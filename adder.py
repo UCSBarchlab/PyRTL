@@ -1,6 +1,8 @@
 #----------------------------------------------------------
 import random
-import pyrtl as rtl
+import pyrtl.pyrtl as rtl
+from pyrtl.export import *
+from pyrtl.simulation import *
 
 def one_bit_add(a,b,cin):
     """ Generates a one-bit full adder, returning type of signals """
@@ -28,10 +30,10 @@ r.next, cout = add(r, rtl.Const(1).zero_extended(bitwidth) )
 
 #-----------------------------------------------------
 
-sim_trace = rtl.SimulationTrace()
+sim_trace = SimulationTrace()
 on_reset = {} # signal states to be set when reset is asserted
 # build the actual simulation environment
-sim = rtl.Simulation( register_value_map=on_reset, default_value=0, tracer=sim_trace )
+sim = Simulation( register_value_map=on_reset, default_value=0, tracer=sim_trace )
 
 # step through 15 cycles
 for i in xrange(15):  

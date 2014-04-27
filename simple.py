@@ -1,7 +1,8 @@
 #----------------------------------------------------------
 import random
-import pyrtl as rtl
-
+import pyrtl.pyrtl as rtl
+from pyrtl.export import *
+from pyrtl.simulation import *
 
 def one_bit_add(a,b,cin):
     sum = a ^ b ^ cin
@@ -33,9 +34,9 @@ y <<= rtl.concat(x3,x2,x1)
 
 #-----------------------------------------------------
 
-sim_trace = rtl.SimulationTrace()
+sim_trace = SimulationTrace()
 on_reset = {}
-sim = rtl.Simulation( register_value_map=on_reset, default_value=0, tracer=sim_trace )
+sim = Simulation( register_value_map=on_reset, default_value=0, tracer=sim_trace )
 
 # each input (a,b,c) is given a random value (0,1) each cycle
 for i in xrange(15):  
