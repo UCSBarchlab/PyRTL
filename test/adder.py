@@ -23,20 +23,23 @@ def add( a, b, cin=rtl.Const(0,bitwidth=1) ):
         sumbits = rtl.concat(msbits,lsbit)
     return sumbits, cout
 
+def run_adder():
 # create a 3-bit incrementer connected to a 3-bit register 
-bitwidth = 3
-r = rtl.Register(bitwidth=bitwidth,name='r')
-r.next, cout = add(r, rtl.Const(1).zero_extended(bitwidth) )
+  bitwidth = 3
+  r = rtl.Register(bitwidth=bitwidth,name='r')
+  r.next, cout = add(r, rtl.Const(1).zero_extended(bitwidth) )
 
 #-----------------------------------------------------
 
-sim_trace = SimulationTrace()
-on_reset = {} # signal states to be set when reset is asserted
+  sim_trace = SimulationTrace()
+  on_reset = {} # signal states to be set when reset is asserted
 # build the actual simulation environment
-sim = Simulation( register_value_map=on_reset, default_value=0, tracer=sim_trace )
+  sim = Simulation( register_value_map=on_reset, default_value=0, tracer=sim_trace )
 
 # step through 15 cycles
-for i in xrange(15):  
-    sim.step( {} )
+  for i in xrange(15):  
+      sim.step( {} )
 
-sim_trace.render_trace()
+  #sim_trace.render_trace()
+  return sim_trace
+

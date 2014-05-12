@@ -1,5 +1,9 @@
 *.py[cod]
 
+# coverage
+htmlconv/
+.coverage/
+
 # C extensions
 *.so
 

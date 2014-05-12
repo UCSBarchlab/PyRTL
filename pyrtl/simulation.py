@@ -296,10 +296,11 @@ class SimulationTrace(object):
         for w in self.trace:
             self.trace[w].append(value_map[w])
 
-    def print_trace(self):
+    def print_trace(self, file=sys.stdout):
         maxlen = max([len(w.name) for w in self.trace])
         for w in sorted(self.trace, key=trace_sort_key):
-            print w.name.rjust(maxlen), ''.join(str(x) for x in self.trace[w])
+            file.write(" ".join([w.name.rjust(maxlen), ''.join(str(x) for x in self.trace[w])+"\n"]))
+            file.flush()
 
     def render_trace(
             self, renderer=wave_trace_render, symbol_len=5,
