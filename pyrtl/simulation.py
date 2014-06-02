@@ -1,3 +1,4 @@
+from time import gmtime, strftime
 from pyrtl import *
 
 #-----------------------------------------------------------------
@@ -301,6 +302,31 @@ class SimulationTrace(object):
         for w in sorted(self.trace, key=trace_sort_key):
             file.write(" ".join([w.name.rjust(maxlen), ''.join(str(x) for x in self.trace[w])+"\n"]))
             file.flush()
+
+    def print_vcd(self, file=sys.stdout):
+        # dump header info
+        file_timestamp = strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", gmtime())
+        print >>file, " ".join(["$date", file_timestamp, "$end"])
+        print >>file, " ".join(["$timescale", "1ns", "$end"])
+        print >>file, " ".join(["$scope", "module logic", "$end"])
+
+        # dump variables
+        for w in sorted(self.trace, key=trace_sort_key):
+            print >>file, " ".join(["$var", "wire", str(w.bitwidth), w.name, w.name , "$end"])
+        print >>file, " ".join(["$upscope", "$end"])
+        print >>file, " ".join(["$endefinitions", "$end"])
+        print >>file, " ".join(["$dumpvars"])
+        for w in sorted(self.trace, key=trace_sort_key):
+            print >>file, "".join([str(self.trace[w][0]), w.name])
+        print >>file, " ".join(["$end"])
+
+        # dump values
+        endtime = max([len(self.trace[w]) for w in self.trace])
+        for timestamp in range(endtime):
+            print >>file, "".join(["#", str(timestamp)])
+            for w in self.trace:
+                print >>file, "".join([str(self.trace[w][timestamp]), w.name])
+        print >>file, "".join(["#", str(endtime)])
 
     def render_trace(
             self, renderer=wave_trace_render, symbol_len=5,

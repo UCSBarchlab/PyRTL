@@ -42,4 +42,5 @@ sim = Simulation( register_value_map=on_reset, default_value=0, tracer=sim_trace
 for i in xrange(15):  
     sim.step( {a:random.choice([0,1]), b:random.choice([0,1]), c:random.choice([0,1])} )
 
+sim_trace.print_vcd()
 sim_trace.render_trace(symbol_len=5, segment_size=5)

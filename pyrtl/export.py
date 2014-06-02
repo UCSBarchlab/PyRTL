@@ -18,8 +18,8 @@ class TrivialGraphExporter(ExportBase):
 
     def producer(self, wire):
         assert isinstance(wire, WireVector)
-        for net in self._block.logic:
-            for dest in net.dests:
+        for net in sorted(self._block.logic):
+            for dest in sorted(net.dests):
                 if dest == wire:
                     return net
         self.add_node(wire, '???')
@@ -27,8 +27,8 @@ class TrivialGraphExporter(ExportBase):
 
     def consumer(self, wire):
         assert isinstance(wire, WireVector)
-        for net in self._block.logic:
-            for arg in net.args:
+        for net in sorted(self._block.logic):
+            for arg in sorted(net.args):
                 if arg == wire:
                     return net
         self.add_node(wire, '???')
@@ -56,28 +56,28 @@ class TrivialGraphExporter(ExportBase):
     def import_from_block(self, block):
         self._block = block
         # build edge and node sets
-        for net in self._block.logic:
+        for net in sorted(self._block.logic):
             label = str(net.op)
             label += str(net.op_param) if net.op_param is not None else ''
             self.add_node(net, label)
-        for input in self._block.wirevector_subset(Input):
+        for input in sorted(self._block.wirevector_subset(Input)):
             label = 'in' if input.name is None else input.name
             self.add_node(input, label)
-        for output in self._block.wirevector_subset(Output):
+        for output in sorted(self._block.wirevector_subset(Output)):
             label = 'out' if output.name is None else output.name
             self.add_node(output, label)
-        for const in self._block.wirevector_subset(Const):
+        for const in sorted(self._block.wirevector_subset(Const)):
             label = str(const.val)
             self.add_node(const, label)
-        for net in self._block.logic:
-            for arg in net.args:
+        for net in sorted(self._block.logic):
+            for arg in sorted(net.args):
                 self.add_edge(arg, net)
-            for dest in net.dests:
+            for dest in sorted(net.dests):
                 self.add_edge(net, dest)
 
     def dump(self, file=sys.stdout):
-        for (id, label) in self.nodes.values():
+        for (id, label) in sorted(self.nodes.values()):
             print >> file, id, label
         print >> file, '#'
-        for (frm, to) in self.edges:
+        for (frm, to) in sorted(self.edges):
             print >> file, frm, to, self.edge_names.get((frm, to), '')
