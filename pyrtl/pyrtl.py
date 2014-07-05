@@ -158,8 +158,14 @@ class WireVector(object):
         self.name = name
         # now handle the bitwidth
         if bitwidth is not None:
-            assert isinstance(bitwidth, int)
-            assert bitwidth > 0
+            if not isinstance(bitwidth, int):
+                raise PyrtlError(
+                    'error attempting to create wirevector with bitwidth of type "%s" '
+                    'instead of integer' % type(w))
+            if bitwidth <= 0:
+                raise PyrtlError(
+                    'error attempting to create wirevector with bitwidth of length "%s", '
+                    'all bitwidths must be > 0' % type(w))
         self.bitwidth = bitwidth
         ParseState.current_block.add_wirevector(self)
 
@@ -178,7 +184,9 @@ class WireVector(object):
         if self.bitwidth is None:
             self.bitwidth = len(other)
         else:
-            assert len(self) == len(other)
+            if len(self) != len(other):
+                raise PyrtlError(
+                    'error attempting to assign a wirevector to an existing wirevector with a different bitwidth')
 
         net = LogicNet(
             op=None,
@@ -227,7 +235,7 @@ class WireVector(object):
         return self.logicop(other, '-')
 
     def __getitem__(self, item):
-        assert self.bitwidth is not None
+        assert self.bitwidth is not None # should never be user visible
         allindex = [i for i in range(self.bitwidth)]
         if isinstance(item, int):
             selectednums = [allindex[item]]
@@ -295,7 +303,11 @@ class Const(WireVector):
         else:
             self.bitwidth = bitwidth
         self.val = val
-        assert (self.val >> self.bitwidth) == 0
+        if (self.val >> self.bitwidth) != 0:
+            raise PyrtlError(
+                'error constant "%s" cannot fit in the specified %d bits'
+                % (str(self.val),self.bitwidth) )
+            
         ParseState.current_block.add_wirevector(self)
 
     def __ilshift__(self, other):
@@ -381,7 +393,8 @@ class MemBlock(object):
     def _update_net(self):
         if self.stored_net:
             ParseState.current_block.logic.remove(self.stored_net)
-        assert len(self.write_addr) == len(self.write_data)
+        assert len(self.write_addr) == len(self.write_data) # not sure about this one
+
         net = LogicNet(
             op='m',
             op_param=(self.id, len(self.read_addr), len(self.write_addr)),
@@ -413,13 +426,14 @@ class MemBlock(object):
 def as_wires(val):
     if isinstance(val, int):
         return Const(val)
-    else:
-        assert isinstance(val, WireVector)
-        return val
+    if not isinstance(val, WireVector):
+        raise PyrtlError
+    return val
 
 
 def concat(*args):
-    assert len(args) > 0
+    if len(args) <= 0:
+        raise PyrtlError
     if len(args) == 1:
         return args[0]
     else:
