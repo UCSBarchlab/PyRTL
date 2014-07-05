@@ -11,8 +11,6 @@ import collections
 import sys
 import re
 
-from export_base import ExportBase
-
 # todo list:
 # * all user visible assert calls should be replaced with "raise PyrtlError"
 # * all PyrtlError calls should have useful error message
@@ -469,10 +467,7 @@ class ParseState(object):
 
     @classmethod
     def export(cls, exporter, file=sys.stdout):
-        if not isinstance(exporter, ExportBase):
-          raise PyrtlError
-        exporter.import_from_block(cls.current_block)
-        exporter.dump(file)
+        exporter.export(cls.current_block, file)
 
     @classmethod
     def next_tempvar_name(cls):

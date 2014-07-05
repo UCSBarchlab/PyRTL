@@ -1,6 +1,5 @@
 import sys
 from pyrtl import *
-from export_base import *
 
 #-----------------------------------------------------------------
 #   ___      __   __   __  ___
@@ -8,17 +7,22 @@ from export_base import *
 #  |___ / \ |    \__/ |  \  |
 #
 
-class TrivialGraphExporter(ExportBase):
+class Exporter(object):
+    def export(self, block, file):
+        raise NotImplementedError("Export base \"dump()\" not implemented.")
+
+
+class TrivialGraphExporter(Exporter):
     def __init__(self):
         self.uid = 1
         self.nodes = {}
         self.edges = set([])
         self.edge_names = {}
-        self._block = None
+        self.block = None
 
     def producer(self, wire):
         assert isinstance(wire, WireVector)
-        for net in sorted(self._block.logic):
+        for net in sorted(self.block.logic):
             for dest in sorted(net.dests):
                 if dest == wire:
                     return net
@@ -27,7 +31,7 @@ class TrivialGraphExporter(ExportBase):
 
     def consumer(self, wire):
         assert isinstance(wire, WireVector)
-        for net in sorted(self._block.logic):
+        for net in sorted(self.block.logic):
             for arg in sorted(net.args):
                 if arg == wire:
                     return net
@@ -54,28 +58,29 @@ class TrivialGraphExporter(ExportBase):
             self.edge_names[(frm_id, to_id)] = edge_label
 
     def import_from_block(self, block):
-        self._block = block
+        self.block = block
         # build edge and node sets
-        for net in sorted(self._block.logic):
+        for net in sorted(self.block.logic):
             label = str(net.op)
             label += str(net.op_param) if net.op_param is not None else ''
             self.add_node(net, label)
-        for input in sorted(self._block.wirevector_subset(Input)):
+        for input in sorted(self.block.wirevector_subset(Input)):
             label = 'in' if input.name is None else input.name
             self.add_node(input, label)
-        for output in sorted(self._block.wirevector_subset(Output)):
+        for output in sorted(self.block.wirevector_subset(Output)):
             label = 'out' if output.name is None else output.name
             self.add_node(output, label)
-        for const in sorted(self._block.wirevector_subset(Const)):
+        for const in sorted(self.block.wirevector_subset(Const)):
             label = str(const.val)
             self.add_node(const, label)
-        for net in sorted(self._block.logic):
+        for net in sorted(self.block.logic):
             for arg in sorted(net.args):
                 self.add_edge(arg, net)
             for dest in sorted(net.dests):
                 self.add_edge(net, dest)
 
-    def dump(self, file=sys.stdout):
+    def export(self, block, file=sys.stdout):
+        self.import_from_block(block)
         for (id, label) in sorted(self.nodes.values()):
             print >> file, id, label
         print >> file, '#'
