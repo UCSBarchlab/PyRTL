@@ -1,6 +1,6 @@
 #----------------------------------------------------------
 import random
-import pyrtl.pyrtl as rtl
+import pyrtl as rtl
 
 def one_bit_add(a,b,cin):
     """ Generates a one-bit full adder, returning type of signals """
