@@ -226,6 +226,16 @@ class WireVector(object):
     def __sub__(self, other):
         return self.logicop(other, '-')
 
+    def __invert__(self):
+        outwire = WireVector(bitwidth=len(self))
+        net = LogicNet(
+            op='~',
+            op_param=None,
+            args=(self,),
+            dests=(outwire,))
+        ParseState.current_block.add_net(net)
+        return outwire
+
     def __getitem__(self, item):
         assert self.bitwidth is not None
         allindex = [i for i in range(self.bitwidth)]

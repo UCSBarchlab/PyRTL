@@ -93,7 +93,7 @@ class Simulation(object):
                 break
         else:  # no break
             raise PyrtlInternalError(
-                'error, "%d" appears to be waiting for value never produced'
+                'error, "%s" appears to be waiting for value never produced'
                 % str(logic_left))
 
         # at the end of the step, record the values to the trace
