@@ -1,5 +1,5 @@
 from time import gmtime, strftime
-from pyrtl import *
+from rtlcore import *
 
 #-----------------------------------------------------------------
 #    __                         ___    __

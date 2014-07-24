@@ -1,8 +1,11 @@
+#!/usr/bin/env python
+
 import sys
-sys.path.append("test")
 import unittest
 import StringIO
+import pyrtl
 
+sys.path.append("test")
 import adder
 
 class TestAdder(unittest.TestCase):
@@ -10,16 +13,17 @@ class TestAdder(unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
-    TestAdder.sim_trace = adder.run_adder()
+    cls.sim_trace = adder.run_adder()
 
   def test_adder(self):
     output = StringIO.StringIO()
-    TestAdder.sim_trace.print_trace(output)
+    self.sim_trace.print_trace(output)
     self.assertEqual(output.getvalue(), open("test/adder_output.txt").read())
 
   def test_export(self):
     output = StringIO.StringIO()
-    adder.ParseState.export(adder.TrivialGraphExporter(), output)
+    pyrtl.ParseState.export(pyrtl.TrivialGraphExporter(), output)
+
     with open("adder.vcd", "w") as vcd_fp:
       TestAdder.sim_trace.print_vcd(vcd_fp)
     #print output.getvalue()
