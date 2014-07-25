@@ -1,6 +1,9 @@
+
+import sys
+import re
+
 from time import gmtime, strftime
-from rtlcore import *
-from rtlhelper import *
+from pyrtl import *
 
 #-----------------------------------------------------------------
 #    __                         ___    __
@@ -272,7 +275,7 @@ class SimulationTrace(object):
         if block is None:
             block = rtlhelper._working_block()
 
-        if not isinstance(block,Block) 
+        if not isinstance(block,Block):
             raise PyrtlError(
                 'simulation initialization requires either a valid'
                 ' hardware block to be specified (or implied)')

@@ -27,7 +27,7 @@ from rtlcore import *
 # Right now we use singlton_block to store the one global
 # block, but in the future we should support multiple Blocks.
 # The argument "singlton_block" should never be passed.
-def _working_block( singlton_block = Block() )
+def _working_block( singlton_block = Block() ):
     return singlton_block
 
 #------------------------------------------------------------------------
@@ -40,7 +40,7 @@ class Input(WireVector):
     """ A WireVector type denoting inputs to a block (no writers) """
 
     def __init__(self, bitwidth=None, name=None):
-        WireVector.__init__(self, bitwidth, name)
+        super(Input,self).__init__(bitwidth, name)
 
     def __ilshift__(self, _):
         raise PyrtlError(
@@ -52,7 +52,7 @@ class Output(WireVector):
     """ A WireVector type denoting outputs of a block (no readers) """
 
     def __init__(self, bitwidth=None, name=None):
-        WireVector.__init__(self, bitwidth, name)
+        super(Output,self).__init__(bitwidth, name)
     # todo: check that we can't read from this vector
 
 
@@ -60,18 +60,21 @@ class Const(WireVector):
     """ A WireVector representation of an integer constant """
 
     def __init__(self, val, bitwidth=None):
-        self.name = Block.next_constvar_name(val)
+        """ Construct a constant implementation at initialization """
+        name = Block.next_constvar_name(val)        
+        # infer bitwidth if it is not specified explicitly
         if bitwidth is None:
-            self.bitwidth = len(bin(val))-2
-        else:
-            self.bitwidth = bitwidth
-        self.val = val
-        if (self.val >> self.bitwidth) != 0:
+            bitwidth = len(bin(val))-2
+        # check sanity of bitwidth
+        if (val >> bitwidth) != 0:
             raise PyrtlError(
                 'error constant "%s" cannot fit in the specified %d bits'
-                % (str(self.val),self.bitwidth) )
-            
-        self.block.add_wirevector(self)
+                % (str(val),bitwidth) )
+
+        # initialize the WireVector
+        super(Const, self).__init__(bitwidth=bitwidth, name=name)
+        # add the member "val" to track the value of the constant
+        self.val = val            
 
     def __ilshift__(self, other):
         raise PyrtlError(
@@ -83,7 +86,7 @@ class Register(WireVector):
     """ A WireVector with a latch in the middle (read current value, set .next value) """
 
     def __init__(self, bitwidth, name=None):
-        WireVector.__init__(self, bitwidth=bitwidth, name=name)
+        super(Register,self).__init__(bitwidth=bitwidth, name=name)
         self.reg_in = None
 
     def _makereg(self):
@@ -220,7 +223,5 @@ def concat(*args):
             op_param=None,
             args=tuple(args),
             dests=(outwire,))
-        self.block.add_net(net)
+        outwire.block.add_net(net)
         return outwire
-
-

@@ -104,7 +104,7 @@ class Block(object):
                 raise PyrtlError(
                     'error making net with unknown source "%s"'
                     % w.name)
-            if w.motherblock is not self:
+            if w.block is not self:
                 raise PyrtlError(
                     'error, cannot make net between two different blocks')
         if net.op not in self.legal_ops:
