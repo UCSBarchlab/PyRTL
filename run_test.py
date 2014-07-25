@@ -22,14 +22,10 @@ class TestAdder(unittest.TestCase):
 
   def test_export(self):
     output = StringIO.StringIO()
-    pyrtl.ParseState.export(pyrtl.TrivialGraphExporter(), output)
+    #pyrtl.ParseState.export(pyrtl.TrivialGraphExporter(), output)
 
-    with open("adder.vcd", "w") as vcd_fp:
-      TestAdder.sim_trace.print_vcd(vcd_fp)
-    #print output.getvalue()
-    #with open("curr.txt", "w") as fp:
-    #  fp.write(output.getvalue())
-    #self.assertEqual(output.getvalue(), open("test/adder_export.txt", "r").read())
+    #with open("adder.vcd", "w") as vcd_fp:
+    #  TestAdder.sim_trace.print_vcd(vcd_fp)
 
 if __name__ == "__main__":
   unittest.main()
