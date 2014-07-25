@@ -1,28 +1,35 @@
 """
-PyRTL is a framework for synthesizable logic specification in Python.
+rtlcore contains the minumum necessary elements for PyRTL
 
-The module contains a collection of classes that are intended to work together
-to provide RTL specification, simulation, tracing, and testing suitable for
-teaching and research.  Simplicity, usability, clarity, and extendability
-rather than performance or optimization is the overarching goal.
+The classes PyrtlError and PyrtlInternalError are the two main exeptions to 
+be thrown when things go wrong.  Block is the netlist storing module for a
+chunk of hardware with well defined inputs and outputs, it contains both the 
+basic logic elements and references to the wires that connect them together.
+Wirevector is the the named element that connect nets together and is mutually
+dependent on Block.
 """
+
 
 import collections
 import sys
 import re
 
-# todo list:
-# * all user visible assert calls should be replaced with "raise PyrtlError"
-# * all PyrtlError calls should have useful error message
-# * all classes should have useful docstrings
-# * all public functions and methods should have useful docstrings
-# * all private methods and members should use "_" at the start of their names
-# * should have set of unit tests for main abstractions
-# * should be PEP8 compliant
-# * multiple nested blocks should be supported
-# * add verilog export option to block
+# All ASCII Art in "JS Stick Letters"
 
-# ASCII Art in "JS Stick Letters"
+
+
+#-----------------------------------------------------------------
+#   ___  __   __   __   __  ___      __   ___  __  
+#  |__  |__) |__) /  \ |__)  |  \ / |__) |__  /__` 
+#  |___ |  \ |  \ \__/ |  \  |   |  |    |___ .__/ 
+# 
+
+class PyrtlError(Exception):
+    pass  # raised on any user-facing error in this module
+
+
+class PyrtlInternalError(Exception):
+    pass  # raised on any internal failure
 
 
 #-----------------------------------------------------------------
@@ -140,9 +147,9 @@ class Block(object):
 
 
 #-----------------------------------------------------------------
-#        ___  __  ___  __   __   __               ___
-#  \  / |__  /  `  |  /  \ |__) /__`   -|-  |\/| |__   |\/|
-#   \/  |___ \__,  |  \__/ |  \ .__/        |  | |___  |  |
+#        ___  __  ___  __   __     
+#  \  / |__  /  `  |  /  \ |__)   
+#   \/  |___ \__,  |  \__/ |  \ 
 #
 
 class WireVector(object):
@@ -178,7 +185,8 @@ class WireVector(object):
 
     def __ilshift__(self, other):
         if not isinstance(other, WireVector):
-            other = Const(other)
+            import rtlhelper
+            other = rtlhelper.Const(other)
         if self.bitwidth is None:
             self.bitwidth = len(other)
         else:
@@ -267,9 +275,11 @@ class WireVector(object):
 
     def zero_extended(self, bitwidth):
         """ return a zero extended wirevector derived from self """
-        return self._extended(bitwidth, Const(0, bitwidth=1))
+        import rtlhelper
+        return self._extended(bitwidth, rtlhelper.Const(0, bitwidth=1))
 
     def _extended(self, bitwidth, extbit):
+        import rtlhelper
         numext = bitwidth - self.bitwidth
         if numext == 0:
             return self
@@ -284,184 +294,8 @@ class WireVector(object):
                 args=(extbit,),
                 dests=(extvector,))
             ParseState.current_block.add_net(net)
-            return concat(extvector, self)
+            return rtlhelper.concat(extvector, self)
 
-
-class Input(WireVector):
-    def __init__(self, bitwidth=None, name=None):
-        WireVector.__init__(self, bitwidth, name)
-
-    def __ilshift__(self, _):
-        raise PyrtlError(
-            'Input, such as "%s", cannot have values generated internally'
-            % str(self.name))
-
-
-class Output(WireVector):
-    def __init__(self, bitwidth=None, name=None):
-        WireVector.__init__(self, bitwidth, name)
-    # todo: check that we can't read from this vector
-
-
-class Const(WireVector):
-    def __init__(self, val, bitwidth=None):
-        self.name = ParseState.next_constvar_name(val)
-        if bitwidth is None:
-            self.bitwidth = len(bin(val))-2
-        else:
-            self.bitwidth = bitwidth
-        self.val = val
-        if (self.val >> self.bitwidth) != 0:
-            raise PyrtlError(
-                'error constant "%s" cannot fit in the specified %d bits'
-                % (str(self.val),self.bitwidth) )
-            
-        ParseState.current_block.add_wirevector(self)
-
-    def __ilshift__(self, other):
-        raise PyrtlError(
-            'ConstWires, such as "%s", should never be assigned to with <<='
-            % str(self.name))
-
-
-class Register(WireVector):
-    def __init__(self, bitwidth, name=None):
-        WireVector.__init__(self, bitwidth=bitwidth, name=name)
-        self.reg_in = None
-
-    def _makereg(self):
-        if self.reg_in is None:
-            n = WireVector(bitwidth=self.bitwidth, name=self.name+"'")
-            net = LogicNet(
-                op='r',
-                op_param=None,
-                args=(n,),
-                dests=(self,))
-            ParseState.current_block.add_net(net)
-            self.reg_in = n
-        return self.reg_in
-
-    def __ilshift__(self, other):
-        raise PyrtlError(
-            'Registers, such as "%s", should never be assigned to with <<='
-            % str(self.name))
-
-    @property
-    def next(self):
-        return self._makereg()
-
-    @next.setter
-    def next(self, value):
-        # The .next feild can be set with either "<<=" or "=", and
-        # they do the same thing.
-        if self.reg_in == value:
-            return
-        if self.reg_in is not None:
-            raise PyrtlError
-        if len(self) != len(value):
-            raise PyrtlError
-        n = self._makereg()
-        n <<= value
-
-
-class MemBlock(object):
-    # data = memory[addr]  (infer read port)
-    # memory[addr] = data  (infer write port)
-    # Not currently implemented:  memory[addr] <<= data (infer write port)
-    def __init__(self,  bitwidth, addrwidth, name=None):
-        if bitwidth <= 0:
-            raise PyrtlError
-        if addrwidth <= 0:
-            raise PyrtlError
-        if name is None:
-            name = ParseState.next_tempvar_name()
-
-        self.bitwidth = bitwidth
-        self.name = name
-        self.addrwidth = addrwidth
-        self.stored_net = None
-        self.id = ParseState.next_memid()
-        self.read_addr = []  # arg
-        self.read_data = []  # dest
-        self.write_addr = []  # arg
-        self.write_data = []  # arg
-
-    def __getitem__(self, item):
-        if not isinstance(item, WireVector):
-            raise PyrtlError
-        if len(item) != self.addrwidth:
-            raise PyrtlError
-
-        data = WireVector(bitwidth=self.bitwidth)
-        self.read_data.append(data)
-        self.read_addr.append(item)
-        self._update_net()
-        return data
-
-    def _update_net(self):
-        if self.stored_net:
-            ParseState.current_block.logic.remove(self.stored_net)
-        assert len(self.write_addr) == len(self.write_data) # not sure about this one
-
-        net = LogicNet(
-            op='m',
-            op_param=(self.id, len(self.read_addr), len(self.write_addr)),
-            args=tuple(self.read_addr + self.write_addr + self.write_data),
-            dests=tuple(self.read_data))
-        ParseState.current_block.add_net(net)
-        self.stored_net = net
-
-    def __setitem__(self, item, val):
-        if not isinstance(item, WireVector):
-            raise PyrtlError
-        if len(item) != self.addrwidth:
-            raise PyrtlError
-        if not isinstance(val, WireVector):
-            raise PyrtlError
-        if len(val) != self.bitwidth:
-            raise PyrtlError
-        self.write_data.append(val)
-        self.write_addr.append(item)
-        self._update_net()
-
-
-#-----------------------------------------------------------------
-#        ___       __   ___  __   __
-#  |__| |__  |    |__) |__  |__) /__`
-#  |  | |___ |___ |    |___ |  \ .__/
-#
-
-def as_wires(val):
-    if isinstance(val, int):
-        return Const(val)
-    if not isinstance(val, WireVector):
-        raise PyrtlError
-    return val
-
-
-def concat(*args):
-    if len(args) <= 0:
-        raise PyrtlError
-    if len(args) == 1:
-        return args[0]
-    else:
-        final_width = sum([len(arg) for arg in args])
-        outwire = WireVector(bitwidth=final_width)
-        net = LogicNet(
-            op='c',
-            op_param=None,
-            args=tuple(args),
-            dests=(outwire,))
-        ParseState.current_block.add_net(net)
-        return outwire
-
-
-class PyrtlError(Exception):
-    pass  # raised on any user-facing error in this module
-
-
-class PyrtlInternalError(Exception):
-    pass  # raised on any internal failure
 
 
 #-----------------------------------------------------------------
@@ -495,4 +329,5 @@ class ParseState(object):
     def next_memid(cls):
         cls._memid_count += 1
         return cls._memid_count
+
 

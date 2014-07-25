@@ -1,3 +1,11 @@
+""" 
+Helper functions for reading and writing hardware files.
+
+Each of the functions in inputoutput take a block and a file descriptor.
+The functions provided either read the file and update the Block
+accordingly, or write information from the Block out to the file.
+"""
+
 import sys
 from rtlcore import *
 
