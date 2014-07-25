@@ -17,5 +17,5 @@ from simulation import Simulation
 from simulation import SimulationTrace
 
 # exporter interface
-from exporter import Exporter
-from exporter import TrivialGraphExporter
+from inputoutput import Exporter
+from inputoutput import TrivialGraphExporter
