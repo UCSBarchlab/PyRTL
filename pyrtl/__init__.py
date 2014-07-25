@@ -16,6 +16,6 @@ from rtlcore import concat
 from simulation import Simulation
 from simulation import SimulationTrace
 
-# exporter interface
-from inputoutput import Exporter
-from inputoutput import TrivialGraphExporter
+# inputoutput
+from inputoutput import input_block_as_blif
+from inputoutput import output_block_as_trivialgraph

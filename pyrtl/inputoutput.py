@@ -1,5 +1,5 @@
 import sys
-from pyrtl import *
+from rtlcore import *
 
 #-----------------------------------------------------------------
 #            __       ___ 
@@ -7,7 +7,7 @@ from pyrtl import *
 #    | | \| |    \__/  |  
                              
 
-def read_block_as_blif( block, blif_file ):
+def input_block_as_blif( block, blif_file ):
     """ Read an open blif file as input, updating the block appropriately 
     
         Assumes the blif has been flattened and their is only a single module.
@@ -138,7 +138,7 @@ def read_block_as_blif( block, blif_file ):
 #                             
 
 
-def output_block_as_trivialgraph( block, file )
+def output_block_as_trivialgraph( block, file ):
     """ Walk the block and output it in trivial graph format to the open file """
 
     uid = 1
