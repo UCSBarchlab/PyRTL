@@ -4,7 +4,6 @@ from rtlcore import Block
 from rtlcore import WireVector
 from rtlcore import PyrtlError
 from rtlcore import PyrtlInternalError
-from rtlcore import ParseState
 
 # convenience classes for building hardware
 from rtlhelper import Input, Output

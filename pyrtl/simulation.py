@@ -10,18 +10,19 @@ from rtlhelper import *
 
 
 class Simulation(object):
-
     """A class for simulating blocks of logic step by step."""
 
     def __init__(
             self, register_value_map=None, default_value=None,
-            tracer=None, hw_description=None):
-        if hw_description is None:
-            hw_description = ParseState.current_block
-        hw_description.sanity_check()  # check that this is a good hw block
+            tracer=None, block=None):
+
+        if block is None:
+            block = rtlhelper._working_block()
+        block.sanity_check()  # check that this is a good hw block
+
         self.value = {}   # map from signal->value
         self.memvalue = {}  # map from (memid,address)->value
-        self.hw = hw_description
+        self.block = block
         self.default_value = default_value
         self.tracer = tracer
         self.initialize(register_value_map)
@@ -34,7 +35,7 @@ class Simulation(object):
             default_value = self.default_value
 
         # set registers to their values
-        reg_set = self.hw.wirevector_subset(Register)
+        reg_set = self.block.wirevector_subset(Register)
         if register_value_map is not None:
             for r in reg_set:
                 if r in register_value_map:
@@ -43,12 +44,12 @@ class Simulation(object):
                     self.value[r] = default_value
 
         # set constants to their set values
-        for w in self.hw.wirevector_subset(Const):
+        for w in self.block.wirevector_subset(Const):
             self.value[w] = w.val
             assert isinstance(w.val, int)  # for now
 
         # set all other variables to default value
-        for w in self.hw.wirevector_set:
+        for w in self.block.wirevector_set:
             if w not in self.value:
                 self.value[w] = default_value
 
@@ -58,7 +59,7 @@ class Simulation(object):
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle """
         # check that all Input have a corresponding provided_input
-        input_set = self.hw.wirevector_subset(Input)
+        input_set = self.block.wirevector_subset(Input)
         for i in input_set:
             if i not in provided_inputs:
                 raise PyrtlError(
@@ -74,15 +75,15 @@ class Simulation(object):
             self.value[i] = provided_inputs[i]
 
         # do all of the clock-edge triggered operations
-        for net in self.hw.logic:
+        for net in self.block.logic:
             self.edge_update(net)
 
         # propagate inputs to outputs
         # wires  which are defined at the start are inputs and registers
-        const_set = self.hw.wirevector_subset(Const)
-        reg_set = self.hw.wirevector_subset(Register)
+        const_set = self.block.wirevector_subset(Const)
+        reg_set = self.block.wirevector_subset(Register)
         defined_set = reg_set | const_set | input_set
-        logic_left = self.hw.logic.copy()
+        logic_left = self.block.logic.copy()
 
         for _ in xrange(self.max_iter):
             logic_left = set(
@@ -266,10 +267,15 @@ def trace_sort_key(w):
 
 class SimulationTrace(object):
 
-    def __init__(self, wirevector_subset=None, hw=None):
-        if hw is None:
-            hw = ParseState.current_block
-        assert isinstance(hw, Block)
+    def __init__(self, wirevector_subset=None, block=None):
+
+        if block is None:
+            block = rtlhelper._working_block()
+
+        if not isinstance(block,Block) 
+            raise PyrtlError(
+                'simulation initialization requires either a valid'
+                ' hardware block to be specified (or implied)')
 
         def is_internal_name(name):
             if (
@@ -281,14 +287,10 @@ class SimulationTrace(object):
             else:
                 return False
 
-        if hw is None and wirevector_subset is None:
-            raise PyrtlError(
-                'simulation initialization requires either a wirevector_subset'
-                ' or full hw to be specified')
         if wirevector_subset is None:
             self.trace = {
                 w: []
-                for w in hw.wirevector_set
+                for w in block.wirevector_set
                 if not is_internal_name(w.name)
                 }
         else:

@@ -23,10 +23,12 @@ from rtlcore import *
 #    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \ 
 #
 
-# Note: this is a module specific global, and may be replaced once
-# we add some nexted block stuff
 
-_working_block = Block()
+# Right now we use singlton_block to store the one global
+# block, but in the future we should support multiple Blocks.
+# The argument "singlton_block" should never be passed.
+def _working_block( singlton_block = Block() )
+    return singlton_block
 
 #------------------------------------------------------------------------
 #  ___     ___  ___       __   ___  __           ___  __  ___  __   __   __  
@@ -35,6 +37,8 @@ _working_block = Block()
 #                                                                        
 
 class Input(WireVector):
+    """ A WireVector type denoting inputs to a block (no writers) """
+
     def __init__(self, bitwidth=None, name=None):
         WireVector.__init__(self, bitwidth, name)
 
@@ -45,12 +49,16 @@ class Input(WireVector):
 
 
 class Output(WireVector):
+    """ A WireVector type denoting outputs of a block (no readers) """
+
     def __init__(self, bitwidth=None, name=None):
         WireVector.__init__(self, bitwidth, name)
     # todo: check that we can't read from this vector
 
 
 class Const(WireVector):
+    """ A WireVector representation of an integer constant """
+
     def __init__(self, val, bitwidth=None):
         self.name = Block.next_constvar_name(val)
         if bitwidth is None:
@@ -72,6 +80,8 @@ class Const(WireVector):
 
 
 class Register(WireVector):
+    """ A WireVector with a latch in the middle (read current value, set .next value) """
+
     def __init__(self, bitwidth, name=None):
         WireVector.__init__(self, bitwidth=bitwidth, name=name)
         self.reg_in = None
@@ -119,6 +129,8 @@ class Register(WireVector):
 #
 
 class MemBlock(object):
+    """ An object for specifying block memories """
+
     # data = memory[addr]  (infer read port)
     # memory[addr] = data  (infer write port)
     # Not currently implemented:  memory[addr] <<= data (infer write port)

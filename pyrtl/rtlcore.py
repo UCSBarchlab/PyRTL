@@ -184,8 +184,7 @@ class WireVector(object):
         if isinstance(block, Block):
             self.block = block
         elif block is None:
-            import rtlhelper
-            self.block = rtlhelper._working_block;
+            self.block = _rtlhelper_working_block();
         else:
             raise PyrtlError(
                 'Attempt to link WireVector to block not derived of type Block')
@@ -211,7 +210,7 @@ class WireVector(object):
                     'all bitwidths must be > 0' % type(w))
         self.bitwidth = bitwidth
 
-        # finally, register the wirevector back with the mother block
+        # finally, add the wirevector back in the mother block
         self.block.add_wirevector(self)
 
     def __repr__(self):
@@ -225,8 +224,7 @@ class WireVector(object):
 
     def __ilshift__(self, other):
         if not isinstance(other, WireVector):
-            import rtlhelper
-            other = rtlhelper.Const(other)
+            other = _rtlhelper_const(other)
         if self.bitwidth is None:
             self.bitwidth = len(other)
         else:
@@ -246,7 +244,7 @@ class WireVector(object):
         a, b = self, other
         # convert constants if necessary
         if not isinstance(b, WireVector):
-            b = Const(b)
+            b = _rtlhelper_const(b)
         # check size of operands
         if len(a) < len(b):
             a = a.sign_extended(len(b))
@@ -315,11 +313,9 @@ class WireVector(object):
 
     def zero_extended(self, bitwidth):
         """ return a zero extended wirevector derived from self """
-        import rtlhelper
-        return self._extended(bitwidth, rtlhelper.Const(0, bitwidth=1))
+        return self._extended(bitwidth, _rtlhelper_const(0, bitwidth=1))
 
     def _extended(self, bitwidth, extbit):
-        import rtlhelper
         numext = bitwidth - self.bitwidth
         if numext == 0:
             return self
@@ -334,9 +330,27 @@ class WireVector(object):
                 args=(extbit,),
                 dests=(extvector,))
             self.block.add_net(net)
-            return rtlhelper.concat(extvector, self)
+            return _rtlhelper_concat(extvector, self)
 
 
- 
+#-----------------------------------------------------------------
+#    __  ___            ___       __   ___  __  
+#   |__)  |  |    |__| |__  |    |__) |__  |__) 
+#   |  \  |  |___ |  | |___ |___ |    |___ |  \ 
+#  
 
+# these functions wrap the circular dependencies between rtlcore
+# and rtlhelper.  Rather than putting imports all through the code
+# all necessary imports should happen here
 
+def _rtlhelper_const( integer_constant, bitwidth=None ):
+    import rtlhelper
+    return rtlhelper.Const( integer_constant, bitwidth )
+
+def _rtlhelper_concat(*args):
+    import rtlhelper
+    return rtlhelper.concat(*args)
+
+def _rtlhelper_working_block(*args):
+    import rtlhelper
+    return rtlhelper._working_block()
