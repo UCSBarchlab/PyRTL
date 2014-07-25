@@ -16,6 +16,18 @@ parameters and concats them into one new wire vector which it returns.
 
 from rtlcore import *
 
+
+#------------------------------------------------------------------------
+#          __   __               __      __        __   __       
+#    |  | /  \ |__) |__/ | |\ | / _`    |__) |    /  \ /  ` |__/ 
+#    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \ 
+#
+
+# Note: this is a module specific global, and may be replaced once
+# we add some nexted block stuff
+
+_working_block = Block()
+
 #------------------------------------------------------------------------
 #  ___     ___  ___       __   ___  __           ___  __  ___  __   __   __  
 # |__  \_/  |  |__  |\ | |  \ |__  |  \    \  / |__  /  `  |  /  \ |__) /__` 
@@ -40,7 +52,7 @@ class Output(WireVector):
 
 class Const(WireVector):
     def __init__(self, val, bitwidth=None):
-        self.name = ParseState.next_constvar_name(val)
+        self.name = Block.next_constvar_name(val)
         if bitwidth is None:
             self.bitwidth = len(bin(val))-2
         else:
@@ -51,7 +63,7 @@ class Const(WireVector):
                 'error constant "%s" cannot fit in the specified %d bits'
                 % (str(self.val),self.bitwidth) )
             
-        ParseState.current_block.add_wirevector(self)
+        self.block.add_wirevector(self)
 
     def __ilshift__(self, other):
         raise PyrtlError(
@@ -72,7 +84,7 @@ class Register(WireVector):
                 op_param=None,
                 args=(n,),
                 dests=(self,))
-            ParseState.current_block.add_net(net)
+            self.block.add_net(net)
             self.reg_in = n
         return self.reg_in
 
@@ -116,13 +128,13 @@ class MemBlock(object):
         if addrwidth <= 0:
             raise PyrtlError
         if name is None:
-            name = ParseState.next_tempvar_name()
+            name = Block.next_tempvar_name()
 
         self.bitwidth = bitwidth
         self.name = name
         self.addrwidth = addrwidth
         self.stored_net = None
-        self.id = ParseState.next_memid()
+        self.id = Block.next_memid()
         self.read_addr = []  # arg
         self.read_data = []  # dest
         self.write_addr = []  # arg
@@ -142,7 +154,7 @@ class MemBlock(object):
 
     def _update_net(self):
         if self.stored_net:
-            ParseState.current_block.logic.remove(self.stored_net)
+            self.block.logic.remove(self.stored_net)
         assert len(self.write_addr) == len(self.write_data) # not sure about this one
 
         net = LogicNet(
@@ -150,7 +162,7 @@ class MemBlock(object):
             op_param=(self.id, len(self.read_addr), len(self.write_addr)),
             args=tuple(self.read_addr + self.write_addr + self.write_data),
             dests=tuple(self.read_data))
-        ParseState.current_block.add_net(net)
+        self.block.add_net(net)
         self.stored_net = net
 
     def __setitem__(self, item, val):
@@ -196,7 +208,7 @@ def concat(*args):
             op_param=None,
             args=tuple(args),
             dests=(outwire,))
-        ParseState.current_block.add_net(net)
+        self.block.add_net(net)
         return outwire
 
 

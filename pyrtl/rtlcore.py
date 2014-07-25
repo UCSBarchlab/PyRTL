@@ -77,7 +77,6 @@ class Block(object):
     from WireVector, and registered seperately with the block using
     the method add_wirevector.
     """
-
     def __init__(self):
         """Creates and empty hardware block."""
         self.logic = set([])  # set of nets, each is a LogicNet named tuple
@@ -90,7 +89,7 @@ class Block(object):
         return '\n'.join(str(l) for l in self.logic)
 
     def add_wirevector(self, wirevector):
-        """ Add a wirevector object to the module."""
+        """ Add a wirevector object to the block."""
         self.wirevector_set.add(wirevector)
         self.wirevector_by_name[wirevector.name] = wirevector
 
@@ -105,10 +104,14 @@ class Block(object):
                 raise PyrtlError(
                     'error making net with unknown source "%s"'
                     % w.name)
+            if w.motherblock is not self:
+                raise PyrtlError(
+                    'error, cannot make net between two different blocks')
         if net.op not in self.legal_ops:
             raise PyrtlError(
                 'error adding op "%s" not from known set %s'
                 % (net.op, self.legal_ops))
+        # after all that sanity checking, actually update the data structure
         self.logic.add(net)
 
     def wirevector_subset(self, cls=None):
@@ -118,7 +121,7 @@ class Block(object):
         else:
             return set([x for x in self.wirevector_set if isinstance(x, cls)])
 
-    def typecheck(self):
+    def sanity_check(self):
         """ Check logic and wires and throw PyrtlError if there is an issue."""
         # check for unique names
         wirevector_names = [x.name for x in self.wirevector_set]
@@ -146,6 +149,28 @@ class Block(object):
                 % repr([w.name for w in allwires_minus_connected]))
 
 
+    # some unique name class methods useful internally
+    _tempvar_count = 1 
+    _memid_count = 0
+
+    @classmethod
+    def next_tempvar_name(cls):
+        wire_name = ''.join(['tmp', str(cls._tempvar_count)])
+        cls._tempvar_count += 1
+        return wire_name
+
+    @classmethod
+    def next_constvar_name(cls, val):
+        wire_name = ''.join(['const', str(cls._tempvar_count), '_', str(val)])
+        cls._tempvar_count += 1
+        return wire_name
+
+    @classmethod
+    def next_memid(cls):
+        cls._memid_count += 1
+        return cls._memid_count
+
+
 #-----------------------------------------------------------------
 #        ___  __  ___  __   __     
 #  \  / |__  /  `  |  /  \ |__)   
@@ -153,14 +178,27 @@ class Block(object):
 #
 
 class WireVector(object):
-    def __init__(self, bitwidth=None, name=None):
-        # now figure out a name
+    def __init__(self, bitwidth=None, name=None, block=None):
+
+        # figure out what block this wirevector should be part of
+        if isinstance(block, Block):
+            self.block = block
+        elif block is None:
+            import rtlhelper
+            self.block = rtlhelper._working_block;
+        else:
+            raise PyrtlError(
+                'Attempt to link WireVector to block not derived of type Block')
+        
+
+        # figure out a name
         if name is None:
-            name = ParseState.next_tempvar_name()
+            name = Block.next_tempvar_name()
         if name.lower() in ['clk', 'clock']:
             raise PyrtlError(
                 'Clock signals should never be explicitly instantiated')
         self.name = name
+
         # now handle the bitwidth
         if bitwidth is not None:
             if not isinstance(bitwidth, int):
@@ -172,7 +210,9 @@ class WireVector(object):
                     'error attempting to create wirevector with bitwidth of length "%s", '
                     'all bitwidths must be > 0' % type(w))
         self.bitwidth = bitwidth
-        ParseState.current_block.add_wirevector(self)
+
+        # finally, register the wirevector back with the mother block
+        self.block.add_wirevector(self)
 
     def __repr__(self):
         return ''.join([
@@ -199,7 +239,7 @@ class WireVector(object):
             op_param=None,
             args=(other,),
             dests=(self,))
-        ParseState.current_block.add_net(net)
+        self.block.add_net(net)
         return self
 
     def logicop(self, other, op):
@@ -222,7 +262,7 @@ class WireVector(object):
             op_param=None,
             args=(a, b),
             dests=(s,))
-        ParseState.current_block.add_net(net)
+        self.block.add_net(net)
         return s
 
     def __and__(self, other):
@@ -247,7 +287,7 @@ class WireVector(object):
             op_param=None,
             args=(self,),
             dests=(outwire,))
-        ParseState.current_block.add_net(net)
+        self.block.add_net(net)
         return outwire
 
     def __getitem__(self, item):
@@ -263,7 +303,7 @@ class WireVector(object):
             op_param=tuple(selectednums),
             args=(self,),
             dests=(outwire,))
-        ParseState.current_block.add_net(net)
+        self.block.add_net(net)
         return outwire
 
     def __len__(self):
@@ -293,41 +333,10 @@ class WireVector(object):
                 op_param=(0,)*numext,
                 args=(extbit,),
                 dests=(extvector,))
-            ParseState.current_block.add_net(net)
+            self.block.add_net(net)
             return rtlhelper.concat(extvector, self)
 
 
-
-#-----------------------------------------------------------------
-#   __        __   __   ___     __  ___      ___  ___
-#  |__)  /\  |__) /__` |__     /__`  |   /\   |  |__
-#  |    /~~\ |  \ .__/ |___    .__/  |  /~~\  |  |___
-#
-
-class ParseState(object):
-    current_block = Block()
-    _tempvar_count = 1
-    _memid_count = 0
-
-    @classmethod
-    def export(cls, exporter, file=sys.stdout):
-        exporter.export(cls.current_block, file)
-
-    @classmethod
-    def next_tempvar_name(cls):
-        wire_name = ''.join(['tmp', str(cls._tempvar_count)])
-        cls._tempvar_count += 1
-        return wire_name
-
-    @classmethod
-    def next_constvar_name(cls, val):
-        wire_name = ''.join(['const', str(cls._tempvar_count), '_', str(val)])
-        cls._tempvar_count += 1
-        return wire_name
-
-    @classmethod
-    def next_memid(cls):
-        cls._memid_count += 1
-        return cls._memid_count
+ 
 
 

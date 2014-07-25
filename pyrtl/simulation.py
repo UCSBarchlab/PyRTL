@@ -18,7 +18,7 @@ class Simulation(object):
             tracer=None, hw_description=None):
         if hw_description is None:
             hw_description = ParseState.current_block
-        hw_description.typecheck()  # check that this is a good hw block
+        hw_description.sanity_check()  # check that this is a good hw block
         self.value = {}   # map from signal->value
         self.memvalue = {}  # map from (memid,address)->value
         self.hw = hw_description
