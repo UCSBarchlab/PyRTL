@@ -12,6 +12,8 @@ from rtlhelper import Register
 from rtlhelper import MemBlock
 from rtlhelper import as_wires
 from rtlhelper import concat
+from rtlhelper import working_block 
+from rtlhelper import reset_working_block
 
 # block simulation support
 from simulation import Simulation

@@ -27,8 +27,12 @@ from rtlcore import *
 # Right now we use singlton_block to store the one global
 # block, but in the future we should support multiple Blocks.
 # The argument "singlton_block" should never be passed.
-def _working_block( singlton_block = Block() ):
-    return singlton_block
+_singleton_block = Block()
+def working_block():
+    return _singleton_block
+def reset_working_block():
+    global _singleton_block
+    _singleton_block = Block()
 
 #------------------------------------------------------------------------
 #  ___     ___  ___       __   ___  __           ___  __  ___  __   __   __  

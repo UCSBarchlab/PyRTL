@@ -95,6 +95,10 @@ class Block(object):
 
     def add_net(self, net):
         """ Connect new net to wirevectors previously added to the block."""
+        if not isinstance(net, LogicNet):
+            raise PyrtlError(
+                'error attempting to create logic net from "%s" '
+                'instead of LogicNet' % type(net))
         for w in net.args + net.dests:
             if not isinstance(w, WireVector):
                 raise PyrtlError(
@@ -131,7 +135,8 @@ class Block(object):
             if y > 1
             ]
         if len(dup_list) > 0:
-            raise PyrtlError('Duplicate wire names found: %s' % repr(dup_list))
+            raise PyrtlError('Duplicate wire names found for the following '
+                'different signals: %s' % repr(dup_list))
 
         # check for dead input wires (not connected to anything)
         dest_set = set(wire for net in self.logic for wire in net.dests)
@@ -203,11 +208,11 @@ class WireVector(object):
             if not isinstance(bitwidth, int):
                 raise PyrtlError(
                     'error attempting to create wirevector with bitwidth of type "%s" '
-                    'instead of integer' % type(w))
+                    'instead of integer' % type(bitwidth))
             if bitwidth <= 0:
                 raise PyrtlError(
-                    'error attempting to create wirevector with bitwidth of length "%s", '
-                    'all bitwidths must be > 0' % type(w))
+                    'error attempting to create wirevector with bitwidth of length "%d", '
+                    'all bitwidths must be > 0' % bitwidth)
         self.bitwidth = bitwidth
 
         # finally, add the wirevector back in the mother block
@@ -353,4 +358,4 @@ def _rtlhelper_concat(*args):
 
 def _rtlhelper_working_block(*args):
     import rtlhelper
-    return rtlhelper._working_block()
+    return rtlhelper.working_block()

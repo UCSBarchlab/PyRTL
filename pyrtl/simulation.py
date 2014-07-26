@@ -20,7 +20,7 @@ class Simulation(object):
             tracer=None, block=None):
 
         if block is None:
-            block = rtlhelper._working_block()
+            block = working_block()
         block.sanity_check()  # check that this is a good hw block
 
         self.value = {}   # map from signal->value
@@ -273,7 +273,7 @@ class SimulationTrace(object):
     def __init__(self, wirevector_subset=None, block=None):
 
         if block is None:
-            block = rtlhelper._working_block()
+            block = working_block()
 
         if not isinstance(block,Block):
             raise PyrtlError(
