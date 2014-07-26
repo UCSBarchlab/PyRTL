@@ -7,21 +7,21 @@ from helperfunctions import testmissing
 class TestBlock(unittest.TestCase):
 
     def setUp(self):
-        self.block = pyrtl.Block()
-    
+        pyrtl.reset_working_block()    
+
     def tearDown(self):
-        pass
+        pyrtl.reset_working_block()    
 
     def test_add_wirevector_simple(self):
-        w = pyrtl.WireVector(block=self.block, name='testwire')
-        self.block.add_wirevector(w)
-        self.assertTrue(w in self.block.wirevector_set)
-        self.assertTrue('testwire' in self.block.wirevector_by_name)
+        w = pyrtl.WireVector(name='testwire')
+        pyrtl.working_block().add_wirevector(w)
+        self.assertTrue(w in pyrtl.working_block().wirevector_set)
+        self.assertTrue('testwire' in pyrtl.working_block().wirevector_by_name)
 
     def test_add_net(self):
-        self.assertRaises(pyrtl.PyrtlError, self.block.add_net, None )
-        self.assertRaises(pyrtl.PyrtlError, self.block.add_net, 1 )
-        self.assertRaises(pyrtl.PyrtlError, self.block.add_net, "hi" )
+        self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().add_net, None )
+        self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().add_net, 1 )
+        self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().add_net, "hi" )
 
     def test_sanity_check(self): 
         testmissing()
@@ -30,10 +30,10 @@ class TestBlock(unittest.TestCase):
 class TestWireVector(unittest.TestCase):
 
     def setUp(self):
-        self.block = pyrtl.Block()
+        pyrtl.reset_working_block()    
     
     def tearDown(self):
-        pass
+        pyrtl.reset_working_block()    
 
     def test_assignment(self):
         testmissing()
