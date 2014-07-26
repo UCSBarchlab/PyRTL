@@ -18,10 +18,11 @@ def generate_one_bit_adder(a,b,cin):
     cout = a & b | a & cin | b & cin
     return sum,cout
 
-def generate_full_adder( a, b, cin=pyrtl.Const(0,bitwidth=1) ):
+def generate_full_adder( a, b, cin=None ):
     """ Generates a arbitrary bitwidth ripple-carry adder """
     assert len(a) == len(b)
-
+    if cin is None:
+        cin = pyrtl.Const(0,bitwidth=1)
     if len(a)==1:
         sumbits, cout = generate_one_bit_adder(a,b,cin)
     else:

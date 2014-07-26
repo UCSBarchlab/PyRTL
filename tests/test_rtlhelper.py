@@ -13,9 +13,11 @@ class TestRTLAdderDesign(unittest.TestCase):
         pyrtl.reset_working_block()
         
     def test_complete_adders(self):
-        for bitwidth in range(1,10):
+        for bitwidth in range(9,10):
             r = pyrtl.Register(bitwidth=bitwidth, name='r')
-            r.next, cout = generate_full_adder(r, pyrtl.Const(1).zero_extended(bitwidth) )
+            const_one = pyrtl.Const(1)
+            addby = const_one.zero_extended(bitwidth)
+            r.next, cout = generate_full_adder(r, addby )
  
             self.assertTrue( isinstance(r,pyrtl.Register) )
             self.assertTrue( isinstance(cout,pyrtl.WireVector) )
