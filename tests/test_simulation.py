@@ -45,7 +45,6 @@ class TestRTLSimulationTraceWithMux(unittest.TestCase):
         pass
         
     def test_adder_simulation(self):
-        return
         sim_trace = pyrtl.SimulationTrace()
         # build the actual simulation environment
         sim = pyrtl.Simulation( tracer=sim_trace )

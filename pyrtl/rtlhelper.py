@@ -69,6 +69,10 @@ class Const(WireVector):
         # infer bitwidth if it is not specified explicitly
         if bitwidth is None:
             bitwidth = len(bin(val))-2
+        if not isinstance(bitwidth,int):
+            raise PyrtlError(
+                'error, bitwidth must be from type int, instead Const was passed "%s" of type %s'
+                % (str(bitwidth),type(bitwidth)) )
         # check sanity of bitwidth
         if (val >> bitwidth) != 0:
             raise PyrtlError(
