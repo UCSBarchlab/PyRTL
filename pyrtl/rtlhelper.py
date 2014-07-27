@@ -145,7 +145,16 @@ class MemBlock(object):
     # data = memory[addr]  (infer read port)
     # memory[addr] = data  (infer write port)
     # Not currently implemented:  memory[addr] <<= data (infer write port)
-    def __init__(self,  bitwidth, addrwidth, name=None):
+    def __init__(self,  bitwidth, addrwidth, name=None, block=None):
+
+        if isinstance(block, Block):
+            self.block = block
+        elif block is None:
+            self.block = working_block();
+        else:
+            raise PyrtlError(
+                'Attempt to link MemBlock to block not derived of type Block')
+
         if bitwidth <= 0:
             raise PyrtlError
         if addrwidth <= 0:

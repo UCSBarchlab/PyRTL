@@ -41,16 +41,15 @@ class TestRTLSimulationTraceWithMux(unittest.TestCase):
         self.sel = pyrtl.Input(bitwidth=1)
         self.muxout = pyrtl.Output(bitwidth=bitwidth, name='muxout')
         self.muxout <<= generate_full_mux(self.a, self.b, self.sel)
+
+        # build the actual simulation environment
+        self.sim_trace = pyrtl.SimulationTrace()
+        self.sim = pyrtl.Simulation( tracer=self.sim_trace )
         
     def tearDown(self):
         pass
         
     def test_adder_simulation(self):
-        sim_trace = pyrtl.SimulationTrace()
-        # build the actual simulation environment
-        sim = pyrtl.Simulation( tracer=sim_trace )
-
-        # step through 15 cycles
         input_signals = {}
         input_signals[0] = {self.a:0, self.b:1, self.sel:1}
         input_signals[1] = {self.a:0, self.b:2, self.sel:1}
@@ -59,11 +58,56 @@ class TestRTLSimulationTraceWithMux(unittest.TestCase):
         input_signals[4] = {self.a:2, self.b:1, self.sel:0}
         input_signals[5] = {self.a:0, self.b:1, self.sel:0}
         for i in xrange(6):  
-            sim.step( input_signals[i] )
+            self.sim.step( input_signals[i] )
 
         output = StringIO.StringIO()
-        sim_trace.print_trace(output)
+        self.sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'muxout 120120\n')
+
+class TestRTLMemBlockSimulation(unittest.TestCase):
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.bitwidth = 3
+        self.addrwidth = 4
+        self.output1 = pyrtl.Output(self.bitwidth,"o1")
+        self.output2 = pyrtl.Output(self.bitwidth,"o2")
+        self.read_addr1 = pyrtl.Input(self.addrwidth)
+        self.read_addr2 = pyrtl.Input(self.addrwidth)
+        self.write_addr = pyrtl.Input(self.addrwidth)
+        self.write_data = pyrtl.Input(self.bitwidth)
+        self.memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
+        self.output1 <<= self.memory[self.read_addr1]
+        self.output2 <<= self.memory[self.read_addr2]
+        self.memory[self.write_addr] = self.write_data
+
+        # build the actual simulation environment
+        self.sim_trace = pyrtl.SimulationTrace()
+        self.sim = pyrtl.Simulation( tracer=self.sim_trace )
+
+    def tearDown(self):
+        pyrtl.reset_working_block()
+
+    def test_simple_memblock(self):
+        input_signals = {}
+        input_signals[0] = {self.read_addr1:0, self.read_addr2:1, self.write_addr:4, self.write_data:5}
+        input_signals[1] = {self.read_addr1:4, self.read_addr2:1, self.write_addr:0, self.write_data:5}
+        input_signals[2] = {self.read_addr1:0, self.read_addr2:4, self.write_addr:1, self.write_data:6}
+        input_signals[3] = {self.read_addr1:1, self.read_addr2:1, self.write_addr:0, self.write_data:0}
+        input_signals[4] = {self.read_addr1:6, self.read_addr2:0, self.write_addr:6, self.write_data:7}
+        for i in xrange(5):  
+            self.sim.step( input_signals[i] )
+
+        output = StringIO.StringIO()
+        self.sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), 'o1 05567\no2 00560\n')
+
 
 if __name__ == '__main__':
   unittest.main()
+
+
+
+
+
+

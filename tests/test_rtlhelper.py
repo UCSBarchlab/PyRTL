@@ -28,33 +28,25 @@ if __name__ == "__main__":
 
 class TestRTLMemBlockDesign(unittest.TestCase):
 
-    """
-    TODO: get mem test integrated into new class
-    def memUnit(address,readWire,writeSelect,bitwidth):
-        "generates a functioning memory unit"
-        #write select wire is high when you want to write an low when reading
+    def setUp(self):
+        pyrtl.reset_working_block()
     
-    inDataIncrement = rtl.Input(3,"InDataIncrement")
-    addressIncrement = rtl.Input(3,"addressIncrement")
-    outAddressIncrement = rtl.Input(3,"outAddressIncrement")
+    def tearDown(self):
+        pyrtl.reset_working_block()
 
-    output = rtl.Output(3,"Output")
+    def test_simple_memblock(self):
+        bitwidth = 3
 
+        output1 = pyrtl.Output(bitwidth,"output1")
+        output2 = pyrtl.Output(bitwidth,"output2")
 
-    bitwidth = 3
-    memInData = rtl.Register(bitwidth=bitwidth,name='memInData')
-    memInData.next, cout = add(memInData, inDataIncrement )
+        mem_read_address1 = pyrtl.Input(bitwidth,name='mem_read_address1')
+        mem_read_address2 = pyrtl.Input(bitwidth,name='mem_read_address2')
+        mem_write_address = pyrtl.Input(bitwidth,name='mem_write_address')
+        mem_write_data = pyrtl.Input(bitwidth,name='mem_write_data')
 
-    memAddress =rtl.Register(bitwidth=bitwidth,name='memAddress')
-    memAddress.next, cout = add(memAddress, addressIncrement )
+        memory = pyrtl.MemBlock(bitwidth=bitwidth, addrwidth=bitwidth, name='adder_mem')
 
-    memOutAddress =rtl.Register(bitwidth=bitwidth,name='memOutAddress')
-    memOutAddress.next, cout = add(memOutAddress, outAddressIncrement )
-   
-    adderMem = rtl.MemBlock(bitwidth = bitwidth,addrwidth = bitwidth,name ='adderMem')
-    output <<= adderMem[memOutAddress]
-    adderMem[memAddress] = memInData
-    """
-
-    pass
-
+        output1 <<= memory[mem_read_address1]
+        output2 <<= memory[mem_read_address2]
+        memory[mem_write_address] = mem_write_data
