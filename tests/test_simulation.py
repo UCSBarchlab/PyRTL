@@ -39,8 +39,9 @@ class TestRTLSimulationTraceWithMux(unittest.TestCase):
         self.a = pyrtl.Input(bitwidth=bitwidth)
         self.b = pyrtl.Input(bitwidth=bitwidth)
         self.sel = pyrtl.Input(bitwidth=1)
-        self.muxout = generate_full_mux(self.a, self.b, self.sel)
-     
+        self.muxout = pyrtl.Output(bitwidth=bitwidth, name='muxout')
+        self.muxout <<= generate_full_mux(self.a, self.b, self.sel)
+        
     def tearDown(self):
         pass
         
@@ -52,12 +53,17 @@ class TestRTLSimulationTraceWithMux(unittest.TestCase):
         # step through 15 cycles
         input_signals = {}
         input_signals[0] = {self.a:0, self.b:1, self.sel:1}
-        for i in xrange(15):  
-            sim.step( input_signals[0] )
+        input_signals[1] = {self.a:0, self.b:2, self.sel:1}
+        input_signals[2] = {self.a:0, self.b:0, self.sel:1}
+        input_signals[3] = {self.a:1, self.b:1, self.sel:0}
+        input_signals[4] = {self.a:2, self.b:1, self.sel:0}
+        input_signals[5] = {self.a:0, self.b:1, self.sel:0}
+        for i in xrange(6):  
+            sim.step( input_signals[i] )
 
         output = StringIO.StringIO()
         sim_trace.print_trace(output)
-        self.assertEqual(output.getvalue(), '\n')
+        self.assertEqual(output.getvalue(), 'muxout 120120\n')
 
 if __name__ == '__main__':
   unittest.main()

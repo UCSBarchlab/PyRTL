@@ -14,3 +14,4 @@ todo list:
 * should be PEP8 compliant
 * multiple nested blocks should be supported
 * add verilog export option to block
+* add debug mode, where we track call stack for each wirevector initiated
