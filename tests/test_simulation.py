@@ -5,6 +5,50 @@ import StringIO
 
 from helperfunctions import *
 
+class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.bitwidth = 3
+        self.r = pyrtl.Register(bitwidth=self.bitwidth, name='r')
+    
+    def tearDown(self):
+        pass
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation( tracer=sim_trace )
+        for i in xrange(8):
+            sim.step( {} )
+        output = StringIO.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_string)
+        
+    def test_not_simulation(self):
+        self.r.next <<= ~ self.r
+        self.check_trace('r 07070707\n')
+
+    def test_and_simulation(self):
+        self.r.next <<= (~ self.r) & pyrtl.Const(6,bitwidth=self.bitwidth)
+        self.check_trace('r 06060606\n')
+
+    def test_or_simulation(self):
+        self.r.next <<= self.r | pyrtl.Const(4,bitwidth=self.bitwidth)
+        self.check_trace('r 04444444\n')
+
+    def test_xor_simulation(self):
+        self.r.next <<= self.r ^ pyrtl.Const(4,bitwidth=self.bitwidth)
+        self.check_trace('r 04040404\n')
+
+    def test_plus_simulation(self):
+        self.r.next <<= self.r + pyrtl.Const(2,bitwidth=self.bitwidth)
+        self.check_trace('r 02460246\n')
+
+    def test_minus_simulation(self):
+        self.r.next <<= self.r - pyrtl.Const(1,bitwidth=self.bitwidth)
+        self.check_trace('r 07654321\n')
+
+
 class TestRTLSimulationTraceWithAdder(unittest.TestCase):
 
     def setUp(self):
@@ -17,7 +61,6 @@ class TestRTLSimulationTraceWithAdder(unittest.TestCase):
         pass
         
     def test_adder_simulation(self):
-        print pyrtl.working_block()
         sim_trace = pyrtl.SimulationTrace()
         on_reset = {} # signal states to be set when reset is asserted
         # build the actual simulation environment

@@ -16,7 +16,7 @@ class Simulation(object):
     """A class for simulating blocks of logic step by step."""
 
     def __init__(
-            self, register_value_map=None, default_value=None,
+            self, register_value_map=None, default_value=0,
             tracer=None, block=None):
 
         if block is None:

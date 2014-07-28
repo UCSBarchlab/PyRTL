@@ -174,9 +174,10 @@ class MemBlock(object):
 
     def __getitem__(self, item):
         if not isinstance(item, WireVector):
-            raise PyrtlError
+            raise PyrtlError('error, index to a memblock must be a WireVector (or derived) type')
         if len(item) != self.addrwidth:
-            raise PyrtlError
+            raise PyrtlError('error, width of memblock index "%s" is %d, '
+                'addrwidth is %d' % (item.name,len(item),self.addrwidth) )
 
         data = WireVector(bitwidth=self.bitwidth)
         self.read_data.append(data)
@@ -209,6 +210,14 @@ class MemBlock(object):
         self.write_data.append(val)
         self.write_addr.append(item)
         self._update_net()
+
+    @property
+    def write_enable(self):
+        raise PyrtlError('error, attempt to read the write_enable signal (set with "=" not "<<=")')
+
+    @write_enable.setter
+    def write_enable(self, value):
+        raise NotImplementedError
 
 
 #-----------------------------------------------------------------

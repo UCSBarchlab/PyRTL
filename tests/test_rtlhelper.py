@@ -30,23 +30,30 @@ class TestRTLMemBlockDesign(unittest.TestCase):
 
     def setUp(self):
         pyrtl.reset_working_block()
+        self.bitwidth = 3
+        self.addrwidth = 5
+        self.output1 = pyrtl.Output(self.bitwidth,"output1")
+        self.output2 = pyrtl.Output(self.bitwidth,"output2")
+        self.mem_read_address1 = pyrtl.Input(self.addrwidth,name='mem_read_address1')
+        self.mem_read_address2 = pyrtl.Input(self.addrwidth,name='mem_read_address2')
+        self.mem_write_address = pyrtl.Input(self.addrwidth,name='mem_write_address')
+        self.mem_write_data = pyrtl.Input(self.bitwidth,name='mem_write_data')
     
     def tearDown(self):
         pyrtl.reset_working_block()
 
-    def test_simple_memblock(self):
-        bitwidth = 3
+    def test_memblock_simple(self):
+        memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
+        self.output1 <<= memory[self.mem_read_address1]
+        self.output2 <<= memory[self.mem_read_address2]
+        memory[self.mem_write_address] = self.mem_write_data
 
-        output1 = pyrtl.Output(bitwidth,"output1")
-        output2 = pyrtl.Output(bitwidth,"output2")
+    def test_memblock_with_write_enable_with_equalsign(self):
+        memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
+        memory.write_enable = pyrtl.Const(1,bitwidth=1)
+        self.output1 <<= memory[self.mem_read_address1]
+        self.output2 <<= memory[self.mem_read_address2]
+        memory[self.mem_write_address] = self.mem_write_data
 
-        mem_read_address1 = pyrtl.Input(bitwidth,name='mem_read_address1')
-        mem_read_address2 = pyrtl.Input(bitwidth,name='mem_read_address2')
-        mem_write_address = pyrtl.Input(bitwidth,name='mem_write_address')
-        mem_write_data = pyrtl.Input(bitwidth,name='mem_write_data')
-
-        memory = pyrtl.MemBlock(bitwidth=bitwidth, addrwidth=bitwidth, name='adder_mem')
-
-        output1 <<= memory[mem_read_address1]
-        output2 <<= memory[mem_read_address2]
-        memory[mem_write_address] = mem_write_data
+    def test_memblock_with_write_enable_with_shiftset(self):
+        testmissing()
