@@ -15,6 +15,7 @@ Const wire vectors), and concat (which takes an arbitrary set of wire vector
 parameters and concats them into one new wire vector which it returns.
 """
 
+import collections
 from block import *
 
 
@@ -310,7 +311,7 @@ class Register(WireVector):
 # Based on the number of reads and writes a memory will be inferred
 # with the correct number of ports to support that
 
-DataWithEnable = namedtuple('DataWithEnable', 'data, enable')
+DataWithEnable = collections.namedtuple('DataWithEnable', 'data, enable')
 
 class MemBlock(object):
     """ An object for specifying block memories """
@@ -364,11 +365,13 @@ class MemBlock(object):
             self.block.logic.remove(self.stored_net)
         assert len(self.write_addr) == len(self.write_data) # not sure about this one
 
+        # construct the arg list from reads and writes
+        coupled_write_args = zip(self.write_addr, self.write_data, self.write_enable)
+        flattened_write_args = [item for sublist in coupled_write_args for item in sublist]
         net = LogicNet(
             op='m',
             op_param=(self.id, len(self.read_addr), len(self.write_addr)),
-            args=tuple(self.read_addr + self.write_addr + self.write_data),
-            # need to be interleaved
+            args=tuple(self.read_addr + flattened_write_args),
             dests=tuple(self.read_data))
         self.block.add_net(net)
         self.stored_net = net

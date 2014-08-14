@@ -10,6 +10,7 @@ from wirevector import Input, Output
 from wirevector import Const
 from wirevector import Register
 from wirevector import MemBlock
+from wirevector import DataWithEnable
 from wirevector import as_wires
 from wirevector import concat
 from wirevector import working_block 

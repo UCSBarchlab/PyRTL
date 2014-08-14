@@ -74,7 +74,7 @@ class TestRTLMemBlockDesign(unittest.TestCase):
         we = pyrtl.Const(1,bitwidth=1)
         self.output1 <<= memory[self.mem_read_address1]
         self.output2 <<= memory[self.mem_read_address2]
-        memory[self.mem_write_address] = DataWithEnable(self.mem_write_data, enable=we)
+        memory[self.mem_write_address] = pyrtl.DataWithEnable(self.mem_write_data, enable=we)
 
     def test_memblock_with_write_enable_with_shiftset(self):
         testmissing()
