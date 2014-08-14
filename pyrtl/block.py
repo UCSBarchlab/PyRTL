@@ -69,8 +69,8 @@ class Block(object):
       at posedge).  Multiple read and write ports are possible, and op_param
       requires three numbers (memory id, num reads, num writes). It assumes
       that operator reads have one addr (an arg) and one data (a dest).
-      Writes have two args (addr and data).  Reads are specified first and then
-      writes.
+      Writes have three args (addr, data, and write enable).  Reads are
+      specified first and then writes.
 
     The connecting elements (args and dests) should be WireVectors or derived
     from WireVector, and registered seperately with the block using

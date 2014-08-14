@@ -303,6 +303,15 @@ class Register(WireVector):
 #   |  | |___  |  | \__/ |  \  |     |__) |___ \__/ \__, |  \ 
 #
 
+# MemBlock supports any number of the following operations:
+# read: d = mem[address]
+# write: mem[address] = d
+# write with an enable: mem[address] = DataWithEnable(d,enable=we)
+# Based on the number of reads and writes a memory will be inferred
+# with the correct number of ports to support that
+
+DataWithEnable = namedtuple('DataWithEnable', 'data, enable')
+
 class MemBlock(object):
     """ An object for specifying block memories """
 
@@ -335,6 +344,7 @@ class MemBlock(object):
         self.read_data = []  # dest
         self.write_addr = []  # arg
         self.write_data = []  # arg
+        self.write_enable = []  # arg
 
     def __getitem__(self, item):
         if not isinstance(item, WireVector):
@@ -358,30 +368,37 @@ class MemBlock(object):
             op='m',
             op_param=(self.id, len(self.read_addr), len(self.write_addr)),
             args=tuple(self.read_addr + self.write_addr + self.write_data),
+            # need to be interleaved
             dests=tuple(self.read_data))
         self.block.add_net(net)
         self.stored_net = net
 
     def __setitem__(self, item, val):
+        # check that 'item' is a valid address vector
         if not isinstance(item, WireVector):
             raise PyrtlError
         if len(item) != self.addrwidth:
             raise PyrtlError
-        if not isinstance(val, WireVector):
-            raise PyrtlError
-        if len(val) != self.bitwidth:
-            raise PyrtlError
-        self.write_data.append(val)
-        self.write_addr.append(item)
-        self._update_net()
+        addr = item
 
-    #@property
-    #def write_enable(self):
-    #    raise PyrtlError('error, attempt to read the write_enable signal (set with "=" not "<<=")')
-    #
-    #@write_enable.setter
-    #def write_enable(self, value):
-    #    raise NotImplementedError
+        # check that 'val' is a valid datavector
+        if isinstance(val, WireVector):
+            data = val
+            enable = Const(1,bitwidth=1)
+        elif isinstance(val, DataWithEnable):
+            data = val.data
+            enable = val.enable
+        else:
+            raise PyrtlError
+        if len(data) != self.bitwidth:
+            raise PyrtlError
+        if len(enable) != 1:
+            raise PyrtlError
+            
+        self.write_data.append(data)
+        self.write_addr.append(addr)
+        self.write_enable.append(enable)
+        self._update_net()
 
 
 #-----------------------------------------------------------------

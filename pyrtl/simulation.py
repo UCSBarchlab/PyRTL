@@ -133,12 +133,14 @@ class Simulation(object):
                 memid = net.op_param[0]
                 num_reads = net.op_param[1]
                 num_writes = net.op_param[2]
-                if num_reads + 2*num_writes != len(net.args):
+                if num_reads + 3*num_writes != len(net.args):
                     raise PyrtlInternalError
-                for i in range(num_reads, num_reads + 2*num_writes, 2):
+                for i in range(num_reads, num_reads + 3*num_writes, 3):
                     write_addr = self.value[net.args[i]]
                     write_val = self.value[net.args[i+1]]
-                    self.memvalue[(memid, write_addr)] = write_val
+                    write_enable = self.value[net.args[i+2]]
+                    if write_enable:
+                        self.memvalue[(memid, write_addr)] = write_val
             else:
                 raise PyrtlInternalError
 
