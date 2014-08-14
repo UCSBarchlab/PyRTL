@@ -1,19 +1,19 @@
 
 # core rtl constructs
-from rtlcore import Block
-from rtlcore import WireVector
-from rtlcore import PyrtlError
-from rtlcore import PyrtlInternalError
+from block import Block
+from block import PyrtlError
+from block import PyrtlInternalError
 
 # convenience classes for building hardware
-from rtlhelper import Input, Output
-from rtlhelper import Const
-from rtlhelper import Register
-from rtlhelper import MemBlock
-from rtlhelper import as_wires
-from rtlhelper import concat
-from rtlhelper import working_block 
-from rtlhelper import reset_working_block
+from wirevector import WireVector
+from wirevector import Input, Output
+from wirevector import Const
+from wirevector import Register
+from wirevector import MemBlock
+from wirevector import as_wires
+from wirevector import concat
+from wirevector import working_block 
+from wirevector import reset_working_block
 
 # block simulation support
 from simulation import Simulation

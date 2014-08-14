@@ -1,7 +1,8 @@
 """
-rtlhelper has all of the basic extended types useful for creating logic.
+wirevector has all of the basic extended types useful for creating logic.
 
 Types defined in this file include:
+WireVector: the base class for ordered collections of wires
 Input: a wire vector that recieves an input for a block
 Output: a wire vector that defines an output for a block
 Const: a wire vector fed by a constant set of values defined as an integer
@@ -14,7 +15,7 @@ Const wire vectors), and concat (which takes an arbitrary set of wire vector
 parameters and concats them into one new wire vector which it returns.
 """
 
-from rtlcore import *
+from block import *
 
 
 #------------------------------------------------------------------------
@@ -33,6 +34,169 @@ def working_block():
 def reset_working_block():
     global _singleton_block
     _singleton_block = Block()
+
+
+#-----------------------------------------------------------------
+#        ___  __  ___  __   __     
+#  \  / |__  /  `  |  /  \ |__)   
+#   \/  |___ \__,  |  \__/ |  \ 
+#
+
+class WireVector(object):
+    def __init__(self, bitwidth=None, name=None, block=None):
+
+        # figure out what block this wirevector should be part of
+        if isinstance(block, Block):
+            self.block = block
+        elif block is None:
+            self.block = working_block();
+        else:
+            raise PyrtlError(
+                'Attempt to link WireVector to block not derived of type Block')
+        
+
+        # figure out a name
+        if name is None:
+            name = Block.next_tempvar_name()
+        if name.lower() in ['clk', 'clock']:
+            raise PyrtlError(
+                'Clock signals should never be explicitly instantiated')
+        self.name = name
+
+        # now handle the bitwidth
+        if bitwidth is not None:
+            if not isinstance(bitwidth, int):
+                raise PyrtlError(
+                    'error attempting to create wirevector with bitwidth of type "%s" '
+                    'instead of integer' % type(bitwidth))
+            if bitwidth <= 0:
+                raise PyrtlError(
+                    'error attempting to create wirevector with bitwidth of length "%d", '
+                    'all bitwidths must be > 0' % bitwidth)
+        self.bitwidth = bitwidth
+
+        # finally, add the wirevector back in the mother block
+        self.block.add_wirevector(self)
+
+    def __repr__(self):
+        return ''.join([
+            type(self).__name__,
+            ':',
+            self.name,
+            '/',
+            str(self.bitwidth)
+            ])
+
+    def __ilshift__(self, other):
+        if not isinstance(other, WireVector):
+            other = Const(other)
+        if self.bitwidth is None:
+            self.bitwidth = len(other)
+        else:
+            if len(self) != len(other):
+                raise PyrtlError(
+                    'error attempting to assign a wirevector to an existing wirevector with a different bitwidth')
+
+        net = LogicNet(
+            op=None,
+            op_param=None,
+            args=(other,),
+            dests=(self,))
+        self.block.add_net(net)
+        return self
+
+    def logicop(self, other, op):
+        a, b = self, other
+        # convert constants if necessary
+        if not isinstance(b, WireVector):
+            b = Const(b)
+        # check size of operands
+        if len(a) < len(b):
+            a = a.sign_extended(len(b))
+        elif len(b) < len(a):
+            b = b.sign_extended(len(a))
+        # if len(a) != len(b):
+        #    raise PyrtlError(
+        #       'error, cannot apply op "%s" to wirevectors'
+        #       ' of different length' % op)
+        s = WireVector(bitwidth=len(a))  # both are same length now
+        net = LogicNet(
+            op=op,
+            op_param=None,
+            args=(a, b),
+            dests=(s,))
+        self.block.add_net(net)
+        return s
+
+    def __and__(self, other):
+        return self.logicop(other, '&')
+
+    def __or__(self, other):
+        return self.logicop(other, '|')
+
+    def __xor__(self, other):
+        return self.logicop(other, '^')
+
+    def __add__(self, other):
+        return self.logicop(other, '+')
+
+    def __sub__(self, other):
+        return self.logicop(other, '-')
+
+    def __invert__(self):
+        outwire = WireVector(bitwidth=len(self))
+        net = LogicNet(
+            op='~',
+            op_param=None,
+            args=(self,),
+            dests=(outwire,))
+        self.block.add_net(net)
+        return outwire
+
+    def __getitem__(self, item):
+        assert self.bitwidth is not None # should never be user visible
+        allindex = [i for i in range(self.bitwidth)]
+        if isinstance(item, int):
+            selectednums = [allindex[item]]
+        else:
+            selectednums = allindex[item]  # slice
+        outwire = WireVector(bitwidth=len(selectednums))
+        net = LogicNet(
+            op='s',
+            op_param=tuple(selectednums),
+            args=(self,),
+            dests=(outwire,))
+        self.block.add_net(net)
+        return outwire
+
+    def __len__(self):
+        return self.bitwidth
+
+    def sign_extended(self, bitwidth):
+        """ return a sign extended wirevector derived from self """
+        return self._extended(bitwidth, self[-1])
+
+    def zero_extended(self, bitwidth):
+        """ return a zero extended wirevector derived from self """
+        return self._extended(bitwidth, Const(0, bitwidth=1))
+
+    def _extended(self, bitwidth, extbit):
+        numext = bitwidth - self.bitwidth
+        if numext == 0:
+            return self
+        elif numext < 0:
+            raise PyrtlError(
+                'error, zero_extended cannot reduce the number of bits')
+        else:
+            extvector = WireVector(bitwidth=numext)
+            net = LogicNet(
+                op='s',
+                op_param=(0,)*numext,
+                args=(extbit,),
+                dests=(extvector,))
+            self.block.add_net(net)
+            return concat(extvector, self)
+
 
 #------------------------------------------------------------------------
 #  ___     ___  ___       __   ___  __           ___  __  ___  __   __   __  
@@ -211,13 +375,13 @@ class MemBlock(object):
         self.write_addr.append(item)
         self._update_net()
 
-    @property
-    def write_enable(self):
-        raise PyrtlError('error, attempt to read the write_enable signal (set with "=" not "<<=")')
-
-    @write_enable.setter
-    def write_enable(self, value):
-        raise NotImplementedError
+    #@property
+    #def write_enable(self):
+    #    raise PyrtlError('error, attempt to read the write_enable signal (set with "=" not "<<=")')
+    #
+    #@write_enable.setter
+    #def write_enable(self, value):
+    #    raise NotImplementedError
 
 
 #-----------------------------------------------------------------

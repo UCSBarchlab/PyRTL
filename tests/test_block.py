@@ -27,25 +27,6 @@ class TestBlock(unittest.TestCase):
         testmissing()
 
 
-class TestWireVector(unittest.TestCase):
-
-    def setUp(self):
-        pyrtl.reset_working_block()    
-    
-    def tearDown(self):
-        pyrtl.reset_working_block()    
-
-    def test_assignment(self):
-        testmissing()
-    def test_logic_operatons(self):
-        testmissing()
-    def test_slice(self):
-        testmissing()
-    def test_zero_extend(self):
-        testmissing()
-    def test_sign_extend(self):
-        testmissing()
-
 if __name__ == "__main__":
   unittest.main()
 

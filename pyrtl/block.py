@@ -1,13 +1,11 @@
 
 """
-rtlcore contains the minumum necessary elements for PyRTL
+Block contains the core netlist datastructure for PyRTL
 
 The classes PyrtlError and PyrtlInternalError are the two main exeptions to 
 be thrown when things go wrong.  Block is the netlist storing module for a
 chunk of hardware with well defined inputs and outputs, it contains both the 
 basic logic elements and references to the wires that connect them together.
-Wirevector is the the named element that connect nets together and is mutually
-dependent on Block.
 """
 
 
@@ -91,6 +89,7 @@ class Block(object):
 
     def add_wirevector(self, wirevector):
         """ Add a wirevector object to the block."""
+        _check_type_wirevector(wirevector)
         self.wirevector_set.add(wirevector)
         self.wirevector_by_name[wirevector.name] = wirevector
 
@@ -101,10 +100,7 @@ class Block(object):
                 'error attempting to create logic net from "%s" '
                 'instead of LogicNet' % type(net))
         for w in net.args + net.dests:
-            if not isinstance(w, WireVector):
-                raise PyrtlError(
-                    'error attempting to create logic with input of type "%s" '
-                    'instead of WireVector' % type(w))
+            _check_type_wirevector(w)
             if w not in self.wirevector_set:
                 raise PyrtlError(
                     'error making net with unknown source "%s"'
@@ -177,186 +173,9 @@ class Block(object):
         return cls._memid_count
 
 
-#-----------------------------------------------------------------
-#        ___  __  ___  __   __     
-#  \  / |__  /  `  |  /  \ |__)   
-#   \/  |___ \__,  |  \__/ |  \ 
-#
-
-class WireVector(object):
-    def __init__(self, bitwidth=None, name=None, block=None):
-
-        # figure out what block this wirevector should be part of
-        if isinstance(block, Block):
-            self.block = block
-        elif block is None:
-            self.block = _rtlhelper_working_block();
-        else:
-            raise PyrtlError(
-                'Attempt to link WireVector to block not derived of type Block')
-        
-
-        # figure out a name
-        if name is None:
-            name = Block.next_tempvar_name()
-        if name.lower() in ['clk', 'clock']:
-            raise PyrtlError(
-                'Clock signals should never be explicitly instantiated')
-        self.name = name
-
-        # now handle the bitwidth
-        if bitwidth is not None:
-            if not isinstance(bitwidth, int):
-                raise PyrtlError(
-                    'error attempting to create wirevector with bitwidth of type "%s" '
-                    'instead of integer' % type(bitwidth))
-            if bitwidth <= 0:
-                raise PyrtlError(
-                    'error attempting to create wirevector with bitwidth of length "%d", '
-                    'all bitwidths must be > 0' % bitwidth)
-        self.bitwidth = bitwidth
-
-        # finally, add the wirevector back in the mother block
-        self.block.add_wirevector(self)
-
-    def __repr__(self):
-        return ''.join([
-            type(self).__name__,
-            ':',
-            self.name,
-            '/',
-            str(self.bitwidth)
-            ])
-
-    def __ilshift__(self, other):
-        if not isinstance(other, WireVector):
-            other = _rtlhelper_const(other)
-        if self.bitwidth is None:
-            self.bitwidth = len(other)
-        else:
-            if len(self) != len(other):
-                raise PyrtlError(
-                    'error attempting to assign a wirevector to an existing wirevector with a different bitwidth')
-
-        net = LogicNet(
-            op=None,
-            op_param=None,
-            args=(other,),
-            dests=(self,))
-        self.block.add_net(net)
-        return self
-
-    def logicop(self, other, op):
-        a, b = self, other
-        # convert constants if necessary
-        if not isinstance(b, WireVector):
-            b = _rtlhelper_const(b)
-        # check size of operands
-        if len(a) < len(b):
-            a = a.sign_extended(len(b))
-        elif len(b) < len(a):
-            b = b.sign_extended(len(a))
-        # if len(a) != len(b):
-        #    raise PyrtlError(
-        #       'error, cannot apply op "%s" to wirevectors'
-        #       ' of different length' % op)
-        s = WireVector(bitwidth=len(a))  # both are same length now
-        net = LogicNet(
-            op=op,
-            op_param=None,
-            args=(a, b),
-            dests=(s,))
-        self.block.add_net(net)
-        return s
-
-    def __and__(self, other):
-        return self.logicop(other, '&')
-
-    def __or__(self, other):
-        return self.logicop(other, '|')
-
-    def __xor__(self, other):
-        return self.logicop(other, '^')
-
-    def __add__(self, other):
-        return self.logicop(other, '+')
-
-    def __sub__(self, other):
-        return self.logicop(other, '-')
-
-    def __invert__(self):
-        outwire = WireVector(bitwidth=len(self))
-        net = LogicNet(
-            op='~',
-            op_param=None,
-            args=(self,),
-            dests=(outwire,))
-        self.block.add_net(net)
-        return outwire
-
-    def __getitem__(self, item):
-        assert self.bitwidth is not None # should never be user visible
-        allindex = [i for i in range(self.bitwidth)]
-        if isinstance(item, int):
-            selectednums = [allindex[item]]
-        else:
-            selectednums = allindex[item]  # slice
-        outwire = WireVector(bitwidth=len(selectednums))
-        net = LogicNet(
-            op='s',
-            op_param=tuple(selectednums),
-            args=(self,),
-            dests=(outwire,))
-        self.block.add_net(net)
-        return outwire
-
-    def __len__(self):
-        return self.bitwidth
-
-    def sign_extended(self, bitwidth):
-        """ return a sign extended wirevector derived from self """
-        return self._extended(bitwidth, self[-1])
-
-    def zero_extended(self, bitwidth):
-        """ return a zero extended wirevector derived from self """
-        return self._extended(bitwidth, _rtlhelper_const(0, bitwidth=1))
-
-    def _extended(self, bitwidth, extbit):
-        numext = bitwidth - self.bitwidth
-        if numext == 0:
-            return self
-        elif numext < 0:
-            raise PyrtlError(
-                'error, zero_extended cannot reduce the number of bits')
-        else:
-            extvector = WireVector(bitwidth=numext)
-            net = LogicNet(
-                op='s',
-                op_param=(0,)*numext,
-                args=(extbit,),
-                dests=(extvector,))
-            self.block.add_net(net)
-            return _rtlhelper_concat(extvector, self)
-
-
-#-----------------------------------------------------------------
-#    __  ___            ___       __   ___  __  
-#   |__)  |  |    |__| |__  |    |__) |__  |__) 
-#   |  \  |  |___ |  | |___ |___ |    |___ |  \ 
-#  
-
-# these functions wrap the circular dependencies between rtlcore
-# and rtlhelper.  Rather than putting imports all through the code
-# all necessary imports should happen here
-
-def _rtlhelper_const( integer_constant, bitwidth=None ):
-    import rtlhelper
-    return rtlhelper.Const( integer_constant, bitwidth )
-
-def _rtlhelper_concat(*args):
-    import rtlhelper
-    return rtlhelper.concat(*args)
-
-def _rtlhelper_working_block(*args):
-    import rtlhelper
-    return rtlhelper.working_block()
+def _check_type_wirevector(w):
+    from wirevector import WireVector
+    if not isinstance(w, WireVector):
+        raise PyrtlError(
+            'error attempting to pass an input of type "%s" '
+            'instead of WireVector' % type(w))

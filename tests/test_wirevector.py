@@ -4,6 +4,29 @@ import pyrtl
 
 from helperfunctions import *
 
+class TestWireVector(unittest.TestCase):
+
+    def setUp(self):
+        pyrtl.reset_working_block()    
+    
+    def tearDown(self):
+        pyrtl.reset_working_block()    
+
+    def test_assignment(self):
+        testmissing()
+    def test_logic_operatons(self):
+        testmissing()
+    def test_slice(self):
+        testmissing()
+    def test_zero_extend(self):
+        testmissing()
+    def test_sign_extend(self):
+        testmissing()
+
+if __name__ == "__main__":
+  unittest.main()
+
+
 class TestRTLAdderDesign(unittest.TestCase):
 
     def setUp(self):
@@ -23,8 +46,6 @@ class TestRTLAdderDesign(unittest.TestCase):
             self.assertTrue( isinstance(cout,pyrtl.WireVector) )
             pyrtl.reset_working_block()
 
-if __name__ == "__main__":
-  unittest.main()
 
 class TestRTLMemBlockDesign(unittest.TestCase):
 
@@ -57,3 +78,8 @@ class TestRTLMemBlockDesign(unittest.TestCase):
 
     def test_memblock_with_write_enable_with_shiftset(self):
         testmissing()
+
+if __name__ == "__main__":
+  unittest.main()
+
+

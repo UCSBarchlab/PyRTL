@@ -7,7 +7,7 @@ accordingly, or write information from the Block out to the file.
 """
 
 import sys
-from rtlcore import *
+from block import *
 
 #-----------------------------------------------------------------
 #            __       ___ 
