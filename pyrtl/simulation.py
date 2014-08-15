@@ -280,7 +280,7 @@ class SimulationTrace(object):
         if block is None:
             block = working_block()
 
-        if not isinstance(block,Block):
+        if not isinstance(block, Block):
             raise PyrtlError(
                 'simulation initialization requires either a valid'
                 ' hardware block to be specified (or implied)')
@@ -305,17 +305,19 @@ class SimulationTrace(object):
             self.trace = {w: [] for w in wirevector_subset}
 
     def add_step(self, value_map):
-        if len(self.trace)==0:
-            raise PyrtlError('error, simulation trace needs at least 1 signal to track (try passing name to WireVector)')
+        if len(self.trace) == 0:
+            raise PyrtlError('error, simulation trace needs at least 1 signal'
+                             'to track (try passing name to WireVector)')
         for w in self.trace:
             self.trace[w].append(value_map[w])
 
     def print_trace(self, file=sys.stdout):
-        if len(self.trace)==0:
+        if len(self.trace) == 0:
             raise PyrtlError('error, cannot print an empty trace')
         maxlen = max([len(w.name) for w in self.trace])
         for w in sorted(self.trace, key=trace_sort_key):
-            file.write(" ".join([w.name.rjust(maxlen), ''.join(str(x) for x in self.trace[w])+"\n"]))
+            file.write(" ".join([w.name.rjust(maxlen),
+                       ''.join(str(x) for x in self.trace[w])+"\n"]))
             file.flush()
 
     def print_vcd(self, file=sys.stdout):
@@ -327,7 +329,7 @@ class SimulationTrace(object):
 
         # dump variables
         for w in sorted(self.trace, key=trace_sort_key):
-            print >>file, " ".join(["$var", "wire", str(w.bitwidth), w.name, w.name , "$end"])
+            print >>file, " ".join(["$var", "wire", str(w.bitwidth), w.name, w.name, "$end"])
         print >>file, " ".join(["$upscope", "$end"])
         print >>file, " ".join(["$endefinitions", "$end"])
         print >>file, " ".join(["$dumpvars"])
@@ -381,5 +383,3 @@ class SimulationTrace(object):
             print formatted_trace_line(w, self.trace[w]).encode('utf-8')
         if extra_line:
             print
-
-

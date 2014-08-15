@@ -2,9 +2,9 @@
 """
 Block contains the core netlist datastructure for PyRTL
 
-The classes PyrtlError and PyrtlInternalError are the two main exeptions to 
+The classes PyrtlError and PyrtlInternalError are the two main exeptions to
 be thrown when things go wrong.  Block is the netlist storing module for a
-chunk of hardware with well defined inputs and outputs, it contains both the 
+chunk of hardware with well defined inputs and outputs, it contains both the
 basic logic elements and references to the wires that connect them together.
 """
 
@@ -13,15 +13,12 @@ import collections
 import sys
 import re
 
-# All ASCII Art in "JS Stick Letters"
-
-
 
 #-----------------------------------------------------------------
-#   ___  __   __   __   __  ___      __   ___  __  
-#  |__  |__) |__) /  \ |__)  |  \ / |__) |__  /__` 
-#  |___ |  \ |  \ \__/ |  \  |   |  |    |___ .__/ 
-# 
+#   ___  __   __   __   __  ___      __   ___  __
+#  |__  |__) |__) /  \ |__)  |  \ / |__) |__  /__`
+#  |___ |  \ |  \ \__/ |  \  |   |  |    |___ .__/
+#
 
 class PyrtlError(Exception):
     pass  # raised on any user-facing error in this module
@@ -110,7 +107,7 @@ class Block(object):
                     'error, cannot make net between two different blocks')
         if net.op in set('&|^+-*'):
             widths = set(x.bitwidth for x in net.args)
-            if len(widths)>1:
+            if len(widths) > 1:
                 raise PyrtlInternalError(
                     'error operands have mismatched bitwidths')
         if net.op not in self.legal_ops:
@@ -138,7 +135,7 @@ class Block(object):
             ]
         if len(dup_list) > 0:
             raise PyrtlError('Duplicate wire names found for the following '
-                'different signals: %s' % repr(dup_list))
+                             'different signals: %s' % repr(dup_list))
 
         # check for dead input wires (not connected to anything)
         dest_set = set(wire for net in self.logic for wire in net.dests)
@@ -155,9 +152,8 @@ class Block(object):
                 'Wires declared but never connected: %s'
                 % repr([w.name for w in allwires_minus_connected]))
 
-
     # some unique name class methods useful internally
-    _tempvar_count = 1 
+    _tempvar_count = 1
     _memid_count = 0
 
     @classmethod

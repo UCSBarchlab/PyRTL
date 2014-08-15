@@ -5,7 +5,7 @@ Types defined in this file include:
 WireVector: the base class for ordered collections of wires
 Input: a wire vector that recieves an input for a block
 Output: a wire vector that defines an output for a block
-Const: a wire vector fed by a constant set of values defined as an unsigned integer
+Const: a wire vector fed by an unsigned constant
 Register: a wire vector that is latched each cycle
 MemBlock: a block of memory that can be read (async) and written (sync)
 
@@ -21,9 +21,9 @@ from block import *
 
 
 #------------------------------------------------------------------------
-#          __   __               __      __        __   __       
-#    |  | /  \ |__) |__/ | |\ | / _`    |__) |    /  \ /  ` |__/ 
-#    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \ 
+#          __   __               __      __        __   __
+#    |  | /  \ |__) |__/ | |\ | / _`    |__) |    /  \ /  ` |__/
+#    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \
 #
 
 
@@ -31,17 +31,21 @@ from block import *
 # block, but in the future we should support multiple Blocks.
 # The argument "singlton_block" should never be passed.
 _singleton_block = Block()
+
+
 def working_block():
     return _singleton_block
+
+
 def reset_working_block():
     global _singleton_block
     _singleton_block = Block()
 
 
 #-----------------------------------------------------------------
-#        ___  __  ___  __   __     
-#  \  / |__  /  `  |  /  \ |__)   
-#   \/  |___ \__,  |  \__/ |  \ 
+#        ___  __  ___  __   __
+#  \  / |__  /  `  |  /  \ |__)
+#   \/  |___ \__,  |  \__/ |  \
 #
 
 class WireVector(object):
@@ -51,11 +55,10 @@ class WireVector(object):
         if isinstance(block, Block):
             self.block = block
         elif block is None:
-            self.block = working_block();
+            self.block = working_block()
         else:
-            raise PyrtlError(
-                'Attempt to link WireVector to block not derived of type Block')
-        
+            raise PyrtlError('Attempt to link WireVector to block '
+                             'not derived of type Block')
 
         # figure out a name
         if name is None:
@@ -101,7 +104,7 @@ class WireVector(object):
         if self.bitwidth > other.bitwidth:
             # extend appropriately
             other = other.extended(self.bitwidth)
-            
+
         net = LogicNet(
             op=None,
             op_param=None,
@@ -120,12 +123,12 @@ class WireVector(object):
             a = a.extended(len(b))
         elif len(b) < len(a):
             b = b.extended(len(a))
-        resultlen = len(a) # both are the same length now
-        if op=='+' or op=='-':
-            resultlen += 1 # extra bit required for carry
-        if op=='*':
+        resultlen = len(a)  # both are the same length now
+        if op == '+' or op == '-':
+            resultlen += 1  # extra bit required for carry
+        if op == '*':
             resultlen = resultlen * 2  # more bits needed for mult
-        s = WireVector(bitwidth=resultlen) 
+        s = WireVector(bitwidth=resultlen)
         net = LogicNet(
             op=op,
             op_param=None,
@@ -136,31 +139,37 @@ class WireVector(object):
 
     def __and__(self, other):
         return self.logicop(other, '&')
+
     def __rand__(self, other):
         return self.logicop(other, '&')
 
     def __or__(self, other):
         return self.logicop(other, '|')
+
     def __ror__(self, other):
         return self.logicop(other, '|')
 
     def __xor__(self, other):
         return self.logicop(other, '^')
+
     def __rxor__(self, other):
         return self.logicop(other, '^')
 
     def __add__(self, other):
         return self.logicop(other, '+')
+
     def __radd__(self, other):
         return self.logicop(other, '+')
 
     def __sub__(self, other):
         return self.logicop(other, '-')
+
     def __rsub__(self, other):
         return self.logicop(other, '-')
 
     def __mul__(self, other):
         return self.logicop(other, '*')
+
     def __rmul__(self, other):
         return self.logicop(other, '*')
 
@@ -175,7 +184,7 @@ class WireVector(object):
         return outwire
 
     def __getitem__(self, item):
-        assert self.bitwidth is not None # should never be user visible
+        assert self.bitwidth is not None  # should never be user visible
         allindex = [i for i in range(self.bitwidth)]
         if isinstance(item, int):
             selectednums = [allindex[item]]
@@ -223,18 +232,17 @@ class WireVector(object):
             return concat(extvector, self)
 
 
-
 #------------------------------------------------------------------------
-#  ___     ___  ___       __   ___  __           ___  __  ___  __   __   __  
-# |__  \_/  |  |__  |\ | |  \ |__  |  \    \  / |__  /  `  |  /  \ |__) /__` 
-# |___ / \  |  |___ | \| |__/ |___ |__/     \/  |___ \__,  |  \__/ |  \ .__/ 
-#                                                                        
+#  ___     ___  ___       __   ___  __           ___  __  ___  __   __   __
+# |__  \_/  |  |__  |\ | |  \ |__  |  \    \  / |__  /  `  |  /  \ |__) /__`
+# |___ / \  |  |___ | \| |__/ |___ |__/     \/  |___ \__,  |  \__/ |  \ .__/
+#
 
 class Input(WireVector):
     """ A WireVector type denoting inputs to a block (no writers) """
 
     def __init__(self, bitwidth=None, name=None):
-        super(Input,self).__init__(bitwidth, name)
+        super(Input, self).__init__(bitwidth, name)
 
     def __ilshift__(self, _):
         raise PyrtlError(
@@ -246,7 +254,7 @@ class Output(WireVector):
     """ A WireVector type denoting outputs of a block (no readers) """
 
     def __init__(self, bitwidth=None, name=None):
-        super(Output,self).__init__(bitwidth, name)
+        super(Output, self).__init__(bitwidth, name)
     # todo: check that we can't read from this vector
 
 
@@ -255,30 +263,31 @@ class Const(WireVector):
 
     def __init__(self, val, bitwidth=None):
         """ Construct a constant implementation at initialization """
-        name = Block.next_constvar_name(val)        
+        name = Block.next_constvar_name(val)
 
-        if isinstance(val,int):
+        if isinstance(val, int):
             num = val
             # infer bitwidth if it is not specified explicitly
             if bitwidth is None:
-                bitwidth = len(bin(num))-2 # the -2 for the "0b" at the start of the string
-        if isinstance(val,basestring):
+                bitwidth = len(bin(num))-2  # the -2 for the "0b" at the start of the string
+        if isinstance(val, basestring):
             if bitwidth is not None:
                 raise PyrtlError('error, bitwidth parameter of const should be unspecified when'
-                    ' the const is created from a string (instead use verilog style specification)')
-            split_string = string.split(val,"'")
+                                 ' the const is created from a string (instead use verilog style'
+                                 ' specification)')
+            split_string = string.split(val, "'")
             if len(split_string) != 2:
                 raise PyrtlError('error, string for Const not in verilog "32\'b01001" style format')
             try:
                 bitwidth = int(split_string[0])
-                num = int( ''.join(['0',split_string[1]]), 0 )
+                num = int(''.join(['0', split_string[1]]), 0)
             except ValueError:
                 raise PyrtlError('error, string for Const not in verilog "32\'b01001" style format')
 
-        if not isinstance(bitwidth,int):
+        if not isinstance(bitwidth, int):
             raise PyrtlError(
                 'error, bitwidth must be from type int, instead Const was passed "%s" of type %s'
-                % (str(bitwidth),type(bitwidth)) )
+                % (str(bitwidth), type(bitwidth)))
         if num < 0:
             raise PyrtlError(
                 'error, Const is only for unsigned numbers and must be positive')
@@ -288,12 +297,12 @@ class Const(WireVector):
         if (num >> bitwidth) != 0:
             raise PyrtlError(
                 'error constant "%s" cannot fit in the specified %d bits'
-                % (str(num),bitwidth) )
+                % (str(num), bitwidth))
 
         # initialize the WireVector
         super(Const, self).__init__(bitwidth=bitwidth, name=name)
         # add the member "val" to track the value of the constant
-        self.val = num           
+        self.val = num
 
     def __ilshift__(self, other):
         raise PyrtlError(
@@ -305,7 +314,7 @@ class Register(WireVector):
     """ A WireVector with a latch in the middle (read current value, set .next value) """
 
     def __init__(self, bitwidth, name=None):
-        super(Register,self).__init__(bitwidth=bitwidth, name=name)
+        super(Register, self).__init__(bitwidth=bitwidth, name=name)
         self.reg_in = None
 
     def _makereg(self):
@@ -342,26 +351,30 @@ class Register(WireVector):
 
 
 #-----------------------------------------------------------------
-#   __     __        ___  __           ___  __  ___  __   __   __  
-#  /__` | / _` |\ | |__  |  \    \  / |__  /  `  |  /  \ |__) /__` 
-#  .__/ | \__> | \| |___ |__/     \/  |___ \__,  |  \__/ |  \ .__/ 
-#                                                            
+#   __     __        ___  __           ___  __  ___  __   __   __
+#  /__` | / _` |\ | |__  |  \    \  / |__  /  `  |  /  \ |__) /__`
+#  .__/ | \__> | \| |___ |__/     \/  |___ \__,  |  \__/ |  \ .__/
+#
 
 class SignedWireVector(WireVector):
     def extended(self, bitwidth):
         return self.sign_extended(bitwidth)
 
+
 class SignedInput(Input):
     def extended(self, bitwidth):
         return self.sign_extended(bitwidth)
+
 
 class SignedOutput(Output):
     def extended(self, bitwidth):
         return self.sign_extended(bitwidth)
 
+
 class SignedConst(Const):
     def extended(self, bitwidth):
         return self.sign_extended(bitwidth)
+
 
 class SignedRegister(Register):
     def extended(self, bitwidth):
@@ -370,9 +383,9 @@ class SignedRegister(Register):
 
 #------------------------------------------------------------------------
 #
-#         ___        __   __          __        __   __       
-#   |\/| |__   |\/| /  \ |__) \ /    |__) |    /  \ /  ` |__/ 
-#   |  | |___  |  | \__/ |  \  |     |__) |___ \__/ \__, |  \ 
+#         ___        __   __          __        __   __
+#   |\/| |__   |\/| /  \ |__) \ /    |__) |    /  \ /  ` |__/
+#   |  | |___  |  | \__/ |  \  |     |__) |___ \__/ \__, |  \
 #
 
 # MemBlock supports any number of the following operations:
@@ -383,6 +396,7 @@ class SignedRegister(Register):
 # with the correct number of ports to support that
 
 DataWithEnable = collections.namedtuple('DataWithEnable', 'data, enable')
+
 
 class MemBlock(object):
     """ An object for specifying block memories """
@@ -395,7 +409,7 @@ class MemBlock(object):
         if isinstance(block, Block):
             self.block = block
         elif block is None:
-            self.block = working_block();
+            self.block = working_block()
         else:
             raise PyrtlError(
                 'Attempt to link MemBlock to block not derived of type Block')
@@ -423,7 +437,7 @@ class MemBlock(object):
             raise PyrtlError('error, index to a memblock must be a WireVector (or derived) type')
         if len(item) != self.addrwidth:
             raise PyrtlError('error, width of memblock index "%s" is %d, '
-                'addrwidth is %d' % (item.name,len(item),self.addrwidth) )
+                             'addrwidth is %d' % (item.name, len(item), self.addrwidth))
 
         data = WireVector(bitwidth=self.bitwidth)
         self.read_data.append(data)
@@ -434,7 +448,7 @@ class MemBlock(object):
     def _update_net(self):
         if self.stored_net:
             self.block.logic.remove(self.stored_net)
-        assert len(self.write_addr) == len(self.write_data) # not sure about this one
+        assert len(self.write_addr) == len(self.write_data)  # not sure about this one
 
         # construct the arg list from reads and writes
         coupled_write_args = zip(self.write_addr, self.write_data, self.write_enable)
@@ -458,7 +472,7 @@ class MemBlock(object):
         # check that 'val' is a valid datavector
         if isinstance(val, WireVector):
             data = val
-            enable = Const(1,bitwidth=1)
+            enable = Const(1, bitwidth=1)
         elif isinstance(val, DataWithEnable):
             data = val.data
             enable = val.enable
@@ -468,12 +482,11 @@ class MemBlock(object):
             raise PyrtlError
         if len(enable) != 1:
             raise PyrtlError
-            
+
         self.write_data.append(data)
         self.write_addr.append(addr)
         self.write_enable.append(enable)
         self._update_net()
-
 
 
 #-----------------------------------------------------------------
@@ -507,4 +520,3 @@ def concat(*args):
             dests=(outwire,))
         outwire.block.add_net(net)
         return outwire
-
