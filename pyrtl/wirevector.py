@@ -5,7 +5,7 @@ Types defined in this file include:
 WireVector: the base class for ordered collections of wires
 Input: a wire vector that recieves an input for a block
 Output: a wire vector that defines an output for a block
-Const: a wire vector fed by a constant set of values defined as an integer
+Const: a wire vector fed by a constant set of values defined as an unsigned integer
 Register: a wire vector that is latched each cycle
 MemBlock: a block of memory that can be read (async) and written (sync)
 
@@ -16,6 +16,7 @@ parameters and concats them into one new wire vector which it returns.
 """
 
 import collections
+import string
 from block import *
 
 
@@ -226,28 +227,49 @@ class Output(WireVector):
 
 
 class Const(WireVector):
-    """ A WireVector representation of an integer constant """
+    """ A WireVector representation of an unsigned integer constant """
 
     def __init__(self, val, bitwidth=None):
         """ Construct a constant implementation at initialization """
         name = Block.next_constvar_name(val)        
-        # infer bitwidth if it is not specified explicitly
-        if bitwidth is None:
-            bitwidth = len(bin(val))-2
+
+        if isinstance(val,int):
+            num = val
+            # infer bitwidth if it is not specified explicitly
+            if bitwidth is None:
+                bitwidth = len(bin(num))-2 # the -2 for the "0b" at the start of the string
+        if isinstance(val,basestring):
+            if bitwidth is not None:
+                raise PyrtlError('error, bitwidth parameter of const should be unspecified when'
+                    ' the const is created from a string (instead use verilog style specification)')
+            split_string = string.split(val,"'")
+            if len(split_string) != 2:
+                raise PyrtlError('error, string for Const not in verilog "32\'b01001" style format')
+            try:
+                bitwidth = int(split_string[0])
+                num = int( ''.join(['0',split_string[1]]), 0 )
+            except ValueError:
+                raise PyrtlError('error, string for Const not in verilog "32\'b01001" style format')
+
         if not isinstance(bitwidth,int):
             raise PyrtlError(
                 'error, bitwidth must be from type int, instead Const was passed "%s" of type %s'
                 % (str(bitwidth),type(bitwidth)) )
-        # check sanity of bitwidth
-        if (val >> bitwidth) != 0:
+        if num < 0:
+            raise PyrtlError(
+                'error, Const is only for unsigned numbers and must be positive')
+        if bitwidth < 0:
+            raise PyrtlError(
+                'error, you are trying a negative bitwidth? awesome but wrong')
+        if (num >> bitwidth) != 0:
             raise PyrtlError(
                 'error constant "%s" cannot fit in the specified %d bits'
-                % (str(val),bitwidth) )
+                % (str(num),bitwidth) )
 
         # initialize the WireVector
         super(Const, self).__init__(bitwidth=bitwidth, name=name)
         # add the member "val" to track the value of the constant
-        self.val = val            
+        self.val = num           
 
     def __ilshift__(self, other):
         raise PyrtlError(
