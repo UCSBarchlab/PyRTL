@@ -30,7 +30,7 @@ class Simulation(object):
         self.tracer = tracer
         self.initialize(register_value_map)
         self.max_iter = 1000
-        print self.block # FIXME
+        # print self.block # Helpful Debug Print
 
     def initialize(self, register_value_map, default_value=None):
         """ Sets the wire and register values to default or as specified """
@@ -103,7 +103,7 @@ class Simulation(object):
                 % str(logic_left))
 
         # at the end of the step, record the values to the trace
-        print self.value # FIXME
+        # print self.value # Helpful Debug Print
         if self.tracer is not None:
             self.tracer.add_step(self.value)
 
@@ -124,7 +124,7 @@ class Simulation(object):
         semantics of the primitive ops.  Function updates self.value and
         self.memvalue accordingly.
         """
-        if net.op is None or net.op in '~ & | ^ + - c s'.split():
+        if net.op is None or net.op in '~ & | ^ + - * c s'.split():
             return  # stateless elements
         else:
             if net.op == 'r':

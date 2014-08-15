@@ -136,20 +136,32 @@ class WireVector(object):
 
     def __and__(self, other):
         return self.logicop(other, '&')
+    def __rand__(self, other):
+        return self.logicop(other, '&')
 
     def __or__(self, other):
+        return self.logicop(other, '|')
+    def __ror__(self, other):
         return self.logicop(other, '|')
 
     def __xor__(self, other):
         return self.logicop(other, '^')
+    def __rxor__(self, other):
+        return self.logicop(other, '^')
 
     def __add__(self, other):
+        return self.logicop(other, '+')
+    def __radd__(self, other):
         return self.logicop(other, '+')
 
     def __sub__(self, other):
         return self.logicop(other, '-')
+    def __rsub__(self, other):
+        return self.logicop(other, '-')
 
     def __mul__(self, other):
+        return self.logicop(other, '*')
+    def __rmul__(self, other):
         return self.logicop(other, '*')
 
     def __invert__(self):

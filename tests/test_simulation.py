@@ -41,12 +41,52 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.check_trace('r 04040404\n')
 
     def test_plus_simulation(self):
+        self.r.next <<= self.r + pyrtl.Const(2,bitwidth=self.bitwidth)
+        self.check_trace('r 02460246\n')
+
+    def test_next_works_with_equal(self):
         self.r.next = self.r + pyrtl.Const(2,bitwidth=self.bitwidth)
         self.check_trace('r 02460246\n')
 
     def test_minus_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1,bitwidth=self.bitwidth)
         self.check_trace('r 07654321\n')
+
+    def test_multiply_simulation(self):
+        self.r.next <<= self.r * pyrtl.Const(2,bitwidth=self.bitwidth) + pyrtl.Const(1,bitwidth=self.bitwidth)
+        self.check_trace('r 01377777\n')
+
+    def test_const_nobitwidth_simulation(self):
+        self.r.next <<= self.r - pyrtl.Const(1)
+        self.check_trace('r 07654321\n')
+
+    def test_const_rawint_simulation(self):
+        self.r.next <<= self.r - 1
+        self.check_trace('r 07654321\n')
+
+    def test_const_verilogsmall_simulation(self):
+        self.r.next <<= self.r - "1'b1"
+        self.check_trace('r 07654321\n')
+
+    def test_const_verilogbig_simulation(self):
+        self.r.next <<= self.r - "3'b1"
+        self.check_trace('r 07654321\n')
+
+    def test_const_veriloghuge_simulation(self):
+        self.r.next <<= self.r - "64'b1"
+        self.check_trace('r 07654321\n')
+
+    def test_const_veriloghuge2_simulation(self):
+        self.r.next <<= self.r + "64'b1"
+        self.check_trace('r 01234567\n')
+
+    def test_const_associativity_string_simulation(self):
+        self.r.next <<= "64'b1" + self.r 
+        self.check_trace('r 01234567\n')
+
+    def test_const_associativity_int_simulation(self):
+        self.r.next <<= 1 + self.r 
+        self.check_trace('r 01234567\n')
 
 
 class TestRTLSimulationTraceWithAdder(unittest.TestCase):
