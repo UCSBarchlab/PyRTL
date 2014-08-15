@@ -9,6 +9,12 @@ from wirevector import WireVector
 from wirevector import Input, Output
 from wirevector import Const
 from wirevector import Register
+
+from wirevector import SignedWireVector
+from wirevector import SignedInput, SignedOutput
+from wirevector import SignedConst
+from wirevector import SignedRegister
+
 from wirevector import MemBlock
 from wirevector import DataWithEnable
 from wirevector import as_wires

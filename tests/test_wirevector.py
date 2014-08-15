@@ -12,8 +12,12 @@ class TestWireVector(unittest.TestCase):
     def tearDown(self):
         pyrtl.reset_working_block()    
 
-    def test_assignment(self):
-        testmissing()
+    def test_assignment_small(self):
+        c = pyrtl.Register(bitwidth=3)
+        c.next <<= pyrtl.Const(1)
+    def test_assignment_large(self):
+        c = pyrtl.Register(bitwidth=3)
+        c.next <<= pyrtl.Const(202)
     def test_logic_operatons(self):
         testmissing()
     def test_slice(self):

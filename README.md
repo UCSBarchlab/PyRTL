@@ -9,7 +9,6 @@ near-term todo list:
 * all PyrtlError calls should have useful error message
 * all classes should have useful docstrings
 * all public functions and methods should have useful docstrings
-* all private methods and members should use "_" at the start of their names
 * should have set of unit tests for main abstractions
 * should be PEP8 compliant
 * multiple nested blocks should be supported

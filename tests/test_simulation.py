@@ -41,7 +41,7 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.check_trace('r 04040404\n')
 
     def test_plus_simulation(self):
-        self.r.next <<= self.r + pyrtl.Const(2,bitwidth=self.bitwidth)
+        self.r.next = self.r + pyrtl.Const(2,bitwidth=self.bitwidth)
         self.check_trace('r 02460246\n')
 
     def test_minus_simulation(self):

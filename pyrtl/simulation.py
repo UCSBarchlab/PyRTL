@@ -30,6 +30,7 @@ class Simulation(object):
         self.tracer = tracer
         self.initialize(register_value_map)
         self.max_iter = 1000
+        print self.block # FIXME
 
     def initialize(self, register_value_map, default_value=None):
         """ Sets the wire and register values to default or as specified """
@@ -102,6 +103,7 @@ class Simulation(object):
                 % str(logic_left))
 
         # at the end of the step, record the values to the trace
+        print self.value # FIXME
         if self.tracer is not None:
             self.tracer.add_step(self.value)
 
@@ -157,7 +159,8 @@ class Simulation(object):
             '|': lambda l, r: l | r,
             '^': lambda l, r: l ^ r,
             '+': lambda l, r: l + r,
-            '-': lambda l, r: l - r
+            '-': lambda l, r: l - r,
+            '*': lambda l, r: l * r
             }
         if net.op in simple_func:
             argvals = [self.value[arg] for arg in net.args]

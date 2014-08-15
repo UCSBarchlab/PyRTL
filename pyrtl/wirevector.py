@@ -93,12 +93,15 @@ class WireVector(object):
         if not isinstance(other, WireVector):
             other = Const(other)
         if self.bitwidth is None:
-            self.bitwidth = len(other)
-        else:
-            if len(self) != len(other):
-                raise PyrtlError(
-                    'error attempting to assign a wirevector to an existing wirevector with a different bitwidth')
+            raise PyrtlError
 
+        if self.bitwidth < other.bitwidth:
+            # truncate the upper bits
+            other = other[:self.bitwidth]
+        if self.bitwidth > other.bitwidth:
+            # extend appropriately
+            other = other.extended(self.bitwidth)
+            
         net = LogicNet(
             op=None,
             op_param=None,
@@ -114,14 +117,15 @@ class WireVector(object):
             b = Const(b)
         # check size of operands
         if len(a) < len(b):
-            a = a.sign_extended(len(b))
+            a = a.extended(len(b))
         elif len(b) < len(a):
-            b = b.sign_extended(len(a))
-        # if len(a) != len(b):
-        #    raise PyrtlError(
-        #       'error, cannot apply op "%s" to wirevectors'
-        #       ' of different length' % op)
-        s = WireVector(bitwidth=len(a))  # both are same length now
+            b = b.extended(len(a))
+        resultlen = len(a) # both are the same length now
+        if op=='+' or op=='-':
+            resultlen += 1 # extra bit required for carry
+        if op=='*':
+            resultlen = resultlen * 2  # more bits needed for mult
+        s = WireVector(bitwidth=resultlen) 
         net = LogicNet(
             op=op,
             op_param=None,
@@ -144,6 +148,9 @@ class WireVector(object):
 
     def __sub__(self, other):
         return self.logicop(other, '-')
+
+    def __mul__(self, other):
+        return self.logicop(other, '*')
 
     def __invert__(self):
         outwire = WireVector(bitwidth=len(self))
@@ -176,13 +183,17 @@ class WireVector(object):
 
     def sign_extended(self, bitwidth):
         """ return a sign extended wirevector derived from self """
-        return self._extended(bitwidth, self[-1])
+        return self._extend_with_bit(bitwidth, self[-1])
 
     def zero_extended(self, bitwidth):
         """ return a zero extended wirevector derived from self """
-        return self._extended(bitwidth, Const(0, bitwidth=1))
+        return self._extend_with_bit(bitwidth, Const(0, bitwidth=1))
 
-    def _extended(self, bitwidth, extbit):
+    def extended(self, bitwidth):
+        """ return an extended wirevector derived from self """
+        return self.zero_extended(bitwidth)
+
+    def _extend_with_bit(self, bitwidth, extbit):
         numext = bitwidth - self.bitwidth
         if numext == 0:
             return self
@@ -198,6 +209,7 @@ class WireVector(object):
                 dests=(extvector,))
             self.block.add_net(net)
             return concat(extvector, self)
+
 
 
 #------------------------------------------------------------------------
@@ -313,10 +325,35 @@ class Register(WireVector):
             return
         if self.reg_in is not None:
             raise PyrtlError
-        if len(self) != len(value):
-            raise PyrtlError
         n = self._makereg()
         n <<= value
+
+
+#-----------------------------------------------------------------
+#   __     __        ___  __           ___  __  ___  __   __   __  
+#  /__` | / _` |\ | |__  |  \    \  / |__  /  `  |  /  \ |__) /__` 
+#  .__/ | \__> | \| |___ |__/     \/  |___ \__,  |  \__/ |  \ .__/ 
+#                                                            
+
+class SignedWireVector(WireVector):
+    def extended(self, bitwidth):
+        return self.sign_extended(bitwidth)
+
+class SignedInput(Input):
+    def extended(self, bitwidth):
+        return self.sign_extended(bitwidth)
+
+class SignedOutput(Output):
+    def extended(self, bitwidth):
+        return self.sign_extended(bitwidth)
+
+class SignedConst(Const):
+    def extended(self, bitwidth):
+        return self.sign_extended(bitwidth)
+
+class SignedRegister(Register):
+    def extended(self, bitwidth):
+        return self.sign_extended(bitwidth)
 
 
 #------------------------------------------------------------------------
@@ -426,6 +463,7 @@ class MemBlock(object):
         self._update_net()
 
 
+
 #-----------------------------------------------------------------
 #        ___       __   ___  __   __
 #  |__| |__  |    |__) |__  |__) /__`
@@ -457,3 +495,4 @@ def concat(*args):
             dests=(outwire,))
         outwire.block.add_net(net)
         return outwire
+

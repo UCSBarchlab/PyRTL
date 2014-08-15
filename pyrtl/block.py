@@ -53,7 +53,7 @@ class Block(object):
     memory), and two tuples (args and dests) that list the wirevectors hooked
     up as inputs and outputs to that primitive respectively.
 
-    * Most logical and arithmetic ops ('&','|','^','+','-') are pretty self
+    * Most logical and arithmetic ops ('&','|','^','+','-','*') are pretty self
       explanitory, they should perform the operation specified.
     * The op (None) is simply a directional wire and has no logic function.
     * The 'c' operator is the concatiation operator and combines any number of
@@ -81,7 +81,7 @@ class Block(object):
         self.logic = set([])  # set of nets, each is a LogicNet named tuple
         self.wirevector_set = set([])  # set of all wirevectors
         self.wirevector_by_name = {}  # map from name->wirevector
-        self.legal_ops = set('~&|^+-csrm') | set([None])
+        self.legal_ops = set('~&|^+-*csrm') | set([None])
 
     def __str__(self):
         """String form has one LogicNet per line."""
@@ -106,10 +106,15 @@ class Block(object):
                     'error making net with unknown source "%s"'
                     % w.name)
             if w.block is not self:
-                raise PyrtlError(
+                raise PyrtlInternalError(
                     'error, cannot make net between two different blocks')
+        if net.op in set('&|^+-*'):
+            widths = set(x.bitwidth for x in net.args)
+            if len(widths)>1:
+                raise PyrtlInternalError(
+                    'error operands have mismatched bitwidths')
         if net.op not in self.legal_ops:
-            raise PyrtlError(
+            raise PyrtlInternalError(
                 'error adding op "%s" not from known set %s'
                 % (net.op, self.legal_ops))
         # after all that sanity checking, actually update the data structure
