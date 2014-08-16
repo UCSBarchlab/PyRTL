@@ -1,0 +1,17 @@
+#!/bin/tcsh
+
+echo 
+echo ===== Running NoseTests ==============================================
+nosetests
+
+echo 
+echo ===== Checking PEP8 Style ============================================
+pep8 --max-line-length=100 pyrtl/*.py
+pep8 --max-line-length=100 examples/*.py
+
+echo 
+echo ===== Checking for Common Errors =====================================
+pylint -E pyrtl/*.py
+pylint -E examples/*.py
+
+echo 
