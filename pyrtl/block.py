@@ -118,11 +118,21 @@ class Block(object):
         self.logic.add(net)
 
     def wirevector_subset(self, cls=None):
-        """Return set of wirevectors, filtered by the types provided as cls."""
+        """Return set of wirevectors, filtered by the type or tuple of types provided as cls."""
         if cls is None:
             return self.wirevector_set
         else:
             return set([x for x in self.wirevector_set if isinstance(x, cls)])
+
+    def get_wirevector_by_name(self, name, strict=False):
+        """Return the wirevector matching name."""
+        try:
+            retval = self.wirevector_by_name[name]
+        except KeyError:
+            retval = None
+            if strict:
+                raise PyrtlError('error, block does not have a wirevector named %s' % name)
+        return retval
 
     def sanity_check(self):
         """ Check logic and wires and throw PyrtlError if there is an issue."""
