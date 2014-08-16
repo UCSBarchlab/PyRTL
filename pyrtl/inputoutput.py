@@ -39,7 +39,7 @@ def input_from_blif(blif, block=None):
     elif isinstance(blif, basestring):
         blif_string = blif
     else:
-        raise PyrtlError('input_blif expecting either open file or string') 
+        raise PyrtlError('input_blif expecting either open file or string')
 
     def SKeyword(x):
         return Suppress(Keyword(x))
@@ -69,15 +69,15 @@ def input_from_blif(blif, block=None):
 
     # asynchronous Flip-flop
     dffas_formal = SLiteral('C=') + signal_id('C') \
-                   + SLiteral('D=') + signal_id('D') \
-                   + SLiteral('Q=') + signal_id('Q') \
-                   + SLiteral('R=') + signal_id('R')
+        + SLiteral('D=') + signal_id('D') \
+        + SLiteral('Q=') + signal_id('Q') \
+        + SLiteral('R=') + signal_id('R')
     dffas_keyword = SKeyword('$_DFF_PN0_') | SKeyword('$_DFF_PP0_')
     dffas_def = Group(SKeyword('.subckt') + dffas_keyword + dffas_formal)('dffas_def')
     # synchronous Flip-flop
     dffs_def = Group(SKeyword('.latch')
-                     + signal_id('D') 
-                     + signal_id('Q') 
+                     + signal_id('D')
+                     + signal_id('Q')
                      + SLiteral('re')
                      + signal_id('C'))('dffs_def')
     command_def = name_def | dffas_def | dffs_def
@@ -120,11 +120,11 @@ def input_from_blif(blif, block=None):
     def extract_cover(command):
         netio = command['namesignal_list']
         if len(command['cover_list']) == 0:
-            output_wire = twire(netio[0])            
-            output_wire <<= Const(0,bitwidth=1)  # const "FALSE"
+            output_wire = twire(netio[0])
+            output_wire <<= Const(0, bitwidth=1)  # const "FALSE"
         elif command['cover_list'].asList() == ['1']:
-            output_wire = twire(netio[0])            
-            output_wire <<= Const(1,bitwidth=1)  # const "TRUE"
+            output_wire = twire(netio[0])
+            output_wire <<= Const(1, bitwidth=1)  # const "TRUE"
         elif command['cover_list'].asList() == ['1', '1']:
             #Populate clock list if one input is already a clock
             if(netio[1] in clk_set):
@@ -152,12 +152,12 @@ def input_from_blif(blif, block=None):
                 | (twire(netio[1]) & twire(netio[2]))   # mux
         else:
             raise PyrtlError('Blif file with unknown logic cover set '
-                                  '(currently gates are hard coded)')
+                             '(currently gates are hard coded)')
 
     def extract_flop(command):
         if(command['C'] not in ff_clk_set):
             ff_clk_set.add(command['C'])
-            
+
         #Create register and assign next state to D and output to Q
         flop = Register(self, command['Q'] + '_reg')
         flop.next <<= twire(command['D'])

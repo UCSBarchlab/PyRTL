@@ -1,5 +1,5 @@
 import sys
-sys.path.append("..") 
+sys.path.append("..")
 import random
 from pyrtl import *
 
@@ -46,13 +46,17 @@ full_adder_blif = """
 input_from_blif(full_adder_blif)
 # have to find the actual wire vectors generated from the names in the blif file
 x, y, cin = [working_block().get_wirevector_by_name(s) for s in ['x', 'y', 'cin']]
-io_vectors = working_block().wirevector_subset((Input,Output))
+io_vectors = working_block().wirevector_subset((Input, Output))
 
 # we are only going to trace the input and output vectors for clarity
 sim_trace = SimulationTrace(wirevector_subset=io_vectors)
 # now simulate the logic with some random inputs
-sim = Simulation( tracer=sim_trace )
+sim = Simulation(tracer=sim_trace)
 for i in xrange(15):
     # here we actually generate random booleans for the inputs
-    sim.step( {x:random.choice([0,1]), y:random.choice([0,1]), cin:random.choice([0,1])} )
+    sim.step({
+        x: random.choice([0, 1]),
+        y: random.choice([0, 1]),
+        cin: random.choice([0, 1])
+        })
 sim_trace.render_trace(symbol_len=5, segment_size=5)

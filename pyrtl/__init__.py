@@ -19,7 +19,7 @@ from wirevector import MemBlock
 from wirevector import DataWithEnable
 from wirevector import as_wires
 from wirevector import concat
-from wirevector import working_block 
+from wirevector import working_block
 from wirevector import reset_working_block
 
 # block simulation support
