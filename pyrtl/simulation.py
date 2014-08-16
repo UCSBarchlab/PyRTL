@@ -3,7 +3,8 @@ import sys
 import re
 
 from time import gmtime, strftime
-from pyrtl import *
+from pyrtl.block import *
+from pyrtl.wirevector import *
 
 #-----------------------------------------------------------------
 #    __                         ___    __

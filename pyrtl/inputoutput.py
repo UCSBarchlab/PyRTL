@@ -92,7 +92,8 @@ def input_from_blif(blif, block=None):
     result = parser.parseString(blif_string, parseAll=True)
     # Blif file with multiple models (currently only handles one flattened models)
     assert(len(result) == 1)
-    clk_set = {}
+    clk_set = set([])
+    ff_clk_set = set([])
 
     def extract_inputs(model):
         for input_name in model['input_list']:
@@ -115,7 +116,7 @@ def input_from_blif(blif, block=None):
             elif command.getName() == 'dffas_def' or command.getName() == 'dffs_def':
                 extract_flop(command)
             else:
-                raise BlifFormatError('unknown command type')
+                raise PyrtlError('unknown command type')
 
     def extract_cover(command):
         netio = command['namesignal_list']
@@ -159,7 +160,8 @@ def input_from_blif(blif, block=None):
             ff_clk_set.add(command['C'])
 
         #Create register and assign next state to D and output to Q
-        flop = Register(self, command['Q'] + '_reg')
+        regname = command['Q'] + '_reg'
+        flop = Register(bitwidth=1, name=regname)
         flop.next <<= twire(command['D'])
         flop_output = twire(command['Q'])
         flop_output <<= flop
@@ -179,14 +181,14 @@ def input_from_blif(blif, block=None):
 def output_to_trivialgraph(file, block):
     """ Walk the block and output it in trivial graph format to the open file """
 
-    uid = 1
     nodes = {}
     edges = set([])
     edge_names = {}
+    uid = [1]
 
     def add_node(x, label):
-        nodes[x] = (uid, label)
-        uid += 1
+        nodes[x] = (uid[0], label)
+        uid[0] = uid[0] + 1
 
     def add_edge(frm, to):
         if hasattr(frm, 'name') and not frm.name.startswith('tmp'):
@@ -195,7 +197,7 @@ def output_to_trivialgraph(file, block):
             edge_label = ''
         if frm not in nodes:
             frm = producer(frm)
-        if to not in self.nodes:
+        if to not in nodes:
             to = consumer(to)
         (frm_id, _) = nodes[frm]
         (to_id, _) = nodes[to]
@@ -203,7 +205,7 @@ def output_to_trivialgraph(file, block):
         if edge_label:
             edge_names[(frm_id, to_id)] = edge_label
 
-    def producer(self, wire):
+    def producer(wire):
         """ return the node driving wire (or create it if undefined) """
         assert isinstance(wire, WireVector)
         for net in sorted(block.logic):
@@ -213,14 +215,14 @@ def output_to_trivialgraph(file, block):
         add_node(wire, '???')
         return wire
 
-    def consumer(self, wire):
+    def consumer(wire):
         """ return the node being driven by wire (or create it if undefined) """
         assert isinstance(wire, WireVector)
-        for net in sorted(self.block.logic):
+        for net in sorted(block.logic):
             for arg in sorted(net.args):
                 if arg == wire:
                     return net
-        self.add_node(wire, '???')
+        add_node(wire, '???')
         return wire
 
     # add all of the nodes
@@ -246,8 +248,8 @@ def output_to_trivialgraph(file, block):
             add_edge(net, dest)
 
     # print the actual output to the file
-    for (id, label) in sorted(self.nodes.values()):
+    for (id, label) in sorted(nodes.values()):
         print >> file, id, label
     print >> file, '#'
-    for (frm, to) in sorted(self.edges):
-        print >> file, frm, to, self.edge_names.get((frm, to), '')
+    for (frm, to) in sorted(edges):
+        print >> file, frm, to, edge_names.get((frm, to), '')
