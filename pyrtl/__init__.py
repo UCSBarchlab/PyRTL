@@ -27,5 +27,5 @@ from simulation import Simulation
 from simulation import SimulationTrace
 
 # input and output to file format routines
-from inputoutput import input_block_as_blif
-from inputoutput import output_block_as_trivialgraph
+from inputoutput import input_from_blif
+from inputoutput import output_to_trivialgraph

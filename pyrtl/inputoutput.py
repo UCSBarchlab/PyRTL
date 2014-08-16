@@ -7,7 +7,9 @@ accordingly, or write information from the Block out to the file.
 """
 
 import sys
+import pyparsing
 from block import *
+from wirevector import *
 
 #-----------------------------------------------------------------
 #            __       ___
@@ -15,8 +17,8 @@ from block import *
 #    | | \| |    \__/  |
 
 
-def input_block_as_blif(block, blif_file):
-    """ Read an open blif file as input, updating the block appropriately
+def input_from_blif(blif, block=None):
+    """ Read an open blif file or string as input, updating the block appropriately
 
         Assumes the blif has been flattened and their is only a single module.
         Assumes that there is only one single shared clock and reset
@@ -27,6 +29,18 @@ def input_block_as_blif(block, blif_file):
     from pyparsing import Word, Literal, infixNotation, OneOrMore, ZeroOrMore
     from pyparsing import oneOf, Suppress, Group, Optional, Keyword
 
+    if block is None:
+        block = working_block()
+    if not isinstance(block, Block):
+        raise PyrtlError('input_blif initialization requires either a valid'
+                         ' hardware block to be specified (or implied)')
+    if isinstance(blif, file):
+        blif_string = blif.read()
+    elif isinstance(blif, basestring):
+        blif_string = blif
+    else:
+        raise PyrtlError('input_blif expecting either open file or string') 
+
     def SKeyword(x):
         return Suppress(Keyword(x))
 
@@ -35,7 +49,7 @@ def input_block_as_blif(block, blif_file):
 
     def twire(x):
         """ find or make wire named x and return it """
-        s = block.get_wire_by_name(x)
+        s = block.get_wirevector_by_name(x)
         if s is None:
             s = Wire(block, x)
         return s
@@ -54,14 +68,18 @@ def input_block_as_blif(block, blif_file):
     name_def = Group(SKeyword('.names') + namesignal_list + cover_list)('name_def')
 
     # asynchronous Flip-flop
-    dffas_formal = SLiteral('C=')+signal_id('C') + SLiteral('D=')+signal_id('D') \
-        + SLiteral('Q=')+signal_id('Q') + SLiteral('R=')+signal_id('R')
-    dffas_def = Group(SKeyword('.subckt')
-        + (SKeyword('$_DFF_PN0_') | SKeyword('$_DFF_PP0_')) + dffas_formal)('dffas_def')
+    dffas_formal = SLiteral('C=') + signal_id('C') \
+                   + SLiteral('D=') + signal_id('D') \
+                   + SLiteral('Q=') + signal_id('Q') \
+                   + SLiteral('R=') + signal_id('R')
+    dffas_keyword = SKeyword('$_DFF_PN0_') | SKeyword('$_DFF_PP0_')
+    dffas_def = Group(SKeyword('.subckt') + dffas_keyword + dffas_formal)('dffas_def')
     # synchronous Flip-flop
-    dffs_def = Group(SKeyword('.latch') + signal_id('D') + signal_id('Q') \
-        + SLiteral('re') + signal_id('C'))('dffs_def')
-
+    dffs_def = Group(SKeyword('.latch')
+                     + signal_id('D') 
+                     + signal_id('Q') 
+                     + SLiteral('re')
+                     + signal_id('C'))('dffs_def')
     command_def = name_def | dffas_def | dffs_def
     command_list = Group(OneOrMore(command_def))('command_list')
 
@@ -71,7 +89,7 @@ def input_block_as_blif(block, blif_file):
     parser = model_list.ignore(pyparsing.pythonStyleComment)
 
     # Begin actually reading and parsing the BLIF file
-    result = parser.parseString(f.read(), parseAll=True)
+    result = parser.parseString(blif_string, parseAll=True)
     # Blif file with multiple models (currently only handles one flattened models)
     assert(len(result) == 1)
     clk_set = {}
@@ -81,11 +99,11 @@ def input_block_as_blif(block, blif_file):
             if input_name == 'clk':
                 clk_set.add(input_name)
             else:
-                block.add_wire(InputWire(block, input_name))
+                block.add_wirevector(Input(bitwidth=1, name=input_name))
 
     def extract_outputs(model):
         for output_name in model['output_list']:
-            block.add_wire(OutputWire(block, output_name))
+            block.add_wirevector(Output(bitwidth=1, name=output_name))
 
     def extract_commands(model):
         # for each "command" (dff or net) in the model
@@ -102,9 +120,11 @@ def input_block_as_blif(block, blif_file):
     def extract_cover(command):
         netio = command['namesignal_list']
         if len(command['cover_list']) == 0:
-            twire(netio[0]) <= ConstWire(self, 0)  # const "FALSE"
+            output_wire = twire(netio[0])            
+            output_wire <<= Const(0,bitwidth=1)  # const "FALSE"
         elif command['cover_list'].asList() == ['1']:
-            twire(netio[0]) <= ConstWire(self, 1)  # const "TRUE"
+            output_wire = twire(netio[0])            
+            output_wire <<= ConstWire(1,bitwidth=1)  # const "TRUE"
         elif command['cover_list'].asList() == ['1', '1']:
             #Populate clock list if one input is already a clock
             if(netio[1] in clk_set):
@@ -112,32 +132,37 @@ def input_block_as_blif(block, blif_file):
             elif(netio[0] in clk_set):
                 clk_set.add(netio[1])
             else:
-                twire(netio[1]) <= twire(netio[0])  # simple wire
+                output_wire = twire(netio[1])
+                output_wire <<= twire(netio[0])  # simple wire
         elif command['cover_list'].asList() == ['0', '1']:
-            twire(netio[1]) <= ~ twire(netio[0])  # not gate
+            output_wire = twire(netio[1])
+            output_wire <<= ~ twire(netio[0])  # not gate
         elif command['cover_list'].asList() == ['11', '1']:
-            twire(netio[2]) <= twire(netio[0]) & twire(netio[1])  # and gate
+            output_wire = twire(netio[2])
+            output_wire <<= twire(netio[0]) & twire(netio[1])  # and gate
         elif command['cover_list'].asList() == ['1-', '1', '-1', '1']:
-            twire(netio[2]) <= twire(netio[0]) | twire(netio[1])  # or gate
+            output_wire = twire(netio[2])
+            output_wire <<= twire(netio[0]) | twire(netio[1])  # or gate
         elif command['cover_list'].asList() == ['10', '1', '01', '1']:
-            twire(netio[2]) <= (twire(netio[0]) & ~twire(netio[1])) \
-                | (~twire(netio[0]) & twire(netio[1]))  # xor gate
+            output_wire = twire(netio[2])
+            output_wire <<= twire(netio[0]) ^ twire(netio[1])  # xor gate
         elif command['cover_list'].asList() == ['1-0', '1', '-11', '1']:
-            twire(netio[3]) <= (twire(netio[0]) & ~ twire(netio[2])) \
+            output_wire = twire(netio[3])
+            output_wire <<= (twire(netio[0]) & ~ twire(netio[2])) \
                 | (twire(netio[1]) & twire(netio[2]))   # mux
         else:
-            raise BlifFormatError('Blif file with unknown logic cover set '
+            raise PyrtlError('Blif file with unknown logic cover set '
                                   '(currently gates are hard coded)')
 
     def extract_flop(command):
         if(command['C'] not in ff_clk_set):
             ff_clk_set.add(command['C'])
-            tlog.verbose_status('    Inferring %s as a clock signal' % command['C'])
-
+            
         #Create register and assign next state to D and output to Q
         flop = Register(self, command['Q'] + '_reg')
-        flop.next <= twire(command['D'])
-        twire(command['Q']) <= flop
+        flop.next <<= twire(command['D'])
+        flop_output = twire(command['Q'])
+        flop_output <<= flop
 
     for model in result:
         extract_inputs(model)
@@ -151,7 +176,7 @@ def input_block_as_blif(block, blif_file):
 #   \__/ \__/  |  |    \__/  |
 #
 
-def output_block_as_trivialgraph(block, file):
+def output_to_trivialgraph(file, block):
     """ Walk the block and output it in trivial graph format to the open file """
 
     uid = 1
