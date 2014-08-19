@@ -245,7 +245,7 @@ class WireVector(object):
         return self._extend_with_bit(bitwidth, Const(0, bitwidth=1))
 
     def extended(self, bitwidth):
-        """ return an extended wirevector derived from self """
+        """ return wirevector extended as the default rule for the class """
         return self.zero_extended(bitwidth)
 
     def _extend_with_bit(self, bitwidth, extbit):
@@ -560,11 +560,36 @@ class MemBlock(object):
 
 def as_wires(val):
     """ Return wires from val which may be wires or int. """
-    if isinstance(val, int):
+    if isinstance(val, [int,basestring]):
         return Const(val)
     if not isinstance(val, WireVector):
-        raise PyrtlError
+        raise PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
     return val
+
+
+def mux(select,a,b):
+    """ Multiplexer returning a for select==0, otherwise b. """
+    # check size and type of operands
+    select = as_wires(select)
+    a = as_wires(a)
+    b = as_wires(b)
+    if len(select) != 1:
+        raise PyrtlError('error, select input to the mux must be 1-bit wirevector')
+    if len(a) < len(b):
+        a = a.extended(len(b))
+    elif len(b) < len(a):
+        b = b.extended(len(a))
+    resultlen = len(a)  # both are the same length now
+
+    outwire = WireVector(bitwidth=resultlen)
+    net = LogicNet(
+        op='x',
+        op_param=None,
+        args=(select,a,b),
+        dests=(outwire,))
+    outwire.block.add_net(net)
+    return outwire
+
 
 
 def concat(*args):
