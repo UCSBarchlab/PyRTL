@@ -196,7 +196,7 @@ class WireVector(object):
         return self.logicop(other, '=')
 
     def __ne__(self, other):
-        return ! self.logicop(other, '=')
+        return ~ self.logicop(other, '=')
 
     def __gt__(self, other):
         return self.logicop(other, '>')
@@ -376,7 +376,7 @@ class Register(WireVector):
     def next(self, value):
         # The .next feild can be set with either "<<=" or "=", and
         # they do the same thing.
-        if self.reg_in == value:
+        if self.reg_in is value:
             return
         if self.reg_in is not None:
             raise PyrtlError
@@ -435,13 +435,13 @@ class ConditionalUpdate(object):
     def otherwise(self):
         return self
 
-u = ConditionalUpdate()
-with u.when(a):
-    r.next = b
-with u.otherwise():
-    r.next = c
-x <<= r
-y <<= r
+#u = ConditionalUpdate()
+#with u.when(a):
+#    r.next = b
+#with u.otherwise():
+#    r.next = c
+#x <<= r
+#y <<= r
 
 
 #------------------------------------------------------------------------
