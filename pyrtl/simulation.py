@@ -153,7 +153,7 @@ class Simulation(object):
         This function, along with execute, defined the semantics
         of the primitive ops.  Function updates self.value accordingly.
         """
-        simple_func = {
+        simple_func = {  # OPS
             None: lambda x: x,
             '~': lambda x: ~x,
             '&': lambda l, r: l & r,
@@ -161,11 +161,20 @@ class Simulation(object):
             '^': lambda l, r: l ^ r,
             '+': lambda l, r: l + r,
             '-': lambda l, r: l - r,
-            '*': lambda l, r: l * r
+            '*': lambda l, r: l * r,
+            '<': lambda l, r: int(l < r),
+            '>': lambda l, r: int(l > r),
+            '=': lambda l, r: int(l == r)
             }
         if net.op in simple_func:
             argvals = [self.value[arg] for arg in net.args]
             result = simple_func[net.op](*argvals)
+            self.value[net.dests[0]] = self.sanitize(result, net.dests[0])
+        elif net.op == 'x':
+            select = self.value[net.args[0]]
+            a = self.value[net.args[1]]
+            b = self.value[net.args[2]]
+            result = a if select==0 else b
             self.value[net.dests[0]] = self.sanitize(result, net.dests[0])
         elif net.op == 'c':
             result = 0

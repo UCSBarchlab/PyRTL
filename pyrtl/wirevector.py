@@ -382,6 +382,35 @@ class SignedRegister(Register):
 
 
 #------------------------------------------------------------------------
+#    __   __        __    ___    __                  __  
+#   /  ` /  \ |\ | |  \ |  |  | /  \ |\ |  /\  |    /__` 
+#   \__, \__/ | \| |__/ |  |  | \__/ | \| /~~\ |___ .__/ 
+#
+                                                     
+class ConditionalUpdate(object):
+    condition = []  # Stack used to track the current set of conditions
+
+    def __init__(self, block=None):
+        pass
+    def __enter__(self):
+        pass
+    def __exit__(self, type, value, traceback):
+        pass
+    def when(self, condition):
+        return self
+    def otherwise(self):
+        return self
+
+u = ConditionalUpdate()
+with u.when(a):
+    r.next = b
+with u.otherwise():
+    r.next = c
+x <<= r
+y <<= r
+
+
+#------------------------------------------------------------------------
 #
 #         ___        __   __          __        __   __
 #   |\/| |__   |\/| /  \ |__) \ /    |__) |    /  \ /  ` |__/

@@ -50,9 +50,14 @@ class Block(object):
     memory), and two tuples (args and dests) that list the wirevectors hooked
     up as inputs and outputs to that primitive respectively.
 
-    * Most logical and arithmetic ops ('&','|','^','+','-','*') are pretty self
-      explanitory, they should perform the operation specified.
+    * Most logical and arithmetic ops are pretty self explanitory, 
+      OPS: ('&','|','^','+','-','*','<','>','=') 
+      they should perform the operation specified.  The '=' is checking 
+      to see if the bits of the vectors are equal
     * The op (None) is simply a directional wire and has no logic function.
+    * The 'x' operator is a mux which takes a select bit and two signals.
+      If the value of the select bit is 0 it selects the second argument, if 
+      it is 1 it selects the third argument..
     * The 'c' operator is the concatiation operator and combines any number of
       wirevectors (a,b,...,z) into a single new wirevector with "a" in the MSB
       and "z" (or whatever is last) in the LSB position.
@@ -78,7 +83,7 @@ class Block(object):
         self.logic = set([])  # set of nets, each is a LogicNet named tuple
         self.wirevector_set = set([])  # set of all wirevectors
         self.wirevector_by_name = {}  # map from name->wirevector
-        self.legal_ops = set('~&|^+-*csrm') | set([None])
+        self.legal_ops = set('~&|^+-*<>=xcsrm') | set([None])  # OPS
 
     def __str__(self):
         """String form has one LogicNet per line."""
