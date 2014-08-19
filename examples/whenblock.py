@@ -3,21 +3,10 @@ sys.path.append("..")  # needed only if not installed
 import random
 from pyrtl import *
 
-a,b,c = [Input(1, signame) for signame in ['a', 'b', 'c']]
-x,y = [Output(1, signame) for signame in ['x', 'y']]
+a, b, c = [Input(1, signame) for signame in ['a', 'b', 'c']]
+x, y = [Output(1, signame) for signame in ['x', 'y']]
 r = Register(1, 'r')
 
-class ConditionalUpdate(object):
-    def __init__(self, block=None):
-        pass
-    def __enter__(self):
-        pass
-    def __exit__(self, type, value, traceback):
-        pass
-    def when(self, condition):
-        return self
-    def otherwise(self):
-        return self
 
 u = ConditionalUpdate()
 with u.when(a):

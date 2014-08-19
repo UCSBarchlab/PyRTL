@@ -174,7 +174,10 @@ class Simulation(object):
             select = self.value[net.args[0]]
             a = self.value[net.args[1]]
             b = self.value[net.args[2]]
-            result = a if select==0 else b
+            if select == 0:
+                result = a
+            else:
+                result = b
             self.value[net.dests[0]] = self.sanitize(result, net.dests[0])
         elif net.op == 'c':
             result = 0

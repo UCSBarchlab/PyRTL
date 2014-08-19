@@ -17,6 +17,7 @@ parameters and concats them into one new wire vector which it returns.
 
 import collections
 import string
+from enum import Enum
 from block import *
 
 
@@ -127,11 +128,11 @@ class WireVector(object):
         resultlen = len(a)  # both are the same length now
 
         # some operations actually create more or less bits
-        if op in ['+','-']:
+        if op in ['+', '-']:
             resultlen += 1  # extra bit required for carry
         elif op in ['*']:
             resultlen = resultlen * 2  # more bits needed for mult
-        elif op in ['<','>','-']:
+        elif op in ['<', '>', '-']:
             resultlen = 1
 
         s = WireVector(bitwidth=resultlen)
@@ -175,9 +176,6 @@ class WireVector(object):
         return self.logicop(other, '-')
 
     def __mul__(self, other):
-        return self.logicop(other, '*')
-
-    def __rmul__(self, other):
         return self.logicop(other, '*')
 
     def __rmul__(self, other):
@@ -416,32 +414,69 @@ class SignedRegister(Register):
 
 
 #------------------------------------------------------------------------
-#    __   __        __    ___    __                  __  
-#   /  ` /  \ |\ | |  \ |  |  | /  \ |\ |  /\  |    /__` 
-#   \__, \__/ | \| |__/ |  |  | \__/ | \| /~~\ |___ .__/ 
+#    __   __        __    ___    __                  __
+#   /  ` /  \ |\ | |  \ |  |  | /  \ |\ |  /\  |    /__`
+#   \__, \__/ | \| |__/ |  |  | \__/ | \| /~~\ |___ .__/
 #
-                                                     
+
 class ConditionalUpdate(object):
+    """ Manages the conditional update of registers based on a predicate. 
+        
+    The management of conditional updates is expected to happen through
+    the "with" blocks which will ensure that the region of execution for
+    which the condition should apply is well defined.  It is easiest
+    to see with an example:
+
+    >  u = ConditionalUpdate()
+    >  with u.when(a):
+    >      r.next <<= x
+    >  with u.elsewhen(b):
+    >      r.next <<= y
+    >  with u.otherwise():
+    >      r.next <<= z
+
+    The code above will set r.next to be "x" when the condition "a" holds
+    (where a is a one-bit wirevector), r.next to "y" when the condition
+    "!a & b" holds, and r.next to "z" when neither condition holds (more
+    specifically when "!(!a & b)" is true.  This chaining of conditional
+    updates is done through a stack of mulitplexers.
+    """
+
     condition = []  # Stack used to track the current set of conditions
 
+    class StateDef(Enum):
+        start = 0
+        didwhen = 1
+        didotherwsie = 2
+
     def __init__(self, block=None):
-        pass
+        self.state = ConditionalUpdate.StateDef.start
+
     def __enter__(self):
         pass
+
     def __exit__(self, type, value, traceback):
         pass
-    def when(self, condition):
-        return self
-    def otherwise(self):
+
+    def when(self, predicate):
+        if self.state != ConditionalUpdate.StateDef.start:
+            raise PyrtlError('error, ConditionalUpdates must start with "when"')
+        self.state = ConditionalUpdate.StateDef.didwhen
         return self
 
-#u = ConditionalUpdate()
-#with u.when(a):
-#    r.next = b
-#with u.otherwise():
-#    r.next = c
-#x <<= r
-#y <<= r
+    def elsewhen(self, predicate):
+        if self.state != ConditionalUpdate.StateDef.didwhen:
+            raise PyrtlError('error, elsewhen clause must come after a "when"'
+                             ' and before "otherwise"')
+        self.state = ConditionalUpdate.StateDef.didwhen
+        return self
+
+    def otherwise(self):
+        if self.state != ConditionalUpdate.StateDef.didwhen:
+            raise PyrtlError('error, otherwise clause must come after at least'
+                             ' one "when" clause')
+        return self
+
 
 
 #------------------------------------------------------------------------
@@ -560,14 +595,14 @@ class MemBlock(object):
 
 def as_wires(val):
     """ Return wires from val which may be wires or int. """
-    if isinstance(val, [int,basestring]):
+    if isinstance(val, [int, basestring]):
         return Const(val)
     if not isinstance(val, WireVector):
         raise PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
     return val
 
 
-def mux(select,a,b):
+def mux(select, a, b):
     """ Multiplexer returning a for select==0, otherwise b. """
     # check size and type of operands
     select = as_wires(select)
@@ -585,11 +620,10 @@ def mux(select,a,b):
     net = LogicNet(
         op='x',
         op_param=None,
-        args=(select,a,b),
+        args=(select, a, b),
         dests=(outwire,))
     outwire.block.add_net(net)
     return outwire
-
 
 
 def concat(*args):
