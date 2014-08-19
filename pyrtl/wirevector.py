@@ -442,39 +442,43 @@ class ConditionalUpdate(object):
     updates is done through a stack of mulitplexers.
     """
 
-    condition = []  # Stack used to track the current set of conditions
-
     class StateDef(Enum):
         start = 0
-        didwhen = 1
-        didotherwsie = 2
+        did_when = 1
+        did_otherwise = 2
 
     def __init__(self, block=None):
         self.state = ConditionalUpdate.StateDef.start
+        self.current_predicate = None
 
     def __enter__(self):
-        pass
+        if self.current_predicate is None:
+            if self.state != ConditionalUpdate.StateDef.did_otherwise:
+                raise PyrtlError
 
-    def __exit__(self, type, value, traceback):
-        pass
+    def __exit__(self, etype, evalue, etraceback):
+        self.current_predicate = None
 
     def when(self, predicate):
         if self.state != ConditionalUpdate.StateDef.start:
             raise PyrtlError('error, ConditionalUpdates must start with "when"')
-        self.state = ConditionalUpdate.StateDef.didwhen
+        self.state = ConditionalUpdate.StateDef.did_when
+        self.current_predicate = predicate
         return self
-
+            
     def elsewhen(self, predicate):
-        if self.state != ConditionalUpdate.StateDef.didwhen:
+        if self.state != ConditionalUpdate.StateDef.did_when:
             raise PyrtlError('error, elsewhen clause must come after a "when"'
                              ' and before "otherwise"')
-        self.state = ConditionalUpdate.StateDef.didwhen
+        self.state = ConditionalUpdate.StateDef.did_when
+        self.current_predicate = predicate
         return self
 
     def otherwise(self):
-        if self.state != ConditionalUpdate.StateDef.didwhen:
+        if self.state != ConditionalUpdate.StateDef.did_when:
             raise PyrtlError('error, otherwise clause must come after at least'
                              ' one "when" clause')
+        self.state = ConditionalUpdate.StateDef.did_otherwise
         return self
 
 
