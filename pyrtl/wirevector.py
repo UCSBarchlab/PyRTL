@@ -118,16 +118,22 @@ class WireVector(object):
         # convert constants if necessary
         if not isinstance(b, WireVector):
             b = Const(b)
+
         # check size of operands
         if len(a) < len(b):
             a = a.extended(len(b))
         elif len(b) < len(a):
             b = b.extended(len(a))
         resultlen = len(a)  # both are the same length now
-        if op == '+' or op == '-':
+
+        # some operations actually create more or less bits
+        if op in ['+','-']:
             resultlen += 1  # extra bit required for carry
-        if op == '*':
+        elif op in ['*']:
             resultlen = resultlen * 2  # more bits needed for mult
+        elif op in ['<','>','-']:
+            resultlen = 1
+
         s = WireVector(bitwidth=resultlen)
         net = LogicNet(
             op=op,
@@ -137,6 +143,7 @@ class WireVector(object):
         self.block.add_net(net)
         return s
 
+    # OPS
     def __and__(self, other):
         return self.logicop(other, '&')
 
@@ -172,6 +179,33 @@ class WireVector(object):
 
     def __rmul__(self, other):
         return self.logicop(other, '*')
+
+    def __rmul__(self, other):
+        return self.logicop(other, '*')
+
+    def __lt__(self, other):
+        return self.logicop(other, '<')
+
+    def __le__(self, other):
+        # FIXME: Inefficient implementation of <=
+        lt = self.logicop(other, '<')
+        eq = self.logicop(other, '=')
+        return lt | eq
+
+    def __eq__(self, other):
+        return self.logicop(other, '=')
+
+    def __ne__(self, other):
+        return ! self.logicop(other, '=')
+
+    def __gt__(self, other):
+        return self.logicop(other, '>')
+
+    def __ge__(self, other):
+        # FIXME: Inefficient implementation of >=
+        lt = self.logicop(other, '>')
+        eq = self.logicop(other, '=')
+        return lt | eq
 
     def __invert__(self):
         outwire = WireVector(bitwidth=len(self))
