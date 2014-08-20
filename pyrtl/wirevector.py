@@ -427,7 +427,7 @@ class ConditionalUpdate(object):
     which the condition should apply is well defined.  It is easiest
     to see with an example:
 
-    >  condition = ConditionalUpdate(r,r2)
+    >  condition = ConditionalUpdate()
     >  with condition(a):
     >      r.next <<= x
     >      with condition(b):
@@ -439,43 +439,54 @@ class ConditionalUpdate(object):
     >      r.next <<= w
     """
 
-    _monostate = {}
+    def __init__(self, block=None):
+        # A stack of all the lists of conditions is required, with
+        # the most highy nested conditions near the top of the stack.
+        # As we decend the nested conditions we push conditions onto the
+        # list for that level of nesting, and we pop lists off when those
+        # condition blocks are closed.
+        self.conditions_list_stack = [[]]
 
-    def __init__(self):
-        if not ConditionalUpdate._monostate:
-            ConditionalUpdate._monostate = self.__dict__
-            self.predicate_stack = []
-            self.predicate_on_deck = None
-        else:
-            self.__dict__ = Borg.__monostate
+        # predicate_on_deck stores the predicate passed by the last
+        # call to the object (which is then used in __enter__).
+        self.predicate_on_deck = None
         
     def __call__(self, predicate=None):
-        if predicate is not None:
-            self.predicate_on_deck = predicate
+        self.predicate_on_deck = predicate
         return self
 
     def __enter__(self):
-        self.predicate_stack.append(self.predicate_on_deck)
+        # make sure we did not add a condition after the "always true" clause
+        if len(self.conditions_list_stack[-1]) >= 1:
+            if self.conditions_list_stack[-1][-1] is None:
+                raise PyrtlError('error, attempting to add unreachable condition')
+        # append the predicate to the end of top list
+        self.conditions_list_stack[-1].append(self.predicate_on_deck)
+        # push a new empty list on the stack for sub-conditions
+        self.conditions_list_stack.append([])
         self.predicate_on_deck = None
+        return None
 
     def __exit__(self, etype, evalue, etraceback):
-        self.predicate_stack.pop()
+        # pop any sub-conditions off the top of the stacks
+        self.conditions_list_stack.pop()
 
-                                                                        
-    >  with condition(a):
-    >      r.next <<= x         -->    r.next  <<= mux(a, r, x)
-    >      with condition(b):
-    >          r2.next <<= y    -->    r2.next <<= mux(a&b, r2, y)
-    >  with condition(c):
-    >      r.next <<= z         -->    r.next  <<= mux(a, mux(!a&c, r, z), x)
-    >      r2.next <<= z        -->    r2.next <<= mux(a&b, mux(!a&c, r2, z), y)
-    >      with condition(b):
-    >          r3.next <<= k    -->    r3.next <<= mux(!a&c&b, r3, k)
-    >  with condition():
-    >      r.next <<= w         -->    r.next  <<= mux(a, mux(!a&c, w, z), x)
-    """
-
-
+    def _current_select(self):
+        """ Generates the conjuctions of the predicates required to control condition. """
+        select = None
+        # for all conditions except the current children (which should be [])
+        for predlist in self.conditions_list_stack[:-1]:
+            # negate all of the predicates before the current one
+            for predicate in predlist[:-1]:
+                assert(predicate is not None)
+                if select is None:
+                    select = ~predicate
+                else:
+                    select = select & ~l
+            # include the predicate for the current one (not negated)
+            if predlist[-1] is not None:
+                select = select & predlist[-1] 
+        return select
 
 #------------------------------------------------------------------------
 #
