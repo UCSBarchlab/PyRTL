@@ -8,13 +8,18 @@ x, y = [Output(1, signame) for signame in ['x', 'y']]
 r = Register(1, 'r')
 
 
-u = ConditionalUpdate()
-with u.when(a):
-    r.next = b
-with u.otherwise():
-    r.next = c
+update = ConditionalUpdate(r, r2)
+with update.condition(a):
+    r.next <<= b
+    with update.condition(b < c):
+        r.next <<= c
+with update.else_condition(a):
+    r.next <<= b
+with update.otherwise():
+    r.next <<= c
 x <<= r
 y <<= r
+
 
 
 sim_trace = SimulationTrace()

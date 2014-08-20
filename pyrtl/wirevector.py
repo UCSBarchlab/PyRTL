@@ -427,59 +427,53 @@ class ConditionalUpdate(object):
     which the condition should apply is well defined.  It is easiest
     to see with an example:
 
-    >  u = ConditionalUpdate()
-    >  with u.when(a):
+    >  condition = ConditionalUpdate(r,r2)
+    >  with condition(a):
     >      r.next <<= x
-    >  with u.elsewhen(b):
-    >      r.next <<= y
-    >  with u.otherwise():
+    >      with condition(b):
+    >          r2.next <<= y
+    >  with condition(c):
     >      r.next <<= z
-
-    The code above will set r.next to be "x" when the condition "a" holds
-    (where a is a one-bit wirevector), r.next to "y" when the condition
-    "!a & b" holds, and r.next to "z" when neither condition holds (more
-    specifically when "!(!a & b)" is true.  This chaining of conditional
-    updates is done through a stack of mulitplexers.
+    >      r2.next <<= z
+    >  with condition():
+    >      r.next <<= w
     """
 
-    class StateDef(Enum):
-        start = 0
-        did_when = 1
-        did_otherwise = 2
+    _monostate = {}
 
-    def __init__(self, block=None):
-        self.state = ConditionalUpdate.StateDef.start
-        self.current_predicate = None
+    def __init__(self):
+        if not ConditionalUpdate._monostate:
+            ConditionalUpdate._monostate = self.__dict__
+            self.predicate_stack = []
+            self.predicate_on_deck = None
+        else:
+            self.__dict__ = Borg.__monostate
+        
+    def __call__(self, predicate=None):
+        if predicate is not None:
+            self.predicate_on_deck = predicate
+        return self
 
     def __enter__(self):
-        if self.current_predicate is None:
-            if self.state != ConditionalUpdate.StateDef.did_otherwise:
-                raise PyrtlError
+        self.predicate_stack.append(self.predicate_on_deck)
+        self.predicate_on_deck = None
 
     def __exit__(self, etype, evalue, etraceback):
-        self.current_predicate = None
+        self.predicate_stack.pop()
 
-    def when(self, predicate):
-        if self.state != ConditionalUpdate.StateDef.start:
-            raise PyrtlError('error, ConditionalUpdates must start with "when"')
-        self.state = ConditionalUpdate.StateDef.did_when
-        self.current_predicate = predicate
-        return self
-            
-    def elsewhen(self, predicate):
-        if self.state != ConditionalUpdate.StateDef.did_when:
-            raise PyrtlError('error, elsewhen clause must come after a "when"'
-                             ' and before "otherwise"')
-        self.state = ConditionalUpdate.StateDef.did_when
-        self.current_predicate = predicate
-        return self
-
-    def otherwise(self):
-        if self.state != ConditionalUpdate.StateDef.did_when:
-            raise PyrtlError('error, otherwise clause must come after at least'
-                             ' one "when" clause')
-        self.state = ConditionalUpdate.StateDef.did_otherwise
-        return self
+                                                                        
+    >  with condition(a):
+    >      r.next <<= x         -->    r.next  <<= mux(a, r, x)
+    >      with condition(b):
+    >          r2.next <<= y    -->    r2.next <<= mux(a&b, r2, y)
+    >  with condition(c):
+    >      r.next <<= z         -->    r.next  <<= mux(a, mux(!a&c, r, z), x)
+    >      r2.next <<= z        -->    r2.next <<= mux(a&b, mux(!a&c, r2, z), y)
+    >      with condition(b):
+    >          r3.next <<= k    -->    r3.next <<= mux(!a&c&b, r3, k)
+    >  with condition():
+    >      r.next <<= w         -->    r.next  <<= mux(a, mux(!a&c, w, z), x)
+    """
 
 
 
