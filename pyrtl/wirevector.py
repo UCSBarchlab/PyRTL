@@ -352,7 +352,7 @@ class Register(WireVector):
 
     def __init__(self, bitwidth, name=None):
         super(Register, self).__init__(bitwidth=bitwidth, name=name)
-        self.reg_in = None
+        self.reg_in = None  # wire vector setting self.next
 
     @property
     def next(self):
@@ -363,18 +363,28 @@ class Register(WireVector):
 
     @next.setter
     def next(self, nextsetter):
-        if self.reg_in is not None:
-            raise PyrtlError('error, .next value should be set once and only once')
         if not isinstance(nextsetter, Register.NextSetter):
             raise PyrtlError('error, .next values should only be set with the "<<=" operator')
-        self.reg_in = nextsetter.rhs
-        net = LogicNet(
-            op='r',
-            op_param=None,
-            args=(self.reg_in,),
-            dests=(self,))
-        self.block.add_net(net)
-        #cond.add_conditional_update(self.rnet, valwire, block)
+
+        conditional = ConditionalUpdate.current
+        if not conditional:
+            if self.reg_in is not None:
+                raise PyrtlError('error, .next value should be set once and only once')
+            else:
+                self.reg_in = nextsetter.rhs
+                net = LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
+                self.block.add_net(net)
+        else:  # conditional
+            # if this is the first assignment to the register
+            if self.reg_in is None:
+                # assume default update is "no change"
+                self.reg_in = self
+                net = LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
+                self.block.add_net(net)
+            else:
+                net = LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
+            # do the actual conditional update
+            conditional.add_conditional_update(net, nextsetter.rhs, self.block)
 
 
 #-----------------------------------------------------------------
@@ -445,10 +455,8 @@ class ConditionalUpdate(object):
     >      r.next <<= w
     """
 
-    # map from register to the ConditionalUpdate instance that defines
-    # that register.  Used to make sure that one register does not
-    # appear under multiple update instances
-    register_to_conditional_update = {}
+    current = None  # the ConditionalUpdate instance in the current scope
+    nesting_depth = 0  # the depth of nestin of the scopes 
 
     def __init__(self, block=None):
         # A stack of all the lists of conditions is required, with
@@ -467,6 +475,14 @@ class ConditionalUpdate(object):
         return self
 
     def __enter__(self):
+        # sanity checks on the scope
+        if ConditionalUpdate.nesting_depth != 0:
+            if ConditionalUpdate.current != self:
+                raise PyrtlError('error, cannot nest different conditionals inside one another')
+        assert(nesting_depth>=0)
+        nesting_depth +=1
+        ConditionalUpdate.current = self
+
         # make sure we did not add a condition after the "always true" clause
         if len(self.conditions_list_stack[-1]) >= 1:
             if self.conditions_list_stack[-1][-1] is None:
@@ -481,6 +497,13 @@ class ConditionalUpdate(object):
     def __exit__(self, etype, evalue, etraceback):
         # pop any sub-conditions off the top of the stacks
         self.conditions_list_stack.pop()
+
+        # sanity checks on the scope
+        nesting_depth -= 1
+        if nesting_depth == 0:
+            self.current = None
+        assert(nesting_depth>=0)
+
 
     def add_conditional_update(self, reg_net, valwire, block):
         """ Under the currently defined predicate, add an update rule to reg. """
@@ -499,8 +522,8 @@ class ConditionalUpdate(object):
             dests=(reg,))
 
         # swap out the old register for the new conditioned one
-        self.block.logic.remove(reg_net)
-        self.block.add_net(new_net)
+        block.logic.remove(reg_net)
+        block.add_net(new_net)
 
     def _current_select(self):
         """ Generates the conjuctions of the predicates required to control condition. """
