@@ -419,6 +419,17 @@ class SignedRegister(Register):
 #   \__, \__/ | \| |__/ |  |  | \__/ | \| /~~\ |___ .__/
 #
 
+# FIXME: Still need to add in the code to 
+# x 1) keep track of the registers that fall under conditional update (to 
+# x make sure that they are not assigned anywhere else!)
+# x 2) register the set of all conditional updates in some class state
+# x so that we can always figure out which "scope" we are making registers
+# x in
+# 4) actually generate the muxes required to do the conditional update
+# when we do the register assignments
+# 5) Handle memories and other crazy crap people might try to do inside
+# these conditional statements!
+
 class ConditionalUpdate(object):
     """ Manages the conditional update of registers based on a predicate. 
         
@@ -438,6 +449,11 @@ class ConditionalUpdate(object):
     >  with condition():
     >      r.next <<= w
     """
+    
+    # map from register to the ConditionalUpdate instance that defines
+    # that register.  Used to make sure that one register does not
+    # appear under multiple update instances
+    register_to_conditional_update = {}
 
     def __init__(self, block=None):
         # A stack of all the lists of conditions is required, with
