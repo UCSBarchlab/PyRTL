@@ -21,7 +21,6 @@ x <<= r
 y <<= r
 
 
-
 sim_trace = SimulationTrace()
 sim = Simulation(tracer=sim_trace)
 for i in xrange(15):

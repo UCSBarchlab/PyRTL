@@ -340,12 +340,13 @@ class Const(WireVector):
             'ConstWires, such as "%s", should never be assigned to with <<='
             % str(self.name))
 
+
 class Register(WireVector):
 
     # When the register is called as such:  r.next <<= foo
     # the sequence of actions that happens is:
     # 1) The property .next is called to get the "value" of r.next
-    # 2) The "value" is then passed to __ilshift__ 
+    # 2) The "value" is then passed to __ilshift__
 
     NextSetter = collections.namedtuple('NextSetter', 'rhs')
 
@@ -363,9 +364,9 @@ class Register(WireVector):
     @next.setter
     def next(self, nextsetter):
         if self.reg_in is not None:
-            raise PyrtlError('error, register.next value should be set once and only once')
+            raise PyrtlError('error, .next value should be set once and only once')
         if not isinstance(nextsetter, Register.NextSetter):
-            raise PyrtlError('error, register.next values should only be set with the "<<=" operator')        
+            raise PyrtlError('error, .next values should only be set with the "<<=" operator')
         self.reg_in = nextsetter.rhs
         net = LogicNet(
             op='r',
@@ -374,6 +375,7 @@ class Register(WireVector):
             dests=(self,))
         self.block.add_net(net)
         #cond.add_conditional_update(self.rnet, valwire, block)
+
 
 #-----------------------------------------------------------------
 #   __     __        ___  __           ___  __  ___  __   __   __
@@ -412,8 +414,8 @@ class SignedRegister(Register):
 #   \__, \__/ | \| |__/ |  |  | \__/ | \| /~~\ |___ .__/
 #
 
-# FIXME: Still need to add in the code to 
-# x 1) keep track of the registers that fall under conditional update (to 
+# FIXME: Still need to add in the code to
+# x 1) keep track of the registers that fall under conditional update (to
 # x make sure that they are not assigned anywhere else!)
 # x 2) register the set of all conditional updates in some class state
 # x so that we can always figure out which "scope" we are making registers
@@ -424,8 +426,8 @@ class SignedRegister(Register):
 # these conditional statements!
 
 class ConditionalUpdate(object):
-    """ Manages the conditional update of registers based on a predicate. 
-        
+    """ Manages the conditional update of registers based on a predicate.
+
     The management of conditional updates is expected to happen through
     the "with" blocks which will ensure that the region of execution for
     which the condition should apply is well defined.  It is easiest
@@ -442,7 +444,7 @@ class ConditionalUpdate(object):
     >  with condition():
     >      r.next <<= w
     """
-    
+
     # map from register to the ConditionalUpdate instance that defines
     # that register.  Used to make sure that one register does not
     # appear under multiple update instances
@@ -459,7 +461,7 @@ class ConditionalUpdate(object):
         # predicate_on_deck stores the predicate passed by the last
         # call to the object (which is then used in __enter__).
         self.predicate_on_deck = None
-        
+
     def __call__(self, predicate=None):
         self.predicate_on_deck = predicate
         return self
@@ -487,19 +489,18 @@ class ConditionalUpdate(object):
         # copy the state out of reg_net that we need to build new net
         old_reg_next = reg_net.args[0]
         reg = reg_net.dests[0]
-        
-        # generate the mux selecting between old 
+
+        # generate the mux selecting between old
         mux_out = mux(select, old_reg_next, valwire)
         new_reg_net = LogicNet(
-            op = 'r',
-            op_param = None,
-            args = (mux_out,),  # .next
-            dests = (reg,))
+            op='r',
+            op_param=None,
+            args=(mux_out,),  # .next
+            dests=(reg,))
 
         # swap out the old register for the new conditioned one
         self.block.logic.remove(reg_net)
         self.block.add_net(new_net)
-        
 
     def _current_select(self):
         """ Generates the conjuctions of the predicates required to control condition. """
@@ -515,7 +516,7 @@ class ConditionalUpdate(object):
                     select = select & ~predicate
             # include the predicate for the current one (not negated)
             if predlist[-1] is not None:
-                select = select & predlist[-1] 
+                select = select & predlist[-1]
         return select
 
 
