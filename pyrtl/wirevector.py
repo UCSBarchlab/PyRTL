@@ -487,6 +487,27 @@ class ConditionalUpdate(object):
         # pop any sub-conditions off the top of the stacks
         self.conditions_list_stack.pop()
 
+    def add_conditional_update(self, reg_net, valwire, block):
+        """ Under the currently defined predicate, add an update rule to reg. """
+        # calculate the predicate to use as a the select to a mux
+        select = self._current_select()
+        # copy the state out of reg_net that we need to build new net
+        old_reg_next = reg_net.args[0]
+        reg = reg_net.dests[0]
+        
+        # generate the mux selecting between old 
+        mux_out = mux(select, old_reg_next, valwire)
+        new_reg_net = LogicNet(
+            op = 'r',
+            op_param = None,
+            args = (mux_out,),  # .next
+            dests = (reg,))
+
+        # swap out the old register for the new conditioned one
+        self.block.logic.remove(reg_net)
+        self.block.add_net(new_net)
+        
+
     def _current_select(self):
         """ Generates the conjuctions of the predicates required to control condition. """
         select = None
@@ -498,7 +519,7 @@ class ConditionalUpdate(object):
                 if select is None:
                     select = ~predicate
                 else:
-                    select = select & ~l
+                    select = select & ~predicate
             # include the predicate for the current one (not negated)
             if predlist[-1] is not None:
                 select = select & predlist[-1] 
@@ -620,6 +641,7 @@ class MemBlock(object):
 
 def as_wires(val):
     """ Return wires from val which may be wires or int. """
+    # FIXME: implicit use of block
     if isinstance(val, [int, basestring]):
         return Const(val)
     if not isinstance(val, WireVector):
@@ -629,6 +651,7 @@ def as_wires(val):
 
 def mux(select, a, b):
     """ Multiplexer returning a for select==0, otherwise b. """
+    # FIXME: implicit use of block
     # check size and type of operands
     select = as_wires(select)
     a = as_wires(a)
@@ -653,6 +676,7 @@ def mux(select, a, b):
 
 def concat(*args):
     """ Take any number of wire vector params and return a wire vector concatinating them."""
+    # FIXME: implicit use of block
     if len(args) <= 0:
         raise PyrtlError
     if len(args) == 1:
