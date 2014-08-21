@@ -17,7 +17,6 @@ parameters and concats them into one new wire vector which it returns.
 
 import collections
 import string
-from enum import Enum
 from block import *
 
 
@@ -341,46 +340,40 @@ class Const(WireVector):
             'ConstWires, such as "%s", should never be assigned to with <<='
             % str(self.name))
 
-
 class Register(WireVector):
-    """ A WireVector with a latch in the middle (read current value, set .next value) """
+
+    # When the register is called as such:  r.next <<= foo
+    # the sequence of actions that happens is:
+    # 1) The property .next is called to get the "value" of r.next
+    # 2) The "value" is then passed to __ilshift__ 
+
+    NextSetter = collections.namedtuple('NextSetter', 'rhs')
 
     def __init__(self, bitwidth, name=None):
         super(Register, self).__init__(bitwidth=bitwidth, name=name)
         self.reg_in = None
 
-    def _makereg(self):
-        if self.reg_in is None:
-            n = WireVector(bitwidth=self.bitwidth, name=self.name+"'")
-            net = LogicNet(
-                op='r',
-                op_param=None,
-                args=(n,),
-                dests=(self,))
-            self.block.add_net(net)
-            self.reg_in = n
-        return self.reg_in
-
-    def __ilshift__(self, other):
-        raise PyrtlError(
-            'Registers, such as "%s", should never be assigned to with <<='
-            % str(self.name))
-
     @property
     def next(self):
-        return self._makereg()
+        return self
+
+    def __ilshift__(self, other):
+        return Register.NextSetter(rhs=other)
 
     @next.setter
-    def next(self, value):
-        # The .next feild can be set with either "<<=" or "=", and
-        # they do the same thing.
-        if self.reg_in is value:
-            return
+    def next(self, nextsetter):
         if self.reg_in is not None:
-            raise PyrtlError
-        n = self._makereg()
-        n <<= value
-
+            raise PyrtlError('error, register.next value should be set once and only once')
+        if not isinstance(nextsetter, Register.NextSetter):
+            raise PyrtlError('error, register.next values should only be set with the "<<=" operator')        
+        self.reg_in = nextsetter.rhs
+        net = LogicNet(
+            op='r',
+            op_param=None,
+            args=(self.reg_in,),
+            dests=(self,))
+        self.block.add_net(net)
+        #cond.add_conditional_update(self.rnet, valwire, block)
 
 #-----------------------------------------------------------------
 #   __     __        ___  __           ___  __  ___  __   __   __
@@ -525,6 +518,7 @@ class ConditionalUpdate(object):
                 select = select & predlist[-1] 
         return select
 
+
 #------------------------------------------------------------------------
 #
 #         ___        __   __          __        __   __
@@ -535,15 +529,14 @@ class ConditionalUpdate(object):
 # MemBlock supports any number of the following operations:
 # read: d = mem[address]
 # write: mem[address] = d
-# write with an enable: mem[address] = DataWithEnable(d,enable=we)
+# write with an enable: mem[address] = MemBlock.EnabledWrite(d,enable=we)
 # Based on the number of reads and writes a memory will be inferred
 # with the correct number of ports to support that
 
-DataWithEnable = collections.namedtuple('DataWithEnable', 'data, enable')
-
-
 class MemBlock(object):
     """ An object for specifying block memories """
+
+    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
 
     # data = memory[addr]  (infer read port)
     # memory[addr] = data  (infer write port)
@@ -617,7 +610,7 @@ class MemBlock(object):
         if isinstance(val, WireVector):
             data = val
             enable = Const(1, bitwidth=1)
-        elif isinstance(val, DataWithEnable):
+        elif isinstance(val, MemBlock.EnabledWrite):
             data = val.data
             enable = val.enable
         else:

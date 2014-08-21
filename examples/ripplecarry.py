@@ -25,7 +25,8 @@ def add(a, b, cin=Const(0)):
 
 
 counter = Register(bitwidth=3, name='counter')
-counter.next, cout = add(counter, Const("3'b001"))
+sum, cout = add(counter, Const("3'b001"))
+counter.next <<= sum
 
 # Actually simulate the adder here
 sim_trace = pyrtl.SimulationTrace()

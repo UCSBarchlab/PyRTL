@@ -44,10 +44,6 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.r.next <<= self.r + pyrtl.Const(2,bitwidth=self.bitwidth)
         self.check_trace('r 02460246\n')
 
-    def test_next_works_with_equal(self):
-        self.r.next = self.r + pyrtl.Const(2,bitwidth=self.bitwidth)
-        self.check_trace('r 02460246\n')
-
     def test_minus_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1,bitwidth=self.bitwidth)
         self.check_trace('r 07654321\n')
@@ -95,7 +91,8 @@ class TestRTLSimulationTraceWithAdder(unittest.TestCase):
         pyrtl.reset_working_block()
         bitwidth = 3
         self.r = pyrtl.Register(bitwidth=bitwidth, name='r')
-        self.r.next, self.cout = generate_full_adder(self.r, pyrtl.Const(1).zero_extended(bitwidth) )
+        self.sum, self.cout = generate_full_adder(self.r, pyrtl.Const(1).zero_extended(bitwidth) )
+        self.r.next <<= self.sum
     
     def tearDown(self):
         pass

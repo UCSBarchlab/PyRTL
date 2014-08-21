@@ -15,7 +15,6 @@ from wirevector import SignedConst
 from wirevector import SignedRegister
 from wirevector import ConditionalUpdate
 from wirevector import MemBlock
-from wirevector import DataWithEnable
 from wirevector import as_wires
 from wirevector import concat
 from wirevector import working_block

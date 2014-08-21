@@ -96,7 +96,8 @@ class TestRTLAdderDesign(unittest.TestCase):
             r = pyrtl.Register(bitwidth=bitwidth, name='r')
             const_one = pyrtl.Const(1)
             addby = const_one.zero_extended(bitwidth)
-            r.next, cout = generate_full_adder(r, addby )
+            sum, cout = generate_full_adder(r, addby )
+            r.next <<= sum
  
             self.assertTrue( isinstance(r,pyrtl.Register) )
             self.assertTrue( isinstance(cout,pyrtl.WireVector) )
@@ -130,7 +131,7 @@ class TestRTLMemBlockDesign(unittest.TestCase):
         we = pyrtl.Const(1,bitwidth=1)
         self.output1 <<= memory[self.mem_read_address1]
         self.output2 <<= memory[self.mem_read_address2]
-        memory[self.mem_write_address] = pyrtl.DataWithEnable(self.mem_write_data, enable=we)
+        memory[self.mem_write_address] = pyrtl.MemBlock.EnabledWrite(self.mem_write_data, enable=we)
 
     def test_memblock_with_write_enable_with_shiftset(self):
         testmissing()
