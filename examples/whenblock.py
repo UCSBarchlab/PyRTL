@@ -9,7 +9,7 @@ r = Register(1, 'r')
 r2 = Register(3, 'r2')
 
 # Example of how to use ConditionalUpdate to set
-# registers only when the conditions are true.  
+# registers only when the conditions are true.
 condition = ConditionalUpdate()
 with condition(a):
     r.next <<= 1  # when a is true
