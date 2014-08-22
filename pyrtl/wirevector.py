@@ -384,7 +384,8 @@ class Register(WireVector):
             else:
                 net = LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
             # do the actual conditional update
-            conditional.add_conditional_update(net, nextsetter.rhs, self.block)
+            new_reg_in = conditional.add_conditional_update(net, nextsetter.rhs, self.block)
+            self.reg_in = new_reg_in
 
 
 #-----------------------------------------------------------------
@@ -445,14 +446,14 @@ class ConditionalUpdate(object):
 
     >  condition = ConditionalUpdate()
     >  with condition(a):
-    >      r.next <<= x
+    >      r.next <<= x  # set when a is true
     >      with condition(b):
-    >          r2.next <<= y
+    >          r2.next <<= y  # set when a and b are true
     >  with condition(c):
-    >      r.next <<= z
+    >      r.next <<= z  # set when a is false and c is true
     >      r2.next <<= z
     >  with condition():
-    >      r.next <<= w
+    >      r.next <<= w  # a is false and c is false
     """
 
     current = None  # the ConditionalUpdate instance in the current scope
@@ -505,7 +506,11 @@ class ConditionalUpdate(object):
         assert(ConditionalUpdate.nesting_depth >= 0)
 
     def add_conditional_update(self, reg_net, valwire, block):
-        """ Under the currently defined predicate, add an update rule to reg. """
+        """ Under the currently defined predicate, add an update rule to reg. 
+        
+        Returns the new wire that should connect to the ".next" terminal
+        of the register.
+        """
         # calculate the predicate to use as a the select to a mux
         select = self._current_select()
         # copy the state out of reg_net that we need to build new net
@@ -519,14 +524,15 @@ class ConditionalUpdate(object):
         # swap out the old register for the new conditioned one
         block.logic.remove(reg_net)
         block.add_net(new_reg_net)
+        return mux_out
 
     def _current_select(self):
         """ Generates the conjuctions of the predicates required to control condition. """
         select = None
-        
+
         # helper to create the conjuction of predicates
         def and_with_possible_none(a, b):
-            assert( a is not None or b is not None )
+            assert(a is not None or b is not None)
             if a is None:
                 return b
             if b is None:
@@ -540,7 +546,7 @@ class ConditionalUpdate(object):
                 assert(predicate is not None)
                 select = and_with_possible_none(select, ~predicate)
             # include the predicate for the current one (not negated)
-            select = and_with_possible_none( select, predlist[-1] )
+            select = and_with_possible_none(select, predlist[-1])
 
         assert(select is not None)
         return select
