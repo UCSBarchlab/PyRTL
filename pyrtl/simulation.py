@@ -125,7 +125,7 @@ class Simulation(object):
         semantics of the primitive ops.  Function updates self.value and
         self.memvalue accordingly.
         """
-        if net.op is None or net.op in '~ & | ^ + - * c s'.split():
+        if net.op is None or net.op in '~&|^+-*<>=xcs':
             return  # stateless elements
         else:
             if net.op == 'r':

@@ -456,7 +456,7 @@ class ConditionalUpdate(object):
     """
 
     current = None  # the ConditionalUpdate instance in the current scope
-    nesting_depth = 0  # the depth of nestin of the scopes 
+    nesting_depth = 0  # the depth of nestin of the scopes
 
     def __init__(self, block=None):
         # A stack of all the lists of conditions is required, with
@@ -479,8 +479,8 @@ class ConditionalUpdate(object):
         if ConditionalUpdate.nesting_depth != 0:
             if ConditionalUpdate.current != self:
                 raise PyrtlError('error, cannot nest different conditionals inside one another')
-        assert(nesting_depth>=0)
-        nesting_depth +=1
+        assert(ConditionalUpdate.nesting_depth >= 0)
+        ConditionalUpdate.nesting_depth += 1
         ConditionalUpdate.current = self
 
         # make sure we did not add a condition after the "always true" clause
@@ -499,11 +499,10 @@ class ConditionalUpdate(object):
         self.conditions_list_stack.pop()
 
         # sanity checks on the scope
-        nesting_depth -= 1
-        if nesting_depth == 0:
-            self.current = None
-        assert(nesting_depth>=0)
-
+        ConditionalUpdate.nesting_depth -= 1
+        if ConditionalUpdate.nesting_depth == 0:
+            ConditionalUpdate.current = None
+        assert(ConditionalUpdate.nesting_depth >= 0)
 
     def add_conditional_update(self, reg_net, valwire, block):
         """ Under the currently defined predicate, add an update rule to reg. """
@@ -515,31 +514,35 @@ class ConditionalUpdate(object):
 
         # generate the mux selecting between old
         mux_out = mux(select, old_reg_next, valwire)
-        new_reg_net = LogicNet(
-            op='r',
-            op_param=None,
-            args=(mux_out,),  # .next
-            dests=(reg,))
+        new_reg_net = LogicNet('r', None, args=tuple([mux_out]), dests=tuple([reg]))
 
         # swap out the old register for the new conditioned one
         block.logic.remove(reg_net)
-        block.add_net(new_net)
+        block.add_net(new_reg_net)
 
     def _current_select(self):
         """ Generates the conjuctions of the predicates required to control condition. """
         select = None
+        
+        # helper to create the conjuction of predicates
+        def and_with_possible_none(a, b):
+            assert( a is not None or b is not None )
+            if a is None:
+                return b
+            if b is None:
+                return a
+            return a & b
+
         # for all conditions except the current children (which should be [])
         for predlist in self.conditions_list_stack[:-1]:
             # negate all of the predicates before the current one
             for predicate in predlist[:-1]:
                 assert(predicate is not None)
-                if select is None:
-                    select = ~predicate
-                else:
-                    select = select & ~predicate
+                select = and_with_possible_none(select, ~predicate)
             # include the predicate for the current one (not negated)
-            if predlist[-1] is not None:
-                select = select & predlist[-1]
+            select = and_with_possible_none( select, predlist[-1] )
+
+        assert(select is not None)
         return select
 
 
@@ -659,7 +662,7 @@ class MemBlock(object):
 def as_wires(val):
     """ Return wires from val which may be wires or int. """
     # FIXME: implicit use of block
-    if isinstance(val, [int, basestring]):
+    if isinstance(val, (int, basestring)):
         return Const(val)
     if not isinstance(val, WireVector):
         raise PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
