@@ -272,8 +272,8 @@ class WireVector(object):
 class Input(WireVector):
     """ A WireVector type denoting inputs to a block (no writers) """
 
-    def __init__(self, bitwidth=None, name=None):
-        super(Input, self).__init__(bitwidth, name)
+    def __init__(self, bitwidth=None, name=None, block=None):
+        super(Input, self).__init__(bitwidth=bitwidth, name=name, block=block)
 
     def __ilshift__(self, _):
         raise PyrtlError(
@@ -284,15 +284,15 @@ class Input(WireVector):
 class Output(WireVector):
     """ A WireVector type denoting outputs of a block (no readers) """
 
-    def __init__(self, bitwidth=None, name=None):
-        super(Output, self).__init__(bitwidth, name)
+    def __init__(self, bitwidth=None, name=None, block=None):
+        super(Output, self).__init__(bitwidth, name, block)
     # todo: check that we can't read from this vector
 
 
 class Const(WireVector):
     """ A WireVector representation of an unsigned integer constant """
 
-    def __init__(self, val, bitwidth=None):
+    def __init__(self, val, bitwidth=None, block=None):
         """ Construct a constant implementation at initialization """
         name = Block.next_constvar_name(val)
 
@@ -331,7 +331,7 @@ class Const(WireVector):
                 % (str(num), bitwidth))
 
         # initialize the WireVector
-        super(Const, self).__init__(bitwidth=bitwidth, name=name)
+        super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)
         # add the member "val" to track the value of the constant
         self.val = num
 
@@ -350,8 +350,8 @@ class Register(WireVector):
 
     NextSetter = collections.namedtuple('NextSetter', 'rhs')
 
-    def __init__(self, bitwidth, name=None):
-        super(Register, self).__init__(bitwidth=bitwidth, name=name)
+    def __init__(self, bitwidth, name=None, block=None):
+        super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block)
         self.reg_in = None  # wire vector setting self.next
 
     @property

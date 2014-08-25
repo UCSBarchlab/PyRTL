@@ -17,7 +17,7 @@ from wirevector import *
 #    | | \| |    \__/  |
 
 
-def input_from_blif(blif, block=None):
+def input_from_blif(blif, block=None, merge_io_vectors=True):
     """ Read an open blif file or string as input, updating the block appropriately
 
         Assumes the blif has been flattened and their is only a single module.
@@ -68,12 +68,13 @@ def input_from_blif(blif, block=None):
     name_def = Group(SKeyword('.names') + namesignal_list + cover_list)('name_def')
 
     # asynchronous Flip-flop
-    dffas_formal = SLiteral('C=') + signal_id('C') \
-        + SLiteral('D=') + signal_id('D') \
-        + SLiteral('Q=') + signal_id('Q') \
-        + SLiteral('R=') + signal_id('R')
+    dffas_formal = (SLiteral('C=') + signal_id('C')
+                    + SLiteral('R=') + signal_id('R')
+                    + SLiteral('D=') + signal_id('D')
+                    + SLiteral('Q=') + signal_id('Q'))
     dffas_keyword = SKeyword('$_DFF_PN0_') | SKeyword('$_DFF_PP0_')
     dffas_def = Group(SKeyword('.subckt') + dffas_keyword + dffas_formal)('dffas_def')
+
     # synchronous Flip-flop
     dffs_def = Group(SKeyword('.latch')
                      + signal_id('D')
@@ -96,15 +97,36 @@ def input_from_blif(blif, block=None):
     ff_clk_set = set([])
 
     def extract_inputs(model):
-        for input_name in model['input_list']:
+        start_names = [re.sub(r'\[([0-9]+)\]$', '', x) for x in model['input_list']]
+        name_counts = collections.Counter(start_names)
+        for input_name in name_counts:
+            bitwidth = name_counts[input_name]
             if input_name == 'clk':
                 clk_set.add(input_name)
-            else:
+            elif not merge_io_vectors or bitwidth == 1:
                 block.add_wirevector(Input(bitwidth=1, name=input_name))
+            else:
+                wire_in = Input(bitwidth=bitwidth, name=input_name, block=block)
+                for i in range(bitwidth):
+                    bit_name = input_name + '[' + str(i) + ']'
+                    bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
+                    bit_wire <<= wire_in[i]
 
     def extract_outputs(model):
-        for output_name in model['output_list']:
-            block.add_wirevector(Output(bitwidth=1, name=output_name))
+        start_names = [re.sub(r'\[([0-9]+)\]$', '', x) for x in model['output_list']]
+        name_counts = collections.Counter(start_names)
+        for output_name in name_counts:
+            bitwidth = name_counts[output_name]
+            if not merge_io_vectors or bitwidth == 1:
+                block.add_wirevector(Output(bitwidth=1, name=output_name))
+            else:
+                wire_out = Output(bitwidth=bitwidth, name=output_name, block=block)
+                bit_list = []
+                for i in range(bitwidth):
+                    bit_name = output_name + '[' + str(i) + ']'
+                    bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
+                    bit_list.append(bit_wire)
+                wire_out <<= concat(*bit_list)
 
     def extract_commands(model):
         # for each "command" (dff or net) in the model
