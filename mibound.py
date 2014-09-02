@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 def main():
 	
 	#testBasicGates()
+	testmux()
 	
+def testmux():
+
 	a, b, s = Input(1, 'a'), Input(1, 'b'), Input(1, 's')
 	out = Output(1, 'out')
 	
@@ -16,7 +19,7 @@ def main():
 	
 	a.tainted = True
 	
-	dists = [(.25,0.), (.25,.5), (.25,1.)]
+	dists = [(.5,0.), (.5,.5), (.5,1.)]
 	
 	for dist in dists:
 		a.DIST0 = dist[0]
@@ -62,7 +65,7 @@ def testBasicGates():
 	
 	a.tainted = True
 	
-	dists = [(.5,0.), (.5,.5), (.5,1.)]
+	dists = [(.75,0.), (.75,.5), (.75,1.)]
 	
 	for dist in dists:
 		a.DIST0 = dist[0]
@@ -82,7 +85,7 @@ def testBasicGates():
 
 		for gate in pyrtl.working_block().logic.copy():
 			if gate.op:
-				print "op {:s} = {:s}{:s}{:s}: MI(out, a) = {:.1f}".format(wiren(D.get(gate.dests[0],gate.dests[0])), wiren(gate.args[0]), gate.op, wiren(gate.args[1]), gate.dests[0].MI)
+				print "op {:s} = {:s}{:s}{:s}: MI(out, a) = {:f}".format(wiren(D.get(gate.dests[0],gate.dests[0])), wiren(gate.args[0]), gate.op, wiren(gate.args[1]), gate.dests[0].MI)
 				#print gate.args[0], gate.args[0].DIST0, '/', gate.args[0].DIST1, gate.op, gate.args[1], gate.args[1].DIST0, '/', gate.args[1].DIST1, '---', gate.dests[0].MI
 
 def wiren(s):
@@ -198,17 +201,37 @@ def gateMI(G):
 
 	mi = 0.0
 
+	# get a distribution that maximizes entropy
+	if a.DIST0 >= .5 and a.DIST1 >= .5:
+		a0, a1 = .5, .5
+	elif a.DIST0 < .5: # 0's are limiting reagent
+		a0, a1 = a.DIST0, 1. - a.DIST0
+	else: # 1's are limiting reagent
+		a0, a1 = 1. - a.DIST1, a.DIST1
+
 	if G.op == '&':
 		# Contributing states:
 		# a z (b)
 		# ---------
 		# 0 0 (0,1)
 		# 1 0 (0)
-		# 1 1 (1)		
+		# 1 1 (1)	
+		
+		# choose b distribution that maximizes MI of output with a
+		b0, b1 = 1. - b.DIST1, b.DIST1
+		# re-formulate output distribution based on new inputs
+		z0 = min(a0 + b0, 1.0)
+		z1 = min(a1, b1)
+		z0,z1 = worstCaseCorr(a0,a1,z0,z1)
+			
+		#print a0,a1
+		#print b0,b1
+		#print z0,z1
+			
 		#mi += miterm(a.DIST0, z.DIST0, min(a.DIST0, b.DIST0) + min(a.DIST0, b.DIST1))
-		mi += miterm(a.DIST0, z.DIST0, min(a.DIST0, b.DIST0 + b.DIST1))
-		mi += miterm(a.DIST1, z.DIST0, min(a.DIST1, b.DIST0))
-		mi += miterm(a.DIST1, z.DIST1, min(a.DIST1, b.DIST1))
+		mi += miterm(a0, z0, a0)
+		mi += miterm(a1, z0, a1 * b0)
+		mi += miterm(a1, z1, a1 * b1)
 		
 	elif G.op == '|':
 		# Contributing states:
@@ -217,10 +240,18 @@ def gateMI(G):
 		# 0 0 (0)
 		# 0 1 (1)
 		# 1 1 (0,1)		
-		mi += miterm(a.DIST0, z.DIST0, min(a.DIST0, b.DIST0))
-		mi += miterm(a.DIST0, z.DIST1, min(a.DIST0, b.DIST1))
+		
+		# choose b distribution that maximizes MI of output with a
+		b0, b1 = b.DIST0, 1. - b.DIST0
+		# re-formulate output distribution based on new inputs
+		z0 = min(a0, b0)
+		z1 = min(a1 + b1, 1.0)
+		z0,z1 = worstCaseCorr(a0,a1,z0,z1)
+		
+		mi += miterm(a0, z0, a0 * b0)
+		mi += miterm(a0, z1, a0 * b1)
 		#mi += miterm(a.DIST1, z.DIST1, min(a.DIST1, b.DIST0) + min(a.DIST1, b.DIST1))
-		mi += miterm(a.DIST1, z.DIST1, min(a.DIST1, b.DIST0 + b.DIST1))
+		mi += miterm(a1, z1, a1)
 	
 	elif G.op == '^':
 		# Contributing states:
@@ -236,6 +267,14 @@ def gateMI(G):
 		mi += miterm(a.DIST1, z.DIST0, min(a.DIST1, b.DIST1))
 	
 	z.MI = mi
+
+def worstCaseCorr(a0, a1, z0, z1):
+	if z0 >= a0 and z1 >= a1:
+		return a0, a1
+	if z0 < a0:
+		return z0, 1.-z0
+	else:
+		return 1.-z1, z1
 
 def miterm(px, py, pxy):
 	if pxy == 0:
