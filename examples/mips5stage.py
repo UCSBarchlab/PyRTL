@@ -74,7 +74,7 @@ class MipsCore(Pipeline):
         EW = MemBlock.EnabledWrite
         regfile[self.write_register] = EW(self.write_data, enable=self.regwrite)
 
-        self.immed = immed.sign_extended()
+        self.immed = immed.sign_extended(32)
         self.rt = rt
         self.rd = rd
         self.regread1 = regfile[rs]
