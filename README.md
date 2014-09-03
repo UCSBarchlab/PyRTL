@@ -17,6 +17,8 @@ pyrtl and defines its semantics at a high level.
 
 ### Near-term todo list
 
+* -Wall option (warn on trucate, sign and unigned extentions)
+* input and output BLIF input files
 * all user visible assert calls should be replaced with "raise PyrtlError"
 * all PyrtlError calls should have useful error message
 * all classes should have useful docstrings
