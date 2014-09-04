@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 
 def main():
 	
-	#testBasicGates()
-	testmux()
+	testBasicGates()
+	#testmux()
 	
 def testmux():
 
@@ -65,7 +65,7 @@ def testBasicGates():
 	
 	a.tainted = True
 	
-	dists = [(.75,0.), (.75,.5), (.75,1.)]
+	dists = [(0.,.5), (.25,.25), (.5,.5), (.75,.75), (1.,.5)]
 	
 	for dist in dists:
 		a.DIST0 = dist[0]
@@ -75,7 +75,12 @@ def testBasicGates():
 		
 		mibound(pyrtl.working_block())
 
-		print "Inputs probabilities: a - p0={:.0f}%, p1={:.0f}%, b - p0={:.0f}%, p1={:.0f}%".format(a.DIST0*100., a.DIST1*100., b.DIST0*100., b.DIST1*100.)
+		print "Input probabilites"
+		print "\t0\t1"
+		print "a\t{:.0f}%\t{:.0f}%".format(a.DIST0*100., a.DIST1*100.)
+		print "b\t{:.0f}%\t{:.0f}%".format(b.DIST0*100., b.DIST1*100.)
+
+		#print "Inputs probabilities: a - p0={:.0f}%, p1={:.0f}%, b - p0={:.0f}%, p1={:.0f}%".format(a.DIST0*100., a.DIST1*100., b.DIST0*100., b.DIST1*100.)
 
 		D = {}
 		for gate in pyrtl.working_block().logic.copy():
@@ -260,11 +265,28 @@ def gateMI(G):
 		# 0 0 (0)
 		# 0 1 (1)
 		# 1 1 (0)
-		# 1 0 (1)		
-		mi += miterm(a.DIST0, z.DIST0, min(a.DIST0, b.DIST0))
-		mi += miterm(a.DIST0, z.DIST1, min(a.DIST0, b.DIST1))
-		mi += miterm(a.DIST1, z.DIST1, min(a.DIST1, b.DIST0))
-		mi += miterm(a.DIST1, z.DIST0, min(a.DIST1, b.DIST1))
+		# 1 0 (1)
+		
+		# choose b distribution that maximizes MI of output with a
+		if b.DIST0 >= b.DIST1: 
+			b0, b1 = b.DIST0, 1. - b.DIST0
+		else:
+			b0, b1 = 1. - b.DIST1, b.DIST1
+		# re-formulate output distribution based on new inputs
+		z0 = min( min(a0, b0) + min(a1, b1), 1.0)
+		z1 = min( min(a0, b1) + min(a1, b0), 1.0)
+		print z0,z1
+		z0,z1 = worstCaseCorr(a0,a1,z0,z1)
+		print z0,z1		
+		print z.DIST0, z.DIST1
+		#print a0,a1
+		#print b0,b1
+		#print z0,z1
+				
+		mi += miterm(a0, z0, a0 * b0)
+		mi += miterm(a0, z1, a0 * b1)
+		mi += miterm(a1, z1, a1 * b0)
+		mi += miterm(a1, z0, a1 * b1)
 	
 	z.MI = mi
 
@@ -277,6 +299,7 @@ def worstCaseCorr(a0, a1, z0, z1):
 		return 1.-z1, z1
 
 def miterm(px, py, pxy):
+	#print px, py, pxy
 	if pxy == 0:
 		return 0.0
 	#if pxy < (px*py):
