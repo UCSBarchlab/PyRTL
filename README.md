@@ -17,19 +17,19 @@ pyrtl and defines its semantics at a high level.
 
 ### Near-term todo list
 
-* -Wall option (warn on trucate, sign and unigned extentions)
-* input and output BLIF input files
 * all user visible assert calls should be replaced with "raise PyrtlError"
 * all PyrtlError calls should have useful error message
 * all classes should have useful docstrings
 * all public functions and methods should have useful docstrings
-* should have set of unit tests for main abstractions
-* should be PEP8 compliant
-* multiple nested blocks should be supported
+* should have set of unit tests for all main abstractions
 * add verilog export option to block
-* add multiply operation as a primitive
+* add a -Wall option which warns on truncation
 
 ### Bigger todo projects
+
+**Multiple-Blocks:**
+Rather than one single monolythic hardware block, PyRTL should support
+multiple nested blocks active at the same time (and nested recursively)
 
 **Estimators:** 
 add area, clockrate, and energy estimations

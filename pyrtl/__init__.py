@@ -17,6 +17,7 @@ from wirevector import ConditionalUpdate
 from wirevector import MemBlock
 from wirevector import as_wires
 from wirevector import concat
+from wirevector import appropriate_register_type
 from wirevector import working_block
 from wirevector import reset_working_block
 

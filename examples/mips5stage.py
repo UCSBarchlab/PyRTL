@@ -126,19 +126,13 @@ class MipsCore(Pipeline):
         return concat(op0, op1, op2)
 
     def alu(self, ctrl, op1, op2)
-        retval = mux( (ctrl)
-        
-        op1 & op2
-        op1 | op2
-        op1 + op2
-        op1 - op2
-000 AND
-001 OR
-010 add
-110 subtract
-111 set-on-less-than
-
-
+        retval = switch(ctrl, {
+            "3'000": op1 & op2
+            "3'001": op1 | op2
+            "3'010": op1 + op2
+            "3'110": op1 - op2
+            "3'111": op1 < op2
+            })
 
 
 # Simulation of the core
