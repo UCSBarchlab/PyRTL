@@ -1,3 +1,4 @@
+
 import sys
 sys.path.append("..")  # needed only if not installed
 from pyrtl import *
@@ -7,40 +8,35 @@ class Pipeline(object):
     """ Pipeline constructor with auto generation of pipeline registers. """
 
     def __init__(self):
-        self._pipeline_register = {}
-        self._interstage_signals = {}
+        self._pipeline_register_map = {}
         self._current_stage_num = 0
 
-        self._processing_stages = False
-        self.interstage()
-
-        self._processing_stages = True
         stage_list = sorted(
             [method for
              method in dir(self)
-             if method.startswith('stage')
-             ])
+             if method.startswith('stage')])
         for stage in stage_list:
-            self._pipeline_register[self._current_stage_num] = {}
+            self._pipeline_register_map[self._current_stage_num] = {}
             stage_method = getattr(self, stage)
             stage_method()
             self._current_stage_num += 1
 
     def __getattr__(self, name):
-        if name in self._interstage_signals:
-            return self._interstage_signals[name]
-        else:
-            return self._pipeline_register[self._current_state_num][name]
+            return self._pipeline_register_map[self._current_state_num][name]
 
     def __setattr__(self, name, value):
-        if self._processing_stages:
+        if name.startswith('_'):
+            # do not do anything tricky with variables starting with '_'
+            self.__dict__[name] = value
+        else:
             rtype = appropriate_register_type(value)
             rname = '_'.join(['stage', str(self._current_stage_num), name])
             new_pipe_reg = rtype(bitwidth=len(value), name=rname)
-            self._pipeline_register[self._current_stage_num + 1][name] = new_pipe_reg
+            next_stage = self._current_stage_num + 1
+            if next_stage not in self._pipeline_register_map:
+                self._pipeline_register_map[next_stage] = {}
+            self._pipeline_register_map[next_stage][name] = new_pipe_reg
             new_pipe_reg.next <<= value
-        else:
-            self._interstage_signals[name] = value
 
 
 def switch(ctrl, logic_dict):
@@ -52,24 +48,37 @@ def switch(ctrl, logic_dict):
             truecase=logic_dict[case_value])
     return working_result
 
+class StupidPipeline(Pipeline):
+    def __init__(self):
+        self._loopback = WireVector(1, 'loopback')
+        super(StupidPipeline,self).__init__()
+    def stage0(self):
+        self.n = self._loopback ^ 1
+    def stage1(self):
+        self.m = self.n
+    def stage2(self):
+        self._loopback = self.m
 
 # implementation of: http://i.stack.imgur.com/Pc9Vh.png
 class MipsCore(Pipeline):
-    def interstage(self):
+    """ Variable bitwidth 5 Stage Mips Pipeline """
+    def __init__(self, addrwidth=5):
         """ all of the cross-pipeline signals are declared here """
-        self.pcsrc = WireVector(1, 'pcsrc')
-        self.computed_address = WireVector(1, 'computed_address')
-        self.regwrite = WireVector(1, 'regwrite')
-        self.write_register = WireVector(5, 'write_register')
-        self.write_data = WireVector(bitwidth, 'write_data')
+        self._addrwidth = addrwidth  # a compile time constant
+        self._pcsrc = WireVector(1, 'pcsrc')
+        self._computed_address = WireVector(1, 'computed_address')
+        self._regwrite = WireVector(1, 'regwrite')  # CHECK
+        self._write_register = WireVector(5, 'write_register')  # CHECK
+        self._write_data = WireVector(32, 'write_data')
+        super(MipsCore, self).__init__()
 
     def stage0_fetch(self):
         """ update the PC, grab the instruction from imem """
-        pc = Register(addrwidth, 'pc')
-        imem = MemBlock(bitwidth, addrwidth, 'imem')
+        pc = Register(self._addrwidth, 'pc')
+        imem = MemBlock(32, self._addrwidth, 'imem')
         instr = imem[pc]
         pc_incr = pc + 4
-        pc.next <<= mux(self.pcsrc, pc_incr, self.computed_address)
+        pc.next <<= mux(self._pcsrc, pc_incr, self._computed_address)
 
         self.pc_incr = pc_incr
         self.instr = instr
@@ -87,9 +96,9 @@ class MipsCore(Pipeline):
         # shamt = instr[6:11]
         # funct = instr[0:6]
 
-        regfile = MemBlock(bitwidth, 5, 'regfile')
+        regfile = MemBlock(32, 5, 'regfile')
         EW = MemBlock.EnabledWrite
-        regfile[self.write_register] = EW(self.write_data, enable=self.regwrite)
+        regfile[self._write_register] = EW(self._write_data, enable=self._regwrite)
 
         self.immed = immed.sign_extended(32)
         self.rt = rt
@@ -112,7 +121,7 @@ class MipsCore(Pipeline):
 
     def stage3_memory(self):
         """ access dmem for loads and stores """
-        dmem = MemBlock(bitwidth, addrwidth, 'dmem')
+        dmem = MemBlock(32, self._addrwidth, 'dmem')
         EW = MemBlock.EnabledWrite
         dmem[self.alu_result] = EW(self.regread2, enable=self.memwrite)
 
@@ -122,7 +131,7 @@ class MipsCore(Pipeline):
 
     def stage4_writeback(self):
         """ select the data to write back to registers """
-        self.write_data = mux(self.mem_to_reg, self.alu_result, self.read_data)
+        self._write_data = mux(self.mem_to_reg, self.alu_result, self.read_data)
 
     def alu_ctrl(self, opcode, immed):
         # A A
@@ -154,6 +163,10 @@ class MipsCore(Pipeline):
             "3'111": op1 < op2,
             None: 0,
             })
+
+
+#testcore = MipsCore(addrwidth=5)
+testcore = StupidPipeline()
 
 
 # Simulation of the core
