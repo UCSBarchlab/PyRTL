@@ -669,34 +669,39 @@ def as_wires(val):
         raise PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
     return val
 
+
 def and_all_bits(vector):
     return _apply_op_over_all_bits('__and__', vector)
+
 
 def or_all_bits(vector):
     return _apply_op_over_all_bits('__or__', vector)
 
+
 def xor_all_bits(vector):
     return _apply_op_over_all_bits('__xor__', vector)
 
+
 def parity(vector):
-    return _apply_op_over_all_bits(vector.__xor__, vector)
+    return _apply_op_over_all_bits('__xor__', vector)
+
 
 def _apply_op_over_all_bits(op, vector):
     if len(vector) == 1:
         return vector
     else:
-        rest = _apply_op_over_all_bits(vector[1:])
+        rest = _apply_op_over_all_bits(op, vector[1:])
         func = getattr(vector[0], op)
-        return self.op(vector[0].op(rest)
+        return func(vector[0], rest)
 
 
-def mux(select, a, b):
-    """ Multiplexer returning a for select==0, otherwise b. """
+def mux(select, falsecase, truecase):
+    """ Multiplexer returning falsecase for select==0, otherwise truecase. """
     # FIXME: implicit use of block
     # check size and type of operands
     select = as_wires(select)
-    a = as_wires(a)
-    b = as_wires(b)
+    a = as_wires(falsecase)
+    b = as_wires(truecase)
     if len(select) != 1:
         raise PyrtlError('error, select input to the mux must be 1-bit wirevector')
     if len(a) < len(b):
@@ -733,14 +738,14 @@ def concat(*args):
         outwire.block.add_net(net)
         return outwire
 
+
 def appropriate_register_type(t):
     """ take a type t, return a type which is appropriate for registering t (signed or unsigned)."""
     if isinstance(t, (Output, Const)):
-        raise PyrtlError # includes signed versions
+        raise PyrtlError  # includes signed versions
     elif isinstance(t, (SignedWireVector, SignedInput, SignedRegister)):
         return SignedRegister
     elif isinstance(t, (WireVector, Input, Register)):
         return Register
     else:
         raise PyrtlError
-

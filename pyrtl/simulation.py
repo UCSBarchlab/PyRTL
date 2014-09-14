@@ -319,7 +319,7 @@ class SimulationTrace(object):
 
     def add_step(self, value_map):
         if len(self.trace) == 0:
-            raise PyrtlError('error, simulation trace needs at least 1 signal'
+            raise PyrtlError('error, simulation trace needs at least 1 signal '
                              'to track (try passing name to WireVector)')
         for w in self.trace:
             self.trace[w].append(value_map[w])

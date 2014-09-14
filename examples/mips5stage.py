@@ -2,6 +2,7 @@ import sys
 sys.path.append("..")  # needed only if not installed
 from pyrtl import *
 
+
 class Pipeline(object):
     """ Pipeline constructor with auto generation of pipeline registers. """
 
@@ -12,14 +13,16 @@ class Pipeline(object):
 
         self._processing_stages = False
         self.interstage()
-        
+
         self._processing_stages = True
-        stage_list = sorted([method for
-            method in dir(self)
-            if method.startswith('stage')])
+        stage_list = sorted(
+            [method for
+             method in dir(self)
+             if method.startswith('stage')
+             ])
         for stage in stage_list:
             self._pipeline_register[self._current_stage_num] = {}
-            stage_method = getattr(self,stage)
+            stage_method = getattr(self, stage)
             stage_method()
             self._current_stage_num += 1
 
@@ -39,16 +42,29 @@ class Pipeline(object):
         else:
             self._interstage_signals[name] = value
 
+
+def switch(ctrl, logic_dict):
+    working_result = logic_dict[None]
+    for case_value in logic_dict:
+        working_result = mux(
+            ctrl == case_value,
+            falsecase=working_result,
+            truecase=logic_dict[case_value])
+    return working_result
+
+
 # implementation of: http://i.stack.imgur.com/Pc9Vh.png
 class MipsCore(Pipeline):
     def interstage(self):
-        self.pcsrc = WireVector(1,'pcsrc')
-        self.computed_address = WireVector(1,'computed_address')
-        self.regwrite = WireVector(1,'regwrite')
-        self.write_register = WireVector(5,'write_register')
-        self.write_data = WireVector(bitwidth,'write_data')
+        """ all of the cross-pipeline signals are declared here """
+        self.pcsrc = WireVector(1, 'pcsrc')
+        self.computed_address = WireVector(1, 'computed_address')
+        self.regwrite = WireVector(1, 'regwrite')
+        self.write_register = WireVector(5, 'write_register')
+        self.write_data = WireVector(bitwidth, 'write_data')
 
     def stage0_fetch(self):
+        """ update the PC, grab the instruction from imem """
         pc = Register(addrwidth, 'pc')
         imem = MemBlock(bitwidth, addrwidth, 'imem')
         instr = imem[pc]
@@ -59,6 +75,7 @@ class MipsCore(Pipeline):
         self.instr = instr
 
     def stage1_decode(self):
+        """ break instruction into fields and access registers """
         instr = self.instr
         rs = instr[21:26]
         rt = instr[16:21]
@@ -79,10 +96,11 @@ class MipsCore(Pipeline):
         self.rd = rd
         self.regread1 = regfile[rs]
         self.regread2 = regfile[rt]
-        self.pc_incr = self.pc_incr 
+        self.pc_incr = self.pc_incr
         self.opcode = opcode
-        
+
     def stage2_execute(self):
+        """ perform the alu operations """
         alu_op_1 = self.regread1
         alu_op_2 = mux(self.alusrc, self.regread2, self.immed)
         alu_ctrl = self.alu_ctrl(self.opcode, self.immed)
@@ -93,6 +111,7 @@ class MipsCore(Pipeline):
         self.dest = mux(self.regdest, rt, rd)
 
     def stage3_memory(self):
+        """ access dmem for loads and stores """
         dmem = MemBlock(bitwidth, addrwidth, 'dmem')
         EW = MemBlock.EnabledWrite
         dmem[self.alu_result] = EW(self.regread2, enable=self.memwrite)
@@ -102,9 +121,10 @@ class MipsCore(Pipeline):
         self.pc_src = self.branch & self.zero
 
     def stage4_writeback(self):
+        """ select the data to write back to registers """
         self.write_data = mux(self.mem_to_reg, self.alu_result, self.read_data)
 
-    def alu_ctrl(self, opcode, immed)
+    def alu_ctrl(self, opcode, immed):
         # A A
         # L L
         # U U  F F F F F F  O
@@ -125,13 +145,14 @@ class MipsCore(Pipeline):
         op2 = aluop[0] | (aluop[1] & f[1])
         return concat(op0, op1, op2)
 
-    def alu(self, ctrl, op1, op2)
+    def alu(self, ctrl, op1, op2):
         retval = switch(ctrl, {
-            "3'000": op1 & op2
-            "3'001": op1 | op2
-            "3'010": op1 + op2
-            "3'110": op1 - op2
-            "3'111": op1 < op2
+            "3'000": op1 & op2,
+            "3'001": op1 | op2,
+            "3'010": op1 + op2,
+            "3'110": op1 - op2,
+            "3'111": op1 < op2,
+            None: 0,
             })
 
 
