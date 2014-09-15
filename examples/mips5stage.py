@@ -36,10 +36,7 @@ class Pipeline(object):
             if next_stage not in self._pipeline_register_map:
                 self._pipeline_register_map[next_stage] = {}
             self._pipeline_register_map[next_stage][name] = new_pipereg
-            t = WireVector(1)
-            t <<= value
-            new_pipereg.next <<= t
-            #new_pipereg.next <<= value
+            new_pipereg.next <<= value
 
 
 def switch(ctrl, logic_dict):

@@ -63,7 +63,7 @@ class Simulation(object):
 
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle """
-        # check that all Input have a corresponding provided_input
+        # Check that all Input have a corresponding provided_input
         input_set = self.block.wirevector_subset(Input)
         for i in input_set:
             if i not in provided_inputs:
@@ -71,7 +71,7 @@ class Simulation(object):
                     'Input "%s" has no input value specified'
                     % i.name)
 
-        # check that only inputs are specified, and set the values
+        # Check that only inputs are specified, and set the values
         for i in provided_inputs.keys():
             if i not in input_set:
                 raise PyrtlError(
@@ -79,9 +79,12 @@ class Simulation(object):
                     'not a known input' % i.name)
             self.value[i] = provided_inputs[i]
 
-        # do all of the clock-edge triggered operations
+        # Do all of the clock-edge triggered operations.
+        # To avoid registers and memories updating incorrectly
+        # we make a copy of the "old" values and use that as the source
+        prior_value = self.value.copy()
         for net in self.block.logic:
-            self.edge_update(net)
+            self.edge_update(net, prior_value)
 
         # propagate inputs to outputs
         # wires  which are defined at the start are inputs and registers
@@ -117,20 +120,20 @@ class Simulation(object):
         """
         return val & ((1 << len(wirevector))-1)
 
-    def edge_update(self, net):
+    def edge_update(self, net, prior_value):
         """Handle the posedge event for the simulation of the given net.
 
         Combinational logic should have no posedge behavior, but registers and
         memory should.  This function, along with execute, defined the
         semantics of the primitive ops.  Function updates self.value and
-        self.memvalue accordingly.
+        self.memvalue accordingly (using prior_value)
         """
         if net.op is None or net.op in '~&|^+-*<>=xcs':
             return  # stateless elements
         else:
             if net.op == 'r':
                 # copy result from input to output of register
-                argval = self.value[net.args[0]]
+                argval = prior_value[net.args[0]]
                 self.value[net.dests[0]] = self.sanitize(argval, net.dests[0])
             elif net.op == 'm':
                 memid = net.op_param[0]
@@ -139,9 +142,9 @@ class Simulation(object):
                 if num_reads + 3*num_writes != len(net.args):
                     raise PyrtlInternalError
                 for i in range(num_reads, num_reads + 3*num_writes, 3):
-                    write_addr = self.value[net.args[i]]
-                    write_val = self.value[net.args[i+1]]
-                    write_enable = self.value[net.args[i+2]]
+                    write_addr = prior_value[net.args[i]]
+                    write_val = prior_value[net.args[i+1]]
+                    write_enable = prior_value[net.args[i+2]]
                     if write_enable:
                         self.memvalue[(memid, write_addr)] = write_val
             else:
