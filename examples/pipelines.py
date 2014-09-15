@@ -44,6 +44,13 @@ class Pipeline(object):
 
 
 def switch(ctrl, logic_dict):
+    """ switch finds the matching key in logic_dict and returns the value. 
+    
+    The case "None" specifies the default value to return when there is no
+    match.  The logic will be a simple linear mux tree of comparisons between
+    the key and the ctrl, selecting the appropriate value
+    """
+
     working_result = logic_dict[None]
     for case_value in logic_dict:
         working_result = mux(
@@ -54,6 +61,8 @@ def switch(ctrl, logic_dict):
 
 
 class TrivialPipelineExample(Pipeline):
+    """ A very simple pipeline to show how registers are inferred. """
+
     def __init__(self):
         self._loopback = WireVector(1, 'loopback')
         super(TrivialPipelineExample, self).__init__()
@@ -76,7 +85,7 @@ class TrivialPipelineExample(Pipeline):
 
 # implementation of: http://i.stack.imgur.com/Pc9Vh.png
 class MipsCore(Pipeline):
-    """ Variable bitwidth 5 Stage Mips Pipeline """
+    """ Simple 5 Stage Mips Pipeline """
     def __init__(self, addrwidth=5):
         """ all of the cross-pipeline signals are declared here """
         self._addrwidth = addrwidth  # a compile time constant
