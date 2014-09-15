@@ -49,6 +49,21 @@ def reset_working_block():
 #
 
 class WireVector(object):
+    """ The main class for describing the connections between operators.
+
+    WireVectors act much like a list of wires, except that there is no
+    "contained" type, each slice of a wirevector is itself a wirevector
+    (even if it just contains a single "bit" of information).  The least
+    significant bit of the wire is at index 0 and normal list slicing
+    syntax applies (i.e. myvector[0:5] makes a new vector from the bottom
+    5 bits of myvector, myvector[-1] takes the most significant bit, and
+    myvector[-4:] takes the 4 most significant bits).
+    """
+
+    # "code" is a static variable used when output as string.
+    # Each class inhieriting from WireVector should overload accordingly
+    code = 'W'
+
     def __init__(self, bitwidth=None, name=None, block=None):
 
         # figure out what block this wirevector should be part of
@@ -83,14 +98,8 @@ class WireVector(object):
         # finally, add the wirevector back in the mother block
         self.block.add_wirevector(self)
 
-    def __repr__(self):
-        return ''.join([
-            type(self).__name__,
-            ':',
-            self.name,
-            '/',
-            str(self.bitwidth)
-            ])
+    def __str__(self):
+        return ''.join([self.name, '/', str(self.bitwidth), self.code])
 
     def __ilshift__(self, other):
         if not isinstance(other, WireVector):
@@ -271,6 +280,7 @@ class WireVector(object):
 
 class Input(WireVector):
     """ A WireVector type denoting inputs to a block (no writers) """
+    code = 'I'
 
     def __init__(self, bitwidth=None, name=None, block=None):
         super(Input, self).__init__(bitwidth=bitwidth, name=name, block=block)
@@ -283,6 +293,7 @@ class Input(WireVector):
 
 class Output(WireVector):
     """ A WireVector type denoting outputs of a block (no readers) """
+    code = 'O'
 
     def __init__(self, bitwidth=None, name=None, block=None):
         super(Output, self).__init__(bitwidth, name, block)
@@ -291,6 +302,7 @@ class Output(WireVector):
 
 class Const(WireVector):
     """ A WireVector representation of an unsigned integer constant """
+    code = 'C'
 
     def __init__(self, val, bitwidth=None, block=None):
         """ Construct a constant implementation at initialization """
@@ -342,6 +354,7 @@ class Const(WireVector):
 
 
 class Register(WireVector):
+    code = 'R'
 
     # When the register is called as such:  r.next <<= foo
     # the sequence of actions that happens is:
@@ -395,26 +408,36 @@ class Register(WireVector):
 #
 
 class SignedWireVector(WireVector):
+    code = 'SW'
+
     def extended(self, bitwidth):
         return self.sign_extended(bitwidth)
 
 
 class SignedInput(Input):
+    code = 'SI'
+
     def extended(self, bitwidth):
         return self.sign_extended(bitwidth)
 
 
 class SignedOutput(Output):
+    code = 'SO'
+
     def extended(self, bitwidth):
         return self.sign_extended(bitwidth)
 
 
 class SignedConst(Const):
+    code = 'SC'
+
     def extended(self, bitwidth):
         return self.sign_extended(bitwidth)
 
 
 class SignedRegister(Register):
+    code = 'SR'
+
     def extended(self, bitwidth):
         return self.sign_extended(bitwidth)
 

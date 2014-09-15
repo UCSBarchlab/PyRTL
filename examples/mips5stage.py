@@ -16,27 +16,30 @@ class Pipeline(object):
              method in dir(self)
              if method.startswith('stage')])
         for stage in stage_list:
-            self._pipeline_register_map[self._current_stage_num] = {}
             stage_method = getattr(self, stage)
             stage_method()
             self._current_stage_num += 1
 
     def __getattr__(self, name):
-            return self._pipeline_register_map[self._current_state_num][name]
+            return self._pipeline_register_map[self._current_stage_num][name]
 
     def __setattr__(self, name, value):
         if name.startswith('_'):
             # do not do anything tricky with variables starting with '_'
-            self.__dict__[name] = value
+            object.__setattr__(self, name, value)
         else:
             rtype = appropriate_register_type(value)
-            rname = '_'.join(['stage', str(self._current_stage_num), name])
-            new_pipe_reg = rtype(bitwidth=len(value), name=rname)
             next_stage = self._current_stage_num + 1
+            pipereg_id = str(self._current_stage_num) + 'to' + str(next_stage)
+            rname = 'pipereg_' + pipereg_id + '_' + name
+            new_pipereg = rtype(bitwidth=len(value), name=rname)
             if next_stage not in self._pipeline_register_map:
                 self._pipeline_register_map[next_stage] = {}
-            self._pipeline_register_map[next_stage][name] = new_pipe_reg
-            new_pipe_reg.next <<= value
+            self._pipeline_register_map[next_stage][name] = new_pipereg
+            t = WireVector(1)
+            t <<= value
+            new_pipereg.next <<= t
+            #new_pipereg.next <<= value
 
 
 def switch(ctrl, logic_dict):
@@ -48,16 +51,22 @@ def switch(ctrl, logic_dict):
             truecase=logic_dict[case_value])
     return working_result
 
+
 class StupidPipeline(Pipeline):
     def __init__(self):
         self._loopback = WireVector(1, 'loopback')
-        super(StupidPipeline,self).__init__()
+        super(StupidPipeline, self).__init__()
     def stage0(self):
-        self.n = self._loopback ^ 1
+        self.n = ~ self._loopback
     def stage1(self):
-        self.m = self.n
+        self.n = self.n
     def stage2(self):
-        self._loopback = self.m
+        self.n = self.n
+    def stage3(self):
+        self.n = self.n
+    def stage4(self):
+        self._loopback <<= self.n
+
 
 # implementation of: http://i.stack.imgur.com/Pc9Vh.png
 class MipsCore(Pipeline):
@@ -167,7 +176,7 @@ class MipsCore(Pipeline):
 
 #testcore = MipsCore(addrwidth=5)
 testcore = StupidPipeline()
-
+print working_block()
 
 # Simulation of the core
 sim_trace = SimulationTrace()

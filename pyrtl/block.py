@@ -13,6 +13,8 @@ import collections
 import sys
 import re
 
+from collections import namedtuple
+
 
 #-----------------------------------------------------------------
 #   ___  __   __   __   __  ___      __   ___  __
@@ -34,10 +36,17 @@ class PyrtlInternalError(Exception):
 #   |__) |___ \__/ \__, |  \
 #
 
-LogicNet = collections.namedtuple(
-    'LogicNet',
-    ['op', 'op_param', 'args', 'dests']
-    )
+#LogicNet = collections.namedtuple(
+#    'LogicNet',
+#    ['op', 'op_param', 'args', 'dests']
+#    )
+
+class LogicNet(namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
+    def __str__(self):
+        lhs = str(self.args[0]) if len(self.args) == 1 else str(self.args)
+        rhs = str(self.dests[0]) if len(self.dests) == 1 else str(self.dests)
+        op_str = '' if self.op is None else self.op
+        return ' '.join([lhs, '<<=', op_str, rhs])
 
 
 class Block(object):
