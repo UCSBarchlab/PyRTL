@@ -10,6 +10,7 @@ import sys
 import pyparsing
 from block import *
 from wirevector import *
+from helperfuncs import *
 
 #-----------------------------------------------------------------
 #            __       ___
@@ -29,11 +30,8 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
     from pyparsing import Word, Literal, infixNotation, OneOrMore, ZeroOrMore
     from pyparsing import oneOf, Suppress, Group, Optional, Keyword
 
-    if block is None:
-        block = working_block()
-    if not isinstance(block, Block):
-        raise PyrtlError('input_blif initialization requires either a valid'
-                         ' hardware block to be specified (or implied)')
+    block = working_block(block)
+
     if isinstance(blif, file):
         blif_string = blif.read()
     elif isinstance(blif, basestring):

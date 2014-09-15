@@ -7,46 +7,18 @@ Input: a wire vector that recieves an input for a block
 Output: a wire vector that defines an output for a block
 Const: a wire vector fed by an unsigned constant
 Register: a wire vector that is latched each cycle
-MemBlock: a block of memory that can be read (async) and written (sync)
-
-In addition, two helper functions are defined, as_wires (which does nothing
-but return original wire vector if passed one, but converts integers into
-Const wire vectors), and concat (which takes an arbitrary set of wire vector
-parameters and concats them into one new wire vector which it returns.
 """
 
 import collections
 import string
 from block import *
 
-
-#------------------------------------------------------------------------
-#          __   __               __      __        __   __
-#    |  | /  \ |__) |__/ | |\ | / _`    |__) |    /  \ /  ` |__/
-#    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \
-#
-
-
-# Right now we use singlton_block to store the one global
-# block, but in the future we should support multiple Blocks.
-# The argument "singlton_block" should never be passed.
-_singleton_block = Block()
-
-
-def working_block():
-    return _singleton_block
-
-
-def reset_working_block():
-    global _singleton_block
-    _singleton_block = Block()
-
-
 #-----------------------------------------------------------------
 #        ___  __  ___  __   __
 #  \  / |__  /  `  |  /  \ |__)
 #   \/  |___ \__,  |  \__/ |  \
 #
+
 
 class WireVector(object):
     """ The main class for describing the connections between operators.
@@ -65,15 +37,7 @@ class WireVector(object):
     code = 'W'
 
     def __init__(self, bitwidth=None, name=None, block=None):
-
-        # figure out what block this wirevector should be part of
-        if isinstance(block, Block):
-            self.block = block
-        elif block is None:
-            self.block = working_block()
-        else:
-            raise PyrtlError('Attempt to link WireVector to block '
-                             'not derived of type Block')
+        self.block = working_block(block)
 
         # figure out a name
         if name is None:
@@ -262,6 +226,7 @@ class WireVector(object):
             raise PyrtlError(
                 'error, zero_extended cannot reduce the number of bits')
         else:
+            from helperfuncs import concat
             extvector = WireVector(bitwidth=numext)
             net = LogicNet(
                 op='s',
@@ -529,6 +494,8 @@ class ConditionalUpdate(object):
         Returns the new wire that should connect to the ".next" terminal
         of the register.
         """
+        from helperfuncs import mux
+
         # calculate the predicate to use as a the select to a mux
         select = self._current_select()
         # copy the state out of reg_net that we need to build new net
@@ -568,207 +535,3 @@ class ConditionalUpdate(object):
 
         assert(select is not None)
         return select
-
-
-#------------------------------------------------------------------------
-#
-#         ___        __   __          __        __   __
-#   |\/| |__   |\/| /  \ |__) \ /    |__) |    /  \ /  ` |__/
-#   |  | |___  |  | \__/ |  \  |     |__) |___ \__/ \__, |  \
-#
-
-# MemBlock supports any number of the following operations:
-# read: d = mem[address]
-# write: mem[address] = d
-# write with an enable: mem[address] = MemBlock.EnabledWrite(d,enable=we)
-# Based on the number of reads and writes a memory will be inferred
-# with the correct number of ports to support that
-
-class MemBlock(object):
-    """ An object for specifying block memories """
-
-    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
-
-    # data = memory[addr]  (infer read port)
-    # memory[addr] = data  (infer write port)
-    # Not currently implemented:  memory[addr] <<= data (infer write port)
-    def __init__(self,  bitwidth, addrwidth, name=None, block=None):
-
-        if isinstance(block, Block):
-            self.block = block
-        elif block is None:
-            self.block = working_block()
-        else:
-            raise PyrtlError(
-                'Attempt to link MemBlock to block not derived of type Block')
-
-        if bitwidth <= 0:
-            raise PyrtlError
-        if addrwidth <= 0:
-            raise PyrtlError
-        if name is None:
-            name = Block.next_tempvar_name()
-
-        self.bitwidth = bitwidth
-        self.name = name
-        self.addrwidth = addrwidth
-        self.stored_net = None
-        self.id = Block.next_memid()
-        self.read_addr = []  # arg
-        self.read_data = []  # dest
-        self.write_addr = []  # arg
-        self.write_data = []  # arg
-        self.write_enable = []  # arg
-
-    def __getitem__(self, item):
-        if not isinstance(item, WireVector):
-            raise PyrtlError('error, index to a memblock must be a WireVector (or derived) type')
-        if len(item) != self.addrwidth:
-            raise PyrtlError('error, width of memblock index "%s" is %d, '
-                             'addrwidth is %d' % (item.name, len(item), self.addrwidth))
-
-        data = WireVector(bitwidth=self.bitwidth)
-        self.read_data.append(data)
-        self.read_addr.append(item)
-        self._update_net()
-        return data
-
-    def _update_net(self):
-        if self.stored_net:
-            self.block.logic.remove(self.stored_net)
-        assert len(self.write_addr) == len(self.write_data)  # not sure about this one
-
-        # construct the arg list from reads and writes
-        coupled_write_args = zip(self.write_addr, self.write_data, self.write_enable)
-        flattened_write_args = [item for sublist in coupled_write_args for item in sublist]
-        net = LogicNet(
-            op='m',
-            op_param=(self.id, len(self.read_addr), len(self.write_addr)),
-            args=tuple(self.read_addr + flattened_write_args),
-            dests=tuple(self.read_data))
-        self.block.add_net(net)
-        self.stored_net = net
-
-    def __setitem__(self, item, val):
-        # check that 'item' is a valid address vector
-        if not isinstance(item, WireVector):
-            raise PyrtlError
-        if len(item) != self.addrwidth:
-            raise PyrtlError
-        addr = item
-
-        # check that 'val' is a valid datavector
-        if isinstance(val, WireVector):
-            data = val
-            enable = Const(1, bitwidth=1)
-        elif isinstance(val, MemBlock.EnabledWrite):
-            data = val.data
-            enable = val.enable
-        else:
-            raise PyrtlError
-        if len(data) != self.bitwidth:
-            raise PyrtlError
-        if len(enable) != 1:
-            raise PyrtlError
-
-        self.write_data.append(data)
-        self.write_addr.append(addr)
-        self.write_enable.append(enable)
-        self._update_net()
-
-
-#-----------------------------------------------------------------
-#        ___       __   ___  __   __
-#  |__| |__  |    |__) |__  |__) /__`
-#  |  | |___ |___ |    |___ |  \ .__/
-#
-
-def as_wires(val):
-    """ Return wires from val which may be wires or int. """
-    # FIXME: implicit use of block
-    if isinstance(val, (int, basestring)):
-        return Const(val)
-    if not isinstance(val, WireVector):
-        raise PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
-    return val
-
-
-def and_all_bits(vector):
-    return _apply_op_over_all_bits('__and__', vector)
-
-
-def or_all_bits(vector):
-    return _apply_op_over_all_bits('__or__', vector)
-
-
-def xor_all_bits(vector):
-    return _apply_op_over_all_bits('__xor__', vector)
-
-
-def parity(vector):
-    return _apply_op_over_all_bits('__xor__', vector)
-
-
-def _apply_op_over_all_bits(op, vector):
-    if len(vector) == 1:
-        return vector
-    else:
-        rest = _apply_op_over_all_bits(op, vector[1:])
-        func = getattr(vector[0], op)
-        return func(vector[0], rest)
-
-
-def mux(select, falsecase, truecase):
-    """ Multiplexer returning falsecase for select==0, otherwise truecase. """
-    # FIXME: implicit use of block
-    # check size and type of operands
-    select = as_wires(select)
-    a = as_wires(falsecase)
-    b = as_wires(truecase)
-    if len(select) != 1:
-        raise PyrtlError('error, select input to the mux must be 1-bit wirevector')
-    if len(a) < len(b):
-        a = a.extended(len(b))
-    elif len(b) < len(a):
-        b = b.extended(len(a))
-    resultlen = len(a)  # both are the same length now
-
-    outwire = WireVector(bitwidth=resultlen)
-    net = LogicNet(
-        op='x',
-        op_param=None,
-        args=(select, a, b),
-        dests=(outwire,))
-    outwire.block.add_net(net)
-    return outwire
-
-
-def concat(*args):
-    """ Take any number of wire vector params and return a wire vector concatinating them."""
-    # FIXME: implicit use of block
-    if len(args) <= 0:
-        raise PyrtlError
-    if len(args) == 1:
-        return args[0]
-    else:
-        final_width = sum([len(arg) for arg in args])
-        outwire = WireVector(bitwidth=final_width)
-        net = LogicNet(
-            op='c',
-            op_param=None,
-            args=tuple(args),
-            dests=(outwire,))
-        outwire.block.add_net(net)
-        return outwire
-
-
-def appropriate_register_type(t):
-    """ take a type t, return a type which is appropriate for registering t (signed or unsigned)."""
-    if isinstance(t, (Output, Const)):
-        raise PyrtlError  # includes signed versions
-    elif isinstance(t, (SignedWireVector, SignedInput, SignedRegister)):
-        return SignedRegister
-    elif isinstance(t, (WireVector, Input, Register)):
-        return Register
-    else:
-        raise PyrtlError

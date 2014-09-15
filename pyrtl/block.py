@@ -6,6 +6,9 @@ The classes PyrtlError and PyrtlInternalError are the two main exceptions to
 be thrown when things go wrong.  Block is the netlist storing module for a
 chunk of hardware with well defined inputs and outputs, it contains both the
 basic logic elements and references to the wires that connect them together.
+The functions working_block and reset_working_block provide an easy way to
+manage the current "working" block (i.e. the block that all hardware, by
+default, is added in to).
 """
 
 
@@ -36,12 +39,8 @@ class PyrtlInternalError(Exception):
 #   |__) |___ \__/ \__, |  \
 #
 
-#LogicNet = collections.namedtuple(
-#    'LogicNet',
-#    ['op', 'op_param', 'args', 'dests']
-#    )
-
 class LogicNet(namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
+    """ The basic immutable datatype for storing a "net" in a netlist."""
     def __str__(self):
         lhs = str(self.args[0]) if len(self.args) == 1 else str(self.args)
         rhs = str(self.dests[0]) if len(self.dests) == 1 else str(self.dests)
@@ -204,3 +203,38 @@ def _check_type_wirevector(w):
         raise PyrtlError(
             'error attempting to pass an input of type "%s" '
             'instead of WireVector' % type(w))
+
+
+#------------------------------------------------------------------------
+#          __   __               __      __        __   __
+#    |  | /  \ |__) |__/ | |\ | / _`    |__) |    /  \ /  ` |__/
+#    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \
+#
+
+
+# Right now we use singlton_block to store the one global
+# block, but in the future we should support multiple Blocks.
+# The argument "singlton_block" should never be passed.
+_singleton_block = Block()
+
+
+def working_block(block=None):
+    """ Convenience function for capturing the current working block.
+
+    If a block is not passed, or if the block passed is None, then
+    this will return the "current working block".  However, if a block
+    is passed in it will simply return that block instead.  This feature
+    is useful in allowing functions to "override" the current working block.
+    """
+
+    if block is None:
+        return _singleton_block
+    elif not isinstance(block, Block):
+        raise PyrtlError('error, expected instance of Block as block arguement')
+    else:
+        return block
+
+
+def reset_working_block():
+    global _singleton_block
+    _singleton_block = Block()

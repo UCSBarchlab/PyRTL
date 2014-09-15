@@ -3,6 +3,8 @@
 from block import Block
 from block import PyrtlError
 from block import PyrtlInternalError
+from block import working_block
+from block import reset_working_block
 
 # convenience classes for building hardware
 from wirevector import WireVector
@@ -14,13 +16,15 @@ from wirevector import SignedInput, SignedOutput
 from wirevector import SignedConst
 from wirevector import SignedRegister
 from wirevector import ConditionalUpdate
-from wirevector import MemBlock
-from wirevector import as_wires
-from wirevector import concat
-from wirevector import mux
-from wirevector import appropriate_register_type
-from wirevector import working_block
-from wirevector import reset_working_block
+
+# helper functions
+from helperfuncs import as_wires
+from helperfuncs import concat
+from helperfuncs import mux
+from helperfuncs import appropriate_register_type
+
+# memory blocks
+from memblock import MemBlock
 
 # block simulation support
 from simulation import Simulation

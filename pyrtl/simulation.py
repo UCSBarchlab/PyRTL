@@ -20,8 +20,7 @@ class Simulation(object):
             self, register_value_map=None, default_value=0,
             tracer=None, block=None):
 
-        if block is None:
-            block = working_block()
+        block = working_block(block)
         block.sanity_check()  # check that this is a good hw block
 
         self.value = {}   # map from signal->value
@@ -293,13 +292,7 @@ class SimulationTrace(object):
 
     def __init__(self, wirevector_subset=None, block=None):
 
-        if block is None:
-            block = working_block()
-
-        if not isinstance(block, Block):
-            raise PyrtlError(
-                'simulation initialization requires either a valid'
-                ' hardware block to be specified (or implied)')
+        block = working_block(block)
 
         def is_internal_name(name):
             if (
