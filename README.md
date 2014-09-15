@@ -8,6 +8,7 @@ In the package you should find the following files and Directories
 * **pyrtl/**  The src directory for the module
 * **tests/**    A set of unit tests for pyrtl which you can run with nosetests
 * **examples/** A set of hardware design examples that show the main idea behind pyrtl
+* **research/** A place for experiments and other changes not ready for primetime
 * **checkcode** A script you should run before you check any code into the master or development branches
 
 If you are just getting started with pyrtl it is suggested that you start with the examples first,
@@ -25,7 +26,6 @@ pyrtl and defines its semantics at a high level.
 * add verilog export option to block
 * add a -Wall option which warns on truncation
 * change "tmp" and "const" "'" names to be more pyrtl specific to avoid confusion
-* move block checks to a single function to simplify code base and provide more complete checks
 
 ### Bigger todo projects
 
