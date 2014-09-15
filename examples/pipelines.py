@@ -21,7 +21,11 @@ class Pipeline(object):
             self._current_stage_num += 1
 
     def __getattr__(self, name):
-            return self._pipeline_register_map[self._current_stage_num][name]
+            try:
+                return self._pipeline_register_map[self._current_stage_num][name]
+            except KeyError:
+                raise PyrtlError('error, no pipeline register "%s" defined for stage %d'
+                                 % (name, self._current_stage_num))
 
     def __setattr__(self, name, value):
         if name.startswith('_'):
@@ -49,18 +53,23 @@ def switch(ctrl, logic_dict):
     return working_result
 
 
-class StupidPipeline(Pipeline):
+class TrivialPipelineExample(Pipeline):
     def __init__(self):
         self._loopback = WireVector(1, 'loopback')
-        super(StupidPipeline, self).__init__()
+        super(TrivialPipelineExample, self).__init__()
+
     def stage0(self):
         self.n = ~ self._loopback
+
     def stage1(self):
         self.n = self.n
+
     def stage2(self):
         self.n = self.n
+
     def stage3(self):
         self.n = self.n
+
     def stage4(self):
         self._loopback <<= self.n
 
@@ -121,9 +130,9 @@ class MipsCore(Pipeline):
         alu_ctrl = self.alu_ctrl(self.opcode, self.immed)
 
         self.pc_cmp = self.pc_incr + (self.immed << 2)
-        self.alu_result, self.zero = alu(alu_ctrl, alu_op_1, alu_op_2)
+        self.alu_result, self.zero = self.alu(alu_ctrl, alu_op_1, alu_op_2)
         self.regread2 = self.regread2
-        self.dest = mux(self.regdest, rt, rd)
+        self.dest = mux(self.regdest, self.rt, self.rd)
 
     def stage3_memory(self):
         """ access dmem for loads and stores """
@@ -171,9 +180,8 @@ class MipsCore(Pipeline):
             })
 
 
+testcore = TrivialPipelineExample()
 #testcore = MipsCore(addrwidth=5)
-testcore = StupidPipeline()
-print working_block()
 
 # Simulation of the core
 sim_trace = SimulationTrace()
