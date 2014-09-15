@@ -1,8 +1,8 @@
 
 """
-Block contains the core netlist datastructure for PyRTL
+Block contains the core netlist data structure for PyRTL
 
-The classes PyrtlError and PyrtlInternalError are the two main exeptions to
+The classes PyrtlError and PyrtlInternalError are the two main exceptions to
 be thrown when things go wrong.  Block is the netlist storing module for a
 chunk of hardware with well defined inputs and outputs, it contains both the
 basic logic elements and references to the wires that connect them together.

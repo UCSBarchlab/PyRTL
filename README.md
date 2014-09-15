@@ -30,7 +30,7 @@ pyrtl and defines its semantics at a high level.
 ### Bigger todo projects
 
 **Multiple-Blocks:**
-Rather than one single monolythic hardware block, PyRTL should support
+Rather than one single monolithic hardware block, PyRTL should support
 multiple nested blocks active at the same time (and nested recursively)
 
 **Estimators:** 
@@ -48,6 +48,6 @@ add a pass to print out the block as a set of C code that implement the
 hardware block (useful for longer running tests -- like a processor model)
 
 **Ability to Lower Abstraction Level:**
-add a pass to tranform all complex operators (such as 'cat' and multibit
+add a pass to transform all complex operators (such as 'cat' and multibit
 arithmetic operations) down into simple and/or/not gates.  Useful for prototyping
 gate-level analysis and as a very simple path to synthesis
