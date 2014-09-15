@@ -44,8 +44,8 @@ class Pipeline(object):
 
 
 def switch(ctrl, logic_dict):
-    """ switch finds the matching key in logic_dict and returns the value. 
-    
+    """ switch finds the matching key in logic_dict and returns the value.
+
     The case "None" specifies the default value to return when there is no
     match.  The logic will be a simple linear mux tree of comparisons between
     the key and the ctrl, selecting the appropriate value
