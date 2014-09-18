@@ -12,6 +12,7 @@ from block import *
 from wirevector import *
 from helperfuncs import *
 
+
 #-----------------------------------------------------------------
 #            __       ___
 #    | |\ | |__) |  |  |
@@ -273,3 +274,36 @@ def output_to_trivialgraph(file, block):
     print >> file, '#'
     for (frm, to) in sorted(edges):
         print >> file, frm, to, edge_names.get((frm, to), '')
+
+#-----------------------------------------------------------------
+#         ___  __          __   __  
+#   \  / |__  |__) | |    /  \ / _` 
+#    \/  |___ |  \ | |___ \__/ \__> 
+#
+
+
+def _verilog_vector_decl(L):
+    return '' if L==1 else '[%d:0]' % L-1
+
+def _to_verilog_header(file, block):
+    io_list = [wirevector.name for wirevector in block.wirevector_subset((Input, Output))]
+    io_list_str = ', '.join(io_list)
+    print >> file, 'module toplevel(%s);' % io_list_str
+    for w in block.wirevector_subset(Input):
+        print >> file, '    input%s %s;' % (_verilog_vect_decl(len(w)), w.name)
+    for w in block.wirevector_subset(Output):
+        print >> file, '    output%s %s;' % (_verilog_vect_decl(len(w)), w.name)
+    for w in block.wirevector_subset(Register):
+        print >> file, '    output%s %s;' % (_verilog_vect_decl(len(w)), w.name)
+
+def _to_verilog_combinational(file, block):
+
+def output_to_verilog(file, block=None):
+    """ Walk the block and output it in verilog format to the open file """
+
+    block = working_block(block)
+    _to_verilog_header(file, block)
+    _to_verilog_combinational(file, block)
+    _to_verilog_sequential(file, block)
+    _to_verilog_footer(file, block)
+
