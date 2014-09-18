@@ -17,7 +17,7 @@ with condition(a):
         r2.next <<= 2  # when a and d are true
     with condition():
         r2.next <<= 3  # when a is true and d is false
-with condition(b & c):
+with condition(b == c):
     r.next <<= 0  # when a is not true and b & c is true
 
 
