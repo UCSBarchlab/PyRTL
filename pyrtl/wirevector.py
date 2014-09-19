@@ -104,7 +104,7 @@ class WireVector(object):
             resultlen += 1  # extra bit required for carry
         elif op in ['*']:
             resultlen = resultlen * 2  # more bits needed for mult
-        elif op in ['<', '>', '-']:
+        elif op in ['<', '>', '=']:
             resultlen = 1
 
         s = WireVector(bitwidth=resultlen)
