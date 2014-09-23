@@ -17,7 +17,7 @@ from helperfuncs import *
 
 def area_estimation(tech_in_nm, block=None):
     """ Returns a single number estimating the total area of the block.
-    
+
     The tech_in_nm is the size of the circuit technology to be estimated,
     with 65 being 65nm and 250 being 0.25um for example.  The area returned
     is in the units of square mm.  The estimates are VERY simple
@@ -42,4 +42,3 @@ def area_estimation(tech_in_nm, block=None):
             t_count += max_width * 10
         elif net.op in 'm':
             t_count += max_width * 10
-
