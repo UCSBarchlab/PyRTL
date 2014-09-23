@@ -118,7 +118,7 @@ class Block(object):
             if w.block is not self:
                 raise PyrtlInternalError(
                     'error, cannot make net between two different blocks')
-        if net.op in set('&|^+-*'):
+        if net.op in set('&|^+-*<>='):
             widths = set(x.bitwidth for x in net.args)
             if len(widths) > 1:
                 raise PyrtlInternalError(
