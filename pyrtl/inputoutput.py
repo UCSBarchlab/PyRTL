@@ -339,7 +339,7 @@ def _to_verilog_combinational(file, block):
         elif net.op == 'r':
             pass  # do nothing for registers
         elif net.op == 'm':
-            raise NotImplementedError
+            raise NotImplementedError('Memories are not supported by output_to_verilog currently')
         else: 
             raise PyrtlInternalError
     print >> file, ''
