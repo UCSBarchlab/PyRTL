@@ -238,3 +238,9 @@ def working_block(block=None):
 def reset_working_block():
     global _singleton_block
     _singleton_block = Block()
+
+def set_working_block(block):
+    global _singleton_block
+    if not isinstance(block, Block):
+        raise PyrtlError('error, expected instance of Block as block arguement')
+    _singleton_block = block
