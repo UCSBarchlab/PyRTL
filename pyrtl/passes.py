@@ -26,26 +26,28 @@ def area_estimation(tech_in_nm, block=None):
 
 
 #---------------------------------------------------------------------
-#    __           ___       ___  __     __  
-#   /__` \ / |\ |  |  |__| |__  /__` | /__` 
-#   .__/  |  | \|  |  |  | |___ .__/ | .__/ 
-#                                             
+#    __           ___       ___  __     __
+#   /__` \ / |\ |  |  |__| |__  /__` | /__`
+#   .__/  |  | \|  |  |  | |___ .__/ | .__/
+#
 
 
-def _decompose_primitive(net):
+def _decompose(net):
     raise PyrtlInternalError
+    return set()
+
 
 def synthesis(update_workingblock=True, block=None):
-    """ Lower the design to just single-bit "and", "or", and "not" gates. 
-    
+    """ Lower the design to just single-bit "and", "or", and "not" gates.
+
     Takes as input a block (default to working block) and creates a new
     block which is identical in fucntion but uses only single bit gates
     and excludes many of the more complicated primitives.  The new block
     should only consist of the combination elements of &, |, and ~ (and
     the functionless wire "None") and sequential elements of registers
     (which are one bit as well).  Because memories cannot be broken
-    down to bit-level operations they extracted from the design and made 
-    into new input/output interfaces.  
+    down to bit-level operations they extracted from the design and made
+    into new input/output interfaces.
     """
 
     block_in = working_block(block)
