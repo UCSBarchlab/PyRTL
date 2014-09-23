@@ -271,7 +271,6 @@ class Const(WireVector):
 
     def __init__(self, val, bitwidth=None, block=None):
         """ Construct a constant implementation at initialization """
-        name = Block.next_constvar_name(val)
 
         if isinstance(val, int):
             num = val
@@ -306,6 +305,8 @@ class Const(WireVector):
             raise PyrtlError(
                 'error constant "%s" cannot fit in the specified %d bits'
                 % (str(num), bitwidth))
+
+        name = Block.next_constvar_name(num)
 
         # initialize the WireVector
         super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)

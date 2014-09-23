@@ -12,6 +12,9 @@ sum <<= a ^ b ^ c
 cout <<= a & b | a & c | b & c
 
 
+# output the hardware as verilog
+pyrtl.output_to_verilog(sys.stdout)
+
 # now simulate the logic with some random inputs
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)

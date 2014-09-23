@@ -26,7 +26,7 @@ def area_estimation(tech_in_nm, block=None):
     block = working_block(block)
     t_count = 0
 
-    net in block.logic:
+    for net in block.logic:
         max_arg_width = max([len(arg) for arg in net.args])
         max_dest_width = max([len(dest) for dest in net.dests])
         max_width = max(max_arg_width, max_dest_width)

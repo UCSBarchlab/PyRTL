@@ -28,6 +28,8 @@ counter = Register(bitwidth=3, name='counter')
 sum, cout = add(counter, Const("3'b001"))
 counter.next <<= sum
 
+pyrtl.output_to_verilog(sys.stdout)
+
 # Actually simulate the adder here
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)

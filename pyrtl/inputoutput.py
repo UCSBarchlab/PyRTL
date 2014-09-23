@@ -282,22 +282,80 @@ def output_to_trivialgraph(file, block):
 #
 
 
-def _verilog_vector_decl(L):
-    return '' if L==1 else '[%d:0]' % L-1
+def _verilog_vector_decl(w):
+    return '' if len(w)==1 else '[%d:0]' % (len(w)-1)
 
 def _to_verilog_header(file, block):
     io_list = [wirevector.name for wirevector in block.wirevector_subset((Input, Output))]
+    io_list.append('clk')
     io_list_str = ', '.join(io_list)
     print >> file, 'module toplevel(%s);' % io_list_str
-    for w in block.wirevector_subset(Input):
-        print >> file, '    input%s %s;' % (_verilog_vect_decl(len(w)), w.name)
-    for w in block.wirevector_subset(Output):
-        print >> file, '    output%s %s;' % (_verilog_vect_decl(len(w)), w.name)
-    for w in block.wirevector_subset(Register):
-        print >> file, '    output%s %s;' % (_verilog_vect_decl(len(w)), w.name)
+
+    inputs = block.wirevector_subset(Input)
+    outputs = block.wirevector_subset(Output)
+    registers = block.wirevector_subset(Register)
+    wires = block.wirevector_subset() - (inputs | outputs | registers)
+    for w in inputs:
+        print >> file, '    input%s %s;' % (_verilog_vector_decl(w), w.name)
+    for w in outputs:
+        print >> file, '    output%s %s;' % (_verilog_vector_decl(w), w.name)
+    print >> file, ''
+
+    for w in registers:
+        print >> file, '    reg%s %s;' % (_verilog_vector_decl(w), w.name)
+    for w in wires:
+        print >> file, '    wire%s %s;' % (_verilog_vector_decl(w), w.name)
+    print >> file, ''
 
 def _to_verilog_combinational(file, block):
+    for const in block.wirevector_subset(Const):
+            print >> file, '    assign %s = %d;' % (const.name, const.val)
 
+    for net in block.logic:
+        if net.op is None:  
+            t = (net.dests[0].name, net.args[0].name)
+            print >> file, '    assign %s = %s;' % t
+        elif net.op in '&|^+-*<>':  # binary ops
+            t = (net.dests[0].name, net.args[0].name, net.op, net.args[1].name)
+            print >> file, '    assign %s = %s %s %s;' % t
+        elif net.op in set(['~',None]):  # unary ops
+            t = (net.dests[0].name, net.op, net.args[0].name)
+            print >> file, '    assign %s = %s%s;' % t
+        elif net.op == '=': 
+            t = (net.dests[0].name, net.args[0].name, net.args[1].name)
+            print >> file, '    assign %s = %s == %s;' % t
+        elif net.op == 'x': 
+            # note that the argument order for 'x' is backwards from the ternary operator
+            t = (net.dests[0].name, net.args[0].name, net.args[2].name, net.args[1].name)
+            print >> file, '    assign %s = %s ? %s : %s;' % t
+        elif net.op == 'c': 
+            catlist = ', '.join([w.name for w in net.args])
+            t = (net.dests[0].name, catlist)
+            print >> file, '    assign %s = {%s};' % t
+        elif net.op == 's': 
+            catlist = ', '.join([net.args[0].name+'['+str(i)+']' for i in net.op_param])
+            t = (net.dests[0].name, catlist)
+            print >> file, '    assign %s = {%s};' % t
+        elif net.op == 'r':
+            pass  # do nothing for registers
+        elif net.op == 'm':
+            raise NotImplementedError
+        else: 
+            raise PyrtlInternalError
+    print >> file, ''
+
+def _to_verilog_sequential(file, block):
+    print >> file, '    always @( posedge clk )'
+    print >> file, '    begin'
+    for net in block.logic:
+        if net.op == 'r':
+            t = (net.dests[0].name, net.args[0].name)
+            print >> file, '        %s <= %s;' % t
+    print >> file, '    end'
+
+def _to_verilog_footer(file, block):
+    print >> file, 'endmodule\n' 
+        
 def output_to_verilog(file, block=None):
     """ Walk the block and output it in verilog format to the open file """
 
@@ -306,4 +364,3 @@ def output_to_verilog(file, block=None):
     _to_verilog_combinational(file, block)
     _to_verilog_sequential(file, block)
     _to_verilog_footer(file, block)
-
