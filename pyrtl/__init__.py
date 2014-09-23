@@ -33,3 +33,4 @@ from simulation import SimulationTrace
 # input and output to file format routines
 from inputoutput import input_from_blif
 from inputoutput import output_to_trivialgraph
+from inputoutput import output_to_verilog
