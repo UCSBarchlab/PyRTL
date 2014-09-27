@@ -126,7 +126,7 @@ class Simulation(object):
         semantics of the primitive ops.  Function updates self.value and
         self.memvalue accordingly (using prior_value)
         """
-        if net.op is None or net.op in '~&|^+-*<>=xcs':
+        if net.op in 'w~&|^+-*<>=xcs':
             return  # stateless elements
         else:
             if net.op == 'r':
@@ -155,7 +155,7 @@ class Simulation(object):
         of the primitive ops.  Function updates self.value accordingly.
         """
         simple_func = {  # OPS
-            None: lambda x: x,
+            'w': lambda x: x,
             '~': lambda x: ~x,
             '&': lambda l, r: l & r,
             '|': lambda l, r: l | r,

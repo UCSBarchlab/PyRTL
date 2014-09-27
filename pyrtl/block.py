@@ -44,9 +44,8 @@ class LogicNet(namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
     def __str__(self):
         rhs = ', '.join([str(x) for x in self.args])
         lhs = ', '.join([str(x) for x in self.dests])
-        op_str = '' if self.op is None else self.op
         options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
-        return ' '.join([lhs, '<--', op_str, '--', rhs, options])
+        return ' '.join([lhs, '<--', self.op, '--', rhs, options])
 
 
 class Block(object):
@@ -63,7 +62,7 @@ class Block(object):
       OPS: ('&','|','^','+','-','*','<','>','=')
       they should perform the operation specified.  The '=' is checking
       to see if the bits of the vectors are equal
-    * The op (None) is simply a directional wire and has no logic function.
+    * The 'w' operator is simply a directional wire and has no logic function.
     * The 'x' operator is a mux which takes a select bit and two signals.
       If the value of the select bit is 0 it selects the second argument, if
       it is 1 it selects the third argument..
@@ -92,7 +91,7 @@ class Block(object):
         self.logic = set([])  # set of nets, each is a LogicNet named tuple
         self.wirevector_set = set([])  # set of all wirevectors
         self.wirevector_by_name = {}  # map from name->wirevector
-        self.legal_ops = set('~&|^+-*<>=xcsrm') | set([None])  # set of OPS
+        self.legal_ops = set('w~&|^+-*<>=xcsrm')  # set of OPS
 
     def __str__(self):
         """String form has one LogicNet per line."""

@@ -48,13 +48,13 @@ def _remove_wire_nets(block):
     # one pass to build the map of value producers and
     # all of the nets and wires to be removed
     for net in block.logic:
-        if net.op is None:
+        if net.op == 'w':
             immediate_producer[net.dests[0]] = net.args[0]
             wire_removal_set.add(net.dests[0])
     # second full pass to cleanup
     new_logic = set()
     for net in block.logic:
-        if net.op is not None:
+        if net.op != 'w':
             new_args = tuple(find_producer(x) for x in net.args)
             new_net = LogicNet(net.op, net.op_param, new_args, net.dests)
             new_logic.add(new_net)
@@ -70,7 +70,7 @@ def optimize(update_working_block=True, block=None):
 
     block = working_block(block)
     for net in block.logic:
-        if net.op not in set('r|&~^') | set([None]):
+        if net.op not in set('r|&~^w'):
             raise PyrtlError('error, optization only works on post-synthesis blocks')
     if not update_working_block:
         block = copy.deepcopy(block)
@@ -90,17 +90,16 @@ def synthesize(update_working_block=True, block=None):
     Takes as input a block (default to working block) and creates a new
     block which is identical in fucntion but uses only single bit gates
     and excludes many of the more complicated primitives.  The new block
-    should only consist of the combination elements of &, |, ^, and ~ (and
-    the functionless wire "None") and sequential elements of registers
-    (which are one bit as well).  Because memories cannot be broken
-    down to bit-level operations they are extracted from the design and made
-    into new input/output interfaces.
+    should only consist of the combination elements of w, &, |, ^, and ~.
+    and sequential elements of registers (which are one bit as well).
+    Because memories cannot be broken down to bit-level operations they
+    are extracted from the design and made into new input/output interfaces.
     """
 
     block_in = working_block(block)
     block_out = Block()
     # resulting block should only have one of a restricted set of net ops
-    block_out.legal_ops = set('~&|^r') | set([None])
+    block_out.legal_ops = set('~&|^rw')
     wirevector_map = {}  # map from (vector,index) -> new_wire
     uid = 0  # used for unique names
 
@@ -145,7 +144,7 @@ def _decompose(net, wv_map, block_out):
         # assign v to the wiremap for dest[0], wire i
         wv_map[(net.dests[0], i)] <<= v
 
-    if net.op is None:
+    if net.op == 'w':
         for i in destlen():
             assign_dest(i, arg(0, i))
     elif net.op == '~':

@@ -314,15 +314,13 @@ def _to_verilog_combinational(file, block):
             print >> file, '    assign %s = %d;' % (const.name, const.val)
 
     for net in block.logic:
-        if net.op is None:
-            t = (net.dests[0].name, net.args[0].name)
-            print >> file, '    assign %s = %s;' % t
+        if net.op in set('w~'):  # unary ops
+            opstr = '' if net.op == 'w' else net.op
+            t = (net.dests[0].name, opstr, net.args[0].name)
+            print >> file, '    assign %s = %s%s;' % t
         elif net.op in '&|^+-*<>':  # binary ops
             t = (net.dests[0].name, net.args[0].name, net.op, net.args[1].name)
             print >> file, '    assign %s = %s %s %s;' % t
-        elif net.op in set(['~', None]):  # unary ops
-            t = (net.dests[0].name, net.op, net.args[0].name)
-            print >> file, '    assign %s = %s%s;' % t
         elif net.op == '=':
             t = (net.dests[0].name, net.args[0].name, net.args[1].name)
             print >> file, '    assign %s = %s == %s;' % t

@@ -85,7 +85,7 @@ class WireVector(object):
             other = other.extended(self.bitwidth)
 
         net = LogicNet(
-            op=None,
+            op='w',
             op_param=None,
             args=(other,),
             dests=(self,))
