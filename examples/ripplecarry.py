@@ -39,6 +39,7 @@ for i in xrange(15):
 sim_trace.render_trace()
 
 pyrtl.synthesize()
+pyrtl.optimize()
 print pyrtl.working_block()
 #pyrtl.output_to_verilog(sys.stdout)
 

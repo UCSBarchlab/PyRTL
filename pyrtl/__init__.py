@@ -42,3 +42,4 @@ from inputoutput import output_to_verilog
 
 # different analysis and transform passes
 from passes import synthesize
+from passes import optimize
