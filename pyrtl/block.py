@@ -15,9 +15,7 @@ default, is added in to).
 import collections
 import sys
 import re
-
-from collections import namedtuple
-
+import wirevector
 
 #-----------------------------------------------------------------
 #   ___  __   __   __   __  ___      __   ___  __
@@ -39,8 +37,12 @@ class PyrtlInternalError(Exception):
 #   |__) |___ \__/ \__, |  \
 #
 
-class LogicNet(namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
-    """ The basic immutable datatype for storing a "net" in a netlist."""
+class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
+    """ The basic immutable datatype for storing a "net" in a netlist.
+    
+    The details of what is allowed in each of these fields is defined
+    in the comments of Block, and is checked by block.sanity_check
+    """
     def __str__(self):
         rhs = ', '.join([str(x) for x in self.args])
         lhs = ', '.join([str(x) for x in self.dests])
@@ -49,23 +51,35 @@ class LogicNet(namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
 
 
 class Block(object):
-    """Data structure for holding a hardware connectivity graph.
+    """ Data structure for holding a hardware connectivity graph.
     Structure is primarily contained in self.logic which holds a set of
-    "LogicNet"s. Each LogicNet is describes a primitive unit (such as an adder
-    or memory).  The primitive is described by a 4-tuple of the op (a single
-    character describing the operation such as '+' or 'm'), a set of hard
-    parameters to that primitives (such as the number of read ports for a
-    memory), and two tuples (args and dests) that list the wirevectors hooked
-    up as inputs and outputs to that primitive respectively.
+    "LogicNet"s. Each LogicNet is describes a primitive operation (such as an adder
+    or memory).  The primitive is described by a 4-tuple of:
+    1) the op (a single character describing the operation such as '+' or 'm'),
+    2) a set of hard parameters to that primitives (such as the number of read
+       ports for a memory), 
+    3) the tuple "args" which list the wirevectors hooked up as inputs to 
+       this particular net.
+    4) the tuple "dests" which list the wirevectors hooked up as output for 
+       this particular net.
+    Below is a list of the basic operations.  These properties (more formally
+    specified) should all be checked by the class method sanity_check.
 
-    * Most logical and arithmetic ops are pretty self explanitory,
-      OPS: ('&','|','^','+','-','*','<','>','=')
-      they should perform the operation specified.  The '=' is checking
-      to see if the bits of the vectors are equal
+    * Most logical and arithmetic ops are pretty self explanitory, each takes
+      exactly two arguments and they should perform the arithmetic or logical
+      operation specified. OPS: ('&','|','^','+','-','*').  All inputs must
+      be the same bitwidth.  Logical operations produce as many bits as are in
+      the input, while '+' and '-' produce n+1 bits, and '*' produced 2n bits.
+    * In addition there are some operations for performing comparisons 
+      that should perform the operation specified.  The '=' op is checking
+      to see if the bits of the vectors are equal, while '<' and '>' do
+      unsigned arithmetic comparison.  All comparisons generate a single bit
+      of output (1 for true, 0 for false).
     * The 'w' operator is simply a directional wire and has no logic function.
     * The 'x' operator is a mux which takes a select bit and two signals.
       If the value of the select bit is 0 it selects the second argument, if
-      it is 1 it selects the third argument..
+      it is 1 it selects the third argument.  Select must be a single bit, while
+      the other two arguments must be the same length.
     * The 'c' operator is the concatiation operator and combines any number of
       wirevectors (a,b,...,z) into a single new wirevector with "a" in the MSB
       and "z" (or whatever is last) in the LSB position.
@@ -83,15 +97,22 @@ class Block(object):
       specified first and then writes.
 
     The connecting elements (args and dests) should be WireVectors or derived
-    from WireVector, and registered seperately with the block using
-    the method add_wirevector.
+    from WireVector, and should be registered with the block using
+    the method add_wirevector.  Nets should be registered with the block using add_net.
+
+    In addition, there is a member legal_ops which defines the set of operations
+    that can be legally added to the block.  By default it is set to all of the above
+    defined operations, but it can be useful in certain cases to only allow a 
+    subset of operations (such as when transforms are being done that are "lowering"
+    the blocks to more primitive ops.
     """
+
     def __init__(self):
-        """Creates and empty hardware block."""
-        self.logic = set([])  # set of nets, each is a LogicNet named tuple
-        self.wirevector_set = set([])  # set of all wirevectors
-        self.wirevector_by_name = {}  # map from name->wirevector
-        self.legal_ops = set('w~&|^+-*<>=xcsrm')  # set of OPS
+        """Creates an empty hardware block."""
+        self.logic = set()  # set of nets, each is a LogicNet named tuple
+        self.wirevector_set = set()  # set of all wirevectors
+        self.wirevector_by_name = {}  # map from name->wirevector, used for performance
+        self.legal_ops = set('w~&|^+-*<>=xcsrm')  # set of legal OPS
 
     def __str__(self):
         """String form has one LogicNet per line."""
@@ -105,29 +126,7 @@ class Block(object):
 
     def add_net(self, net):
         """ Connect new net to wirevectors previously added to the block."""
-        if not isinstance(net, LogicNet):
-            raise PyrtlError(
-                'error attempting to create logic net from "%s" '
-                'instead of LogicNet' % type(net))
-        for w in net.args + net.dests:
-            _check_type_wirevector(w)
-            if w not in self.wirevector_set:
-                raise PyrtlError(
-                    'error making net with unknown source "%s"'
-                    % w.name)
-            if w.block is not self:
-                raise PyrtlInternalError(
-                    'error, cannot make net between two different blocks')
-        if net.op in set('&|^+-*<>='):
-            widths = set(x.bitwidth for x in net.args)
-            if len(widths) > 1:
-                raise PyrtlInternalError(
-                    'error operands have mismatched bitwidths')
-        if net.op not in self.legal_ops:
-            raise PyrtlInternalError(
-                'error adding op "%s" not from acceptable set %s'
-                % (net.op, self.legal_ops))
-        # after all that sanity checking, actually update the data structure
+        _check_valid_net(net)
         self.logic.add(net)
 
     def wirevector_subset(self, cls=None):
@@ -135,7 +134,7 @@ class Block(object):
         if cls is None:
             return self.wirevector_set
         else:
-            return set([x for x in self.wirevector_set if isinstance(x, cls)])
+            return set(x for x in self.wirevector_set if isinstance(x, cls))
 
     def get_wirevector_by_name(self, name, strict=False):
         """Return the wirevector matching name."""
@@ -148,17 +147,25 @@ class Block(object):
         return retval
 
     def sanity_check(self):
-        """ Check logic and wires and throw PyrtlError if there is an issue."""
+        """ Check logic and wires and throw PyrtlError or PyrtlInternalError if there is an issue."""
+
+        # check for valid wires
+        for w in self.wirevector_set:
+            _check_type_wirevector(w)
+
+        # TODO: check that the wirevector_by_name is sane        
+        # check for valid LogicNets
+        for net in self.logic:
+            _check_valid_net(net)
+            
         # check for unique names
-        wirevector_names = [x.name for x in self.wirevector_set]
-        dup_list = [
-            x
-            for x, y in collections.Counter(wirevector_names).items()
-            if y > 1
-            ]
-        if len(dup_list) > 0:
+        wirevector_names_list = [x.name for x in self.wirevector_set]
+        wirevector_names_set = set(wirevector_names_list)
+        if len(wirevector_names_list) != len(wirevector_names_set):
+            for w in wirevector_names_set:
+                wirevector_names_list.remove(w)
             raise PyrtlError('Duplicate wire names found for the following '
-                             'different signals: %s' % repr(dup_list))
+                             'different signals: %s' % repr(wirevector_names_list))
 
         # check for dead input wires (not connected to anything)
         dest_set = set(wire for net in self.logic for wire in net.dests)
@@ -166,14 +173,10 @@ class Block(object):
         full_set = dest_set | arg_set
         connected_minus_allwires = full_set.difference(self.wirevector_set)
         if len(connected_minus_allwires) > 0:
-            raise PyrtlError(
-                'Unknown wires found in net: %s'
-                % repr(connected_minus_allwires))
+            raise PyrtlError( 'Unknown wires found in net: %s' % repr(connected_minus_allwires))
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         if len(allwires_minus_connected) > 0:
-            raise PyrtlError(
-                'Wires declared but never connected: %s'
-                % repr([w.name for w in allwires_minus_connected]))
+            raise PyrtlError('Wires declared but never connected: %s' % repr(allwires_minus_connectes))
 
     # some unique name class methods useful internally
     _tempvar_count = 1
@@ -198,12 +201,72 @@ class Block(object):
 
 
 def _check_type_wirevector(w):
-    from wirevector import WireVector
-    if not isinstance(w, WireVector):
+    """ Check that w is a valid wirevector type. """
+    if not isinstance(w, wirevector.WireVector):
         raise PyrtlError(
             'error attempting to pass an input of type "%s" '
             'instead of WireVector' % type(w))
 
+def _check_valid_net(net):
+    """ Check that net is a valid LogicNet. """
+
+    # general sanity checks that apply to all operations
+    if not isinstance(net, LogicNet):
+        raise PyrtlInternalError('error, net must be of type LogicNet')
+    if not isinstance(net.args, tuple):
+        raise PyrtlInternalError('error, LogicNet args must be tuple')
+    if not isinstance(net.dests, tuple):
+        raise PyrtlInternalError('error, LogicNet dests must be tuple')        
+    for w in net.args + net.dests:
+        _check_type_wirevector(w)
+        if w not in self.wirevector_set:
+            raise PyrtlInternalError('error, net with unknown source "%s"' % w.name)
+        if w.block is not self:
+            raise PyrtlInternalError('error, net references different block')
+    if net.op not in self.legal_ops:
+        raise PyrtlInternalError('error, net op "%s" not from acceptable set %s' % 
+                                 (net.op, self.legal_ops))
+
+    # operation specific checks on arguments
+    if net.op in 'w~rs' and len(net.args != 1):
+        raise PyrtlInternalError('error, op only allowed 1 argument')
+    if net.op in '&|^+-*<>=' and len(net.args != 2):
+        raise PyrtlInternalError('error, op only allowed 2 arguments')
+    if net.op in 'x' and len(net.args != 2):
+        raise PyrtlInternalError('error, op only allowed 3 arguments')
+    if net.op in '&|^+-*<>=' and len(set(x.bitwidth for x in net.args)) > 1:
+        raise PyrtlInternalError('error, args have mismatched bitwidths')
+    if net.op == 'x' and net.args[1].bitwidth != net.args[2].bitwidth:
+         raise PyrtlInternalError('error, args have mismatched bitwidths')
+    if net.op == 'x' and net.args[0].bitwidth != 1:
+        raise PyrtlInternalError('error, mux select must be a single bit')
+
+    # operation specific checks on op_params
+    if net.op in 'w~&|^+-*<>=xcr' and net.op_param is not None:
+         raise PyrtlInternalError('error, op_param should be None')
+    if net.op == 's':
+        if not isinstance(net.op_param, tuple):
+            raise PyrtlInternalError('error, select op requires op_param')
+        for p in net.op_param:
+            if p < 0 or p >= net.args[0].bitwidth:
+                raise PyrtlInternalError('error, op_param out of bounds')
+
+    # check destination validity
+    if net.op in 'w~&|^r' and net.dests[0].bitwidth > net.args[0].bitwidth:
+        raise PyrtlInternalError('error, upper bits of destination unassigned')
+    if net.op in '<>=' and net.dests[0].bitwidth != 1:
+        raise PyrtlInternalError('error, destination should be of bitwidth=1')
+    if net.op in '+-' and net.dests[0].bitwidth > net.args[0].bitwidth + 1:
+        raise PyrtlInternalError('error, upper bits of destination unassigned')
+    if net.op == '*' and net.dests[0].bitwidth > 2 * net.args[0].bitwidth:
+        raise PyrtlInternalError('error, upper bits of destination unassigned')
+    if net.op == 'x' and net.dests[0].bitwidth > net.args[1].bitwidth:
+        raise PyrtlInternalError('error, upper bits of mux output undefined')
+    if net.op == 'c' and net.dests[0].bitwidth > sum(x.bitwidth for x in net.args):
+        raise PyrtlInternalError('error, upper bits of concat output undefined')
+    if net.op == 's' and net.dests[0].bitwidth > len(net.op_param):
+        raise PyrtlInternalError('error, upper bits of select output undefined')
+    # TODO: Add Memory to the above checks
 
 #------------------------------------------------------------------------
 #          __   __               __      __        __   __
@@ -212,9 +275,9 @@ def _check_type_wirevector(w):
 #
 
 
-# Right now we use singlton_block to store the one global
+# Right now we use singleton_block to store the one global
 # block, but in the future we should support multiple Blocks.
-# The argument "singlton_block" should never be passed.
+# The argument "singleton_block" should never be passed.
 _singleton_block = Block()
 
 
@@ -230,7 +293,7 @@ def working_block(block=None):
     if block is None:
         return _singleton_block
     elif not isinstance(block, Block):
-        raise PyrtlError('error, expected instance of Block as block arguement')
+        raise PyrtlError('error, expected instance of Block as block argument')
     else:
         return block
 
@@ -243,5 +306,5 @@ def reset_working_block():
 def set_working_block(block):
     global _singleton_block
     if not isinstance(block, Block):
-        raise PyrtlError('error, expected instance of Block as block arguement')
+        raise PyrtlError('error, expected instance of Block as block argument')
     _singleton_block = block
