@@ -7,6 +7,7 @@ and_all_bits, or_all_bits, xor_all_bits: apply function across all bits
 parity: same as xor_all_bits
 mux: generate a multiplexer
 concat: concatenate multiple wirevectors into one long vector
+get_block: get the block of the arguments, throw error if they are different
 appropriate_register_type: return the register needed to capture the given type
 """
 
@@ -25,9 +26,10 @@ def as_wires(val, block=None):
 
     if isinstance(val, (int, basestring)):
         return Const(val, block=block)
-    if not isinstance(val, WireVector):
+    elif not isinstance(val, WireVector):
         raise PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
-    return val
+    else:
+        return val
 
 
 def and_all_bits(vector):
@@ -63,11 +65,11 @@ def mux(select, falsecase, truecase):
     operator of some languages
     """
 
-    # FIXME: implicit use of block
-    # check size and type of operands
-    select = as_wires(select)
-    a = as_wires(falsecase)
-    b = as_wires(truecase)
+    block = get_block(select, falsecase, truecase)
+    select = as_wires(select, block=block)
+    a = as_wires(falsecase, block=block)
+    b = as_wires(truecase, block=block)
+
     if len(select) != 1:
         raise PyrtlError('error, select input to the mux must be 1-bit wirevector')
     if len(a) < len(b):
@@ -76,7 +78,7 @@ def mux(select, falsecase, truecase):
         b = b.extended(len(a))
     resultlen = len(a)  # both are the same length now
 
-    outwire = WireVector(bitwidth=resultlen)
+    outwire = WireVector(bitwidth=resultlen, block=block)
     net = LogicNet(
         op='x',
         op_param=None,
@@ -86,17 +88,35 @@ def mux(select, falsecase, truecase):
     return outwire
 
 
+def get_block(*arglist):
+    """ Take any number of wire vector params and return the block they are all in.
+
+    If any of the arguments come from different blocks, throw an error.
+    If none of the arguments are wirevectors, return the working_block.
+    """
+    block = None
+    for arg in arglist:
+        if isinstance(arg, WireVector):
+            if block and block is not arg.block:
+                raise PyrtlError('get_block passed WireVectors from differnt blocks')
+            else:
+                block = arg.block
+    # use working block is block is still None
+    block = working_block(block)
+    return block
+
+
 def concat(*args):
     """ Take any number of wire vector params and return a wire vector concatinating them."""
 
-    # FIXME: implicit use of block
+    block = get_block(*args)
     if len(args) <= 0:
         raise PyrtlError
     if len(args) == 1:
         return args[0]
     else:
         final_width = sum([len(arg) for arg in args])
-        outwire = WireVector(bitwidth=final_width)
+        outwire = WireVector(bitwidth=final_width, block=block)
         net = LogicNet(
             op='c',
             op_param=None,

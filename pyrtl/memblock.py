@@ -4,6 +4,7 @@ Defines MemBlock, a block of memory that can be read (async) and written (sync)
 
 from block import *
 from wirevector import *
+from helperfuncs import *
 
 
 #------------------------------------------------------------------------
@@ -57,7 +58,7 @@ class MemBlock(object):
             raise PyrtlError('error, width of memblock index "%s" is %d, '
                              'addrwidth is %d' % (item.name, len(item), self.addrwidth))
 
-        data = WireVector(bitwidth=self.bitwidth)
+        data = WireVector(bitwidth=self.bitwidth, block=self.block)
         self.read_data.append(data)
         self.read_addr.append(item)
         self._update_net()
@@ -90,7 +91,7 @@ class MemBlock(object):
         # check that 'val' is a valid datavector
         if isinstance(val, WireVector):
             data = val
-            enable = Const(1, bitwidth=1)
+            enable = Const(1, bitwidth=1, block=self.block)
         elif isinstance(val, MemBlock.EnabledWrite):
             data = val.data
             enable = val.enable

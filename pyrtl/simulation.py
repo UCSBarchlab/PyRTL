@@ -30,7 +30,6 @@ class Simulation(object):
         self.tracer = tracer
         self.initialize(register_value_map)
         self.max_iter = 1000
-        # print self.block # Helpful Debug Print
 
     def initialize(self, register_value_map, default_value=None):
         """ Sets the wire and register values to default or as specified """

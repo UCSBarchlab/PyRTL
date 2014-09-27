@@ -42,10 +42,11 @@ class PyrtlInternalError(Exception):
 class LogicNet(namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
     """ The basic immutable datatype for storing a "net" in a netlist."""
     def __str__(self):
-        lhs = str(self.args[0]) if len(self.args) == 1 else str(self.args)
-        rhs = str(self.dests[0]) if len(self.dests) == 1 else str(self.dests)
+        rhs = ', '.join([str(x) for x in self.args])
+        lhs = ', '.join([str(x) for x in self.dests])
         op_str = '' if self.op is None else self.op
-        return ' '.join([lhs, '<<=', op_str, rhs])
+        options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
+        return ' '.join([lhs, '<--', op_str, '--', rhs, options])
 
 
 class Block(object):
@@ -91,7 +92,7 @@ class Block(object):
         self.logic = set([])  # set of nets, each is a LogicNet named tuple
         self.wirevector_set = set([])  # set of all wirevectors
         self.wirevector_by_name = {}  # map from name->wirevector
-        self.legal_ops = set('~&|^+-*<>=xcsrm') | set([None])  # OPS
+        self.legal_ops = set('~&|^+-*<>=xcsrm') | set([None])  # set of OPS
 
     def __str__(self):
         """String form has one LogicNet per line."""
@@ -125,7 +126,7 @@ class Block(object):
                     'error operands have mismatched bitwidths')
         if net.op not in self.legal_ops:
             raise PyrtlInternalError(
-                'error adding op "%s" not from known set %s'
+                'error adding op "%s" not from acceptable set %s'
                 % (net.op, self.legal_ops))
         # after all that sanity checking, actually update the data structure
         self.logic.add(net)
@@ -238,6 +239,7 @@ def working_block(block=None):
 def reset_working_block():
     global _singleton_block
     _singleton_block = Block()
+
 
 def set_working_block(block):
     global _singleton_block

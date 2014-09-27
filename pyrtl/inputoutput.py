@@ -143,10 +143,10 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         netio = command['namesignal_list']
         if len(command['cover_list']) == 0:
             output_wire = twire(netio[0])
-            output_wire <<= Const(0, bitwidth=1)  # const "FALSE"
+            output_wire <<= Const(0, bitwidth=1, block=block)  # const "FALSE"
         elif command['cover_list'].asList() == ['1']:
             output_wire = twire(netio[0])
-            output_wire <<= Const(1, bitwidth=1)  # const "TRUE"
+            output_wire <<= Const(1, bitwidth=1, block=block)  # const "TRUE"
         elif command['cover_list'].asList() == ['1', '1']:
             #Populate clock list if one input is already a clock
             if(netio[1] in clk_set):

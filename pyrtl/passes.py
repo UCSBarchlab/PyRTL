@@ -26,7 +26,6 @@ def area_estimation(tech_in_nm, block=None):
     raise NotImplementedError
 
 
-
 #---------------------------------------------------------------------
 #    __           ___       ___  __     __
 #   /__` \ / |\ |  |  |__| |__  /__` | /__`
@@ -42,7 +41,7 @@ def _generate_one_bit_add(a, b, cin):
 
 def _generate_add(a, b, cin):
     """ a and b are lists of wirevectors (all len 1)
-        cin is a wirevector (also len 1) 
+        cin is a wirevector (also len 1)
         returns sum as list of wirevectors (all len 1)
         and a carry out wirevector (also len 1)
     """
@@ -50,56 +49,90 @@ def _generate_add(a, b, cin):
         sumbits, cout = _generate_one_bit_add(a, b, cin)
     else:
         lsbit, ripplecarry = _generate_one_bit_add(a[0], b[0], cin)
-        msbits, cout = add(a[1:], b[1:], ripplecarry)
+        msbits, cout = _generate_add(a[1:], b[1:], ripplecarry)
         sumbits = [lsbit] + msbits  # append to lsb to the lowest bits
     return sumbits, cout
 
 
 def _decompose(net, wv_map, block_out):
-    def arg(x,i):
-        return wirevector_map[(net.args[x],i)] 
+    """ Add the wires and logicnets to block_out and wv_map to decompose net """
+
+    def arg(x, i):
+        # return the mapped wire vector for argument x, wire number i
+        return wv_map[(net.args[x], i)]
+
+    def destlen():
+        # return the length of the destination in bits
+        return range(len(net.dests[0]))
+
+    def assign_dest(i, v):
+        # assign v to the wiremap for dest[0], wire i
+        wv_map[(net.dests[0], i)] <<= v
+
     if net.op is None:
-        for i in range(len(net.dests[0])):
-            wv_map[(net.dests[0],i)] <<= arg(0,i) 
-    if net.op == '~':
-        for i in range(len(net.dests[0])):
-            wv_map[(net.dests[0],i)] <<= ~ arg(0,i) 
-    if net.op == '&':
-        for i in range(len(net.dests[0])):
-            wv_map[(net.dests[0],i)] <<= arg(0,i) & arg(1,i)
-    if net.op == '|':
-        for i in range(len(net.dests[0])):
-            wv_map[(net.dests[0],i)] <<= arg(0,i) | arg(1,i)
-    if net.op == '^':
-        for i in range(len(net.dests[0])):
-            wv_map[(net.dests[0],i)] <<= arg(0,i) ^ arg(1,i)            
+        for i in destlen():
+            assign_dest(i, arg(0, i))
+    elif net.op == '~':
+        for i in destlen():
+            assign_dest(i, ~arg(0, i))
+    elif net.op == '&':
+        for i in destlen():
+            assign_dest(i, arg(0, i) & arg(1, i))
+    elif net.op == '|':
+        for i in destlen():
+            assign_dest(i, arg(0, i) | arg(1, i))
+    elif net.op == '^':
+        for i in destlen():
+            assign_dest(i, arg(0, i) ^ arg(1, i))
     elif net.op == '=':
-        result = arg(0,i) ^ arg(1,i)
-        for i in range(1,len(net.args[0])):
-            result = result | (arg(0,i) ^ arg(1,i))            
-        wv_map[(net.dests[0],0)] <<= ~ result
+        # The == operator is implemented with a nor of xors.
+        temp_result = arg(0, i) ^ arg(1, i)
+        for i in range(1, len(net.args[0])):
+            temp_result = temp_result | (arg(0, i) ^ arg(1, i))
+        assign_dest(0, ~temp_result)
     elif net.op == 'm':
-        for i in range(len(net.dests[0])):
-            wv_map[(net.dests[0],i)] <<= (~arg(0,0) & arg(1,i)) | (arg(0,0) & arg(2,i))
+        for i in destlen():
+            muxed_bit = ~arg(0, 0) & arg(1, i) | arg(0, 0) & arg(2, i)
+            assign_dest(i, muxed_bit)
+    elif net.op == 's':
+        for i in destlen():
+            selected_bit = arg(0, net.op_param[i])
+            assign_dest(i, selected_bit)
+    elif net.op == 'c':
+        arg_wirelist = []
+        # generate list of wires for vectors being concatenated
+        for arg_vector in net.args:
+            arg_vector_as_list = [wv_map[(arg_vector, i)] for i in range(len(arg_vector))]
+            arg_wirelist = arg_vector_as_list + arg_wirelist
+        for i in destlen():
+            assign_dest(i, arg_wirelist[i])
+    elif net.op == 'r':
+        for i in destlen():
+            args = (arg(0, i),)
+            dests = (wv_map[(net.dests[0], i)],)
+            new_net = LogicNet('r', None, args=args, dests=dests)
+            block_out.add_net(new_net)
     elif net.op == '+':
-        arg0list = [arg(0,i) for i in range(len(net.args[0]))]
-        arg1list = [arg(1,i) for i in range(len(net.args[0]))]
+        arg0list = [arg(0, i) for i in range(len(net.args[0]))]
+        arg1list = [arg(1, i) for i in range(len(net.args[1]))]
         cin = Const(0, bitwidth=1, block=block_out)
         sumbits, cout = _generate_add(arg0list, arg1list, cin)
         destlist = sumbits + [cout]
-        for i in range(len(net.dests[0])):
-            wv_map[(net.dests[0],i)] <<= destlist[i]
+        for i in destlen():
+            assign_dest(i, destlist[i])
     else:
-        raise PyrtlInternalError 
-    return new_nets
+        raise PyrtlInternalError('Unnable to synthesize the following net '
+                                 'due to unimplemented op :\n%s' % str(net))
+    return
 
-def synthesis(update_working_block=True, block=None):
+
+def synthesize(update_working_block=True, block=None):
     """ Lower the design to just single-bit "and", "or", and "not" gates.
 
     Takes as input a block (default to working block) and creates a new
     block which is identical in fucntion but uses only single bit gates
     and excludes many of the more complicated primitives.  The new block
-    should only consist of the combination elements of &, |, and ~ (and
+    should only consist of the combination elements of &, |, ^, and ~ (and
     the functionless wire "None") and sequential elements of registers
     (which are one bit as well).  Because memories cannot be broken
     down to bit-level operations they are extracted from the design and made
@@ -108,29 +141,31 @@ def synthesis(update_working_block=True, block=None):
 
     block_in = working_block(block)
     block_out = Block()
+    # resulting block should only have one of a restricted set of net ops
+    block_out.legal_ops = set('~&|^r') | set([None])
     wirevector_map = {}  # map from (vector,index) -> new_wire
-    uid = 0
+    uid = 0  # used for unique names
 
-    # first step, create all of the new wires for the new block
+    # First step, create all of the new wires for the new block
     # from the original wires and store them in the wirevector_map
     # for reference.
     for wirevector in block_in.wirevector_subset():
-        for i in len(wirevector):
-            new_name = 'synth' + str(uid)  # FIXME: better name needed
+        for i in range(len(wirevector)):
+            new_name = '_'.join(['synth', wirevector.name, str(i), str(uid)])
             uid += 1
             if isinstance(wirevector, Const):
                 new_val = (wirevector.val >> i) & 0x1
-                new_wirevector = Const(bitwidth=1, val=new_val, block=block_out):
+                new_wirevector = Const(bitwidth=1, val=new_val, block=block_out)
             else:
-                new_wirevector = WireVector(name=new_name, block=block_out)
-            wirevector_map[(wirevector,i)] = new_wirevector
+                # build the appropriately typed wire (maintaining input/output)
+                wirevector_type = type(wirevector)
+                new_wirevector = wirevector_type(name=new_name, bitwidth=1, block=block_out)
+            wirevector_map[(wirevector, i)] = new_wirevector
 
-    # Now walk all the blocks and map the logic to the equivelent set of 
-    # primitives in the system
-    for net in block.logic:
-        new_nets = _decompose(net, wirevector_map, block_out)
-        for n in new_nets:
-            block_out.add_net(n)
+    # Now that we have all the wires built and mapped, walk all the blocks
+    # and map the logic to the equivelent set of primitives in the system
+    for net in block_in.logic:
+        _decompose(net, wirevector_map, block_out)
 
     if update_working_block:
         set_working_block(block_out)

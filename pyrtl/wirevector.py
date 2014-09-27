@@ -13,6 +13,13 @@ import collections
 import string
 from block import *
 
+
+# FIXME: this is here to avoid circular dependency
+# refactor this out by avoiding "from ... import *" everywhere
+def _as_wires(value, block):
+    from helperfuncs import as_wires
+    return as_wires(value, block)
+
 #-----------------------------------------------------------------
 #        ___  __  ___  __   __
 #  \  / |__  /  `  |  /  \ |__)
@@ -66,11 +73,10 @@ class WireVector(object):
         return ''.join([self.name, '/', str(self.bitwidth), self.code])
 
     def __ilshift__(self, other):
-        if not isinstance(other, WireVector):
-            other = Const(other)
+        other = _as_wires(other, block=self.block)
+
         if self.bitwidth is None:
             raise PyrtlError
-
         if self.bitwidth < other.bitwidth:
             # truncate the upper bits
             other = other[:self.bitwidth]
@@ -89,8 +95,7 @@ class WireVector(object):
     def logicop(self, other, op):
         a, b = self, other
         # convert constants if necessary
-        if not isinstance(b, WireVector):
-            b = Const(b)
+        b = _as_wires(b, block=self.block)
 
         # check size of operands
         if len(a) < len(b):
@@ -107,7 +112,7 @@ class WireVector(object):
         elif op in ['<', '>', '=']:
             resultlen = 1
 
-        s = WireVector(bitwidth=resultlen)
+        s = WireVector(bitwidth=resultlen, block=self.block)
         net = LogicNet(
             op=op,
             op_param=None,
@@ -178,7 +183,7 @@ class WireVector(object):
         return lt | eq
 
     def __invert__(self):
-        outwire = WireVector(bitwidth=len(self))
+        outwire = WireVector(bitwidth=len(self), block=self.block)
         net = LogicNet(
             op='~',
             op_param=None,
@@ -194,7 +199,7 @@ class WireVector(object):
             selectednums = [allindex[item]]
         else:
             selectednums = allindex[item]  # slice
-        outwire = WireVector(bitwidth=len(selectednums))
+        outwire = WireVector(bitwidth=len(selectednums), block=self.block)
         net = LogicNet(
             op='s',
             op_param=tuple(selectednums),
@@ -212,7 +217,7 @@ class WireVector(object):
 
     def zero_extended(self, bitwidth):
         """ return a zero extended wirevector derived from self """
-        return self._extend_with_bit(bitwidth, Const(0, bitwidth=1))
+        return self._extend_with_bit(bitwidth, Const(0, bitwidth=1, block=self.block))
 
     def extended(self, bitwidth):
         """ return wirevector extended as the default rule for the class """
@@ -227,7 +232,7 @@ class WireVector(object):
                 'error, zero_extended cannot reduce the number of bits')
         else:
             from helperfuncs import concat
-            extvector = WireVector(bitwidth=numext)
+            extvector = WireVector(bitwidth=numext, block=self.block)
             net = LogicNet(
                 op='s',
                 op_param=(0,)*numext,

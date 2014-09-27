@@ -22,6 +22,11 @@ from helperfuncs import as_wires
 from helperfuncs import concat
 from helperfuncs import mux
 from helperfuncs import appropriate_register_type
+from helperfuncs import get_block
+from helperfuncs import and_all_bits
+from helperfuncs import or_all_bits
+from helperfuncs import xor_all_bits
+from helperfuncs import parity
 
 # memory blocks
 from memblock import MemBlock
@@ -34,3 +39,6 @@ from simulation import SimulationTrace
 from inputoutput import input_from_blif
 from inputoutput import output_to_trivialgraph
 from inputoutput import output_to_verilog
+
+# different analysis and transform passes
+from passes import synthesize
