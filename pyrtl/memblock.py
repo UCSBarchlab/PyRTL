@@ -2,9 +2,10 @@
 Defines MemBlock, a block of memory that can be read (async) and written (sync)
 """
 
-from block import *
-from wirevector import *
-from helperfuncs import *
+import collections
+import core
+import wire
+import helperfuncs
 
 
 #------------------------------------------------------------------------
@@ -31,20 +32,20 @@ class MemBlock(object):
     # Not currently implemented:  memory[addr] <<= data (infer write port)
     def __init__(self,  bitwidth, addrwidth, name=None, block=None):
 
-        self.block = working_block(block)
+        self.block = core.working_block(block)
 
         if bitwidth <= 0:
-            raise PyrtlError
+            raise core.PyrtlError
         if addrwidth <= 0:
-            raise PyrtlError
+            raise core.PyrtlError
         if name is None:
-            name = Block.next_tempvar_name()
+            name = core.Block.next_tempvar_name()
 
         self.bitwidth = bitwidth
         self.name = name
         self.addrwidth = addrwidth
         self.stored_net = None
-        self.id = Block.next_memid()
+        self.id = core.Block.next_memid()
         self.read_addr = []  # arg
         self.read_data = []  # dest
         self.write_addr = []  # arg
@@ -52,13 +53,13 @@ class MemBlock(object):
         self.write_enable = []  # arg
 
     def __getitem__(self, item):
-        if not isinstance(item, WireVector):
-            raise PyrtlError('error, index to a memblock must be a WireVector (or derived) type')
+        if not isinstance(item, wire.WireVector):
+            raise core.PyrtlError('error, index to memblock must be WireVector (or derived) type')
         if len(item) != self.addrwidth:
-            raise PyrtlError('error, width of memblock index "%s" is %d, '
-                             'addrwidth is %d' % (item.name, len(item), self.addrwidth))
+            raise core.PyrtlError('error, width of memblock index "%s" is %d, '
+                                  'addrwidth is %d' % (item.name, len(item), self.addrwidth))
 
-        data = WireVector(bitwidth=self.bitwidth, block=self.block)
+        data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
         self.read_data.append(data)
         self.read_addr.append(item)
         self._update_net()
@@ -72,7 +73,7 @@ class MemBlock(object):
         # construct the arg list from reads and writes
         coupled_write_args = zip(self.write_addr, self.write_data, self.write_enable)
         flattened_write_args = [item for sublist in coupled_write_args for item in sublist]
-        net = LogicNet(
+        net = core.LogicNet(
             op='m',
             op_param=(self.id, len(self.read_addr), len(self.write_addr)),
             args=tuple(self.read_addr + flattened_write_args),
@@ -82,25 +83,25 @@ class MemBlock(object):
 
     def __setitem__(self, item, val):
         # check that 'item' is a valid address vector
-        if not isinstance(item, WireVector):
-            raise PyrtlError
+        if not isinstance(item, wire.WireVector):
+            raise core.PyrtlError
         if len(item) != self.addrwidth:
-            raise PyrtlError
+            raise core.PyrtlError
         addr = item
 
         # check that 'val' is a valid datavector
-        if isinstance(val, WireVector):
+        if isinstance(val, wire.WireVector):
             data = val
-            enable = Const(1, bitwidth=1, block=self.block)
+            enable = wire.Const(1, bitwidth=1, block=self.block)
         elif isinstance(val, MemBlock.EnabledWrite):
             data = val.data
             enable = val.enable
         else:
-            raise PyrtlError
+            raise core.PyrtlError
         if len(data) != self.bitwidth:
-            raise PyrtlError
+            raise core.PyrtlError
         if len(enable) != 1:
-            raise PyrtlError
+            raise core.PyrtlError
 
         self.write_data.append(data)
         self.write_addr.append(addr)

@@ -1,10 +1,9 @@
 
 import sys
 import re
-
-from time import gmtime, strftime
-from pyrtl.block import *
-from pyrtl.wirevector import *
+import time
+import core
+import wire
 
 #-----------------------------------------------------------------
 #    __                         ___    __
@@ -20,7 +19,7 @@ class Simulation(object):
             self, register_value_map=None, default_value=0,
             tracer=None, block=None):
 
-        block = working_block(block)
+        block = core.working_block(block)
         block.sanity_check()  # check that this is a good hw block
 
         self.value = {}   # map from signal->value
@@ -38,7 +37,7 @@ class Simulation(object):
             default_value = self.default_value
 
         # set registers to their values
-        reg_set = self.block.wirevector_subset(Register)
+        reg_set = self.block.wirevector_subset(wire.Register)
         if register_value_map is not None:
             for r in reg_set:
                 if r in register_value_map:
@@ -47,7 +46,7 @@ class Simulation(object):
                     self.value[r] = default_value
 
         # set constants to their set values
-        for w in self.block.wirevector_subset(Const):
+        for w in self.block.wirevector_subset(wire.Const):
             self.value[w] = w.val
             assert isinstance(w.val, int)  # for now
 
@@ -62,17 +61,17 @@ class Simulation(object):
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle """
         # Check that all Input have a corresponding provided_input
-        input_set = self.block.wirevector_subset(Input)
+        input_set = self.block.wirevector_subset(wire.Input)
         for i in input_set:
             if i not in provided_inputs:
-                raise PyrtlError(
+                raise core.PyrtlError(
                     'Input "%s" has no input value specified'
                     % i.name)
 
         # Check that only inputs are specified, and set the values
         for i in provided_inputs.keys():
             if i not in input_set:
-                raise PyrtlError(
+                raise core.PyrtlError(
                     'step provided a value for input for "%s" which is '
                     'not a known input' % i.name)
             self.value[i] = provided_inputs[i]
@@ -86,8 +85,8 @@ class Simulation(object):
 
         # propagate inputs to outputs
         # wires  which are defined at the start are inputs and registers
-        const_set = self.block.wirevector_subset(Const)
-        reg_set = self.block.wirevector_subset(Register)
+        const_set = self.block.wirevector_subset(wire.Const)
+        reg_set = self.block.wirevector_subset(wire.Register)
         defined_set = reg_set | const_set | input_set
         logic_left = self.block.logic.copy()
 
@@ -100,7 +99,7 @@ class Simulation(object):
             if len(logic_left) == 0:
                 break
         else:  # no break
-            raise PyrtlInternalError(
+            raise core.PyrtlInternalError(
                 'error, the set of logic "%s" appears to be waiting for value never produced'
                 % str(logic_left))
 
@@ -138,7 +137,7 @@ class Simulation(object):
                 num_reads = net.op_param[1]
                 num_writes = net.op_param[2]
                 if num_reads + 3*num_writes != len(net.args):
-                    raise PyrtlInternalError
+                    raise core.PyrtlInternalError
                 for i in range(num_reads, num_reads + 3*num_writes, 3):
                     write_addr = prior_value[net.args[i]]
                     write_val = prior_value[net.args[i+1]]
@@ -146,7 +145,7 @@ class Simulation(object):
                     if write_enable:
                         self.memvalue[(memid, write_addr)] = write_val
             else:
-                raise PyrtlInternalError
+                raise core.PyrtlInternalError
 
     def execute(self, net):
         """Handle the combinational logic update rules for the given net.
@@ -199,13 +198,13 @@ class Simulation(object):
             memid = net.op_param[0]
             num_reads = net.op_param[1]
             if num_reads != len(net.dests):
-                raise PyrtlInternalError
+                raise core.PyrtlInternalError
             for i in range(num_reads):
                 read_addr = self.value[net.args[i]]
                 mem_lookup_result = self.memvalue.get((memid, read_addr), 0)
                 self.value[net.dests[i]] = mem_lookup_result
         else:
-            raise PyrtlInternalError
+            raise core.PyrtlInternalError
 
     def _try_execute(self, defined_set, net):
         """ Try to Execute net but return False if not ready.
@@ -291,7 +290,7 @@ class SimulationTrace(object):
 
     def __init__(self, wirevector_subset=None, block=None):
 
-        block = working_block(block)
+        block = core.working_block(block)
 
         def is_internal_name(name):
             if (
@@ -314,14 +313,14 @@ class SimulationTrace(object):
 
     def add_step(self, value_map):
         if len(self.trace) == 0:
-            raise PyrtlError('error, simulation trace needs at least 1 signal '
-                             'to track (try passing name to WireVector)')
+            raise core.PyrtlError('error, simulation trace needs at least 1 signal '
+                                  'to track (try passing name to WireVector)')
         for w in self.trace:
             self.trace[w].append(value_map[w])
 
     def print_trace(self, file=sys.stdout):
         if len(self.trace) == 0:
-            raise PyrtlError('error, cannot print an empty trace')
+            raise core.PyrtlError('error, cannot print an empty trace')
         maxlen = max([len(w.name) for w in self.trace])
         for w in sorted(self.trace, key=trace_sort_key):
             file.write(" ".join([w.name.rjust(maxlen),
@@ -330,7 +329,7 @@ class SimulationTrace(object):
 
     def print_vcd(self, file=sys.stdout):
         # dump header info
-        file_timestamp = strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", gmtime())
+        file_timestamp = time.strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", time.gmtime())
         print >>file, " ".join(["$date", file_timestamp, "$end"])
         print >>file, " ".join(["$timescale", "1ns", "$end"])
         print >>file, " ".join(["$scope", "module logic", "$end"])

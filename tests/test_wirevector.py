@@ -14,16 +14,29 @@ class TestWireVector(unittest.TestCase):
 
     def test_assignment_small(self):
         c = pyrtl.Register(bitwidth=3)
+        c.next <<= pyrtl.Const(1, bitwidth=3)
+
+    def test_assignment_unspec_width(self):
+        c = pyrtl.Register(bitwidth=3)
         c.next <<= pyrtl.Const(1)
+
+    def test_assignment_raw(self):
+        c = pyrtl.Register(bitwidth=3)
+        c.next <<= 1
+
     def test_assignment_large(self):
         c = pyrtl.Register(bitwidth=3)
         c.next <<= pyrtl.Const(202)
+
     def test_logic_operatons(self):
         testmissing()
+
     def test_slice(self):
         testmissing()
+
     def test_zero_extend(self):
         testmissing()
+
     def test_sign_extend(self):
         testmissing()
 

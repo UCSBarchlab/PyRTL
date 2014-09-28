@@ -4,10 +4,10 @@ passes contains structures helpful for writing analysis and
 transformation passes over blocks.
 """
 
-from block import *
-from wirevector import *
-from helperfuncs import *
 import copy
+import core
+import wire
+import helperfuncs
 
 #---------------------------------------------------------------------
 #         __   ___          ___  __  ___              ___    __
@@ -56,7 +56,7 @@ def _remove_wire_nets(block):
     for net in block.logic:
         if net.op != 'w':
             new_args = tuple(find_producer(x) for x in net.args)
-            new_net = LogicNet(net.op, net.op_param, new_args, net.dests)
+            new_net = core.LogicNet(net.op, net.op_param, new_args, net.dests)
             new_logic.add(new_net)
     # now update the block with the new logic and remove wirevectors
     block.logic = new_logic
@@ -68,10 +68,10 @@ def _remove_wire_nets(block):
 def optimize(update_working_block=True, block=None):
     """ Return an optimized version of a synthesized hardware block. """
 
-    block = working_block(block)
+    block = core.working_block(block)
     for net in block.logic:
         if net.op not in set('r|&~^w'):
-            raise PyrtlError('error, optization only works on post-synthesis blocks')
+            raise core.PyrtlError('error, optization only works on post-synthesis blocks')
     if not update_working_block:
         block = copy.deepcopy(block)
     _remove_wire_nets(block)
@@ -96,8 +96,8 @@ def synthesize(update_working_block=True, block=None):
     are extracted from the design and made into new input/output interfaces.
     """
 
-    block_in = working_block(block)
-    block_out = Block()
+    block_in = core.working_block(block)
+    block_out = core.Block()
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^rw')
     wirevector_map = {}  # map from (vector,index) -> new_wire
@@ -110,9 +110,9 @@ def synthesize(update_working_block=True, block=None):
         for i in range(len(wirevector)):
             new_name = '_'.join(['synth', wirevector.name, str(i), str(uid)])
             uid += 1
-            if isinstance(wirevector, Const):
+            if isinstance(wirevector, wire.Const):
                 new_val = (wirevector.val >> i) & 0x1
-                new_wirevector = Const(bitwidth=1, val=new_val, block=block_out)
+                new_wirevector = wire.Const(bitwidth=1, val=new_val, block=block_out)
             else:
                 # build the appropriately typed wire (maintaining input/output)
                 wirevector_type = type(wirevector)
@@ -125,7 +125,7 @@ def synthesize(update_working_block=True, block=None):
         _decompose(net, wirevector_map, block_out)
 
     if update_working_block:
-        set_working_block(block_out)
+        core.set_working_block(block_out)
     return block_out
 
 
@@ -185,19 +185,19 @@ def _decompose(net, wv_map, block_out):
         for i in destlen():
             args = (arg(0, i),)
             dests = (wv_map[(net.dests[0], i)],)
-            new_net = LogicNet('r', None, args=args, dests=dests)
+            new_net = core.LogicNet('r', None, args=args, dests=dests)
             block_out.add_net(new_net)
     elif net.op == '+':
         arg0list = [arg(0, i) for i in range(len(net.args[0]))]
         arg1list = [arg(1, i) for i in range(len(net.args[1]))]
-        cin = Const(0, bitwidth=1, block=block_out)
+        cin = wire.Const(0, bitwidth=1, block=block_out)
         sumbits, cout = _generate_add(arg0list, arg1list, cin)
         destlist = sumbits + [cout]
         for i in destlen():
             assign_dest(i, destlist[i])
     else:
-        raise PyrtlInternalError('Unnable to synthesize the following net '
-                                 'due to unimplemented op :\n%s' % str(net))
+        raise core.PyrtlInternalError('Unnable to synthesize the following net '
+                                      'due to unimplemented op :\n%s' % str(net))
     return
 
 

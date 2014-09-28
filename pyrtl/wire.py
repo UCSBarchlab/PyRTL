@@ -11,20 +11,15 @@ Register: a wire vector that is latched each cycle
 
 import collections
 import string
-import block as core
+import core
+import helperfuncs
 
-# FIXME: this is here to avoid circular dependency
-# refactor this out by avoiding "from ... import *" everywhere
-def _as_wires(value, block):
-    from helperfuncs import as_wires
-    return as_wires(value, block)
 
 #-----------------------------------------------------------------
 #        ___  __  ___  __   __
 #  \  / |__  /  `  |  /  \ |__)
 #   \/  |___ \__,  |  \__/ |  \
 #
-
 
 class WireVector(object):
     """ The main class for describing the connections between operators.
@@ -47,20 +42,20 @@ class WireVector(object):
 
         # figure out a name
         if name is None:
-            name = Block.next_tempvar_name()
+            name = core.Block.next_tempvar_name()
         if name.lower() in ['clk', 'clock']:
-            raise PyrtlError(
+            raise core.PyrtlError(
                 'Clock signals should never be explicitly instantiated')
         self.name = name
 
         # now handle the bitwidth
         if bitwidth is not None:
             if not isinstance(bitwidth, int):
-                raise PyrtlError(
+                raise core.PyrtlError(
                     'error attempting to create wirevector with bitwidth of type "%s" '
                     'instead of integer' % type(bitwidth))
             if bitwidth <= 0:
-                raise PyrtlError(
+                raise core.PyrtlError(
                     'error attempting to create wirevector with bitwidth of length "%d", '
                     'all bitwidths must be > 0' % bitwidth)
         self.bitwidth = bitwidth
@@ -72,10 +67,10 @@ class WireVector(object):
         return ''.join([self.name, '/', str(self.bitwidth), self.code])
 
     def __ilshift__(self, other):
-        other = _as_wires(other, block=self.block)
+        other = helperfuncs.as_wires(other, block=self.block)
 
         if self.bitwidth is None:
-            raise PyrtlError
+            raise core.PyrtlError
         if self.bitwidth < other.bitwidth:
             # truncate the upper bits
             other = other[:self.bitwidth]
@@ -83,7 +78,7 @@ class WireVector(object):
             # extend appropriately
             other = other.extended(self.bitwidth)
 
-        net = LogicNet(
+        net = core.LogicNet(
             op='w',
             op_param=None,
             args=(other,),
@@ -94,7 +89,7 @@ class WireVector(object):
     def logicop(self, other, op):
         a, b = self, other
         # convert constants if necessary
-        b = _as_wires(b, block=self.block)
+        b = helperfuncs.as_wires(b, block=self.block)
 
         # check size of operands
         if len(a) < len(b):
@@ -112,7 +107,7 @@ class WireVector(object):
             resultlen = 1
 
         s = WireVector(bitwidth=resultlen, block=self.block)
-        net = LogicNet(
+        net = core.LogicNet(
             op=op,
             op_param=None,
             args=(a, b),
@@ -183,7 +178,7 @@ class WireVector(object):
 
     def __invert__(self):
         outwire = WireVector(bitwidth=len(self), block=self.block)
-        net = LogicNet(
+        net = core.LogicNet(
             op='~',
             op_param=None,
             args=(self,),
@@ -199,7 +194,7 @@ class WireVector(object):
         else:
             selectednums = allindex[item]  # slice
         outwire = WireVector(bitwidth=len(selectednums), block=self.block)
-        net = LogicNet(
+        net = core.LogicNet(
             op='s',
             op_param=tuple(selectednums),
             args=(self,),
@@ -227,12 +222,12 @@ class WireVector(object):
         if numext == 0:
             return self
         elif numext < 0:
-            raise PyrtlError(
+            raise core.PyrtlError(
                 'error, zero_extended cannot reduce the number of bits')
         else:
             from helperfuncs import concat
             extvector = WireVector(bitwidth=numext, block=self.block)
-            net = LogicNet(
+            net = core.LogicNet(
                 op='s',
                 op_param=(0,)*numext,
                 args=(extbit,),
@@ -255,7 +250,7 @@ class Input(WireVector):
         super(Input, self).__init__(bitwidth=bitwidth, name=name, block=block)
 
     def __ilshift__(self, _):
-        raise PyrtlError(
+        raise core.PyrtlError(
             'Input, such as "%s", cannot have values generated internally'
             % str(self.name))
 
@@ -283,34 +278,34 @@ class Const(WireVector):
                 bitwidth = len(bin(num))-2  # the -2 for the "0b" at the start of the string
         if isinstance(val, basestring):
             if bitwidth is not None:
-                raise PyrtlError('error, bitwidth parameter of const should be unspecified when'
-                                 ' the const is created from a string (instead use verilog style'
-                                 ' specification)')
+                raise core.PyrtlError('error, bitwidth parameter of const should be'
+                                      ' unspecified when the const is created from a string'
+                                      ' (instead use verilog style specification)')
             split_string = string.split(val, "'")
             if len(split_string) != 2:
-                raise PyrtlError('error, string for Const not in verilog "32\'b01001" style format')
+                raise core.PyrtlError('error, string for Const not in verilog style format')
             try:
                 bitwidth = int(split_string[0])
                 num = int(''.join(['0', split_string[1]]), 0)
             except ValueError:
-                raise PyrtlError('error, string for Const not in verilog "32\'b01001" style format')
+                raise core.PyrtlError('error, string for Const not in verilog style format')
 
         if not isinstance(bitwidth, int):
-            raise PyrtlError(
+            raise core.PyrtlError(
                 'error, bitwidth must be from type int, instead Const was passed "%s" of type %s'
                 % (str(bitwidth), type(bitwidth)))
         if num < 0:
-            raise PyrtlError(
+            raise core.PyrtlError(
                 'error, Const is only for unsigned numbers and must be positive')
         if bitwidth < 0:
-            raise PyrtlError(
+            raise core.PyrtlError(
                 'error, you are trying a negative bitwidth? awesome but wrong')
         if (num >> bitwidth) != 0:
-            raise PyrtlError(
+            raise core.PyrtlError(
                 'error constant "%s" cannot fit in the specified %d bits'
                 % (str(num), bitwidth))
 
-        name = Block.next_constvar_name(num)
+        name = core.Block.next_constvar_name(num)
 
         # initialize the WireVector
         super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)
@@ -318,7 +313,7 @@ class Const(WireVector):
         self.val = num
 
     def __ilshift__(self, other):
-        raise PyrtlError(
+        raise core.PyrtlError(
             'ConstWires, such as "%s", should never be assigned to with <<='
             % str(self.name))
 
@@ -342,30 +337,41 @@ class Register(WireVector):
         return self
 
     def __ilshift__(self, other):
+        other = helperfuncs.as_wires(other, block=self.block)
+        # covert to proper bitwidth
+        if self.bitwidth is None:
+            raise core.PyrtlInternalError
+        if self.bitwidth < other.bitwidth:
+            # truncate the upper bits
+            other = other[:self.bitwidth]
+        if self.bitwidth > other.bitwidth:
+            # extend appropriately
+            other = other.extended(self.bitwidth)
+        # pack into a special type to be handled by next.setter
         return Register.NextSetter(rhs=other)
 
     @next.setter
     def next(self, nextsetter):
         if not isinstance(nextsetter, Register.NextSetter):
-            raise PyrtlError('error, .next values should only be set with the "<<=" operator')
+            raise core.PyrtlError('error, .next values should only be set with the "<<=" operator')
 
         conditional = ConditionalUpdate.current
         if not conditional:
             if self.reg_in is not None:
-                raise PyrtlError('error, .next value should be set once and only once')
+                raise core.PyrtlError('error, .next value should be set once and only once')
             else:
                 self.reg_in = nextsetter.rhs
-                net = LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
+                net = core.LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
                 self.block.add_net(net)
         else:  # conditional
             # if this is the first assignment to the register
             if self.reg_in is None:
                 # assume default update is "no change"
                 self.reg_in = self
-                net = LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
+                net = core.LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
                 self.block.add_net(net)
             else:
-                net = LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
+                net = core.LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
             # do the actual conditional update
             new_reg_in = conditional.add_conditional_update(net, nextsetter.rhs, self.block)
             self.reg_in = new_reg_in
@@ -467,7 +473,7 @@ class ConditionalUpdate(object):
         # sanity checks on the scope
         if ConditionalUpdate.nesting_depth != 0:
             if ConditionalUpdate.current != self:
-                raise PyrtlError('error, cannot nest different conditionals inside one another')
+                raise core.PyrtlError('error, cannot nest different conditionals in one another')
         assert(ConditionalUpdate.nesting_depth >= 0)
         ConditionalUpdate.nesting_depth += 1
         ConditionalUpdate.current = self
@@ -475,7 +481,7 @@ class ConditionalUpdate(object):
         # make sure we did not add a condition after the "always true" clause
         if len(self.conditions_list_stack[-1]) >= 1:
             if self.conditions_list_stack[-1][-1] is None:
-                raise PyrtlError('error, attempting to add unreachable condition')
+                raise core.PyrtlError('error, attempting to add unreachable condition')
         # append the predicate to the end of top list
         self.conditions_list_stack[-1].append(self.predicate_on_deck)
         # push a new empty list on the stack for sub-conditions
@@ -509,7 +515,7 @@ class ConditionalUpdate(object):
 
         # generate the mux selecting between old
         mux_out = mux(select, old_reg_next, valwire)
-        new_reg_net = LogicNet('r', None, args=tuple([mux_out]), dests=tuple([reg]))
+        new_reg_net = core.LogicNet('r', None, args=tuple([mux_out]), dests=tuple([reg]))
 
         # swap out the old register for the new conditioned one
         block.logic.remove(reg_net)

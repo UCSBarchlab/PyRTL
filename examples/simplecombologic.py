@@ -11,7 +11,6 @@ sum, cout = Output(1, 'sum'), Output(1, 'cout')
 sum <<= a ^ b ^ c
 cout <<= a & b | a & c | b & c
 
-
 # output the hardware as verilog
 # pyrtl.output_to_verilog(sys.stdout)
 

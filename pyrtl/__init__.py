@@ -1,21 +1,21 @@
 
 # core rtl constructs
-from block import Block
-from block import PyrtlError
-from block import PyrtlInternalError
-from block import working_block
-from block import reset_working_block
+from core import Block
+from core import PyrtlError
+from core import PyrtlInternalError
+from core import working_block
+from core import reset_working_block
 
 # convenience classes for building hardware
-from wirevector import WireVector
-from wirevector import Input, Output
-from wirevector import Const
-from wirevector import Register
-from wirevector import SignedWireVector
-from wirevector import SignedInput, SignedOutput
-from wirevector import SignedConst
-from wirevector import SignedRegister
-from wirevector import ConditionalUpdate
+from wire import WireVector
+from wire import Input, Output
+from wire import Const
+from wire import Register
+from wire import SignedWireVector
+from wire import SignedInput, SignedOutput
+from wire import SignedConst
+from wire import SignedRegister
+from wire import ConditionalUpdate
 
 # helper functions
 from helperfuncs import as_wires

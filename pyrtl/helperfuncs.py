@@ -11,8 +11,8 @@ get_block: get the block of the arguments, throw error if they are different
 appropriate_register_type: return the register needed to capture the given type
 """
 
-from block import *
-from wirevector import *
+import core
+import wire
 
 
 #-----------------------------------------------------------------
@@ -22,12 +22,12 @@ from wirevector import *
 #
 def as_wires(val, block=None):
     """ Return wires from val which may be wires or int. """
-    block = working_block(block)
+    block = core.working_block(block)
 
     if isinstance(val, (int, basestring)):
-        return Const(val, block=block)
-    elif not isinstance(val, WireVector):
-        raise PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
+        return wire.Const(val, block=block)
+    elif not isinstance(val, wire.WireVector):
+        raise core.PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
     else:
         return val
 
@@ -71,15 +71,15 @@ def mux(select, falsecase, truecase):
     b = as_wires(truecase, block=block)
 
     if len(select) != 1:
-        raise PyrtlError('error, select input to the mux must be 1-bit wirevector')
+        raise core.PyrtlError('error, select input to the mux must be 1-bit wirevector')
     if len(a) < len(b):
         a = a.extended(len(b))
     elif len(b) < len(a):
         b = b.extended(len(a))
     resultlen = len(a)  # both are the same length now
 
-    outwire = WireVector(bitwidth=resultlen, block=block)
-    net = LogicNet(
+    outwire = wire.WireVector(bitwidth=resultlen, block=block)
+    net = core.LogicNet(
         op='x',
         op_param=None,
         args=(select, a, b),
@@ -96,13 +96,13 @@ def get_block(*arglist):
     """
     block = None
     for arg in arglist:
-        if isinstance(arg, WireVector):
+        if isinstance(arg, wire.WireVector):
             if block and block is not arg.block:
-                raise PyrtlError('get_block passed WireVectors from differnt blocks')
+                raise core.PyrtlError('get_block passed WireVectors from differnt blocks')
             else:
                 block = arg.block
     # use working block is block is still None
-    block = working_block(block)
+    block = core.working_block(block)
     return block
 
 
@@ -111,13 +111,13 @@ def concat(*args):
 
     block = get_block(*args)
     if len(args) <= 0:
-        raise PyrtlError
+        raise core.PyrtlError
     if len(args) == 1:
         return args[0]
     else:
         final_width = sum([len(arg) for arg in args])
-        outwire = WireVector(bitwidth=final_width, block=block)
-        net = LogicNet(
+        outwire = wire.WireVector(bitwidth=final_width, block=block)
+        net = core.LogicNet(
             op='c',
             op_param=None,
             args=tuple(args),
@@ -129,11 +129,11 @@ def concat(*args):
 def appropriate_register_type(t):
     """ take a type t, return a type which is appropriate for registering t (signed or unsigned)."""
 
-    if isinstance(t, (Output, Const)):
-        raise PyrtlError  # includes signed versions
-    elif isinstance(t, (SignedWireVector, SignedInput, SignedRegister)):
-        return SignedRegister
-    elif isinstance(t, (WireVector, Input, Register)):
-        return Register
+    if isinstance(t, (wire.Output, wire.Const)):
+        raise core.PyrtlError  # includes signed versions
+    elif isinstance(t, (wire.SignedWireVector, wire.SignedInput, wire.SignedRegister)):
+        return wire.SignedRegister
+    elif isinstance(t, (wire.WireVector, wire.Input, wire.Register)):
+        return wire.Register
     else:
-        raise PyrtlError
+        raise core.PyrtlError

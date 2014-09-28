@@ -15,7 +15,7 @@ default, is added in to).
 import collections
 import sys
 import re
-import wirevector
+import wire
 
 
 #-----------------------------------------------------------------
@@ -183,7 +183,7 @@ class Block(object):
 
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
-        if not isinstance(w, wirevector.WireVector):
+        if not isinstance(w, wire.WireVector):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
                 'instead of WireVector' % type(w))
@@ -209,11 +209,11 @@ class Block(object):
                                      (net.op, self.legal_ops))
 
         # operation specific checks on arguments
-        if net.op in 'w~rs' and len(net.args != 1):
+        if net.op in 'w~rs' and len(net.args) != 1:
             raise PyrtlInternalError('error, op only allowed 1 argument')
-        if net.op in '&|^+-*<>=' and len(net.args != 2):
+        if net.op in '&|^+-*<>=' and len(net.args) != 2:
             raise PyrtlInternalError('error, op only allowed 2 arguments')
-        if net.op in 'x' and len(net.args != 2):
+        if net.op in 'x' and len(net.args) != 3:
             raise PyrtlInternalError('error, op only allowed 3 arguments')
         if net.op in '&|^+-*<>=' and len(set(x.bitwidth for x in net.args)) > 1:
             raise PyrtlInternalError('error, args have mismatched bitwidths')
