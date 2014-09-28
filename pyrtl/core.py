@@ -1,6 +1,6 @@
 
 """
-Block contains the core netlist data structure for PyRTL
+Core contains the core netlist data structure for PyRTL
 
 The classes PyrtlError and PyrtlInternalError are the two main exceptions to
 be thrown when things go wrong.  Block is the netlist storing module for a
@@ -25,11 +25,13 @@ import wire
 #
 
 class PyrtlError(Exception):
-    pass  # raised on any user-facing error in this module
+    """ Raised on any user-facing error in this module """
+    pass
 
 
 class PyrtlInternalError(Exception):
-    pass  # raised on any internal failure
+    """ Raised on any PyRTL internal failure """
+    pass
 
 
 #-----------------------------------------------------------------
@@ -301,12 +303,15 @@ def working_block(block=None):
 
 
 def reset_working_block():
+    """ Reset the working block to be empty. """
     global _singleton_block
     _singleton_block = Block()
 
 
 def set_working_block(block):
+    """ Set the working block to be the block passed as argument. """
     global _singleton_block
     if not isinstance(block, Block):
         raise PyrtlError('error, expected instance of Block as block argument')
+    block.sanity_check()
     _singleton_block = block

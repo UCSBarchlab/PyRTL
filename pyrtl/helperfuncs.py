@@ -33,18 +33,22 @@ def as_wires(val, block=None):
 
 
 def and_all_bits(vector):
+    """ Returns 1 bit WireVector, the result of "and"ing all bits of the argument vector."""
     return _apply_op_over_all_bits('__and__', vector)
 
 
 def or_all_bits(vector):
+    """ Returns 1 bit WireVector, the result of "or"ing all bits of the argument vector."""
     return _apply_op_over_all_bits('__or__', vector)
 
 
 def xor_all_bits(vector):
+    """ Returns 1 bit WireVector, the result of "xor"ing all bits of the argument vector."""
     return _apply_op_over_all_bits('__xor__', vector)
 
 
 def parity(vector):
+    """ Returns 1 bit WireVector, the result of "xor"ing all bits of the argument vector."""
     return _apply_op_over_all_bits('__xor__', vector)
 
 
@@ -111,7 +115,7 @@ def concat(*args):
 
     block = get_block(*args)
     if len(args) <= 0:
-        raise core.PyrtlError
+        raise core.PyrtlError('error, concat requires at least 1 argument')
     if len(args) == 1:
         return args[0]
     else:
@@ -130,10 +134,11 @@ def appropriate_register_type(t):
     """ take a type t, return a type which is appropriate for registering t (signed or unsigned)."""
 
     if isinstance(t, (wire.Output, wire.Const)):
-        raise core.PyrtlError  # includes signed versions
+        # includes signed versions
+        raise core.PyrtlError('error, no appropriate register type for outputs or constants')
     elif isinstance(t, (wire.SignedWireVector, wire.SignedInput, wire.SignedRegister)):
         return wire.SignedRegister
     elif isinstance(t, (wire.WireVector, wire.Input, wire.Register)):
         return wire.Register
     else:
-        raise core.PyrtlError
+        raise core.PyrtlError('error, unknown type "%s" passed as argument' % str(type(t)))

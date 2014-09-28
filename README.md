@@ -18,12 +18,8 @@ pyrtl and defines its semantics at a high level.
 
 ### Near-term todo list
 
-* all user visible assert calls should be replaced with "raise PyrtlError"
-* all PyrtlError calls should have useful error message
-* all classes should have useful docstrings
 * all public functions and methods should have useful docstrings
 * should have set of unit tests for all main abstractions
-* add verilog export option to block
 * add a -Wall option which warns on truncation
 * change "tmp" and "const" "'" names to be more pyrtl specific to avoid confusion
 
@@ -46,8 +42,3 @@ the problem)
 **C Code Model:**
 add a pass to print out the block as a set of C code that implement the 
 hardware block (useful for longer running tests -- like a processor model)
-
-**Ability to Lower Abstraction Level:**
-add a pass to transform all complex operators (such as 'cat' and multibit
-arithmetic operations) down into simple and/or/not gates.  Useful for prototyping
-gate-level analysis and as a very simple path to synthesis

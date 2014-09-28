@@ -287,7 +287,7 @@ def trace_sort_key(w):
 
 
 class SimulationTrace(object):
-
+    """ Storage and presentation of simulation waveforms. """
     def __init__(self, wirevector_subset=None, block=None):
 
         block = core.working_block(block)

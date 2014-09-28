@@ -33,7 +33,7 @@ def area_estimation(tech_in_nm, block=None):
 #
 
 def _remove_wire_nets(block):
-    """ Remove all wire nodes from the block """
+    """ Remove all wire nodes from the block. """
 
     def find_producer(x):
         # trace back to the root producer of x

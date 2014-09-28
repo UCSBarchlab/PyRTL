@@ -35,9 +35,9 @@ class MemBlock(object):
         self.block = core.working_block(block)
 
         if bitwidth <= 0:
-            raise core.PyrtlError
+            raise core.PyrtlError('error, bitwidth must be >= 1')
         if addrwidth <= 0:
-            raise core.PyrtlError
+            raise core.PyrtlError('error, addrwidth must be >= 1')
         if name is None:
             name = core.Block.next_tempvar_name()
 
@@ -84,9 +84,9 @@ class MemBlock(object):
     def __setitem__(self, item, val):
         # check that 'item' is a valid address vector
         if not isinstance(item, wire.WireVector):
-            raise core.PyrtlError
+            raise core.PyrtlError('error, address not a valide WireVector')
         if len(item) != self.addrwidth:
-            raise core.PyrtlError
+            raise core.PyrtlError('error, address width passed different from declaration')
         addr = item
 
         # check that 'val' is a valid datavector
@@ -97,11 +97,11 @@ class MemBlock(object):
             data = val.data
             enable = val.enable
         else:
-            raise core.PyrtlError
+            raise core.PyrtlError('error, write data must be WireVector or EnabledWrite')
         if len(data) != self.bitwidth:
-            raise core.PyrtlError
+            raise core.PyrtlError('error, write data not of the correct bitwidth')
         if len(enable) != 1:
-            raise core.PyrtlError
+            raise core.PyrtlError('error, enable signal not exactly 1 bit')
 
         self.write_data.append(data)
         self.write_addr.append(addr)

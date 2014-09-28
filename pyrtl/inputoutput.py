@@ -285,6 +285,16 @@ def output_to_trivialgraph(file, block):
 #
 
 
+def output_to_verilog(file, block=None):
+    """ Walk the block and output it in verilog format to the open file """
+
+    block = core.working_block(block)
+    _to_verilog_header(file, block)
+    _to_verilog_combinational(file, block)
+    _to_verilog_sequential(file, block)
+    _to_verilog_footer(file, block)
+
+
 def _verilog_vector_decl(w):
     return '' if len(w) == 1 else '[%d:0]' % (len(w) - 1)
 
@@ -360,13 +370,3 @@ def _to_verilog_sequential(file, block):
 
 def _to_verilog_footer(file, block):
     print >> file, 'endmodule\n'
-
-
-def output_to_verilog(file, block=None):
-    """ Walk the block and output it in verilog format to the open file """
-
-    block = core.working_block(block)
-    _to_verilog_header(file, block)
-    _to_verilog_combinational(file, block)
-    _to_verilog_sequential(file, block)
-    _to_verilog_footer(file, block)

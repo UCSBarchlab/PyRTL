@@ -70,7 +70,7 @@ class WireVector(object):
         other = helperfuncs.as_wires(other, block=self.block)
 
         if self.bitwidth is None:
-            raise core.PyrtlError
+            raise core.PyrtlError('error, bitwidth must be >= 1')
         if self.bitwidth < other.bitwidth:
             # truncate the upper bits
             other = other[:self.bitwidth]
@@ -319,6 +319,15 @@ class Const(WireVector):
 
 
 class Register(WireVector):
+    """ A WireVector with a register state element embedded.
+
+    Registers only update their outputs on posedge of an implicit
+    clk signal.  The "value" in the current cycle can be accessed
+    by just referencing the Register itself.  To set the value for
+    the next cycle (after the next posedge) you write to the
+    property .next with the <<= operator.  For example, if you want
+    to specify a counter it would look like: "a.next <<= a + 1"
+    """
     code = 'R'
 
     # When the register is called as such:  r.next <<= foo
@@ -384,6 +393,7 @@ class Register(WireVector):
 #
 
 class SignedWireVector(WireVector):
+    """ Same as WireVector but when extended it will use MSb. """
     code = 'SW'
 
     def extended(self, bitwidth):
@@ -391,6 +401,7 @@ class SignedWireVector(WireVector):
 
 
 class SignedInput(Input):
+    """ Same as Input but when extended it will use MSb. """
     code = 'SI'
 
     def extended(self, bitwidth):
@@ -398,6 +409,7 @@ class SignedInput(Input):
 
 
 class SignedOutput(Output):
+    """ Same as Output but when extended it will use MSb. """
     code = 'SO'
 
     def extended(self, bitwidth):
@@ -405,6 +417,7 @@ class SignedOutput(Output):
 
 
 class SignedConst(Const):
+    """ Same as Const but when extended it will use MSb. """
     code = 'SC'
 
     def extended(self, bitwidth):
@@ -412,6 +425,7 @@ class SignedConst(Const):
 
 
 class SignedRegister(Register):
+    """ Same as Register but when extended it will use MSb. """
     code = 'SR'
 
     def extended(self, bitwidth):
