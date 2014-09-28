@@ -319,17 +319,7 @@ class Register(WireVector):
         return self
 
     def __ilshift__(self, other):
-        other = helperfuncs.as_wires(other, block=self.block)
-        # covert to proper bitwidth
-        if self.bitwidth is None:
-            raise core.PyrtlInternalError
-        if self.bitwidth < other.bitwidth:
-            # truncate the upper bits
-            other = other[:self.bitwidth]
-        if self.bitwidth > other.bitwidth:
-            # extend appropriately
-            other = other.extended(self.bitwidth)
-        # pack into a special type to be handled by next.setter
+        other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
         return Register.NextSetter(rhs=other)
 
     @next.setter
