@@ -20,14 +20,20 @@ import wire
 #  |__| |__  |    |__) |__  |__) /__`
 #  |  | |___ |___ |    |___ |  \ .__/
 #
-def as_wires(val, block=None):
+def as_wires(val, bitwidth=None, block=None):
     """ Return wires from val which may be wires or int. """
     block = core.working_block(block)
 
     if isinstance(val, (int, basestring)):
-        return wire.Const(val, block=block)
+        return wire.Const(val, bitwidth=bitwidth, block=block)
     elif not isinstance(val, wire.WireVector):
         raise core.PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
+    elif bitwidth == '0':
+        raise core.PyrtlError('error, bitwidth must be >= 1')
+    elif bitwidth and bitwidth < val.bitwidth:
+        return val[:bitwidth]  # truncate the upper bits
+    elif bitwidth and bitwidth > val.bitwidth:
+        return val.extended(bitwidth)  # extend appropriately
     else:
         return val
 
@@ -117,14 +123,15 @@ def concat(*args):
     if len(args) <= 0:
         raise core.PyrtlError('error, concat requires at least 1 argument')
     if len(args) == 1:
-        return args[0]
+        return as_wires(args[0], block=block)
     else:
-        final_width = sum([len(arg) for arg in args])
+        arg_wirevectors = [as_wires(arg, block=block) for arg in args]
+        final_width = sum([len(arg) for arg in arg_wirevectors])
         outwire = wire.WireVector(bitwidth=final_width, block=block)
         net = core.LogicNet(
             op='c',
             op_param=None,
-            args=tuple(args),
+            args=tuple(arg_wirevectors),
             dests=(outwire,))
         outwire.block.add_net(net)
         return outwire

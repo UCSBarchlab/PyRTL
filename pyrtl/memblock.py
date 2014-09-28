@@ -33,13 +33,12 @@ class MemBlock(object):
     def __init__(self,  bitwidth, addrwidth, name=None, block=None):
 
         self.block = core.working_block(block)
+        name = self.block.next_tempvar_name(name)
 
         if bitwidth <= 0:
             raise core.PyrtlError('error, bitwidth must be >= 1')
         if addrwidth <= 0:
             raise core.PyrtlError('error, addrwidth must be >= 1')
-        if name is None:
-            name = core.Block.next_tempvar_name()
 
         self.bitwidth = bitwidth
         self.name = name

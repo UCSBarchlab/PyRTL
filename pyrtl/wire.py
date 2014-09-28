@@ -39,45 +39,18 @@ class WireVector(object):
 
     def __init__(self, bitwidth=None, name=None, block=None):
         self.block = core.working_block(block)
-
-        # figure out a name
-        if name is None:
-            name = core.Block.next_tempvar_name()
-        if name.lower() in ['clk', 'clock']:
-            raise core.PyrtlError(
-                'Clock signals should never be explicitly instantiated')
-        self.name = name
-
-        # now handle the bitwidth
-        if bitwidth is not None:
-            if not isinstance(bitwidth, int):
-                raise core.PyrtlError(
-                    'error attempting to create wirevector with bitwidth of type "%s" '
-                    'instead of integer' % type(bitwidth))
-            if bitwidth <= 0:
-                raise core.PyrtlError(
-                    'error attempting to create wirevector with bitwidth of length "%d", '
-                    'all bitwidths must be > 0' % bitwidth)
+        self.name = self.block.next_tempvar_name(name)
+        if bitwidth is not None and bitwidth <= 0:
+            raise core.PyrtlError('error, bitwidth must be >= 1')
         self.bitwidth = bitwidth
-
-        # finally, add the wirevector back in the mother block
+        # finally, add the wirevector to the block
         self.block.add_wirevector(self)
 
     def __str__(self):
         return ''.join([self.name, '/', str(self.bitwidth), self.code])
 
     def __ilshift__(self, other):
-        other = helperfuncs.as_wires(other, block=self.block)
-
-        if self.bitwidth is None:
-            raise core.PyrtlError('error, bitwidth must be >= 1')
-        if self.bitwidth < other.bitwidth:
-            # truncate the upper bits
-            other = other[:self.bitwidth]
-        if self.bitwidth > other.bitwidth:
-            # extend appropriately
-            other = other.extended(self.bitwidth)
-
+        other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
         net = core.LogicNet(
             op='w',
             op_param=None,

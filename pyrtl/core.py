@@ -255,10 +255,17 @@ class Block(object):
     _tempvar_count = 1
     _memid_count = 0
 
-    @classmethod
-    def next_tempvar_name(cls):
-        wire_name = ''.join(['tmp', str(cls._tempvar_count)])
-        cls._tempvar_count += 1
+    def next_tempvar_name(self, name=None):
+        cls = type(self)
+        if name is None:
+            wire_name = ''.join(['tmp', str(cls._tempvar_count)])
+            cls._tempvar_count += 1
+        else:
+            if name.lower() in ['clk', 'clock']:
+                raise PyrtlError('Clock signals should never be explicit')
+            wire_name = name
+        if wire_name in self.wirevector_by_name:
+            raise PyrtlError('duplicate name "%s" added' % wire_name)
         return wire_name
 
     @classmethod
