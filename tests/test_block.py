@@ -19,9 +19,9 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('testwire' in pyrtl.working_block().wirevector_by_name)
 
     def test_add_net(self):
-        self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().add_net, None )
-        self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().add_net, 1 )
-        self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().add_net, "hi" )
+        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, None )
+        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, 1 )
+        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, "hi" )
 
     def test_sanity_check(self): 
         testmissing()

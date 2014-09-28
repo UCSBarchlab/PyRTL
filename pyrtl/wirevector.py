@@ -11,8 +11,7 @@ Register: a wire vector that is latched each cycle
 
 import collections
 import string
-from block import *
-
+import block as core
 
 # FIXME: this is here to avoid circular dependency
 # refactor this out by avoiding "from ... import *" everywhere
@@ -44,7 +43,7 @@ class WireVector(object):
     code = 'W'
 
     def __init__(self, bitwidth=None, name=None, block=None):
-        self.block = working_block(block)
+        self.block = core.working_block(block)
 
         # figure out a name
         if name is None:

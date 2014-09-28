@@ -17,6 +17,7 @@ import sys
 import re
 import wirevector
 
+
 #-----------------------------------------------------------------
 #   ___  __   __   __   __  ___      __   ___  __
 #  |__  |__) |__) /  \ |__)  |  \ / |__) |__  /__`
@@ -39,7 +40,7 @@ class PyrtlInternalError(Exception):
 
 class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
     """ The basic immutable datatype for storing a "net" in a netlist.
-    
+
     The details of what is allowed in each of these fields is defined
     in the comments of Block, and is checked by block.sanity_check
     """
@@ -57,10 +58,10 @@ class Block(object):
     or memory).  The primitive is described by a 4-tuple of:
     1) the op (a single character describing the operation such as '+' or 'm'),
     2) a set of hard parameters to that primitives (such as the number of read
-       ports for a memory), 
-    3) the tuple "args" which list the wirevectors hooked up as inputs to 
+       ports for a memory),
+    3) the tuple "args" which list the wirevectors hooked up as inputs to
        this particular net.
-    4) the tuple "dests" which list the wirevectors hooked up as output for 
+    4) the tuple "dests" which list the wirevectors hooked up as output for
        this particular net.
     Below is a list of the basic operations.  These properties (more formally
     specified) should all be checked by the class method sanity_check.
@@ -70,7 +71,7 @@ class Block(object):
       operation specified. OPS: ('&','|','^','+','-','*').  All inputs must
       be the same bitwidth.  Logical operations produce as many bits as are in
       the input, while '+' and '-' produce n+1 bits, and '*' produced 2n bits.
-    * In addition there are some operations for performing comparisons 
+    * In addition there are some operations for performing comparisons
       that should perform the operation specified.  The '=' op is checking
       to see if the bits of the vectors are equal, while '<' and '>' do
       unsigned arithmetic comparison.  All comparisons generate a single bit
@@ -98,11 +99,11 @@ class Block(object):
 
     The connecting elements (args and dests) should be WireVectors or derived
     from WireVector, and should be registered with the block using
-    the method add_wirevector.  Nets should be registered with the block using add_net.
+    the method add_wirevector.  Nets should be registered using add_net.
 
     In addition, there is a member legal_ops which defines the set of operations
     that can be legally added to the block.  By default it is set to all of the above
-    defined operations, but it can be useful in certain cases to only allow a 
+    defined operations, but it can be useful in certain cases to only allow a
     subset of operations (such as when transforms are being done that are "lowering"
     the blocks to more primitive ops.
     """
@@ -120,13 +121,13 @@ class Block(object):
 
     def add_wirevector(self, wirevector):
         """ Add a wirevector object to the block."""
-        _check_type_wirevector(wirevector)
+        self.sanity_check_wirevector(wirevector)
         self.wirevector_set.add(wirevector)
         self.wirevector_by_name[wirevector.name] = wirevector
 
     def add_net(self, net):
         """ Connect new net to wirevectors previously added to the block."""
-        _check_valid_net(net)
+        self.sanity_check_net(net)
         self.logic.add(net)
 
     def wirevector_subset(self, cls=None):
@@ -138,26 +139,28 @@ class Block(object):
 
     def get_wirevector_by_name(self, name, strict=False):
         """Return the wirevector matching name."""
-        try:
-            retval = self.wirevector_by_name[name]
-        except KeyError:
-            retval = None
-            if strict:
-                raise PyrtlError('error, block does not have a wirevector named %s' % name)
-        return retval
+        if name in self.wirevector_by_name:
+            return self.wirevector_by_name[name]
+        elif strict:
+            raise PyrtlError('error, block does not have a wirevector named %s' % name)
+        else:
+            return None
 
     def sanity_check(self):
-        """ Check logic and wires and throw PyrtlError or PyrtlInternalError if there is an issue."""
+        """ Check block and throw PyrtlError or PyrtlInternalError if there is an issue.
+
+        Should not modify anything, only check datastructures to make sure they have been
+        built according to the assumptions stated in the Block comments."""
 
         # check for valid wires
         for w in self.wirevector_set:
-            _check_type_wirevector(w)
+            self.sanity_check_wirevector(w)
+        # TODO: check that the wirevector_by_name is sane
 
-        # TODO: check that the wirevector_by_name is sane        
         # check for valid LogicNets
         for net in self.logic:
-            _check_valid_net(net)
-            
+            self.sanity_check_net(net)
+
         # check for unique names
         wirevector_names_list = [x.name for x in self.wirevector_set]
         wirevector_names_set = set(wirevector_names_list)
@@ -173,10 +176,78 @@ class Block(object):
         full_set = dest_set | arg_set
         connected_minus_allwires = full_set.difference(self.wirevector_set)
         if len(connected_minus_allwires) > 0:
-            raise PyrtlError( 'Unknown wires found in net: %s' % repr(connected_minus_allwires))
+            raise PyrtlError('Unknown wires found in net: %s' % repr(connected_minus_allwires))
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         if len(allwires_minus_connected) > 0:
-            raise PyrtlError('Wires declared but never connected: %s' % repr(allwires_minus_connectes))
+            raise PyrtlError('Wires declared but not connected:%s' % repr(allwires_minus_connected))
+
+    def sanity_check_wirevector(self, w):
+        """ Check that w is a valid wirevector type. """
+        if not isinstance(w, wirevector.WireVector):
+            raise PyrtlError(
+                'error attempting to pass an input of type "%s" '
+                'instead of WireVector' % type(w))
+
+    def sanity_check_net(self, net):
+        """ Check that net is a valid LogicNet. """
+
+        # general sanity checks that apply to all operations
+        if not isinstance(net, LogicNet):
+            raise PyrtlInternalError('error, net must be of type LogicNet')
+        if not isinstance(net.args, tuple):
+            raise PyrtlInternalError('error, LogicNet args must be tuple')
+        if not isinstance(net.dests, tuple):
+            raise PyrtlInternalError('error, LogicNet dests must be tuple')
+        for w in net.args + net.dests:
+            self.sanity_check_wirevector(w)
+            if w not in self.wirevector_set:
+                raise PyrtlInternalError('error, net with unknown source "%s"' % w.name)
+            if w.block is not self:
+                raise PyrtlInternalError('error, net references different block')
+        if net.op not in self.legal_ops:
+            raise PyrtlInternalError('error, net op "%s" not from acceptable set %s' %
+                                     (net.op, self.legal_ops))
+
+        # operation specific checks on arguments
+        if net.op in 'w~rs' and len(net.args != 1):
+            raise PyrtlInternalError('error, op only allowed 1 argument')
+        if net.op in '&|^+-*<>=' and len(net.args != 2):
+            raise PyrtlInternalError('error, op only allowed 2 arguments')
+        if net.op in 'x' and len(net.args != 2):
+            raise PyrtlInternalError('error, op only allowed 3 arguments')
+        if net.op in '&|^+-*<>=' and len(set(x.bitwidth for x in net.args)) > 1:
+            raise PyrtlInternalError('error, args have mismatched bitwidths')
+        if net.op == 'x' and net.args[1].bitwidth != net.args[2].bitwidth:
+            raise PyrtlInternalError('error, args have mismatched bitwidths')
+        if net.op == 'x' and net.args[0].bitwidth != 1:
+            raise PyrtlInternalError('error, mux select must be a single bit')
+
+        # operation specific checks on op_params
+        if net.op in 'w~&|^+-*<>=xcr' and net.op_param is not None:
+            raise PyrtlInternalError('error, op_param should be None')
+        if net.op == 's':
+            if not isinstance(net.op_param, tuple):
+                raise PyrtlInternalError('error, select op requires op_param')
+            for p in net.op_param:
+                if p < 0 or p >= net.args[0].bitwidth:
+                    raise PyrtlInternalError('error, op_param out of bounds')
+
+        # check destination validity
+        if net.op in 'w~&|^r' and net.dests[0].bitwidth > net.args[0].bitwidth:
+            raise PyrtlInternalError('error, upper bits of destination unassigned')
+        if net.op in '<>=' and net.dests[0].bitwidth != 1:
+            raise PyrtlInternalError('error, destination should be of bitwidth=1')
+        if net.op in '+-' and net.dests[0].bitwidth > net.args[0].bitwidth + 1:
+            raise PyrtlInternalError('error, upper bits of destination unassigned')
+        if net.op == '*' and net.dests[0].bitwidth > 2 * net.args[0].bitwidth:
+            raise PyrtlInternalError('error, upper bits of destination unassigned')
+        if net.op == 'x' and net.dests[0].bitwidth > net.args[1].bitwidth:
+            raise PyrtlInternalError('error, upper bits of mux output undefined')
+        if net.op == 'c' and net.dests[0].bitwidth > sum(x.bitwidth for x in net.args):
+            raise PyrtlInternalError('error, upper bits of concat output undefined')
+        if net.op == 's' and net.dests[0].bitwidth > len(net.op_param):
+            raise PyrtlInternalError('error, upper bits of select output undefined')
+        # TODO: Add Memory to the above checks
 
     # some unique name class methods useful internally
     _tempvar_count = 1
@@ -200,80 +271,11 @@ class Block(object):
         return cls._memid_count
 
 
-def _check_type_wirevector(w):
-    """ Check that w is a valid wirevector type. """
-    if not isinstance(w, wirevector.WireVector):
-        raise PyrtlError(
-            'error attempting to pass an input of type "%s" '
-            'instead of WireVector' % type(w))
-
-def _check_valid_net(net):
-    """ Check that net is a valid LogicNet. """
-
-    # general sanity checks that apply to all operations
-    if not isinstance(net, LogicNet):
-        raise PyrtlInternalError('error, net must be of type LogicNet')
-    if not isinstance(net.args, tuple):
-        raise PyrtlInternalError('error, LogicNet args must be tuple')
-    if not isinstance(net.dests, tuple):
-        raise PyrtlInternalError('error, LogicNet dests must be tuple')        
-    for w in net.args + net.dests:
-        _check_type_wirevector(w)
-        if w not in self.wirevector_set:
-            raise PyrtlInternalError('error, net with unknown source "%s"' % w.name)
-        if w.block is not self:
-            raise PyrtlInternalError('error, net references different block')
-    if net.op not in self.legal_ops:
-        raise PyrtlInternalError('error, net op "%s" not from acceptable set %s' % 
-                                 (net.op, self.legal_ops))
-
-    # operation specific checks on arguments
-    if net.op in 'w~rs' and len(net.args != 1):
-        raise PyrtlInternalError('error, op only allowed 1 argument')
-    if net.op in '&|^+-*<>=' and len(net.args != 2):
-        raise PyrtlInternalError('error, op only allowed 2 arguments')
-    if net.op in 'x' and len(net.args != 2):
-        raise PyrtlInternalError('error, op only allowed 3 arguments')
-    if net.op in '&|^+-*<>=' and len(set(x.bitwidth for x in net.args)) > 1:
-        raise PyrtlInternalError('error, args have mismatched bitwidths')
-    if net.op == 'x' and net.args[1].bitwidth != net.args[2].bitwidth:
-         raise PyrtlInternalError('error, args have mismatched bitwidths')
-    if net.op == 'x' and net.args[0].bitwidth != 1:
-        raise PyrtlInternalError('error, mux select must be a single bit')
-
-    # operation specific checks on op_params
-    if net.op in 'w~&|^+-*<>=xcr' and net.op_param is not None:
-         raise PyrtlInternalError('error, op_param should be None')
-    if net.op == 's':
-        if not isinstance(net.op_param, tuple):
-            raise PyrtlInternalError('error, select op requires op_param')
-        for p in net.op_param:
-            if p < 0 or p >= net.args[0].bitwidth:
-                raise PyrtlInternalError('error, op_param out of bounds')
-
-    # check destination validity
-    if net.op in 'w~&|^r' and net.dests[0].bitwidth > net.args[0].bitwidth:
-        raise PyrtlInternalError('error, upper bits of destination unassigned')
-    if net.op in '<>=' and net.dests[0].bitwidth != 1:
-        raise PyrtlInternalError('error, destination should be of bitwidth=1')
-    if net.op in '+-' and net.dests[0].bitwidth > net.args[0].bitwidth + 1:
-        raise PyrtlInternalError('error, upper bits of destination unassigned')
-    if net.op == '*' and net.dests[0].bitwidth > 2 * net.args[0].bitwidth:
-        raise PyrtlInternalError('error, upper bits of destination unassigned')
-    if net.op == 'x' and net.dests[0].bitwidth > net.args[1].bitwidth:
-        raise PyrtlInternalError('error, upper bits of mux output undefined')
-    if net.op == 'c' and net.dests[0].bitwidth > sum(x.bitwidth for x in net.args):
-        raise PyrtlInternalError('error, upper bits of concat output undefined')
-    if net.op == 's' and net.dests[0].bitwidth > len(net.op_param):
-        raise PyrtlInternalError('error, upper bits of select output undefined')
-    # TODO: Add Memory to the above checks
-
 #------------------------------------------------------------------------
 #          __   __               __      __        __   __
 #    |  | /  \ |__) |__/ | |\ | / _`    |__) |    /  \ /  ` |__/
 #    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \
 #
-
 
 # Right now we use singleton_block to store the one global
 # block, but in the future we should support multiple Blocks.
