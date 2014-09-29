@@ -9,7 +9,6 @@ accordingly, or write information from the Block out to the file.
 import sys
 import re
 import collections
-import pyparsing
 
 import core
 import wire
@@ -31,6 +30,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
     Ignores reset signal (which it assumes is input only to the flip flops)
     """
 
+    import pyparsing
     from pyparsing import Word, Literal, infixNotation, OneOrMore, ZeroOrMore
     from pyparsing import oneOf, Suppress, Group, Optional, Keyword
 
