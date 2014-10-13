@@ -88,7 +88,7 @@ def synthesize(update_working_block=True, block=None):
     """ Lower the design to just single-bit "and", "or", and "not" gates.
 
     Takes as input a block (default to working block) and creates a new
-    block which is identical in fucntion but uses only single bit gates
+    block which is identical in function but uses only single bit gates
     and excludes many of the more complicated primitives.  The new block
     should only consist of the combination elements of w, &, |, ^, and ~.
     and sequential elements of registers (which are one bit as well).
