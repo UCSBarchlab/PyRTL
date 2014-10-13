@@ -75,7 +75,127 @@ def optimize(update_working_block=True, block=None):
     if not update_working_block:
         block = copy.deepcopy(block)
     _remove_wire_nets(block)
+    _constant_propagation(block)
     return block
+
+
+def _constant_propagation(block):
+    """Removes excess constants in the block
+    """
+
+    def _constant_prop_pass(block):
+        """ Does one constant propagation pass """
+
+        def constant_prop_check(net_checking):
+
+            def replace_net(new_net):
+                nets_to_remove.add(net_checking)
+                nets_to_add.add(new_net)
+                for arg_wire in net_checking.args:
+                    if arg_wire not in new_net.args:
+                        wire_removal_set.add(arg_wire)
+
+            def replace_net_with_const(const_val):
+                new_const_wire = wire.Const(bitwidth=1, val=const_val, block=block)
+                wire_add_set.add(new_const_wire)
+                replace_net_with_wire(const_wire)
+
+            def replace_net_with_wire(new_wire):
+                if isinstance(net_checking.dests[0], wire.Output):
+                    # if isinstance(new_wire,wire.Input) or isinstance(new_wire,wire.Const):
+                    replace_net(core.LogicNet('w', None, args=(new_wire,), dests=net_checking.dests))
+                else:
+                    nets_to_remove.add(net_checking)
+                    replacement_wires[net_checking.dests[0]] = new_wire
+                    wire_removal_set.add(net_checking.dests)
+
+            one_var_ops = {
+                '~': lambda x: ~x,
+                'r': lambda x: x   # This is only valid for constant folding purposes
+            }
+            two_var_ops = {
+                '&': lambda l, r: l & r,
+                '|': lambda l, r: l | r,
+                '^': lambda l, r: l ^ r,
+            }
+            num_constants = 0
+            for arg_wires in net_checking.args:
+                if isinstance(arg_wires, wire.Const):
+                    num_constants += 1
+
+            if num_constants is 0 or net_checking.op == 'w':
+                return None
+
+            if (net_checking.op in two_var_ops) & num_constants is 1:
+                # special case
+                arg1, arg2 = net_checking.args
+                if isinstance(arg1, wire.Const):
+                    const_wire = arg1
+                    other_wire = arg2
+                else:
+                    const_wire = arg2
+                    other_wire = arg1
+
+                outputs = []
+                for other_val in range(0, 1):
+                    outputs[other_val] = two_var_ops[net_checking.op](const_wire.val, other_val)
+
+                if outputs[0] == outputs[1]:
+                    replace_net_with_const(outputs[0])
+                elif outputs[0] == 0:
+                    replace_net_with_wire(other_wire)
+                else:
+                    replace_net(core.LogicNet('~', None, args=(other_wire,), dests=net_checking.dests))
+
+            else:
+                if net_checking.op in two_var_ops:
+                    output = two_var_ops[net_checking.op](net_checking.args[0], net_checking.args[1])
+                elif net_checking.op in one_var_ops:
+                    output = one_var_ops[net_checking.op](net_checking.args[0])
+                else:
+                    raise core.PyrtlInternalError('net with invalid op code: ' + net_checking.op + ' found')
+
+                replace_net_with_const(output)
+
+        def find_producer(x):
+            # trace back to the root producer of x
+            if x in replacement_wires:
+                return replacement_wires[x]
+            else:
+                return x
+
+        replacement_wires = {}  # map from wire to its producer
+        wire_add_set = set()
+        wire_removal_set = set()  # set of all wirevectors to be removed
+        nets_to_add = set()
+        nets_to_remove = set()
+
+        for a_net in block.logic:
+            constant_prop_check(a_net)
+        # second full pass to cleanup
+
+        new_logic = set()
+        for net in block.logic:
+            if net not in nets_to_remove:
+                new_args = tuple(find_producer(x) for x in net.args)
+                new_net = core.LogicNet(net.op, net.op_param, new_args, net.dests)
+                new_logic.add(new_net)
+        # now update the block with the new logic and remove wirevectors
+
+        new_logic = new_logic.union(nets_to_add)
+        block.logic = new_logic
+        for new_wirevector in wire_add_set:
+            block.add_wirevector(new_wirevector)
+
+        for dead_wirevector in wire_removal_set:
+            del block.wirevector_by_name[dead_wirevector.name]
+            block.wirevector_set.remove(dead_wirevector)
+            ## TODO: add warning about useless input wirevectors
+
+    current_nets = 0
+    while len(block.logic) != current_nets:
+        current_nets = len(block.logic)
+        _constant_prop_pass(block)
 
 
 #---------------------------------------------------------------------

@@ -127,6 +127,10 @@ class Block(object):
         self.wirevector_set.add(wirevector)
         self.wirevector_by_name[wirevector.name] = wirevector
 
+    def remove_wirevector(self, wirevector):
+        self.wirevector_set.remove(wirevector)
+        del self.wirevector_by_name[wirevector.name]
+
     def add_net(self, net):
         """ Connect new net to wirevectors previously added to the block."""
         self.sanity_check_net(net)
