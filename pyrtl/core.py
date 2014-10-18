@@ -160,6 +160,11 @@ class Block(object):
         for net in self.logic:
             self.sanity_check_net(net)
 
+        for w in self.wirevector_subset():
+            if w.bitwidth is None:
+                raise PyrtlError(
+                    'error, missing bitwidth for WireVector "%s" ', w.name)
+
         # check for unique names
         wirevector_names_list = [x.name for x in self.wirevector_set]
         wirevector_names_set = set(wirevector_names_list)

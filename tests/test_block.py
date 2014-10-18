@@ -13,7 +13,7 @@ class TestBlock(unittest.TestCase):
         pyrtl.reset_working_block()    
 
     def test_add_wirevector_simple(self):
-        w = pyrtl.WireVector(name='testwire')
+        w = pyrtl.WireVector(name='testwire',bitwidth=3)
         pyrtl.working_block().add_wirevector(w)
         self.assertTrue(w in pyrtl.working_block().wirevector_set)
         self.assertTrue('testwire' in pyrtl.working_block().wirevector_by_name)
