@@ -68,7 +68,7 @@ class Block(object):
     Below is a list of the basic operations.  These properties (more formally
     specified) should all be checked by the class method sanity_check.
 
-    * Most logical and arithmetic ops are pretty self explanitory, each takes
+    * Most logical and arithmetic ops are pretty self explanatory, each takes
       exactly two arguments and they should perform the arithmetic or logical
       operation specified. OPS: ('&','|','^','+','-','*').  All inputs must
       be the same bitwidth.  Logical operations produce as many bits as are in

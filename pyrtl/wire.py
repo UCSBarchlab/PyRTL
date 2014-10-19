@@ -34,7 +34,7 @@ class WireVector(object):
     """
 
     # "code" is a static variable used when output as string.
-    # Each class inhieriting from WireVector should overload accordingly
+    # Each class inheriting from WireVector should overload accordingly
     code = 'W'
 
     def __init__(self, bitwidth=None, name=None, block=None):

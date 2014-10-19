@@ -76,7 +76,7 @@ def optimize(update_working_block=True, block=None):
     block = core.working_block(block)
     for net in block.logic:
         if net.op not in set('r|&~^w'):
-            raise core.PyrtlError('error, optization only works on post-synthesis blocks')
+            raise core.PyrtlError('error, optimization only works on post-synthesis blocks')
     if not update_working_block:
         block = copy.deepcopy(block)
     _remove_wire_nets(block)
@@ -85,8 +85,7 @@ def optimize(update_working_block=True, block=None):
 
 
 def _constant_propagation(block):
-    """Removes excess constants in the block
-    """
+    """Removes excess constants in the block"""
 
     def _constant_prop_pass(block):
         """ Does one constant propagation pass """
@@ -150,15 +149,18 @@ def _constant_propagation(block):
                 elif outputs[0] == 0:
                     replace_net_with_wire(other_wire)
                 else:
-                    replace_net(core.LogicNet('~', None, args=(other_wire,), dests=net_checking.dests))
+                    replace_net(core.LogicNet('~', None, args=(other_wire,),
+                                              dests=net_checking.dests))
 
             else:
                 if net_checking.op in two_var_ops:
-                    output = two_var_ops[net_checking.op](net_checking.args[0], net_checking.args[1])
+                    output = two_var_ops[net_checking.op](net_checking.args[0],
+                                                          net_checking.args[1])
                 elif net_checking.op in one_var_ops:
                     output = one_var_ops[net_checking.op](net_checking.args[0])
                 else:
-                    raise core.PyrtlInternalError('net with invalid op code: ' + net_checking.op + ' found')
+                    raise core.PyrtlInternalError('net with invalid op code: '
+                                                  + net_checking.op + ' found')
 
                 replace_net_with_const(output)
 
@@ -245,7 +247,7 @@ def synthesize(update_working_block=True, block=None):
             wirevector_map[(wirevector, i)] = new_wirevector
 
     # Now that we have all the wires built and mapped, walk all the blocks
-    # and map the logic to the equivelent set of primitives in the system
+    # and map the logic to the equivalent set of primitives in the system
     for net in block_in.logic:
         _decompose(net, wirevector_map, block_out)
 
@@ -286,7 +288,7 @@ def _decompose(net, wv_map, block_out):
             assign_dest(i, arg(0, i) ^ arg(1, i))
     elif net.op == '=':
         # The == operator is implemented with a nor of xors.
-        temp_result = arg(0, i) ^ arg(1, i)
+        temp_result = arg(0, 0) ^ arg(1, 0)
         for i in range(1, len(net.args[0])):
             temp_result = temp_result | (arg(0, i) ^ arg(1, i))
         assign_dest(0, ~temp_result)
@@ -321,7 +323,7 @@ def _decompose(net, wv_map, block_out):
         for i in destlen():
             assign_dest(i, destlist[i])
     else:
-        raise core.PyrtlInternalError('Unnable to synthesize the following net '
+        raise core.PyrtlInternalError('Unable to synthesize the following net '
                                       'due to unimplemented op :\n%s' % str(net))
     return
 

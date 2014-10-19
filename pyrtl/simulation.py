@@ -211,7 +211,7 @@ class Simulation(object):
 
         Ready inputs will be fined in "defined_set" and if any
         inputs are not yet in this set, we know the we need to execute
-        the prededing ops first.  If the net is sucessfully exectuted
+        the preceding ops first.  If the net is successfully executed
         return True, otherwise return False so we can return to this net
         at a later time.
         """
