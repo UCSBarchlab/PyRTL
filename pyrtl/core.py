@@ -158,14 +158,16 @@ class Block(object):
         Should not modify anything, only check datastructures to make sure they have been
         built according to the assumptions stated in the Block comments."""
 
-        # check for valid wires
-        for w in self.wirevector_set:
-            self.sanity_check_wirevector(w)
         # TODO: check that the wirevector_by_name is sane
 
-        # check for valid LogicNets
+        # check for valid LogicNets (and wires)
         for net in self.logic:
             self.sanity_check_net(net)
+
+        for w in self.wirevector_subset():
+            if w.bitwidth is None:
+                raise PyrtlError(
+                    'error, missing bitwidth for WireVector "%s" ', w.name)
 
         # check for unique names
         wirevector_names_list = [x.name for x in self.wirevector_set]
@@ -210,6 +212,15 @@ class Block(object):
                 raise PyrtlInternalError('error, net with unknown source "%s"' % w.name)
             if w.block is not self:
                 raise PyrtlInternalError('error, net references different block')
+
+        # checks that input and output wirevectors are not misused
+        for w in net.dests:
+            if isinstance(w, wire.Input):
+                raise PyrtlInternalError('error, Inputs cannot be destinations to a net')
+        for w in net.args:
+            if isinstance(w, wire.Output):
+                raise PyrtlInternalError('error, Outputs cannot be arguments for a net')
+
         if net.op not in self.legal_ops:
             raise PyrtlInternalError('error, net op "%s" not from acceptable set %s' %
                                      (net.op, self.legal_ops))

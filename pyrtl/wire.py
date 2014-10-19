@@ -51,6 +51,8 @@ class WireVector(object):
 
     def __ilshift__(self, other):
         other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
+        if self.bitwidth is None:
+            self.bitwidth = other.bitwidth
         net = core.LogicNet(
             op='w',
             op_param=None,
@@ -320,6 +322,8 @@ class Register(WireVector):
 
     def __ilshift__(self, other):
         other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
+        if self.bitwidth is None:
+            self.bitwidth = other.bitwidth
         return Register.NextSetter(rhs=other)
 
     @next.setter

@@ -42,7 +42,7 @@ def _remove_wire_nets(block):
         else:
             return x
 
-    immediate_producer = {}  # map from wire to its producer
+    immediate_producer = {}  # map from wirevector to its direct producer wirevector
     wire_removal_set = set()  # set of all wirevectors to be removed
 
     # one pass to build the map of value producers and
@@ -50,19 +50,24 @@ def _remove_wire_nets(block):
     for net in block.logic:
         if net.op == 'w':
             immediate_producer[net.dests[0]] = net.args[0]
-            wire_removal_set.add(net.dests[0])
-    # second full pass to cleanup
+            if not isinstance(net.dests[0], wire.Output):
+                wire_removal_set.add(net.dests[0])
+
+    # second full pass to create the new logic without the wire nets
     new_logic = set()
     for net in block.logic:
-        if net.op != 'w':
+        if net.op != 'w' or isinstance(net.dests[0], wire.Output):
             new_args = tuple(find_producer(x) for x in net.args)
             new_net = core.LogicNet(net.op, net.op_param, new_args, net.dests)
             new_logic.add(new_net)
+
     # now update the block with the new logic and remove wirevectors
     block.logic = new_logic
     for dead_wirevector in wire_removal_set:
         del block.wirevector_by_name[dead_wirevector.name]
         block.wirevector_set.remove(dead_wirevector)
+
+    block.sanity_check()
 
 
 def optimize(update_working_block=True, block=None):
