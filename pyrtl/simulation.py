@@ -335,13 +335,16 @@ class SimulationTrace(object):
         print >>file, " ".join(["$scope", "module logic", "$end"])
 
         # dump variables
-        for w in sorted(self.trace, key=trace_sort_key):
+        for w in self.trace:
             print >>file, " ".join(["$var", "wire", str(w.bitwidth), w.name, w.name, "$end"])
         print >>file, " ".join(["$upscope", "$end"])
-        print >>file, " ".join(["$endefinitions", "$end"])
+        print >>file, " ".join(["$enddefinitions", "$end"])
         print >>file, " ".join(["$dumpvars"])
-        for w in sorted(self.trace, key=trace_sort_key):
-            print >>file, "".join([str(self.trace[w][0]), w.name])
+        for w in self.trace:
+            if w.bitwidth > 1:
+                print >>file, " ".join([str(bin(self.trace[w][0]))[1:], w.name])
+            else:
+                print >>file, "".join([str(self.trace[w][0]), w.name])
         print >>file, " ".join(["$end"])
 
         # dump values
@@ -349,7 +352,10 @@ class SimulationTrace(object):
         for timestamp in range(endtime):
             print >>file, "".join(["#", str(timestamp)])
             for w in self.trace:
-                print >>file, "".join([str(self.trace[w][timestamp]), w.name])
+                if w.bitwidth > 1:
+                    print >>file, " ".join([str(bin(self.trace[w][timestamp]))[1:], w.name])
+                else:
+                    print >>file, "".join([str(self.trace[w][timestamp]), w.name])
         print >>file, "".join(["#", str(endtime)])
 
     def render_trace(

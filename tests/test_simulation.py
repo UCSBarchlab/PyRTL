@@ -2,6 +2,8 @@ import unittest
 import random
 import pyrtl
 import StringIO
+import os
+import subprocess
 
 from helperfunctions import *
 
@@ -110,6 +112,43 @@ class TestRTLSimulationTraceWithAdder(unittest.TestCase):
         output = StringIO.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
+
+class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+        bitwidth = 3
+        self.r = pyrtl.Register(bitwidth=bitwidth, name='r')
+        self.sum, self.cout = generate_full_adder(self.r, pyrtl.Const(1).zero_extended(bitwidth) )
+        self.r.next <<= self.sum
+    
+    def tearDown(self):
+        pass
+        
+    def test_adder_simulation(self):
+        sim_trace = pyrtl.SimulationTrace()
+        on_reset = {} # signal states to be set when reset is asserted
+        # build the actual simulation environment
+        sim = pyrtl.Simulation( register_value_map=on_reset, default_value=0, tracer=sim_trace )
+
+        # step through 15 cycles
+        for i in xrange(15):  
+            sim.step( {} )
+            
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        # generate output from this test case
+        with open(os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_1.vcd"), "w") as fd:
+            sim_trace.print_vcd(fd)
+        
+        with open(os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_comparevcd_log.txt"), "w") as fd:
+            compare_result = subprocess.call(["java", "-jar", os.path.join(current_dir, "comparevcd.jar"), 
+                os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder.vcd"), 
+                os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_1.vcd")], stdout=fd)
+        self.assertEqual(compare_result, 0)
+
+        # generate initial vcd output
+        #with open(os.path.join(os.path.dirname(os.path.realpath(__file__)),"TestRTLSimulationTraceWithAdder.vcd"), "w") as fd:
+        #    sim_trace.print_vcd(fd)
 
 class TestRTLSimulationTraceWithMux(unittest.TestCase):
 
