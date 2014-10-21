@@ -178,7 +178,7 @@ class Block(object):
             raise PyrtlError('Duplicate wire names found for the following '
                              'different signals: %s' % repr(wirevector_names_list))
 
-        # check for dead input wires (not connected to anything)
+		# check for dead input wires (not connected to anything)
         dest_set = set(wire for net in self.logic for wire in net.dests)
         arg_set = set(wire for net in self.logic for wire in net.args)
         full_set = dest_set | arg_set
@@ -188,6 +188,26 @@ class Block(object):
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         if len(allwires_minus_connected) > 0:
             raise PyrtlError('Wires declared but not connected:%s' % repr(allwires_minus_connected))
+
+	    # Check for connection errors
+
+		# Check for wires that are destinations of a logicNet, but are not outputs and are never
+		# used as args.
+        outs = dest_set.difference(arg_set)
+        outs = outs.difference(self.wirevector_subset(wire.Output))
+        if len(outs) > 0:
+        	raise PyrtlError('Wires driven but never used: %s' % (outs))
+       	
+       	# Check for wires that are inputs to a logicNet, but are not block inputs and are never
+       	# driven.
+       	ins = arg_set.difference(dest_set)
+       	ins = ins.difference(self.wirevector_subset(wire.Input))
+       	ins = ins.difference(self.wirevector_subset(wire.Const))
+        if len(ins) > 0:
+        	raise PyrtlError('Wires used but never driven: %s' % (ins))
+        	
+
+        
 
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
