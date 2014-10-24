@@ -311,6 +311,7 @@ def _to_verilog_header(file, block):
     wires = block.wirevector_subset() - (inputs | outputs | registers)
     for w in inputs:
         print >> file, '    input%s %s;' % (_verilog_vector_decl(w), w.name)
+    print >> file, '    input clk;'
     for w in outputs:
         print >> file, '    output%s %s;' % (_verilog_vector_decl(w), w.name)
     print >> file, ''
