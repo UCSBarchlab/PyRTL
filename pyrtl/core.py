@@ -188,23 +188,23 @@ class Block(object):
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         if len(allwires_minus_connected) > 0:
             raise PyrtlError('Wires declared but not connected:%s' % repr(allwires_minus_connected))
+            
+        # Check for connection errors
 
-	    # Check for connection errors
-
-		# Check for wires that are destinations of a logicNet, but are not outputs and are never
-		# used as args.
+        # Check for wires that are destinations of a logicNet, but are not outputs and are never
+        # used as args.
         outs = dest_set.difference(arg_set)
-        outs = outs.difference(self.wirevector_subset(wire.Output))
+        unused = outs.difference(self.wirevector_subset(wire.Output))
         if len(outs) > 0:
-        	raise PyrtlError('Wires driven but never used: %s' % (outs))
+        	raise PyrtlError('Wires driven but never used: %s' % [w.name for w in unused])
        	
        	# Check for wires that are inputs to a logicNet, but are not block inputs and are never
        	# driven.
        	ins = arg_set.difference(dest_set)
        	ins = ins.difference(self.wirevector_subset(wire.Input))
-       	ins = ins.difference(self.wirevector_subset(wire.Const))
+       	undriven = ins.difference(self.wirevector_subset(wire.Const))
         if len(ins) > 0:
-        	raise PyrtlError('Wires used but never driven: %s' % (ins))
+        	raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
         	
 
         
