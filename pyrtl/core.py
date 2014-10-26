@@ -186,10 +186,10 @@ class Block(object):
         if len(connected_minus_allwires) > 0:
             raise PyrtlError('Unknown wires found in net: %s' % repr(connected_minus_allwires))
         allwires_minus_connected = self.wirevector_set.difference(full_set)
-        allwires_minus_connected = self.wirevector_set.difference(self.wirevector_subset(wire.Input))         
+        allwires_minus_connected = allwires_minus_connected.difference(self.wirevector_subset(wire.Input))         
             # ^ allow inputs to be unconnected
         if len(allwires_minus_connected) > 0:
-            raise PyrtlError('Wires declared but not connected:%s' % repr(allwires_minus_connected))
+            raise PyrtlError('Wires declared but not connected:%s' % [w.name for w in allwires_minus_connected])
             
        	# Check for wires that are inputs to a logicNet, but are not block inputs and are never
        	# driven.

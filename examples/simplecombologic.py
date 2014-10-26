@@ -11,8 +11,12 @@ sum, cout = Output(1, 'sum'), Output(1, 'cout')
 sum <<= a ^ b ^ c
 cout <<= a & b | a & c | b & c
 
+print pyrtl.working_block()
+
 # output the hardware as verilog
-# pyrtl.output_to_verilog(sys.stdout)
+f = open('tm.v','w')
+pyrtl.output_to_verilog(f)
+f.close()
 
 # now simulate the logic with some random inputs
 sim_trace = pyrtl.SimulationTrace()
@@ -25,3 +29,8 @@ for i in xrange(15):
         c: random.choice([0, 1])
         })
 sim_trace.render_trace(symbol_len=5, segment_size=5)
+
+# output testbench of simulation values
+f = open('tb.v', 'w')
+pyrtl.output_verilog_testbench(f, pyrtl.working_block(), sim_trace)
+f.close()
