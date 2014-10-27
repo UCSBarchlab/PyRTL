@@ -46,12 +46,12 @@ class Pipeline(object):
 def switch(ctrl, logic_dict):
     """ switch finds the matching key in logic_dict and returns the value.
 
-    The case "None" specifies the default value to return when there is no
+    The case "0" specifies the default value to return when there is no
     match.  The logic will be a simple linear mux tree of comparisons between
     the key and the ctrl, selecting the appropriate value
     """
 
-    working_result = logic_dict[None]
+    working_result = logic_dict[0]
     for case_value in logic_dict:
         working_result = mux(
             ctrl == case_value,
@@ -90,7 +90,7 @@ class MipsCore(Pipeline):
         """ all of the cross-pipeline signals are declared here """
         self._addrwidth = addrwidth  # a compile time constant
         self._pcsrc = WireVector(1, 'pcsrc')
-        self._computed_address = WireVector(1, 'computed_address')
+        self._computed_address = WireVector(self._addrwidth, 'computed_address')
         self._regwrite = WireVector(1, 'regwrite')  # CHECK
         self._write_register = WireVector(5, 'write_register')  # CHECK
         self._write_data = WireVector(32, 'write_data')
@@ -134,28 +134,38 @@ class MipsCore(Pipeline):
 
     def stage2_execute(self):
         """ perform the alu operations """
+        opcode = self.opcode
+        regdest, alusrc = self.ex_ctrl(opcode)
         alu_op_1 = self.regread1
-        alu_op_2 = mux(self.alusrc, self.regread2, self.immed)
+        alu_op_2 = mux(alusrc, self.regread2, self.immed)
         alu_ctrl = self.alu_ctrl(self.opcode, self.immed)
 
-        self.pc_cmp = self.pc_incr + (self.immed << 2)
+        self._computed_address <<= self.pc_incr + (self.immed * 4)
+        self._write_register <<= mux(regdest, self.rt, self.rd)
         self.alu_result, self.zero = self.alu(alu_ctrl, alu_op_1, alu_op_2)
         self.regread2 = self.regread2
-        self.dest = mux(self.regdest, self.rt, self.rd)
+        self.opcode = opcode
 
     def stage3_memory(self):
         """ access dmem for loads and stores """
+        opcode = self.opcode
+        branch, memwrite = self.mem_ctrl(opcode)
+
         dmem = MemBlock(32, self._addrwidth, 'dmem')
         EW = MemBlock.EnabledWrite
-        dmem[self.alu_result] = EW(self.regread2, enable=self.memwrite)
 
-        self.read_data = dmem[self.alu_result]
+        address = self.alu_result[0:self._addrwidth]
+        dmem[address] = EW(self.regread2, enable=memwrite)
+
+        self._pcsrc <<= branch & self.zero
+        self.read_data = dmem[address]
         self.alu_result = self.alu_result
-        self.pc_src = self.branch & self.zero
+        self.opcode = opcode
 
     def stage4_writeback(self):
         """ select the data to write back to registers """
-        self._write_data = mux(self.mem_to_reg, self.alu_result, self.read_data)
+        self._regwrite <<= self.wb_ctrl(self.opcode)
+        self._write_data <<= mux(self._regwrite, self.alu_result, self.read_data)
 
     def alu_ctrl(self, opcode, immed):
         # A A
@@ -176,21 +186,85 @@ class MipsCore(Pipeline):
         op0 = aluop[1] & (f[0] | f[3])
         op1 = ~aluop[0] | ~f[2]
         op2 = aluop[0] | (aluop[1] & f[1])
+
         return concat(op0, op1, op2)
+
+    def ex_ctrl(self, opcode):
+        #                       EXECUTE CONTROL
+        #          O O O O O O  R A A A
+        #          P P P P P P  E L L L
+        #          C C C C C C  G U U U
+        #          O O O O O O  D O O S
+        #          D D D D D D  S P P R
+        #  Inst    E E E E E E  T 1 0 C
+        #          5 4 3 2 1 0         
+        # -----------------------------
+        # R-format 0 0 0 0 0 0  1 1 0 0
+        # lw       1 0 0 0 1 1  0 0 0 1
+        # sw       1 0 1 0 1 1  X 0 0 1
+        # beq      0 0 1 1 0 0  X 0 1 0
+        # addi     0 0 1 0 0 0  0 0 0 1
+        oc = opcode
+        # aluop0 = ~oc[5] & ~oc[4] & oc[3] & oc[2] & ~oc[1] & ~oc[0]
+        # aluop1 = ~oc[5] & ~oc[4] & ~oc[3] & ~oc[2] & ~oc[1] & ~oc[0]
+        alusrc = (~oc[5] & ~oc[4] & oc[3] & ~oc[2] & ~oc[1] & ~oc[0]) | (oc[5] & ~oc[4] & ~oc[2] & oc[1] & oc[0])
+        regdest = ~oc[5] & ~oc[4] & ~oc[3] & ~oc[2] & ~oc[1] & ~oc[0]
+
+        return regdest, alusrc
+
+    def mem_ctrl(self, opcode):
+        #                       MEM CONTROL
+        #          O O O O O O  B    
+        #          P P P P P P  R M M
+        #          C C C C C C  A E E
+        #          O O O O O O  B M M
+        #          D D D D D D  C R W
+        #  Inst    E E E E E E  H D R
+        #          5 4 3 2 1 0       
+        # ---------------------------
+        # R-format 0 0 0 0 0 0  0 0 0
+        # lw       1 0 0 0 1 1  0 1 0
+        # sw       1 0 1 0 1 1  0 0 1
+        # beq      0 0 1 1 0 0  1 0 0
+        oc = opcode
+        branch = ~oc[5] & ~oc[4] & oc[3] & oc[2] & ~oc[1] & ~oc[0]
+        # memread = oc[5] & ~oc[4] & ~oc[3] & ~oc[2] & oc[1] & oc[0]
+        memwrite = oc[5] & ~oc[4] & oc[3] & ~oc[2] & oc[1] & oc[0]
+
+        return branch, memwrite
+
+    def wb_ctrl(self, opcode):
+        #                       WRITEBACK CONTROL
+        #          O O O O O O  M
+        #          P P P P P P  E
+        #          C C C C C C  M
+        #          O O O O O O  R
+        #          D D D D D D  E
+        #  Inst    E E E E E E  G
+        #          5 4 3 2 1 0   
+        # -----------------------
+        # R-format 0 0 0 0 0 0  0
+        # lw       1 0 0 0 1 1  1
+        # sw       1 0 1 0 1 1  X
+        # beq      0 0 1 1 0 0  X
+        oc = opcode
+        regwrite = oc[5] & ~oc[4] & ~oc[3] & ~oc[2] & oc[1] & oc[0]
+
+        return regwrite
 
     def alu(self, ctrl, op1, op2):
         retval = switch(ctrl, {
-            "3'000": op1 & op2,
-            "3'001": op1 | op2,
-            "3'010": op1 + op2,
-            "3'110": op1 - op2,
-            "3'111": op1 < op2,
-            None: 0,
+            "3'b000": op1 & op2,
+            "3'b001": op1 | op2,
+            "3'b010": op1 + op2,
+            "3'b110": op1 - op2,
+            "3'b111": op1 < op2,
+            0: 0,
             })
+        return retval[0:32], retval[32]
 
-
-testcore = TrivialPipelineExample()
-# testcore = MipsCore(addrwidth=5)
+# testcore = TrivialPipelineExample()
+testcore = MipsCore(addrwidth=32)
 
 # Simulation of the core
 sim_trace = SimulationTrace()
