@@ -186,21 +186,29 @@ class Block(object):
         if len(connected_minus_allwires) > 0:
             raise PyrtlError('Unknown wires found in net: %s' % repr(connected_minus_allwires))
         allwires_minus_connected = self.wirevector_set.difference(full_set)
-        allwires_minus_connected = allwires_minus_connected.difference(self.wirevector_subset(wire.Input))         
+        allwires_minus_connected = allwires_minus_connected.difference(
+            self.wirevector_subset(wire.Input))
             # ^ allow inputs to be unconnected
         if len(allwires_minus_connected) > 0:
-            raise PyrtlError('Wires declared but not connected:%s' % [w.name for w in allwires_minus_connected])
-            
-       	# Check for wires that are inputs to a logicNet, but are not block inputs and are never
-       	# driven.
-       	ins = arg_set.difference(dest_set)
-       	ins = ins.difference(self.wirevector_subset(wire.Input))
-       	undriven = ins.difference(self.wirevector_subset(wire.Const))
-        if len(ins) > 0:
-            raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
-        	
+            raise PyrtlError('Wires declared but not connected:%s' % repr(allwires_minus_connected))
 
-        
+        # Check for connection errors
+
+        # Check for wires that are destinations of a logicNet, but are not outputs and are never
+        # used as args.
+        outs = dest_set.difference(arg_set)
+        unused = outs.difference(self.wirevector_subset(wire.Output))
+        if len(unused) > 0:
+            raise PyrtlError('Wires driven but never used: %s' % [w.name for w in unused])
+
+        # Check for wires that are inputs to a logicNet, but are not block inputs and are never
+        # driven.
+        ins = arg_set.difference(dest_set)
+        ins = ins.difference(self.wirevector_subset(wire.Input))
+        undriven = ins.difference(self.wirevector_subset(wire.Const))
+        if len(undriven) > 0:
+            raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
+
 
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
