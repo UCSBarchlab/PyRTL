@@ -146,6 +146,9 @@ def _constant_propagation(block):
 
                 if outputs[0] == outputs[1]:
                     replace_net_with_const(outputs[0])
+                    if isinstance(other_wire, wire.Input):
+                        print "Input wire, " + other_wire.name + \
+                              ' was eliminated by constant folding'
                 elif outputs[0] == 0:
                     replace_net_with_wire(other_wire)
                 else:
@@ -159,7 +162,7 @@ def _constant_propagation(block):
                 elif net_checking.op in one_var_ops:
                     output = one_var_ops[net_checking.op](net_checking.args[0])
                 else:
-                    raise core.PyrtlInternalError('net with invalid op code: '
+                    raise core.PyrtlInternalError('net with invalid op code, '
                                                   + net_checking.op + ' found')
 
                 replace_net_with_const(output)
