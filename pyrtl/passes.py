@@ -107,7 +107,8 @@ def _constant_propagation(block):
             def replace_net_with_wire(new_wire):
                 if isinstance(net_checking.dests[0], wire.Output):
                     # if isinstance(new_wire,wire.Input) or isinstance(new_wire,wire.Const):
-                    replace_net(core.LogicNet('w', None, args=(new_wire,), dests=net_checking.dests))
+                    replace_net(core.LogicNet('w', None, args=(new_wire,), 
+                                              dests=net_checking.dests))
                 else:
                     nets_to_remove.add(net_checking)
                     replacement_wires[net_checking.dests[0]] = new_wire

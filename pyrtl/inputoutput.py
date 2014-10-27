@@ -418,7 +418,8 @@ def output_verilog_testbench(file, block=None, simulation_trace=None):
     for i in range(simlen):
         print >> file, "\t\t#1"
         for w in inputs:
-            print >> file, "\t\t{:s} = {:s}{:d};".format(w.name, "{:d}'d".format(len(w)), trace[w][i])
+            print >> file, "\t\t{:s} = {:s}{:d};".format(
+                w.name, "{:d}'d".format(len(w)), trace[w][i])
         print >> file, ""
 
     # Footer

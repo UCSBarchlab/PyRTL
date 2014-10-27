@@ -1,5 +1,10 @@
 #!/bin/tcsh
 
+# Packages required (and Ubuntu/Debian style packages)
+# Python nose tests (apt-get install python-nose)
+# Python pep8 style checker (apt-get install pep8)
+# Pylint error checker (apt-get install pylint)
+
 echo 
 echo ===== Running NoseTests ==============================================
 nosetests
