@@ -14,7 +14,7 @@ cout <<= a & b | a & c | b & c
 print pyrtl.working_block()
 
 # output the hardware as verilog
-f = open('tm.v','w')
+f = open('tm.v', 'w')
 pyrtl.output_to_verilog(f)
 f.close()
 

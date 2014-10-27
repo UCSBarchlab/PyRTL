@@ -209,7 +209,6 @@ class Block(object):
         if len(undriven) > 0:
             raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
 
-
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
         if not isinstance(w, wire.WireVector):

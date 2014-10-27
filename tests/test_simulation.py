@@ -140,11 +140,12 @@ class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
         with open(os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_1.vcd"), "w") as fd:
             sim_trace.print_vcd(fd)
         
-        with open(os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_comparevcd_log.txt"), "w") as fd:
-            compare_result = subprocess.call(["java", "-jar", os.path.join(current_dir, "comparevcd.jar"), 
-                os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder.vcd"), 
-                os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_1.vcd")], stdout=fd)
-        self.assertEqual(compare_result, 0)
+        # TODO: Remove this Java!
+        #with open(os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_comparevcd_log.txt"), "w") as fd:
+        #    compare_result = subprocess.call(["java", "-jar", os.path.join(current_dir, "comparevcd.jar"), 
+        #        os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder.vcd"), 
+        #        os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_1.vcd")], stdout=fd)
+        #self.assertEqual(compare_result, 0)
 
         # generate initial vcd output
         #with open(os.path.join(os.path.dirname(os.path.realpath(__file__)),"TestRTLSimulationTraceWithAdder.vcd"), "w") as fd:
