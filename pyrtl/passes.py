@@ -210,19 +210,7 @@ def constant_prop_pass(block):
     for new_wirevector in wire_add_set:
         block.add_wirevector(new_wirevector)
 
-    all_wire_vectors = set()
-    for logic_net in new_logic:
-        for arg_wire in logic_net.args:
-            all_wire_vectors.add(arg_wire)
-        for dest_wire in logic_net.dests:
-            all_wire_vectors.add(dest_wire)
-
-    wire_removal_set = block.wirevector_set.difference(all_wire_vectors)
-    for removed_wire in wire_removal_set:
-        if isinstance(removed_wire, wire.Input):
-            print "Wire, " + removed_wire.name + " was removed by constant folding."
-
-    block.wirevector_set = all_wire_vectors
+    remove_unused_wires(block, "constant folding")
 
 
 def remove_unlistened_nets(block):
@@ -249,7 +237,23 @@ def remove_unlistened_nets(block):
                 listened_nets.add(net)
                 for arg_wire in net.args:
                     listened_wires_cur.add(arg_wire)
-    
+
+
+def remove_unused_wires(block, parent_process_name):
+    """ Removes all unconnected wires from a block"""
+    all_wire_vectors = set()
+    for logic_net in block.logic:
+        for arg_wire in logic_net.args:
+            all_wire_vectors.add(arg_wire)
+        for dest_wire in logic_net.dests:
+            all_wire_vectors.add(dest_wire)
+
+    wire_removal_set = block.wirevector_set.difference(all_wire_vectors)
+    for removed_wire in wire_removal_set:
+        if isinstance(removed_wire, wire.Input):
+            print "Input Wire, " + removed_wire.name + " was removed by " + parent_process_name
+
+    block.wirevector_set = all_wire_vectors
 
 
 
