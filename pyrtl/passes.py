@@ -85,9 +85,14 @@ def optimize(update_working_block=True, block=None):
 
 
 def constant_propagation(block):
-    """Removes excess constants in the block"""
+    """
+    Removes excess constants in the block
 
-
+    Note on resulting block:
+    The output of the block can have wirevectors that are driven but not
+    listened to. This is to be expected. These are to be removed by the
+    remove_unlistened_nets function
+    """
 
     current_nets = 0
     while len(block.logic) != current_nets:
