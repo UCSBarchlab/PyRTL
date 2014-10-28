@@ -111,6 +111,30 @@ class TestRTLSimulationTraceWithAdder(unittest.TestCase):
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
 
+class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+        bitwidth = 3
+        self.r = pyrtl.Register(bitwidth=bitwidth, name='r')
+        self.sum, self.cout = generate_full_adder(self.r, pyrtl.Const(1).zero_extended(bitwidth) )
+        self.r.next <<= self.sum
+    
+    def tearDown(self):
+        pass
+        
+    def test_vcd_output(self):
+        sim_trace = pyrtl.SimulationTrace()
+        on_reset = {} # signal states to be set when reset is asserted
+        # build the actual simulation environment
+        sim = pyrtl.Simulation( register_value_map=on_reset, default_value=0, tracer=sim_trace )
+
+        # step through 15 cycles
+        for i in xrange(15):  
+            sim.step( {} )
+
+        # TODO: compare VCD output
+
 class TestRTLSimulationTraceWithMux(unittest.TestCase):
 
     def setUp(self):

@@ -341,15 +341,21 @@ class SimulationTrace(object):
         print >>file, " ".join(["$endefinitions", "$end"])
         print >>file, " ".join(["$dumpvars"])
         for w in sorted(self.trace, key=trace_sort_key):
-            print >>file, "".join([str(self.trace[w][0]), w.name])
+            if w.bitwidth > 1:
+                print >>file, " ".join([str(bin(self.trace[w][0]))[1:], w.name])
+            else:
+                print >>file, "".join([str(self.trace[w][0]), w.name])
         print >>file, " ".join(["$end"])
 
         # dump values
         endtime = max([len(self.trace[w]) for w in self.trace])
         for timestamp in range(endtime):
             print >>file, "".join(["#", str(timestamp)])
-            for w in self.trace:
-                print >>file, "".join([str(self.trace[w][timestamp]), w.name])
+            for w in sorted(self.trace, key=trace_sort_key):
+                if w.bitwidth > 1:
+                    print >>file, " ".join([str(bin(self.trace[w][timestamp]))[1:], w.name])
+                else:
+                    print >>file, "".join([str(self.trace[w][timestamp]), w.name])
         print >>file, "".join(["#", str(endtime)])
 
     def render_trace(
