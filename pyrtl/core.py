@@ -152,7 +152,7 @@ class Block(object):
         else:
             return None
 
-    def sanity_check(self, strict=False):
+    def sanity_check(self):
         """ Check block and throw PyrtlError or PyrtlInternalError if there is an issue.
 
         Should not modify anything, only check datastructures to make sure they have been
@@ -162,7 +162,7 @@ class Block(object):
 
         # check for valid LogicNets (and wires)
         for net in self.logic:
-            self.sanity_check_net(net, strict)
+            self.sanity_check_net(net)
 
         for w in self.wirevector_subset():
             if w.bitwidth is None:
@@ -202,22 +202,22 @@ class Block(object):
         if len(undriven) > 0:
             raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
 
-        if strict:
+        if _debug_mode:
             # Check for wires that are destinations of a logicNet, but are not outputs and are never
             # used as args.
             outs = dest_set.difference(arg_set)
             unused = outs.difference(self.wirevector_subset(wire.Output))
             if len(unused) > 0:
-                raise PyrtlError('Wires driven but never used: %s' % [w.name for w in unused])
+                print 'Warning: Wires driven but never used { %s }' % [w.name for w in unused]
 
-    def sanity_check_wirevector(self, w, strict=False):
+    def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
         if not isinstance(w, wire.WireVector):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
                 'instead of WireVector' % type(w))
 
-    def sanity_check_net(self, net, strict=False):
+    def sanity_check_net(self, net):
         """ Check that net is a valid LogicNet. """
 
         # general sanity checks that apply to all operations
@@ -228,7 +228,7 @@ class Block(object):
         if not isinstance(net.dests, tuple):
             raise PyrtlInternalError('error, LogicNet dests must be tuple')
         for w in net.args + net.dests:
-            self.sanity_check_wirevector(w, strict)
+            self.sanity_check_wirevector(w)
             if w not in self.wirevector_set:
                 raise PyrtlInternalError('error, net with unknown source "%s"' % w.name)
             if w.block is not self:
@@ -326,6 +326,7 @@ class Block(object):
 # block, but in the future we should support multiple Blocks.
 # The argument "singleton_block" should never be passed.
 _singleton_block = Block()
+_debug_mode = False
 
 
 def working_block(block=None):
@@ -358,3 +359,8 @@ def set_working_block(block):
         raise PyrtlError('error, expected instance of Block as block argument')
     block.sanity_check()
     _singleton_block = block
+
+
+def set_debug_mode(debug=True):
+    global _debug_mode
+    _debug_mode = debug
