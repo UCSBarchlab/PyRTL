@@ -81,6 +81,7 @@ def optimize(update_working_block=True, block=None):
         block = copy.deepcopy(block)
     _remove_wire_nets(block)
     constant_propagation(block)
+    remove_unlistened_nets(block)
     return block
 
 
@@ -237,6 +238,9 @@ def remove_unlistened_nets(block):
                 listened_nets.add(net)
                 for arg_wire in net.args:
                     listened_wires_cur.add(arg_wire)
+
+    block.logic = listened_nets
+    remove_unused_wires(block, "unlistened net removal")
 
 
 def remove_unused_wires(block, parent_process_name):
