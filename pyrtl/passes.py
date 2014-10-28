@@ -103,9 +103,9 @@ def constant_prop_pass(block):
         def replace_net(new_net):
             nets_to_remove.add(net_checking)
             nets_to_add.add(new_net)
-            for arg_wire in net_checking.args:
-                if arg_wire not in new_net.args:
-                    wire_removal_set.add(arg_wire)
+            # for arg_wire in net_checking.args:
+            #     if arg_wire not in new_net.args:
+            #         wire_removal_set.add(arg_wire)
 
         def replace_net_with_const(const_val):
             new_const_wire = wire.Const(bitwidth=1, val=const_val, block=block)
@@ -120,7 +120,7 @@ def constant_prop_pass(block):
             else:
                 nets_to_remove.add(net_checking)
                 replacement_wires[net_checking.dests[0]] = new_wire
-                wire_removal_set.add(net_checking.dests)
+                # wire_removal_set.add(net_checking.dests)
 
         one_var_ops = {
             '~': lambda x: ~x,
@@ -185,7 +185,6 @@ def constant_prop_pass(block):
 
     replacement_wires = {}  # map from wire to its producer
     wire_add_set = set()
-    wire_removal_set = set()  # set of all wirevectors to be removed
     nets_to_add = set()
     nets_to_remove = set()
 
@@ -206,10 +205,17 @@ def constant_prop_pass(block):
     for new_wirevector in wire_add_set:
         block.add_wirevector(new_wirevector)
 
-    for dead_wirevector in wire_removal_set:
-        del block.wirevector_by_name[dead_wirevector.name]
-        block.wirevector_set.remove(dead_wirevector)
-        ## TODO: add warning about useless input wirevectors
+    all_wire_vectors = set()
+    for logic_net in new_logic:
+        all_wire_vectors.add(arg_wire for arg_wire in logic_net.args)
+        all_wire_vectors.add(dest_wire for dest_wire in logic_net.dests)
+
+    wire_removal_set = block.wirevector_set.difference(all_wire_vectors)
+    for removed_wire in wire_removal_set:
+        if isinstance(removed_wire, wire.Input):
+            print "Wire, " + removed_wire.name + " was removed by constant folding."
+
+    block.wirevector_set = all_wire_vectors
 
 
 #---------------------------------------------------------------------
