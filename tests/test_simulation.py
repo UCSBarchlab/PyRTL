@@ -2,6 +2,8 @@ import unittest
 import random
 import pyrtl
 import StringIO
+import os
+import subprocess
 
 from helperfunctions import *
 
@@ -132,7 +134,7 @@ class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
         # step through 15 cycles
         for i in xrange(15):  
             sim.step( {} )
-
+        
         # TODO: compare VCD output
 
 class TestRTLSimulationTraceWithMux(unittest.TestCase):

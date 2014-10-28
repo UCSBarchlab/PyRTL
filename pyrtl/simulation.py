@@ -211,7 +211,7 @@ class Simulation(object):
 
         Ready inputs will be fined in "defined_set" and if any
         inputs are not yet in this set, we know the we need to execute
-        the prededing ops first.  If the net is sucessfully exectuted
+        the preceding ops first.  If the net is successfully executed
         return True, otherwise return False so we can return to this net
         at a later time.
         """
@@ -335,12 +335,12 @@ class SimulationTrace(object):
         print >>file, " ".join(["$scope", "module logic", "$end"])
 
         # dump variables
-        for w in sorted(self.trace, key=trace_sort_key):
+        for w in self.trace:
             print >>file, " ".join(["$var", "wire", str(w.bitwidth), w.name, w.name, "$end"])
         print >>file, " ".join(["$upscope", "$end"])
-        print >>file, " ".join(["$endefinitions", "$end"])
+        print >>file, " ".join(["$enddefinitions", "$end"])
         print >>file, " ".join(["$dumpvars"])
-        for w in sorted(self.trace, key=trace_sort_key):
+        for w in self.trace:
             if w.bitwidth > 1:
                 print >>file, " ".join([str(bin(self.trace[w][0]))[1:], w.name])
             else:
@@ -351,7 +351,7 @@ class SimulationTrace(object):
         endtime = max([len(self.trace[w]) for w in self.trace])
         for timestamp in range(endtime):
             print >>file, "".join(["#", str(timestamp)])
-            for w in sorted(self.trace, key=trace_sort_key):
+            for w in self.trace:
                 if w.bitwidth > 1:
                     print >>file, " ".join([str(bin(self.trace[w][timestamp]))[1:], w.name])
                 else:

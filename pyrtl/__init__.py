@@ -39,6 +39,7 @@ from simulation import SimulationTrace
 from inputoutput import input_from_blif
 from inputoutput import output_to_trivialgraph
 from inputoutput import output_to_verilog
+from inputoutput import output_verilog_testbench
 
 # different analysis and transform passes
 from passes import synthesize
