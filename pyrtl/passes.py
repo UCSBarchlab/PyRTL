@@ -256,6 +256,9 @@ def remove_unused_wires(block, parent_process_name):
     for removed_wire in wire_removal_set:
         if isinstance(removed_wire, wire.Input):
             print "Input Wire, " + removed_wire.name + " was removed by " + parent_process_name
+        if isinstance(removed_wire, wire.Output):
+            core.PyrtlInternalError("Output wire, " + removed_wire.name +
+                                    "was disconnected by" + parent_process_name)
 
     block.wirevector_set = all_wire_vectors
 
