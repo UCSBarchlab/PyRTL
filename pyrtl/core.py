@@ -152,7 +152,7 @@ class Block(object):
         else:
             return None
 
-    def sanity_check(self):
+    def sanity_check(self, strict=False):
         """ Check block and throw PyrtlError or PyrtlInternalError if there is an issue.
 
         Should not modify anything, only check datastructures to make sure they have been
@@ -162,7 +162,7 @@ class Block(object):
 
         # check for valid LogicNets (and wires)
         for net in self.logic:
-            self.sanity_check_net(net)
+            self.sanity_check_net(net, strict)
 
         for w in self.wirevector_subset():
             if w.bitwidth is None:
@@ -184,23 +184,16 @@ class Block(object):
         full_set = dest_set | arg_set
         connected_minus_allwires = full_set.difference(self.wirevector_set)
         if len(connected_minus_allwires) > 0:
-            raise PyrtlError('Unknown wires found in net: %s' % repr(connected_minus_allwires))
+            bad_wire_names = '\n    '.join(str(x) for x in connected_minus_allwires)
+            raise PyrtlError('Unknown wires found in net:\n    %s' % bad_wire_names)
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         allwires_minus_connected = allwires_minus_connected.difference(
             self.wirevector_subset(wire.Input))
             # ^ allow inputs to be unconnected
         if len(allwires_minus_connected) > 0:
-            raise PyrtlError('Wires declared but not connected:%s' % repr(allwires_minus_connected))
+            bad_wire_names = '\n    '.join(str(x) for x in allwires_minus_connected)
+            raise PyrtlError('Wires declared but not connected:\n    %s' % bad_wire_names)
 
-        # Check for connection errors
-        '''
-        # Check for wires that are destinations of a logicNet, but are not outputs and are never
-        # used as args.
-        outs = dest_set.difference(arg_set)
-        unused = outs.difference(self.wirevector_subset(wire.Output))
-        if len(unused) > 0:
-            raise PyrtlError('Wires driven but never used: %s' % [w.name for w in unused])
-        '''
         # Check for wires that are inputs to a logicNet, but are not block inputs and are never
         # driven.
         ins = arg_set.difference(dest_set)
@@ -209,14 +202,22 @@ class Block(object):
         if len(undriven) > 0:
             raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
 
-    def sanity_check_wirevector(self, w):
+        if strict:
+            # Check for wires that are destinations of a logicNet, but are not outputs and are never
+            # used as args.
+            outs = dest_set.difference(arg_set)
+            unused = outs.difference(self.wirevector_subset(wire.Output))
+            if len(unused) > 0:
+                raise PyrtlError('Wires driven but never used: %s' % [w.name for w in unused])
+
+    def sanity_check_wirevector(self, w, strict=False):
         """ Check that w is a valid wirevector type. """
         if not isinstance(w, wire.WireVector):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
                 'instead of WireVector' % type(w))
 
-    def sanity_check_net(self, net):
+    def sanity_check_net(self, net, strict=False):
         """ Check that net is a valid LogicNet. """
 
         # general sanity checks that apply to all operations
@@ -227,7 +228,7 @@ class Block(object):
         if not isinstance(net.dests, tuple):
             raise PyrtlInternalError('error, LogicNet dests must be tuple')
         for w in net.args + net.dests:
-            self.sanity_check_wirevector(w)
+            self.sanity_check_wirevector(w, strict)
             if w not in self.wirevector_set:
                 raise PyrtlInternalError('error, net with unknown source "%s"' % w.name)
             if w.block is not self:

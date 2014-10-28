@@ -263,8 +263,6 @@ def remove_unused_wires(block, parent_process_name):
     block.wirevector_set = all_wire_vectors
 
 
-
-
 #---------------------------------------------------------------------
 #    __           ___       ___  __     __
 #   /__` \ / |\ |  |  |__| |__  /__` | /__`
