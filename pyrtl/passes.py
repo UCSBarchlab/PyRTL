@@ -212,8 +212,10 @@ def constant_prop_pass(block):
 
     all_wire_vectors = set()
     for logic_net in new_logic:
-        all_wire_vectors.add(arg_wire for arg_wire in logic_net.args)
-        all_wire_vectors.add(dest_wire for dest_wire in logic_net.dests)
+        for arg_wire in logic_net.args:
+            all_wire_vectors.add(arg_wire)
+        for dest_wire in logic_net.dests: 
+            all_wire_vectors.add(dest_wire)
 
     wire_removal_set = block.wirevector_set.difference(all_wire_vectors)
     for removed_wire in wire_removal_set:
