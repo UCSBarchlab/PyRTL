@@ -29,14 +29,14 @@ sum, cout = add(counter, pyrtl.Const("3'b001"))
 counter.next <<= sum
 
 print '\nBefore Synthesis:'
-#pyrtl.output_to_verilog(sys.stdout)
+# pyrtl.output_to_verilog(sys.stdout)
 print pyrtl.working_block()
 
 pyrtl.synthesize()
 pyrtl.optimize()
 
 print '\nAfter Synthesis:'
-#pyrtl.output_to_verilog(sys.stdout)
+# pyrtl.output_to_verilog(sys.stdout)
 print pyrtl.working_block()
 print
 

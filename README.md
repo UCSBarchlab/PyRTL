@@ -1,6 +1,8 @@
 PyRTL
 =====
 
+[![Build Status](https://magnum.travis-ci.com/UCSBarchlab/PyRTL.svg?token=XAZcwAigXaYVLzkPHGNx)](https://magnum.travis-ci.com/UCSBarchlab/PyRTL)
+
 A collection of classes providing simple RTL specification, simulation, tracing, and testing suitable for teaching and research. 
 Simplicity, usability, clarity, and extendibility rather than performance or optimization is the overarching goal.
 
