@@ -223,6 +223,30 @@ def constant_prop_pass(block):
     block.wirevector_set = all_wire_vectors
 
 
+def remove_unlistened_nets(block):
+    """
+    Removes all nets that are not connected to an output wirevector
+    """
+
+    listened_nets = set()
+    listened_wires = set()
+    prev_listened_net_count = 0
+
+    for a_net in block:
+        if isinstance(a_net.dests[0], wire.Output):
+            listened_nets.add(a_net)
+
+
+    while len(listened_nets) > prev_listened_net_count:
+        prev_listened_net_count = len(listened_nets)
+
+
+
+
+
+
+
+
 #---------------------------------------------------------------------
 #    __           ___       ___  __     __
 #   /__` \ / |\ |  |  |__| |__  /__` | /__`
