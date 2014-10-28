@@ -214,7 +214,7 @@ def constant_prop_pass(block):
     for logic_net in new_logic:
         for arg_wire in logic_net.args:
             all_wire_vectors.add(arg_wire)
-        for dest_wire in logic_net.dests: 
+        for dest_wire in logic_net.dests:
             all_wire_vectors.add(dest_wire)
 
     wire_removal_set = block.wirevector_set.difference(all_wire_vectors)
@@ -231,20 +231,25 @@ def remove_unlistened_nets(block):
     """
 
     listened_nets = set()
-    listened_wires = set()
+    listened_wires_cur = set()
     prev_listened_net_count = 0
 
-    for a_net in block:
+    for a_net in block.logic:
         if isinstance(a_net.dests[0], wire.Output):
             listened_nets.add(a_net)
-
+            for arg_wire in a_net.args:
+                listened_wires_cur.add(arg_wire)
 
     while len(listened_nets) > prev_listened_net_count:
         prev_listened_net_count = len(listened_nets)
+        listened_wires_prev = listened_wires_cur
 
-
-
-
+        for net in block.logic:
+            if (net.dests[0] in listened_wires_prev) and net not in listened_nets:
+                listened_nets.add(net)
+                for arg_wire in net.args:
+                    listened_wires_cur.add(arg_wire)
+    
 
 
 
