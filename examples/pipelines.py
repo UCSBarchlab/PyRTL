@@ -190,7 +190,7 @@ class MipsCore(Pipeline):
 
 
 testcore = TrivialPipelineExample()
-#testcore = MipsCore(addrwidth=5)
+# testcore = MipsCore(addrwidth=5)
 
 # Simulation of the core
 sim_trace = SimulationTrace()

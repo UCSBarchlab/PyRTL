@@ -18,7 +18,7 @@ import re
 import wire
 
 
-#-----------------------------------------------------------------
+# -----------------------------------------------------------------
 #   ___  __   __   __   __  ___      __   ___  __
 #  |__  |__) |__) /  \ |__)  |  \ / |__) |__  /__`
 #  |___ |  \ |  \ \__/ |  \  |   |  |    |___ .__/
@@ -34,7 +34,7 @@ class PyrtlInternalError(Exception):
     pass
 
 
-#-----------------------------------------------------------------
+# -----------------------------------------------------------------
 #    __        __   __
 #   |__) |    /  \ /  ` |__/
 #   |__) |___ \__/ \__, |  \
@@ -189,7 +189,7 @@ class Block(object):
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         allwires_minus_connected = allwires_minus_connected.difference(
             self.wirevector_subset(wire.Input))
-            # ^ allow inputs to be unconnected
+        #   ^ allow inputs to be unconnected
         if len(allwires_minus_connected) > 0:
             bad_wire_names = '\n    '.join(str(x) for x in allwires_minus_connected)
             raise PyrtlError('Wires declared but not connected:\n    %s' % bad_wire_names)
@@ -316,7 +316,7 @@ class Block(object):
         return cls._memid_count
 
 
-#------------------------------------------------------------------------
+# -----------------------------------------------------------------------
 #          __   __               __      __        __   __
 #    |  | /  \ |__) |__/ | |\ | / _`    |__) |    /  \ /  ` |__/
 #    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \

@@ -1,0 +1,15 @@
+language: python
+python:
+  - "2.7"
+# command to install dependencies
+install: "pip install -r requirements.txt"
+
+# don't test branches that might not build
+branches:
+  only:
+    - master
+    - development
+    - feature/ci
+
+# command to run tests
+script: ./checkcode
