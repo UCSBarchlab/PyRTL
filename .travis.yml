@@ -9,7 +9,6 @@ branches:
   only:
     - master
     - development
-    - feature/ci
 
 # command to run tests
 script: ./checkcode
