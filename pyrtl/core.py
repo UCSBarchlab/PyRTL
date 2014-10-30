@@ -315,6 +315,21 @@ class Block(object):
         cls._memid_count += 1
         return cls._memid_count
 
+    def iter(self):
+        """Return a generator object that yields the block's LogicNets in topological order.
+        A LogicNet is never returned before all of its dependent LogicNets have been seen;
+        this is the only guarantee on the order of the returned LogicNets."""
+        cleared = self.wirevector_subset(wire.Input)
+        remaining = self.logic.copy()
+
+        while len(remaining) != 0:
+            for gate in remaining:  # loop over logicnets not yet returned
+                if all([arg in cleared for arg in gate.args]):  # if all args ready
+                    cleared.update(set(gate.dests))  # add dests to set of ready wires
+                    remaining.remove(gate)  # remove gate from set of to return
+                    yield gate
+                    break
+
 
 # -----------------------------------------------------------------------
 #          __   __               __      __        __   __
