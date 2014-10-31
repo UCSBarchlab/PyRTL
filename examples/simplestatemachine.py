@@ -61,6 +61,57 @@ refund <<= state == REFUND
 sim_trace = SimulationTrace()
 sim = Simulation(tracer=sim_trace)
 
+
+def getGen(inputs):
+    def f(vals):
+        return {inp: val for inp, val in zip(inputs, vals)}
+    return f
+
+
+def parseTable(s):
+    s = s.split('\n')
+    names = []
+    while names == []:
+        names = s[0].strip().split()
+        s = s[1:]
+
+    wnames = pyrtl.working_block().wirevector_by_name
+    ins = [wnames[n] for n in names]
+    f = getGen(ins)
+
+    def next():
+        for line in s:
+            vals = line.strip().split()
+            if vals != []:
+                yield f(map(int, vals))
+
+    return next
+
+testvals = '''
+token_in req_refund
+0 1
+0 1
+1 0
+0 0
+1 0
+0 1
+0 0
+1 0
+1 0
+1 0
+0 0
+1 0
+0 0
+0 0
+0 0
+0 0
+'''
+
+f = parseTable(testvals)
+for x in f():
+    sim.step(x)
+
+"""
 vals = {  # dictionary of values to assign in each cycle
     0: {token_in: 0, req_refund: 1},
     1: {token_in: 0, req_refund: 1},
@@ -82,6 +133,7 @@ vals = {  # dictionary of values to assign in each cycle
 
 for i in range(len(vals)):
     sim.step(vals[i])
+"""
 
 sim_trace.render_trace()
 
