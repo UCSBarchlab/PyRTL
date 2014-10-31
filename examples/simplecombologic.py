@@ -15,7 +15,7 @@ print pyrtl.working_block()
 
 # iterate through gates in topological order
 print "In order:"
-for g in pyrtl.working_block().iter():
+for g in pyrtl.working_block():
     print g
 
 # output the hardware as verilog
