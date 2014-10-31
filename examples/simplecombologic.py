@@ -13,6 +13,11 @@ cout <<= a & b | a & c | b & c
 
 print pyrtl.working_block()
 
+# iterate through gates in topological order
+print "In order:"
+for g in pyrtl.working_block():
+    print g
+
 # output the hardware as verilog
 f = open('tm.v', 'w')
 pyrtl.output_to_verilog(f)

@@ -15,7 +15,7 @@ import wire
 import helperfuncs
 
 
-#-----------------------------------------------------------------
+# -----------------------------------------------------------------
 #            __       ___
 #    | |\ | |__) |  |  |
 #    | | \| |    \__/  |
@@ -151,7 +151,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
             output_wire = twire(netio[0])
             output_wire <<= wire.Const(1, bitwidth=1, block=block)  # const "TRUE"
         elif command['cover_list'].asList() == ['1', '1']:
-            #Populate clock list if one input is already a clock
+            # Populate clock list if one input is already a clock
             if(netio[1] in clk_set):
                 clk_set.add(netio[0])
             elif(netio[0] in clk_set):
@@ -183,7 +183,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         if(command['C'] not in ff_clk_set):
             ff_clk_set.add(command['C'])
 
-        #Create register and assign next state to D and output to Q
+        # Create register and assign next state to D and output to Q
         regname = command['Q'] + '_reg'
         flop = wire.Register(bitwidth=1, name=regname)
         flop.next <<= twire(command['D'])
@@ -196,7 +196,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         extract_commands(model)
 
 
-#-----------------------------------------------------------------
+# ----------------------------------------------------------------
 #    __       ___  __       ___
 #   /  \ |  |  |  |__) |  |  |
 #   \__/ \__/  |  |    \__/  |
@@ -278,7 +278,7 @@ def output_to_trivialgraph(file, block):
     for (frm, to) in sorted(edges):
         print >> file, frm, to, edge_names.get((frm, to), '')
 
-#-----------------------------------------------------------------
+# ----------------------------------------------------------------
 #         ___  __          __   __
 #   \  / |__  |__) | |    /  \ / _`
 #    \/  |___ |  \ | |___ \__/ \__>
@@ -406,21 +406,21 @@ def output_verilog_testbench(file, block=None, simulation_trace=None):
 
     # Move through all steps of trace, writing out input assignments per cycle
     print >> file, "\tinitial begin\n"
-    print >> file, '\t$dumpfile ("waveform.vcd");'
-    print >> file, '$dumpvars;'
+    print >> file, '\t\t$dumpfile ("waveform.vcd");'
+    print >> file, '\t\t$dumpvars;\n'
 
-    print >> file, "\t\tclk = 0;"
+    print >> file, "\t\tclk = 0;\n"
 
     w = inputs.pop()  # get length of simulation
     simlen = len(trace[w])
     inputs.add(w)
 
     for i in range(simlen):
-        print >> file, "\t\t#1"
         for w in inputs:
             print >> file, "\t\t{:s} = {:s}{:d};".format(
                 w.name, "{:d}'d".format(len(w)), trace[w][i])
         print >> file, ""
+        print >> file, "\t\t#2"
 
     # Footer
     print >> file, "\t\t$finish;"

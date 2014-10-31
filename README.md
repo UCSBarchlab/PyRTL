@@ -1,6 +1,8 @@
 PyRTL
 =====
 
+[![Build Status](https://magnum.travis-ci.com/UCSBarchlab/PyRTL.svg?token=XAZcwAigXaYVLzkPHGNx)](https://magnum.travis-ci.com/UCSBarchlab/PyRTL)
+
 A collection of classes providing simple RTL specification, simulation, tracing, and testing suitable for teaching and research. 
 Simplicity, usability, clarity, and extendibility rather than performance or optimization is the overarching goal.
 
@@ -20,7 +22,6 @@ pyrtl and defines its semantics at a high level.
 
 * all public functions and methods should have useful docstrings
 * should have set of unit tests for all main abstractions
-* add a -Wall option which warns on truncation
 * change "tmp" and "const" "'" names to be more pyrtl specific to avoid confusion
 
 ### Bigger todo projects
@@ -39,6 +40,6 @@ add debug mode, where we track call stack for each wirevector initiated (and
 where all errors thrown tell you where the wire was instantiated that is causing
 the problem)
 
-**C Code Model:**
-add a pass to print out the block as a set of C code that implement the 
+**Python Code Model:**
+add a pass to print out the block as a set of Python code that implement the 
 hardware block (useful for longer running tests -- like a processor model)

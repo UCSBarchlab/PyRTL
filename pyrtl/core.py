@@ -18,7 +18,7 @@ import re
 import wire
 
 
-#-----------------------------------------------------------------
+# -----------------------------------------------------------------
 #   ___  __   __   __   __  ___      __   ___  __
 #  |__  |__) |__) /  \ |__)  |  \ / |__) |__  /__`
 #  |___ |  \ |  \ \__/ |  \  |   |  |    |___ .__/
@@ -34,7 +34,7 @@ class PyrtlInternalError(Exception):
     pass
 
 
-#-----------------------------------------------------------------
+# -----------------------------------------------------------------
 #    __        __   __
 #   |__) |    /  \ /  ` |__/
 #   |__) |___ \__/ \__, |  \
@@ -152,6 +152,12 @@ class Block(object):
         else:
             return None
 
+    def __iter__(self):
+        """Return a generator object that yields the block's LogicNets in topological order.
+        A LogicNet is never returned before all of its dependent LogicNets have been seen;
+        this is the only guarantee on the order of the returned LogicNets."""
+        return BlockIterator(self)
+
     def sanity_check(self):
         """ Check block and throw PyrtlError or PyrtlInternalError if there is an issue.
 
@@ -184,23 +190,16 @@ class Block(object):
         full_set = dest_set | arg_set
         connected_minus_allwires = full_set.difference(self.wirevector_set)
         if len(connected_minus_allwires) > 0:
-            raise PyrtlError('Unknown wires found in net: %s' % repr(connected_minus_allwires))
+            bad_wire_names = '\n    '.join(str(x) for x in connected_minus_allwires)
+            raise PyrtlError('Unknown wires found in net:\n    %s' % bad_wire_names)
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         allwires_minus_connected = allwires_minus_connected.difference(
             self.wirevector_subset(wire.Input))
-            # ^ allow inputs to be unconnected
+        #   ^ allow inputs to be unconnected
         if len(allwires_minus_connected) > 0:
-            raise PyrtlError('Wires declared but not connected:%s' % repr(allwires_minus_connected))
+            bad_wire_names = '\n    '.join(str(x) for x in allwires_minus_connected)
+            raise PyrtlError('Wires declared but not connected:\n    %s' % bad_wire_names)
 
-        # Check for connection errors
-        '''
-        # Check for wires that are destinations of a logicNet, but are not outputs and are never
-        # used as args.
-        outs = dest_set.difference(arg_set)
-        unused = outs.difference(self.wirevector_subset(wire.Output))
-        if len(unused) > 0:
-            raise PyrtlError('Wires driven but never used: %s' % [w.name for w in unused])
-        '''
         # Check for wires that are inputs to a logicNet, but are not block inputs and are never
         # driven.
         ins = arg_set.difference(dest_set)
@@ -208,6 +207,14 @@ class Block(object):
         undriven = ins.difference(self.wirevector_subset(wire.Const))
         if len(undriven) > 0:
             raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
+
+        if _debug_mode:
+            # Check for wires that are destinations of a logicNet, but are not outputs and are never
+            # used as args.
+            outs = dest_set.difference(arg_set)
+            unused = outs.difference(self.wirevector_subset(wire.Output))
+            if len(unused) > 0:
+                print 'Warning: Wires driven but never used { %s }' % [w.name for w in unused]
 
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
@@ -315,7 +322,29 @@ class Block(object):
         return cls._memid_count
 
 
-#------------------------------------------------------------------------
+class BlockIterator():
+    """ BlockIterator iterates over the block passed on init in topographic order.
+        The input is a Block, and when a LogicNet is returned it is always the case
+        that all of it's "parents" have already been returned earlier in the iteration. """
+
+    def __init__(self, block):
+        self.block = block
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        cleared = self.block.wirevector_subset(wire.Input)
+        remaining = self.block.logic.copy()
+        while len(remaining) > 0:
+            for gate in remaining:  # loop over logicnets not yet returned
+                if all([arg in cleared for arg in gate.args]):  # if all args ready
+                    cleared.update(set(gate.dests))  # add dests to set of ready wires
+                    remaining.remove(gate)  # remove gate from set of to return
+                    yield gate
+        raise StopIteration
+
+# -----------------------------------------------------------------------
 #          __   __               __      __        __   __
 #    |  | /  \ |__) |__/ | |\ | / _`    |__) |    /  \ /  ` |__/
 #    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \
@@ -325,6 +354,7 @@ class Block(object):
 # block, but in the future we should support multiple Blocks.
 # The argument "singleton_block" should never be passed.
 _singleton_block = Block()
+_debug_mode = False
 
 
 def working_block(block=None):
@@ -357,3 +387,8 @@ def set_working_block(block):
         raise PyrtlError('error, expected instance of Block as block argument')
     block.sanity_check()
     _singleton_block = block
+
+
+def set_debug_mode(debug=True):
+    global _debug_mode
+    _debug_mode = debug

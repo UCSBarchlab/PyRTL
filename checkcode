@@ -1,22 +1,38 @@
-#!/bin/tcsh
+#!/bin/bash
 
 # Packages required (and Ubuntu/Debian style packages)
 # Python nose tests (apt-get install python-nose)
 # Python pep8 style checker (apt-get install pep8)
 # Pylint error checker (apt-get install pylint)
 
+# check exit code
+function check_exit_code {
+    exit_status=$1
+    if [[ $exit_status != 0 ]]; then
+        echo $2
+        exit $exit_status
+    fi
+}
+
 echo 
 echo ===== Running NoseTests ==============================================
 nosetests
+check_exit_code $? 'PyRTL core nose tests failed. Exiting'
 
 echo 
 echo ===== Checking PEP8 Style ============================================
 pep8 --max-line-length=100 pyrtl/*.py
+check_exit_code $? 'PyRTL core pep8 check failed. Exiting.'
 pep8 --max-line-length=100 examples/*.py
+check_exit_code $? 'PyRTL examples pep8 check failed. Exiting.'
 
 echo 
 echo ===== Checking for Common Errors =====================================
 pylint -E pyrtl/*.py
+check_exit_code $? 'PyRTL core lint check failed. Exiting.'
 pylint -E examples/*.py
+check_exit_code $? 'PyRTL example link check failed. Exiting.'
 
-echo 
+echo 'Tests passed.'
+echo
+exit 0
