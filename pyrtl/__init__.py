@@ -6,6 +6,7 @@ from core import PyrtlError
 from core import PyrtlInternalError
 from core import working_block
 from core import reset_working_block
+from core import set_debug_mode
 
 # convenience classes for building hardware
 from wire import WireVector

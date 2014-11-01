@@ -11,6 +11,7 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
 
     def setUp(self):
         pyrtl.reset_working_block()
+        pyrtl.set_debug_mode(True)
         self.bitwidth = 3
         self.r = pyrtl.Register(bitwidth=self.bitwidth, name='r')
     

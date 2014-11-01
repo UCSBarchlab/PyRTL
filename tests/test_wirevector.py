@@ -7,7 +7,8 @@ from helperfunctions import *
 class TestWireVector(unittest.TestCase):
 
     def setUp(self):
-        pyrtl.reset_working_block()    
+        pyrtl.reset_working_block()
+        pyrtl.set_debug_mode(True)
     
     def tearDown(self):
         pyrtl.reset_working_block()    
