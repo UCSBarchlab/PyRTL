@@ -13,7 +13,7 @@ class TestPasses(unittest.TestCase):
     def tearDown(self):
         pyrtl.reset_working_block()    
 
-    def test_optimiziation_wire_on_inpu(self):
+    def test_optimiziation_wire_on_input(self):
         inwire = pyrtl.Input(bitwidth=3)
         tempwire = pyrtl.WireVector()
         outwire = pyrtl.Output()
@@ -24,7 +24,7 @@ class TestPasses(unittest.TestCase):
         result = str(pyrtl.working_block())
         self.assertTrue(result.startswith("tmp3/3O <-- w -- tmp1/3I"))
 
-    def test_optimiziation_wire_on_inpu(self):
+    def test_optimiziation_wire_on_input_2(self):
         inwire = pyrtl.Input(bitwidth=3)
         tempwire = pyrtl.WireVector()
         tempwire2 = pyrtl.WireVector()
@@ -35,7 +35,7 @@ class TestPasses(unittest.TestCase):
         pyrtl.optimize()
         # should remove the middle wires but keep the input
         result = str(pyrtl.working_block())
-        self.assertTrue(result.startswith("tmp4/3O <-- w -- tmp1/3I"))
+        self.assertTrue(result.startswith("tmp7/3O <-- w -- tmp4/3I"))
 
     def test_sanity_check(self): 
         testmissing()
