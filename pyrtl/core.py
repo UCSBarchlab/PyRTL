@@ -208,7 +208,7 @@ class Block(object):
         if len(undriven) > 0:
             raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
 
-        if _debug_mode:
+        if debug_mode:
             # Check for wires that are destinations of a logicNet, but are not outputs and are never
             # used as args.
             outs = dest_set.difference(arg_set)
@@ -354,7 +354,7 @@ class BlockIterator():
 # block, but in the future we should support multiple Blocks.
 # The argument "singleton_block" should never be passed.
 _singleton_block = Block()
-_debug_mode = False
+debug_mode = False
 
 
 def working_block(block=None):
@@ -390,5 +390,5 @@ def set_working_block(block):
 
 
 def set_debug_mode(debug=True):
-    global _debug_mode
-    _debug_mode = debug
+    global debug_mode
+    debug_mode = debug

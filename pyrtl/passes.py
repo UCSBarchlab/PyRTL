@@ -72,16 +72,24 @@ def _remove_wire_nets(block):
 
 def optimize(update_working_block=True, block=None):
     """ Return an optimized version of a synthesized hardware block. """
-
     block = core.working_block(block)
     for net in block.logic:
         if net.op not in set('r|&~^w'):
             raise core.PyrtlError('error, optimization only works on post-synthesis blocks')
     if not update_working_block:
         block = copy.deepcopy(block)
-    _remove_wire_nets(block)
-    constant_propagation(block)
-    remove_unlistened_nets(block)
+
+    if core.debug_mode:
+        block.sanity_check()
+        _remove_wire_nets(block)
+        block.sanity_check()
+        constant_propagation(block)
+        block.sanity_check()
+        remove_unlistened_nets(block)
+    else:
+        _remove_wire_nets(block)
+        constant_propagation(block)
+        remove_unlistened_nets(block)
     return block
 
 
