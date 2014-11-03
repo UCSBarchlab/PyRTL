@@ -87,7 +87,6 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.r.next <<= 1 + self.r 
         self.check_trace('r 01234567\n')
 
-
 class TestRTLSimulationTraceWithAdder(unittest.TestCase):
 
     def setUp(self):
@@ -114,6 +113,47 @@ class TestRTLSimulationTraceWithAdder(unittest.TestCase):
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
 
+VCD_OUTPUT = """$timescale 1ns $end
+$scope module logic $end
+$var wire 3 r r $end
+$upscope $end
+$enddefinitions $end
+$dumpvars
+b0 r
+$end
+#0
+b0 r
+#1
+b1 r
+#2
+b10 r
+#3
+b11 r
+#4
+b100 r
+#5
+b101 r
+#6
+b110 r
+#7
+b111 r
+#8
+b0 r
+#9
+b1 r
+#10
+b10 r
+#11
+b11 r
+#12
+b100 r
+#13
+b101 r
+#14
+b110 r
+#15
+"""
+
 class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
 
     def setUp(self):
@@ -126,7 +166,7 @@ class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
     def tearDown(self):
         pass
         
-    def test_adder_simulation(self):
+    def test_vcd_output(self):
         sim_trace = pyrtl.SimulationTrace()
         on_reset = {} # signal states to be set when reset is asserted
         # build the actual simulation environment
@@ -135,22 +175,10 @@ class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
         # step through 15 cycles
         for i in xrange(15):  
             sim.step( {} )
-            
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        # generate output from this test case
-        with open(os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_1.vcd"), "w") as fd:
-            sim_trace.print_vcd(fd)
         
-        # TODO: Remove this Java!
-        #with open(os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_comparevcd_log.txt"), "w") as fd:
-        #    compare_result = subprocess.call(["java", "-jar", os.path.join(current_dir, "comparevcd.jar"), 
-        #        os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder.vcd"), 
-        #        os.path.join(current_dir, "TestRTLSimulationTraceVCDWithAdder_1.vcd")], stdout=fd)
-        #self.assertEqual(compare_result, 0)
-
-        # generate initial vcd output
-        #with open(os.path.join(os.path.dirname(os.path.realpath(__file__)),"TestRTLSimulationTraceWithAdder.vcd"), "w") as fd:
-        #    sim_trace.print_vcd(fd)
+        test_output = StringIO.StringIO()
+        sim_trace.print_vcd(test_output)
+        self.assertEquals(VCD_OUTPUT, test_output.getvalue())
 
 class TestRTLSimulationTraceWithMux(unittest.TestCase):
 
