@@ -1,6 +1,7 @@
 
 # core rtl constructs
 from core import Block
+from core import BlockIterator
 from core import PyrtlError
 from core import PyrtlInternalError
 from core import working_block

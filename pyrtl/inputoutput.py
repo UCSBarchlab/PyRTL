@@ -406,21 +406,21 @@ def output_verilog_testbench(file, block=None, simulation_trace=None):
 
     # Move through all steps of trace, writing out input assignments per cycle
     print >> file, "\tinitial begin\n"
-    print >> file, '\t$dumpfile ("waveform.vcd");'
-    print >> file, '$dumpvars;'
+    print >> file, '\t\t$dumpfile ("waveform.vcd");'
+    print >> file, '\t\t$dumpvars;\n'
 
-    print >> file, "\t\tclk = 0;"
+    print >> file, "\t\tclk = 0;\n"
 
     w = inputs.pop()  # get length of simulation
     simlen = len(trace[w])
     inputs.add(w)
 
     for i in range(simlen):
-        print >> file, "\t\t#1"
         for w in inputs:
             print >> file, "\t\t{:s} = {:s}{:d};".format(
                 w.name, "{:d}'d".format(len(w)), trace[w][i])
         print >> file, ""
+        print >> file, "\t\t#2"
 
     # Footer
     print >> file, "\t\t$finish;"

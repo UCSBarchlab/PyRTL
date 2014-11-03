@@ -152,6 +152,12 @@ class Block(object):
         else:
             return None
 
+    def __iter__(self):
+        """Return a generator object that yields the block's LogicNets in topological order.
+        A LogicNet is never returned before all of its dependent LogicNets have been seen;
+        this is the only guarantee on the order of the returned LogicNets."""
+        return BlockIterator(self)
+
     def sanity_check(self):
         """ Check block and throw PyrtlError or PyrtlInternalError if there is an issue.
 
@@ -315,6 +321,28 @@ class Block(object):
         cls._memid_count += 1
         return cls._memid_count
 
+
+class BlockIterator():
+    """ BlockIterator iterates over the block passed on init in topographic order.
+        The input is a Block, and when a LogicNet is returned it is always the case
+        that all of it's "parents" have already been returned earlier in the iteration. """
+
+    def __init__(self, block):
+        self.block = block
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        cleared = self.block.wirevector_subset(wire.Input)
+        remaining = self.block.logic.copy()
+        while len(remaining) > 0:
+            for gate in remaining:  # loop over logicnets not yet returned
+                if all([arg in cleared for arg in gate.args]):  # if all args ready
+                    cleared.update(set(gate.dests))  # add dests to set of ready wires
+                    remaining.remove(gate)  # remove gate from set of to return
+                    yield gate
+        raise StopIteration
 
 # -----------------------------------------------------------------------
 #          __   __               __      __        __   __
