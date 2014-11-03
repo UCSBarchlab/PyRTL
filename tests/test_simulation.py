@@ -86,7 +86,6 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.r.next <<= 1 + self.r 
         self.check_trace('r 01234567\n')
 
-
 class TestRTLSimulationTraceWithAdder(unittest.TestCase):
 
     def setUp(self):
@@ -113,6 +112,47 @@ class TestRTLSimulationTraceWithAdder(unittest.TestCase):
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
 
+VCD_OUTPUT = """$timescale 1ns $end
+$scope module logic $end
+$var wire 3 r r $end
+$upscope $end
+$enddefinitions $end
+$dumpvars
+b0 r
+$end
+#0
+b0 r
+#1
+b1 r
+#2
+b10 r
+#3
+b11 r
+#4
+b100 r
+#5
+b101 r
+#6
+b110 r
+#7
+b111 r
+#8
+b0 r
+#9
+b1 r
+#10
+b10 r
+#11
+b11 r
+#12
+b100 r
+#13
+b101 r
+#14
+b110 r
+#15
+"""
+
 class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
 
     def setUp(self):
@@ -135,7 +175,9 @@ class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
         for i in xrange(15):  
             sim.step( {} )
         
-        # TODO: compare VCD output
+        test_output = StringIO.StringIO()
+        sim_trace.print_vcd(test_output)
+        self.assertEquals(VCD_OUTPUT, test_output.getvalue())
 
 class TestRTLSimulationTraceWithMux(unittest.TestCase):
 
