@@ -33,6 +33,14 @@ check_exit_code $? 'PyRTL core lint check failed. Exiting.'
 pylint -E examples/*.py
 check_exit_code $? 'PyRTL example link check failed. Exiting.'
 
+echo
 echo 'Tests passed.'
 echo
+
+echo ===== Building documentation =====================================
+cd docs
+make html
+cd ..
+check_exit_code $? "Docs failed to build. Exiting."
+
 exit 0

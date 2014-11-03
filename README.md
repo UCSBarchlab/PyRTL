@@ -16,7 +16,9 @@ In the package you should find the following files and Directories
 If you are just getting started with pyrtl it is suggested that you start with the examples first,
 to get and sense of the "thinking with pyrtls" required to design hardware in this way.  Then 
 dive into the code for the object Block, which is the core data structure at the heart of 
-pyrtl and defines its semantics at a high level.   
+pyrtl and defines its semantics at a high level.
+
+The docs are also available, just run `./checkcode` once and it will build the documentation for you (under the **docs/** directory). Requires [Sphinx](http://sphinx-doc.org/).
 
 ### Near-term todo list
 
