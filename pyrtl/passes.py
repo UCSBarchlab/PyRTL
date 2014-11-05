@@ -358,7 +358,7 @@ def _decompose(net, wv_map, block_out):
         for i in range(1, len(net.args[0])):
             temp_result = temp_result | (arg(0, i) ^ arg(1, i))
         assign_dest(0, ~temp_result)
-    elif net.op == 'm':
+    elif net.op == 'x':
         for i in destlen():
             muxed_bit = ~arg(0, 0) & arg(1, i) | arg(0, 0) & arg(2, i)
             assign_dest(i, muxed_bit)
