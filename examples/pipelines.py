@@ -36,11 +36,26 @@ class Pipeline(object):
             next_stage = self._current_stage_num + 1
             pipereg_id = str(self._current_stage_num) + 'to' + str(next_stage)
             rname = 'pipereg_' + pipereg_id + '_' + name
-            new_pipereg = rtype(bitwidth=len(value), name=rname)
             if next_stage not in self._pipeline_register_map:
                 self._pipeline_register_map[next_stage] = {}
-            self._pipeline_register_map[next_stage][name] = new_pipereg
-            new_pipereg.next <<= value
+            if name not in self._pipeline_register_map[next_stage]:
+                new_pipereg = rtype(bitwidth=len(value), name=rname)
+                self._pipeline_register_map[next_stage][name] = new_pipereg
+                new_pipereg.next <<= value
+            else:
+                self._pipeline_register_map[next_stage][name].next <<= value
+
+    def route_future_pipeline_reg(self, stage, bitwidth, name, rtype=Register):
+        next_stage = stage + 1
+
+        if next_stage not in self._pipeline_register_map:
+            self._pipeline_register_map[next_stage] = {}
+
+        pipereg_id = str(stage) + 'to' + str(next_stage)
+        rname = 'pipereg_' + pipereg_id + '_' + name
+        new_pipereg = rtype(bitwidth=bitwidth, name=rname)
+        self._pipeline_register_map[next_stage][name] = new_pipereg
+        return new_pipereg
 
 
 def switch(ctrl, logic_dict):
