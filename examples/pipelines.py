@@ -182,6 +182,47 @@ class MipsCore(Pipeline):
         self._regwrite <<= self.wb_ctrl(self.opcode)
         self._write_data <<= mux(self._regwrite, self.alu_result, self.read_data)
 
+    def main_decoder(self, opcode):
+        #                       SIGNALS
+        #          O O O O O O  A A A B M M R R
+        #          P P P P P P  L L L R E E E E
+        #          C C C C C C  U U U A M M G G
+        #          O O O O O O  O O S N T W D W
+        #          D D D D D D  P P R C R R S R
+        #  Inst    E E E E E E  1 0 C H G I T I
+        #          5 4 3 2 1 0
+        # -------------------------------------
+        # R-format 0 0 0 0 0 0  1 0 0 0 0 0 1 1
+        # lw       1 0 0 0 1 1  0 0 1 0 1 0 0 1
+        # sw       1 0 1 0 1 1  0 0 1 0 X 1 X 0
+        # beq      0 0 1 1 0 0  0 1 0 1 X 0 X 0
+        # addi     0 0 1 0 0 0  0 0 1 0 0 0 0 1
+
+        oc = opcode
+
+        r_format_inst = ~oc[5] & ~oc[4] & ~oc[3] & ~oc[2] & ~oc[1] & ~oc[0]
+        lw_inst = oc[5] & ~oc[4] & ~oc[3] & ~oc[2] & oc[1] & oc[0]
+        sw_inst = oc[5] & ~oc[4] & oc[3] & ~oc[2] & oc[1] & oc[0]
+        beq_inst = ~oc[5] & ~oc[4] & oc[3] & oc[2] & ~oc[1] & ~oc[0]
+        addi_inst = ~oc[5] & ~oc[4] & oc[3] & ~oc[2] & ~oc[1] & ~oc[0]
+
+        control_signals = {}
+
+        control_signals["aluop0"] = beq_inst
+        control_signals["aluop1"] = r_format_inst
+
+        control_signals["alusrc"] = lw_inst | sw_inst | addi_inst
+
+        control_signals["branch"] = beq_inst
+
+        control_signals["memtoreg"] = lw_inst
+        control_signals["memwrite"] = sw_inst
+
+        control_signals["regdest"] = r_format_inst
+        control_signals["regwrite"] = r_format_inst | lw_inst | addi_inst
+
+        return control_signals
+
     def alu_ctrl(self, opcode, immed):
         # A A
         # L L
