@@ -21,11 +21,11 @@ class Pipeline(object):
             self._current_stage_num += 1
 
     def __getattr__(self, name):
-            try:
-                return self._pipeline_register_map[self._current_stage_num][name]
-            except KeyError:
-                raise PyrtlError('error, no pipeline register "%s" defined for stage %d'
-                                 % (name, self._current_stage_num))
+        try:
+            return self._pipeline_register_map[self._current_stage_num][name]
+        except KeyError:
+            raise PyrtlError('error, no pipeline register "%s" defined for stage %d'
+                             % (name, self._current_stage_num))
 
     def __setattr__(self, name, value):
         if name.startswith('_'):
