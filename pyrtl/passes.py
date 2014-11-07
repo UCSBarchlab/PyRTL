@@ -124,7 +124,7 @@ def constant_prop_pass(block):
         def replace_net_with_const(const_val):
             new_const_wire = wire.Const(bitwidth=1, val=const_val, block=block)
             wire_add_set.add(new_const_wire)
-            replace_net_with_wire(const_wire)
+            replace_net_with_wire(new_const_wire)
 
         def replace_net_with_wire(new_wire):
             if isinstance(net_checking.dests[0], wire.Output):
@@ -137,7 +137,7 @@ def constant_prop_pass(block):
                 # wire_removal_set.add(net_checking.dests)
 
         one_var_ops = {
-            '~': lambda x: ~x,
+            '~': lambda x: 1-x,
             'r': lambda x: x   # This is only valid for constant folding purposes
         }
         two_var_ops = {
@@ -163,9 +163,8 @@ def constant_prop_pass(block):
                 const_wire = arg2
                 other_wire = arg1
 
-            outputs = []
-            for other_val in range(0, 1):
-                outputs[other_val] = two_var_ops[net_checking.op](const_wire.val, other_val)
+            outputs = [two_var_ops[net_checking.op](const_wire.val, other_val)
+                       for other_val in range(0, 2)]
 
             if outputs[0] == outputs[1]:
                 replace_net_with_const(outputs[0])
@@ -180,10 +179,10 @@ def constant_prop_pass(block):
 
         else:
             if net_checking.op in two_var_ops:
-                output = two_var_ops[net_checking.op](net_checking.args[0],
-                                                      net_checking.args[1])
+                output = two_var_ops[net_checking.op](net_checking.args[0].val,
+                                                      net_checking.args[1].val)
             elif net_checking.op in one_var_ops:
-                output = one_var_ops[net_checking.op](net_checking.args[0])
+                output = one_var_ops[net_checking.op](net_checking.args[0].val)
             else:
                 raise core.PyrtlInternalError('net with invalid op code, '
                                               + net_checking.op + ' found')
