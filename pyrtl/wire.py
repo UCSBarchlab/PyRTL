@@ -245,13 +245,12 @@ class Const(WireVector):
 
     def __init__(self, val, bitwidth=None, block=None):
         """ Construct a constant implementation at initialization """
-
         if isinstance(val, int):
             num = val
             # infer bitwidth if it is not specified explicitly
             if bitwidth is None:
                 bitwidth = len(bin(num))-2  # the -2 for the "0b" at the start of the string
-        if isinstance(val, basestring):
+        elif isinstance(val, basestring):
             if bitwidth is not None:
                 raise core.PyrtlError('error, bitwidth parameter of const should be'
                                       ' unspecified when the const is created from a string'
@@ -264,6 +263,9 @@ class Const(WireVector):
                 num = int(''.join(['0', split_string[1]]), 0)
             except ValueError:
                 raise core.PyrtlError('error, string for Const not in verilog style format')
+        else:
+            raise core.PyrtlError('error, the value of Const is of an improper type, "%s"'
+                                  'proper types are int and string' % type(val))
 
         if not isinstance(bitwidth, int):
             raise core.PyrtlError(
