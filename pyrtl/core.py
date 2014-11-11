@@ -1,17 +1,4 @@
 
-"""
-Core contains the core netlist data structure for PyRTL
-
-The classes PyrtlError and PyrtlInternalError are the two main exceptions to
-be thrown when things go wrong.  Block is the netlist storing module for a
-chunk of hardware with well defined inputs and outputs, it contains both the
-basic logic elements and references to the wires that connect them together.
-The functions working_block and reset_working_block provide an easy way to
-manage the current "working" block (i.e. the block that all hardware, by
-default, is added in to).
-"""
-
-
 import collections
 import sys
 import re
@@ -54,10 +41,17 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
 
 
 class Block(object):
-    """ Data structure for holding a hardware connectivity graph.
-    Structure is primarily contained in self.logic which holds a set of
-    "LogicNet"s. Each LogicNet is describes a primitive operation (such as an adder
+    """ Block encapsulates a netlist.
+
+    A Block in PyRTL is the class that stores a netlist and provides basic access
+    and error checking members.  Each block has well defined inputs and outputs,
+    and contains both the basic logic elements and references to the wires that
+    connect them together.
+
+    The logic structure is primarily contained in self.logic which holds a set of
+    "LogicNet"s. Each LogicNet describes a primitive operation (such as an adder
     or memory).  The primitive is described by a 4-tuple of:
+
     1) the op (a single character describing the operation such as '+' or 'm'),
     2) a set of hard parameters to that primitives (such as the number of read
        ports for a memory),
@@ -65,6 +59,7 @@ class Block(object):
        this particular net.
     4) the tuple "dests" which list the wirevectors hooked up as output for
        this particular net.
+
     Below is a list of the basic operations.  These properties (more formally
     specified) should all be checked by the class method sanity_check.
 
@@ -128,23 +123,38 @@ class Block(object):
         self.wirevector_by_name[wirevector.name] = wirevector
 
     def remove_wirevector(self, wirevector):
+        """ Remove a wirevector object to the block."""
         self.wirevector_set.remove(wirevector)
         del self.wirevector_by_name[wirevector.name]
 
     def add_net(self, net):
-        """ Connect new net to wirevectors previously added to the block."""
+        """ Add a net to the logic of the block.
+
+        The passed net, which must be of type LogicNet, is checked and then
+        added to the block.  No wires are added by this member, they must be
+        added seperately with add_wirevector."""
+
         self.sanity_check_net(net)
         self.logic.add(net)
 
     def wirevector_subset(self, cls=None):
-        """Return set of wirevectors, filtered by the type or tuple of types provided as cls."""
+        """Return set of wirevectors, filtered by the type or tuple of types provided as cls.
+
+        If no cls is specified, the full set of wirevectors associated with the Block are
+        returned.  If cls is a single type, or a tuple of types, only those wirevectors of
+        the matching types will be returned.  This is helpful for getting all inputs, outputs,
+        or registers of a block for example."""
         if cls is None:
             return self.wirevector_set
         else:
             return set(x for x in self.wirevector_set if isinstance(x, cls))
 
     def get_wirevector_by_name(self, name, strict=False):
-        """Return the wirevector matching name."""
+        """Return the wirevector matching name.
+
+        By default, if a matching wirevector cannot be found the value None is
+        returned.  However, if the argument strict is set to True, then this will
+        instead throw a PyrtlError when no match is found."""
         if name in self.wirevector_by_name:
             return self.wirevector_by_name[name]
         elif strict:
@@ -154,6 +164,7 @@ class Block(object):
 
     def __iter__(self):
         """Return a generator object that yields the block's LogicNets in topological order.
+
         A LogicNet is never returned before all of its dependent LogicNets have been seen;
         this is the only guarantee on the order of the returned LogicNets."""
         return BlockIterator(self)
@@ -390,5 +401,6 @@ def set_working_block(block):
 
 
 def set_debug_mode(debug=True):
+    """ Set the global debug mode. """
     global debug_mode
     debug_mode = debug
