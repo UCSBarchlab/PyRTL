@@ -2,7 +2,7 @@ import sys
 sys.path.append("..")  # needed only if not installed
 
 import pyrtl
-
+pyrtl.set_debug_mode(True)
 output = pyrtl.Output(bitwidth=3, name='output')
 counter = pyrtl.Register(bitwidth=3, name='counter')
 counter.next <<= counter + 1
@@ -21,7 +21,7 @@ print pyrtl.working_block()
 run(15)
 
 pyrtl.synthesize()
-# pyrtl.optimize()
+pyrtl.optimize()
 
 print '\nAfter Synthesis:'
 print pyrtl.working_block()

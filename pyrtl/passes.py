@@ -192,7 +192,7 @@ def constant_prop_pass(block):
     def find_producer(x):
         # trace back to the root producer of x
         if x in replacement_wires:
-            return replacement_wires[x]
+            return find_producer(replacement_wires[x])
         else:
             return x
 
