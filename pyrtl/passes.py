@@ -394,10 +394,13 @@ def _decompose(net, wv_map, block_out):
 
 
 def _generate_one_bit_add(a, b, cin):
-    """ Generates hardware for a 1-bit full adder. """
+    """ Generates hardware for a 1-bit full adder.
+        Input: 3 1-bit wire vectors
+        Output: a list of wire vectors (the sum), and a single 1-bit wirevector cout
+    """
     sum = a ^ b ^ cin
     cout = a & b | a & cin | b & cin
-    return sum, cout
+    return [sum], cout
 
 
 def _generate_add(a, b, cin):
@@ -407,9 +410,9 @@ def _generate_add(a, b, cin):
         and a carry out wirevector (also len 1)
     """
     if len(a) == 1:
-        sumbits, cout = _generate_one_bit_add(a, b, cin)
+        sumbits, cout = _generate_one_bit_add(a[0], b[0], cin)
     else:
         lsbit, ripplecarry = _generate_one_bit_add(a[0], b[0], cin)
         msbits, cout = _generate_add(a[1:], b[1:], ripplecarry)
-        sumbits = [lsbit] + msbits  # append to lsb to the lowest bits
+        sumbits = lsbit + msbits  # append to lsb to the lowest bits
     return sumbits, cout
