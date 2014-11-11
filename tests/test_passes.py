@@ -26,11 +26,13 @@ class TestPasses(unittest.TestCase):
         outwire = pyrtl.Output()
         tempwire <<= inwire
         outwire <<= tempwire
+
+        pyrtl.synthesize()
         pyrtl.optimize()
-        # should remove the middle wire but keep the input
         block = pyrtl.working_block(None)
-        self.assertTrue(len(block.logic) == 1)
-        self.assertTrue(len(block.wirevector_set) == 2)
+        # should remove the middle wire but keep the input
+        self.assertTrue(len(block.logic) == 3)
+        self.assertTrue(len(block.wirevector_set) == 6)
         # # self.assertTrue(result.startswith("tmp3/3O <-- w -- tmp1/3I"))
 
     def test_wire_net_removal_2(self):
@@ -41,11 +43,12 @@ class TestPasses(unittest.TestCase):
         tempwire <<= inwire
         tempwire2 <<= tempwire
         outwire <<= tempwire
+        # pyrtl.synthesize()
         pyrtl.optimize()
         # should remove the middle wires but keep the input
         block = pyrtl.working_block(None)
-        self.assertTrue(len(block.logic) == 1)
-        self.assertTrue(len(block.wirevector_set) == 2)
+        self.assertTrue(len(block.logic) == 3)
+        self.assertTrue(len(block.wirevector_set) == 6)
         # # self.assertTrue(result.startswith("tmp7/3O <-- w -- tmp4/3I"))
 
     def test_const_folding_basic_one_var_op_1(self):
@@ -53,6 +56,7 @@ class TestPasses(unittest.TestCase):
         outwire = pyrtl.Output()
 
         outwire <<= ~constwire
+        pyrtl.synthesize()
         pyrtl.optimize()
 
         block = pyrtl.working_block(None)
@@ -71,6 +75,7 @@ class TestPasses(unittest.TestCase):
         tempwire <<= ~constwire
         reg.next <<= tempwire
         outwire <<= reg
+        pyrtl.synthesize()
         pyrtl.optimize()
 
         block = pyrtl.working_block(None)
@@ -111,6 +116,7 @@ class TestPasses(unittest.TestCase):
         outwire = pyrtl.Output()
 
         outwire <<= inwire & constwire
+        pyrtl.synthesize()
         pyrtl.optimize()
         # should remove the or block and replace it with a
         # wire net (to separate the const from the output)
@@ -143,6 +149,7 @@ class TestPasses(unittest.TestCase):
 
         # playing with edge cases
         outwire <<= constwire ^ constwire
+        pyrtl.synthesize()
         pyrtl.optimize()
         # should remove the and block and replace it with a
         # wirevector (to separate the input from the output)
@@ -155,6 +162,20 @@ class TestPasses(unittest.TestCase):
 
     def test_sanity_check(self):
         testmissing()
+
+    def test_const_folding_complex_1(self):
+        pyrtl.set_debug_mode(True)
+        output = pyrtl.Output(bitwidth=3, name='output')
+        counter = pyrtl.Register(bitwidth=3, name='counter')
+        counter.next <<= counter + 1
+        output <<= counter
+        pyrtl.synthesize()
+        pyrtl.optimize()
+
+        #just to check that something like this will run properly
+
+
+
 
 
 if __name__ == "__main__":
