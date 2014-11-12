@@ -373,7 +373,7 @@ def _to_verilog_footer(file, block):
     print >> file, 'endmodule\n'
 
 
-def output_verilog_testbench(file, block=None, simulation_trace=None):
+def output_verilog_testbench(file, simulation_trace=None, block=None):
     """Output a verilog testbanch for the block/inputs used in the simulation trace."""
 
     block = core.working_block(block)
