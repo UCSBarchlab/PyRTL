@@ -2,14 +2,15 @@
 
     This next example shows how you make stateful things with registers
     and more complex hardware structures with functions.  We generate
-    a 3-bit ripple carry adder building off of the 1-bit adder from 
+    a 3-bit ripple carry adder building off of the 1-bit adder from
     the prior example, and then hook it to a register to count up modulo 8.
 """
 
 import sys
-sys.path.append("..")  
+sys.path.append("..")
 
 import pyrtl
+
 
 # Let's just dive right in.
 
@@ -25,6 +26,7 @@ def one_bit_add(a, b, cin):
 # those values together and return the wires for sum and cout as applied to "x",
 # "y", and "z".  If I call it again on "i", "j", and "k" it will build a new one-bit
 # adder for those inputs and return the resulting sum and cout for that adder.
+
 
 # While PyRTL actually provides an "+" operator for wirevectors which generates
 # adders, a ripple carry adder is something people can understand easily but has
@@ -54,7 +56,7 @@ def ripple_add(a, b, cin=0):
 # is a WireVector at other times.  Python supports polymorphism throughout
 # and PyRTL will cast integers and some other types to WireVectors when it can.
 
-# Now let's build a 3-bit counter from our N-bit ripple carry adder.  
+# Now let's build a 3-bit counter from our N-bit ripple carry adder.
 
 counter = pyrtl.Register(bitwidth=3, name='counter')
 sum, cout = ripple_add(counter, pyrtl.Const("3'b001"))
@@ -67,7 +69,7 @@ counter.next <<= sum
 # Registers are just like wires, except their updates are delayed to the next
 # clock cycle.  This is made explicit in the syntax through the property '.next'
 # which should always be set for registers.  In this simple example, we take
-# counter next cycle equal to counter this cycle plus one.  
+# counter next cycle equal to counter this cycle plus one.
 
 # Now let's run the bugger.  No need for inputs, it doesn't have any, but let's
 # throw in an assert to check that it really counts up modulo 8.  Finally we'll
@@ -83,4 +85,3 @@ sim_trace.render_trace()
 # all done.
 
 exit(0)
-

@@ -168,9 +168,6 @@ def constant_prop_pass(block):
 
             if outputs[0] == outputs[1]:
                 replace_net_with_const(outputs[0])
-                if isinstance(other_wire, wire.Input):
-                    print "Input wire, " + other_wire.name + \
-                          ' was eliminated by constant folding'
             elif outputs[0] == 0:
                 replace_net_with_wire(other_wire)
             else:
