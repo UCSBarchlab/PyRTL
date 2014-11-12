@@ -288,8 +288,8 @@ def trace_sort_key(w):
 
 class SimulationTrace(object):
     """ Storage and presentation of simulation waveforms. """
-    def __init__(self, wirevector_subset=None, block=None):
 
+    def __init__(self, wirevector_subset=None, block=None):
         block = core.working_block(block)
 
         def is_internal_name(name):
@@ -311,7 +311,16 @@ class SimulationTrace(object):
         else:
             self.trace = {w: [] for w in wirevector_subset}
 
+    def __len__(self):
+        """ Return the current length of the trace in cycles. """
+        if len(self.trace) == 0:
+            raise core.PyrtlError('error, length of trace undefined if no signals tracked')
+        # return the length of the list of some element in the dictionary (all should be the same)
+        wire, value_list = next(x for x in self.trace.items())
+        return len(value_list)
+
     def add_step(self, value_map):
+        """ Add the values in value_map to the end of the trace. """
         if len(self.trace) == 0:
             raise core.PyrtlError('error, simulation trace needs at least 1 signal '
                                   'to track (try passing name to WireVector)')
@@ -328,6 +337,7 @@ class SimulationTrace(object):
             file.flush()
 
     def print_vcd(self, file=sys.stdout):
+        """ Print the trace out as a VCD File for use in other tools. """
         # dump header info
         # file_timestamp = time.strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", time.gmtime())
         # print >>file, " ".join(["$date", file_timestamp, "$end"])

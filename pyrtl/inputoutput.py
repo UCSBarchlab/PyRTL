@@ -377,52 +377,47 @@ def output_verilog_testbench(file, simulation_trace=None, block=None):
     """Output a verilog testbanch for the block/inputs used in the simulation trace."""
 
     block = core.working_block(block)
-    trace = simulation_trace.trace
-    # trace maps wire --> list of vals (indexed by cycle)
+    inputs = block.wirevector_subset(wire.Input)
+    outputs = block.wirevector_subset(wire.Output)
 
     # Output header
-    print >> file, "module tb();\n"
+    print >> file, 'module tb();'
 
     # Declare all block inputs as reg
-    inputs = block.wirevector_subset(wire.Input)
+    print >> file, '    reg clk;'
     for w in inputs:
-        print >> file, "\treg {:s} {:s};".format(_verilog_vector_decl(w), w.name)
-    print >> file, "\treg clk;\n"
+        print >> file, '    reg {:s} {:s};'.format(_verilog_vector_decl(w), w.name)
 
     # Declare all block outputs as wires
-    outputs = block.wirevector_subset(wire.Output)
     for w in outputs:
-        print >> file, "\twire {:s} {:s};".format(_verilog_vector_decl(w), w.name)
-    print >> file, ""
-
-    # Generate clock signal
-    print >> file, "\talways\n\t\t#1 clk = ~clk;\n"
+        print >> file, '    wire {:s} {:s};'.format(_verilog_vector_decl(w), w.name)
+    print >> file
 
     # Instantiate logic block
     io_list = [w.name for w in block.wirevector_subset((wire.Input, wire.Output))]
     io_list.append('clk')
-    io_list_str = ", ".join([".{0:s}({0:s})".format(w) for w in io_list])
-    print >> file, "\ttoplevel block({:s});\n".format(io_list_str)
+    io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
+    print >> file, '    toplevel block({:s});\n'.format(', '.join(io_list_str))
+
+    # Generate clock signal
+    print >> file, '    always'
+    print >> file, '        #0.5 clk = ~clk;\n'
 
     # Move through all steps of trace, writing out input assignments per cycle
-    print >> file, "\tinitial begin\n"
-    print >> file, '\t\t$dumpfile ("waveform.vcd");'
-    print >> file, '\t\t$dumpvars;\n'
+    print >> file, '    initial begin'
+    print >> file, '        $dumpfile ("waveform.vcd");'
+    print >> file, '        $dumpvars;\n'
+    print >> file, '        clk = 0;'
 
-    print >> file, "\t\tclk = 0;\n"
-
-    w = inputs.pop()  # get length of simulation
-    simlen = len(trace[w])
-    inputs.add(w)
-
-    for i in range(simlen):
+    for i in range(len(simulation_trace)):
         for w in inputs:
-            print >> file, "\t\t{:s} = {:s}{:d};".format(
-                w.name, "{:d}'d".format(len(w)), trace[w][i])
-        print >> file, ""
-        print >> file, "\t\t#2"
+            print >> file, '        {:s} = {:s}{:d};'.format(
+                w.name,
+                "{:d}'d".format(len(w)),
+                simulation_trace.trace[w][i])
+        print >> file, '\n        #2'
 
     # Footer
-    print >> file, "\t\t$finish;"
-    print >> file, "\tend"
-    print >> file, "\tendmodule"
+    print >> file, '        $finish;'
+    print >> file, '    end'
+    print >> file, 'endmodule'
