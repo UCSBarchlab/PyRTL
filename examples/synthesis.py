@@ -1,6 +1,8 @@
 import sys
 sys.path.append("..")  # needed only if not installed
 
+"add verilog stuff"
+
 import pyrtl
 pyrtl.set_debug_mode(True)
 output = pyrtl.Output(bitwidth=3, name='output')
