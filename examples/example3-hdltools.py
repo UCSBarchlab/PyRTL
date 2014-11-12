@@ -44,20 +44,23 @@ for cycle in xrange(15):
     sim.step({zero: random.choice([0,0,0,1])})
 sim_trace.render_trace()
 
+# We already did the "hard" work of generating a test input for this simulation so 
+# we might want to reuse that work when we take this design through a verilog toolchain.
+# The function output_verilog_testbench grabs the inputs used in the simulation trace
+# and sets them up in a standar verilog testbench.
+
 print "--- Verilog for the TestBench ---"
 with io.BytesIO() as tbfile:
     pyrtl.output_verilog_testbench(tbfile, sim_trace)
     print tbfile.getvalue()
 
-"""
-print '\nBefore Synthesis:'
-print pyrtl.working_block()
-run(15)
+
+# More comments
 
 pyrtl.synthesize()
 pyrtl.optimize()
 
-print '\nAfter Synthesis:'
-print pyrtl.working_block()
-run(15)
-"""
+print "--- Optimized Verilog for the Counter ---"
+with io.BytesIO() as vfile:
+    pyrtl.output_to_verilog(vfile)
+    print vfile.getvalue()
