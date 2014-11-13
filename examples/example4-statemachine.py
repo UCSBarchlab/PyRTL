@@ -50,12 +50,12 @@ with condition((state == DISPENSE) | (state == REFUND)):
 dispense <<= state == DISPENSE
 refund <<= state == REFUND
 
-# A couple of other things to note: 1) A condition can be nested within another condition 
-# and the implied hardware is that the register should only get that value if ALL of the 
+# A couple of other things to note: 1) A condition can be nested within another condition
+# and the implied hardware is that the register should only get that value if ALL of the
 # encompassing conditions are satisfied.  2) Only one conditional at each level can be
 # true meaning that all conditions are implicitly also saying that none of the prior conditions
 # at the same level also have been true.  The highest priority condition is listed first,
-# and in a sense you can think about each other condition as an "elif".  3) If not every 
+# and in a sense you can think about each other condition as an "elif".  3) If not every
 # condition is enumerated, the default value for the register under those cases will be the
 # same as it was the prior cycle ("state.next <<= state" in this example).  4) There is a
 # way to specify something like an "else" instead of "elif" and that is to leave the condition
@@ -81,7 +81,7 @@ sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
 
 # Rather than just give some random inputs, let's specify some specific 1 bit values.  Recall
-# that the sim.step method takes a dictionary mapping inputs to their values.  We could just 
+# that the sim.step method takes a dictionary mapping inputs to their values.  We could just
 # specify the input set directly as a dictiony but it gets pretty ugly -- let's use some python
 # to parse them up.
 
@@ -91,6 +91,6 @@ sim_inputs = {
     }
 
 for cycle in range(len(sim_inputs[token_in])):
-    sim.step({w:int(v[cycle]) for w,v in sim_inputs.items()})
+    sim.step({w: int(v[cycle]) for w, v in sim_inputs.items()})
 
 sim_trace.render_trace()

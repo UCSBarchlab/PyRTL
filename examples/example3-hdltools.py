@@ -70,4 +70,3 @@ pyrtl.optimize()
 with io.BytesIO() as vfile:
     pyrtl.output_to_verilog(vfile)
     print vfile.getvalue()
-
