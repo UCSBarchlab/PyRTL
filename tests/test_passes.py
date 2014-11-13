@@ -43,7 +43,7 @@ class TestPasses(unittest.TestCase):
         tempwire <<= inwire
         tempwire2 <<= tempwire
         outwire <<= tempwire
-        # pyrtl.synthesize()
+        pyrtl.synthesize()
         pyrtl.optimize()
         # should remove the middle wires but keep the input
         block = pyrtl.working_block(None)
