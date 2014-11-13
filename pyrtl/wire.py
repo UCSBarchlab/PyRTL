@@ -3,7 +3,7 @@ wirevector has all of the basic extended types useful for creating logic.
 
 Types defined in this file include:
 WireVector: the base class for ordered collections of wires
-Input: a wire vector that recieves an input for a block
+Input: a wire vector that receives an input for a block
 Output: a wire vector that defines an output for a block
 Const: a wire vector fed by an unsigned constant
 Register: a wire vector that is latched each cycle
@@ -305,6 +305,11 @@ class Register(WireVector):
     property .next with the <<= operator.  For example, if you want
     to specify a counter it would look like: "a.next <<= a + 1"
     """
+
+    # Note to coders:
+    # This wire type is the one for the wire connected to the output
+    # of the Register block.
+
     code = 'R'
 
     # When the register is called as such:  r.next <<= foo
