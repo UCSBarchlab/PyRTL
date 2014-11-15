@@ -32,7 +32,7 @@ def area_estimation(tech_in_nm, block=None):
 #    |  |  |  | | | \| \__>     /    \| \| /~~\ |_  |   .__/ |  .__/
 #
 
-def quick_timing_analysis(block, print_total_length = True):
+def quick_timing_analysis(block, print_total_length=True):
     cleared = block.wirevector_subset(wire.Input).union(block.wirevector_subset(wire.Register))
     remaining = block.logic.copy()
     num_prev_remaining = len(remaining)+1
@@ -74,6 +74,7 @@ def print_analysis(block, wirevector_timing_map, ):
 #  /  \ |__)  |  |  |\/| |  /  /\   |  | /  \ |\ |
 #  \__/ |     |  |  |  | | /_ /~~\  |  | \__/ | \|
 #
+
 
 def _remove_wire_nets(block):
     """ Remove all wire nodes from the block. """
