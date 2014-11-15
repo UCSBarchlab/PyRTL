@@ -336,7 +336,10 @@ class Block(object):
 class BlockIterator():
     """ BlockIterator iterates over the block passed on init in topographic order.
         The input is a Block, and when a LogicNet is returned it is always the case
-        that all of it's "parents" have already been returned earlier in the iteration. """
+        that all of it's "parents" have already been returned earlier in the iteration.
+
+        Note: this method will not return all of the items in order if there are loops
+        in the logic that do not involve registers"""
 
     def __init__(self, block):
         self.block = block
@@ -345,14 +348,23 @@ class BlockIterator():
         return self
 
     def next(self):
-        cleared = self.block.wirevector_subset(wire.Input)
+        cleared = self.block.wirevector_subset(wire.Input)\
+            .union(self.block.wirevector_subset(wire.Register))
         remaining = self.block.logic.copy()
-        while len(remaining) > 0:
+        prev_remain = len(self.block.logic)
+        while len(remaining) > prev_remain:
+            prev_remain = len(remaining)
             for gate in remaining:  # loop over logicnets not yet returned
                 if all([arg in cleared for arg in gate.args]):  # if all args ready
                     cleared.update(set(gate.dests))  # add dests to set of ready wires
                     remaining.remove(gate)  # remove gate from set of to return
                     yield gate
+
+        for gate_in_loop in remaining:
+            yield gate_in_loop
+            # loop through gates that initially fail to iterate
+            # through due to being in a nonregister loop
+
         raise StopIteration
 
 # -----------------------------------------------------------------------
