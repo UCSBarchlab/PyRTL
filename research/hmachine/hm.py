@@ -25,15 +25,25 @@ textsize = pow(2, textspace)  # number of words of immortal heap memory
 
 def main():
 
+    # Build list of possible data sources
+    localsOut = WireVector(width, "localsOut")
+    argsOut =  WireVector(width, "argsOut")
+    heapOut =  WireVector(width, "heapOut")
+    immediate =  WireVector(width, "instrImmediate")
+    retRegOut = WireVector(width, "returnRegisterOut")
+    srcList = [localsOut, argsOut, heapOut, immediate, retRegOut] + [Const(0)] * 3
+    dataSrcSelect = WireVector(3, "dataSourceSelect")
+    srcMux = muxtree(srcList, dataSrcSelect)
+
     # Registers
-    PC = register(textspace, "ExecutionPointer")  # addr of next instr
-    envclo = register(namespace, "CurrentClosure")  # name of closure we're in now
-    nlocalsreg = register(localspace, "NumberLocals")  # number of locals bound so far
-    nargsreg = register(argspace, "NumberArgs")  # number of args bound so far
-    nfreevarreg = register(freevarspace, "NumberFreeVars")  # number of freevars bound so far
-    hp = register(heapspace, "HeapPointer")  # heap pointer (next free addr)
-    sp = register(svalstackspace "EvalStackPointer")  # evaluation stack pointer
-    rr = register(width, "ReturnRegister")  # return register
+    PC = Register(textspace, "ExecutionPointer")  # addr of next instr
+    envclo = Register(namespace, "CurrentClosure")  # name of closure we're in now
+    nlocalsreg = Register(localspace, "NumberLocals")  # number of locals bound so far
+    nargsreg = Register(argspace, "NumberArgs")  # number of args bound so far
+    nfreevarreg = Register(freevarspace, "NumberFreeVars")  # number of freevars bound so far
+    hp = Register(heapspace, "HeapPointer")  # heap pointer (next free addr)
+    sp = Register(evalstackspace, "EvalStackPointer")  # evaluation stack pointer
+    rr = Register(width, "ReturnRegister")  # return register
 
     # Argument Registers
     argR = WireVector(width, "argsReadData")
@@ -45,7 +55,20 @@ def main():
     argSwitch = WireVector(1, "argsSwitch")
     arg1 = WireVector(width, "argreg1")
     arg2 = WireVector(width, "argreg2")
-    argregs(argwe, argsWaddr, argW, argRaddr, argR, argSwitch, arg1, arg2)
+    argregs(argwe, argWaddr, argW, argRaddr, argR, argSwitch, arg1, arg2)
+
+    # Update number of arguments
+    incArgs = WireVector(1, "incNumArgs")
+    cond = ConditionalUpdate()
+    with cond(argSwitch):  # Clear reg on scope change
+        nargsreg.next <<= 0
+    with cond(incArgs):  # increment on control signal
+        nargsreg.next <<= nargsreg + 1
+
+    # Instantiate ALU; connect to first two args
+    
+
+    pyrtl.working_block().sanity_check()
 
 # ######################################################################
 #     Instruction Decode
@@ -65,6 +88,11 @@ def argregs(we, waddr, wdata, raddr, rdata, flipstate, reg1, reg2):
     # state == 0: args1 is writeargs, args2 is readargs
     # state == 1: args1 is readargs, args2 is writeargs
 
+    #    help(MemBlock.EnabledWrite)
+    #    help(MemBlock)
+
+    #block[i] = MemBlock.EnabledWrite(data, en)
+
     args1 = MemBlock(width, argspace, name="args1")
     args2 = MemBlock(width, argspace, name="args2")
 
@@ -75,26 +103,23 @@ def argregs(we, waddr, wdata, raddr, rdata, flipstate, reg1, reg2):
     read2 = args2[raddr]
     rdata <<= mux(state, falsecase=read2, truecase=read1)  # mux for output
     # Additional ports to output arg0 and arg1; need for primitive (ALU) ops
-    reg1 <<= mux(state, falsecase=args2[0], truecase=args1[0])
-    reg2 <<= mux(state, falsecase=args2[1], truecase=args1[1])
+    reg1 <<= mux(state, falsecase=args2[Const("3'b0")], truecase=args1[Const("3'b0")])
+    reg2 <<= mux(state, falsecase=args2[Const("3'b1")], truecase=args1[Const("3'b1")])
 
     # Input
-    c = ConditionalUpdate()
-    with c(we & (state == 0)):
-        args1[waddr] = wdata
-    with c(we & (state == 1)):
-        args2[waddr] = wdata
+    args1in = args1.EnabledWrite(wdata, we & (state == 0))
+    args1[waddr] = args1in
+    args2in = args2.EnabledWrite(wdata, we & (state == 1))
+    args2[waddr] = args2in
     
     # Handle state flips
-    with c(flipstate):
-        state.next <<= ~state
-        
-    pyrtl.working_block().sanity_check()
+    state.next <<= mux(flipstate, falsecase=state, truecase=~state)
 
 # ######################################################################
 #     Primitive Ops Unit (a.k.a. ALU)
 # ######################################################################
-
+def makeALU(control, in1, in2, out):
+    
 
 
 
@@ -128,10 +153,12 @@ class RegisterFile:
         self.regs = regs
 
 def muxtree(vals, select):
+    """Recursively build a tree of muxes. Takes a list of wires and a select wire; the list
+    should be ordered such that the value of select is the index of the wire passed through."""
     if len(select) == 1:
         if len(vals) != 2:
             raise ValueError("Mismatched values; select should have logN bits")
-        out = WireVector(1)
+        out = WireVector(max([len(x) for x in vals]))
         out <<= mux(select, falsecase = vals[0], truecase = vals[1])
         return out
     else:
