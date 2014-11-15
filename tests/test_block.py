@@ -4,14 +4,14 @@ import pyrtl
 
 from helperfunctions import testmissing
 
-class TestBlock(unittest.TestCase):
 
+class TestBlock(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         pyrtl.set_debug_mode(True)
 
     def tearDown(self):
-        pyrtl.reset_working_block()    
+        pyrtl.reset_working_block()
 
     def test_add_wirevector_simple(self):
         w = pyrtl.WireVector(name='testwire', bitwidth=3)
@@ -20,19 +20,19 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('testwire' in pyrtl.working_block().wirevector_by_name)
 
     def test_add_net(self):
-        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, None )
-        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, 1 )
-        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, "hi" )
+        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, None)
+        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, 1)
+        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, "hi")
 
     def test_undriven_net(self):
         w = pyrtl.WireVector(name='testwire', bitwidth=3)
-        self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check )
+        self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
 
-    def test_sanity_check(self): 
+    def test_sanity_check(self):
         testmissing()
 
 
 if __name__ == "__main__":
-  unittest.main()
+    unittest.main()
 
 

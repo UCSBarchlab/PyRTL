@@ -172,10 +172,7 @@ class TestPasses(unittest.TestCase):
         pyrtl.synthesize()
         pyrtl.optimize()
 
-        #just to check that something like this will run properly
-
-
-
+        # just to check that something like this will run properly
 
 
 if __name__ == "__main__":
