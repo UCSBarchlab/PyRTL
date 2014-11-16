@@ -52,8 +52,8 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.check_trace('r 07654321\n')
 
     def test_multiply_simulation(self):
-        self.r.next <<= self.r * pyrtl.Const(2, bitwidth=self.bitwidth) + pyrtl.Const(1,
-                                                                                      bitwidth=self.bitwidth)
+        self.r.next <<= self.r * pyrtl.Const(2, bitwidth=self.bitwidth) + \
+                        pyrtl.Const(1, bitwidth=self.bitwidth)
         self.check_trace('r 01377777\n')
 
     def test_const_nobitwidth_simulation(self):
@@ -262,9 +262,3 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-
-
-
-
-
