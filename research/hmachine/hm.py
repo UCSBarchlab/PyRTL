@@ -36,35 +36,34 @@ def main():
     srcMux = muxtree(srcList, dataSrcSelect)
 
     # Registers
-    PC = Register(textspace, "ExecutionPointer")  # addr of next instr
-    envclo = Register(namespace, "CurrentClosure")  # name of closure we're in now
-    nlocalsreg = Register(localspace, "NumberLocals")  # number of locals bound so far
+#    PC = Register(textspace, "ExecutionPointer")  # addr of next instr
+#    envclo = Register(namespace, "CurrentClosure")  # name of closure we're in now
+#    nlocalsreg = Register(localspace, "NumberLocals")  # number of locals bound so far
     nargsreg = Register(argspace, "NumberArgs")  # number of args bound so far
-    nfreevarreg = Register(freevarspace, "NumberFreeVars")  # number of freevars bound so far
-    hp = Register(heapspace, "HeapPointer")  # heap pointer (next free addr)
-    sp = Register(evalstackspace, "EvalStackPointer")  # evaluation stack pointer
+#    nfreevarreg = Register(freevarspace, "NumberFreeVars")  # number of freevars bound so far
+#    hp = Register(heapspace, "HeapPointer")  # heap pointer (next free addr)
+#    sp = Register(evalstackspace, "EvalStackPointer")  # evaluation stack pointer
     rr = Register(width, "ReturnRegister")  # return register
 
     # Argument Registers
     argR = WireVector(width, "argsReadData")
     argW = WireVector(width, "argsWriteData")
     argW <<= srcMux
-    argwe = WireVector(1, "argsWriteEnable")
+    ctrl_argwe = WireVector(1, "ctrl_argsWriteEnable")
     argRaddr = WireVector(argspace, "argsReadAddr")
     argWaddr = WireVector(argspace, "argsWriteAddr")
     argWaddr <<= nargsreg  # write to next free arg reg
     ctrl_argSwitch = WireVector(1, "ctrl_argsSwitch")
     arg1 = WireVector(width, "argreg1")
     arg2 = WireVector(width, "argreg2")
-    argregs(argwe, argWaddr, argW, argRaddr, argR, ctrl_argSwitch, arg1, arg2)
+    argregs(ctrl_argwe, argWaddr, argW, argRaddr, argR, ctrl_argSwitch, arg1, arg2)
     argsOut <<= argR  # send output to srcMux
 
     # Update number of arguments
-    ctrl_incArgs = WireVector(1, "ctrl_incNumArgs")
     cond = ConditionalUpdate()
     with cond(ctrl_argSwitch):  # Clear reg on scope change
         nargsreg.next <<= 0
-    with cond(ctrl_incArgs):  # increment on control signal
+    with cond(ctrl_argwe):  # increment on control signal
         nargsreg.next <<= nargsreg + 1
 
     # Instantiate ALU; connect to first two args
@@ -82,7 +81,11 @@ def main():
             rr.next <<= srcMux
     retRegOut <<= rr  # send result to srcMux
 
+    test_args_alu_rr()
+
+
     pyrtl.working_block().sanity_check()
+
 
 # ######################################################################
 #     Instruction Decode
@@ -134,14 +137,12 @@ def argregs(we, waddr, wdata, raddr, rdata, flipstate, reg1, reg2):
 # ######################################################################
 def makeALU(control, op1, op2, out):
 
-    print control
-
     out <<= switch(control, {
-        "3'000": op1 & op2,
-        "3'001": op1 | op2,
-        "3'010": op1 + op2,
-        "3'110": op1 - op2,
-        "3'111": op1 < op2,
+        "3'b000": op1 & op2,
+        "3'b001": op1 | op2,
+        "3'b010": op1 + op2,
+        "3'b110": op1 - op2,
+        "3'b111": op1 < op2,
         None: 0
     })    
 
@@ -175,17 +176,14 @@ def switch(ctrl, logic_dict):
     the key and the ctrl, selecting the appropriate value
     """
 
-    print ctrl
-    print logic_dict
-
     working_result = logic_dict[None]
     for case_value in logic_dict:
-        print case_value
+        if case_value is None:
+            continue
         working_result = mux(
             ctrl == case_value,
             falsecase=working_result,
             truecase=logic_dict[case_value])
-        print case_value, working_result
     return working_result
 
 def muxtree(vals, select):
@@ -203,6 +201,57 @@ def muxtree(vals, select):
         for i in range(len(vals)/2):
             new.append(mux(select[0], falsecase=vals[2*i], truecase=vals[2*i+1]))
         return muxtree(new, select[1:])
+
+
+
+def test_args_alu_rr():
+
+    block = pyrtl.working_block()
+    for name in ['heapOut', 'localsOut']:
+        temp = block.get_wirevector_by_name(name)
+        temp <<= 0
+
+    ctrl_ALUcontrol = block.get_wirevector_by_name("ctrl_ALUcontrol")
+    ctrl_ALUcontrol <<= 2
+    dsrc = block.get_wirevector_by_name("dataSourceSelect")
+    dsrc <<= 3  # choose immediate as sources
+
+    # get all signals to control
+    dctrl_argsSwitch = block.get_wirevector_by_name("ctrl_argsSwitch")
+    dargsReadAddr = block.get_wirevector_by_name("argsReadAddr")
+    dctrl_argswe = block.get_wirevector_by_name("ctrl_argsWriteEnable")
+    dctrl_ALU2rr = block.get_wirevector_by_name("ctrl_ALU-to-returnReg")
+    dctrl_loadRR = block.get_wirevector_by_name("ctrl_loadRR")
+    dimm = block.get_wirevector_by_name("instrImmediate")
+
+    # declare inputs, connect to signals
+    ctrl_argsSwitch = Input(len(dctrl_argsSwitch))
+    dctrl_argsSwitch <<= ctrl_argsSwitch
+    argsReadAddr = Input(len(dargsReadAddr))
+    dargsReadAddr <<= argsReadAddr
+    ctrl_argswe = Input(len(dctrl_argswe))
+    dctrl_argswe <<= ctrl_argswe
+    ctrl_ALU2rr = Input(len(dctrl_ALU2rr))
+    dctrl_ALU2rr <<= ctrl_ALU2rr
+    ctrl_loadRR = Input(len(dctrl_loadRR))
+    dctrl_loadRR <<= ctrl_loadRR
+    imm = Input(len(dimm))
+    dimm <<= imm
+
+    valstring = {
+        ctrl_ALU2rr     : [0,0,0,0,0], 
+        argsReadAddr    : [0,0,0,0,0], 
+        ctrl_loadRR     : [0,0,0,0,0], 
+        ctrl_argswe     : [1,1,1,1,1], 
+        ctrl_argsSwitch : [0,0,0,0,0],
+        imm             : [1,2,3,4,5]
+    }
+
+    sim_trace = pyrtl.SimulationTrace()
+    sim = pyrtl.Simulation(tracer=sim_trace)
+    for cycle in range(len(valstring[imm])):
+        sim.step({k:v[cycle] for k,v in valstring.items()})
+    sim_trace.render_trace()
 
 
 if __name__ == "__main__":
