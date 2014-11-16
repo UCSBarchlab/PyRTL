@@ -48,25 +48,39 @@ def main():
     # Argument Registers
     argR = WireVector(width, "argsReadData")
     argW = WireVector(width, "argsWriteData")
+    argW <<= srcMux
     argwe = WireVector(1, "argsWriteEnable")
     argRaddr = WireVector(argspace, "argsReadAddr")
     argWaddr = WireVector(argspace, "argsWriteAddr")
     argWaddr <<= nargsreg  # write to next free arg reg
-    argSwitch = WireVector(1, "argsSwitch")
+    ctrl_argSwitch = WireVector(1, "ctrl_argsSwitch")
     arg1 = WireVector(width, "argreg1")
     arg2 = WireVector(width, "argreg2")
-    argregs(argwe, argWaddr, argW, argRaddr, argR, argSwitch, arg1, arg2)
+    argregs(argwe, argWaddr, argW, argRaddr, argR, ctrl_argSwitch, arg1, arg2)
+    argsOut <<= argR  # send output to srcMux
 
     # Update number of arguments
-    incArgs = WireVector(1, "incNumArgs")
+    ctrl_incArgs = WireVector(1, "ctrl_incNumArgs")
     cond = ConditionalUpdate()
-    with cond(argSwitch):  # Clear reg on scope change
+    with cond(ctrl_argSwitch):  # Clear reg on scope change
         nargsreg.next <<= 0
-    with cond(incArgs):  # increment on control signal
+    with cond(ctrl_incArgs):  # increment on control signal
         nargsreg.next <<= nargsreg + 1
 
     # Instantiate ALU; connect to first two args
-    
+    ctrl_ALUop = WireVector(4, "ctrl_ALUcontrol")
+    ALUout = WireVector(width, "ALUout")
+    makeALU(ctrl_ALUop, arg1, arg2, ALUout)
+
+    # Return Register update
+    ctrl_alu2rr = WireVector(1, "ctrl_ALU-to-returnReg")
+    ctrl_loadrr = WireVector(1, "ctrl_loadRR")
+    with cond(ctrl_loadrr):  # signal to modify return reg
+        with cond(ctrl_alu2rr):  # load rr with ALU output
+            rr.next <<= ALUout
+        with cond():  # if not loading ALU, load from srcMux
+            rr.next <<= srcMux
+    retRegOut <<= rr  # send result to srcMux
 
     pyrtl.working_block().sanity_check()
 
@@ -118,17 +132,18 @@ def argregs(we, waddr, wdata, raddr, rdata, flipstate, reg1, reg2):
 # ######################################################################
 #     Primitive Ops Unit (a.k.a. ALU)
 # ######################################################################
-def makeALU(control, in1, in2, out):
-    
+def makeALU(control, op1, op2, out):
 
+    print control
 
-
-
-
-
-
-
-
+    out <<= switch(control, {
+        "3'000": op1 & op2,
+        "3'001": op1 | op2,
+        "3'010": op1 + op2,
+        "3'110": op1 - op2,
+        "3'111": op1 < op2,
+        None: 0
+    })    
 
 
 class RegisterFile:
@@ -151,6 +166,27 @@ class RegisterFile:
         rdata <<= muxtree(regs, raddr)
 
         self.regs = regs
+
+
+def switch(ctrl, logic_dict):
+    """ switch finds the matching key in logic_dict and returns the value.                                                            
+    The case "None" specifies the default value to return when there is no
+    match.  The logic will be a simple linear mux tree of comparisons between
+    the key and the ctrl, selecting the appropriate value
+    """
+
+    print ctrl
+    print logic_dict
+
+    working_result = logic_dict[None]
+    for case_value in logic_dict:
+        print case_value
+        working_result = mux(
+            ctrl == case_value,
+            falsecase=working_result,
+            truecase=logic_dict[case_value])
+        print case_value, working_result
+    return working_result
 
 def muxtree(vals, select):
     """Recursively build a tree of muxes. Takes a list of wires and a select wire; the list
