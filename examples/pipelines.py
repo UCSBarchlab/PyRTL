@@ -1,5 +1,5 @@
-
 import sys
+from pprint import *
 sys.path.append("..")  # needed only if not installed
 from pyrtl import *
 
@@ -57,21 +57,53 @@ class Pipeline(object):
         self._pipeline_register_map[next_stage][name] = new_pipereg
         return new_pipereg
 
+class SwitchDefaultType(object):
+    # __slots__ = () if you want to save a few bytes
+    def __init__(self, val=None):
+        self._value = val
+        super(SwitchDefaultType, self).__init__()
+
+    def __repr__(self):
+        return 'SwitchDefault'
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
+    def __eq__(self, other):
+        return self.__repr__() == self.__repr__()
+
+    def __call__(self, val=None):
+        if val is not None:
+            self._value = val
+            return SwitchDefaultType(val)
+        else:
+            return self._value
+
+SwitchDefault = SwitchDefaultType()
 
 def switch(ctrl, logic_dict):
     """ switch finds the matching key in logic_dict and returns the value.
 
-    The case "0" specifies the default value to return when there is no
+    The case SwitchDefault specifies the default value to return when there is no
     match.  The logic will be a simple linear mux tree of comparisons between
     the key and the ctrl, selecting the appropriate value
     """
 
-    working_result = logic_dict[0]
-    for case_value in logic_dict:
+    working_result = logic_dict[SwitchDefault]
+    for case_value in sorted(logic_dict):
+        true_case = logic_dict[case_value]
+
+        if isinstance(case_value, SwitchDefaultType):
+            case_value = case_value()
+            true_case = logic_dict[SwitchDefault]
+
+            if case_value is None:
+                continue
+
         working_result = mux(
             ctrl == case_value,
             falsecase=working_result,
-            truecase=logic_dict[case_value])
+            truecase=true_case)
     return working_result
 
 
@@ -106,9 +138,11 @@ class MipsCore(Pipeline):
         self._addrwidth = addrwidth  # a compile time constant
         self._pcsrc = WireVector(1, 'pcsrc')
         self._computed_address = WireVector(self._addrwidth, 'computed_address')
-        self._regwrite = WireVector(1, 'regwrite')  # CHECK
-        self._write_register = WireVector(5, 'write_register')  # CHECK
         self._write_data = WireVector(32, 'write_data')
+        self._alu_result = WireVector(32, 'alu_result')
+        self._zero = WireVector(1, 'zero')
+        self._regfile = MemBlock(32, 5, 'regfile')
+
         super(MipsCore, self).__init__()
 
     def stage0_fetch(self):
@@ -128,59 +162,84 @@ class MipsCore(Pipeline):
         rs = instr[21:26]
         rt = instr[16:21]
         rd = instr[11:16]
-        immed = instr[0:16]
+        immed = instr[0:16].sign_extended(32)
         opcode = instr[26:]
+
+        control_signals = self.main_decoder(opcode)
+
+        self.fwd_op_1, self.fwd_op_2 = self.decoder_forwarding_unit(rs, rt)
+        self.write_register = mux(control_signals["regdest"], rt, rd)
 
         # target = instr[0:26]
         # shamt = instr[6:11]
-        # funct = instr[0:6]
+        funct = instr[0:6]
 
-        regfile = MemBlock(32, 5, 'regfile')
-        EW = MemBlock.EnabledWrite
-        regfile[self._write_register] = EW(self._write_data, enable=self._regwrite)
-
-        self.immed = immed.sign_extended(32)
+        self.aluop = concat(control_signals["aluop1"], control_signals["aluop0"])
+        self.funct = funct
+        self.alusrc = control_signals["alusrc"]
+        self.branch = control_signals["branch"]
+        self.immed = immed
+        self.memwrite = control_signals["memwrite"]
+        self.regread2 = self._regfile[rt]
+        self.regwrite = control_signals["regwrite"]
+        self.rs = rs
         self.rt = rt
-        self.rd = rd
-        self.regread1 = regfile[rs]
-        self.regread2 = regfile[rt]
         self.pc_incr = self.pc_incr
         self.opcode = opcode
 
     def stage2_execute(self):
         """ perform the alu operations """
-        opcode = self.opcode
-        regdest, alusrc = self.ex_ctrl(opcode)
-        alu_op_1 = self.regread1
-        alu_op_2 = mux(alusrc, self.regread2, self.immed)
-        alu_ctrl = self.alu_ctrl(self.opcode, self.immed)
+        # fwd_op_1, fwd_op_2 = self.execution_forwarding_unit()
 
-        self._computed_address <<= self.pc_incr + (self.immed * 4)
-        self._write_register <<= mux(regdest, self.rt, self.rd)
-        self.alu_result, self.zero = self.alu(alu_ctrl, alu_op_1, alu_op_2)
+        # alu_op_1 = fwd_op_1
+        # alu_op_2 = mux(self.alusrc, fwd_op_2, self.immed)
+
+        fwd_op_1, fwd_op_2 = self.fwd_op_1, self.fwd_op_2
+
+        alu_op_1 = fwd_op_1
+        alu_op_2 = mux(self.alusrc, fwd_op_2, self.immed)
+
+        alu_ctrl = self.alu_ctrl(self.aluop, self.immed)
+
+        immed_shifted = concat(self.immed, Const(0, bitwidth=2))[:32]
+
+        # needed for next stage and sw
+        # check that regread2 is correct
         self.regread2 = self.regread2
-        self.opcode = opcode
+
+        self._computed_address <<= self.pc_incr + immed_shifted
+        alu_result, zero = self.alu(alu_ctrl, alu_op_1, alu_op_2)
+        self._alu_result <<= alu_result
+        self._zero <<= zero
+        self.branch = self.branch
+        self.memwrite = self.memwrite
+        self.alu_result, self.zero = self._alu_result, self._zero
+        self.regwrite = self.regwrite
+        self.write_register = self.write_register
 
     def stage3_memory(self):
         """ access dmem for loads and stores """
-        opcode = self.opcode
-        branch, memwrite = self.mem_ctrl(opcode)
-
         dmem = MemBlock(32, self._addrwidth, 'dmem')
         EW = MemBlock.EnabledWrite
 
         address = self.alu_result[0:self._addrwidth]
-        dmem[address] = EW(self.regread2, enable=memwrite)
+        dmem[address] = EW(self.regread2, enable=self.memwrite)  # TODO: check if regread2 is correct
+        read_data = dmem[address]
 
-        self._pcsrc <<= branch & self.zero
-        self.read_data = dmem[address]
+        self._pcsrc <<= self.branch & self.zero
+        self.write_register = self.write_register
+        self.write_data = mux(self.regwrite, read_data, self.alu_result)
+        self.read_data = read_data
         self.alu_result = self.alu_result
-        self.opcode = opcode
+        self.regwrite = self.regwrite
 
     def stage4_writeback(self):
         """ select the data to write back to registers """
-        self._regwrite <<= self.wb_ctrl(self.opcode)
-        self._write_data <<= mux(self._regwrite, self.alu_result, self.read_data)
+        self._write_data <<= mux(self.regwrite, self.read_data, self.alu_result)
+
+        EW = MemBlock.EnabledWrite
+        writable_register = (self.regwrite == 1) & (self.write_register != 0)
+        self._regfile[self.write_register] = EW(self._write_data, enable=writable_register)
 
     def main_decoder(self, opcode):
         #                       SIGNALS
@@ -223,90 +282,26 @@ class MipsCore(Pipeline):
 
         return control_signals
 
-    def alu_ctrl(self, opcode, immed):
+    def alu_ctrl(self, aluop, immed):
         # A A
         # L L
         # U U  F F F F F F  O
-        # 1 0  5 4 3 2 1 0  P
-        # --------------------
-        # 0 0  X X X X X X 010
-        # X 1  X X X X X X 110
-        # 1 X  X X 0 0 0 0 010
-        # 1 X  X X 0 0 1 0 110
-        # 1 X  X X 0 1 0 0 000
-        # 1 X  X X 0 1 0 1 001
-        # 1 X  X X 1 0 1 0 111
+        # 1 0  5 4 3 2 1 0  P  OPERATION
+        # ------------------------------
+        # 0 0  X X X X X X 010 lw/sw
+        # X 1  X X X X X X 110 beq
+        # 1 X  X X 0 0 0 0 010 add
+        # 1 X  X X 0 0 1 0 110 sub
+        # 1 X  X X 0 1 0 0 000 and
+        # 1 X  X X 0 1 0 1 001 or
+        # 1 X  X X 1 0 1 0 111 slt
 
-        aluop = opcode[:2]
         f = immed[:6]
         op0 = aluop[1] & (f[0] | f[3])
-        op1 = ~aluop[0] | ~f[2]
+        op1 = ~aluop[1] | ~f[2]
         op2 = aluop[0] | (aluop[1] & f[1])
 
-        return concat(op0, op1, op2)
-
-    def ex_ctrl(self, opcode):
-        #                       EXECUTE CONTROL
-        #          O O O O O O  R A A A
-        #          P P P P P P  E L L L
-        #          C C C C C C  G U U U
-        #          O O O O O O  D O O S
-        #          D D D D D D  S P P R
-        #  Inst    E E E E E E  T 1 0 C
-        #          5 4 3 2 1 0         
-        # -----------------------------
-        # R-format 0 0 0 0 0 0  1 1 0 0
-        # lw       1 0 0 0 1 1  0 0 0 1
-        # sw       1 0 1 0 1 1  X 0 0 1
-        # beq      0 0 1 1 0 0  X 0 1 0
-        # addi     0 0 1 0 0 0  0 0 0 1
-        oc = opcode
-        # aluop0 = ~oc[5] & ~oc[4] & oc[3] & oc[2] & ~oc[1] & ~oc[0]
-        # aluop1 = ~oc[5] & ~oc[4] & ~oc[3] & ~oc[2] & ~oc[1] & ~oc[0]
-        alusrc = (~oc[5] & ~oc[4] & oc[3] & ~oc[2] & ~oc[1] & ~oc[0]) | (oc[5] & ~oc[4] & ~oc[2] & oc[1] & oc[0])
-        regdest = ~oc[5] & ~oc[4] & ~oc[3] & ~oc[2] & ~oc[1] & ~oc[0]
-
-        return regdest, alusrc
-
-    def mem_ctrl(self, opcode):
-        #                       MEM CONTROL
-        #          O O O O O O  B    
-        #          P P P P P P  R M M
-        #          C C C C C C  A E E
-        #          O O O O O O  B M M
-        #          D D D D D D  C R W
-        #  Inst    E E E E E E  H D R
-        #          5 4 3 2 1 0       
-        # ---------------------------
-        # R-format 0 0 0 0 0 0  0 0 0
-        # lw       1 0 0 0 1 1  0 1 0
-        # sw       1 0 1 0 1 1  0 0 1
-        # beq      0 0 1 1 0 0  1 0 0
-        oc = opcode
-        branch = ~oc[5] & ~oc[4] & oc[3] & oc[2] & ~oc[1] & ~oc[0]
-        # memread = oc[5] & ~oc[4] & ~oc[3] & ~oc[2] & oc[1] & oc[0]
-        memwrite = oc[5] & ~oc[4] & oc[3] & ~oc[2] & oc[1] & oc[0]
-
-        return branch, memwrite
-
-    def wb_ctrl(self, opcode):
-        #                       WRITEBACK CONTROL
-        #          O O O O O O  M
-        #          P P P P P P  E
-        #          C C C C C C  M
-        #          O O O O O O  R
-        #          D D D D D D  E
-        #  Inst    E E E E E E  G
-        #          5 4 3 2 1 0   
-        # -----------------------
-        # R-format 0 0 0 0 0 0  0
-        # lw       1 0 0 0 1 1  1
-        # sw       1 0 1 0 1 1  X
-        # beq      0 0 1 1 0 0  X
-        oc = opcode
-        regwrite = oc[5] & ~oc[4] & ~oc[3] & ~oc[2] & oc[1] & oc[0]
-
-        return regwrite
+        return concat(op2, op1, op0)
 
     def alu(self, ctrl, op1, op2):
         retval = switch(ctrl, {
@@ -315,16 +310,174 @@ class MipsCore(Pipeline):
             "3'b010": op1 + op2,
             "3'b110": op1 - op2,
             "3'b111": op1 < op2,
-            0: 0,
+            SwitchDefault: op1,
             })
         return retval[0:32], retval[32]
 
+    def decoder_forward_ctrl(self, fwd_id, fwd_ex, fwd_mem):
+        fwd_ctrl = switch(concat(fwd_id, fwd_ex, fwd_mem), {
+            SwitchDefault("3'b000"): "3'b000",
+            "3'b100": "3'b100",
+            "3'b010": "3'b010",
+            "3'b001": "3'b001",
+            })
+        return fwd_ctrl
+
+    def decoder_forward_op(self, fwd_ctrl, register, id_ex_alu_result, ex_mem_alu_result, mem_wb_alu_result):
+        fwd_op = switch(fwd_ctrl, {
+            SwitchDefault("3'b000"): self._regfile[register],
+            "3'b001": mem_wb_alu_result,
+            "3'b010": ex_mem_alu_result,
+            "3'b100": id_ex_alu_result,
+            })
+        return fwd_op
+
+    def decoder_forwarding_unit(self, rs, rt):
+        # get a reference to some pipeline registers that don't exist yet
+        id_ex_alu_result = self._alu_result
+        id_ex_regwrite = self.route_future_pipeline_reg(1, bitwidth=1, name="regwrite")
+        id_ex_write_register = self.route_future_pipeline_reg(1, bitwidth=5, name="write_register")
+
+        ex_mem_alu_result = self.route_future_pipeline_reg(2, bitwidth=32, name="alu_result")
+        ex_mem_regwrite = self.route_future_pipeline_reg(2, bitwidth=1, name="regwrite")
+        ex_mem_write_register = self.route_future_pipeline_reg(2, bitwidth=5, name="write_register")
+
+        mem_wb_write_data = self._write_data
+        mem_wb_regwrite = self.route_future_pipeline_reg(3, bitwidth=1, name="regwrite")
+        mem_wb_write_register = self.route_future_pipeline_reg(3, bitwidth=5, name="write_register")
+
+        # tests for id_ex
+        id_ex_regwrite_enabled = id_ex_regwrite == 1
+        id_ex_write_register_is_nonzero = id_ex_write_register != 0
+
+        id_ex_write_register_eq_rs = id_ex_write_register == rs
+        id_ex_write_register_eq_rt = id_ex_write_register == rt
+
+        # tests for ex_mem
+        ex_mem_regwrite_enabled = ex_mem_regwrite == 1
+        ex_mem_write_register_is_nonzero = ex_mem_write_register != 0
+
+        ex_mem_write_register_eq_rs = ex_mem_write_register == rs
+        ex_mem_write_register_eq_rt = ex_mem_write_register == rt
+
+        # tests for mem_wb registers
+        mem_wb_regwrite_enabled = mem_wb_regwrite == 1
+        mem_wb_write_register_is_nonzero = mem_wb_write_register != 0
+
+        mem_wb_write_register_eq_rs = mem_wb_write_register == rs
+        mem_wb_write_register_eq_rt = mem_wb_write_register == rt
+
+        # forward id
+        fwd_ab_id = id_ex_regwrite_enabled & id_ex_write_register_is_nonzero
+        fwd_a_id = fwd_ab_id & id_ex_write_register_eq_rs
+        fwd_b_id = fwd_ab_id & id_ex_write_register_eq_rt
+
+        # forward ex
+        fwd_ab_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero
+        fwd_a_ex = fwd_ab_ex & ~fwd_a_id & ex_mem_write_register_eq_rs
+        fwd_b_ex = fwd_ab_ex & ~fwd_b_id & ex_mem_write_register_eq_rt
+
+        # forward mem
+        fwd_ab_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero
+        fwd_a_mem = fwd_ab_mem & ~fwd_a_id & ~fwd_a_ex & mem_wb_write_register_eq_rs
+        fwd_b_mem = fwd_ab_mem & ~fwd_b_id & ~fwd_b_ex & mem_wb_write_register_eq_rt
+
+        # get the appropriate forwarding control for the forwarding selection
+        forward_a = self.decoder_forward_ctrl(fwd_a_id, fwd_a_ex, fwd_a_mem)
+        forward_b = self.decoder_forward_ctrl(fwd_b_id, fwd_b_ex, fwd_b_mem)
+
+        # get the operand from the correct place based on the control
+        fwd_op_1 = self.decoder_forward_op(forward_a, rs, id_ex_alu_result, ex_mem_alu_result, mem_wb_write_data)
+        fwd_op_2 = self.decoder_forward_op(forward_b, rt, id_ex_alu_result, ex_mem_alu_result, mem_wb_write_data)
+
+        return fwd_op_1, fwd_op_2
+
+    # def execution_forward_ctrl(self, fwd_ex, fwd_mem):
+    #     fwd_ctrl = switch(concat(fwd_ex, fwd_mem), {
+    #         SwitchDefault("2'b00"): "2'b00",
+    #         "2'b10": "2'b10",
+    #         "2'b11": "2'b10",
+    #         "2'b01": "2'b01",
+    #         })
+    #     return fwd_ctrl
+
+    # def execution_forward_op(self, fwd_ctrl, register, ex_mem_alu_result, mem_wb_alu_result):
+    #     fwd_op = switch(fwd_ctrl, {
+    #         SwitchDefault("2'b00"): self._regfile[register],
+    #         "2'b01": mem_wb_alu_result,
+    #         "2'b10": ex_mem_alu_result,
+    #         })
+    #     return fwd_op
+
+    # def execution_forwarding_unit(self):
+    #     # get a reference to some pipeline registers that don't exist yet
+    #     ex_mem_alu_result = self.route_future_pipeline_reg(2, bitwidth=32, name="alu_result")
+    #     ex_mem_regwrite = self.route_future_pipeline_reg(2, bitwidth=1, name="regwrite")
+    #     ex_mem_write_register = self.route_future_pipeline_reg(2, bitwidth=5, name="write_register")
+
+    #     mem_wb_alu_result = self.route_future_pipeline_reg(3, bitwidth=32, name="alu_result")
+    #     mem_wb_regwrite = self.route_future_pipeline_reg(3, bitwidth=1, name="regwrite")
+    #     mem_wb_write_register = self.route_future_pipeline_reg(3, bitwidth=5, name="write_register")
+
+    #     # tests for ex_mem registers
+    #     ex_mem_regwrite_enabled = ex_mem_regwrite == 1
+    #     ex_mem_write_register_is_nonzero = ex_mem_write_register != 0
+
+    #     ex_mem_write_register_eq_rs = ex_mem_write_register == self.rs
+    #     ex_mem_write_register_eq_rt = ex_mem_write_register == self.rt
+
+    #     # tests for mem_wb registers
+    #     mem_wb_regwrite_enabled = mem_wb_regwrite == 1
+    #     mem_wb_write_register_is_nonzero = mem_wb_write_register != 0
+
+    #     mem_wb_write_register_eq_rs = mem_wb_write_register == self.rs
+    #     mem_wb_write_register_eq_rt = mem_wb_write_register == self.rt
+
+    #     # forward ex when regwrite for that stage is used, won't be written to $r0, and is one of the operands
+    #     fwd_a_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_rs
+    #     fwd_b_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_rt
+
+    #     # forward mem when regwrite for that stage is used, won't br written to $r0, isn't already being forwarded from ex, and is one of the operands
+    #     fwd_a_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~ex_mem_write_register_eq_rs & mem_wb_write_register_eq_rs
+    #     fwd_b_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~ex_mem_write_register_eq_rt & mem_wb_write_register_eq_rt
+
+    #     # get the appropriate forwarding control for the forwarding selection
+    #     forward_a = self.execution_forward_ctrl(fwd_a_ex, fwd_a_mem)
+    #     forward_b = self.execution_forward_ctrl(fwd_b_ex, fwd_b_mem)
+
+    #     # get the operand from the correct place based on the control
+    #     fwd_op_1 = self.execution_forward_op(forward_a, self.rs, ex_mem_alu_result, mem_wb_alu_result)
+    #     fwd_op_2 = self.execution_forward_op(forward_b, self.rt, ex_mem_alu_result, mem_wb_alu_result)
+
+    #     return fwd_op_1, fwd_op_2
+
 # testcore = TrivialPipelineExample()
-testcore = MipsCore(addrwidth=32)
+testcore = MipsCore(addrwidth=24)
 
 # Simulation of the core
 sim_trace = SimulationTrace()
 sim = Simulation(tracer=sim_trace)
-for i in xrange(15):
+
+sim.memvalue = {
+    (2, 0): 0x20020001,
+    (2, 4): 0x20030002,
+    (2, 8): 0x00431820,
+    (2, 12): 0x00621020,
+    (2, 16): 0x00421820,
+    (2, 20): 0x00431822,
+    (2, 24): 0x20630005,
+}
+
+for i in xrange(25):
     sim.step({})
+
 sim_trace.render_trace()
+# sim_trace.print_vcd(open("pipelines.vcd", "w"))
+# output_to_verilog(open("pipelines.v", "w"))
+
+pprint(sim.memvalue)
+
+# print working_block()
+# synthesize()
+# optimize()
+# print working_block()
