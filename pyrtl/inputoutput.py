@@ -347,7 +347,7 @@ def _to_verilog_combinational(file, block):
             t = (net.dests[0].name, catlist)
             print >> file, '    assign %s = {%s};' % t
         elif net.op == 's':
-            catlist = ', '.join([net.args[0].name+'['+str(i)+']' for i in net.op_param])
+            catlist = ', '.join([net.args[0].name + '[%s]' % str(i) if len(net.args[0]) > 1 else net.args[0].name for i in net.op_param])
             t = (net.dests[0].name, catlist)
             print >> file, '    assign %s = {%s};' % t
         elif net.op == 'r':
