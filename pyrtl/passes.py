@@ -357,6 +357,7 @@ def synthesize(update_working_block=True, block=None):
     for net in block_in.logic:
         _decompose(net, wirevector_map, block_out)
 
+    block_in.wirevector_map = wirevector_map
     if update_working_block:
         core.set_working_block(block_out)
     return block_out
