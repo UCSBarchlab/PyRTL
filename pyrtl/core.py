@@ -152,6 +152,16 @@ class Block(object):
         else:
             return set(x for x in self.wirevector_set if isinstance(x, cls))
 
+    def logic_subset(self, op=None):
+        """Return set of logicnets, filtered by the type of logic op provided as op.
+
+        If no op is specified, the full set of logicnets associated with the Block are
+        returned.  This is helpful for getting all memories of a block for example."""
+        if op is None:
+            return self.logic
+        else:
+            return set(x for x in self.logic if op in x.op)
+
     def get_wirevector_by_name(self, name, strict=False):
         """Return the wirevector matching name.
 
