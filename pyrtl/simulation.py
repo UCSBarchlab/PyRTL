@@ -60,6 +60,11 @@ class Simulation(object):
 
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle """
+
+        # To avoid weird loops, we need a copy of the old values which
+        # we can then use to make our updates from
+        prior_value = self.value.copy()
+
         # Check that all Input have a corresponding provided_input
         input_set = self.block.wirevector_subset(wire.Input)
         for i in input_set:
@@ -69,17 +74,14 @@ class Simulation(object):
                     % i.name)
 
         # Check that only inputs are specified, and set the values
-        for i in provided_inputs.keys():
+        for i in provided_inputs:
             if i not in input_set:
                 raise core.PyrtlError(
                     'step provided a value for input for "%s" which is '
                     'not a known input' % i.name)
             self.value[i] = provided_inputs[i]
 
-        # Do all of the clock-edge triggered operations.
-        # To avoid registers and memories updating incorrectly
-        # we make a copy of the "old" values and use that as the source
-        prior_value = self.value.copy()
+        # Do all of the clock-edge triggered operations based off of the priors
         for net in self.block.logic:
             self.edge_update(net, prior_value)
 
