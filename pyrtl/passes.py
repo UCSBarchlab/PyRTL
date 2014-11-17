@@ -429,11 +429,18 @@ def _decompose(net, wv_map, block_out):
         destlist = sumbits + [cout]
         for i in destlen():
             assign_dest(i, destlist[i])
+    elif net.op == '-':
+        arg0list = [arg(0, i) for i in range(len(net.args[0]))]
+        arg1list = [~arg(1, i) for i in range(len(net.args[1]))]
+        cin = wire.Const(1, bitwidth=1, block=block_out)
+        sumbits, cout = _generate_add(arg0list, arg1list, cin)
+        destlist = sumbits + [cout]
+        for i in destlen():
+            assign_dest(i, destlist[i])
     else:
         raise core.PyrtlInternalError('Unable to synthesize the following net '
                                       'due to unimplemented op :\n%s' % str(net))
     return
-
 
 def _generate_one_bit_add(a, b, cin):
     """ Generates hardware for a 1-bit full adder.
