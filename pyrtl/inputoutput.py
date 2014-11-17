@@ -298,8 +298,10 @@ def output_to_verilog(file, block=None):
 def _verilog_vector_decl(w):
     return '' if len(w) == 1 else '[%d:0]' % (len(w) - 1)
 
+
 def _verilog_vector_pow_decl(w):
     return '' if len(w) == 1 else '[%d:0]' % (2 ** len(w) - 1)
+
 
 def _to_verilog_header(file, block):
     io_list = [w.name for w in block.wirevector_subset((wire.Input, wire.Output))]
@@ -329,7 +331,8 @@ def _to_verilog_header(file, block):
         for d in w.dests:
             print >> file, '    reg%s %s_reg;' % (_verilog_vector_decl(d), d.name)
 
-        print >> file, '    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]), w.op_param[0], _verilog_vector_pow_decl(w.args[0]))
+        print >> file, '    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]),
+                                                w.op_param[0], _verilog_vector_pow_decl(w.args[0]))
     print >> file, ''
 
 
@@ -357,7 +360,8 @@ def _to_verilog_combinational(file, block):
             t = (net.dests[0].name, catlist)
             print >> file, '    assign %s = {%s};' % t
         elif net.op == 's':
-            catlist = ', '.join([net.args[0].name + '[%s]' % str(i) if len(net.args[0]) > 1 else net.args[0].name for i in net.op_param])
+            catlist = ', '.join([net.args[0].name + '[%s]' % str(i) if len(net.args[0]) > 1
+                                else net.args[0].name for i in net.op_param])
             t = (net.dests[0].name, catlist)
             print >> file, '    assign %s = {%s};' % t
         elif net.op == 'r':
@@ -380,7 +384,10 @@ def _to_verilog_sequential(file, block):
             print >> file, '        %s <= %s;' % t
         elif net.op == 'm':
             reads = zip(net.args[0:net.op_param[1]], net.dests)
-            writes = [net.args[net.op_param[1]:net.op_param[1]+i+3] for i in range(net.op_param[2])] if net.op_param[2] > 0 else tuple()
+            writes = tuple()
+            if net.op_param[2] > 0:
+                writes = [net.args[net.op_param[1]:net.op_param[1]+i+3]
+                          for i in range(net.op_param[2])]
 
             for read in reads:
                 t = (read[1].name, net.op_param[0], read[0].name)
@@ -388,7 +395,9 @@ def _to_verilog_sequential(file, block):
 
             for write in writes:
                 t = (write[2].name, net.op_param[0], write[0].name, write[1].name)
-                print >> file, '        if (%s) begin\n                mem_%s[%s] <= %s;\n        end' % t
+                print >> file, ('        if (%s) begin\n'
+                                '                mem_%s[%s] <= %s;\n'
+                                '        end') % t
 
     print >> file, '    end'
 
