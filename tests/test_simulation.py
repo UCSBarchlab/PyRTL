@@ -257,7 +257,7 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
 
         output = StringIO.StringIO()
         self.sim_trace.print_trace(output)
-        self.assertEqual(output.getvalue(), 'o1 05567\no2 00560\n')
+        self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
 
 if __name__ == '__main__':

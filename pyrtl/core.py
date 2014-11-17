@@ -92,7 +92,8 @@ class Block(object):
       requires three numbers (memory id, num reads, num writes). It assumes
       that operator reads have one addr (an arg) and one data (a dest).
       Writes have three args (addr, data, and write enable).  Reads are
-      specified first and then writes.
+      specified first and then writes.  You will not see a written value change
+      until the following cycle.
 
     The connecting elements (args and dests) should be WireVectors or derived
     from WireVector, and should be registered with the block using
