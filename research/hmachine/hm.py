@@ -25,6 +25,9 @@ textsize = pow(2, textspace)  # number of words of immortal heap memory
 
 def main():
 
+    test_argregs()
+
+def buildAll():
     # Build list of possible data sources
     localsOut = WireVector(width, "localsOut")
     argsOut =  WireVector(width, "argsOut")
@@ -124,13 +127,68 @@ def argregs(we, waddr, wdata, raddr, rdata, flipstate, reg1, reg2):
     reg2 <<= mux(state, falsecase=args2[Const("3'b1")], truecase=args1[Const("3'b1")])
 
     # Input
-    args1in = args1.EnabledWrite(wdata, we & (state == 0))
-    args1[waddr] = args1in
-    args2in = args2.EnabledWrite(wdata, we & (state == 1))
-    args2[waddr] = args2in
-    
+    EW = MemBlock.EnabledWrite
+    #args1[waddr] = EW(wdata, enable=(we & (state == 0)))
+    #args2[waddr] = EW(wdata, enable=(we & (state == 1)))
+    args1[waddr] = EW(wdata, enable=we)
+    args2[waddr] = EW(wdata, enable=we)
+
     # Handle state flips
     state.next <<= mux(flipstate, falsecase=state, truecase=~state)
+
+def test_argregs():
+
+    we = Input(1, 'we')
+    wdata = Input(width, 'wdata')
+    raddr = Input(argspace, 'raddr')
+    rdata = Output(width, 'rdata')
+    argswitch = Input(1, 'argSwitch')
+    arg1 = Output(width, 'arg1')
+    arg2 = Output(width, 'arg2')
+    #nargsreg = Register(argspace, 'nargs')
+    nargsreg = Input(argspace, 'nargs')
+
+    # Update number of arguments
+    '''
+    cond = ConditionalUpdate()
+    with cond(argswitch):  # Clear reg on scope change
+        nargsreg.next <<= 0
+    with cond(we):  # increment on control signal
+        nargsreg.next <<= nargsreg + 1
+    '''
+
+    # connect
+    argregs(we, nargsreg, wdata, raddr, rdata, argswitch, arg1, arg2)
+
+    pyrtl.working_block().sanity_check()
+
+    # simulate
+    # Write data 1-5, switch, then read out all regs
+    # Switch again, read out all data
+    # Write new dta, switch while writes ongoing, read out all regs
+    # switch, read out all regs
+    simvals = {
+        we:        "0011111111000000000000000",
+        nargsreg:  "0001234567000000000000000",
+        wdata:     "0012345678999000000000000",
+        raddr:     "0000000000000000012345670",
+        argswitch: "0000000000000010000000000"
+    }
+
+    '''
+    simvals = {
+        we:        "0111110000000000000000011111111000000000000000000",
+        wdata:     "0123450000000000000000098765432000000000000000000",
+        raddr:     "0000000123456700123456755555555012345670012345670",
+        argswitch: "0000010000000010000000000000100000000001000000000"
+    }
+    '''
+    sim_trace = pyrtl.SimulationTrace()
+    sim = pyrtl.Simulation(tracer=sim_trace)
+    for cycle in range(len(simvals[we])):
+        sim.step({k:int(v[cycle]) for k,v in simvals.items()})
+    sim_trace.render_trace()
+
 
 # ######################################################################
 #     Primitive Ops Unit (a.k.a. ALU)
