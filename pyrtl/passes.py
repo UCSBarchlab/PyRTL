@@ -56,7 +56,15 @@ def quick_timing_analysis(block, print_total_length=True):
     return timing_map
 
 
-def advanced_timing_analysis(block):
+def advanced_timing_analysis(block, wirevector, ):
+    """
+
+
+    :param block:
+    :param wirevector:
+    :param gate_delay: a map with keys corresponding to the gate and
+    :return: returns a map consisting of each wirevector and the
+    """
 
     def find_blocks(wires_to_check, all_wires):
         return set([aBlock for aBlock in block.logic if
