@@ -50,7 +50,7 @@ instr_imm_bits = slice(0,24)
 cont_nLocals_bits = slice(0,localspace)
 cont_envclo_bits = slice(localspace,localspace+namespace)
 cont_exptr_bits = slice(localspace+namespace,textspace)
-
+'''
 # Mux control constants
 PC_INC = Const("2'b00")
 PC_NINSTRS = Const("2'b01")
@@ -63,13 +63,16 @@ SRC_IMM = Const("3'b011")
 SRC_RR = Const("3'b100")
 SRC_NAME = Const("3'b101")
 SRC_STACK = Const("3'b110")
-
+'''
 def main():
 
     #test_argregs()
     #test_args_alu_rr()
-    buildAll()
-
+    #test_evalstack()
+    #test_localsregs()
+    test_table_heap()
+    #buildAll()
+    
 
 def buildAll():
 
@@ -125,27 +128,28 @@ def buildAll():
     instr_imm = iheapOut[instr_imm_bits]
 
     # Declare control signals
-    ctrl_argwe = WireVector(1, "ctrl_argsWriteEnable")
-    ctrl_argSwitch = WireVector(1, "ctrl_argsSwitch")
-    ctrl_ALUop = WireVector(4, "ctrl_ALUcontrol")
-    ctrl_alu2rr = WireVector(1, "ctrl_ALU-to-returnReg")
-    ctrl_loadrr = WireVector(1, "ctrl_loadRR")
-    ctrl_exptrsrc = WireVector(2, "ctrl_exptrSource")
-    ctrl_exptrload = WireVector(1, "ctrl_exptrLoad")
-    ctrl_spDecr = WireVector(1, "ctrl_evalStackDecrement")
-    ctrl_clearLocals = WireVector(1, "ctrl_clearLocals")
-    ctrl_stackWrite = WireVector(1, "ctrl_stackWrite")
-    ctrl_writeContinuation = WireVector(1, "ctrl_writeContinuation")
-    ctrl_inclocals = WireVector(1, "ctrl_incrementLocals")
-    ctrl_declocals = WireVector(1, "ctrl_decrementLocals")
-    ctrl_loadcont = WireVector(1, "ctrl_loadContinuation")
-    ctrl_writelocal = WireVector(1, "ctrl_writeLocalReg")
-    ctrl_enter = WireVector(1, "ctrl_enterNamedClosure")
-    ctrl_inspectElement = WireVector(1, "ctrl_inspectConsElement")
-    ctrl_writeFreevar = WireVector(1, "ctrl_writeFreevar")
-    ctrl_allocWriteName = WireVector(1, "ctrl_allocWriteName")
-    ctrl_aliasName = WireVector(1, "ctrl_aliasName")
-    ctrl_aliasPrim = WireVector(1, "ctrl_aliasPrim")
+    ctrl_argwe = WireVector(1, "ctrl_argsWriteEnable")  # write value into args reg
+    ctrl_argSwitch = WireVector(1, "ctrl_argsSwitch")  # switch read & write regs
+    ctrl_ALUop = WireVector(4, "ctrl_ALUcontrol")  # alu operation code
+    ctrl_alu2rr = WireVector(1, "ctrl_ALU-to-returnReg")  # if 1 ? RR <<= ALU : RR <<= srcMux
+    ctrl_loadrr = WireVector(1, "ctrl_loadRR")  # load muxed value into return register
+    ctrl_exptrsrc = WireVector(2, "ctrl_exptrSource")  # choose source of exptr (see mux constants)
+    ctrl_exptrload = WireVector(1, "ctrl_exptrLoad")  # load muxed value into exptr
+    ctrl_spDecr = WireVector(1, "ctrl_evalStackDecrement")  # decrement the eval stack pointer
+    ctrl_clearLocals = WireVector(1, "ctrl_clearLocals")  # sp <<= sp - nLocals; nLocals <<= 0
+    ctrl_stackWrite = WireVector(1, "ctrl_stackWrite")  # write value onto top of eval stack
+    ctrl_writeContinuation = WireVector(1, "ctrl_writeContinuation")  # write cont onto stack
+    ctrl_inclocals = WireVector(1, "ctrl_incrementLocals")  # nLocals <<= nLocals + 1
+    ctrl_declocals = WireVector(1, "ctrl_decrementLocals")  # nLocals <<= nLocals - 1
+    ctrl_loadcont = WireVector(1, "ctrl_loadContinuation")  # load cont. into nLocals and envclo
+    ctrl_writelocal = WireVector(1, "ctrl_writeLocalReg")  # locals[nLocals] <<= value
+    ctrl_enter = WireVector(1, "ctrl_enterNamedClosure")  # envclo <<= locals[index]; nTable addr=loc
+    ctrl_inspectElement = WireVector(1, "ctrl_inspectConsElement")  # nameTable addr = return reg
+    ctrl_writeFreevar = WireVector(1, "ctrl_writeFreevar")  # heap[hp] <<= evalstackOut; hp++
+    ctrl_allocWriteName = WireVector(1, "ctrl_allocWriteName")  # nTable[next]<<=hp;heap[hp]<<=itable
+    ctrl_aliasName = WireVector(1, "ctrl_aliasName")  # nTable[next] <<= nTable[value]
+    ctrl_aliasPrim = WireVector(1, "ctrl_aliasPrim")  # nTable[next] <<= value
+    ctrl_addrFreevar = WireVector(1, "ctrl_addressFreevar") # heapAddr = nTable + index + 1
 
     args_alu_rr(srcMux, instr_argindex, ctrl_argwe, ctrl_argSwitch, ctrl_ALUop, ctrl_alu2rr,
             ctrl_loadrr, argsOut, retRegOut)
@@ -157,7 +161,7 @@ def buildAll():
                instr_name, localsOut, ctrl_writelocal, ctrl_enter, envcloOut, nLocalsOut)
     table_heap(envcloOut, retRegOut, localsOut, ctrl_enter, ctrl_inspectElement, srcMux, newName,
             ctrl_writeFreevar, ctrl_allocWriteName, instr_freevarindex, heapOut, instr_itable, evalStackOut,
-            ctrl_aliasName, ctrl_aliasPrim)
+               ctrl_aliasName, ctrl_aliasPrim, ctrl_addrFreevar)
 
     pyrtl.working_block().sanity_check()
 
@@ -174,15 +178,15 @@ def evalstack(ctrl_spDecr, ctrl_spclearLocals, nLocals, ctrl_writeValue,
               ctrl_writeContinuation, continuation, srcMux, evalStackOut):
     sp = Register(evalstackspace, "EvalStackPointer")
     spinc = ctrl_writeValue | ctrl_writeContinuation  # auto-increment on writes
-    toAdd = switch(concat(spinc, ctrl_spDecr, ctrl_spclearLocals), {
-        "3'b100" : 0,
-        "3'b010" : ~Const(1, bitwidth=evalstackspace),
-        "3'b001" : ~nLocals,
+    stacknext = switch(concat(spinc, ctrl_spDecr, ctrl_spclearLocals), {
+        "3'b100" : sp + 1,
+        "3'b010" : sp - 1,
+        "3'b001" : sp - nLocals,
         None : 0
     })
     cond = ConditionalUpdate()
     with cond(ctrl_spDecr | ctrl_spclearLocals | spinc):
-        sp.next <<= toAdd + 1
+        sp.next <<= stacknext
 
     # Instantiate stack memory
     evalStack = MemBlock(width, evalstackspace, "EvaluationStack")
@@ -194,6 +198,36 @@ def evalstack(ctrl_spDecr, ctrl_spclearLocals, nLocals, ctrl_writeValue,
     EW = MemBlock.EnabledWrite
     nextspace = sp + 1
     evalStack[nextspace[0:evalstackspace]] = EW(evalStackWData, enable=spinc)
+
+def test_evalstack():
+
+    ctrl_spDecr = Input(1, "ctrl_spDecr")
+    ctrl_spclearLocals = Input(1, "ctrl_spclearLocals")
+    nLocals = Input(localspace, "nLocals")
+    ctrl_writeValue = Input(1, "ctrl_writeValue")
+    ctrl_writeContinuation = Input(1, "ctrl_writeContinuation")
+    continuation = Input(textspace + namespace + localspace, "continuation")
+    srcMux = Input(width, "srcMux")
+    evalStackOut = Output(width, "evalStackOut")
+
+    evalstack(ctrl_spDecr, ctrl_spclearLocals, nLocals, ctrl_writeValue, 
+              ctrl_writeContinuation, continuation, srcMux, evalStackOut)
+
+    simvals = {
+        ctrl_spDecr            : "000000000111000",
+        ctrl_spclearLocals     : "000000000000010",
+        nLocals                : "000000000000040",
+        ctrl_writeValue        : "011111000000000",
+        ctrl_writeContinuation : "000000111000000",
+        continuation           : "000000987000000",
+        srcMux                 : "012345000000000",
+    }
+
+    sim_trace = pyrtl.SimulationTrace()
+    sim = pyrtl.Simulation(tracer=sim_trace)
+    for cycle in range(len(simvals[srcMux])):
+        sim.step({k:int(v[cycle]) for k,v in simvals.items()})
+    sim_trace.render_trace()
 
 
 # ######################################################################
@@ -229,10 +263,58 @@ def localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearlocals, ctrl_loadcont, 
     envclonext = switch(concat(ctrl_loadcont, ctrl_enter), {
         "2'b10" : srcMux[cont_envclo_bits],
         "2'b01" : localsOut,
-        None : localsOut
+        None : envclo
     })
+    cond = ConditionalUpdate()
     with cond(ctrl_loadcont | ctrl_enter):
         envclo.next <<= envclonext
+    #envclo.next <<= envclonext
+
+    c1 = WireVector(1, "TEST_ctrl_loadcont")
+    c1 <<= ctrl_loadcont
+    c2 = WireVector(namespace, "TEST_contClo")
+    c2 <<= srcMux[cont_envclo_bits]
+
+def test_localsregs():
+
+    ctrl_inclocals = Input(1, "ctrl_inclocals")
+    ctrl_declocals = Input(1, "ctrl_declocals")
+    ctrl_clearlocals = Input(1, "ctrl_clearlocals")
+    ctrl_loadcont = Input(1, "ctrl_loadcont")
+    srcMux = Input(width, "srcMux")
+    localsindex = Input(localspace, "localsindex")
+    localsWire = WireVector(namespace, "localsWire")
+    localsOut = Output(namespace, "localsOut")
+    localsOut <<= localsWire
+    ctrl_writelocal = Input(1, "ctrl_writelocal")
+    ctrl_enter = Input(1, "ctrl_enter")
+    envcloOut = Output(namespace, "envcloOut")
+    nLocalsOut = Output(localspace, "nLocalsOut")
+    contenvout = Output(namespace, "ContEnv")
+    contenvout <<= srcMux[cont_envclo_bits]
+
+    localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearlocals, ctrl_loadcont, srcMux,
+            localsindex, localsWire, ctrl_writelocal, ctrl_enter, envcloOut, nLocalsOut)
+
+#    cont_envclo_bits = slice(localspace,localspace+namespace)
+
+    simvals = {
+        ctrl_inclocals   : "011110000000000000",
+        ctrl_declocals   : "000001000000000000",
+        ctrl_clearlocals : "000000000000100000",
+        ctrl_loadcont    : "000000000000010000",
+        srcMux           : [b for b in "0123450000000"] + [0xFFFFFFF,0,0xF,0,0],
+        localsindex      : "000000123453000020",
+        ctrl_writelocal  : "011111000000000100",
+        ctrl_enter       : "000000000001000010"
+    }
+
+    sim_trace = pyrtl.SimulationTrace()
+    sim = pyrtl.Simulation(tracer=sim_trace)
+    for cycle in range(len(simvals[srcMux])):
+        sim.step({k:int(v[cycle]) for k,v in simvals.items()})
+    sim_trace.render_trace()
+    
 
     
 # ######################################################################
@@ -240,7 +322,7 @@ def localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearlocals, ctrl_loadcont, 
 # ######################################################################
 def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, srcMux, newNameOut,
                ctrl_writeFreevar, ctrl_allocWriteName, freevarIndex, heapOut, infoTable, evalStackOut,
-               ctrl_aliasName, ctrl_aliasPrim):
+               ctrl_aliasName, ctrl_aliasPrim, ctrl_addrFreevar):
 
     freePtr = Register(heapspace, "HeapFreePointer")
 
@@ -258,6 +340,9 @@ def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, sr
     # Allocation of names
     nextName = Register(namespace, "nextNameReg")
     newNameOut <<= nextName  # needed for locals regs and eval stack saving
+    cond = ConditionalUpdate()
+    with cond(ctrl_allocWriteName | ctrl_aliasPrim | ctrl_aliasName):
+        nextName.next <<= nextName + 1
     tableWriteData = switch(concat(ctrl_allocWriteName, ctrl_aliasPrim, ctrl_aliasName), {
         "3'b100" : freePtr,
         "3'b010" : srcMux,
@@ -270,7 +355,7 @@ def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, sr
     
     # Heap
     heap = MemBlock(width, heapspace, "Heap")
-    heapaddr = mux(ctrl_writeFreevar, falsecase=nameTableOut, truecase=(nameTableOut + freevarIndex + 1))
+    heapaddr = mux(ctrl_addrFreevar, falsecase=nameTableOut, truecase=(nameTableOut + freevarIndex + 1))
     heapOut <<= heap[heapaddr[0:heapspace]]
     heapWriteData = mux(ctrl_writeFreevar, falsecase=infoTable, truecase=evalStackOut)
     heap[freePtr] = MemBlock.EnabledWrite(heapWriteData, enable=(ctrl_writeFreevar | ctrl_allocWriteName))
@@ -279,6 +364,88 @@ def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, sr
     cond = ConditionalUpdate()
     with cond(ctrl_writeFreevar | ctrl_allocWriteName):
         freePtr.next <<= freePtr + 1
+
+def find_cycle(block):
+    for wire in block.wirevector_subset(Input):
+        val = __cycle_dfs(block, wire, set(), set())
+        if val is not None:
+            return [str(x) for x in val]
+    return False
+            
+def __cycle_dfs(block, wire, visited, history):
+    print "Visiting {}".format(wire)
+    if wire in visited:
+        return
+    visited.add(wire)
+    history.add(wire)
+    for x in block.logic:
+        print x
+        if not(all([wire is z for z in x.args])):
+            continue
+        for w in x.dests:
+            if w in history:
+                return wire,x,w, [str(x) for x in history]
+            if w not in visited:
+                val = __cycle_dfs(block, w, visited, history)
+                if val is not None:
+                    return val
+    history.remove(wire)
+        
+
+def test_table_heap():
+
+    envclo = Input(namespace, "envclo")
+    returnReg = Input(width, "returnReg")
+    localsOut = Input(namespace, "localsOut")
+    ctrl_enter = Input(1, "ctrl_enter")
+    ctrl_inspectElement = Input(1, "ctrl_inspectElement")
+    srcMux = Input(width, "srcMux")
+    newNameOut = Output(namespace, "newNameOut")
+    ctrl_writeFreevar = Input(1, "ctrl_writeFreevar")
+    ctrl_allocWriteName = Input(1, "ctrl_allocWriteName")
+    freevarIndex = Input(freevarspace, "freevarIndex")
+    heapOut = Output(width, "heapOut")
+    infoTable = Input(itablespace, "infoTable")
+    evalStackOut = Input(width, "evalStackOut")
+    ctrl_aliasName = Input(1, "ctrl_aliasName")
+    ctrl_aliasPrim = Input(1, "ctrl_aliasPrim")
+    ctrl_addrFreevar = Input(1, "ctrl_addrFreevar")
+
+    table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, srcMux, newNameOut,
+               ctrl_writeFreevar, ctrl_allocWriteName, freevarIndex, heapOut, infoTable, evalStackOut,
+               ctrl_aliasName, ctrl_aliasPrim, ctrl_addrFreevar)
+
+    pyrtl.working_block().sanity_check()
+    print find_cycle(pyrtl.working_block())
+    return
+
+    print pyrtl.working_block()
+
+    simvals = {
+        envclo              : "0000000000000",
+        returnReg           : "0000000000000",
+        localsOut           : "0000000000000",
+        ctrl_enter          : "0000000000000",
+        ctrl_inspectElement : "0000000000000",
+        srcMux              : "0000000000092",
+        ctrl_writeFreevar   : "0011110000000",
+        ctrl_allocWriteName : "0100000000000",
+        freevarIndex        : "0000000123000",
+        infoTable           : "0400000000000",
+        ctrl_aliasName      : "0000000000101",
+        ctrl_aliasPrim      : "0000000000010",
+        ctrl_addrFreevar    : "0000001111000",
+        evalStackOut        : "0012340000000"
+    }
+
+    sim_trace = pyrtl.SimulationTrace()
+    sim = pyrtl.Simulation(tracer=sim_trace)
+    for cycle in range(len(simvals[srcMux])):
+        sim.step({k:int(v[cycle]) for k,v in simvals.items()})
+    sim_trace.render_trace()
+
+
+
 
 # ######################################################################
 #     Info Tables, Execution Pointer, and Immortal Heap
