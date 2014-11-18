@@ -33,7 +33,7 @@ itable_arity_bits = slice(29,32)
 # Instruction structure
 instr_opcode_bits = slice(27,32)
 instr_dsrc_bits = slice(24,27)
-instr_name_bits = slice(0,namespace)
+instr_name_bits = slice(0,localspace)
 if namespace > 24:
     raise ValueError("Size of names cannot fit in instruction.")
 instr_argindex_bits = slice(0, argspace)
@@ -42,8 +42,14 @@ instr_litpattern_bits = slice(8,24)
 instr_conitable_bits = slice(8,8+itablespace)
 if itablespace > 16:
     raise ValueError("Size of instruction table address space cannot fit in instruction.")
+instr_itable_bits = slice(0, itablespace)
 instr_nInstrs_bits = slice(0,8)
 instr_imm_bits = slice(0,24)
+
+# Continuation structure
+cont_nLocals_bits = slice(0,localspace)
+cont_envclo_bits = slice(localspace,localspace+namespace)
+cont_exptr_bits = slice(localspace+namespace,textspace)
 
 # Mux control constants
 PC_INC = Const("2'b00")
@@ -56,6 +62,7 @@ SRC_HEAP = Const("3'b010")
 SRC_IMM = Const("3'b011")
 SRC_RR = Const("3'b100")
 SRC_NAME = Const("3'b101")
+SRC_STACK = Const("3'b110")
 
 def main():
 
@@ -73,6 +80,7 @@ def buildAll():
     immediate =  WireVector(width, "instrImmediate")
     retRegOut = WireVector(width, "returnRegisterOut")
     newName = WireVector(namespace, "NewName")
+    evalStackOut = WireVector(width, "evalStackOut")
     dSources = {
         SRC_LOCALS : localsOut,
         SRC_ARGS : argsOut,
@@ -80,6 +88,7 @@ def buildAll():
         SRC_IMM : immediate,
         SRC_RR : retRegOut,
         SRC_NAME : newName,
+        SRC_STACK : evalStackOut,
         None : 0
     }    
     dataSrcSelect = WireVector(3, "dataSourceSelect")
@@ -88,11 +97,10 @@ def buildAll():
     # other needed wires
     iheapOut = WireVector(width, "InstrHeapOut")
     itableOut = WireVector(32, "InstrTableOut")
-    nLocals = WireVector(localspace, "nLocals")
+    nLocalsOut = WireVector(localspace, "nLocals")
     exptr = WireVector(textspace, "exptr")
-    curclo = WireVector(namespace, "currentClosure")
-    continuation = concat(exptr, curclo, nLocals)
-    evalStackOut = WireVector(evalstackspace, "evalStackOut")
+    envcloOut = WireVector(namespace, "CurEnvClosureRegOut")
+    continuation = concat(exptr, envcloOut, nLocalsOut)
     cont_nLocals = evalStackOut[0:localspace]
     cont_envclo = evalStackOut[localspace:localspace+namespace]
     cont_exptr = evalStackOut[localspace+namespace:textspace]
@@ -112,6 +120,7 @@ def buildAll():
     instr_freevarindex = iheapOut[instr_freevarindex_bits]
     instr_litpattern = iheapOut[instr_litpattern_bits]
     instr_conitable = iheapOut[instr_conitable_bits]
+    instr_itable = iheapOut[instr_itable_bits]
     instr_nInstrs = iheapOut[instr_nInstrs_bits]
     instr_imm = iheapOut[instr_imm_bits]
 
@@ -121,19 +130,36 @@ def buildAll():
     ctrl_ALUop = WireVector(4, "ctrl_ALUcontrol")
     ctrl_alu2rr = WireVector(1, "ctrl_ALU-to-returnReg")
     ctrl_loadrr = WireVector(1, "ctrl_loadRR")
-    ctrl_exptrsrc = WireVector(1, "ctrl_exptrSource")
+    ctrl_exptrsrc = WireVector(2, "ctrl_exptrSource")
     ctrl_exptrload = WireVector(1, "ctrl_exptrLoad")
     ctrl_spDecr = WireVector(1, "ctrl_evalStackDecrement")
     ctrl_clearLocals = WireVector(1, "ctrl_clearLocals")
     ctrl_stackWrite = WireVector(1, "ctrl_stackWrite")
     ctrl_writeContinuation = WireVector(1, "ctrl_writeContinuation")
+    ctrl_inclocals = WireVector(1, "ctrl_incrementLocals")
+    ctrl_declocals = WireVector(1, "ctrl_decrementLocals")
+    ctrl_loadcont = WireVector(1, "ctrl_loadContinuation")
+    ctrl_writelocal = WireVector(1, "ctrl_writeLocalReg")
+    ctrl_enter = WireVector(1, "ctrl_enterNamedClosure")
+    ctrl_inspectElement = WireVector(1, "ctrl_inspectConsElement")
+    ctrl_writeFreevar = WireVector(1, "ctrl_writeFreevar")
+    ctrl_allocWriteName = WireVector(1, "ctrl_allocWriteName")
+    ctrl_aliasName = WireVector(1, "ctrl_aliasName")
+    ctrl_aliasPrim = WireVector(1, "ctrl_aliasPrim")
 
     args_alu_rr(srcMux, instr_argindex, ctrl_argwe, ctrl_argSwitch, ctrl_ALUop, ctrl_alu2rr,
-                ctrl_loadrr, argsOut, retRegOut)
-    itable_exptr_iheap(closureTable, ctrl_exptrsrc, ctrl_exptrload, instr_nInstrs, instr_conitable, 
-                       itableOut, iheapOut, exptr)
-    evalstack(ctrl_spDecr, ctrl_clearLocals, nLocals, ctrl_stackWrite, 
-              ctrl_writeContinuation, continuation, srcMux, evalStackOut)
+            ctrl_loadrr, argsOut, retRegOut)
+    itable_exptr_iheap(closureTable, ctrl_exptrsrc, ctrl_exptrload, instr_nInstrs, srcMux, 
+            itableOut, iheapOut, exptr)
+    evalstack(ctrl_spDecr, ctrl_clearLocals, nLocalsOut, ctrl_stackWrite, 
+            ctrl_writeContinuation, continuation, srcMux, evalStackOut)
+    localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearLocals, ctrl_loadcont, srcMux,
+               instr_name, localsOut, ctrl_writelocal, ctrl_enter, envcloOut, nLocalsOut)
+    table_heap(envcloOut, retRegOut, localsOut, ctrl_enter, ctrl_inspectElement, srcMux, newName,
+            ctrl_writeFreevar, ctrl_allocWriteName, instr_freevarindex, heapOut, instr_itable, evalStackOut,
+            ctrl_aliasName, ctrl_aliasPrim)
+
+    pyrtl.working_block().sanity_check()
 
 # ######################################################################
 #     Instruction Decode
@@ -173,19 +199,91 @@ def evalstack(ctrl_spDecr, ctrl_spclearLocals, nLocals, ctrl_writeValue,
 # ######################################################################
 #     Locals
 # ######################################################################
-def instrdecode():
-    pass
+def localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearlocals, ctrl_loadcont, srcMux,
+               localsindex, localsOut, ctrl_writelocal, ctrl_enter, envcloOut, nLocalsOut):
 
+    # Register storing number of local variables so far in this scope
+    nlocals = Register(localspace, "nLocalsReg")
+    nLocalsOut <<= nlocals
+    nlocalsnext = switch(concat(ctrl_inclocals, ctrl_declocals, ctrl_clearlocals, ctrl_loadcont), {
+        "4'b1000" : nlocals + 1,  # increment register
+        "4'b0100" : nlocals - 1,  # decrement register
+        "4'b0010" : Const(0, bitwidth=localspace),  # clear register
+        "4'b0001" : srcMux[cont_nLocals_bits],  # load saved number of locals section of continuation
+        None : nlocals
+    })
+    cond = ConditionalUpdate()
+    with cond(ctrl_inclocals | ctrl_declocals | ctrl_clearlocals | ctrl_loadcont):
+        nlocals.next <<= nlocalsnext
+
+    # Locals registers
+    localsRegs = MemBlock(width, localspace, name="LocalsRegisters")
+    localsOut <<= localsRegs[localsindex]  # read port; read local specified in instr
+    # Values written on allocation and all aliases
+    localsRegs[nlocals] = MemBlock.EnabledWrite(srcMux, enable=ctrl_writelocal)
+
+    # Current environment closure register
+    envclo = Register(namespace, "CurrentEnvClosure")
+    envcloOut <<= envclo
+    # Can load closure off of stack or name in local reg on enter instruction
+    envclonext = switch(concat(ctrl_loadcont, ctrl_enter), {
+        "2'b10" : srcMux[cont_envclo_bits],
+        "2'b01" : localsOut,
+        None : localsOut
+    })
+    with cond(ctrl_loadcont | ctrl_enter):
+        envclo.next <<= envclonext
+
+    
 # ######################################################################
 #     Name Table and Heap
 # ######################################################################
-def instrdecode():
-    pass
+def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, srcMux, newNameOut,
+               ctrl_writeFreevar, ctrl_allocWriteName, freevarIndex, heapOut, infoTable, evalStackOut,
+               ctrl_aliasName, ctrl_aliasPrim):
+
+    freePtr = Register(heapspace, "HeapFreePointer")
+
+    # Name Table
+    nameTable = MemBlock(heapspace, namespace, "NameTable")
+    nameTableAddr = switch(concat(ctrl_enter, ctrl_inspectElement, ctrl_aliasName), {
+        "3'b100" : localsOut,
+        "3'b010" : returnReg,
+        "3'b001" : srcMux,
+        None : envclo
+    })
+    nameTableOut = WireVector(heapspace, "NameTableOut")
+    nameTableOut <<= nameTable[nameTableAddr[0:namespace]]
+
+    # Allocation of names
+    nextName = Register(namespace, "nextNameReg")
+    newNameOut <<= nextName  # needed for locals regs and eval stack saving
+    tableWriteData = switch(concat(ctrl_allocWriteName, ctrl_aliasPrim, ctrl_aliasName), {
+        "3'b100" : freePtr,
+        "3'b010" : srcMux,
+        "3'b001" : nameTableOut,
+        None : nameTableOut
+    })
+    # Can write newly allocated name or alias (from srcMux)
+    nameTable[nextName] = MemBlock.EnabledWrite(tableWriteData[0:heapspace], 
+                                    enable=(ctrl_allocWriteName | ctrl_aliasPrim | ctrl_aliasName))
+    
+    # Heap
+    heap = MemBlock(width, heapspace, "Heap")
+    heapaddr = mux(ctrl_writeFreevar, falsecase=nameTableOut, truecase=(nameTableOut + freevarIndex + 1))
+    heapOut <<= heap[heapaddr[0:heapspace]]
+    heapWriteData = mux(ctrl_writeFreevar, falsecase=infoTable, truecase=evalStackOut)
+    heap[freePtr] = MemBlock.EnabledWrite(heapWriteData, enable=(ctrl_writeFreevar | ctrl_allocWriteName))
+
+    # Update free pointer
+    cond = ConditionalUpdate()
+    with cond(ctrl_writeFreevar | ctrl_allocWriteName):
+        freePtr.next <<= freePtr + 1
 
 # ######################################################################
 #     Info Tables, Execution Pointer, and Immortal Heap
 # ######################################################################
-def itable_exptr_iheap(targetTable, ctrl_exptr, ctrl_loadexptr, nInstrs, contTarget, 
+def itable_exptr_iheap(targetTable, ctrl_exptr, ctrl_loadexptr, nInstrs, srcMux, 
                        itableOut, instrOut, exptrOut):
     infoTable = MemBlock(32, itablespace, "infoTable")
     itableOut <<= infoTable[targetTable]
@@ -198,7 +296,7 @@ def itable_exptr_iheap(targetTable, ctrl_exptr, ctrl_loadexptr, nInstrs, contTar
         PC_INC : exptr + 1,
         PC_NINSTRS : nInstrs,
         PC_ITABLE : itable_entryCode,
-        PC_CONTINUATION : contTarget,
+        PC_CONTINUATION : srcMux[cont_exptr_bits],
         None : exptr
     })
     cond = ConditionalUpdate()
