@@ -442,6 +442,7 @@ def _decompose(net, wv_map, block_out):
                                       'due to unimplemented op :\n%s' % str(net))
     return
 
+
 def _generate_one_bit_add(a, b, cin):
     """ Generates hardware for a 1-bit full adder.
         Input: 3 1-bit wire vectors

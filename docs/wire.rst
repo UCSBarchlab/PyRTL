@@ -7,3 +7,6 @@ Wires also provide the basic input and output interfaces from the generated :cla
 .. automodule:: pyrtl.wire
    :members:
    :show-inheritance:
+   :special-members:
+   :undoc-members:
+   :exclude-members: __dict__,__weakref__,__module__
