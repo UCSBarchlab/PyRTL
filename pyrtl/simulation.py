@@ -227,7 +227,12 @@ class Simulation(object):
 
     def _is_ready_to_execute(self, defined_set, net):
         """Return true if all of the arguments are ready"""
-        return all(arg in defined_set for arg in net.args)
+        # TODO: this is a hack and memories need to be revisited
+        if net.op == 'm':
+            num_reads = net.op_param[1]
+            return all(arg in defined_set for arg in net.args[0:num_reads])
+        else:
+            return all(arg in defined_set for arg in net.args)
 
 
 # ----------------------------------------------------------------
