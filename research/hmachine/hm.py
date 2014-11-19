@@ -348,6 +348,8 @@ def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, sr
         "3'b010" : srcMux,
         "3'b001" : nameTableOut,
         None : nameTableOut
+        #"3'b001" : 0,
+        #None : 0
     })
     # Can write newly allocated name or alias (from srcMux)
     nameTable[nextName] = MemBlock.EnabledWrite(tableWriteData[0:heapspace], 
@@ -359,37 +361,12 @@ def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, sr
     heapOut <<= heap[heapaddr[0:heapspace]]
     heapWriteData = mux(ctrl_writeFreevar, falsecase=infoTable, truecase=evalStackOut)
     heap[freePtr] = MemBlock.EnabledWrite(heapWriteData, enable=(ctrl_writeFreevar | ctrl_allocWriteName))
-
+    
     # Update free pointer
     cond = ConditionalUpdate()
     with cond(ctrl_writeFreevar | ctrl_allocWriteName):
         freePtr.next <<= freePtr + 1
 
-def find_cycle(block):
-    for wire in block.wirevector_subset(Input):
-        val = __cycle_dfs(block, wire, set(), set())
-        if val is not None:
-            return [str(x) for x in val]
-    return False
-            
-def __cycle_dfs(block, wire, visited, history):
-    print "Visiting {}".format(wire)
-    if wire in visited:
-        return
-    visited.add(wire)
-    history.add(wire)
-    for x in block.logic:
-        print x
-        if not(all([wire is z for z in x.args])):
-            continue
-        for w in x.dests:
-            if w in history:
-                return wire,x,w, [str(x) for x in history]
-            if w not in visited:
-                val = __cycle_dfs(block, w, visited, history)
-                if val is not None:
-                    return val
-    history.remove(wire)
         
 
 def test_table_heap():
@@ -415,11 +392,11 @@ def test_table_heap():
                ctrl_writeFreevar, ctrl_allocWriteName, freevarIndex, heapOut, infoTable, evalStackOut,
                ctrl_aliasName, ctrl_aliasPrim, ctrl_addrFreevar)
 
-    pyrtl.working_block().sanity_check()
-    print find_cycle(pyrtl.working_block())
-    return
+    #pyrtl.working_block().sanity_check()
+    #print find_cycle(pyrtl.working_block())
+    #return
 
-    print pyrtl.working_block()
+    #print pyrtl.working_block()
 
     simvals = {
         envclo              : "0000000000000",
@@ -703,6 +680,47 @@ def muxtree(vals, select):
         return muxtree(new, select[1:])
 
 
+def find_cycle(block):
+    for wire in block.wirevector_subset(Input):
+        val = __cycle_dfs(block, wire, [], [])
+        if val is not None:
+            return val
+    return False
+            
+def __cycle_dfs(block, wire, visited, history):
+    #print "Visiting {}".format(wire)
+    if wire in visited:
+        return
+    visited.append(wire)
+    history.append(wire)
+    #print len(block.logic)
+    for x in block.logic.copy():
+        #print len(block.logic)
+        #print x
+        if not(any([wire is z for z in x.args])):
+        #print wire in x.args
+        #if wire in x.args:
+            continue
+        #print "Check"
+        for w in x.dests:
+            #print x.dests
+            #if w in history:
+            if any([w is z for z in history]):
+                #print len(block.logic)
+                s = "Cycle detected.\n"
+                s += "{} feeds into {} but is descended from it.\n".format(wire, x)
+                s += "Set of recursive stack:\n"
+                s += str([str(x) for x in history])
+                return s
+                #return wire,x,w, [str(x) for x in history]
+            #if w not in visited:
+            if not(any([w is z for z in visited])):
+                #print len(block.logic)
+                val = __cycle_dfs(block, w, visited, history)
+                #print val
+                if val is not None:
+                    return val
+    history.remove(wire)
 
 
 
