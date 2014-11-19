@@ -373,10 +373,8 @@ class BlockIterator():
                     remaining.remove(gate)  # remove gate from set of to return
                     yield gate
 
-        for gate_in_loop in remaining:
-            yield gate_in_loop
-            # loop through gates that initially fail to iterate
-            # through due to being in a nonregister loop
+        if remaining:
+            raise PyrtlError("Failure in Block Iterator due to non-register loops")
 
         raise StopIteration
 
