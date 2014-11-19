@@ -118,7 +118,7 @@ def buildAll():
     # Declare control signals
     ctrl_argwe = WireVector(1, "ctrl_argsWriteEnable")
     ctrl_argSwitch = WireVector(1, "ctrl_argsSwitch")
-    ctrl_ALUop = WireVector(4, "ctrl_ALUcontrol")
+    ctrl_ALUop = WireVector(8, "ctrl_ALUcontrol")
     ctrl_alu2rr = WireVector(1, "ctrl_ALU-to-returnReg")
     ctrl_loadrr = WireVector(1, "ctrl_loadRR")
     ctrl_exptrsrc = WireVector(1, "ctrl_exptrSource")
@@ -173,13 +173,16 @@ def evalstack(ctrl_spDecr, ctrl_spclearLocals, nLocals, ctrl_writeValue,
 # ######################################################################
 #     Locals
 # ######################################################################
-def instrdecode():
+def locals():
     pass
 
 # ######################################################################
 #     Name Table and Heap
 # ######################################################################
-def instrdecode():
+def nametable():
+    pass
+
+def heap():
     pass
 
 # ######################################################################
@@ -252,7 +255,7 @@ def test_args_alu_rr():
     argIndex = Input(argspace, "argReadIndex")
     ctrl_argwe = Input(1, "writeArg")
     ctrl_argSwitch = Input(1, "switchArgs")
-    ctrl_ALUop = Input(4, "ALUop")
+    ctrl_ALUop = Input(8, "ALUop")
     ctrl_alu2rr = Input(1, "alu2rr")
     ctrl_loadrr = Input(1, "loadrr")
     argsOut = Output(width, "argsOut")
@@ -372,13 +375,66 @@ def test_argregs():
 #     Primitive Ops Unit (a.k.a. ALU)
 # ######################################################################
 def makeALU(control, op1, op2, out):
+    '''
+        %and    - 8'b0000_0000
+        %or     - 8'b0000_0001
+        %not    - 8'b0000_0010
+        %xor    - 8'b0000_0011
+        %iadd   - 8'b0000_0100
+        %isub   - 8'b0000_0101
+        %eq     - 8'b0000_0110
+        %ne     - 8'b0000_0111
+        %lt     - 8'b0000_1000
+        %le     - 8'b0000_1001
+        %gt     - 8'b0000_1010
+        %ge     - 8'b0000_1011
 
+        %imul   - 8'b0001_0000
+        %idiv   - 8'b0001_0001
+        %imod   - 8'b0001_0010
+
+        %lsl    - 8'b0010_0000
+        %rsl    - 8'b0010_0001
+        %rsa    - 8'b0010_0010
+        %lr     - 8'b0010_0011
+        %rr     - 8'b0010_0100
+
+        %fadd   - 8'b1000_0000
+        %fsub   - 8'b1000_0001
+        %fmul   - 8'b1000_0010
+        %fdiv   - 8'b1000_0011
+    '''
+
+    '''
+    Unimplemented for now
+    "8'b0001_0000": op1 * op2,
+    "8'b0001_0001": op1 / op2,
+    "8'b0001_0010": op1 % op2,
+
+    "8'b0010_0000": lsl,
+    "8'b0010_0001": rsl,
+    "8'b0010_0010": rsa,
+    "8'b0010_0011": lr,
+    "8'b0010_0100": rr,
+
+    "8'b1000_0000": fadd,
+    "8'b1000_0001": fsub,
+    "8'b1000_0010": fmul,
+    "8'b1000_0011": fdiv,
+    '''
     out <<= switch(control, {
-        "4'b0000": op1 & op2,
-        "4'b0001": op1 | op2,
-        "4'b0010": op1 + op2,
-        "4'b0110": op1 - op2,
-        "4'b0111": op1 < op2,
+        "8'b0000_0000": op1 & op2,
+        "8'b0000_0001": op1 | op2,
+        "8'b0000_0010": ~op1,
+        "8'b0000_0011": op1 ^ op2,
+        "8'b0000_0100": op1 + op2,
+        "8'b0000_0101": op1 - op2,
+        "8'b0000_0110": op1 == op2,
+        "8'b0000_0111": op1 != op2,
+        "8'b0000_1000": op1 < op2,
+        "8'b0000_1001": op1 <= op2,
+        "8'b0000_1010": op1 > op2,
+        "8'b0000_1011": op1 >= op2,
         None: 0
     })    
 
