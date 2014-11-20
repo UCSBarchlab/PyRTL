@@ -11,7 +11,10 @@ localspace = 4  # number of bits to specify local var number
 nLocals = pow(2, localspace)  # maximum number of local vars in a function
 freevarspace = 8  # number of bits to specify free variable number
 nfreevars = pow(2, freevarspace)  # maximum number of free variables
-width = 32  # machine width
+datawidth = 32
+width = datawidth + 1   # machine width
+primtag_bits = 0
+data_bits = slice(1, datawidth)
 
 # Memory sizes
 namespace = 10  # number of bits used in IDs
@@ -46,6 +49,21 @@ instr_itable_bits = slice(0, itablespace)
 instr_nInstrs_bits = slice(0,8)
 instr_imm_bits = slice(0,24)
 
+# Instruction opcodes/varietals
+OPCODES = {
+    "arg"         : Const(0 , bitwidth=5),
+    "freevar"     : Const(1 , bitwidth=5),
+    "alias"       : Const(2 , bitwidth=5),
+    "let_closure" : Const(3 , bitwidth=5),
+    "case"        : Const(4 , bitwidth=5),
+    "lit_pattern" : Const(5 , bitwidth=5),
+    "con_pattern" : Const(6 , bitwidth=5),
+    "else_pattern": Const(7 , bitwidth=5),
+    "call"        : Const(8 , bitwidth=5),
+    "enter"       : Const(9 , bitwidth=5),
+    "ret"         : Const(10 , bitwidth=5)
+}
+
 # Continuation structure
 cont_nLocals_bits = slice(0,localspace)
 cont_envclo_bits = slice(localspace,localspace+namespace)
@@ -61,8 +79,9 @@ SRC_ARGS = Const("3'b001")
 SRC_HEAP = Const("3'b010")
 SRC_IMM = Const("3'b011")
 SRC_RR = Const("3'b100")
-SRC_NAME = Const("3'b101")
-SRC_STACK = Const("3'b110")
+SRC_ELEM = Const("3'b101")
+SRC_NAME = Const("3'b110")
+SRC_STACK = Const("3'b111")
 '''
 def main():
 
@@ -77,6 +96,8 @@ def main():
 def buildAll():
 
     # Build source mux
+    # On src_elem (use component of matched constructor), we use contents of RR as address in
+    #  name table, address a free variable of the objet in the heap, and send that through the srcMux
     localsOut = WireVector(width, "localsOut")
     argsOut =  WireVector(width, "argsOut")
     heapOut =  WireVector(width, "heapOut")
@@ -90,6 +111,7 @@ def buildAll():
         SRC_HEAP : heapOut,
         SRC_IMM : immediate,
         SRC_RR : retRegOut,
+        SRC_ELEM : heapOut,
         SRC_NAME : newName,
         SRC_STACK : evalStackOut,
         None : 0
@@ -169,8 +191,92 @@ def buildAll():
 #     Instruction Decode
 # ######################################################################
 def instrdecode():
-    pass
+    '''
+    ALL INSTRUCTIONS:
+    arg_*
+    freevar_*
+    alias_*
+    let_closure
+    case
+    lit_pattern
+    con_pattern
+    else_pattern
+    call
+    enter
+    ret
 
+    ALL CONTROL SIGNALS:
+    ctrl_argSwitch # switch read & write regs
+    ctrl_loadrr # load muxed value into return register
+    ctrl_stackWrite # write value onto top of eval stack
+    ctrl_writelocal # locals[nLocals] <<= value
+    ctrl_inclocals # nLocals <<= nLocals + 1
+
+    # NEEDED: separate clearLocals into two signals; when entering case expression, need to clear nLocals reg without affecting locals on stack
+    # Add nlocalsIsZero output to locals module for state machine termination condition
+    # store nvars from itable in local register on alloc machine entrance
+    # work out allocation and restoration state machines
+    # Refactor remaining signals to use by-signal style instead of by-instruction (can't mix the two)
+    # Add isConstructor tag to itable
+    # Add block somewhere that produces isEvaluated on RR
+    # For each instruction, check definition in simulator, then walk through all control signals to verify operation
+    ctrl_declocals # nLocals <<= nLocals - 1
+    ctrl_clearLocals # sp <<= sp - nLocals; nLocals <<= 0
+
+    ctrl_alias # nTable[next] <<= nTable[value] or value
+    intrl_enterAlloc  # enter the allocation state machine
+    ctrl_allocWriteName # nTable[next]<<=hp;heap[hp]<<=itable
+    ctrl_inspectElement # nameTable addr = return reg
+    ctrl_enter # envclo <<= locals[index]; nTable addr=loc
+    intrl_returnCheck  # load continuation or enter RR closure
+    ctrl_exptrload # load muxed value into exptr
+    ctrl_alu2rr # if 1 ? RR <<= ALU : RR <<= srcMux
+    ctrl_argwe # write value into args reg
+    ctrl_writeContinuation # write cont onto stack
+    ctrl_loadcont # load cont. into nLocals and envclo
+    ctrl_addrFreevar # heapAddr = nTable + index + 1
+    ctrl_ALUop # alu operation code
+    ctrl_exptrsrc # choose source of exptr (see mux constants)
+    '''
+    intrl_enterAlloc = WireVector(1, "EnterAllocState")  # enter allocation state machine
+    intrl_enterRestore = WireVector(1, "EnterRestoreState")  # enter restore continuation state machine
+    intrl_returnCheck = WireVector(1, "returnCheck")
+
+    decodeDict = {
+        "arg"         : "00000",
+        "freevar"     : "00100",
+        "alias"       : "00011",
+        "let_closure" : "00111",
+        "case"        : "00000",
+        "lit_pattern" : "00000",
+        "con_pattern" : "00000",
+        "else_pattern": "00000",
+        "call"        : "11000",
+        "enter"       : "10000",
+        "ret"         : "11000"
+    }
+
+    beginalloc = op == OPCODES["let_closure"]
+    state_alloc = state == ALLOC
+    state_restore = state == CONT_RESTORE
+
+    ctrl_exptrload <<= op ~beginalloc
+    ctrl_writeContinuation <<= op == OPCODES["case"]
+    ctrl_argwe <<= op == OPCODES["arg"]
+    ctrl_alu2rr <<= op == OPCODES["call"]
+    intrl_returnCheck <<= op == OPCODES["ret"]
+    ctrl_enter <<= op == OPCODES["enter"]
+    ctrl_inspectElement <<= dsrc == SRC_ELEM
+    ctrl_addrFreevar <<= (dsrc == SRC_ELEM) | (state_alloc)
+    ctrl_allocWriteName <<= beginalloc
+    intrl_enterAlloc <<= (beginalloc | state_alloc) & (itablenvars != 0)
+    ctrl_writeFreevar <<= state_alloc
+    ctrl_spDecr <<= state_alloc
+    ctrl_alias <<= op == OPCODES["alias"]
+    intrl_enterRestore <<=
+
+    ctrl_ALUop <<= instr_itable_bits[:aluopbits]
+    
 # ######################################################################
 #     Evaluation Stack
 # ######################################################################
@@ -251,8 +357,9 @@ def localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearlocals, ctrl_loadcont, 
         nlocals.next <<= nlocalsnext
 
     # Locals registers
-    localsRegs = MemBlock(width, localspace, name="LocalsRegisters")
-    localsOut <<= localsRegs[localsindex]  # read port; read local specified in instr
+    localsRegs = MemBlock(namespace, localspace, name="LocalsRegisters")
+    # read port; read local specified in instr
+    localsOut <<= concat(localsRegs[localsindex], Const(0, bitwidt=primtag_bits))  # add primtag
     # Values written on allocation and all aliases
     localsRegs[nlocals] = MemBlock.EnabledWrite(srcMux, enable=ctrl_writelocal)
 
@@ -322,28 +429,36 @@ def test_localsregs():
 # ######################################################################
 def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, srcMux, newNameOut,
                ctrl_writeFreevar, ctrl_allocWriteName, freevarIndex, heapOut, infoTable, evalStackOut,
-               ctrl_aliasName, ctrl_aliasPrim, ctrl_addrFreevar):
+               ctrl_alias, ctrl_addrFreevar, srcMuxFiltered):
 
     freePtr = Register(heapspace, "HeapFreePointer")
 
     # Name Table
     nameTable = MemBlock(heapspace, namespace, "NameTable")
-    nameTableAddr = switch(concat(ctrl_enter, ctrl_inspectElement, ctrl_aliasName), {
-        "3'b100" : localsOut,
-        "3'b010" : returnReg,
-        "3'b001" : srcMux,
+    nameTableAddr = switch(concat(ctrl_enter, ctrl_inspectElement), {
+        "2'b10" : localsOut,
+        "2'b01" : returnReg,
         None : envclo
     })
     nameTableOut = WireVector(heapspace, "NameTableOut")
-    nameTableOut <<= nameTable[nameTableAddr[0:namespace]]
+    # Read name for heap addressing
+    nameTableOut <<= nameTable[nameTableAddr[primtag_bits:namespace+primtag_bits]]
+    nameTableAliasPort = WireVector(heapspace, "NameTableAliasPort")
+    # Read entry for re-aliasing
+    nameTableAliasPort <<= nameTable[srcMux[primtag_bits:namespace+primtag_bits]] 
+    # Two read ports are required to make alias_freevar single-cycle; it requires dereferencing 
+    # a name, reading the freevar from the heap, and then dereferencing the resulting name
 
     # Allocation of names
     nextName = Register(namespace, "nextNameReg")
     newNameOut <<= nextName  # needed for locals regs and eval stack saving
     cond = ConditionalUpdate()
-    with cond(ctrl_allocWriteName | ctrl_aliasPrim | ctrl_aliasName):
+    with cond(ctrl_allocWriteName | ctrl_alias):
         nextName.next <<= nextName + 1
-    tableWriteData = switch(concat(ctrl_allocWriteName, ctrl_aliasPrim, ctrl_aliasName), {
+    tableValFiltered = mux(srcMux[primtag_bits], falsecase=nameTableAliasPort, truecase=srcMux)
+    tableWriteData = mux(ctrl_alias, falsecase=freePtr, truecase=tableValFiltered)
+    '''
+    tableWriteData = switch(concat(ctrl_allocWriteName, ctrl_alias & srcMux[primtag_bits], ctrl_alias & ~), {
         "3'b100" : freePtr,
         "3'b010" : srcMux,
         "3'b001" : nameTableOut,
@@ -351,17 +466,27 @@ def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, sr
         #"3'b001" : 0,
         #None : 0
     })
+    '''
     # Can write newly allocated name or alias (from srcMux)
     nameTable[nextName] = MemBlock.EnabledWrite(tableWriteData[0:heapspace], 
-                                    enable=(ctrl_allocWriteName | ctrl_aliasPrim | ctrl_aliasName))
+                                    enable=(ctrl_allocWriteName | ctrl_alias))
     
+    # Filter srcMux 
+    # if value is a primitive or a name that refers to an object, pass it through; if it is a name
+    #  that referes to a primitive, pass the primitive through instead
+    srcMuxFiltered <<= mux((~srcMux[primtag_bits]) & nameTableAliasPort[primtag_bits],
+                           falsecase=srcMux, truecase=nameTableAliasPort)
+
     # Heap
     heap = MemBlock(width, heapspace, "Heap")
     heapaddr = mux(ctrl_addrFreevar, falsecase=nameTableOut, truecase=(nameTableOut + freevarIndex + 1))
-    heapOut <<= heap[heapaddr[0:heapspace]]
+    heapMemOut = heap[heapaddr[0:heapspace]]
     heapWriteData = mux(ctrl_writeFreevar, falsecase=infoTable, truecase=evalStackOut)
     heap[freePtr] = MemBlock.EnabledWrite(heapWriteData, enable=(ctrl_writeFreevar | ctrl_allocWriteName))
-    
+    # If name table entry is a primitive, output that; otherwise, output desired heap entry
+    #heapOut <<= mux(nameTableOut[primtag_bits], falsecase=heapMemOut, truecase=nameTableOut)
+    heapOut <<= heapMemOut
+
     # Update free pointer
     cond = ConditionalUpdate()
     with cond(ctrl_writeFreevar | ctrl_allocWriteName):
@@ -384,13 +509,13 @@ def test_table_heap():
     heapOut = Output(width, "heapOut")
     infoTable = Input(itablespace, "infoTable")
     evalStackOut = Input(width, "evalStackOut")
-    ctrl_aliasName = Input(1, "ctrl_aliasName")
-    ctrl_aliasPrim = Input(1, "ctrl_aliasPrim")
+    ctrl_alias = Input(1, "ctrl_alias")
     ctrl_addrFreevar = Input(1, "ctrl_addrFreevar")
+    srcMuxFiltered = Output(width, "srcMuxFiltered")
 
     table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, srcMux, newNameOut,
                ctrl_writeFreevar, ctrl_allocWriteName, freevarIndex, heapOut, infoTable, evalStackOut,
-               ctrl_aliasName, ctrl_aliasPrim, ctrl_addrFreevar)
+               ctrl_alias, ctrl_addrFreevar, srcMuxFiltered)
 
     #pyrtl.working_block().sanity_check()
     #print find_cycle(pyrtl.working_block())
@@ -399,20 +524,19 @@ def test_table_heap():
     #print pyrtl.working_block()
 
     simvals = {
-        envclo              : "0000000000000",
-        returnReg           : "0000000000000",
-        localsOut           : "0000000000000",
-        ctrl_enter          : "0000000000000",
-        ctrl_inspectElement : "0000000000000",
-        srcMux              : "0000000000092",
-        ctrl_writeFreevar   : "0011110000000",
-        ctrl_allocWriteName : "0100000000000",
-        freevarIndex        : "0000000123000",
-        infoTable           : "0400000000000",
-        ctrl_aliasName      : "0000000000101",
-        ctrl_aliasPrim      : "0000000000010",
-        ctrl_addrFreevar    : "0000001111000",
-        evalStackOut        : "0012340000000"
+        envclo              : "00000000000000000",
+        returnReg           : "00000000000000000",
+        localsOut           : "00000000000000123",
+        ctrl_enter          : "00000000000001111",
+        ctrl_inspectElement : "00000000000000000",
+        srcMux              : "00000000000342000",
+        ctrl_writeFreevar   : "00111100000000000",
+        ctrl_allocWriteName : "01000000000000000",
+        freevarIndex        : "00000001230000000",
+        infoTable           : "07000000000000000",
+        ctrl_alias          : "00000000001110000",
+        ctrl_addrFreevar    : "00000011110000000",
+        evalStackOut        : "00123400000000000"
     }
 
     sim_trace = pyrtl.SimulationTrace()
