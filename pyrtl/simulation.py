@@ -60,7 +60,7 @@ class Simulation(object):
 
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle """
-
+        print {str(k):v for k,v in provided_inputs.items()}
         # To avoid weird loops, we need a copy of the old values which
         # we can then use to make our updates from
         prior_value = self.value.copy()
@@ -103,7 +103,7 @@ class Simulation(object):
         else:  # no break
             raise core.PyrtlInternalError(
                 'error, the set of logic "%s" appears to be waiting for value never produced'
-                % str(logic_left))
+                % str([str(x) for x in logic_left]))
 
         # at the end of the step, record the values to the trace
         # print self.value # Helpful Debug Print
@@ -196,6 +196,7 @@ class Simulation(object):
         elif net.op == 'r':
             pass  # registers have no logic function
         elif net.op == 'm':
+            print "memread {}".format(net)
             # memories act async for reads
             memid = net.op_param[0]
             num_reads = net.op_param[1]
@@ -227,7 +228,12 @@ class Simulation(object):
 
     def _is_ready_to_execute(self, defined_set, net):
         """Return true if all of the arguments are ready"""
-        return all(arg in defined_set for arg in net.args)
+        # TODO: this is a hack and memories need to be revisited
+        if net.op == 'm':
+            num_reads = net.op_param[1]
+            return all(arg in defined_set for arg in net.args[0:num_reads])
+        else:
+            return all(arg in defined_set for arg in net.args)
 
 
 # ----------------------------------------------------------------

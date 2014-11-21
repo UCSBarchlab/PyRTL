@@ -56,7 +56,15 @@ def quick_timing_analysis(block, print_total_length=True):
     return timing_map
 
 
-def advanced_timing_analysis(block):
+def advanced_timing_analysis(block, wirevector, ):
+    """
+
+
+    :param block:
+    :param wirevector:
+    :param gate_delay: a map with keys corresponding to the gate and
+    :return: returns a map consisting of each wirevector and the
+    """
 
     def find_blocks(wires_to_check, all_wires):
         return set([aBlock for aBlock in block.logic if
@@ -357,6 +365,7 @@ def synthesize(update_working_block=True, block=None):
     for net in block_in.logic:
         _decompose(net, wirevector_map, block_out)
 
+    block_in.wirevector_map = wirevector_map
     if update_working_block:
         core.set_working_block(block_out)
     return block_out
@@ -424,6 +433,14 @@ def _decompose(net, wv_map, block_out):
         arg0list = [arg(0, i) for i in range(len(net.args[0]))]
         arg1list = [arg(1, i) for i in range(len(net.args[1]))]
         cin = wire.Const(0, bitwidth=1, block=block_out)
+        sumbits, cout = _generate_add(arg0list, arg1list, cin)
+        destlist = sumbits + [cout]
+        for i in destlen():
+            assign_dest(i, destlist[i])
+    elif net.op == '-':
+        arg0list = [arg(0, i) for i in range(len(net.args[0]))]
+        arg1list = [~arg(1, i) for i in range(len(net.args[1]))]
+        cin = wire.Const(1, bitwidth=1, block=block_out)
         sumbits, cout = _generate_add(arg0list, arg1list, cin)
         destlist = sumbits + [cout]
         for i in destlen():

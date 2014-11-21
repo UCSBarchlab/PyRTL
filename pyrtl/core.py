@@ -111,6 +111,8 @@ class Block(object):
         self.logic = set()  # set of nets, each is a LogicNet named tuple
         self.wirevector_set = set()  # set of all wirevectors
         self.wirevector_by_name = {}  # map from name->wirevector, used for performance
+        self.wirevector_map = {}  # map from (wirevector, number) -> wirevector, used for mapping
+        # pre-synthesis wirevectors to post-synthesis vectors
         self.legal_ops = set('w~&|^+-*<>=xcsrm')  # set of legal OPS
 
     def __str__(self):
@@ -149,6 +151,16 @@ class Block(object):
             return self.wirevector_set
         else:
             return set(x for x in self.wirevector_set if isinstance(x, cls))
+
+    def logic_subset(self, op=None):
+        """Return set of logicnets, filtered by the type of logic op provided as op.
+
+        If no op is specified, the full set of logicnets associated with the Block are
+        returned.  This is helpful for getting all memories of a block for example."""
+        if op is None:
+            return self.logic
+        else:
+            return set(x for x in self.logic if op in x.op)
 
     def get_wirevector_by_name(self, name, strict=False):
         """Return the wirevector matching name.
@@ -361,10 +373,8 @@ class BlockIterator():
                     remaining.remove(gate)  # remove gate from set of to return
                     yield gate
 
-        for gate_in_loop in remaining:
-            yield gate_in_loop
-            # loop through gates that initially fail to iterate
-            # through due to being in a nonregister loop
+        if remaining:
+            raise PyrtlError("Failure in Block Iterator due to non-register loops")
 
         raise StopIteration
 
