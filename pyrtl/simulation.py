@@ -16,8 +16,8 @@ class Simulation(object):
     """A class for simulating blocks of logic step by step."""
 
     def __init__(
-            self, register_value_map=None, default_value=0,
-            tracer=None, block=None):
+            self, register_value_map=None, memory_value_map=None,
+            default_value=0, tracer=None, block=None):
 
         block = core.working_block(block)
         block.sanity_check()  # check that this is a good hw block
@@ -27,11 +27,11 @@ class Simulation(object):
         self.block = block
         self.default_value = default_value
         self.tracer = tracer
-        self.initialize(register_value_map)
+        self.initialize(register_value_map, memory_value_map)
         self.max_iter = 1000
 
-    def initialize(self, register_value_map, default_value=None):
-        """ Sets the wire and register values to default or as specified """
+    def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
+        """ Sets the wire, register, and memory values to default or as specified """
         self.value = {}
         if default_value is None:
             default_value = self.default_value
@@ -49,6 +49,14 @@ class Simulation(object):
         for w in self.block.wirevector_subset(wire.Const):
             self.value[w] = w.val
             assert isinstance(w.val, int)  # for now
+
+        # TODO: this needs better errror checking and documentation
+        # set memories to their passed values
+        if memory_value_map is not None:
+            for (mem, mem_map) in memory_value_map.items():
+                memid = mem.stored_net.op_param[0]
+                for (addr, val) in mem_map.items():
+                    self.memvalue[(memid, addr)] = val
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
@@ -204,7 +212,8 @@ class Simulation(object):
                 raise core.PyrtlInternalError
             for i in range(num_reads):
                 read_addr = self.value[net.args[i]]
-                mem_lookup_result = self.memvalue.get((memid, read_addr), 0)
+                index = (memid, read_addr)
+                mem_lookup_result = self.memvalue.get(index, self.default_value)
                 self.value[net.dests[i]] = mem_lookup_result
         else:
             raise core.PyrtlInternalError
