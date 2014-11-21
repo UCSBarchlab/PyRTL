@@ -36,14 +36,19 @@ validate <<= waddr == count
 
 # Simulate: write 1 through 8 into the eight registers, then read back out
 simvals = {
-    we:        "0011111111000000000000000",
-    waddr:     "0001234567000000000000000",
-    wdata:     "0012345678999000000000000",
-    raddr:     "0000000000000000012345670"
+    we:        "00111111110000000000000000",
+    waddr:     "00012345670000000000000000",
+    wdata:     "00123456789990000000000000",
+    raddr:     "00000000000000000123456789"
 }
 
+# Build the data with which to initialize memory
+mem1_init = {addr: 9 for addr in range(10)}
+mem2_init = {addr: 9 for addr in range(10)}
+memvals = {mem1: mem1_init, mem2: mem2_init}
+
 sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=memvals)
 for cycle in range(len(simvals[we])):
     sim.step({k: int(v[cycle]) for k, v in simvals.items()})
 sim_trace.render_trace()
