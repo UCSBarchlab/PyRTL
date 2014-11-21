@@ -144,7 +144,8 @@ def buildAll():
     closureTable = heapOut[primtag_bits:itablespace+primtag_bits]
     nLocalsIsZero = WireVector(1, "nLocalsIsZero")
 
-    
+    result = WireVector(1, "RESULT_VALUE")
+    result <<= retRegOut[ptb:]
 
     # Name each component of info table
     itable_arity = itableOut[itable_arity_bits]
