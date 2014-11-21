@@ -78,14 +78,14 @@ PC_INC = Const("2'b00")
 PC_NINSTRS = Const("2'b01")
 PC_ITABLE = Const("2'b10")
 PC_CONTINUATION = Const("2'b11")
-'''
+
 SRC_LOCALS = Const("3'b000")
 SRC_ARGS = Const("3'b001")
 SRC_HEAP = Const("3'b010")
 SRC_IMM = Const("3'b011")
 SRC_RR = Const("3'b100")
 SRC_ELEM = Const("3'b101")
-'''
+
 def main():
 
     #test_argregs()
@@ -93,8 +93,8 @@ def main():
     #test_evalstack()
     #test_localsregs()
     #test_table_heap()
-    test_decode()
-    #outputverilog()
+    #test_decode()
+    outputverilog()
 
     #pyrtl.working_block().output_to_trivialgraph(sys.open('testout','w'), block)
 
@@ -140,6 +140,8 @@ def buildAll():
     cont_exptr = evalStackOut[localspace+namespace+ptb:localspace+namespace+textspace+ptb]
     closureTable = heapOut[primtag_bits:itablespace+primtag_bits]
     nLocalsIsZero = WireVector(1, "nLocalsIsZero")
+
+    
 
     # Name each component of info table
     itable_arity = itableOut[itable_arity_bits]
