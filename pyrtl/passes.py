@@ -42,17 +42,19 @@ def quick_timing_analysis(block, print_total_length=True):
         num_prev_remaining = len(remaining)
         time += 1
         for gate in remaining:  # loop over logicnets not yet returned
+            items_to_remove = set()
             if all([arg in cleared for arg in gate.args]):  # if all args ready
                 timing_map[gate.dests[0]] = time
                 cleared.update(set(gate.dests))  # add dests to set of ready wires
-                remaining.remove(gate)  # remove gate from set of to return
+                items_to_remove.add(gate)  # remove gate from set of to return
+            remaining.difference_update(items_to_remove)
 
     if len(remaining) > 0:
         raise core.PyrtlError("Cannot do static timing analysis due to nonregister "
                               "loops in the code")
 
     if print_total_length:
-        print "The estimated total block timing delay is " + time
+        print "The estimated total block timing delay is ", time
     return timing_map
 
 
@@ -78,24 +80,28 @@ def detailed_general_timing_analysis(block, print_total_length=True, gate_timing
     cleared = block.wirevector_subset(wire.Input).union(block.wirevector_subset(wire.Register))
     remaining = block.logic.copy().difference(block.logic_subset('r'))
     timing_map = {wirevector: 0 for wirevector in cleared}
-    timing_heap = heapq.heapify([WireWTiming(0, a_wire) for a_wire in cleared])
+    timing_heap = [WireWTiming(0, a_wire) for a_wire in cleared]
+    heapq.heapify(timing_heap)
     while len(timing_heap) > 0:
-        cleared.update(heapq.heappop(timing_heap).wirevector)
+        cleared.add(heapq.heappop(timing_heap).wirevector)
+        items_to_remove = set()
         for gate in remaining:  # loop over logicnets not yet returned
             if all([arg in cleared for arg in gate.args]):  # if all args ready
                 time = max(timing_map[a_wire] for a_wire in gate.args)+ gate_timings[gate.op]
                 timing_map[gate.dests[0]] = time
                 heapq.heappush(timing_heap, WireWTiming(time, gate.dests[0]))
                 cleared.update(set(gate.dests))  # add dests to set of ready wires
-                remaining.remove(gate)  # remove gate from set of to return
+                items_to_remove.add(gate)  # remove gate from set of to return
+        remaining.difference_update(items_to_remove)
 
     if len(remaining) > 0:
         raise core.PyrtlError("Cannot do static timing analysis due to nonregister "
                               "loops in the code")
 
     if print_total_length:
-        print "The total block timing delay is " + max(timing_map.iterkeys())
+        print "The total block timing delay is ", timing_max_length(timing_map)
     return timing_map
+
 
 def advanced_timing_analysis(block, wirevector, ):
     """
@@ -112,6 +118,14 @@ def advanced_timing_analysis(block, wirevector, ):
                     set(aBlock.args).intersection(wires_to_check) is not None
                     and set(aBlock.args).intersection(all_wires) is set(aBlock.args)])
 
+    raise NotImplementedError
+
+
+def timing_max_length(timing_map):
+    return max(timing_map.itervalues())
+
+
+def timing_critical_path(timing_map):
     raise NotImplementedError
 
 
