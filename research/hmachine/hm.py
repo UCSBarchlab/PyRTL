@@ -97,9 +97,10 @@ def main():
     #test_decode()
 
     #buildAll()
-    outputverilog()
+    #outputverilog()
 
-    #pyrtl.working_block().output_to_trivialgraph(sys.open('testout','w'), block)
+    f = open("add.out")
+    buildAll(*readFile(f))
 
 def outputverilog():
     buildAll()
@@ -107,7 +108,48 @@ def outputverilog():
     pyrtl.output_to_verilog(f)
     f.close()    
 
-def buildAll():
+def makeword(dat):
+    word = 0
+    #dat.reverse()
+    for i in range(4):
+        word = word << 8
+        word |= (0xFF & dat[i])
+    #print dat, word
+    return word
+
+def readFile(f):
+    dat = f.read()
+    dat = [ord(b) for b in dat]
+    words = []
+    for i in range(len(dat)/4):
+        words.append(makeword(dat[0:4]))
+        dat = dat[4:]
+    #print words
+
+    N = words[0]
+    words = words[1:]
+
+    itables = {}
+    tableN = 0
+    code = {}
+    codeN = 0
+
+    for i in range(N):
+        itables[tableN] = words[0]
+        tableN += 1
+        ninstrs = words[1]
+        words = words[2:]
+        for instr in words[:ninstrs]:
+            code[codeN] = int(instr)
+            codeN += 1
+        words = words[ninstrs:]
+
+    #print itables
+    #print code
+
+    return itables, code
+
+def buildAll(itables=None, code=None):
     # Build source mux
     # On src_elem (use component of matched constructor), we use contents of RR as address in
     #  name table, address a free variable of the objet in the heap, and send that through the srcMux
@@ -144,7 +186,7 @@ def buildAll():
     closureTable = heapOut[primtag_bits:itablespace+primtag_bits]
     nLocalsIsZero = WireVector(1, "nLocalsIsZero")
 
-    result = WireVector(1, "RESULT_VALUE")
+    result = Output(1, "RESULT_VALUE")
     result <<= retRegOut[ptb:]
 
     # Name each component of info table
@@ -243,6 +285,16 @@ def buildAll():
 
 
     pyrtl.working_block().sanity_check()
+
+    
+    if itables is not None and code is not None:
+        simlen = len(code)
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for cycle in range(simlen):
+            sim.step({})
+        sim_trace.render_trace()
+    
 
 # ######################################################################
 #     Instruction Decode
