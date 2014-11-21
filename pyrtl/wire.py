@@ -255,6 +255,8 @@ class Const(WireVector):
                 raise core.PyrtlError('error, bitwidth parameter of const should be'
                                       ' unspecified when the const is created from a string'
                                       ' (instead use verilog style specification)')
+            # remove spacer '_'
+            val = val.replace("_", "")
             split_string = string.split(val, "'")
             if len(split_string) != 2:
                 raise core.PyrtlError('error, string for Const not in verilog style format')
