@@ -78,14 +78,14 @@ PC_INC = Const("2'b00")
 PC_NINSTRS = Const("2'b01")
 PC_ITABLE = Const("2'b10")
 PC_CONTINUATION = Const("2'b11")
-
+'''
 SRC_LOCALS = Const("3'b000")
 SRC_ARGS = Const("3'b001")
 SRC_HEAP = Const("3'b010")
 SRC_IMM = Const("3'b011")
 SRC_RR = Const("3'b100")
 SRC_ELEM = Const("3'b101")
-
+'''
 def main():
 
     #test_argregs()
@@ -93,9 +93,16 @@ def main():
     #test_evalstack()
     #test_localsregs()
     #test_table_heap()
-    #test_decode()
+    test_decode()
+    #outputverilog()
+
+    #pyrtl.working_block().output_to_trivialgraph(sys.open('testout','w'), block)
+
+def outputverilog():
     buildAll()
-    #pyrt.working_block().output_to_trivialgraph(sys.open('testout','w'), block)
+    f = open('hmachine.v','w')
+    pyrtl.output_to_verilog(f)
+    f.close()    
 
 def buildAll():
     # Build source mux
@@ -172,7 +179,7 @@ def buildAll():
     ctrl_argSwitch = WireVector(1, "ctrl_argsSwitch")  # switch read & write regs
     ctrl_ALUop = WireVector(5, "ctrl_ALUcontrol")  # alu operation code
     ctrl_ALUop <<= instr_aluop[0:5]
-    ctrl_alu2rr = WireVector(1, "ctrl_ALU-to-returnReg")  # if 1 ? RR <<= ALU : RR <<= srcMux
+    ctrl_alu2rr = WireVector(1, "ctrl_ALU_to_returnReg")  # if 1 ? RR <<= ALU : RR <<= srcMux
     ctrl_loadrr = WireVector(1, "ctrl_loadRR")  # load muxed value into return register
     ctrl_exptrsrc = WireVector(2, "ctrl_exptrSource")  # choose source of exptr (see mux constants)
     ctrl_exptrload = WireVector(1, "ctrl_exptrLoad")  # load muxed value into exptr
@@ -184,7 +191,8 @@ def buildAll():
     ctrl_declocals = WireVector(1, "ctrl_decrementLocals")  # nLocals <<= nLocals - 1
     ctrl_loadcont = WireVector(1, "ctrl_loadContinuation")  # load cont. into nLocals and envclo
     ctrl_writelocal = WireVector(1, "ctrl_writeLocalReg")  # locals[nLocals] <<= value
-    ctrl_enter = WireVector(1, "ctrl_enterNamedClosure")  # envclo <<= locals[index]; nTable addr=loc
+    ctrl_enter = WireVector(1, "ctrl_enterLoadEnvclo")  # envclo <<= locals[index]
+    ctrl_enterLocNT = WireVector(1, "ctrl_enterLocalNameTable")  # ntable address = local
     ctrl_inspectElement = WireVector(1, "ctrl_inspectConsElement")  # nameTable addr = return reg
     ctrl_writeFreevar = WireVector(1, "ctrl_writeFreevar")  # heap[hp] <<= evalstackOut; hp++
     ctrl_allocWriteName = WireVector(1, "ctrl_allocWriteName")  # nTable[next]<<=hp;heap[hp]<<=itable
@@ -211,18 +219,18 @@ def buildAll():
                newName, instr_name, localsOut, ctrl_writelocal, ctrl_enter, envcloOut, nLocalsOut, 
                ctrl_locWriteStackSaved, nLocalsIsZero, ctrl_enterRR, retRegOut)
 
-    table_heap(envcloOut, retRegOut, localsOut, ctrl_enter, ctrl_inspectElement, srcMuxPre, newName,
+    table_heap(envcloOut, retRegOut, localsOut, ctrl_enterLocNT, ctrl_inspectElement, srcMuxPre, newName,
             ctrl_writeFreevar, ctrl_allocWriteName, instr_freevarindex, heapOut, instr_itable, evalStackOut,
                ctrl_alias, ctrl_addrFreevar, srcMux)
 
     instrdecode(instr_opcode, ctrl_argwe, ctrl_argSwitch,
-                ctrl_alu2rr, ctrl_loadrr, 
+                ctrl_alu2rr, ctrl_loadrr,
                 ctrl_exptrsrc, ctrl_exptrload, ctrl_spDecr, 
                 ctrl_clearLocals, ctrl_stackWrite, ctrl_writeContinuation, 
                 ctrl_inclocals, ctrl_declocals, ctrl_loadcont, 
                 ctrl_writelocal, ctrl_enter, ctrl_inspectElement, 
                 ctrl_writeFreevar, ctrl_allocWriteName, ctrl_alias, 
-                ctrl_locWriteStackSaved, 
+                ctrl_locWriteStackSaved, ctrl_enterLocNT,
                 ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
                 ctrl_sploadSaved, isEvaluated, patternMatch_constructor, 
                 patternMatch_literal, nLocalsIsZero, dsrcIsField)
@@ -240,7 +248,7 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
                 ctrl_inclocals, ctrl_declocals, ctrl_loadcont, 
                 ctrl_writelocal, ctrl_enter, ctrl_inspectElement, 
                 ctrl_writeFreevar, ctrl_allocWriteName, ctrl_alias, 
-                ctrl_locWriteStackSaved, 
+                ctrl_locWriteStackSaved, ctrl_enterLocNT,
                 ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
                 ctrl_sploadSaved, isEvaluated, patternMatch_constructor, 
                 patternMatch_literal, nLocalsIsZero, dsrcIsField):
@@ -304,6 +312,10 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
         write local from stack, nlocals--; if nloalcs == 0 state <<= normal
     needs to restore stack frame and nlocals reg...
     Could do: restore from cont, save sp, sp--; copy/dec until localsIsZero; load saved sp; load cont and sp--
+
+    Case:
+    send indicated local through name table, if isEvaluated, pc++; else write continuation, clear locals, clear args
+        enter cont
     '''
     
     EXECUTE, CHECKRR, ALLOCATION, RESTORE_PRE, RESTORE, RESTORE_2, RESTORE_3 = \
@@ -325,15 +337,19 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
     with cond(state_alloc):
         nfvars.next <<= nfvars - 1
 
-    ctrl_argSwitch <<= eqcodes(op, ("call","enter","ret")) & state_ex
+    case_enter = (op == OPCODES["case"]) & ~isEvaluated & state_ex
+    case_noenter = (op == OPCODES["case"]) & isEvaluated & state_ex
+
+    ctrl_argSwitch <<= eqcodes(op, ("call","enter","ret")) & state_ex | case_enter
     ctrl_loadrr <<= eqcodes(op, ("call","ret")) & state_ex
     ctrl_stackWrite <<= eqcodes(op, ("freevar","let_closure")) & state_ex
     ctrl_writelocal <<= eqcodes(op, ("alias","let_closure")) & state_ex
     ctrl_inclocals <<= eqcodes(op, ("alias","let_closure")) & state_ex
-    ctrl_writeContinuation <<= (op == OPCODES["case"]) & state_ex
+    ctrl_writeContinuation <<= case_enter
     ctrl_argwe <<= (op == OPCODES["arg"]) & state_ex
     ctrl_alu2rr <<= (op == OPCODES["call"]) & state_ex
-    ctrl_enter <<= ((op == OPCODES["enter"]) & state_ex)
+    ctrl_enterLocNT <<= (eqcodes(op, ("case", "enter")) & state_ex)  # mux local through name table
+    ctrl_enter <<= ((op == OPCODES["enter"]) & state_ex) | case_enter  # load local into envclo
     ctrl_enterRR <<= (state_check & ~isEvaluated)
     ctrl_inspectElement <<= (dsrcIsField & state_ex) | (state_check & ~isEvaluated) | \
                              ((op == OPCODES["con_pattern"]) & state_ex) | ctrl_enterRR
@@ -342,8 +358,8 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
     ctrl_spDecr <<= state_alloc | ctrl_loadcont | state_restore
     ctrl_alias <<= (op == OPCODES["alias"]) & state_ex
     ctrl_declocals <<= (state_restore & ~nLocalsIsZero) | state_restorepre
-    ctrl_clearLocals <<= eqcodes(op, ("call","enter","ret")) & state_ex # sp <<= sp - nLocals
-    ctrl_clearNLocals <<= eqcodes(op, ("call","enter","ret","case")) & state_ex   # nLocals <<= 0
+    ctrl_clearLocals <<= eqcodes(op, ("call","enter","ret")) & state_ex  # sp <<= sp - nLocals
+    ctrl_clearNLocals <<= eqcodes(op, ("call","enter","ret")) & state_ex | case_enter  # nLocals <<= 0
     ctrl_loadcont <<= (state_check & isEvaluated) | (state_restore3)
     ctrl_spsave <<= (state_check & isEvaluated)
     ctrl_sploadSaved <<= state_restore2
@@ -401,7 +417,7 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
     pc_patternmatched = ((op == OPCODES["lit_pattern"]) & patternMatch_literal) | \
                      ((op == OPCODES["con_pattern"]) & patternMatch_constructor) | \
                      (op == OPCODES["else_pattern"])
-    pc_enterClosure = (op == OPCODES["enter"]) | ctrl_enterRR
+    pc_enterClosure = (op == OPCODES["enter"]) | ctrl_enterRR | case_enter
     pc_loadCont = ctrl_loadcont
     pc_inc = ~(pc_patternmatched | pc_enterClosure | pc_loadCont | (eqcodes(op, ("noop", "call", "ret"))))
 
@@ -437,6 +453,7 @@ def test_decode():
     ctrl_declocals = WireVector(1, "ctrl_decrementLocals")  # nLocals <<= nLocals - 1
     ctrl_loadcont = WireVector(1, "ctrl_loadContinuation")  # load cont. into nLocals and envclo
     ctrl_writelocal = WireVector(1, "ctrl_writeLocalReg")  # locals[nLocals] <<= value
+    ctrl_enterLocNT = WireVector(1, "ctrl_enterLocNT")
     ctrl_enter = WireVector(1, "ctrl_enterNamedClosure")  # envclo <<= locals[index]; nTable addr=loc
     ctrl_inspectElement = WireVector(1, "ctrl_inspectConsElement")  # nameTable addr = return reg
     ctrl_writeFreevar = WireVector(1, "ctrl_writeFreevar")  # heap[hp] <<= evalstackOut; hp++
@@ -462,18 +479,18 @@ def test_decode():
                 ctrl_inclocals, ctrl_declocals, ctrl_loadcont, 
                 ctrl_writelocal, ctrl_enter, ctrl_inspectElement, 
                 ctrl_writeFreevar, ctrl_allocWriteName, ctrl_alias, 
-                ctrl_locWriteStackSaved, 
+                ctrl_locWriteStackSaved, ctrl_enterLocNT,
                 ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
                 ctrl_sploadSaved, isEvaluated, pt_con, 
                 pt_lit, nLocalsIsZero, dsrcIsField)
 
     simvals = {
-        instr_opcode  : "0123402224000005678AB0B000000090",
-        isEvaluated   : "00000000000000000000000100000001",
-        pt_con        : "00000000000000000000000000000000",
-        pt_lit        : "00000000000000000000000000000000",
-        nLocalsIsZero : "00000000000000000000000000100000",
-        dsrcIsField   : "00000000000000000000000000000000"
+        instr_opcode  : "01234022240000055678AB0B000000090",
+        isEvaluated   : "000000000000000010000000100000001",
+        pt_con        : "000000000000000000000000000000000",
+        pt_lit        : "000000000000000000000000000000000",
+        nLocalsIsZero : "000000000000000000000000000100000",
+        dsrcIsField   : "000000000000000000000000000000000"
     }
     '''
     "noop"        : Const( 0 , bitwidth=5),
@@ -503,6 +520,10 @@ def test_decode():
         "enter",
         "ret"
     )]
+    PC_INC = Const("2'b00")
+    PC_NINSTRS = Const("2'b01")
+    PC_ITABLE = Const("2'b10")
+    PC_CONTINUATION = Const("2'b11")
     '''
     sim_trace = pyrtl.SimulationTrace()
     sim = pyrtl.Simulation(tracer=sim_trace)
@@ -675,7 +696,7 @@ def test_localsregs():
 # ######################################################################
 #     Name Table and Heap
 # ######################################################################
-def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, srcMux, newNameOut,
+def table_heap(envclo, returnReg, localsOut, ctrl_enterLocNT, ctrl_inspectElement, srcMux, newNameOut,
                ctrl_writeFreevar, ctrl_allocWriteName, freevarIndex, heapOut, infoTable, evalStackOut,
                ctrl_alias, ctrl_addrFreevar, srcMuxFiltered):
 
@@ -683,7 +704,7 @@ def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, sr
 
     # Name Table
     nameTable = MemBlock(heapspace, namespace, "NameTable")
-    nameTableAddr = switch(concat(ctrl_enter, ctrl_inspectElement), {
+    nameTableAddr = switch(concat(ctrl_enterLocNT, ctrl_inspectElement), {
         "2'b10" : localsOut,
         "2'b01" : returnReg,
         None : envclo
