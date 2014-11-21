@@ -14,6 +14,7 @@ nfreevars = pow(2, freevarspace)  # maximum number of free variables
 datawidth = 32
 width = datawidth + 1   # machine width
 primtag_bits = 0
+ptb = primtag_bits
 data_bits = slice(1, datawidth)
 
 # Memory sizes
@@ -49,6 +50,7 @@ if itablespace > 16:
 instr_itable_bits = slice(0, itablespace)
 instr_nInstrs_bits = slice(0,8)
 instr_imm_bits = slice(0,24)
+instr_aluop_bits = slice(0,8)
 
 # Instruction opcodes/varietals
 OPCODES = {
@@ -67,22 +69,22 @@ OPCODES = {
 }
 
 # Continuation structure
-cont_nLocals_bits = slice(0,localspace)
-cont_envclo_bits = slice(localspace,localspace+namespace)
-cont_exptr_bits = slice(localspace+namespace,textspace)
+cont_nLocals_bits = slice(ptb,localspace+ptb)
+cont_envclo_bits = slice(localspace+ptb,ptb+localspace+namespace)
+cont_exptr_bits = slice(ptb+localspace+namespace,ptb+localspace+namespace+textspace)
 
 # Mux control constants
 PC_INC = Const("2'b00")
 PC_NINSTRS = Const("2'b01")
 PC_ITABLE = Const("2'b10")
 PC_CONTINUATION = Const("2'b11")
+
 SRC_LOCALS = Const("3'b000")
 SRC_ARGS = Const("3'b001")
 SRC_HEAP = Const("3'b010")
 SRC_IMM = Const("3'b011")
 SRC_RR = Const("3'b100")
 SRC_ELEM = Const("3'b101")
-SRC_NAME = Const("3'b110")
 
 def main():
 
@@ -91,11 +93,11 @@ def main():
     #test_evalstack()
     #test_localsregs()
     #test_table_heap()
-    #buildAll()
+    #test_decode()
+    buildAll()
     #pyrt.working_block().output_to_trivialgraph(sys.open('testout','w'), block)
 
 def buildAll():
-
     # Build source mux
     # On src_elem (use component of matched constructor), we use contents of RR as address in
     #  name table, address a free variable of the objet in the heap, and send that through the srcMux
@@ -110,13 +112,14 @@ def buildAll():
         SRC_LOCALS : localsOut,
         SRC_ARGS : argsOut,
         SRC_HEAP : heapOut,
-        SRC_IMM : immediate,
+        SRC_IMM : concat(immediate, "1'b0"),  # add primitive tag
         SRC_RR : retRegOut,
         SRC_ELEM : heapOut,
         None : 0
     }    
     dataSrcSelect = WireVector(3, "dataSourceSelect")
-    srcMux = switch(dataSrcSelect, dSources)
+    srcMuxPre = switch(dataSrcSelect, dSources)
+    srcMux = WireVector(width, "srcMuxFiltered")
 
     # other needed wires
     iheapOut = WireVector(width, "InstrHeapOut")
@@ -126,8 +129,8 @@ def buildAll():
     envcloOut = WireVector(namespace, "CurEnvClosureRegOut")
     continuation = concat(exptr, envcloOut, nLocalsOut)
     cont_nLocals = evalStackOut[primtag_bits:localspace+primtag_bits]
-    cont_envclo = evalStackOut[localspace:localspace+namespace]
-    cont_exptr = evalStackOut[localspace+namespace:textspace]
+    cont_envclo = evalStackOut[localspace+ptb:localspace+namespace+ptb]
+    cont_exptr = evalStackOut[localspace+namespace+ptb:localspace+namespace+textspace+ptb]
     closureTable = heapOut[primtag_bits:itablespace+primtag_bits]
     nLocalsIsZero = WireVector(1, "nLocalsIsZero")
 
@@ -139,11 +142,15 @@ def buildAll():
     itable_isConstructor = itableOut[itable_iscon_bits]
 
     isEvaluated = WireVector(1, "RRisEvaluated")
-    isEvaluated <<= retRegOut[isprimtag] | itable_isConstructor
+    isEvaluated <<= retRegOut[primtag_bits] | itable_isConstructor
+
+    dsrcIsField = dataSrcSelect == SRC_ELEM
+    dsrcIsFreevar = dataSrcSelect == SRC_HEAP
 
     # Name each possible section of instruction
     instr_opcode = iheapOut[instr_opcode_bits]
     instr_dsrc = iheapOut[instr_dsrc_bits]
+    dataSrcSelect <<= instr_dsrc
     instr_name = iheapOut[instr_name_bits]
     instr_argindex = iheapOut[instr_argindex_bits]
     instr_freevarindex = iheapOut[instr_freevarindex_bits]
@@ -152,6 +159,8 @@ def buildAll():
     instr_itable = iheapOut[instr_itable_bits]
     instr_nInstrs = iheapOut[instr_nInstrs_bits]
     instr_imm = iheapOut[instr_imm_bits]
+    immediate <<= instr_imm
+    instr_aluop = iheapOut[instr_aluop_bits]
 
     patternMatch_constructor = WireVector(1, "PatternMatchConstructor")
     patternMatch_constructor <<= closureTable == instr_conitable
@@ -161,7 +170,8 @@ def buildAll():
     # Declare control signals
     ctrl_argwe = WireVector(1, "ctrl_argsWriteEnable")  # write value into args reg
     ctrl_argSwitch = WireVector(1, "ctrl_argsSwitch")  # switch read & write regs
-    ctrl_ALUop = WireVector(8, "ctrl_ALUcontrol")  # alu operation code
+    ctrl_ALUop = WireVector(5, "ctrl_ALUcontrol")  # alu operation code
+    ctrl_ALUop <<= instr_aluop[0:5]
     ctrl_alu2rr = WireVector(1, "ctrl_ALU-to-returnReg")  # if 1 ? RR <<= ALU : RR <<= srcMux
     ctrl_loadrr = WireVector(1, "ctrl_loadRR")  # load muxed value into return register
     ctrl_exptrsrc = WireVector(2, "ctrl_exptrSource")  # choose source of exptr (see mux constants)
@@ -178,34 +188,63 @@ def buildAll():
     ctrl_inspectElement = WireVector(1, "ctrl_inspectConsElement")  # nameTable addr = return reg
     ctrl_writeFreevar = WireVector(1, "ctrl_writeFreevar")  # heap[hp] <<= evalstackOut; hp++
     ctrl_allocWriteName = WireVector(1, "ctrl_allocWriteName")  # nTable[next]<<=hp;heap[hp]<<=itable
-    ctrl_aliasName = WireVector(1, "ctrl_aliasName")  # nTable[next] <<= nTable[value]
-    ctrl_aliasPrim = WireVector(1, "ctrl_aliasPrim")  # nTable[next] <<= value
+    ctrl_alias = WireVector(1, "ctrl_aliasName")  # nTable[next] <<= nTable[value] or value
     ctrl_addrFreevar = WireVector(1, "ctrl_addressFreevar") # heapAddr = nTable + index + 1
-    ctrl_locWriteStackSaved = WireVector(1, "ctrl_localsWriteStackSaved")
-    ctrl_clearNLocals = WireVector(1, "ctrl_clearNLocalsReg")  
+    ctrl_addrFreevar <<= dsrcIsField | dsrcIsFreevar
+    ctrl_locWriteStackSaved = WireVector(1, "ctrl_localsWriteStackSaved")  # locals[n] <<= stack
+    ctrl_clearNLocals = WireVector(1, "ctrl_clearNLocalsReg")  # nlocals <<= 0
     ctrl_enterRR = WireVector(1, "ctrl_enterRR")  # envclo <<= RR
     ctrl_spsave = WireVector(1, "ctrl_spsave")  # save out current sp
     ctrl_sploadSaved = WireVector(1, "ctrl_sploadSaved")  # load saved sp into sp
 
     args_alu_rr(srcMux, instr_argindex, ctrl_argwe, ctrl_argSwitch, ctrl_ALUop, ctrl_alu2rr,
                 ctrl_loadrr, argsOut, retRegOut)
+
     itable_exptr_iheap(closureTable, ctrl_exptrsrc, ctrl_exptrload, instr_nInstrs, srcMux, 
-            itableOut, iheapOut, exptr)
+                       itableOut, iheapOut, exptr, evalStackOut)
+
     evalstack(ctrl_spDecr, ctrl_clearLocals, nLocalsOut, ctrl_stackWrite, 
-            ctrl_writeContinuation, continuation, srcMux, evalStackOut)
+              ctrl_writeContinuation, continuation, srcMux, evalStackOut, ctrl_spsave,
+              ctrl_sploadSaved, ctrl_alias, ctrl_allocWriteName, newName)
+
     localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearNLocals, ctrl_loadcont, evalStackOut,
                newName, instr_name, localsOut, ctrl_writelocal, ctrl_enter, envcloOut, nLocalsOut, 
-               ctrl_locWriteStackSaved, nLocalsIsZero)
-    table_heap(envcloOut, retRegOut, localsOut, ctrl_enter, ctrl_inspectElement, srcMux, newName,
+               ctrl_locWriteStackSaved, nLocalsIsZero, ctrl_enterRR, retRegOut)
+
+    table_heap(envcloOut, retRegOut, localsOut, ctrl_enter, ctrl_inspectElement, srcMuxPre, newName,
             ctrl_writeFreevar, ctrl_allocWriteName, instr_freevarindex, heapOut, instr_itable, evalStackOut,
-               ctrl_aliasName, ctrl_aliasPrim, ctrl_addrFreevar)
+               ctrl_alias, ctrl_addrFreevar, srcMux)
+
+    instrdecode(instr_opcode, ctrl_argwe, ctrl_argSwitch,
+                ctrl_alu2rr, ctrl_loadrr, 
+                ctrl_exptrsrc, ctrl_exptrload, ctrl_spDecr, 
+                ctrl_clearLocals, ctrl_stackWrite, ctrl_writeContinuation, 
+                ctrl_inclocals, ctrl_declocals, ctrl_loadcont, 
+                ctrl_writelocal, ctrl_enter, ctrl_inspectElement, 
+                ctrl_writeFreevar, ctrl_allocWriteName, ctrl_alias, 
+                ctrl_locWriteStackSaved, 
+                ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
+                ctrl_sploadSaved, isEvaluated, patternMatch_constructor, 
+                patternMatch_literal, nLocalsIsZero, dsrcIsField)
+
 
     pyrtl.working_block().sanity_check()
 
 # ######################################################################
 #     Instruction Decode
 # ######################################################################
-def instrdecode(contNLocals):
+def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
+                ctrl_alu2rr, ctrl_loadrr, 
+                ctrl_exptrsrc, ctrl_exptrload, ctrl_spDecr, 
+                ctrl_clearLocals, ctrl_stackWrite, ctrl_writeContinuation, 
+                ctrl_inclocals, ctrl_declocals, ctrl_loadcont, 
+                ctrl_writelocal, ctrl_enter, ctrl_inspectElement, 
+                ctrl_writeFreevar, ctrl_allocWriteName, ctrl_alias, 
+                ctrl_locWriteStackSaved, 
+                ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
+                ctrl_sploadSaved, isEvaluated, patternMatch_constructor, 
+                patternMatch_literal, nLocalsIsZero, dsrcIsField):
+
     '''
     ALL INSTRUCTIONS:
     arg_*
@@ -267,19 +306,21 @@ def instrdecode(contNLocals):
     Could do: restore from cont, save sp, sp--; copy/dec until localsIsZero; load saved sp; load cont and sp--
     '''
     
-    EXECUTE, CHECKRR, ALLOCATION, RESTORE, RESTORE_2, RESTORE_3 = [Const(x, bitwidth=3) for x in range(6)]
+    EXECUTE, CHECKRR, ALLOCATION, RESTORE_PRE, RESTORE, RESTORE_2, RESTORE_3 = \
+                                            [Const(x, bitwidth=3) for x in range(7)]
     state = Register(3, "ctrl_state")
 
     state_ex = state == EXECUTE
     state_check = state == CHECKRR
     state_alloc = state == ALLOCATION
+    state_restorepre = state == RESTORE_PRE
     state_restore = state == RESTORE
     state_restore2 = state == RESTORE_2
     state_restore3 = state == RESTORE_3
 
     nfvars = Register(freevarspace, "ctrl_nfvars")
     cond = ConditionalUpdate()
-    with cond(op == OPCODES["let_closure"]):
+    with cond(op == OPCODES["freevar"]):
         nfvars.next <<= nfvars + 1
     with cond(state_alloc):
         nfvars.next <<= nfvars - 1
@@ -294,24 +335,24 @@ def instrdecode(contNLocals):
     ctrl_alu2rr <<= (op == OPCODES["call"]) & state_ex
     ctrl_enter <<= ((op == OPCODES["enter"]) & state_ex)
     ctrl_enterRR <<= (state_check & ~isEvaluated)
-    ctrl_inspectElement <<= ((dsrc == SRC_ELEM) & state_ex) | (state_check & ~isEvaluated) | 
+    ctrl_inspectElement <<= (dsrcIsField & state_ex) | (state_check & ~isEvaluated) | \
                              ((op == OPCODES["con_pattern"]) & state_ex) | ctrl_enterRR
-    ctrl_addrFreevar <<= (dsrc == SRC_ELEM) & state_ex
     ctrl_allocWriteName <<= (op == OPCODES["let_closure"]) & state_ex
     ctrl_writeFreevar <<= state_alloc
-    ctrl_spDecr <<= state_alloc | ctrl_loadcont
+    ctrl_spDecr <<= state_alloc | ctrl_loadcont | state_restore
     ctrl_alias <<= (op == OPCODES["alias"]) & state_ex
-    ctrl_declocals <<= state_restore
+    ctrl_declocals <<= (state_restore & ~nLocalsIsZero) | state_restorepre
     ctrl_clearLocals <<= eqcodes(op, ("call","enter","ret")) & state_ex # sp <<= sp - nLocals
     ctrl_clearNLocals <<= eqcodes(op, ("call","enter","ret","case")) & state_ex   # nLocals <<= 0
-    ctrl_loadcont <<= (state_check & isEvaluated) | (op == OPCODES["call"]) | (state_restore3)
-    ctrl_spsave <<= (state_check & isEvaluated) | (op == OPCODES["call"])
+    ctrl_loadcont <<= (state_check & isEvaluated) | (state_restore3)
+    ctrl_spsave <<= (state_check & isEvaluated)
     ctrl_sploadSaved <<= state_restore2
+    ctrl_locWriteStackSaved <<= state_restore
 
     intrl_enterAlloc = WireVector(1, "EnterAllocState")  # enter allocation state machine
     intrl_enterAlloc <<= (op == OPCODES["let_closure"]) & (nfvars != 0)
-    intrl_enterCheck = WireVector(1, "EnterCheckState")
-    intrl_enterCheck <<= op == OPCODES["ret"]
+    #intrl_enterCheck = WireVector(1, "EnterCheckState")
+    #intrl_enterCheck <<= op == OPCODES["ret"]
 
     cond = ConditionalUpdate()
 
@@ -321,12 +362,15 @@ def instrdecode(contNLocals):
             state.next <<= ALLOCATION
         # on ALU ops, go directly to restore machine
         with cond(op == OPCODES["call"]):
-            state.next <<= RESTORE
+            state.next <<= CHECKRR
+        # when returning a value, check evaluatedness
+        with cond(op == OPCODES["ret"]):
+            state.next <<= CHECKRR
 
     # if fully evaluated, enter restore machine
     with cond(state_check):
         with cond(isEvaluated):
-            state.next <<= RESTORE
+            state.next <<= RESTORE_PRE
         with cond():
             state.next <<= EXECUTE  # enter into RR closure and begin execution
 
@@ -335,9 +379,13 @@ def instrdecode(contNLocals):
         with cond(nfvars == 1):
             state.next <<= EXECUTE
 
+    # get ready for restore state (just need to decrement nLocals)
+    with cond(state_restorepre):
+        state.next <<= RESTORE
+
     # in restore, copy locals until done; move to cleanup states
     with cond(state_restore):
-        with cond(nlocalsIsZero):
+        with cond(nLocalsIsZero):
             state.next <<= RESTORE_2
 
     with cond(state_restore2):
@@ -346,33 +394,122 @@ def instrdecode(contNLocals):
     with cond(state_restore3):
         state.next <<= EXECUTE
 
-    ctrl_ALUop <<= instr_itable_bits[:aluopbits]
-
     # PC mux
     # pattern_lit & patternMatchLiteral | pattern_con & patternMatchConstructor | pattern_else  ---> NINSTRS
     # enter | ctrl_enterRR  ---> PC_ITABLE
     # ctrl_loadcont  ---> PC_CONTINUATION
-    pc_patternmatched = ((op == OPCODES["pattern_lit"]) & patternMatchLiteral) | 
-                     ((op == OPCODES["pattern_con"]) & patternMatchConstructor) |
-                     (op == OPCODES["pattern_else"])
+    pc_patternmatched = ((op == OPCODES["lit_pattern"]) & patternMatch_literal) | \
+                     ((op == OPCODES["con_pattern"]) & patternMatch_constructor) | \
+                     (op == OPCODES["else_pattern"])
     pc_enterClosure = (op == OPCODES["enter"]) | ctrl_enterRR
     pc_loadCont = ctrl_loadcont
-    pc_inc = ~(pc_patternmatched | pc_enterClosure | pc_loadCont | (op == OPCODES["noop"]))
+    pc_inc = ~(pc_patternmatched | pc_enterClosure | pc_loadCont | (eqcodes(op, ("noop", "call", "ret"))))
 
-    ctrl_pcsel <<= switch(concat(pc_patternmatched, pc_enterClosure, pc_loadcont, pc_inc)), {
-        "4'b1000" : PC_INC,
-        "4'b0100" : PC_NINSTRS,
-        "4'b0010" : PC_ITABLE,
-        "4'b0001" : PC_CONTINUATION,
-        None : 
-    }
-    ctrl_exptrload <<= pc_patternmatched | pc_enterClosure | pc_loadcont | pc_inc
+    ctrl_exptrsrc <<= switch(concat(pc_patternmatched, pc_enterClosure, pc_loadCont, pc_inc), {
+        "4'b1000" : PC_NINSTRS,
+        "4'b0100" : PC_ITABLE,
+        "4'b0010" : PC_CONTINUATION,
+        "4'b0001" : PC_INC,
+        None : 0
+    })
+    ctrl_exptrload <<= pc_patternmatched | pc_enterClosure | pc_loadCont | pc_inc
 
 def eqcodes(op, states):
     eq = Const(0)
     for state in states:
         eq = eq | (op == OPCODES[state])
     return eq
+
+def test_decode():
+    ctrl_argwe = WireVector(1, "ctrl_argsWriteEnable")  # write value into args reg
+    ctrl_argSwitch = WireVector(1, "ctrl_argsSwitch")  # switch read & write regs
+    #ctrl_ALUop = WireVector(5, "ctrl_ALUcontrol")  # alu operation code
+    #ctrl_ALUop <<= 0
+    ctrl_alu2rr = WireVector(1, "ctrl_ALU-to-returnReg")  # if 1 ? RR <<= ALU : RR <<= srcMux
+    ctrl_loadrr = WireVector(1, "ctrl_loadRR")  # load muxed value into return register
+    ctrl_exptrsrc = WireVector(2, "ctrl_exptrSource")  # choose source of exptr (see mux constants)
+    ctrl_exptrload = WireVector(1, "ctrl_exptrLoad")  # load muxed value into exptr
+    ctrl_spDecr = WireVector(1, "ctrl_evalStackDecrement")  # decrement the eval stack pointer
+    ctrl_clearLocals = WireVector(1, "ctrl_clearLocals")  # sp <<= sp - nLocals; nLocals <<= 0
+    ctrl_stackWrite = WireVector(1, "ctrl_stackWrite")  # write value onto top of eval stack
+    ctrl_writeContinuation = WireVector(1, "ctrl_writeContinuation")  # write cont onto stack
+    ctrl_inclocals = WireVector(1, "ctrl_incrementLocals")  # nLocals <<= nLocals + 1
+    ctrl_declocals = WireVector(1, "ctrl_decrementLocals")  # nLocals <<= nLocals - 1
+    ctrl_loadcont = WireVector(1, "ctrl_loadContinuation")  # load cont. into nLocals and envclo
+    ctrl_writelocal = WireVector(1, "ctrl_writeLocalReg")  # locals[nLocals] <<= value
+    ctrl_enter = WireVector(1, "ctrl_enterNamedClosure")  # envclo <<= locals[index]; nTable addr=loc
+    ctrl_inspectElement = WireVector(1, "ctrl_inspectConsElement")  # nameTable addr = return reg
+    ctrl_writeFreevar = WireVector(1, "ctrl_writeFreevar")  # heap[hp] <<= evalstackOut; hp++
+    ctrl_allocWriteName = WireVector(1, "ctrl_allocWriteName")  # nTable[next]<<=hp;heap[hp]<<=itable
+    ctrl_alias = WireVector(1, "ctrl_aliasName")  # nTable[next] <<= nTable[value] or value
+    ctrl_locWriteStackSaved = WireVector(1, "ctrl_localsWriteStackSaved")  # locals[n] <<= stack
+    ctrl_clearNLocals = WireVector(1, "ctrl_clearNLocalsReg")  # nlocals <<= 0
+    ctrl_enterRR = WireVector(1, "ctrl_enterRR")  # envclo <<= RR
+    ctrl_spsave = WireVector(1, "ctrl_spsave")  # save out current sp
+    ctrl_sploadSaved = WireVector(1, "ctrl_sploadSaved")  # load saved sp into sp
+    
+    instr_opcode = Input(5, "instr_opcode")
+    isEvaluated = Input(1, "isEvaluated")
+    pt_con = Input(1, "patternMatchCon")
+    pt_lit = Input(1, "patternMatchLit")
+    nLocalsIsZero = Input(1, "nLocalsIsZero")
+    dsrcIsField = Input(1, "dataSourceIsField")
+
+    instrdecode(instr_opcode, ctrl_argwe, ctrl_argSwitch,
+                ctrl_alu2rr, ctrl_loadrr, 
+                ctrl_exptrsrc, ctrl_exptrload, ctrl_spDecr, 
+                ctrl_clearLocals, ctrl_stackWrite, ctrl_writeContinuation, 
+                ctrl_inclocals, ctrl_declocals, ctrl_loadcont, 
+                ctrl_writelocal, ctrl_enter, ctrl_inspectElement, 
+                ctrl_writeFreevar, ctrl_allocWriteName, ctrl_alias, 
+                ctrl_locWriteStackSaved, 
+                ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
+                ctrl_sploadSaved, isEvaluated, pt_con, 
+                pt_lit, nLocalsIsZero, dsrcIsField)
+
+    simvals = {
+        instr_opcode  : "0123402224000005678AB0B000000090",
+        isEvaluated   : "00000000000000000000000100000001",
+        pt_con        : "00000000000000000000000000000000",
+        pt_lit        : "00000000000000000000000000000000",
+        nLocalsIsZero : "00000000000000000000000000100000",
+        dsrcIsField   : "00000000000000000000000000000000"
+    }
+    '''
+    "noop"        : Const( 0 , bitwidth=5),
+    "arg"         : Const( 1 , bitwidth=5),
+    "freevar"     : Const( 2 , bitwidth=5),
+    "alias"       : Const( 3 , bitwidth=5),
+    "let_closure" : Const( 4 , bitwidth=5),
+    "case"        : Const( 5 , bitwidth=5),
+    "lit_pattern" : Const( 6 , bitwidth=5),
+    "con_pattern" : Const( 7 , bitwidth=5),
+    "else_pattern": Const( 8 , bitwidth=5),
+    "call"        : Const( 9 , bitwidth=5),
+    "enter"       : Const(10 , bitwidth=5),
+    "ret"         : Const(11 , bitwidth=5)
+
+    simvals[instr_opcode] = [OPCODES[instr] for instr in (
+        "noop",
+        "let_closure",
+        "arg",
+        "freevar",
+        "alias",
+        "case",
+        "lit_pattern",
+        "con_pattern",
+        "else_pattern",
+        "call",
+        "enter",
+        "ret"
+    )]
+    '''
+    sim_trace = pyrtl.SimulationTrace()
+    sim = pyrtl.Simulation(tracer=sim_trace)
+    for cycle in range(len(simvals[instr_opcode])):
+        sim.step({k:int(v[cycle],16) for k,v in simvals.items()})
+    sim_trace.render_trace()
+
 
 # ######################################################################
 #     Evaluation Stack
@@ -394,11 +531,11 @@ def evalstack(ctrl_spDecr, ctrl_spclearLocals, nLocals, ctrl_writeValue,
     with cond(ctrl_spDecr | ctrl_spclearLocals | spinc):
         sp.next <<= stacknext
     with cond(ctrl_sploadSaved):
-        sp.next <<= spsaved
+        sp.next <<= savedsp
 
     cond = ConditionalUpdate()
     with cond(ctrl_spsave):
-        savedsp <<= sp
+        savedsp.next <<= sp
     
     # Instantiate stack memory
     evalStack = MemBlock(width, evalstackspace, "EvaluationStack")
@@ -410,8 +547,8 @@ def evalstack(ctrl_spDecr, ctrl_spclearLocals, nLocals, ctrl_writeValue,
         "2'b10" : srcMux,
         "2'b01" : newName,
         None : continuation
-    }
-    evalStackWData = mux(ctrl_writeValue, falsecase=continuation, truecase=srcMux)
+    })
+    #evalStackWData = mux(ctrl_writeValue, falsecase=continuation, truecase=srcMux)
     EW = MemBlock.EnabledWrite
     nextspace = sp + 1
     evalStack[nextspace[0:evalstackspace]] = EW(evalStackWData, enable=spinc)
@@ -474,9 +611,9 @@ def localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearnlocals,
     # Locals registers
     localsRegs = MemBlock(namespace, localspace, name="LocalsRegisters")
     # read port; read local specified in instr
-    localsOut <<= concat(localsRegs[localsindex], Const(0, bitwidt=primtag_bits))  # add primtag
+    localsOut <<= concat(localsRegs[localsindex], Const("1'b0"))  # add primtag
     # Values written on allocation and all aliases
-    localsWrite = mux(ctrl_locWriteStackSaved, falsecase=newName, truecase=evalStackOut)
+    localsWrite = mux(ctrl_locWriteStackSaved, falsecase=newName[ptb:], truecase=evalStackOut[ptb:ptb+namespace])
     localsRegs[nlocals] = MemBlock.EnabledWrite(localsWrite, enable=ctrl_writelocal)
 
     # Current environment closure register
@@ -562,7 +699,7 @@ def table_heap(envclo, returnReg, localsOut, ctrl_enter, ctrl_inspectElement, sr
 
     # Allocation of names
     nextName = Register(namespace, "nextNameReg")
-    newNameOut <<= nextName  # needed for locals regs and eval stack saving
+    newNameOut <<= concat(nextName, "1'b0")  # needed for locals regs and eval stack saving
     cond = ConditionalUpdate()
     with cond(ctrl_allocWriteName | ctrl_alias):
         nextName.next <<= nextName + 1
@@ -663,7 +800,7 @@ def test_table_heap():
 #     Info Tables, Execution Pointer, and Immortal Heap
 # ######################################################################
 def itable_exptr_iheap(targetTable, ctrl_exptr, ctrl_loadexptr, nInstrs, srcMux, 
-                       itableOut, instrOut, exptrOut):
+                       itableOut, instrOut, exptrOut, evalStackOut):
     infoTable = MemBlock(32, itablespace, "infoTable")
     itableOut <<= infoTable[targetTable]
     
@@ -675,7 +812,7 @@ def itable_exptr_iheap(targetTable, ctrl_exptr, ctrl_loadexptr, nInstrs, srcMux,
         PC_INC : exptr + 1,
         PC_NINSTRS : nInstrs,
         PC_ITABLE : itable_entryCode,
-        PC_CONTINUATION : srcMux[cont_exptr_bits],
+        PC_CONTINUATION : evalStackOut[cont_exptr_bits],
         None : exptr
     })
     cond = ConditionalUpdate()
@@ -897,18 +1034,18 @@ def makeALU(control, op1, op2, out):
     "8'b1000_0011": fdiv,
     '''
     out <<= switch(control, {
-        "8'b0000_0000": op1 & op2,
-        "8'b0000_0001": op1 | op2,
-        "8'b0000_0010": ~op1,
-        "8'b0000_0011": op1 ^ op2,
-        "8'b0000_0100": op1 + op2,
-        "8'b0000_0101": op1 - op2,
-        "8'b0000_0110": op1 == op2,
-        "8'b0000_0111": op1 != op2,
-        "8'b0000_1000": op1 < op2,
-        "8'b0000_1001": op1 <= op2,
-        "8'b0000_1010": op1 > op2,
-        "8'b0000_1011": op1 >= op2,
+        "4'b0000": op1 & op2,
+        "4'b0001": op1 | op2,
+        "4'b0010": ~op1,
+        "4'b0011": op1 ^ op2,
+        "4'b0100": op1 + op2,
+        "4'b0101": op1 - op2,
+        "4'b0110": op1 == op2,
+        "4'b0111": op1 != op2,
+        "4'b1000": op1 < op2,
+        "4'b1001": op1 <= op2,
+        "4'b1010": op1 > op2,
+        "4'b1011": op1 >= op2,
         None: 0
     })    
 
