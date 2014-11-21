@@ -87,7 +87,7 @@ def detailed_general_timing_analysis(block, print_total_length=True, gate_timing
         items_to_remove = set()
         for gate in remaining:  # loop over logicnets not yet returned
             if all([arg in cleared for arg in gate.args]):  # if all args ready
-                time = max(timing_map[a_wire] for a_wire in gate.args)+ gate_timings[gate.op]
+                time = max(timing_map[a_wire] for a_wire in gate.args) + gate_timings[gate.op]
                 timing_map[gate.dests[0]] = time
                 heapq.heappush(timing_heap, WireWTiming(time, gate.dests[0]))
                 cleared.update(set(gate.dests))  # add dests to set of ready wires
