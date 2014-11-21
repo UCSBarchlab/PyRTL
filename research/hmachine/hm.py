@@ -1,3 +1,4 @@
+import io
 import sys
 import numpy as np
 sys.path.append("../..")
@@ -67,10 +68,10 @@ SRC_STACK = Const("3'b110")
 def main():
 
     #test_argregs()
-    #test_args_alu_rr()
+    test_args_alu_rr()
     #test_evalstack()
     #test_localsregs()
-    test_table_heap()
+    #test_table_heap()
     #buildAll()
     
 
@@ -530,18 +531,23 @@ def test_args_alu_rr():
     simvals = {
         srcMux          : "0123450000000000090",
         argIndex        : "0000000012345670000",
-        ctrl_argwe     : "0111110000000000000", 
-        ctrl_argSwitch : "0000001000000000000",
+        ctrl_argwe      : "0111110000000000000", 
+        ctrl_argSwitch  : "0000001000000000000",
         ctrl_ALUop      : "0222222222222222220",
         ctrl_alu2rr     : "0111111111111110000",
         ctrl_loadrr     : "0111111111111110010" 
     }
 
-    sim_trace = pyrtl.SimulationTrace()
-    sim = pyrtl.Simulation(tracer=sim_trace)
-    for cycle in range(len(simvals[srcMux])):
-        sim.step({k:int(v[cycle]) for k,v in simvals.items()})
-    sim_trace.render_trace()
+    #sim_trace = pyrtl.SimulationTrace()
+    #sim = pyrtl.Simulation(tracer=sim_trace)
+    #for cycle in range(len(simvals[srcMux])):
+    #    sim.step({k:int(v[cycle]) for k,v in simvals.items()})
+    #sim_trace.render_trace()
+
+
+    with io.BytesIO() as vfile:
+        pyrtl.output_to_verilog(vfile)
+        print vfile.getvalue()
 
 
 
