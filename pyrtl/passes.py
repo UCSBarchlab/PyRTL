@@ -79,6 +79,10 @@ def detailed_general_timing_analysis(block, gate_timings=None):
     import heapq
 
     class WireWTiming:
+        # the purpose of this class is to allow for us to define
+        # the ordering of the objects. This is needed for the
+        # heap to function.
+
         def __init__(self, timing, wirevector):
             self.time = timing
             self.wirevector = wirevector
