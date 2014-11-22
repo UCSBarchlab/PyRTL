@@ -205,33 +205,33 @@ def optimize(update_working_block=True, block=None):
         block.sanity_check()
         _remove_wire_nets(block)
         block.sanity_check()
-        constant_propagation(block)
+        _constant_propagation(block)
         block.sanity_check()
-        remove_unlistened_nets(block)
+        _remove_unlistened_nets(block)
     else:
         _remove_wire_nets(block)
-        constant_propagation(block)
-        remove_unlistened_nets(block)
+        _constant_propagation(block)
+        _remove_unlistened_nets(block)
     return block
 
 
-def constant_propagation(block):
+def _constant_propagation(block):
     """
     Removes excess constants in the block
 
     Note on resulting block:
     The output of the block can have wirevectors that are driven but not
     listened to. This is to be expected. These are to be removed by the
-    remove_unlistened_nets function
+    _remove_unlistened_nets function
     """
 
     current_nets = 0
     while len(block.logic) != current_nets:
         current_nets = len(block.logic)
-        constant_prop_pass(block)
+        _constant_prop_pass(block)
 
 
-def constant_prop_pass(block):
+def _constant_prop_pass(block):
     """ Does one constant propagation pass """
 
     def constant_prop_check(net_checking):
@@ -337,10 +337,10 @@ def constant_prop_pass(block):
     for new_wirevector in wire_add_set:
         block.add_wirevector(new_wirevector)
 
-    remove_unused_wires(block, "constant folding")
+    _remove_unused_wires(block, "constant folding")
 
 
-def remove_unlistened_nets(block):
+def _remove_unlistened_nets(block):
     """
     Removes all nets that are not connected to an output wirevector
     """
@@ -366,10 +366,10 @@ def remove_unlistened_nets(block):
                     listened_wires_cur.add(arg_wire)
 
     block.logic = listened_nets
-    remove_unused_wires(block, "unlistened net removal")
+    _remove_unused_wires(block, "unlistened net removal")
 
 
-def remove_unused_wires(block, parent_process_name):
+def _remove_unused_wires(block, parent_process_name):
     """ Removes all unconnected wires from a block"""
     all_wire_vectors = set()
     for logic_net in block.logic:
