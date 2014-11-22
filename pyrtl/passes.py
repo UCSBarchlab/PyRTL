@@ -56,6 +56,14 @@ def quick_timing_analysis(block):
 
 
 def detailed_general_timing_analysis(block, gate_timings=None):
+    """ Calculates the timing analysis while taking into account the
+    different timing delays of each type of gate
+
+    :param block: The block you want to do timing analysis on
+    :param gate_timings: a map of the gate op to the timing delay for the op
+    if none is specified, a default gate timing is used
+    :return: A map with wires as keys and the associated timing as the value
+    """
     import heapq
 
     class WireWTiming:
