@@ -33,6 +33,15 @@ def area_estimation(tech_in_nm, block=None):
 #
 
 def quick_timing_analysis(block):
+    """ Calculates a quick timing analysis. For large blocks, this will be
+    around 10x as fast as the 'detailed' timing analysis (though performance
+    is very dependent on your code structure)
+
+    This will not take into account that 'w' nets have zero delay
+
+    :param block: The block you want to do timing analysis on
+    :return: A map with wires as keys and the associated timing as the value
+    """
     cleared = block.wirevector_subset(wire.Input).union(block.wirevector_subset(wire.Register))
     remaining = block.logic.copy().difference(block.logic_subset('r'))
     num_prev_remaining = len(remaining)+1
