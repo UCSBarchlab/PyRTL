@@ -32,7 +32,7 @@ def area_estimation(tech_in_nm, block=None):
 #    |  |  |  | | | \| \__>     /    \| \| /~~\ |_  |   .__/ |  .__/
 #
 
-def quick_timing_analysis(block, print_total_length=True):
+def quick_timing_analysis(block):
     cleared = block.wirevector_subset(wire.Input).union(block.wirevector_subset(wire.Register))
     remaining = block.logic.copy().difference(block.logic_subset('r'))
     num_prev_remaining = len(remaining)+1
@@ -52,13 +52,10 @@ def quick_timing_analysis(block, print_total_length=True):
     if len(remaining) > 0:
         raise core.PyrtlError("Cannot do static timing analysis due to nonregister "
                               "loops in the code")
-
-    if print_total_length:
-        print "The estimated total block timing delay is ", time
     return timing_map
 
 
-def detailed_general_timing_analysis(block, print_total_length=True, gate_timings=None):
+def detailed_general_timing_analysis(block, gate_timings=None):
     import heapq
 
     class WireWTiming:
@@ -97,9 +94,6 @@ def detailed_general_timing_analysis(block, print_total_length=True, gate_timing
     if len(remaining) > 0:
         raise core.PyrtlError("Cannot do static timing analysis due to nonregister "
                               "loops in the code")
-
-    if print_total_length:
-        print "The total block timing delay is ", timing_max_length(timing_map)
     return timing_map
 
 
@@ -123,6 +117,10 @@ def advanced_timing_analysis(block, wirevector, ):
 
 def timing_max_length(timing_map):
     return max(timing_map.itervalues())
+
+
+def print_max_length(timing_map):
+    print "The total block timing delay is ", timing_max_length(timing_map)
 
 
 def timing_critical_path(timing_map):
