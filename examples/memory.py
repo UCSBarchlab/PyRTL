@@ -43,8 +43,8 @@ simvals = {
 }
 
 # Build the data with which to initialize memory
-mem1_init = {addr: 9 for addr in range(10)}
-mem2_init = {addr: 9 for addr in range(10)}
+mem1_init = {addr: 9 for addr in range(8)}
+mem2_init = {addr: 9 for addr in range(8)}
 memvals = {mem1: mem1_init, mem2: mem2_init}
 
 sim_trace = pyrtl.SimulationTrace()
