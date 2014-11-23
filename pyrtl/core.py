@@ -39,17 +39,26 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
         return ' '.join([lhs, '<--', self.op, '--', rhs, options])
 
-    def _compare_error(self):
-        # comparisons get you in a bad place between while you can compare op and op_param
-        # safely, the args and dests are references to mutable objects.  You should only
-        # use "is" to compare.
-        raise PyrtlError('Comparison and Equality between LogicNets is not supported')
-
     def __eq__(self, other):
-        self._compare_error()
+        # We can't be going and calling __eq__ recursively on the logic nets for all of
+        # the args and dests because that will actually *create* new logic nets which is
+        # very much not what people would expect to happen.  Instead we define equality
+        # as the immutable feilds as being equal and the list of args and dests as being
+        # references to the same objects.
+        return (self.op == other.op and
+                self.op_param == other.op_param and
+                len(self.args) == len(other.args) and
+                len(self.dests) == len(other.dests) and
+                all(self.args[i] is other.args[i] for i in range(len(self.args))) and
+                all(self.dests[i] is other.dests[i] for i in range(len(self.dests))))
 
     def __ne__(self, other):
-        self._compare_error()
+        return not self.__eq__(other)
+
+    def _compare_error(self):
+        # comparisons get you in a bad place between while you can compare op and op_param
+        # safely, the args and dests are references to mutable objects.
+        raise PyrtlError('Comparison between LogicNets is not supported')
 
     def __lt__(self, other):
         self._compare_error()
