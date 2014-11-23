@@ -42,21 +42,24 @@ def quick_timing_analysis(block):
     :param block: The block you want to do timing analysis on
     :return: A map with wires as keys and the associated timing as the value
     """
-    cleared = block.wirevector_subset(wire.Input).union(block.wirevector_subset(wire.Register))
+    cleared = block.wirevector_subset(wire.Input).union(
+        block.wirevector_subset(wire.Register)).union(block.wirevector_subset(wire.Const))
     remaining = block.logic.copy().difference(block.logic_subset('r'))
     num_prev_remaining = len(remaining)+1
     timing_map = {wirevector: 0 for wirevector in cleared}
     time = 0
-    while len(remaining) > num_prev_remaining:
+    while len(remaining) < num_prev_remaining:
         num_prev_remaining = len(remaining)
         time += 1
+        items_to_remove = set()
+        new_cleared = set()
         for gate in remaining:  # loop over logicnets not yet returned
-            items_to_remove = set()
             if cleared.issuperset(gate.args):  # if all args ready
                 timing_map[gate.dests[0]] = time
-                cleared.update(set(gate.dests))  # add dests to set of ready wires
+                new_cleared.update(set(gate.dests))  # add dests to set of ready wires
                 items_to_remove.add(gate)  # remove gate from set of to return
-            remaining.difference_update(items_to_remove)
+        remaining.difference_update(items_to_remove)
+        cleared.update(new_cleared)
 
     if len(remaining) > 0:
         raise core.PyrtlError("Cannot do static timing analysis due to nonregister "
@@ -91,7 +94,8 @@ def detailed_general_timing_analysis(block, gate_timings=None):
             '^': 1,
             'w': 0,
         }
-    cleared = block.wirevector_subset(wire.Input).union(block.wirevector_subset(wire.Register))
+    cleared = block.wirevector_subset(wire.Input).union(
+        block.wirevector_subset(wire.Register)).union(block.wirevector_subset(wire.Const))
     remaining = block.logic.copy().difference(block.logic_subset('r'))
     timing_map = {wirevector: 0 for wirevector in cleared}
     timing_heap = [WireWTiming(0, a_wire) for a_wire in cleared]
