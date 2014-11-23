@@ -52,7 +52,7 @@ def quick_timing_analysis(block):
         time += 1
         for gate in remaining:  # loop over logicnets not yet returned
             items_to_remove = set()
-            if all([arg in cleared for arg in gate.args]):  # if all args ready
+            if cleared.issuperset(gate.args):  # if all args ready
                 timing_map[gate.dests[0]] = time
                 cleared.update(set(gate.dests))  # add dests to set of ready wires
                 items_to_remove.add(gate)  # remove gate from set of to return
@@ -100,7 +100,7 @@ def detailed_general_timing_analysis(block, gate_timings=None):
         cleared.add(heapq.heappop(timing_heap).wirevector)
         items_to_remove = set()
         for gate in remaining:  # loop over logicnets not yet returned
-            if all([arg in cleared for arg in gate.args]):  # if all args ready
+            if cleared.issuperset(gate.args):  # if all args ready
                 time = max(timing_map[a_wire] for a_wire in gate.args) + gate_timings[gate.op]
                 timing_map[gate.dests[0]] = time
                 heapq.heappush(timing_heap, WireWTiming(time, gate.dests[0]))
