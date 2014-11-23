@@ -303,7 +303,7 @@ def wave_trace_render(w, n, prior_val, current_val, symbol_len):
     return out
 
 
-def trace_sort_key(w):
+def _trace_sort_key(w):
     def tryint(s):
         try:
             return int(s)
@@ -357,7 +357,7 @@ class SimulationTrace(object):
         if len(self.trace) == 0:
             raise core.PyrtlError('error, cannot print an empty trace')
         maxlen = max([len(w.name) for w in self.trace])
-        for w in sorted(self.trace, key=trace_sort_key):
+        for w in sorted(self.trace, key=_trace_sort_key):
             file.write(" ".join([w.name.rjust(maxlen),
                        ''.join(str(x) for x in self.trace[w])+"\n"]))
             file.flush()
@@ -371,12 +371,12 @@ class SimulationTrace(object):
         print >>file, " ".join(["$scope", "module logic", "$end"])
 
         # dump variables
-        for w in sorted(self.trace, key=trace_sort_key):
+        for w in sorted(self.trace, key=_trace_sort_key):
             print >>file, " ".join(["$var", "wire", str(w.bitwidth), w.name, w.name, "$end"])
         print >>file, " ".join(["$upscope", "$end"])
         print >>file, " ".join(["$enddefinitions", "$end"])
         print >>file, " ".join(["$dumpvars"])
-        for w in sorted(self.trace, key=trace_sort_key):
+        for w in sorted(self.trace, key=_trace_sort_key):
             if w.bitwidth > 1:
                 print >>file, " ".join([str(bin(self.trace[w][0]))[1:], w.name])
             else:
@@ -387,7 +387,7 @@ class SimulationTrace(object):
         endtime = max([len(self.trace[w]) for w in self.trace])
         for timestamp in range(endtime):
             print >>file, "".join(["#", str(timestamp)])
-            for w in sorted(self.trace, key=trace_sort_key):
+            for w in sorted(self.trace, key=_trace_sort_key):
                 if w.bitwidth > 1:
                     print >>file, " ".join([str(bin(self.trace[w][timestamp]))[1:], w.name])
                 else:
@@ -396,8 +396,22 @@ class SimulationTrace(object):
         file.flush()
 
     def render_trace(
-            self, renderer=wave_trace_render, symbol_len=5,
-            segment_size=5, segment_delim=' ', extra_line=True):
+            self, trace_list=None, file=sys.stdout, renderer=wave_trace_render,
+            symbol_len=5, segment_size=5, segment_delim=' ', extra_line=True):
+        """ Render the trace to a file using unicode and ASCII escape sequences.
+
+        The resulting output can be viewed directly on the terminal or looked
+        at with "more" or "less -R" which both should handle the ASCII escape
+        sequences used in rendering. render_trace takes the following optional
+        arguments.
+        trace_list: A list of signals to be output in the specified order.
+        file: The place to write output, default to stdout.
+        renderer: A function that translates traces into output bytes.
+        symbol_len: The "length" of each rendered cycle in characters.
+        segment_size: Traces are broken in the segments of this number of cycles.
+        segment_delim: The character to be output between segments.
+        extra_line: A Boolean to determin if we should print a blank line between signals.
+        """
 
         def formatted_trace_line(w, trace):
             heading = w.name.rjust(maxnamelen) + ' '
@@ -412,6 +426,10 @@ class SimulationTrace(object):
                 last_element = trace[i]
             return heading+trace_line
 
+        # default to printing all signals in sorted order
+        if trace_list is None:
+            trace_list = sorted(self.trace, key=_trace_sort_key)
+
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map
         def tick_segment(n):
@@ -424,12 +442,12 @@ class SimulationTrace(object):
             segment_size = maxtracelen
         spaces = ' '*(maxnamelen+1)
         ticks = [tick_segment(n) for n in xrange(0, maxtracelen, segment_size)]
-        print spaces + segment_delim.join(ticks).encode('utf-8')
+        print >>file, spaces + segment_delim.join(ticks).encode('utf-8')
 
         # now all the traces
-        for w in sorted(self.trace, key=trace_sort_key):
+        for w in trace_list:
             if extra_line:
-                print
-            print formatted_trace_line(w, self.trace[w]).encode('utf-8')
+                print >>file
+            print >>file, formatted_trace_line(w, self.trace[w]).encode('utf-8')
         if extra_line:
-            print
+            print >>file
