@@ -175,7 +175,7 @@ class TestPasses(unittest.TestCase):
 
         # just to check that something like this will run properly
 
-    def test_timing_basic_2(self):
+    def test_timing_basic_1(self):
         inwire = pyrtl.Input(bitwidth=1)
         inwire2 = pyrtl.Input(bitwidth=1)
         outwire = pyrtl.Output()
@@ -189,5 +189,24 @@ class TestPasses(unittest.TestCase):
         self.assertTrue(block_max_time == 1)
         # should remove the and block and replace it with a
 
+
+    def test_timing_basic_2(self):
+        inwire = pyrtl.Input(bitwidth=1)
+        inwire2 = pyrtl.Input(bitwidth=1)
+        inwire3 = pyrtl.Input(bitwidth=1)
+        tempwire = pyrtl.WireVector()
+        tempwire2 = pyrtl.WireVector()
+        outwire = pyrtl.Output()
+
+        tempwire <<= inwire | inwire2
+        tempwire2 <<= ~tempwire
+        outwire <<= tempwire2 & inwire3
+        pyrtl.synthesize()
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        timing_map = pyrtl.passes.detailed_general_timing_analysis(block)
+        block_max_time = pyrtl.passes.timing_max_length(timing_map)
+        self.assertTrue(block_max_time == 3)
+        # should remove the and block and replace it with a
 if __name__ == "__main__":
     unittest.main()
