@@ -384,8 +384,8 @@ class BlockIterator():
         The input is a Block, and when a LogicNet is returned it is always the case
         that all of it's "parents" have already been returned earlier in the iteration.
 
-        Note: this method will not return all of the items in order if there are loops
-        in the logic that do not involve registers"""
+        Note: this method will throw an error if there are loops in the
+        logic that do not involve registers"""
 
     def __init__(self, block):
         self.block = block
