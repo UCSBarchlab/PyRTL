@@ -189,7 +189,6 @@ class TestPasses(unittest.TestCase):
         self.assertTrue(block_max_time == 1)
         # should remove the and block and replace it with a
 
-
     def test_timing_basic_2(self):
         inwire = pyrtl.Input(bitwidth=1)
         inwire2 = pyrtl.Input(bitwidth=1)
