@@ -204,8 +204,47 @@ class TestPasses(unittest.TestCase):
         pyrtl.optimize()
         block = pyrtl.working_block()
         timing_map = pyrtl.passes.detailed_general_timing_analysis(block)
+        timing_map_2 = pyrtl.passes.quick_timing_analysis(block)
         block_max_time = pyrtl.passes.timing_max_length(timing_map)
+        block_max_time_2 = pyrtl.passes.timing_max_length(timing_map_2)
         self.assertTrue(block_max_time == 3)
-        # should remove the and block and replace it with a
+
+        # this is because a stelth wire block gets added to the logic net
+        self.assertTrue(block_max_time_2 == 4)
+
+    def test_synth_optimication_and_timing_1(self):
+        inwire = pyrtl.Input(bitwidth=1)
+        tempwire0 = pyrtl.WireVector(bitwidth=1)
+        tempwire1 = pyrtl.WireVector(bitwidth=1)
+        tempwire2 = pyrtl.WireVector(bitwidth=1)
+        outwire = pyrtl.Output()
+
+        tempwire0 <<= inwire
+        tempwire1 <<= tempwire0
+        tempwire2 <<= tempwire1
+        outwire <<= ~tempwire2
+        pyrtl.synthesize()
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        # TODO: fix the function for wire deletion so that len(..) ==1
+        self.assertTrue(len(block.logic) == 2)
+        timing_map = pyrtl.passes.detailed_general_timing_analysis(block)
+        block_max_time = pyrtl.passes.timing_max_length(timing_map)
+        self.assertTrue(block_max_time == 1)
+
+    def test_synth_adder(self):
+        inwire1 = pyrtl.Input(bitwidth=3)
+        inwire2 = pyrtl.Input(bitwidth=3)
+        outwire = pyrtl.Output(bitwidth=4)
+
+        outwire <<= inwire1 + inwire2
+
+        # testing that this actually properly executes
+        pyrtl.synthesize()
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        timing_map = pyrtl.passes.detailed_general_timing_analysis(block)
+        block_max_time = pyrtl.passes.timing_max_length(timing_map)
+
 if __name__ == "__main__":
     unittest.main()
