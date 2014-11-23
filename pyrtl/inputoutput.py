@@ -202,9 +202,10 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
 #   \__/ \__/  |  |    \__/  |
 #
 
-def output_to_trivialgraph(file, block):
+def output_to_trivialgraph(file, block=None):
     """ Walk the block and output it in trivial graph format to the open file """
 
+    block = core.working_block(block)
     nodes = {}
     edges = set([])
     edge_names = {}
@@ -232,9 +233,9 @@ def output_to_trivialgraph(file, block):
     def producer(w):
         """ return the node driving wire (or create it if undefined) """
         assert isinstance(w, wire.WireVector)
-        for net in sorted(block.logic):
-            for dest in sorted(net.dests):
-                if dest == w:
+        for net in block.logic:
+            for dest in net.dests:
+                if dest is w:
                     return net
         add_node(w, '???')
         return w
@@ -242,40 +243,40 @@ def output_to_trivialgraph(file, block):
     def consumer(w):
         """ return the node being driven by wire (or create it if undefined) """
         assert isinstance(w, wire.WireVector)
-        for net in sorted(block.logic):
-            for arg in sorted(net.args):
-                if arg == w:
+        for net in block.logic:
+            for arg in net.args:
+                if arg is w:
                     return net
         add_node(w, '???')
         return w
 
     # add all of the nodes
-    for net in sorted(block.logic):
+    for net in block.logic:
         label = str(net.op)
         label += str(net.op_param) if net.op_param is not None else ''
         add_node(net, label)
-    for input in sorted(block.wirevector_subset(wire.Input)):
+    for input in block.wirevector_subset(wire.Input):
         label = 'in' if input.name is None else input.name
         add_node(input, label)
-    for output in sorted(block.wirevector_subset(wire.Output)):
+    for output in block.wirevector_subset(wire.Output):
         label = 'out' if output.name is None else output.name
         add_node(output, label)
-    for const in sorted(block.wirevector_subset(wire.Const)):
+    for const in block.wirevector_subset(wire.Const):
         label = str(const.val)
         add_node(const, label)
 
     # add all of the edges
-    for net in sorted(block.logic):
-        for arg in sorted(net.args):
+    for net in block.logic:
+        for arg in net.args:
             add_edge(arg, net)
-        for dest in sorted(net.dests):
+        for dest in net.dests:
             add_edge(net, dest)
 
     # print the actual output to the file
-    for (id, label) in sorted(nodes.values()):
+    for (id, label) in nodes.values():
         print >> file, id, label
     print >> file, '#'
-    for (frm, to) in sorted(edges):
+    for (frm, to) in edges:
         print >> file, frm, to, edge_names.get((frm, to), '')
 
 # ----------------------------------------------------------------

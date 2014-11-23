@@ -55,7 +55,7 @@ with io.BytesIO() as tbfile:
     print tbfile.getvalue()
 
 
-# Finally, let's talk about transformations of the hardware block.  Many times when you are
+# Not let's talk about transformations of the hardware block.  Many times when you are
 # doing some hardware-level analysis you might wish to ignore higher level things like
 # multi-bit wirevectors, adds, concatination, etc. and just thing about wires and basic
 # gates.  PyRTL supports "lowering" of designs into this more restricted set of functionality
@@ -70,3 +70,14 @@ pyrtl.optimize()
 with io.BytesIO() as vfile:
     pyrtl.output_to_verilog(vfile)
     print vfile.getvalue()
+
+
+# Finally, there is a handy way to view your hardware creations as a graph.  The function
+# output_to_trivialgraph will ender your hardware a formal that you can then open with the
+# free software "yEd" (http://en.wikipedia.org/wiki/YEd).  There are options under the 
+# "heirachical" rendering to draw something looks quite like a circuit. 
+
+print "--- Trivial Graph Format  ---"
+with io.BytesIO() as tgf:
+    pyrtl.output_to_trivialgraph(tgf)
+    print tgf.getvalue()

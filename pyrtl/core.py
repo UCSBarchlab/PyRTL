@@ -39,6 +39,30 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
         return ' '.join([lhs, '<--', self.op, '--', rhs, options])
 
+    def _compare_error(self):
+        # comparisons get you in a bad place between while you can compare op and op_param
+        # safely, the args and dests are references to mutable objects.  You should only
+        # use "is" to compare.
+        raise PyrtlError('Comparison and Equality between LogicNets is not supported')
+
+    def __eq__(self, other):
+        self._compare_error()
+
+    def __ne__(self, other):
+        self._compare_error()
+
+    def __lt__(self, other):
+        self._compare_error()
+
+    def __le__(self, other):
+        self._compare_error()
+
+    def __gt__(self, other):
+        self._compare_error()
+
+    def __ge__(self, other):
+        self._compare_error()
+
 
 class Block(object):
     """ Block encapsulates a netlist.
