@@ -183,14 +183,10 @@ class Simulation(object):
         elif net.op == 'm':
             # memories act async for reads
             memid = net.op_param[0]
-            num_reads = net.op_param[1]
-            if num_reads != len(net.dests):
-                raise core.PyrtlInternalError
-            for i in range(num_reads):
-                read_addr = self.value[net.args[i]]
-                index = (memid, read_addr)
-                mem_lookup_result = self.memvalue.get(index, self.default_value)
-                self.value[net.dests[i]] = mem_lookup_result
+            read_addr = self.value[net.args[0]]
+            index = (memid, read_addr)
+            mem_lookup_result = self.memvalue.get(index, self.default_value)
+            self.value[net.dests[0]] = mem_lookup_result
         else:
             raise core.PyrtlInternalError
 
@@ -202,25 +198,20 @@ class Simulation(object):
         semantics of the primitive ops.  Function updates self.value and
         self.memvalue accordingly (using prior_value)
         """
-        if net.op in 'w~&|^+-*<>=xcs':
-            return  # stateless elements
+        if net.op in 'w~&|^+-*<>=xcsm':
+            return  # stateless elements and memory-read 
         else:
             if net.op == 'r':
                 # copy result from input to output of register
                 argval = prior_value[net.args[0]]
                 self.value[net.dests[0]] = self._sanitize(argval, net.dests[0])
-            elif net.op == 'm':
+            elif net.op == '@':
                 memid = net.op_param[0]
-                num_reads = net.op_param[1]
-                num_writes = net.op_param[2]
-                if num_reads + 3*num_writes != len(net.args):
-                    raise core.PyrtlInternalError
-                for i in range(num_reads, num_reads + 3*num_writes, 3):
-                    write_addr = prior_value[net.args[i]]
-                    write_val = prior_value[net.args[i+1]]
-                    write_enable = prior_value[net.args[i+2]]
-                    if write_enable:
-                        self.memvalue[(memid, write_addr)] = write_val
+                write_addr = prior_value[net.args[0]]
+                write_val = prior_value[net.args[1]]
+                write_enable = prior_value[net.args[2]]
+                if write_enable:
+                    self.memvalue[(memid, write_addr)] = write_val
             else:
                 raise core.PyrtlInternalError
 
@@ -243,12 +234,7 @@ class Simulation(object):
 
     def _is_ready_to_execute(self, defined_set, net):
         """Return true if all of the arguments are ready"""
-        # TODO: this is a hack and memories need to be revisited
-        if net.op == 'm':
-            num_reads = net.op_param[1]
-            return all(arg in defined_set for arg in net.args[0:num_reads])
-        else:
-            return all(arg in defined_set for arg in net.args)
+        return all(arg in defined_set for arg in net.args)
 
     def _print_values(self):
         print ' '.join([str(v) for _, v in sorted(self.value.iteritems())])

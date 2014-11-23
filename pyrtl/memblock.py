@@ -43,13 +43,9 @@ class MemBlock(object):
         self.bitwidth = bitwidth
         self.name = name
         self.addrwidth = addrwidth
-        self.stored_net = None
+        self.readport_nets = []
+        self.writeport_nets = []
         self.id = core.Block.next_memid()
-        self.read_addr = []  # arg
-        self.read_data = []  # dest
-        self.write_addr = []  # arg
-        self.write_data = []  # arg
-        self.write_enable = []  # arg
 
     def __getitem__(self, item):
         if not isinstance(item, wire.WireVector):
@@ -58,27 +54,16 @@ class MemBlock(object):
             raise core.PyrtlError('error, width of memblock index "%s" is %d, '
                                   'addrwidth is %d' % (item.name, len(item), self.addrwidth))
 
+        addr = item
         data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
-        self.read_data.append(data)
-        self.read_addr.append(item)
-        self._update_net()
+        readport_net = core.LogicNet(
+            op='mr',
+            op_param=(self.id,),
+            args=(addr,),
+            dests=(data,))
+        self.block.add_net(readport_net)
+        self.readport_nets.append(readport_net)
         return data
-
-    def _update_net(self):
-        if self.stored_net:
-            self.block.logic.remove(self.stored_net)
-        assert len(self.write_addr) == len(self.write_data)  # not sure about this one
-
-        # construct the arg list from reads and writes
-        coupled_write_args = zip(self.write_addr, self.write_data, self.write_enable)
-        flattened_write_args = [item for sublist in coupled_write_args for item in sublist]
-        net = core.LogicNet(
-            op='m',
-            op_param=(self.id, len(self.read_addr), len(self.write_addr)),
-            args=tuple(self.read_addr + flattened_write_args),
-            dests=tuple(self.read_data))
-        self.block.add_net(net)
-        self.stored_net = net
 
     def __setitem__(self, item, val):
         # check that 'item' is a valid address vector
@@ -102,7 +87,10 @@ class MemBlock(object):
         if len(enable) != 1:
             raise core.PyrtlError('error, enable signal not exactly 1 bit')
 
-        self.write_data.append(data)
-        self.write_addr.append(addr)
-        self.write_enable.append(enable)
-        self._update_net()
+        writeport_net = core.LogicNet(
+            op='mw',
+            op_param=(self.id,),
+            args=(addr, data, enable)
+            dests=tuple())
+        self.block.add_net(writeport_net)
+        self.writeport_nets.append(writeport_net)

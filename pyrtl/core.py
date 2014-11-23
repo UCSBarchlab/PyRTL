@@ -85,7 +85,7 @@ class Block(object):
     "LogicNet"s. Each LogicNet describes a primitive operation (such as an adder
     or memory).  The primitive is described by a 4-tuple of:
 
-    1) the op (a single character describing the operation such as '+' or 'm'),
+    1) the op (a single character describing the operation such as '+' or 'r'),
     2) a set of hard parameters to that primitives (such as the number of read
        ports for a memory),
     3) the tuple "args" which list the wirevectors hooked up as inputs to
@@ -119,14 +119,18 @@ class Block(object):
       select.  Repeats are accepted.
     * The 'r' operator is a register and on posedge, simply copies the value
       from the input to the output of the register
-    * The 'm' operator is a memory block, which supports async reads (acting
-      like combonational logic), and syncronous writes (writes are "latched"
-      at posedge).  Multiple read and write ports are possible, and op_param
-      requires three numbers (memory id, num reads, num writes). It assumes
-      that operator reads have one addr (an arg) and one data (a dest).
-      Writes have three args (addr, data, and write enable).  Reads are
-      specified first and then writes.  You will not see a written value change
-      until the following cycle.
+    * The 'm' operator is a memory block read port, which supports async reads (acting
+      like combonational logic). Multiple read (and write) ports are possible to
+      the same memory but each 'm' defines only one of those. The op_param
+      is a tuple containing a single number: the memory id.  Each read port has on
+      addr (an arg) and one data (a dest).
+    * The '@' (update) operator is a memory block write port, which supports syncronous writes
+      (writes are "latched" at posedge).  Multiple write (and read) ports are possible
+      to the same memory but each '@' defines only one of those. The op_param
+      is a tuple containing a single number: the memory id. Writes have three args
+      (addr, data, and write enable).  You will not see a written value change
+      until the following cycle.  If multiple writes happen to the same address
+      in the same cycle the behavior is currently undefined.
 
     The connecting elements (args and dests) should be WireVectors or derived
     from WireVector, and should be registered with the block using
@@ -146,7 +150,7 @@ class Block(object):
         self.wirevector_by_name = {}  # map from name->wirevector, used for performance
         self.wirevector_map = {}  # map from (wirevector, number) -> wirevector, used for mapping
         # pre-synthesis wirevectors to post-synthesis vectors
-        self.legal_ops = set('w~&|^+-*<>=xcsrm')  # set of legal OPS
+        self.legal_ops = set('w~&|^+-*<>=xcsrm@')  # set of legal OPS
 
     def __str__(self):
         """String form has one LogicNet per line."""
