@@ -18,6 +18,7 @@ class Simulation(object):
     def __init__(
             self, register_value_map=None, memory_value_map=None,
             default_value=0, tracer=None, block=None):
+        """ Creates object and initializes it with self.initialize. """
 
         block = core.working_block(block)
         block.sanity_check()  # check that this is a good hw block
@@ -31,7 +32,14 @@ class Simulation(object):
         self.max_iter = 1000
 
     def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
-        """ Sets the wire, register, and memory values to default or as specified """
+        """ Sets the wire, register, and memory values to default or as specified.
+
+        register_value_map is a map of {Register: value}.
+        memory_value_map is a map of maps {Memory: {address: Value}}.
+        default_value is the value that all unspecified registers and memories will default to.
+        if no default_value is specified, it will use the value stored in the object (default to 0)
+        """
+
         self.value = {}
         if default_value is None:
             default_value = self.default_value
@@ -50,21 +58,20 @@ class Simulation(object):
             self.value[w] = w.val
             assert isinstance(w.val, int)  # for now
 
-        # TODO: this needs better errror checking and documentation
         # set memories to their passed values
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
                 memid = mem.stored_net.op_param[0]
                 for (addr, val) in mem_map.items():
+                    if addr < 0 or addr >= 2**mem.addrwidth:
+                        raise core.PyrtlError('error, address outside of bounds')
                     self.memvalue[(memid, addr)] = val
+                    # TODO: warn if value larger than fits in bitwidth
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
             if w not in self.value:
                 self.value[w] = default_value
-
-    def print_values(self):
-        print ' '.join([str(v) for _, v in sorted(self.value.iteritems())])
 
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle """
@@ -91,7 +98,7 @@ class Simulation(object):
 
         # Do all of the clock-edge triggered operations based off of the priors
         for net in self.block.logic:
-            self.edge_update(net, prior_value)
+            self._edge_update(net, prior_value)
 
         # propagate inputs to outputs
         # wires  which are defined at the start are inputs and registers
@@ -118,7 +125,7 @@ class Simulation(object):
         if self.tracer is not None:
             self.tracer.add_step(self.value)
 
-    def sanitize(self, val, wirevector):
+    def _sanitize(self, val, wirevector):
         """Return a modified version of val that would fit in wirevector.
 
         This function should be applied to every primitive call, and it's
@@ -126,36 +133,6 @@ class Simulation(object):
         new value.
         """
         return val & ((1 << len(wirevector))-1)
-
-    def edge_update(self, net, prior_value):
-        """Handle the posedge event for the simulation of the given net.
-
-        Combinational logic should have no posedge behavior, but registers and
-        memory should.  This function, along with execute, defined the
-        semantics of the primitive ops.  Function updates self.value and
-        self.memvalue accordingly (using prior_value)
-        """
-        if net.op in 'w~&|^+-*<>=xcs':
-            return  # stateless elements
-        else:
-            if net.op == 'r':
-                # copy result from input to output of register
-                argval = prior_value[net.args[0]]
-                self.value[net.dests[0]] = self.sanitize(argval, net.dests[0])
-            elif net.op == 'm':
-                memid = net.op_param[0]
-                num_reads = net.op_param[1]
-                num_writes = net.op_param[2]
-                if num_reads + 3*num_writes != len(net.args):
-                    raise core.PyrtlInternalError
-                for i in range(num_reads, num_reads + 3*num_writes, 3):
-                    write_addr = prior_value[net.args[i]]
-                    write_val = prior_value[net.args[i+1]]
-                    write_enable = prior_value[net.args[i+2]]
-                    if write_enable:
-                        self.memvalue[(memid, write_addr)] = write_val
-            else:
-                raise core.PyrtlInternalError
 
     def execute(self, net):
         """Handle the combinational logic update rules for the given net.
@@ -179,7 +156,7 @@ class Simulation(object):
         if net.op in simple_func:
             argvals = [self.value[arg] for arg in net.args]
             result = simple_func[net.op](*argvals)
-            self.value[net.dests[0]] = self.sanitize(result, net.dests[0])
+            self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 'x':
             select = self.value[net.args[0]]
             a = self.value[net.args[1]]
@@ -188,19 +165,19 @@ class Simulation(object):
                 result = a
             else:
                 result = b
-            self.value[net.dests[0]] = self.sanitize(result, net.dests[0])
+            self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 'c':
             result = 0
             for arg in net.args:
                 result = result << len(arg)
                 result = result | self.value[arg]
-            self.value[net.dests[0]] = self.sanitize(result, net.dests[0])
+            self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 's':
             result = 0
             source = self.value[net.args[0]]
             for b in net.op_param[::-1]:
                 result = (result << 1) | (0x1 & (source >> b))
-            self.value[net.dests[0]] = self.sanitize(result, net.dests[0])
+            self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 'r':
             pass  # registers have no logic function
         elif net.op == 'm':
@@ -216,6 +193,36 @@ class Simulation(object):
                 self.value[net.dests[i]] = mem_lookup_result
         else:
             raise core.PyrtlInternalError
+
+    def _edge_update(self, net, prior_value):
+        """Handle the posedge event for the simulation of the given net.
+
+        Combinational logic should have no posedge behavior, but registers and
+        memory should.  This function, along with execute, defined the
+        semantics of the primitive ops.  Function updates self.value and
+        self.memvalue accordingly (using prior_value)
+        """
+        if net.op in 'w~&|^+-*<>=xcs':
+            return  # stateless elements
+        else:
+            if net.op == 'r':
+                # copy result from input to output of register
+                argval = prior_value[net.args[0]]
+                self.value[net.dests[0]] = self._sanitize(argval, net.dests[0])
+            elif net.op == 'm':
+                memid = net.op_param[0]
+                num_reads = net.op_param[1]
+                num_writes = net.op_param[2]
+                if num_reads + 3*num_writes != len(net.args):
+                    raise core.PyrtlInternalError
+                for i in range(num_reads, num_reads + 3*num_writes, 3):
+                    write_addr = prior_value[net.args[i]]
+                    write_val = prior_value[net.args[i+1]]
+                    write_enable = prior_value[net.args[i+2]]
+                    if write_enable:
+                        self.memvalue[(memid, write_addr)] = write_val
+            else:
+                raise core.PyrtlInternalError
 
     def _try_execute(self, defined_set, net):
         """ Try to Execute net but return False if not ready.
@@ -242,6 +249,9 @@ class Simulation(object):
             return all(arg in defined_set for arg in net.args[0:num_reads])
         else:
             return all(arg in defined_set for arg in net.args)
+
+    def _print_values(self):
+        print ' '.join([str(v) for _, v in sorted(self.value.iteritems())])
 
 
 # ----------------------------------------------------------------
