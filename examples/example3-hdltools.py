@@ -74,8 +74,8 @@ with io.BytesIO() as vfile:
 
 # Finally, there is a handy way to view your hardware creations as a graph.  The function
 # output_to_trivialgraph will ender your hardware a formal that you can then open with the
-# free software "yEd" (http://en.wikipedia.org/wiki/YEd).  There are options under the 
-# "heirachical" rendering to draw something looks quite like a circuit. 
+# free software "yEd" (http://en.wikipedia.org/wiki/YEd).  There are options under the
+# "heirachical" rendering to draw something looks quite like a circuit.
 
 print "--- Trivial Graph Format  ---"
 with io.BytesIO() as tgf:
