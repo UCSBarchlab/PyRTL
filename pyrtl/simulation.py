@@ -61,11 +61,10 @@ class Simulation(object):
         # set memories to their passed values
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
-                memid = mem.stored_net.op_param[0]
                 for (addr, val) in mem_map.items():
                     if addr < 0 or addr >= 2**mem.addrwidth:
                         raise core.PyrtlError('error, address outside of bounds')
-                    self.memvalue[(memid, addr)] = val
+                    self.memvalue[(mem.id, addr)] = val
                     # TODO: warn if value larger than fits in bitwidth
 
         # set all other variables to default value
@@ -178,8 +177,6 @@ class Simulation(object):
             for b in net.op_param[::-1]:
                 result = (result << 1) | (0x1 & (source >> b))
             self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
-        elif net.op == 'r':
-            pass  # registers have no logic function
         elif net.op == 'm':
             # memories act async for reads
             memid = net.op_param[0]
@@ -187,8 +184,10 @@ class Simulation(object):
             index = (memid, read_addr)
             mem_lookup_result = self.memvalue.get(index, self.default_value)
             self.value[net.dests[0]] = mem_lookup_result
+        elif net.op == 'r' or net.op == '@':
+            pass  # registers and memory write ports have no logic function
         else:
-            raise core.PyrtlInternalError
+            raise core.PyrtlInternalError('error, unknown op type')
 
     def _edge_update(self, net, prior_value):
         """Handle the posedge event for the simulation of the given net.
@@ -199,7 +198,7 @@ class Simulation(object):
         self.memvalue accordingly (using prior_value)
         """
         if net.op in 'w~&|^+-*<>=xcsm':
-            return  # stateless elements and memory-read 
+            return  # stateless elements and memory-read
         else:
             if net.op == 'r':
                 # copy result from input to output of register

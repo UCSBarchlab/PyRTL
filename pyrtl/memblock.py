@@ -57,7 +57,7 @@ class MemBlock(object):
         addr = item
         data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
         readport_net = core.LogicNet(
-            op='mr',
+            op='m',
             op_param=(self.id,),
             args=(addr,),
             dests=(data,))
@@ -88,9 +88,9 @@ class MemBlock(object):
             raise core.PyrtlError('error, enable signal not exactly 1 bit')
 
         writeport_net = core.LogicNet(
-            op='mw',
+            op='@',
             op_param=(self.id,),
-            args=(addr, data, enable)
+            args=(addr, data, enable),
             dests=tuple())
         self.block.add_net(writeport_net)
         self.writeport_nets.append(writeport_net)
