@@ -108,6 +108,8 @@ def outputverilog():
     f.close()    
 
 def buildAll():
+    # I/O ports
+    value = pyrtl.Output(datawidth, 'value')
     # Build source mux
     # On src_elem (use component of matched constructor), we use contents of RR as address in
     #  name table, address a free variable of the objet in the heap, and send that through the srcMux
@@ -144,6 +146,7 @@ def buildAll():
     closureTable = heapOut[primtag_bits:itablespace+primtag_bits]
     nLocalsIsZero = WireVector(1, "nLocalsIsZero")
 
+    value <<= retRegOut[0:datawidth]
     
 
     # Name each component of info table
