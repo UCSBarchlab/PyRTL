@@ -170,10 +170,15 @@ class TestPasses(unittest.TestCase):
         counter = pyrtl.Register(bitwidth=3, name='counter')
         counter.next <<= counter + 1
         output <<= counter
-        pyrtl.synthesize()
-        pyrtl.optimize()
 
         # just to check that something like this will run properly
+        pyrtl.synthesize()
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        timing_map = pyrtl.passes.timing_analysis(block)
+        timing_map_2 = pyrtl.passes.quick_timing_analysis(block)
+        block_max_time = pyrtl.passes.timing_max_length(timing_map)
+        block_max_time_2 = pyrtl.passes.timing_max_length(timing_map_2)
 
     def test_timing_basic_1(self):
         inwire = pyrtl.Input(bitwidth=1)
@@ -211,6 +216,28 @@ class TestPasses(unittest.TestCase):
 
         # this is because a stelth wire block gets added to the logic net
         self.assertTrue(block_max_time_2 == 4)
+
+    def test_timing_error(self):
+        inwire = pyrtl.Input(bitwidth=1)
+        inwire2 = pyrtl.Input(bitwidth=1)
+        tempwire = pyrtl.WireVector(bitwidth=1)
+        tempwire2 = pyrtl.WireVector(bitwidth=1)
+        outwire = pyrtl.Output()
+
+        tempwire <<= ~(inwire & tempwire2)
+        tempwire2 <<= ~(inwire2 & tempwire)
+        outwire <<= tempwire
+
+        def doAllOps():
+            pyrtl.synthesize()
+            pyrtl.optimize()
+            block = pyrtl.working_block()
+            timing_map = pyrtl.passes.timing_analysis(block)
+            timing_map_2 = pyrtl.passes.quick_timing_analysis(block)
+            block_max_time = pyrtl.passes.timing_max_length(timing_map)
+            block_max_time_2 = pyrtl.passes.timing_max_length(timing_map_2)
+
+        self.assertRaises(pyrtl.PyrtlError, doAllOps)
 
     def test_synth_optimication_and_timing_1(self):
         inwire = pyrtl.Input(bitwidth=1)
