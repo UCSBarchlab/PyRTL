@@ -16,10 +16,10 @@ import random
 import pyrtl
 
 zero = pyrtl.Input(1, 'zero')
-output = pyrtl.Output(3, 'output')
+counter_output = pyrtl.Output(3, 'counter_output')
 counter = pyrtl.Register(3, 'counter')
 counter.next <<= pyrtl.mux(zero, counter + 1, 0)
-output <<= counter
+counter_output <<= counter
 
 # The counter gets 0 in the next cycle if the "zero" signal goes high, otherwise just
 # counter + 1.  Note that both "0" and "1" are bit extended to the proper length and
@@ -38,7 +38,7 @@ with io.BytesIO() as vfile:
     print vfile.getvalue()
 
 print "--- Simulation Results ---"
-sim_trace = pyrtl.SimulationTrace([output, zero])
+sim_trace = pyrtl.SimulationTrace([counter_output, zero])
 sim = pyrtl.Simulation(tracer=sim_trace)
 for cycle in xrange(15):
     sim.step({zero: random.choice([0, 0, 0, 1])})

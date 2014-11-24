@@ -290,6 +290,7 @@ def output_to_verilog(file, block=None):
     """ Walk the block and output it in verilog format to the open file """
 
     block = core.working_block(block)
+    _verilog_check_all_wirenames(block)
     _to_verilog_header(file, block)
     _to_verilog_combinational(file, block)
     _to_verilog_sequential(file, block)
@@ -302,6 +303,33 @@ def _verilog_vector_decl(w):
 
 def _verilog_vector_pow_decl(w):
     return '' if len(w) == 1 else '[%d:0]' % (2 ** len(w) - 1)
+
+
+def _verilog_check_all_wirenames(block):
+    verilog_reserved_set = set("""
+        always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos
+        config deassign default defparam design disable edge else end endcase endconfig
+        endfunction endgenerate endmodule endprimitive endspecify endtable endtask
+        event for force forever fork function generate genvar highz0 highz1 if ifnone
+        incdir include initial inout input instance integer join large liblist library
+        localparam macromodule medium module nand negedge nmos nor noshowcancelledno
+        not notif0 notif1 or output parameter pmos posedge primitive pull0 pull1
+        pulldown pullup pulsestyle_oneventglitch pulsestyle_ondetectglitch remos real
+        realtime reg release repeat rnmos rpmos rtran rtranif0 rtranif1 scalared
+        showcancelled signed small specify specparam strong0 strong1 supply0 supply1
+        table task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg unsigned
+        use vectored wait wand weak0 weak1 while wire wor xnor xor
+        """.split())
+    for w in block.wirevector_subset():
+        if not re.match('[_A-Za-z][_a-zA-Z0-9\$]*$', w.name):
+            raise core.PyrtlError('error, the wirevector name "%s"'
+                                  ' is not a valid Verilog identifier' % w.name)
+        if w.name in verilog_reserved_set:
+            raise core.PyrtlError('error, the wirevector name "%s"'
+                                  ' is a Verilog reserved keyword' % w.name)
+        if len(w.name) >= 1024:
+            raise core.PyrtlError('error, the wirevector name "%s" is too'
+                                  ' long to be a Verilog id' % w.name)
 
 
 def _to_verilog_header(file, block):
