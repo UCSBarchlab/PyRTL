@@ -342,7 +342,11 @@ def _to_verilog_header(file, block):
     outputs = block.wirevector_subset(wire.Output)
     registers = block.wirevector_subset(wire.Register)
     wires = block.wirevector_subset() - (inputs | outputs | registers)
-    memories = block.logic_subset('m')
+    memory_nets = block.logic_subset(('m', '@'))
+    memories = set()
+    for m in memory_nets:
+        if not any(m.op_param[0] == x.op_param[0] for x in memories):
+            memories.add(m)
     for w in inputs:
         print >> file, '    input%s %s;' % (_verilog_vector_decl(w), w.name)
     print >> file, '    input clk;'
@@ -357,8 +361,12 @@ def _to_verilog_header(file, block):
     print >> file, ''
 
     for w in memories:
-        print >> file, '    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]),
-                                                w.op_param[0], _verilog_vector_pow_decl(w.args[0]))
+        if w.op == 'm':
+            print >> file, '    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]),
+                                                    w.op_param[0], _verilog_vector_pow_decl(w.args[0]))
+        elif w.op == '@':
+            print >> file, '    reg%s mem_%s%s;' % (_verilog_vector_decl(w.args[1]),
+                                                    w.op_param[0], _verilog_vector_pow_decl(w.args[0]))
     print >> file, ''
 
 
@@ -393,11 +401,10 @@ def _to_verilog_combinational(file, block):
         elif net.op == 'r':
             pass  # do nothing for registers
         elif net.op == 'm':
-            reads = zip(net.args[0:net.op_param[1]], net.dests)
-
-            for read in reads:
-                t = (read[1].name, net.op_param[0], read[0].name)
-                print >> file, '        assign %s = mem_%s[%s];' % t
+            t = (net.dests[0].name, net.op_param[0], net.args[0].name)
+            print >> file, '        assign %s = mem_%s[%s];' % t
+        elif net.op == '@':
+            pass
         else:
             raise core.PyrtlInternalError
     print >> file, ''
@@ -410,18 +417,11 @@ def _to_verilog_sequential(file, block):
         if net.op == 'r':
             t = (net.dests[0].name, net.args[0].name)
             print >> file, '        %s <= %s;' % t
-        elif net.op == 'm':
-            writes = tuple()
-            if net.op_param[2] > 0:
-                writes = [net.args[net.op_param[1]:net.op_param[1]+i+3]
-                          for i in range(net.op_param[2])]
-
-            for write in writes:
-                t = (write[2].name, net.op_param[0], write[0].name, write[1].name)
-                print >> file, ('        if (%s) begin\n'
-                                '                mem_%s[%s] <= %s;\n'
-                                '        end') % t
-
+        elif net.op == '@':
+            t = (net.args[2].name, net.op_param[0], net.args[0].name, net.args[1].name)
+            print >> file, ('        if (%s) begin\n'
+                            '                mem_%s[%s] <= %s;\n'
+                            '        end') % t
     print >> file, '    end'
 
 

@@ -197,7 +197,7 @@ class Block(object):
         if op is None:
             return self.logic
         else:
-            return set(x for x in self.logic if op in x.op)
+            return set(x for x in self.logic if x.op in op)
 
     def get_wirevector_by_name(self, name, strict=False):
         """Return the wirevector matching name.
