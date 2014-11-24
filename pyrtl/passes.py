@@ -34,7 +34,7 @@ def area_estimation(tech_in_nm, block=None):
 
 def quick_timing_analysis(block):
     """ Calculates a quick timing analysis. For large blocks, this will be
-    around 10x as fast as the 'detailed' timing analysis (though performance
+    around 10x as fast as the 'normal' timing analysis (though performance
     is very dependent on your code structure)
 
     This will not take into account that 'w' nets have zero delay
@@ -66,7 +66,7 @@ def quick_timing_analysis(block):
     return timing_map
 
 
-def detailed_general_timing_analysis(block, gate_timings=None):
+def timing_analysis(block, gate_timings=None):
     """ Calculates the timing analysis while taking into account the
     different timing delays of each type of gate
 

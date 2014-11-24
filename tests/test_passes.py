@@ -184,7 +184,7 @@ class TestPasses(unittest.TestCase):
         pyrtl.synthesize()
         pyrtl.optimize()
         block = pyrtl.working_block()
-        timing_map = pyrtl.passes.detailed_general_timing_analysis(block)
+        timing_map = pyrtl.passes.timing_analysis(block)
         block_max_time = pyrtl.passes.timing_max_length(timing_map)
         self.assertTrue(block_max_time == 1)
         # should remove the and block and replace it with a
@@ -203,7 +203,7 @@ class TestPasses(unittest.TestCase):
         pyrtl.synthesize()
         pyrtl.optimize()
         block = pyrtl.working_block()
-        timing_map = pyrtl.passes.detailed_general_timing_analysis(block)
+        timing_map = pyrtl.passes.timing_analysis(block)
         timing_map_2 = pyrtl.passes.quick_timing_analysis(block)
         block_max_time = pyrtl.passes.timing_max_length(timing_map)
         block_max_time_2 = pyrtl.passes.timing_max_length(timing_map_2)
@@ -228,7 +228,7 @@ class TestPasses(unittest.TestCase):
         block = pyrtl.working_block()
         # TODO: fix the function for wire deletion so that len(..) ==1
         self.assertTrue(len(block.logic) == 2)
-        timing_map = pyrtl.passes.detailed_general_timing_analysis(block)
+        timing_map = pyrtl.passes.timing_analysis(block)
         block_max_time = pyrtl.passes.timing_max_length(timing_map)
         self.assertTrue(block_max_time == 1)
 
@@ -243,7 +243,7 @@ class TestPasses(unittest.TestCase):
         pyrtl.synthesize()
         pyrtl.optimize()
         block = pyrtl.working_block()
-        timing_map = pyrtl.passes.detailed_general_timing_analysis(block)
+        timing_map = pyrtl.passes.timing_analysis(block)
         block_max_time = pyrtl.passes.timing_max_length(timing_map)
 
 if __name__ == "__main__":
