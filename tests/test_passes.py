@@ -239,7 +239,7 @@ class TestPasses(unittest.TestCase):
 
         self.assertRaises(pyrtl.PyrtlError, doAllOps)
 
-    def test_synth_optimication_and_timing_1(self):
+    def test_synth_optimization_and_timing_1(self):
         inwire = pyrtl.Input(bitwidth=1)
         tempwire0 = pyrtl.WireVector(bitwidth=1)
         tempwire1 = pyrtl.WireVector(bitwidth=1)
