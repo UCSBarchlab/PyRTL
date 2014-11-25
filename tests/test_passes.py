@@ -216,7 +216,7 @@ class TestPasses(unittest.TestCase):
 
         # this is because a stelth wire block gets added to the logic net
         self.assertTrue(block_max_time_2 == 4)
-        #  pyrtl.passes.timing_critical_path(timing_map)
+        pyrtl.passes.timing_critical_path(timing_map)
 
     def test_timing_error(self):
         inwire = pyrtl.Input(bitwidth=1)

@@ -160,19 +160,20 @@ def timing_critical_path(timing_map, block=None):
     def critical_path_pass(old_critical_path, first_wire):
         if isinstance(first_wire, (wire.Input, wire.Const, wire.Register)):
             critical_paths.append(old_critical_path)
+            return
 
         source_list = [anet for anet in block.logic if anet.dests[0] is first_wire]
 
         if len(source_list) is not 1:
             raise core.PyrtlInternalError("The following net has the wrong number of sources:"
-                                          + first_wire + ". It has " + len(source_list))
+                                          + str(first_wire) + ". It has " + len(source_list))
         source = source_list[0]
         critical_path = source_list
         critical_path.extend(old_critical_path)
         if len(source.args) is 1:
             critical_path_pass(critical_path, source.args[0])
         elif len(source.args) is 2:
-            arg_max_time = max(timing_map[source.args[0]], timing_map(source.args[1]))
+            arg_max_time = max(timing_map[source.args[0]], timing_map[source.args[1]])
 
             # if the time for both items are the same, both will be the critical path
             if timing_map[source.args[0]] == arg_max_time:
@@ -189,7 +190,7 @@ def timing_critical_path(timing_map, block=None):
 
     #  print the critical path
     for cp_with_num in enumerate(critical_paths):
-        print "critical path" + cp_with_num[0] + ":"
+        print "critical path ", cp_with_num[0], " :"
         print cp_with_num[1]
         print
 
