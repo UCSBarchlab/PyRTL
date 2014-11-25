@@ -102,11 +102,13 @@ def main():
     #test_decode()
 
     #buildAll()
-    outputverilog()
+    #outputverilog()
 
     #f = open("add.out")
     #f = open(sys.argv[1])
     #buildAll(*readFile(f))
+    buildAll()
+
     #makeverilogmemory(f)
 
     #buildAll(*makeadd())
@@ -375,6 +377,16 @@ def buildAll(itables=None, code=None):
 
     pyrtl.working_block().sanity_check()
 
+    tot = 0
+    for x in pyrtl.working_block().logic:
+        #print x, x.dests[0].bitwidth
+        if x.op == 'm':
+            continue
+        tot += x.dests[0].bitwidth
+        if len(x.dests) > 1:
+            print x
+    print tot
+
     #    print pyrtl.working_block().wirevector_by_name#["infoTable"]
     #    print pyrtl.working_block().wirevector_by_name["immortalHeap"]
 
@@ -388,7 +400,7 @@ def buildAll(itables=None, code=None):
 
     #print find_cycle(pyrtl.working_block())
 
-    
+    '''
     if itables is not None and code is not None:
         simlen = 15
         sim_trace = pyrtl.SimulationTrace()
@@ -397,7 +409,7 @@ def buildAll(itables=None, code=None):
         for cycle in range(simlen):
             sim.step({})
         sim_trace.render_trace()
-    
+    '''
 
 # ######################################################################
 #     Instruction Decode
