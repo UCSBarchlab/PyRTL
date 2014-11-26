@@ -150,8 +150,9 @@ def timing_critical_path(timing_map, block=None):
     """
     Takes a timing map and returns the critical paths of the system
     :param timing_map: a timing map from the timing analysis
-    :return: a list containing the critical paths (which themselves are lists
-    of nets)
+    :return: a list containing tuples with the 'first' wire as the
+    first value and the critical paths (which themselves are lists
+    of nets) as the second
     """
 
     block = core.working_block(block)
@@ -159,7 +160,7 @@ def timing_critical_path(timing_map, block=None):
 
     def critical_path_pass(old_critical_path, first_wire):
         if isinstance(first_wire, (wire.Input, wire.Const, wire.Register)):
-            critical_paths.append(old_critical_path)
+            critical_paths.append((first_wire, old_critical_path))
             return
 
         source_list = [anet for anet in block.logic if anet.dests[0] is first_wire]
@@ -188,10 +189,13 @@ def timing_critical_path(timing_map, block=None):
         if wire_pair[1] == max_time:
             critical_path_pass([], wire_pair[0])
 
+    line_indent = "  "
     #  print the critical path
     for cp_with_num in enumerate(critical_paths):
-        print "critical path ", cp_with_num[0], " :"
-        print cp_with_num[1]
+        print "Critical path", cp_with_num[0], ":"
+        print line_indent, "The first wire is:", cp_with_num[1][0]
+        for block in cp_with_num[1][1]:
+            print line_indent, (block)
         print
 
     return critical_paths
