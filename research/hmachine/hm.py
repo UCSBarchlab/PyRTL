@@ -21,13 +21,13 @@ data_bits = slice(1, datawidth)
 # Memory sizes
 namespace = 10  # number of bits used in IDs
 ntablesize = pow(2, namespace)  # possible number of IDs (currently just 1 memory block)
-evalstackspace = 15  # number of bits in eval stack addresses
+evalstackspace = 9  # number of bits in eval stack addresses
 evalstacksize = pow(2, evalstackspace)
-heapspace = 16  # number of bits in heap addresses
+heapspace = 10  # number of bits in heap addresses
 heapsize = pow(2, heapspace)  # number of words in heap
-textspace = 14  # number of bits in text memory addresses (a.k.a. immortal heap)
+textspace = 9  # number of bits in text memory addresses (a.k.a. immortal heap)
 textsize = pow(2, textspace)  # number of words of immortal heap memory
-itablespace = 10  # number of bits in info table memory address
+itablespace = 9  # number of bits in info table memory address
 
 # Info Table structure
 itable_entrycode_bits = slice(1,15)
@@ -219,8 +219,12 @@ def readFile(f):
     return itables, code
 
 def buildAll(itables=None, code=None):
-    # I/O ports
-    value = pyrtl.Output(datawidth, 'value')
+    # Add new I/Os
+    load = Input(1, "load")
+    loader_addr = Input(textspace, "loader_addr")
+    loader_data = Input(datawidth, "loader_data")
+    result = Output(width, "result")
+
     # Build source mux
     # On src_elem (use component of matched constructor), we use contents of RR as address in
     #  name table, address a free variable of the objet in the heap, and send that through the srcMux
@@ -259,10 +263,6 @@ def buildAll(itables=None, code=None):
     closureTable = heapOut[ptb:itablespace+ptb]
     nLocalsIsZero = WireVector(1, "nLocalsIsZero")
 
-    value <<= retRegOut[ptb:]
-    #result = Output(width, "RESULT_VALUE")
-    #result <<= retRegOut[ptb:]
-
     # Name each component of info table
     itable_arity = itableOut[itable_arity_bits]
     itable_nptrs = itableOut[itable_nptrs_bits]
@@ -273,6 +273,7 @@ def buildAll(itables=None, code=None):
 
     isEvaluated = WireVector(1, "RRisEvaluated")
     isEvaluated <<= retRegOut[primtag_bits] | itable_isConstructor
+    result <<= retRegOut[ptb:]
 
     dsrcIsField = WireVector(1, "dsrcIsField")
     dsrcIsField <<= dataSrcSelect == SRC_ELEM
@@ -302,6 +303,7 @@ def buildAll(itables=None, code=None):
     patternMatch_literal <<= retRegOut == instr_litpattern
 
     # Declare control signals
+    ctrl_loadOut = WireVector(1, "ctrl_loadOut") # decoder says loading is happening
     ctrl_argwe = WireVector(1, "ctrl_argsWriteEnable")  # write value into args reg
     ctrl_argSwitch = WireVector(1, "ctrl_argsSwitch")  # switch read & write regs
     ctrl_ALUop = WireVector(5, "ctrl_ALUcontrol")  # alu operation code
@@ -338,8 +340,9 @@ def buildAll(itables=None, code=None):
     args_alu_rr(srcMux, instr_argindex, ctrl_argwe, ctrl_argSwitch, ctrl_ALUop, ctrl_alu2rr,
                 ctrl_loadrr, argsOut, retRegOut)
 
-    itable_exptr_iheap(closureTable, ctrl_exptrsrc, ctrl_exptrload, instr_nInstrs, srcMux, 
-                       itableOut, iheapOut, exptr, evalStackOut)    
+    itable_exptr_iheap(closureTable, ctrl_loadOut, loader_addr, loader_data, ctrl_exptrsrc,
+                       ctrl_exptrload, instr_nInstrs, srcMux, itableOut, iheapOut,
+                       exptr, evalStackOut)    
     
     evalstack(ctrl_spDecr, ctrl_clearLocals, nLocalsOut, ctrl_stackWrite, 
               ctrl_writeContinuation, continuation, srcMux, evalStackOut, ctrl_spsave,
@@ -363,7 +366,7 @@ def buildAll(itables=None, code=None):
     #heapOut <<= 0
     #srcMux <<= 0
 
-    instrdecode(instr_opcode, ctrl_argwe, ctrl_argSwitch,
+    instrdecode(instr_opcode, load, ctrl_argwe, ctrl_argSwitch,
                 ctrl_alu2rr, ctrl_loadrr, ctrl_writeName,
                 ctrl_exptrsrc, ctrl_exptrload, ctrl_spDecr, 
                 ctrl_clearLocals, ctrl_stackWrite, ctrl_writeContinuation, 
@@ -373,7 +376,7 @@ def buildAll(itables=None, code=None):
                 ctrl_locWriteStackSaved, ctrl_enterLocNT,
                 ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
                 ctrl_sploadSaved, isEvaluated, patternMatch_constructor, 
-                patternMatch_literal, nLocalsIsZero, dsrcIsField)
+                patternMatch_literal, nLocalsIsZero, dsrcIsField, ctrl_loadOut)
 
 
     pyrtl.working_block().sanity_check()
@@ -405,7 +408,7 @@ def buildAll(itables=None, code=None):
 # ######################################################################
 #     Instruction Decode
 # ######################################################################
-def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
+def instrdecode(op, ctrl_load, ctrl_argwe, ctrl_argSwitch,
                 ctrl_alu2rr, ctrl_loadrr, ctrl_writeName,
                 ctrl_exptrsrc, ctrl_exptrload, ctrl_spDecr, 
                 ctrl_clearLocals, ctrl_stackWrite, ctrl_writeContinuation, 
@@ -415,7 +418,7 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
                 ctrl_locWriteStackSaved, ctrl_enterLocNT,
                 ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
                 ctrl_sploadSaved, isEvaluated, patternMatch_constructor, 
-                patternMatch_literal, nLocalsIsZero, dsrcIsField):
+                patternMatch_literal, nLocalsIsZero, dsrcIsField, ctrl_loadOut):
 
     '''
     ALL INSTRUCTIONS:
@@ -482,10 +485,11 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
         enter cont
     '''
     
-    EXECUTE, CHECKRR, ALLOCATION, ALLOC_END, RESTORE_PRE, RESTORE, RESTORE_2, RESTORE_3, EXCALL = \
-                                            [Const(x, bitwidth=4) for x in range(9)]
+    LOAD, EXECUTE, CHECKRR, ALLOCATION, ALLOC_END, RESTORE_PRE, RESTORE, RESTORE_2, RESTORE_3, EXCALL = \
+                                            [Const(x, bitwidth=4) for x in range(10)]
     state = Register(4, "ctrl_state")
 
+    state_loaded = (state == LOAD) & (ctrl_load != 1)
     state_ex = state == EXECUTE
     state_check = WireVector(1, "state_check")
     state_check <<= state == CHECKRR
@@ -532,6 +536,7 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
     ctrl_sploadSaved <<= state_restore2
     ctrl_locWriteStackSaved <<= state_restore
     ctrl_writeName <<= state_allocend
+    ctrl_loadOut <<= state == LOAD
 
     intrl_enterAlloc = WireVector(1, "EnterAllocState")  # enter allocation state machine
     intrl_enterAlloc <<= (op == OPCODES["let_closure"]) & (nfvars != 0)
@@ -539,6 +544,9 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
     #intrl_enterCheck <<= op == OPCODES["ret"]
 
     cond = ConditionalUpdate()
+
+    with cond(state_loaded):
+        state.next <<= EXECUTE
 
     with cond(state_ex):
         # enter allocation machine on let_closure
@@ -641,6 +649,7 @@ def test_decode():
     ctrl_spsave = WireVector(1, "ctrl_spsave")  # save out current sp
     ctrl_sploadSaved = WireVector(1, "ctrl_sploadSaved")  # load saved sp into sp
     
+    load = Input(1, "ctrl_load")  # control code load operation
     instr_opcode = Input(5, "instr_opcode")
     isEvaluated = Input(1, "isEvaluated")
     pt_con = Input(1, "patternMatchCon")
@@ -648,7 +657,7 @@ def test_decode():
     nLocalsIsZero = Input(1, "nLocalsIsZero")
     dsrcIsField = Input(1, "dataSourceIsField")
 
-    instrdecode(instr_opcode, ctrl_argwe, ctrl_argSwitch,
+    instrdecode(instr_opcode, load, ctrl_argwe, ctrl_argSwitch,
                 ctrl_alu2rr, ctrl_loadrr, 
                 ctrl_exptrsrc, ctrl_exptrload, ctrl_spDecr, 
                 ctrl_clearLocals, ctrl_stackWrite, ctrl_writeContinuation, 
@@ -658,9 +667,10 @@ def test_decode():
                 ctrl_locWriteStackSaved, ctrl_enterLocNT,
                 ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
                 ctrl_sploadSaved, isEvaluated, pt_con, 
-                pt_lit, nLocalsIsZero, dsrcIsField)
+                pt_lit, nLocalsIsZero, dsrcIsField, ctrl_loadOut)
 
     simvals = {
+        load          : "100000000000000000000000000000000",
         instr_opcode  : "01234022240000055678AB0B000000090",
         isEvaluated   : "000000000000000010000000100000001",
         pt_con        : "000000000000000000000000000000000",
@@ -1004,11 +1014,12 @@ def test_table_heap():
 # ######################################################################
 #     Info Tables, Execution Pointer, and Immortal Heap
 # ######################################################################
-def itable_exptr_iheap(targetTable, ctrl_exptr, ctrl_loadexptr, nInstrs, srcMux, 
-                       itableOut, instrOut, exptrOut, evalStackOut):
+def itable_exptr_iheap(targetTable, ctrl_load, ctrl_loader_addr, ctrl_loader_data,
+                        ctrl_exptr, ctrl_loadexptr, nInstrs, srcMux, itableOut,
+                        instrOut, exptrOut, evalStackOut):
 
     itableOut <<= infoTable[targetTable]
-    
+
     # Execution Pointer (PC)
     exptr = Register(textspace, "ExecutionPointer")
     exptrOut <<= exptr
@@ -1026,7 +1037,9 @@ def itable_exptr_iheap(targetTable, ctrl_exptr, ctrl_loadexptr, nInstrs, srcMux,
 
     # Immortal Heap
     instrOut <<= immortalHeap[exptr]
-
+    EW = MemBlock.EnabledWrite
+    immortalHeap[ctrl_loader_addr] = EW(concat("1'b0", ctrl_loader_data), ctrl_load)
+    
 
 # ######################################################################
 #     Arg Regs, ALU, and Return Register
