@@ -105,8 +105,12 @@ def main():
     #outputverilog()
 
     #f = open("add.out")
+
     f = open(sys.argv[1])
-    buildAll(*readFile(f))
+    sl = 15
+    if len(sys.argv) > 2:
+        sl = int(sys.argv[2])
+    buildAll(*readFile(f), simlen=sl)
     #buildAll()
 
     #makeverilogmemory(f)
@@ -204,10 +208,15 @@ def readFile(f):
     tableN = 0
     code = {}
     codeN = 0
-
+    
+    print N
     for i in range(N):
         itables[tableN] = words[0]
         tableN += 1
+        if (words[0] & 0x1):
+            print "Constructor {}".format(words[0])
+            words = words[1:]
+            continue  # constructors have no instructions
         ninstrs = words[1]
         words = words[2:]
         for instr in words[:ninstrs]:
@@ -220,7 +229,7 @@ def readFile(f):
 
     return itables, code
 
-def buildAll(itables=None, code=None):
+def buildAll(itables=None, code=None, simlen=15):
     # Build source mux
     # On src_elem (use component of matched constructor), we use contents of RR as address in
     #  name table, address a free variable of the objet in the heap, and send that through the srcMux
@@ -235,15 +244,15 @@ def buildAll(itables=None, code=None):
         SRC_LOCALS : localsOut,
         SRC_ARGS : argsOut,
         SRC_HEAP : heapOut,
-        SRC_IMM : concat(immediate, "1'b0"),  # add primitive tag
+        SRC_IMM : concat(immediate, "1'b1"),  # add primitive tag
         SRC_RR : retRegOut,
         SRC_ELEM : heapOut,
         None : 0
     }    
     dataSrcSelect = WireVector(3, "dataSourceSelect")
     #srcMuxPre = switch(dataSrcSelect, dSources)
-    #srcMux = WireVector(width, "srcMuxFiltered")
-    srcMux = switch(dataSrcSelect, dSources)
+    srcMux = WireVector(width, "srcMux")
+    srcMux <<= switch(dataSrcSelect, dSources)
     #srcMux = Const(0, bitwidth=width)
 
     # other needed wires
@@ -253,12 +262,14 @@ def buildAll(itables=None, code=None):
     exptr = WireVector(textspace, "exptr")
     envcloOut = WireVector(namespace, "CurEnvClosureRegOut")
     continuation = WireVector(width, "continuation")
-    continuation <<= concat(exptr, envcloOut, nLocalsOut)
+    continuation <<= concat((exptr)[:textspace], envcloOut, nLocalsOut, Const("1'b0"))
     cont_nLocals = evalStackOut[ptb:localspace+ptb]
     cont_envclo = evalStackOut[localspace+ptb:localspace+namespace+ptb]
     cont_exptr = evalStackOut[localspace+namespace+ptb:localspace+namespace+textspace+ptb]
     closureTable = heapOut[ptb:itablespace+ptb]
     nLocalsIsZero = WireVector(1, "nLocalsIsZero")
+    caseval = WireVector(width, "caseValue")
+    caseIsEvaluated = WireVector(1, "caseIsEvaluated")
 
     result = Output(width, "RESULT_VALUE")
     result <<= retRegOut[ptb:]
@@ -273,8 +284,6 @@ def buildAll(itables=None, code=None):
 
     isEvaluated = WireVector(1, "RRisEvaluated")
     isEvaluated <<= retRegOut[primtag_bits] | itable_isConstructor
-    caseIsEvaluated = WireVector(1, "caseIsEvaluated")
-    caseIsEvaluated <<= srcMux[primtag_bits] | itable_isConstructor
 
     dsrcIsField = WireVector(1, "dsrcIsField")
     dsrcIsField <<= dataSrcSelect == SRC_ELEM
@@ -301,12 +310,8 @@ def buildAll(itables=None, code=None):
     patternMatch_constructor = WireVector(1, "PatternMatchConstructor")
     patternMatch_constructor <<= closureTable == instr_conitable
     patternMatch_literal = WireVector(1, "PatternMatchLiteral")
-    patternMatch_literal <<= retRegOut == instr_litpattern
-
-    machineCall = WireVector(1, "callIsMachineOp")
-    machineCall <<= instr_itable < Const(0x100, bitwidth=itablespace)
-    targetTable = WireVector(itablespace, "targetITable")
-    targetTable <<= mux(machineCall, falsecase=closureTable, truecase=instr_itable)
+    patternMatch_literal <<= retRegOut[ptb:] == instr_litpattern
+    caseIsEvaluated <<= (caseval[primtag_bits]) | itable_isConstructor
 
     # Declare control signals
     ctrl_argwe = WireVector(1, "ctrl_argsWriteEnable")  # write value into args reg
@@ -331,8 +336,9 @@ def buildAll(itables=None, code=None):
     ctrl_writeFreevar = WireVector(1, "ctrl_writeFreevar")  # heap[hp] <<= evalstackOut; hp++
     ctrl_allocWriteName = WireVector(1, "ctrl_allocWriteName")  # nTable[next]<<=hp;heap[fp]<<=itable
     ctrl_alias = WireVector(1, "ctrl_aliasName")  # nTable[next] <<= nTable[value] or value
+    ctrl_baseaddr = WireVector(1, "ctrl_baseaddr")  # blocks next instr from addressing freevar
     ctrl_addrFreevar = WireVector(1, "ctrl_addressFreevar") # heapAddr = nTable + index + 1
-    ctrl_addrFreevar <<= dsrcIsField | dsrcIsFreevar
+    ctrl_addrFreevar <<= (dsrcIsField | dsrcIsFreevar) & ~ctrl_baseaddr
     ctrl_locWriteStackSaved = WireVector(1, "ctrl_localsWriteStackSaved")  # locals[n] <<= stack
     ctrl_clearNLocals = WireVector(1, "ctrl_clearNLocalsReg")  # nlocals <<= 0
     ctrl_enterRR = WireVector(1, "ctrl_enterRR")  # envclo <<= RR
@@ -341,13 +347,21 @@ def buildAll(itables=None, code=None):
     ctrl_writeName = WireVector(1, "ctrl_stackWriteName")  # stack[sp] <<= savedName
     ctrl_ntCase = WireVector(1, "ctrl_nameTableSrcMux")  # NT addr = casereg
     ctrl_loadcasereg = WireVector(1, "ctrl_loadCaseRegister")  # casereg <<= srcMux
+    ctrl_call = WireVector(1, "ctrl_call")  # mux instr_itable - 100 through itable
+    ctrl_loadRRcase = WireVector(1, "ctrl_loadRRcase")  # mux caseval -> RR
+
+    machineCall = WireVector(1, "callIsMachineOp")
+    machineCall <<= (instr_itable < Const(0x100, bitwidth=itablespace))
+    targetTable = WireVector(itablespace, "targetITable")
+    targetTable <<= mux(ctrl_call, falsecase=closureTable, truecase=instr_itable)
+    #targetTable <<= mux(ctrl_call, falsecase=instr_itable, truecase=closureTable)
 
     #print len(srcMux)
 
     args_alu_rr(srcMux, instr_argindex, ctrl_argwe, ctrl_argSwitch, ctrl_ALUop, ctrl_alu2rr,
-                ctrl_loadrr, argsOut, retRegOut)
+                ctrl_loadrr, argsOut, retRegOut, ctrl_loadRRcase, caseval)
 
-    itable_exptr_iheap(closureTable, ctrl_exptrsrc, ctrl_exptrload, instr_nInstrs, srcMux, 
+    itable_exptr_iheap(targetTable, ctrl_exptrsrc, ctrl_exptrload, instr_nInstrs, srcMux, 
                        itableOut, iheapOut, exptr, evalStackOut)    
     
     evalstack(ctrl_spDecr, ctrl_clearLocals, nLocalsOut, ctrl_stackWrite, 
@@ -356,7 +370,7 @@ def buildAll(itables=None, code=None):
 
     localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearNLocals, ctrl_loadcont, evalStackOut,
                newName, instr_name, localsOut, ctrl_writelocal, ctrl_enter, envcloOut, nLocalsOut, 
-               ctrl_locWriteStackSaved, nLocalsIsZero, ctrl_enterRR, retRegOut, srcMux)
+               ctrl_locWriteStackSaved, nLocalsIsZero, ctrl_enterRR, retRegOut, caseval)
 
     #srcMuxPre <<= 0
 
@@ -365,7 +379,7 @@ def buildAll(itables=None, code=None):
     #           ctrl_alias, ctrl_addrFreevar, srcMux)
     table_heap(envcloOut, retRegOut, localsOut, ctrl_enterLocNT, ctrl_inspectElement, newName,
             ctrl_writeFreevar, ctrl_allocWriteName, instr_freevarindex, heapOut, instr_itable, evalStackOut,
-               ctrl_alias, ctrl_addrFreevar, ctrl_ntCase, srcMux, ctrl_loadcasereg)
+               ctrl_alias, ctrl_addrFreevar, ctrl_ntCase, srcMux, ctrl_loadcasereg, caseval)
 
 
     #newName <<= 0
@@ -383,7 +397,8 @@ def buildAll(itables=None, code=None):
                 ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
                 ctrl_sploadSaved, isEvaluated, patternMatch_constructor, 
                 patternMatch_literal, nLocalsIsZero, dsrcIsField,
-                ctrl_ntCase, caseIsEvaluated, ctrl_loadcasereg, machineCall)
+                ctrl_ntCase, caseIsEvaluated, ctrl_loadcasereg, machineCall,
+                ctrl_baseaddr, ctrl_call, ctrl_loadRRcase)
 
 
     pyrtl.working_block().sanity_check()
@@ -413,7 +428,6 @@ def buildAll(itables=None, code=None):
 
     
     if itables is not None and code is not None:
-        simlen = 15
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace, 
                                memory_value_map={infoTable: itables, immortalHeap: code})
@@ -436,7 +450,8 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
                 ctrl_clearNLocals, ctrl_enterRR, ctrl_spsave, 
                 ctrl_sploadSaved, isEvaluated, patternMatch_constructor, 
                 patternMatch_literal, nLocalsIsZero, dsrcIsField,
-                ctrl_ntCase, caseIsEvaluated, ctrl_loadcasereg, machineCall):
+                ctrl_ntCase, caseIsEvaluated, ctrl_loadcasereg, machineCall,
+                ctrl_baseaddr, ctrl_call, ctrl_loadRRcase):
 
     '''
     ALL INSTRUCTIONS:
@@ -521,13 +536,13 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
 
     nfvars = Register(freevarspace, "ctrl_nfvars")
     cond = ConditionalUpdate()
-    with cond(op == OPCODES["freevar"]):
+    with cond((op == OPCODES["freevar"]) & state_ex):
         nfvars.next <<= nfvars + 1
     with cond(state_alloc):
         nfvars.next <<= nfvars - 1
 
-    case_enter = (op == OPCODES["case"]) & ~caseIsEvaluated & state_case
-    case_noenter = (op == OPCODES["case"]) & caseIsEvaluated & state_case
+    case_enter = ~caseIsEvaluated & state_case
+    case_noenter = caseIsEvaluated & state_case
 
     ctrl_argSwitch <<= eqcodes(op, ("call","enter","ret")) & state_ex | case_enter
     ctrl_loadrr <<= (eqcodes(op, ("ret",)) & state_ex) | state_excall | case_noenter
@@ -539,7 +554,8 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
     ctrl_alu2rr <<= state_excall #(op == OPCODES["call"]) & state_ex
     #ctrl_enterLocNT <<= (eqcodes(op, ("case", "enter")) & state_ex)  # mux local through name table
     ctrl_enterLocNT <<= (eqcodes(op, ("enter",)) & state_ex)  # mux local through name table
-    ctrl_ntCase <<= op == state_case  # mux casereg through name table
+    ctrl_ntCase <<= state_case  # mux casereg through name table
+    ctrl_loadRRcase <<= case_noenter
     ctrl_enter <<= ((op == OPCODES["enter"]) & state_ex) | case_enter  # load local into envclo
     ctrl_enterRR <<= (state_check & ~isEvaluated)
     ctrl_inspectElement <<= (dsrcIsField & state_ex) | (state_check) | \
@@ -557,6 +573,8 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
     ctrl_locWriteStackSaved <<= state_restore
     ctrl_writeName <<= state_allocend
     ctrl_loadcasereg <<= op == OPCODES["case"]
+    ctrl_baseaddr <<= state_case | (op == OPCODES["enter"])
+    ctrl_call <<= op == OPCODES["call"]
 
     intrl_enterAlloc = WireVector(1, "EnterAllocState")  # enter allocation state machine
     intrl_enterAlloc <<= (op == OPCODES["let_closure"]) & (nfvars != 0)
@@ -569,7 +587,7 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
         # enter allocation machine on let_closure
         with cond(intrl_enterAlloc):
             state.next <<= ALLOCATION
-        # on ALU ops, go directly to restore machine
+        # on ALU ops, go to execute call state; otherwise perform direct jump
         with cond((op == OPCODES["call"]) & machineCall):
             state.next <<= EXCALL
         # when returning a value, check evaluatedness
@@ -583,14 +601,20 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
     with cond(state_case):
         state.next <<= EXECUTE
 
-    # execute call state just performs alu op; move to check
+    # execute call state; if machine op, move to checkrr to restore state; else perform jump
     with cond(state_excall):
+        #with cond(machineCall):
+        #    state.next <<= CHECKRR
+        #with cond():
         state.next <<= CHECKRR
 
     # if fully evaluated, enter restore machine
     with cond(state_check):
         with cond(isEvaluated):
-            state.next <<= RESTORE_PRE
+            with cond(nLocalsIsZero):
+                state.next <<= RESTORE_2
+            with cond():
+                state.next <<= RESTORE_PRE
         with cond():
             state.next <<= EXECUTE  # enter into RR closure and begin execution
 
@@ -625,9 +649,9 @@ def instrdecode(op, ctrl_argwe, ctrl_argSwitch,
     pc_patternmatched = (((op == OPCODES["lit_pattern"]) & patternMatch_literal) | \
                      ((op == OPCODES["con_pattern"]) & patternMatch_constructor) | \
                      (op == OPCODES["else_pattern"])) & state_ex
-    pc_enterClosure = ((op == OPCODES["enter"]) | ctrl_enterRR | case_enter |\
-                       (op == OPCODES["call"]) & machineCall) & state_ex
-    pc_loadCont = ctrl_loadcont & state_ex
+    pc_enterClosure = ((op == OPCODES["enter"]) | (op == OPCODES["call"]) & ~machineCall) & state_ex | case_enter |\
+                      ctrl_enterRR
+    pc_loadCont = ctrl_loadcont & state_ex | state_restore3
     pc_inc = ~(pc_patternmatched | pc_enterClosure | pc_loadCont | (eqcodes(op, ("noop", "call", "ret")))) & state_ex
 
     ctrl_exptrsrc <<= switch(concat(pc_patternmatched, pc_enterClosure, pc_loadCont, pc_inc), {
@@ -825,7 +849,7 @@ def test_evalstack():
 def localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearnlocals, 
                ctrl_loadcont, evalStackOut, newName, localsindex, localsOut, ctrl_writelocal, 
                ctrl_enter, envcloOut, nLocalsOut, ctrl_locWriteStackSaved, nLocalsIsZero,
-               ctrl_enterRR, retRegOut, srcMux):
+               ctrl_enterRR, retRegOut, caseval):
 
     # Register storing number of local variables so far in this scope
     nlocals = Register(localspace, "nLocalsReg")
@@ -858,7 +882,7 @@ def localsregs(ctrl_inclocals, ctrl_declocals, ctrl_clearnlocals,
     envclonext = switch(concat(ctrl_loadcont, ctrl_enter, ctrl_enterRR), {
         "3'b100" : evalStackOut[cont_envclo_bits],
         #"3'b010" : localsOut,
-        "3'b010" : srcMux,
+        "3'b010" : caseval,
         "3'b001" : retRegOut,
         None : envclo
     })
@@ -913,14 +937,17 @@ def test_localsregs():
 # ######################################################################
 def table_heap(envclo, returnReg, localsOut, ctrl_enterLocNT, ctrl_inspectElement, newNameOut,
                ctrl_writeFreevar, ctrl_allocWriteName, freevarIndex, heapOut, infoTable, evalStackOut,
-               ctrl_alias, ctrl_addrFreevar, ctrl_ntCase, srcMux, ctrl_loadcasereg):
+               ctrl_alias, ctrl_addrFreevar, ctrl_ntCase, srcMux, ctrl_loadcasereg, casevalout):
 
     freePtr = Register(heapspace, "HeapFreePointer")
 
     caseval = Register(width, "caseExpression")
+    casevalout <<= caseval
     cond = ConditionalUpdate()
     with cond(ctrl_loadcasereg):
         caseval.next <<= srcMux
+
+    #caseIsPrim <<= caseval[primtag_bits]
 
     # Name Table
     nameTable = MemBlock(heapspace, namespace, "NameTable")
@@ -1047,7 +1074,9 @@ def test_table_heap():
 def itable_exptr_iheap(targetTable, ctrl_exptr, ctrl_loadexptr, nInstrs, srcMux, 
                        itableOut, instrOut, exptrOut, evalStackOut):
 
-    itableOut <<= infoTable[targetTable]
+#    itableaddr = WireVector(itablespace, "ITABLE_ADDR")
+#    itableaddr <<= targetTable
+    itableOut <<= infoTable[(targetTable - Const(0x100, bitwidth=itablespace))[:itablespace]]
     
     # Execution Pointer (PC)
     exptr = Register(textspace, "ExecutionPointer")
@@ -1055,7 +1084,7 @@ def itable_exptr_iheap(targetTable, ctrl_exptr, ctrl_loadexptr, nInstrs, srcMux,
     itable_entryCode = itableOut[itable_entrycode_bits]
     nextexptr = switch(ctrl_exptr, {
         PC_INC : exptr + 1,
-        PC_NINSTRS : nInstrs,
+        PC_NINSTRS : exptr + nInstrs,
         PC_ITABLE : itable_entryCode,
         PC_CONTINUATION : evalStackOut[cont_exptr_bits],
         None : exptr
@@ -1072,7 +1101,7 @@ def itable_exptr_iheap(targetTable, ctrl_exptr, ctrl_loadexptr, nInstrs, srcMux,
 #     Arg Regs, ALU, and Return Register
 # ######################################################################
 def args_alu_rr(srcMux, argIndex, ctrl_argwe, ctrl_argSwitch, ctrl_ALUop, ctrl_alu2rr,
-                ctrl_loadrr, argsOut, rrOut):
+                ctrl_loadrr, argsOut, rrOut, ctrl_loadCase, caseval):
 
     # Regisers used in this section
     rr = Register(width, "ReturnRegister")  # return register
@@ -1097,9 +1126,12 @@ def args_alu_rr(srcMux, argIndex, ctrl_argwe, ctrl_argSwitch, ctrl_ALUop, ctrl_a
     makeALU(ctrl_ALUop, arg1[ptb:], arg2[ptb:], ALUout)
 
     # Return Register update
+    cond = ConditionalUpdate()
     with cond(ctrl_loadrr):  # signal to modify return reg
         with cond(ctrl_alu2rr):  # load rr with ALU output
             rr.next <<= concat(ALUout, Const("1'b1"))  # add primitive tag
+        with cond(ctrl_loadCase):  # load rr with cased value
+            rr.next <<= caseval
         with cond():  # if not loading ALU, load from srcMux
             rr.next <<= srcMux
     rrOut <<= rr  # send result to srcMux
@@ -1295,7 +1327,8 @@ def makeALU(control, op1, op2, out):
         "4'b1000": op1 < op2,
         "4'b1001": op1 <= op2,
         "4'b1010": op1 > op2,
-        "4'b1011": op1 >= op2,
+        #"4'b1011": op1 >= op2,
+        "4'b1011": op1 * op2,
         None: 0
     })    
 
