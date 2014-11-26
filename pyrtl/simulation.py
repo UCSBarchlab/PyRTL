@@ -68,7 +68,7 @@ class Simulation(object):
 
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle """
-        print {str(k):v for k,v in provided_inputs.items()}
+        #print {str(k):v for k,v in provided_inputs.items()}
         # To avoid weird loops, we need a copy of the old values which
         # we can then use to make our updates from
         prior_value = self.value.copy()
@@ -204,7 +204,7 @@ class Simulation(object):
         elif net.op == 'r':
             pass  # registers have no logic function
         elif net.op == 'm':
-            print "memread {}".format(net)
+            #print "memread {}".format(net)
             # memories act async for reads
             memid = net.op_param[0]
             num_reads = net.op_param[1]
@@ -387,7 +387,7 @@ class SimulationTrace(object):
         file.flush()
 
     def render_trace(
-            self, renderer=wave_trace_render, symbol_len=5,
+            self, renderer=wave_trace_render, symbol_len=6,
             segment_size=5, segment_delim=' ', extra_line=True):
 
         def formatted_trace_line(w, trace):
