@@ -305,19 +305,30 @@ class Register(WireVector):
     property .next with the <<= operator.  For example, if you want
     to specify a counter it would look like: "a.next <<= a + 1"
     """
-
-    # Note to coders:
-    # This wire type is the one for the wire connected to the output
-    # of the Register block.
-
     code = 'R'
 
     # When the register is called as such:  r.next <<= foo
     # the sequence of actions that happens is:
     # 1) The property .next is called to get the "value" of r.next
     # 2) The "value" is then passed to __ilshift__
+    #
+    # The resulting behavior should enforce the following:
+    # r.next <<= 5  -- good
+    # a <<= r       -- good
+    # r <<= 5       -- error
+    # a <<= r.next  -- error
+    # r.next = 5    -- error
 
-    NextSetter = collections.namedtuple('NextSetter', 'rhs')
+    class _Next(object):
+        def __init__(self, reg):
+            self.reg = reg
+
+        def __ilshift__(self, other):
+            return self.reg._next_ilshift(other)
+
+    class _NextSetter(object):
+        def __init__(self, rhs):
+            self.rhs = rhs
 
     def __init__(self, bitwidth, name=None, block=None):
         super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block)
@@ -325,39 +336,27 @@ class Register(WireVector):
 
     @property
     def next(self):
-        return self
+        return Register._Next(self)
 
     def __ilshift__(self, other):
+        raise core.PyrtlError('error, you cannot set registers directly, net .next instead')
+
+    def _next_ilshift(self, other):
         other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
         if self.bitwidth is None:
             self.bitwidth = other.bitwidth
-        return Register.NextSetter(rhs=other)
+        return Register._NextSetter(other)
 
     @next.setter
     def next(self, nextsetter):
-        if not isinstance(nextsetter, Register.NextSetter):
+        if not isinstance(nextsetter, Register._NextSetter):
             raise core.PyrtlError('error, .next values should only be set with the "<<=" operator')
-
-        conditional = ConditionalUpdate.current
-        if not conditional:
-            if self.reg_in is not None:
-                raise core.PyrtlError('error, .next value should be set once and only once')
-            else:
-                self.reg_in = nextsetter.rhs
-                net = core.LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
-                self.block.add_net(net)
-        else:  # conditional
-            # if this is the first assignment to the register
-            if self.reg_in is None:
-                # assume default update is "no change"
-                self.reg_in = self
-                net = core.LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
-                self.block.add_net(net)
-            else:
-                net = core.LogicNet('r', None, args=tuple([self.reg_in]), dests=tuple([self]))
-            # do the actual conditional update
-            new_reg_in = conditional.add_conditional_update(net, nextsetter.rhs, self.block)
-            self.reg_in = new_reg_in
+        if self.reg_in is not None:
+            raise core.PyrtlError('error, .next value should be set once and only once')
+        else:
+            self.reg_in = nextsetter.rhs
+            net = core.LogicNet('r', None, args=(self.reg_in,), dests=(self,))
+            self.block.add_net(net)
 
 
 # ----------------------------------------------------------------
