@@ -363,10 +363,12 @@ def _to_verilog_header(file, block):
     for w in memories:
         if w.op == 'm':
             print >> file, '    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]),
-                                                    w.op_param[0], _verilog_vector_pow_decl(w.args[0]))
+                                                    w.op_param[0],
+                                                    _verilog_vector_pow_decl(w.args[0]))
         elif w.op == '@':
             print >> file, '    reg%s mem_%s%s;' % (_verilog_vector_decl(w.args[1]),
-                                                    w.op_param[0], _verilog_vector_pow_decl(w.args[0]))
+                                                    w.op_param[0],
+                                                    _verilog_vector_pow_decl(w.args[0]))
     print >> file, ''
 
 
