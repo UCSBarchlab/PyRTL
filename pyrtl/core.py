@@ -3,6 +3,7 @@ import collections
 import sys
 import re
 import wire
+import memblock
 
 
 # -----------------------------------------------------------------
@@ -78,16 +79,16 @@ class Block(object):
 
     A Block in PyRTL is the class that stores a netlist and provides basic access
     and error checking members.  Each block has well defined inputs and outputs,
-    and contains both the basic logic elements and references to the wires that
-    connect them together.
+    and contains both the basic logic elements and references to the wires and
+    memories that connect them together.
 
     The logic structure is primarily contained in self.logic which holds a set of
     "LogicNet"s. Each LogicNet describes a primitive operation (such as an adder
     or memory).  The primitive is described by a 4-tuple of:
 
     1) the op (a single character describing the operation such as '+' or 'r'),
-    2) a set of hard parameters to that primitives (such as the number of read
-       ports for a memory),
+    2) a set of hard parameters to that primitives (such as the constants to
+       select from the "selection" op.
     3) the tuple "args" which list the wirevectors hooked up as inputs to
        this particular net.
     4) the tuple "dests" which list the wirevectors hooked up as output for
@@ -122,14 +123,15 @@ class Block(object):
     * The 'm' operator is a memory block read port, which supports async reads (acting
       like combonational logic). Multiple read (and write) ports are possible to
       the same memory but each 'm' defines only one of those. The op_param
-      is a tuple containing a single number: the memory id.  Each read port has on
-      addr (an arg) and one data (a dest).
+      is a tuple containing two references: the mem id, and a reference to the
+      MemBlock containing this port. The MemBlock should only be used for debug and
+      sanity checks. Each read port has on addr (an arg) and one data (a dest).
     * The '@' (update) operator is a memory block write port, which supports syncronous writes
       (writes are "latched" at posedge).  Multiple write (and read) ports are possible
       to the same memory but each '@' defines only one of those. The op_param
-      is a tuple containing a single number: the memory id. Writes have three args
-      (addr, data, and write enable).  You will not see a written value change
-      until the following cycle.  If multiple writes happen to the same address
+      is a tuple containing two references: the mem id, and a reference to the MemoryBlock.
+      Writes have three args (addr, data, and write enable).  You will not see a written
+      value change until the following cycle.  If multiple writes happen to the same address
       in the same cycle the behavior is currently undefined.
 
     The connecting elements (args and dests) should be WireVectors or derived
@@ -326,16 +328,31 @@ class Block(object):
             raise PyrtlInternalError('error, args have mismatched bitwidths')
         if net.op == 'x' and net.args[0].bitwidth != 1:
             raise PyrtlInternalError('error, mux select must be a single bit')
+        if net.op in 'm@' and net.args[0].bitwidth != net.op_param[1].addrwidth:
+            raise PyrtlInternalError('error, mem addrwidth mismatch')
+        if net.op == '@' and net.args[1].bitwidth != net.op_param[1].bitwidth:
+            raise PyrtlInternalError('error, mem bitwidth mismatch')
+        if net.op == '@' and net.args[2].bitwidth != 1:
+            raise PyrtlInternalError('error, mem write enable must be 1 bit')
 
         # operation specific checks on op_params
         if net.op in 'w~&|^+-*<>=xcr' and net.op_param is not None:
             raise PyrtlInternalError('error, op_param should be None')
         if net.op == 's':
             if not isinstance(net.op_param, tuple):
-                raise PyrtlInternalError('error, select op requires op_param')
+                raise PyrtlInternalError('error, select op requires tuple op_param')
             for p in net.op_param:
                 if p < 0 or p >= net.args[0].bitwidth:
                     raise PyrtlInternalError('error, op_param out of bounds')
+        if net.op in 'm@':
+            if not isinstance(net.op_param, tuple):
+                raise PyrtlInternalError('error, mem op requires tuple op_param')
+            if len(net.op_param) != 2:
+                raise PyrtlInternalError('error, mem op requires 2 op_params in tuple')
+            if not isinstance(net.op_param[0], int):
+                raise PyrtlInternalError('error, mem op requires first operand as int')
+            if not isinstance(net.op_param[1], memblock.MemBlock):
+                raise PyrtlInternalError('error, mem op requires second operand MemBlock')
 
         # check destination validity
         if net.op in 'w~&|^r' and net.dests[0].bitwidth > net.args[0].bitwidth:
@@ -352,7 +369,8 @@ class Block(object):
             raise PyrtlInternalError('error, upper bits of concat output undefined')
         if net.op == 's' and net.dests[0].bitwidth > len(net.op_param):
             raise PyrtlInternalError('error, upper bits of select output undefined')
-        # TODO: Add Memory to the above checks
+        if net.op == 'm' and net.dests[0].bitwidth != net.op_param[1].bitwidth:
+            raise PyrtlInternalError('error, mem read dest bitwidth mismatch')
 
     # some unique name class methods useful internally
     _tempvar_count = 1

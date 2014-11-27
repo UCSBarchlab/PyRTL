@@ -58,7 +58,7 @@ class MemBlock(object):
         data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
         readport_net = core.LogicNet(
             op='m',
-            op_param=(self.id,),
+            op_param=(self.id, self),
             args=(addr,),
             dests=(data,))
         self.block.add_net(readport_net)
@@ -89,7 +89,7 @@ class MemBlock(object):
 
         writeport_net = core.LogicNet(
             op='@',
-            op_param=(self.id,),
+            op_param=(self.id, self),
             args=(addr, data, enable),
             dests=tuple())
         self.block.add_net(writeport_net)
