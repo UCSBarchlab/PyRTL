@@ -13,6 +13,7 @@ import collections
 import string
 import core
 import helperfuncs
+import conditional
 
 
 # ----------------------------------------------------------------
@@ -333,6 +334,7 @@ class Register(WireVector):
     def __init__(self, bitwidth, name=None, block=None):
         super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block)
         self.reg_in = None  # wire vector setting self.next
+        self.is_conditional = conditional.ConditionalUpdate._register_init(self)
 
     @property
     def next(self):
@@ -351,12 +353,15 @@ class Register(WireVector):
     def next(self, nextsetter):
         if not isinstance(nextsetter, Register._NextSetter):
             raise core.PyrtlError('error, .next values should only be set with the "<<=" operator')
-        if self.reg_in is not None:
+        elif self.reg_in is not None:
             raise core.PyrtlError('error, .next value should be set once and only once')
-        else:
+        elif not self.is_conditional:
+            # normal register assignment
             self.reg_in = nextsetter.rhs
             net = core.LogicNet('r', None, args=(self.reg_in,), dests=(self,))
             self.block.add_net(net)
+        else:
+            conditional.ConditionalUpdate._register_set(self, nextsetter.rhs)
 
 
 # ----------------------------------------------------------------
@@ -403,4 +408,3 @@ class SignedRegister(Register):
 
     def extended(self, bitwidth):
         return self.sign_extended(bitwidth)
-

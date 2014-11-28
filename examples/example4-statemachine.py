@@ -15,7 +15,6 @@ token_in = pyrtl.Input(1, 'token_in')
 req_refund = pyrtl.Input(1, 'req_refund')
 dispense = pyrtl.Output(1, 'dispense')
 refund = pyrtl.Output(1, 'refund')
-state = pyrtl.Register(3, 'state')
 
 # First new step, let's enumerate a set of constant to serve as our states
 WAIT, TOK1, TOK2, TOK3, DISPENSE, REFUND = [pyrtl.Const(x, bitwidth=3) for x in range(6)]
@@ -29,23 +28,24 @@ WAIT, TOK1, TOK2, TOK3, DISPENSE, REFUND = [pyrtl.Const(x, bitwidth=3) for x in 
 # is describing a big logic function NOT an "if-then-else" clause.  All of these things will
 # execute straight through when "build_everything" is called.  More comments after the code.
 
-condition = pyrtl.ConditionalUpdate()
-with condition(req_refund):  # signal of highest precedence
-    state.next <<= REFUND
-with condition(token_in):  # if token received, advance state in counter sequence
-    with condition(state == WAIT):
-        state.next <<= TOK1
-    with condition(state == TOK1):
-        state.next <<= TOK2
-    with condition(state == TOK2):
-        state.next <<= TOK3
-    with condition(state == TOK3):
-        state.next <<= DISPENSE  # 4th token received, go to dispense
-    with condition():  # token received but in state where we can't handle it
+with pyrtl.ConditionalUpdate() as condition:
+    state = pyrtl.Register(3, 'state')
+    with condition(req_refund):  # signal of highest precedence
         state.next <<= REFUND
-# unconditional transition from these two states back to wait state
-with condition((state == DISPENSE) | (state == REFUND)):
-    state.next <<= WAIT
+    with condition(token_in):  # if token received, advance state in counter sequence
+        with condition(state == WAIT):
+            state.next <<= TOK1
+        with condition(state == TOK1):
+            state.next <<= TOK2
+        with condition(state == TOK2):
+            state.next <<= TOK3
+        with condition(state == TOK3):
+            state.next <<= DISPENSE  # 4th token received, go to dispense
+        with condition.default:  # token received but in state where we can't handle it
+            state.next <<= REFUND
+    # unconditional transition from these two states back to wait state
+    with condition((state == DISPENSE) | (state == REFUND)):
+        state.next <<= WAIT
 
 dispense <<= state == DISPENSE
 refund <<= state == REFUND
