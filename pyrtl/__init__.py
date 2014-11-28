@@ -17,7 +17,6 @@ from wire import SignedWireVector
 from wire import SignedInput, SignedOutput
 from wire import SignedConst
 from wire import SignedRegister
-from wire import ConditionalUpdate
 
 # helper functions
 from helperfuncs import as_wires
@@ -32,6 +31,9 @@ from helperfuncs import parity
 
 # memory blocks
 from memblock import MemBlock
+
+# conditional updates
+from conditional import ConditionalUpdate
 
 # block simulation support
 from simulation import Simulation
