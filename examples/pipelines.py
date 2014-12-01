@@ -53,9 +53,12 @@ class Pipeline(object):
 
         pipereg_id = str(stage) + 'to' + str(next_stage)
         rname = 'pipereg_' + pipereg_id + '_' + name
-        new_pipereg = rtype(bitwidth=bitwidth, name=rname)
-        self._pipeline_register_map[next_stage][name] = new_pipereg
-        return new_pipereg
+        if name not in self._pipeline_register_map[next_stage]:
+            new_pipereg = rtype(bitwidth=bitwidth, name=rname)
+            self._pipeline_register_map[next_stage][name] = new_pipereg
+            return new_pipereg
+        else:
+            return self._pipeline_register_map[next_stage][name]
 
 class SwitchDefaultType(object):
     # __slots__ = () if you want to save a few bytes
@@ -137,13 +140,19 @@ class MipsCore(Pipeline):
         """ all of the cross-pipeline signals are declared here """
         self._addrwidth = addrwidth  # a compile time constant
         self._pcsrc = WireVector(1, 'pcsrc')
+        self._if_instr = WireVector(32, 'if_instr')
+        self._stall = WireVector(1, 'stall')
         self._computed_address = WireVector(self._addrwidth, 'computed_address')
+        # self._jump_address = WireVector(self._addrwidth, 'jump_address')
         self._write_data = WireVector(32, 'write_data')
         self._alu_result = WireVector(32, 'alu_result')
         self._zero = WireVector(1, 'zero')
         self._regfile = MemBlock(32, 5, 'regfile')
 
         super(MipsCore, self).__init__()
+
+    def unless_stall(self, stall, val):
+        return mux(stall, val, Const(0, bitwidth=len(val)))
 
     def stage0_fetch(self):
         """ update the PC, grab the instruction from imem """
@@ -153,12 +162,14 @@ class MipsCore(Pipeline):
         pc_incr = pc + 4
         pc.next <<= mux(self._pcsrc, pc_incr, self._computed_address)
 
+        self._if_instr <<= instr
         self.pc_incr = pc_incr
         self.instr = instr
 
     def stage1_decode(self):
         """ break instruction into fields and access registers """
         instr = self.instr
+        self._stall <<= self.decoder_hazard_unit()
         rs = instr[21:26]
         rt = instr[16:21]
         rd = instr[11:16]
@@ -168,24 +179,26 @@ class MipsCore(Pipeline):
         control_signals = self.main_decoder(opcode)
 
         self.fwd_op_1, self.fwd_op_2 = self.decoder_forwarding_unit(rs, rt)
-        self.write_register = mux(control_signals["regdest"], rt, rd)
+        self.write_register = self.unless_stall(self._stall, mux(control_signals["regdest"], rt, rd))
 
         # target = instr[0:26]
         # shamt = instr[6:11]
         funct = instr[0:6]
 
-        self.aluop = concat(control_signals["aluop1"], control_signals["aluop0"])
-        self.funct = funct
-        self.alusrc = control_signals["alusrc"]
-        self.branch = control_signals["branch"]
-        self.immed = immed
-        self.memwrite = control_signals["memwrite"]
-        self.regread2 = self._regfile[rt]
-        self.regwrite = control_signals["regwrite"]
-        self.rs = rs
-        self.rt = rt
-        self.pc_incr = self.pc_incr
-        self.opcode = opcode
+        self.aluop = self.unless_stall(self._stall, concat(control_signals["aluop1"], control_signals["aluop0"]))
+        self.funct = self.unless_stall(self._stall, funct)
+        self.alusrc = self.unless_stall(self._stall, control_signals["alusrc"])
+        self.branch = self.unless_stall(self._stall, control_signals["branch"])
+        self.immed = self.unless_stall(self._stall, immed)
+        self.jump = self.unless_stall(self._stall, control_signals["jump"])
+        self.memtoreg = self.unless_stall(self._stall, control_signals["memtoreg"])
+        self.memwrite = self.unless_stall(self._stall, control_signals["memwrite"])
+        self.regwrite = self.unless_stall(self._stall, control_signals["regwrite"])
+        self.rs = self.unless_stall(self._stall, rs)
+        self.rt = self.unless_stall(self._stall, rt)
+        self.pc_incr = self.unless_stall(self._stall, self.pc_incr)
+        self.opcode = self.unless_stall(self._stall, opcode)
+        self.stall = self._stall
 
     def stage2_execute(self):
         """ perform the alu operations """
@@ -194,10 +207,12 @@ class MipsCore(Pipeline):
         # alu_op_1 = fwd_op_1
         # alu_op_2 = mux(self.alusrc, fwd_op_2, self.immed)
 
+        # self.fwd_op_1, self.fwd_op_2 = fwd_op_1, fwd_op_2
+
         fwd_op_1, fwd_op_2 = self.fwd_op_1, self.fwd_op_2
 
-        alu_op_1 = fwd_op_1
-        alu_op_2 = mux(self.alusrc, fwd_op_2, self.immed)
+        alu_op_1 = self.unless_stall(self._stall, fwd_op_1)
+        alu_op_2 = self.unless_stall(self._stall, mux(self.alusrc, fwd_op_2, self.immed))
 
         alu_ctrl = self.alu_ctrl(self.aluop, self.immed)
 
@@ -205,13 +220,17 @@ class MipsCore(Pipeline):
 
         # needed for next stage and sw
         # check that regread2 is correct
-        self.regread2 = self.regread2
+        self.regread2 = fwd_op_2
 
         self._computed_address <<= self.pc_incr + immed_shifted
+
         alu_result, zero = self.alu(alu_ctrl, alu_op_1, alu_op_2)
         self._alu_result <<= alu_result
-        self._zero <<= zero
+        self._zero <<= alu_result == 0
+        self._pcsrc <<= self.branch & self._zero
         self.branch = self.branch
+        self.jump = self.jump
+        self.memtoreg = self.memtoreg
         self.memwrite = self.memwrite
         self.alu_result, self.zero = self._alu_result, self._zero
         self.regwrite = self.regwrite
@@ -223,19 +242,19 @@ class MipsCore(Pipeline):
         EW = MemBlock.EnabledWrite
 
         address = self.alu_result[0:self._addrwidth]
-        dmem[address] = EW(self.regread2, enable=self.memwrite)  # TODO: check if regread2 is correct
+        dmem[address] = EW(self.regread2, enable=self.memwrite)
         read_data = dmem[address]
 
-        self._pcsrc <<= self.branch & self.zero
-        self.write_register = self.write_register
-        self.write_data = mux(self.regwrite, read_data, self.alu_result)
-        self.read_data = read_data
         self.alu_result = self.alu_result
+        self.write_data = mux(self.memtoreg, self.alu_result, read_data)
+        self.memtoreg = self.memtoreg
+        self.read_data = read_data
         self.regwrite = self.regwrite
+        self.write_register = self.write_register
 
     def stage4_writeback(self):
         """ select the data to write back to registers """
-        self._write_data <<= mux(self.regwrite, self.read_data, self.alu_result)
+        self._write_data <<= self.write_data
 
         EW = MemBlock.EnabledWrite
         writable_register = (self.regwrite == 1) & (self.write_register != 0)
@@ -343,7 +362,7 @@ class MipsCore(Pipeline):
         ex_mem_regwrite = self.route_future_pipeline_reg(2, bitwidth=1, name="regwrite")
         ex_mem_write_register = self.route_future_pipeline_reg(2, bitwidth=5, name="write_register")
 
-        mem_wb_write_data = self._write_data
+        mem_wb_write_data = self.route_future_pipeline_reg(3, bitwidth=32, name="write_data")
         mem_wb_regwrite = self.route_future_pipeline_reg(3, bitwidth=1, name="regwrite")
         mem_wb_write_register = self.route_future_pipeline_reg(3, bitwidth=5, name="write_register")
 
@@ -391,7 +410,21 @@ class MipsCore(Pipeline):
         fwd_op_1 = self.decoder_forward_op(forward_a, rs, id_ex_alu_result, ex_mem_alu_result, mem_wb_write_data)
         fwd_op_2 = self.decoder_forward_op(forward_b, rt, id_ex_alu_result, ex_mem_alu_result, mem_wb_write_data)
 
+        self.forward_a = forward_a
+        self.forward_b = forward_b
+
         return fwd_op_1, fwd_op_2
+
+    def decoder_hazard_unit(self):
+        # get a reference to some pipeline registers that don't exist yet
+        id_ex_memtoreg = self.route_future_pipeline_reg(1, bitwidth=1, name="memtoreg")
+        id_ex_write_register = self.route_future_pipeline_reg(1, bitwidth=5, name="write_register")
+
+        if_id_instr = self._if_instr
+        if_id_rs = if_id_instr[21:26]
+        if_id_rt = if_id_instr[21:26]
+
+        return id_ex_memtoreg & ((id_ex_write_register == if_id_rs) | (id_ex_write_register == if_id_rt))
 
     # def execution_forward_ctrl(self, fwd_ex, fwd_mem):
     #     fwd_ctrl = switch(concat(fwd_ex, fwd_mem), {
@@ -460,14 +493,35 @@ sim_trace = SimulationTrace()
 sim = Simulation(tracer=sim_trace)
 
 sim.memvalue = {
-    (2, 0): 0x20020001,
-    (2, 4): 0x20030002,
-    (2, 8): 0x00431820,
-    (2, 12): 0x00621020,
-    (2, 16): 0x00421820,
-    (2, 20): 0x00431822,
-    (2, 24): 0x20630005,
+    (2, 0): 0x2009000a,  # addi $t1, $zero, 10
+    (2, 4): 0x20020001,  # addi $v0, $zero, 1
+    (2, 8): 0x20030002,  # addi $v1, $zero, 1
+    (2, 12): 0x00431820, # add $v1, $v0, $v1
+    (2, 16): 0x0043202a, # slt $a0, $v0, $v1
+    (2, 20): 0x0062282a, # slt $a1, $v1, $v0
+    (2, 24): 0x00852820, # add $a1, $a0, $a1
+    (2, 28): 0xac050004, # sw $a1, 4($zero)
+    (2, 32): 0x8c030004, # lw $v1, 4($zero)
+    (2, 36): 0x11090005, # beq $t0, $t1, loop_end
+    (2, 40): 0, # NOOP
+    (2, 44): 0x8c080008, # lw $t0, 8($zero)
+    (2, 48): 0x01284020, # add $t0, $t1, $t0
+                         # ; note: delay slot, correct behavior would have t0=10,
+                         # ; but then t0 is overwritten next instr
+    (2, 52): 0x21080002, # addi $t0, $t0, 2
+    (2, 56): 0xac080008, # sw $t0, 8($zero)
+                         # loop_end:
 }
+
+# double data hazard test
+# sim.memvalue = {
+#     (2, 0): 0x20090001,
+#     (2, 4): 0x200a0002,
+#     (2, 8): 0x200b0003,
+#     (2, 12): 0x012a4820,
+#     (2, 16): 0x012b4820,
+#     (2, 20): 0x012c4820,
+# }
 
 for i in xrange(25):
     sim.step({})
