@@ -6,6 +6,7 @@ import collections
 import core
 import wire
 import helperfuncs
+import conditional
 
 
 # ------------------------------------------------------------------------
@@ -47,25 +48,35 @@ class MemBlock(object):
         self.writeport_nets = []
         self.id = core.Block.next_memid()
 
+        if conditional.ConditionalUpdate.current is None:
+            self.is_conditional = False
+        else:
+            self.is_conditional = True
+            conditional.ConditionalUpdate._memblock_init(self)
+
     def __getitem__(self, item):
-        if not isinstance(item, wire.WireVector):
-            raise core.PyrtlError('error, index to memblock must be WireVector (or derived) type')
+        item = helperfuncs.as_wires(item, block=self.block)
         if len(item) != self.addrwidth:
             raise core.PyrtlError('error, width of memblock index "%s" is %d, '
                                   'addrwidth is %d' % (item.name, len(item), self.addrwidth))
-
         addr = item
-        data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
-        readport_net = core.LogicNet(
-            op='m',
-            op_param=(self.id, self),
-            args=(addr,),
-            dests=(data,))
-        self.block.add_net(readport_net)
-        self.readport_nets.append(readport_net)
-        return data
+        if not self.is_conditional:
+            data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
+            readport_net = core.LogicNet(
+                op='m',
+                op_param=(self.id, self),
+                args=(addr,),
+                dests=(data,))
+            self.block.add_net(readport_net)
+            self.readport_nets.append(readport_net)
+            return data
+        else:
+            return conditional.ConditionalUpdate._memblock_get(self, addr)
 
     def __setitem__(self, item, val):
+        # TODO: use "as_wires" to convert item and val if needed
+        # TODO: check that conditional memory not being set in a condition
+
         # check that 'item' is a valid address vector
         if not isinstance(item, wire.WireVector):
             raise core.PyrtlError('error, address not a valide WireVector')
@@ -87,10 +98,13 @@ class MemBlock(object):
         if len(enable) != 1:
             raise core.PyrtlError('error, enable signal not exactly 1 bit')
 
-        writeport_net = core.LogicNet(
-            op='@',
-            op_param=(self.id, self),
-            args=(addr, data, enable),
-            dests=tuple())
-        self.block.add_net(writeport_net)
-        self.writeport_nets.append(writeport_net)
+        if not self.is_conditional:
+            writeport_net = core.LogicNet(
+                op='@',
+                op_param=(self.id, self),
+                args=(addr, data, enable),
+                dests=tuple())
+            self.block.add_net(writeport_net)
+            self.writeport_nets.append(writeport_net)
+        else:
+            conditional.ConditionalUpdate._memblock_set(self, addr, data, enable)

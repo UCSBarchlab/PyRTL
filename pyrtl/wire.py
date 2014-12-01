@@ -91,7 +91,15 @@ class WireVector(object):
         self.block.add_net(net)
         return s
 
-    # OPS
+    def __bool__(self):
+        """ Use of a wirevector in a statement like "a or b" is forbidden."""
+        # python provides now way to overload these logical operations, and thus they
+        # are very much not likely to be doing the thing that the programmer would be 
+        # expecting.
+        raise core.PyrtlError('error, attempt to covert wirevector to compile-time boolean')
+
+    __nonzero__ = __bool__  # for Python 2 and 3 compatibility
+
     def __and__(self, other):
         return self.logicop(other, '&')
 
@@ -334,7 +342,12 @@ class Register(WireVector):
     def __init__(self, bitwidth, name=None, block=None):
         super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block)
         self.reg_in = None  # wire vector setting self.next
-        self.is_conditional = conditional.ConditionalUpdate._register_init(self)
+
+        if conditional.ConditionalUpdate.current is None:
+            self.is_conditional = False
+        else:
+            self.is_conditional = True
+            conditional.ConditionalUpdate.current._register_init(self)
 
     @property
     def next(self):
@@ -361,7 +374,7 @@ class Register(WireVector):
             net = core.LogicNet('r', None, args=(self.reg_in,), dests=(self,))
             self.block.add_net(net)
         else:
-            conditional.ConditionalUpdate._register_set(self, nextsetter.rhs)
+            conditional.ConditionalUpdate.current._register_set(self, nextsetter.rhs)
 
 
 # ----------------------------------------------------------------

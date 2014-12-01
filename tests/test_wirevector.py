@@ -8,7 +8,6 @@ from helperfunctions import *
 class TestWireVector(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        pyrtl.set_debug_mode(True)
 
     def tearDown(self):
         pyrtl.reset_working_block()
@@ -29,8 +28,20 @@ class TestWireVector(unittest.TestCase):
         c = pyrtl.Register(bitwidth=3)
         c.next <<= pyrtl.Const(202)
 
+    def test_register_assignment_direct(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            c = pyrtl.Register(bitwidth=3)
+            c.next = 1
+
+    def test_register_assignment_not_next(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            c = pyrtl.Register(bitwidth=3)
+            c <<= 1
+
     def test_logic_operatons(self):
-        testmissing()
+        with self.assertRaises(pyrtl.PyrtlError):
+            c = pyrtl.Register(bitwidth=1)
+            c.next <<= c or True
 
     def test_slice(self):
         testmissing()
@@ -42,6 +53,7 @@ class TestWireVector(unittest.TestCase):
         testmissing()
 
 
+# -------------------------------------------------------------------
 class TestConst(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -96,7 +108,7 @@ class TestConst(unittest.TestCase):
         self.assertRaises(pyrtl.PyrtlError, pyrtl.Const, "-1'b10")
         self.assertRaises(pyrtl.PyrtlError, pyrtl.Const, "5'b111111'")
 
-
+# -------------------------------------------------------------------
 class TestRTLAdderDesign(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -117,6 +129,7 @@ class TestRTLAdderDesign(unittest.TestCase):
             pyrtl.reset_working_block()
 
 
+# -------------------------------------------------------------------
 class TestRTLMemBlockDesign(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

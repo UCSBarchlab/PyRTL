@@ -8,7 +8,6 @@ from helperfunctions import testmissing
 class TestBlock(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        pyrtl.set_debug_mode(True)
 
     def tearDown(self):
         pyrtl.reset_working_block()

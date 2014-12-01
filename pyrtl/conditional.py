@@ -38,19 +38,22 @@ class ConditionalUpdate(object):
     current = None
 
     def __init__(self, block=None):
+        if self.depth != 0:
+            raise core.PyrtlError('error, no nesting ConditionalUpdates')
         self.block = core.working_block(block)
         self.predicate_on_deck = None
         self.conditions_list_stack = [[]]
-        self.reg_predicate_map = {}  # map reg -> [(pred, rhs), ...]
+        self.register_predicate_map = {}  # map reg -> [(pred, rhs), ...]
+        self.memblock_predicate_map = {}  # map mem -> [(pred, addr, data, enable), ...]
 
     def __enter__(self):
         if self.predicate_on_deck is None:
-            if ConditionalUpdate.depth != 0:
+            if self.depth != 0:
                 raise core.PyrtlError('error, you did something wrong with conditionals')
             ConditionalUpdate.current = self
             retval = self
         else:
-            if ConditionalUpdate.depth <= 0:
+            if self.depth <= 0:
                 raise core.PyrtlError('error, need an enclosing ConditionalUpdate')
             self.conditions_list_stack[-1].append(self.predicate_on_deck)
             # push a new empty list on the stack for sub-conditions
@@ -64,10 +67,11 @@ class ConditionalUpdate(object):
     def __exit__(self, etype, evalue, etraceback):
         self.conditions_list_stack.pop()
         ConditionalUpdate.depth -= 1
-        if ConditionalUpdate.depth == 0:
+        if self.depth == 0:
             self._register_finalize()
+            # self._mem_finalize()
             ConditionalUpdate.current = None
-        if ConditionalUpdate.depth < 0:
+        if self.depth < 0:
             raise core.PyrtlInternalError()
 
     def __call__(self, predicate):
@@ -79,33 +83,35 @@ class ConditionalUpdate(object):
         self.predicate_on_deck = True
         return self
 
-    @classmethod
-    def _register_init(cls, reg):
-        if cls.depth == 0:
-            return False
-        elif cls.depth == 1:
-            cls.current.reg_predicate_map[reg] = []
-            return True
+    def _register_init(self, reg):
+        if self.depth == 1:
+            self.register_predicate_map[reg] = []
         else:
             raise core.PyrtlError('error, cannot declare register in a condition')
 
-    @classmethod
-    def _register_set(cls, reg, rhs):
-        self = cls.current
+    def _register_set(self, reg, rhs):
         p = self._current_select()
-        self.reg_predicate_map[reg].append((p, rhs))
+        self.register_predicate_map[reg].append((p, rhs))
 
     def _register_finalize(self):
         from helperfuncs import mux
-        for reg in self.reg_predicate_map:
-            result = reg  # add check for default case, not feedback then
-            # right now this is totally not optimzied, should use muxes
+        for reg in self.register_predicate_map:
+            result = reg  # TODO: add check for default case, not feedback then
+            # TODO: right now this is totally not optimzied, should use muxes
             # in conjuction with predicates to encode efficiently.
-            for p, rhs in self.reg_predicate_map[reg]:
+            regpredlist = self.register_predicate_map[reg]
+            if regpredlist == []:
+                raise core.PyrtlError('error, Register in ConditionalUpdate not assigned')
+            for p, rhs in regpredlist:
                 result = mux(p, truecase=rhs, falsecase=result)
             reg.reg_in = result
             net = core.LogicNet('r', None, args=(result,), dests=(reg,))
             self.block.add_net(net)
+
+    # _memblock_init(self, memblock)
+    # _memblock_get(self, addr)
+    # _memblock_set(self, addr, data, enable)
+    # _memblock_finalize(self)
 
     def _current_select(self):
         select = None

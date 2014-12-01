@@ -10,7 +10,6 @@ from helperfunctions import testmissing
 class TestPasses(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        pyrtl.set_debug_mode(True)
 
     def tearDown(self):
         pyrtl.reset_working_block()
@@ -165,7 +164,6 @@ class TestPasses(unittest.TestCase):
         testmissing()
 
     def test_const_folding_complex_1(self):
-        pyrtl.set_debug_mode(True)
         output = pyrtl.Output(bitwidth=3, name='output')
         counter = pyrtl.Register(bitwidth=3, name='counter')
         counter.next <<= counter + 1

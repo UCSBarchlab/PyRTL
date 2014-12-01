@@ -11,7 +11,6 @@ from helperfunctions import *
 class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        pyrtl.set_debug_mode(True)
         self.bitwidth = 3
         self.r = pyrtl.Register(bitwidth=self.bitwidth, name='r')
 
@@ -36,7 +35,9 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.check_trace('r 06060606\n')
 
     def test_or_simulation(self):
-        self.r.next <<= self.r | pyrtl.Const(4, bitwidth=self.bitwidth)
+        result = self.r | pyrtl.Const(4, bitwidth=self.bitwidth)
+        self.r.next <<= result
+        self.assertEqual(len(result), self.bitwidth)        
         self.check_trace('r 04444444\n')
 
     def test_xor_simulation(self):

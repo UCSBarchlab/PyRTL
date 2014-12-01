@@ -44,6 +44,8 @@ with pyrtl.ConditionalUpdate() as condition:
         with condition.default:  # token received but in state where we can't handle it
             state.next <<= REFUND
     # unconditional transition from these two states back to wait state
+    # NOTE: the parens are needed because in Python the "|" operator is lower precedence
+    # than the "==" operator.
     with condition((state == DISPENSE) | (state == REFUND)):
         state.next <<= WAIT
 
