@@ -108,10 +108,17 @@ class ConditionalUpdate(object):
             net = core.LogicNet('r', None, args=(result,), dests=(reg,))
             self.block.add_net(net)
 
-    # _memblock_init(self, memblock)
-    # _memblock_get(self, addr)
-    # _memblock_set(self, addr, data, enable)
-    # _memblock_finalize(self)
+    def _memblock_init(self, memblock):
+        raise NotImplementedError
+
+    def _memblock_get(self, addr):
+        raise NotImplementedError
+
+    def _memblock_set(self, addr, data, enable):
+        raise NotImplementedError
+
+    def _memblock_finalize(self):
+        raise NotImplementedError
 
     def _current_select(self):
         select = None

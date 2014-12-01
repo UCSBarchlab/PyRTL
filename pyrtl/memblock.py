@@ -52,7 +52,7 @@ class MemBlock(object):
             self.is_conditional = False
         else:
             self.is_conditional = True
-            conditional.ConditionalUpdate._memblock_init(self)
+            conditional.ConditionalUpdate.current._memblock_init(self)
 
     def __getitem__(self, item):
         item = helperfuncs.as_wires(item, block=self.block)

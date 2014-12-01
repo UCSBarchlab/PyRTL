@@ -94,7 +94,7 @@ class WireVector(object):
     def __bool__(self):
         """ Use of a wirevector in a statement like "a or b" is forbidden."""
         # python provides now way to overload these logical operations, and thus they
-        # are very much not likely to be doing the thing that the programmer would be 
+        # are very much not likely to be doing the thing that the programmer would be
         # expecting.
         raise core.PyrtlError('error, attempt to covert wirevector to compile-time boolean')
 
