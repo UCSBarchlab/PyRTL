@@ -141,9 +141,10 @@ class MipsCore(Pipeline):
         self._addrwidth = addrwidth  # a compile time constant
         self._pcsrc = WireVector(1, 'pcsrc')
         self._if_instr = WireVector(32, 'if_instr')
+        self._jump = WireVector(1, 'jump')
         self._stall = WireVector(1, 'stall')
         self._computed_address = WireVector(self._addrwidth, 'computed_address')
-        # self._jump_address = WireVector(self._addrwidth, 'jump_address')
+        self._jump_address = WireVector(self._addrwidth, 'jump_address')
         self._write_data = WireVector(32, 'write_data')
         self._alu_result = WireVector(32, 'alu_result')
         self._zero = WireVector(1, 'zero')
@@ -160,7 +161,7 @@ class MipsCore(Pipeline):
         imem = MemBlock(32, self._addrwidth, 'imem')
         instr = imem[pc]
         pc_incr = pc + 4
-        pc.next <<= mux(self._pcsrc, pc_incr, self._computed_address)
+        pc.next <<= mux(self._jump, mux(self._pcsrc, pc_incr, self._computed_address), self._jump_address)
 
         self._if_instr <<= instr
         self.pc_incr = pc_incr
@@ -181,16 +182,29 @@ class MipsCore(Pipeline):
         self.fwd_op_1, self.fwd_op_2 = self.decoder_forwarding_unit(rs, rt)
         self.write_register = self.unless_stall(self._stall, mux(control_signals["regdest"], rt, rd))
 
-        # target = instr[0:26]
+        # unconditional jumps
+        jump = self.unless_stall(self._stall, control_signals["jump"])
+        self._jump <<= jump
+
+        target = instr[0:26]
         # shamt = instr[6:11]
         funct = instr[0:6]
+
+        target_shifted = concat(target, Const(0, bitwidth=2))
+        target_absolute = concat(self.pc_incr[self._addrwidth - 4:self._addrwidth], target_shifted)
+        self._jump_address <<= self.unless_stall(self._stall, target_absolute)
+
+        # conditional jump (branch)
+        branch = self.unless_stall(self._stall, control_signals["branch"])
+
+        # TODO: early branch calculation? reduce stalls
+        # currently branches calculated in execute having the effect of two delay slots
 
         self.aluop = self.unless_stall(self._stall, concat(control_signals["aluop1"], control_signals["aluop0"]))
         self.funct = self.unless_stall(self._stall, funct)
         self.alusrc = self.unless_stall(self._stall, control_signals["alusrc"])
-        self.branch = self.unless_stall(self._stall, control_signals["branch"])
+        self.branch = branch
         self.immed = self.unless_stall(self._stall, immed)
-        self.jump = self.unless_stall(self._stall, control_signals["jump"])
         self.memtoreg = self.unless_stall(self._stall, control_signals["memtoreg"])
         self.memwrite = self.unless_stall(self._stall, control_signals["memwrite"])
         self.regwrite = self.unless_stall(self._stall, control_signals["regwrite"])
@@ -198,7 +212,6 @@ class MipsCore(Pipeline):
         self.rt = self.unless_stall(self._stall, rt)
         self.pc_incr = self.unless_stall(self._stall, self.pc_incr)
         self.opcode = self.unless_stall(self._stall, opcode)
-        self.stall = self._stall
 
     def stage2_execute(self):
         """ perform the alu operations """
@@ -228,8 +241,6 @@ class MipsCore(Pipeline):
         self._alu_result <<= alu_result
         self._zero <<= alu_result == 0
         self._pcsrc <<= self.branch & self._zero
-        self.branch = self.branch
-        self.jump = self.jump
         self.memtoreg = self.memtoreg
         self.memwrite = self.memwrite
         self.alu_result, self.zero = self._alu_result, self._zero
@@ -492,26 +503,29 @@ testcore = MipsCore(addrwidth=24)
 sim_trace = SimulationTrace()
 sim = Simulation(tracer=sim_trace)
 
-sim.memvalue = {
-    (2, 0): 0x2009000a,  # addi $t1, $zero, 10
-    (2, 4): 0x20020001,  # addi $v0, $zero, 1
-    (2, 8): 0x20030002,  # addi $v1, $zero, 1
-    (2, 12): 0x00431820, # add $v1, $v0, $v1
-    (2, 16): 0x0043202a, # slt $a0, $v0, $v1
-    (2, 20): 0x0062282a, # slt $a1, $v1, $v0
-    (2, 24): 0x00852820, # add $a1, $a0, $a1
-    (2, 28): 0xac050004, # sw $a1, 4($zero)
-    (2, 32): 0x8c030004, # lw $v1, 4($zero)
-    (2, 36): 0x11090005, # beq $t0, $t1, loop_end
-    (2, 40): 0, # NOOP
-    (2, 44): 0x8c080008, # lw $t0, 8($zero)
-    (2, 48): 0x01284020, # add $t0, $t1, $t0
-                         # ; note: delay slot, correct behavior would have t0=10,
-                         # ; but then t0 is overwritten next instr
-    (2, 52): 0x21080002, # addi $t0, $t0, 2
-    (2, 56): 0xac080008, # sw $t0, 8($zero)
-                         # loop_end:
-}
+# sim.memvalue = {
+#     (2, 0): 0x2009000a,  # addi $t1, $zero, 10
+#     (2, 4): 0x20020001,  # addi $v0, $zero, 1
+#     (2, 8): 0x20030002,  # addi $v1, $zero, 1
+#     (2, 12): 0x00431820, # add $v1, $v0, $v1
+#     (2, 16): 0x0043202a, # slt $a0, $v0, $v1
+#     (2, 20): 0x0062282a, # slt $a1, $v1, $v0
+#     (2, 24): 0x00852820, # add $a1, $a0, $a1
+#     (2, 28): 0xac050004, # sw $a1, 4($zero)
+#     (2, 32): 0x8c030004, # lw $v1, 4($zero)
+#                          # loop_begin:
+#     (2, 36): 0x11090006, # beq $t0, $t1, loop_end
+#     (2, 40): 0, # NOOP
+#     (2, 44): 0x8c080008, # lw $t0, 8($zero)
+#     # (2, 48): 0, # NOOP
+#     (2, 48): 0x01284020, # add $t0, $t1, $t0
+#                          # ; note: delay slot, correct behavior would have t0=10,
+#                          # ; but then t0 is overwritten next instr
+#     (2, 52): 0x21080001, # addi $t0, $t0, 1
+#     (2, 56): 0xac080008, # sw $t0, 8($zero)
+#     (2, 60): 0x08000009, # j loop_begin
+#                          # loop_end:
+# }
 
 # double data hazard test
 # sim.memvalue = {
@@ -522,6 +536,21 @@ sim.memvalue = {
 #     (2, 16): 0x012b4820,
 #     (2, 20): 0x012c4820,
 # }
+
+# simple
+sim.memvalue = {
+    (2, 0): 0x21080003,  # addi $t0, $t0, 3
+                         # loop_begin:
+    (2, 4): 0x11090007,  # beq $t0, $t1, loop_end
+    (2, 8): 0, # NOOP    # currently two branch delay slots are needed
+    (2, 12): 0, # NOOP
+    (2, 16): 0x21080001, # addi $t0, $t0, 1
+    (2, 20): 0x01084820, # add $t1, $t0, $t0
+    (2, 24): 0xac090004, # sw $t1, 4($zero)
+    (2, 28): 0x8c080004, # lw $t0, 4($zero)
+    (2, 32): 0x08000001, # j loop_begin
+                         # loop_end:
+}
 
 for i in xrange(25):
     sim.step({})
