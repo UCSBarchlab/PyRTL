@@ -58,7 +58,8 @@ class WireVector(object):
             return ''.join((self.raw_name(), appendix))
         else:
             source_set = self.block.reverse_wirevector_map[self]
-            return source_set[0].get_original_name(''.join(("_part_", str(source_set[1]), appendix)))
+            return source_set[0].get_original_name(
+                ''.join(("_part_", str(source_set[1]), appendix)))
 
     def __ilshift__(self, other):
         other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
