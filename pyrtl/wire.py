@@ -48,7 +48,17 @@ class WireVector(object):
         self.block.add_wirevector(self)
 
     def __str__(self):
+        return self.get_original_name()
+
+    def raw_name(self):
         return ''.join([self.name, '/', str(self.bitwidth), self.code])
+
+    def get_original_name(self, appendix=""):
+        if self not in self.block.reverse_wirevector_map.viewkeys():
+            return ''.join((self.raw_name(), appendix))
+        else:
+            source_set = self.block.reverse_wirevector_map[self]
+            return source_set[0].get_original_name(''.join(("_part_", str(source_set[1]), appendix)))
 
     def __ilshift__(self, other):
         other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)

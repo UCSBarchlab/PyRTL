@@ -468,7 +468,7 @@ def synthesize(update_working_block=True, block=None):
     block_out = core.Block()
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^rw')
-    wirevector_map = {}  # map from (vector,index) -> new_wire
+    wirevector_map = block_in.wirevector_map  # map from (vector,index) -> new_wire
     uid = 0  # used for unique names
 
     # First step, create all of the new wires for the new block
@@ -492,7 +492,8 @@ def synthesize(update_working_block=True, block=None):
     for net in block_in.logic:
         _decompose(net, wirevector_map, block_out)
 
-    block_in.wirevector_map = wirevector_map
+    block_out.wirevector_map = wirevector_map
+    block_out.reverse_wirevector_map = {value: key for key, value in wirevector_map.viewitems()}
     if update_working_block:
         core.set_working_block(block_out)
     return block_out

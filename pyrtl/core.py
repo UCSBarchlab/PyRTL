@@ -151,6 +151,7 @@ class Block(object):
         self.wirevector_set = set()  # set of all wirevectors
         self.wirevector_by_name = {}  # map from name->wirevector, used for performance
         self.wirevector_map = {}  # map from (wirevector, number) -> wirevector, used for mapping
+        self.reverse_wirevector_map = {}
         # pre-synthesis wirevectors to post-synthesis vectors
         self.legal_ops = set('w~&|^+-*<>=xcsrm@')  # set of legal OPS
 
