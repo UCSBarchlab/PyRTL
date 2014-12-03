@@ -15,6 +15,7 @@ token_in = pyrtl.Input(1, 'token_in')
 req_refund = pyrtl.Input(1, 'req_refund')
 dispense = pyrtl.Output(1, 'dispense')
 refund = pyrtl.Output(1, 'refund')
+state = pyrtl.Register(3, 'state')
 
 # First new step, let's enumerate a set of constant to serve as our states
 WAIT, TOK1, TOK2, TOK3, DISPENSE, REFUND = [pyrtl.Const(x, bitwidth=3) for x in range(6)]
@@ -29,7 +30,6 @@ WAIT, TOK1, TOK2, TOK3, DISPENSE, REFUND = [pyrtl.Const(x, bitwidth=3) for x in 
 # execute straight through when "build_everything" is called.  More comments after the code.
 
 with pyrtl.ConditionalUpdate() as condition:
-    state = pyrtl.Register(3, 'state')
     with condition(req_refund):  # signal of highest precedence
         state.next <<= REFUND
     with condition(token_in):  # if token received, advance state in counter sequence

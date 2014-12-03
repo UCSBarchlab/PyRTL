@@ -353,12 +353,7 @@ class Register(WireVector):
     def __init__(self, bitwidth, name=None, block=None):
         super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block)
         self.reg_in = None  # wire vector setting self.next
-
-        if conditional.ConditionalUpdate.current is None:
-            self.is_conditional = False
-        else:
-            self.is_conditional = True
-            conditional.ConditionalUpdate.current._register_init(self)
+        self._is_conditional = False  # set when register is updated conditionally
 
     @property
     def next(self):
@@ -379,13 +374,13 @@ class Register(WireVector):
             raise core.PyrtlError('error, .next values should only be set with the "<<=" operator')
         elif self.reg_in is not None:
             raise core.PyrtlError('error, .next value should be set once and only once')
-        elif not self.is_conditional:
+        elif not conditional.ConditionalUpdate.currently_under_condition():
             # normal register assignment
             self.reg_in = nextsetter.rhs
             net = core.LogicNet('r', None, args=(self.reg_in,), dests=(self,))
             self.block.add_net(net)
         else:
-            conditional.ConditionalUpdate.current._register_set(self, nextsetter.rhs)
+            conditional.ConditionalUpdate._register_set(self, nextsetter.rhs)
 
 
 # ----------------------------------------------------------------
