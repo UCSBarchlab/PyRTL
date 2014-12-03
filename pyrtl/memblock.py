@@ -54,18 +54,10 @@ class MemBlock(object):
             raise core.PyrtlError('error, width of memblock index "%s" is %d, '
                                   'addrwidth is %d' % (item.name, len(item), self.addrwidth))
         addr = item
-        if not conditional.ConditionalUpdate.currently_under_condition():
-            data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
-            readport_net = core.LogicNet(
-                op='m',
-                op_param=(self.id, self),
-                args=(addr,),
-                dests=(data,))
-            self.block.add_net(readport_net)
-            self.readport_nets.append(readport_net)
-            return data
+        if conditional.ConditionalUpdate.currently_under_condition():
+            return conditional.ConditionalUpdate._build_read_port(self, addr)
         else:
-            return conditional.ConditionalUpdate._memblock_get(self, addr)
+            return self._build_read_port(addr)
 
     def __setitem__(self, item, val):
         # TODO: use "as_wires" to convert item and val if needed
@@ -91,7 +83,23 @@ class MemBlock(object):
         if len(enable) != 1:
             raise core.PyrtlError('error, enable signal not exactly 1 bit')
 
-        if not conditional.ConditionalUpdate.currently_under_condition():
+        if conditional.ConditionalUpdate.currently_under_condition():
+            conditional.ConditionalUpdate._build_write_port(self, addr, data, enable)
+        else:
+            self._build_write_port(addr, data, enable)
+
+    def _build_read_port(self, addr):
+        data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
+        readport_net = core.LogicNet(
+            op='m',
+            op_param=(self.id, self),
+            args=(addr,),
+            dests=(data,))
+        self.block.add_net(readport_net)
+        self.readport_nets.append(readport_net)
+        return data
+
+    def _build_write_port(self, addr, data, enable):
             writeport_net = core.LogicNet(
                 op='@',
                 op_param=(self.id, self),
@@ -99,5 +107,3 @@ class MemBlock(object):
                 dests=tuple())
             self.block.add_net(writeport_net)
             self.writeport_nets.append(writeport_net)
-        else:
-            conditional.ConditionalUpdate._memblock_set(self, addr, data, enable)

@@ -1,5 +1,5 @@
 """
-conditional contains the class for ConditionUpdate
+conditional contains the class for ConditionUpdate.
 """
 
 import core
@@ -55,7 +55,7 @@ class ConditionalUpdate(object):
         self.predicate_on_deck = shortcut_condition
         self.conditions_list_stack = [[]]
         self.register_predicate_map = {}  # map reg -> [(pred, rhs), ...]
-        self.memblock_predicate_map = {}  # map mem -> [(pred, addr, data, enable), ...]
+        self.memblock_write_predicate_map = {}  # map mem -> [(pred, addr, data, enable), ...]
 
     def __enter__(self):
         # if we are entering a context to contain multiple conditions
@@ -79,8 +79,8 @@ class ConditionalUpdate(object):
         self.conditions_list_stack.pop()
         ConditionalUpdate.depth -= 1
         if self.depth == 0:
-            self._register_finalize()
-            # self._mem_finalize()
+            self._finalize_registers()
+            self._finalize_memblocks()
             ConditionalUpdate.current = None
         if self.depth < 0:
             raise core.PyrtlInternalError()
@@ -91,7 +91,7 @@ class ConditionalUpdate(object):
 
     @property
     def default(self):
-        """Property used to entery the context of the default case."""
+        """Property used to enter the context of the default case."""
         self.predicate_on_deck = True
         return self
 
@@ -101,38 +101,59 @@ class ConditionalUpdate(object):
         return cls.depth > 0
 
     @classmethod
-    def _register_set(cls, reg, rhs):
+    def _build_register(cls, reg, rhs):
+        """Stores the register details until finalize is called."""
         if cls.depth == 0:
             raise core.PyrtlError('error, you are doing *something* wrong with ConditionalUpdate')
         p = cls.current._current_select()
         # if map entry not there, set to [], then append the tuple (p, rhs)
         cls.current.register_predicate_map.setdefault(reg, []).append((p, rhs))
 
-    def _register_finalize(self):
+    def _finalize_registers(self):
+        """Build the required muxes and call back to Register to finalize the register build."""
         from helperfuncs import mux
         for reg in self.register_predicate_map:
             result = reg  # TODO: add check for default case, not feedback then
             # TODO: right now this is totally not optimzied, should use muxes
             # in conjuction with predicates to encode efficiently.
             regpredlist = self.register_predicate_map[reg]
-            if regpredlist == []:
-                raise core.PyrtlError('error, Register in ConditionalUpdate not assigned')
             for p, rhs in regpredlist:
                 result = mux(p, truecase=rhs, falsecase=result)
-            reg.reg_in = result
-            net = core.LogicNet('r', None, args=(result,), dests=(reg,))
-            reg.block.add_net(net)
+            reg._build_register(result)
 
-    def _memblock_get(self, addr):
-        raise NotImplementedError
+    @classmethod
+    def _build_read_port(cls, mem, addr):
+        # TODO: reduce number of ports through collapsing reads
+        return mem._build_read_port(addr)
 
-    def _memblock_set(self, addr, data, enable):
-        raise NotImplementedError
+    @classmethod
+    def _build_write_port(cls, mem, addr, data, enable):
+        """Stores the write-port details until finalize is called."""
+        if cls.depth == 0:
+            raise core.PyrtlError('error, you are doing *something* wrong with ConditionalUpdate')
+        p = cls.current._current_select()
+        # if map entry not there, set to [], then append the tuple (p, ...)
+        cls.current.memblock_write_predicate_map.setdefault(mem, []).append((p, addr, data, enable))
 
-    def _memblock_finalize(self):
-        raise NotImplementedError
+    def _finalize_memblocks(self):
+        """Build the required muxes and call back to MemBlock to finalize the write port build."""
+        from helperfuncs import mux
+        for mem in self.memblock_write_predicate_map:
+            is_first = True
+            for p, addr, data, enable in self.memblock_write_predicate_map[mem]:
+                if is_first:
+                    combined_enable = mux(p, truecase=enable, falsecase=wire.Const(0))
+                    combined_addr = addr
+                    combined_data = data
+                    is_first = False
+                else:
+                    combined_enable = mux(p, truecase=enable, falsecase=combined_enable)
+                    combined_addr = mux(p, truecase=addr, falsecase=combined_addr)
+                    combined_data = mux(p, truecase=data, falsecase=combined_data)
+            mem._build_write_port(combined_addr, combined_data, combined_enable)
 
     def _current_select(self):
+        """Function to calculate the current "predicate" in the current context."""
         select = None
 
         # helper to create the conjuction of predicates
@@ -153,5 +174,6 @@ class ConditionalUpdate(object):
             # include the predicate for the current one (not negated)
             select = and_with_possible_none(select, predlist[-1])
 
-        assert(select is not None)
+        if select is None:
+            raise core.PyrtlError('error, update inside ConditionalUpdate not covered by condition')
         return select
