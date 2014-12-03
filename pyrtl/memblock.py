@@ -48,19 +48,13 @@ class MemBlock(object):
         self.writeport_nets = []
         self.id = core.Block.next_memid()
 
-        if conditional.ConditionalUpdate.current is None:
-            self.is_conditional = False
-        else:
-            self.is_conditional = True
-            conditional.ConditionalUpdate.current._memblock_init(self)
-
     def __getitem__(self, item):
         item = helperfuncs.as_wires(item, block=self.block)
         if len(item) != self.addrwidth:
             raise core.PyrtlError('error, width of memblock index "%s" is %d, '
                                   'addrwidth is %d' % (item.name, len(item), self.addrwidth))
         addr = item
-        if not self.is_conditional:
+        if not conditional.ConditionalUpdate.currently_under_condition():
             data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
             readport_net = core.LogicNet(
                 op='m',
@@ -75,7 +69,6 @@ class MemBlock(object):
 
     def __setitem__(self, item, val):
         # TODO: use "as_wires" to convert item and val if needed
-        # TODO: check that conditional memory not being set in a condition
 
         # check that 'item' is a valid address vector
         if not isinstance(item, wire.WireVector):
@@ -98,7 +91,7 @@ class MemBlock(object):
         if len(enable) != 1:
             raise core.PyrtlError('error, enable signal not exactly 1 bit')
 
-        if not self.is_conditional:
+        if not conditional.ConditionalUpdate.currently_under_condition():
             writeport_net = core.LogicNet(
                 op='@',
                 op_param=(self.id, self),

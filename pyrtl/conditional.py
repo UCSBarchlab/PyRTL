@@ -123,9 +123,6 @@ class ConditionalUpdate(object):
             net = core.LogicNet('r', None, args=(result,), dests=(reg,))
             reg.block.add_net(net)
 
-    def _memblock_init(self, memblock):
-        raise NotImplementedError
-
     def _memblock_get(self, addr):
         raise NotImplementedError
 
