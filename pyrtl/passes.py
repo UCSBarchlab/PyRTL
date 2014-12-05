@@ -493,7 +493,6 @@ def synthesize(update_working_block=True, block=None):
         _decompose(net, wirevector_map, block_out)
 
     block_out.wirevector_map = wirevector_map
-    block_out.reverse_wirevector_map = {value: key for key, value in wirevector_map.viewitems()}
     if update_working_block:
         core.set_working_block(block_out)
     return block_out

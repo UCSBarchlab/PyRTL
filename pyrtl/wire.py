@@ -48,18 +48,18 @@ class WireVector(object):
         self.block.add_wirevector(self)
 
     def __str__(self):
-        return self.get_original_name()
-
-    def raw_name(self):
-        return ''.join([self.name, '/', str(self.bitwidth), self.code])
-
-    def get_original_name(self, appendix=""):
-        if self not in self.block.reverse_wirevector_map.viewkeys():
-            return ''.join((self.raw_name(), appendix))
+        inv_wirevector_map = {value: key for key, value
+            in self.block.wirevector_map.viewitems()}  # This is very inefficient...
+        #  i don't just use 'if self not in self.block.wirevector_map.viewvalues():'
+        #  because it actually calls the __eq__ operator on the wirevectors
+        if self not in inv_wirevector_map.viewkeys():
+            return self._raw_name()
         else:
-            source_set = self.block.reverse_wirevector_map[self]
-            return source_set[0].get_original_name(
-                ''.join(("_part_", str(source_set[1]), appendix)))
+            source_set = inv_wirevector_map[self]
+            return ''.join((str(source_set[0]), "_part_", str(source_set[1])))
+
+    def _raw_name(self):
+        return ''.join([self.name, '/', str(self.bitwidth), self.code])
 
     def __ilshift__(self, other):
         other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
