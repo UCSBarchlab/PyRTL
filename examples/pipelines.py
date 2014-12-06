@@ -179,7 +179,12 @@ class MipsCore(Pipeline):
         control_signals = self.main_decoder(opcode)
 
         fwd_op_1, fwd_op_2 = self.decoder_forwarding_unit(rs, rt)
-        self.write_register = self.unless_stall(self._stall, mux(control_signals["regdest"], rt, rd))
+        write_register = switch(concat(control_signals["regdest1"], control_signals["regdest0"]), {
+            SwitchDefault("2'b00"): rt,
+            "2'b01": rd,
+            "2'b10": 31,
+            })
+        self.write_register = self.unless_stall(self._stall, write_register)
 
         # unconditional jumps
         jump = self.unless_stall(self._stall, control_signals["jump"])
@@ -215,7 +220,8 @@ class MipsCore(Pipeline):
         self.fwd_op_1 = fwd_op_1
         self.fwd_op_2 = fwd_op_2
         self.immed = self.unless_stall(self._stall, immed)
-        self.memtoreg = self.unless_stall(self._stall, control_signals["memtoreg"])
+        self.memtoreg = self.unless_stall(self._stall,
+                            concat(control_signals["memtoreg1"], control_signals["memtoreg0"]))
         self.memwrite = self.unless_stall(self._stall, control_signals["memwrite"])
         self.regwrite = self.unless_stall(self._stall, control_signals["regwrite"])
         self.rs = self.unless_stall(self._stall, rs)
@@ -245,9 +251,10 @@ class MipsCore(Pipeline):
 
         alu_result, zero = self.alu(alu_ctrl, alu_op_1, alu_op_2)
         self._alu_result <<= alu_result
+        self.alu_result = self._alu_result
         self.memtoreg = self.memtoreg
         self.memwrite = self.memwrite
-        self.alu_result = self._alu_result
+        self.pc_incr = self.pc_incr
         self.regwrite = self.regwrite
         self.write_register = self.write_register
 
@@ -261,10 +268,13 @@ class MipsCore(Pipeline):
         read_data = dmem[address]
 
         self.alu_result = self.alu_result
-        self.write_data = mux(self.memtoreg, self.alu_result, read_data)
-        self.memtoreg = self.memtoreg
         self.read_data = read_data
         self.regwrite = self.regwrite
+        self.write_data = switch(self.memtoreg, {
+            SwitchDefault("2'b00"): self.alu_result,
+            "2'b01": read_data,
+            "2'b10": self.pc_incr + 4,
+            })
         self.write_register = self.write_register
 
     def stage4_writeback(self):
@@ -277,43 +287,47 @@ class MipsCore(Pipeline):
 
     def main_decoder(self, opcode):
         #                       SIGNALS
-        #          O O O O O O  A A A B J M M R R
-        #          P P P P P P  L L L R U E E E E
-        #          C C C C C C  U U U A M M M G G
-        #          O O O O O O  O O S N P T W D W
-        #          D D D D D D  P P R C   R R S R
-        #  Inst    E E E E E E  1 0 C H   G I T I
-        #          5 4 3 2 1 0
-        # ---------------------------------------
-        # R-format 0 0 0 0 0 0  1 0 0 0 0 0 0 1 1
-        # lw       1 0 0 0 1 1  0 0 1 0 0 1 0 0 1
-        # sw       1 0 1 0 1 1  0 0 1 0 0 X 1 X 0
-        # beq      0 0 0 1 0 0  0 1 0 1 0 X 0 X 0
-        # j        0 0 0 0 1 0  0 0 X 0 1 X 0 X 0
-        # addi     0 0 1 0 0 0  0 0 1 0 0 0 0 0 1
+        #          O O O O O O  A A A B J M M M R R R
+        #          P P P P P P  L L L R U E E E E E E
+        #          C C C C C C  U U U A M M M M G G G
+        #          O O O O O O  O O S N P T T W D D W
+        #          D D D D D D  P P R C   R R R S S R
+        #  Inst    E E E E E E  1 0 C H   G G I T T I
+        #          5 4 3 2 1 0            1 0   1 0
+        # -------------------------------------------
+        # R-format 0 0 0 0 0 0  1 0 0 0 0 0 0 0 0 1 1
+        # lw       1 0 0 0 1 1  0 0 1 0 0 0 1 0 0 0 1
+        # sw       1 0 1 0 1 1  0 0 1 0 0 X X 1 X X 0
+        # beq      0 0 0 1 0 0  0 1 0 1 0 X X 0 X X 0
+        # j        0 0 0 0 1 0  0 0 X 0 1 X X 0 X X 0
+        # jal      0 0 0 0 1 1  X X X X 1 1 0 0 1 0 1
+        # addi     0 0 1 0 0 0  0 0 1 0 0 0 0 0 0 0 1
 
         r_format_inst = opcode == "6'b000000"
         lw_inst       = opcode == "6'b100011"
         sw_inst       = opcode == "6'b101011"
         j_inst        = opcode == "6'b000010"
+        jal_inst      = opcode == "6'b000011"
         beq_inst      = opcode == "6'b000100"
         addi_inst     = opcode == "6'b001000"
 
         control_signals = {}
 
-        control_signals["aluop0"]   = beq_inst
-        control_signals["aluop1"]   = r_format_inst
+        control_signals["aluop0"]    = beq_inst
+        control_signals["aluop1"]    = r_format_inst
 
-        control_signals["alusrc"]   = lw_inst | sw_inst | addi_inst
+        control_signals["alusrc"]    = lw_inst | sw_inst | addi_inst
 
-        control_signals["branch"]   = beq_inst
-        control_signals["jump"]     = j_inst
+        control_signals["branch"]    = beq_inst
+        control_signals["jump"]      = j_inst | jal_inst
 
-        control_signals["memtoreg"] = lw_inst
-        control_signals["memwrite"] = sw_inst
+        control_signals["memtoreg0"] = lw_inst
+        control_signals["memtoreg1"] = jal_inst
+        control_signals["memwrite"]  = sw_inst
 
-        control_signals["regdest"]  = r_format_inst
-        control_signals["regwrite"] = r_format_inst | lw_inst | addi_inst
+        control_signals["regdest0"]  = r_format_inst
+        control_signals["regdest1"]  = jal_inst
+        control_signals["regwrite"]  = r_format_inst | lw_inst | jal_inst | addi_inst
 
         return control_signals
 
@@ -432,7 +446,7 @@ class MipsCore(Pipeline):
 
     def decoder_hazard_unit(self):
         # get a reference to some pipeline registers that don't exist yet
-        id_ex_memtoreg = self.route_future_pipeline_reg(1, bitwidth=1, name="memtoreg")
+        id_ex_memtoreg = self.route_future_pipeline_reg(1, bitwidth=2, name="memtoreg")[0]
         id_ex_write_register = self.route_future_pipeline_reg(1, bitwidth=5, name="write_register")
 
         if_id_instr = self._if_instr
@@ -551,7 +565,7 @@ sim.memvalue = {
     (2, 16): 0x01084820, # add $t1, $t0, $t0
     (2, 20): 0xac090004, # sw $t1, 4($zero)
     (2, 24): 0x8c080004, # lw $t0, 4($zero)
-    (2, 28): 0x08000001, # j loop_begin
+    (2, 28): 0x0c000001, # jal loop_begin
                          # loop_end:
 }
 
