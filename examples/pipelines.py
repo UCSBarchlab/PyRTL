@@ -147,7 +147,6 @@ class MipsCore(Pipeline):
         self._jump_address = WireVector(self._addrwidth, 'jump_address')
         self._write_data = WireVector(32, 'write_data')
         self._alu_result = WireVector(32, 'alu_result')
-        self._zero = WireVector(1, 'zero')
         self._regfile = MemBlock(32, 5, 'regfile')
 
         super(MipsCore, self).__init__()
@@ -179,7 +178,7 @@ class MipsCore(Pipeline):
 
         control_signals = self.main_decoder(opcode)
 
-        self.fwd_op_1, self.fwd_op_2 = self.decoder_forwarding_unit(rs, rt)
+        fwd_op_1, fwd_op_2 = self.decoder_forwarding_unit(rs, rt)
         self.write_register = self.unless_stall(self._stall, mux(control_signals["regdest"], rt, rd))
 
         # unconditional jumps
@@ -197,13 +196,24 @@ class MipsCore(Pipeline):
         # conditional jump (branch)
         branch = self.unless_stall(self._stall, control_signals["branch"])
 
-        # TODO: early branch calculation? reduce stalls
-        # currently branches calculated in execute having the effect of two delay slots
+        immed_shifted = concat(immed, Const(0, bitwidth=2))[:32]
+        self._computed_address <<= self.pc_incr + immed_shifted
 
-        self.aluop = self.unless_stall(self._stall, concat(control_signals["aluop1"], control_signals["aluop0"]))
+        aluop = concat(control_signals["aluop1"], control_signals["aluop0"])
+        alusrc = control_signals["alusrc"]
+        alu_op_1 = fwd_op_1
+        alu_op_2 = mux(alusrc, fwd_op_2, immed)
+        alu_ctrl = self.alu_ctrl(aluop, immed)
+        alu_result, zero = self.alu(alu_ctrl, alu_op_1, alu_op_2)
+        should_branch = alu_result == 0
+        self._pcsrc <<= branch & should_branch
+
+        self.aluop = self.unless_stall(self._stall, aluop)
         self.funct = self.unless_stall(self._stall, funct)
-        self.alusrc = self.unless_stall(self._stall, control_signals["alusrc"])
+        self.alusrc = self.unless_stall(self._stall, alusrc)
         self.branch = branch
+        self.fwd_op_1 = fwd_op_1
+        self.fwd_op_2 = fwd_op_2
         self.immed = self.unless_stall(self._stall, immed)
         self.memtoreg = self.unless_stall(self._stall, control_signals["memtoreg"])
         self.memwrite = self.unless_stall(self._stall, control_signals["memwrite"])
@@ -224,26 +234,20 @@ class MipsCore(Pipeline):
 
         fwd_op_1, fwd_op_2 = self.fwd_op_1, self.fwd_op_2
 
-        alu_op_1 = self.unless_stall(self._stall, fwd_op_1)
-        alu_op_2 = self.unless_stall(self._stall, mux(self.alusrc, fwd_op_2, self.immed))
+        alu_op_1 = fwd_op_1
+        alu_op_2 = mux(self.alusrc, fwd_op_2, self.immed)
 
         alu_ctrl = self.alu_ctrl(self.aluop, self.immed)
-
-        immed_shifted = concat(self.immed, Const(0, bitwidth=2))[:32]
 
         # needed for next stage and sw
         # check that regread2 is correct
         self.regread2 = fwd_op_2
 
-        self._computed_address <<= self.pc_incr + immed_shifted
-
         alu_result, zero = self.alu(alu_ctrl, alu_op_1, alu_op_2)
         self._alu_result <<= alu_result
-        self._zero <<= alu_result == 0
-        self._pcsrc <<= self.branch & self._zero
         self.memtoreg = self.memtoreg
         self.memwrite = self.memwrite
-        self.alu_result, self.zero = self._alu_result, self._zero
+        self.alu_result = self._alu_result
         self.regwrite = self.regwrite
         self.write_register = self.write_register
 
@@ -541,14 +545,13 @@ sim = Simulation(tracer=sim_trace)
 sim.memvalue = {
     (2, 0): 0x21080003,  # addi $t0, $t0, 3
                          # loop_begin:
-    (2, 4): 0x11090007,  # beq $t0, $t1, loop_end
-    (2, 8): 0, # NOOP    # currently two branch delay slots are needed
-    (2, 12): 0, # NOOP
-    (2, 16): 0x21080001, # addi $t0, $t0, 1
-    (2, 20): 0x01084820, # add $t1, $t0, $t0
-    (2, 24): 0xac090004, # sw $t1, 4($zero)
-    (2, 28): 0x8c080004, # lw $t0, 4($zero)
-    (2, 32): 0x08000001, # j loop_begin
+    (2, 4): 0x11090006,  # beq $t0, $t1, loop_end
+    (2, 8): 0x210a0003,  # addi $t2, $t0, 3 ; delay slot awesomeness
+    (2, 12): 0x21080001, # addi $t0, $t0, 1
+    (2, 16): 0x01084820, # add $t1, $t0, $t0
+    (2, 20): 0xac090004, # sw $t1, 4($zero)
+    (2, 24): 0x8c080004, # lw $t0, 4($zero)
+    (2, 28): 0x08000001, # j loop_begin
                          # loop_end:
 }
 
