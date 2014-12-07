@@ -48,8 +48,8 @@ class WireVector(object):
         self.block.add_wirevector(self)
 
     def __str__(self):
-        inv_wirevector_map = {value: key for key, value
-            in self.block.wirevector_map.viewitems()}  # This is very inefficient...
+        inv_wirevector_map = {value: key for key, value in
+                                self.block.wirevector_map.viewitems()}  # This is very inefficient
         #  i don't just use 'if self not in self.block.wirevector_map.viewvalues():'
         #  because it actually calls the __eq__ operator on the wirevectors
         if self not in inv_wirevector_map.viewkeys():
