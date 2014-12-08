@@ -1,7 +1,8 @@
 import sys
 from pprint import *
-sys.path.append("..")  # needed only if not installed
+sys.path.append("../..")  # needed only if not installed
 from pyrtl import *
+from elf_loader import *
 
 
 class Pipeline(object):
@@ -348,6 +349,16 @@ class MipsCore(Pipeline):
         return concat(*read_datas)
 
     def main_decoder(self, opcode, funct):
+        """
+        The main decoder is responsible for control signals for various instructions.
+        Adding support for instructions is a two step process where the control signals are
+        modified and extra logic in the appropriate stage is added.
+
+        The instruction support is good enough for most small C programs that do not depend on libc.
+        A good reference for instructions: https://engineering.purdue.edu/~ece437l/labs/lab3/files/MIPS_ISA.pdf
+        A more general reference: http://www.ece.cmu.edu/~ece447/s13/lib/exe/fetch.php?media=md00082-2b-mips32int-afp-05.01.pdf
+        Note that the current target is MIPS I/R2000 without coprocessor or floating point support.
+        """
         #                       SIGNALS
         #          O O O O O O  A A A B J M M M M M R R R
         #          P P P P P P  L L L R U E E E E E E E E
@@ -616,40 +627,8 @@ testcore = MipsCore(addrwidth=32)
 sim_trace = SimulationTrace()
 sim = Simulation(tracer=sim_trace)
 
-# sim.memvalue = {
-#     (2, 0): 0x2009000a,  # addi $t1, $zero, 10
-#     (2, 4): 0x20020001,  # addi $v0, $zero, 1
-#     (2, 8): 0x20030002,  # addi $v1, $zero, 1
-#     (2, 12): 0x00431820, # add $v1, $v0, $v1
-#     (2, 16): 0x0043202a, # slt $a0, $v0, $v1
-#     (2, 20): 0x0062282a, # slt $a1, $v1, $v0
-#     (2, 24): 0x00852820, # add $a1, $a0, $a1
-#     (2, 28): 0xac050004, # sw $a1, 4($zero)
-#     (2, 32): 0x8c030004, # lw $v1, 4($zero)
-#                          # loop_begin:
-#     (2, 36): 0x11090006, # beq $t0, $t1, loop_end
-#     (2, 40): 0, # NOOP
-#     (2, 44): 0x8c080008, # lw $t0, 8($zero)
-#     (2, 48): 0, # NOOP
-#     # (2, 48): 0x01284020, # add $t0, $t1, $t0
-#     #                      # ; note: delay slot, correct behavior would have t0=10,
-#     #                      # ; but then t0 is overwritten next instr
-#     (2, 52): 0x21080001, # addi $t0, $t0, 1
-#     (2, 56): 0xac080008, # sw $t0, 8($zero)
-#     (2, 60): 0x08000009, # j loop_begin
-#                          # loop_end:
-#     (2, 64): 0,          # nop
-# }
-
-from elf_loader import *
-
-elf = load_elf(open('./mips-example2', 'r'))
+elf = load_elf(open('./a.out', 'r'))
 mem = build_program_memory(elf)
-
-regvalue = {
-    # testcore._pc: 0x400000,
-    # testcore._pc: Const(0xa, bitwidth=32),
-}
 
 memvalue = {
     testcore._umem: mem
@@ -678,68 +657,7 @@ memvalue = {
     # }
 }
 
-sim.initialize(regvalue, memvalue)
-
-# sim.memvalue = {
-#     (2, 0): 0x2009000a,  # addi $t1, $zero, 10
-#     (2, 4): 0x20020001,  # addi $v0, $zero, 1
-#     (2, 8): 0x20030002,  # addi $v1, $zero, 1
-#     (2, 12): 0x00431820, # add $v1, $v0, $v1
-#     (2, 16): 0x0043202a, # slt $a0, $v0, $v1
-#     (2, 20): 0x0062282a, # slt $a1, $v1, $v0
-#     (2, 24): 0x00852820, # add $a1, $a0, $a1
-#     (2, 28): 0xac050004, # sw $a1, 4($zero)
-#     (2, 32): 0x8c030004, # lw $v1, 4($zero)
-#                          # loop_begin:
-
-#     (2, 36): 0x20020001, # li $v0, 1
-#     (2, 40): 0x00082020, # move $a0, $t0
-#     (2, 44): 0x0000000c, # syscall
-
-#     (2, 48): 0x11090006, # beq $t0, $t1, loop_end
-#     (2, 52): 0, # NOOP
-#     (2, 56): 0x8c080008, # lw $t0, 8($zero)
-#     (2, 60): 0, # NOOP
-#     # (2, 48): 0x01284020, # add $t0, $t1, $t0
-#     #                      # ; note: delay slot, correct behavior would have t0=10,
-#     #                      # ; but then t0 is overwritten next instr
-#     (2, 64): 0x21080001, # addi $t0, $t0, 1
-#     (2, 68): 0xac080008, # sw $t0, 8($zero)
-#     (2, 72): 0x08000009, # j loop_begin
-#                          # loop_end:
-#     (2, 76): 0,          # nop
-
-#     (2, 80): 0x2002000a, # li $v0, 10
-#     (2, 84): 0x2004002a, # li $a0, 42
-#     (2, 88): 0x0000000c, # syscall
-# }
-
-# simple
-# sim.memvalue = {
-#     (2, 0): 0x21080003,  # addi $t0, $t0, 3
-#                          # loop_begin:
-#     (2, 4): 0x21290001,  # addi $t1, $t1, 1
-#     # (2, 8): 0x11090008,  # beq $t0, $t1, loop_end
-#     (2, 8): 0x11090008,  # beq $t0, $t1, loop_end
-#     (2, 12): 0x210a0003, # addi $t2, $t0, 3 ; delay slot awesomeness
-#     (2, 16): 0x21080001, # addi $t0, $t0, 1
-#     (2, 20): 0x01084820, # add $t1, $t0, $t0
-#     (2, 24): 0xac090004, # sw $t1, 4($zero)
-#     (2, 28): 0x8c080004, # lw $t0, 4($zero)
-#     # (2, 32): 0,          # nop
-#     # (2, 36): 0x21090001, # addi $t1, $t0, 1
-#     # (2, 40): 0x0c100001, # jal loop_begin
-#     #                      # loop_end:
-#     (2, 32): 0,
-#     (2, 36): 0x21090001, # addi $t1, $t0, 1
-#     (2, 40): 0x21280001, # addi $t0, $t1, 1
-#     # (2, 44): 0x0c100001, # jal loop_begin
-#     (2, 44): 0x08000001, # j loop_begin
-#                          # loop_end:
-#     (2, 48): 0x20020001, # li $v0, 1
-#     (2, 52): 0x00082020, # move $a0, $t0
-#     (2, 56): 0x0000000c, # syscall
-# }
+sim.initialize(memory_value_map=memvalue)
 
 running = True
 steps = 0
@@ -755,9 +673,8 @@ def syscall_c_dispatch():
         actual_syscall_func(v0=None, a0=sim_value(testcore._a1), a1=sim_value(testcore._a2), a2=sim_value(testcore._a3), a3=None)
 
 def syscall_default(v0=sim_value(testcore._v0), a0=sim_value(testcore._a0), a1=sim_value(testcore._a1), a2=sim_value(testcore._a2), a3=sim_value(testcore._a3)):
+    print "Syscall %i not implemented" % (v0)
     print "v0", v0, "a0", a0, "a1", a1, "a2", a2, "a3", a3
-    print "Syscall %i not implemented" % (sim_value(testcore._v0))
-    # syscall_exit()
 
 def syscall_print_int(v0=sim_value(testcore._v0), a0=sim_value(testcore._a0), a1=sim_value(testcore._a1), a2=sim_value(testcore._a2), a3=sim_value(testcore._a3)):
     print "print_int %i" % (a0)
@@ -766,9 +683,6 @@ def syscall_exit(v0=sim_value(testcore._v0), a0=sim_value(testcore._a0), a1=sim_
     global running
     running = False
     print "Exiting with return %i!" % (a0)
-
-def syscall_awesome(v0=sim_value(testcore._v0), a0=sim_value(testcore._a0), a1=sim_value(testcore._a1), a2=sim_value(testcore._a2), a3=sim_value(testcore._a3)):
-    print "this is really really awesome", a1
 
 # syscall_map = {
 #     1: syscall_print_int,
@@ -779,7 +693,6 @@ syscall_map = {
     4000: syscall_c_dispatch,
     4001: syscall_print_int,
     4010: syscall_exit,
-    4044: syscall_awesome,
 }
 
 set_pc = True
@@ -788,14 +701,12 @@ while True:
     if running is False:
         break
 
+    # we need to override the starting pc to be the entry point of the ELF file
     sim.step({
         # testcore._in_pc: 0x400000,
         testcore._in_pc: get_entry(elf),
         testcore._override_pc: 1 if set_pc else 0,
         })
-
-    # print hex(sim_value(testcore._pc))
-    # print sim_value(testcore._jump)
 
     if steps == 0:
         set_pc = False
@@ -815,17 +726,6 @@ while True:
 # output_to_verilog(open("pipelines.v", "w"))
 
 # pprint(sim.memvalue)
-
-# from io import BytesIO
-# from elf_loader import *
-
-# filename = BytesIO()
-# filename.write('./test2-c2')
-# elf = load_elf(open('./test2-c2', 'r'))
-# mem = build_program_memory(elf)
-# new_mem = dict(((2, key), value) for (key, value) in mem.items())
-# print new_mem
-# pprint(mem)
 
 # print working_block()
 # synthesize()
