@@ -231,23 +231,25 @@ class MipsCore(Pipeline):
 
     def stage2_execute(self):
         """ perform the alu operations """
-        # fwd_op_1, fwd_op_2 = self.execution_forwarding_unit()
-
-        # alu_op_1 = fwd_op_1
-        # alu_op_2 = mux(self.alusrc, fwd_op_2, self.immed)
-
-        # self.fwd_op_1, self.fwd_op_2 = fwd_op_1, fwd_op_2
-
-        fwd_op_1, fwd_op_2 = self.fwd_op_1, self.fwd_op_2
+        fwd_op_1, fwd_op_2 = self.execution_forwarding_unit()
 
         alu_op_1 = fwd_op_1
         alu_op_2 = mux(self.alusrc, fwd_op_2, self.immed)
+
+        self.fwd_op_1, self.fwd_op_2 = fwd_op_1, fwd_op_2
+
+        # fwd_op_1, fwd_op_2 = self.fwd_op_1, self.fwd_op_2
+
+        # alu_op_1 = fwd_op_1
+        # alu_op_2 = mux(self.alusrc, fwd_op_2, self.immed)
 
         alu_ctrl = self.alu_ctrl(self.aluop, self.immed)
 
         # needed for next stage and sw
         # check that regread2 is correct
         self.regread2 = fwd_op_2
+
+        self.alu_op_1, self.alu_op_2 = alu_op_1, alu_op_2
 
         alu_result, zero = self.alu(alu_ctrl, alu_op_1, alu_op_2)
         self._alu_result <<= alu_result
@@ -455,64 +457,64 @@ class MipsCore(Pipeline):
 
         return id_ex_memtoreg & ((id_ex_write_register == if_id_rs) | (id_ex_write_register == if_id_rt))
 
-    # def execution_forward_ctrl(self, fwd_ex, fwd_mem):
-    #     fwd_ctrl = switch(concat(fwd_ex, fwd_mem), {
-    #         SwitchDefault("2'b00"): "2'b00",
-    #         "2'b10": "2'b10",
-    #         "2'b11": "2'b10",
-    #         "2'b01": "2'b01",
-    #         })
-    #     return fwd_ctrl
+    def execution_forward_ctrl(self, fwd_ex, fwd_mem):
+        fwd_ctrl = switch(concat(fwd_ex, fwd_mem), {
+            SwitchDefault("2'b00"): "2'b00",
+            "2'b10": "2'b10",
+            "2'b11": "2'b10",
+            "2'b01": "2'b01",
+            })
+        return fwd_ctrl
 
-    # def execution_forward_op(self, fwd_ctrl, register, ex_mem_alu_result, mem_wb_alu_result):
-    #     fwd_op = switch(fwd_ctrl, {
-    #         SwitchDefault("2'b00"): self._regfile[register],
-    #         "2'b01": mem_wb_alu_result,
-    #         "2'b10": ex_mem_alu_result,
-    #         })
-    #     return fwd_op
+    def execution_forward_op(self, fwd_ctrl, register, ex_mem_alu_result, mem_wb_alu_result):
+        fwd_op = switch(fwd_ctrl, {
+            SwitchDefault("2'b00"): self._regfile[register],
+            "2'b01": mem_wb_alu_result,
+            "2'b10": ex_mem_alu_result,
+            })
+        return fwd_op
 
-    # def execution_forwarding_unit(self):
-    #     # get a reference to some pipeline registers that don't exist yet
-    #     ex_mem_alu_result = self.route_future_pipeline_reg(2, bitwidth=32, name="alu_result")
-    #     ex_mem_regwrite = self.route_future_pipeline_reg(2, bitwidth=1, name="regwrite")
-    #     ex_mem_write_register = self.route_future_pipeline_reg(2, bitwidth=5, name="write_register")
+    def execution_forwarding_unit(self):
+        # get a reference to some pipeline registers that don't exist yet
+        ex_mem_alu_result = self.route_future_pipeline_reg(2, bitwidth=32, name="alu_result")
+        ex_mem_regwrite = self.route_future_pipeline_reg(2, bitwidth=1, name="regwrite")
+        ex_mem_write_register = self.route_future_pipeline_reg(2, bitwidth=5, name="write_register")
 
-    #     mem_wb_alu_result = self.route_future_pipeline_reg(3, bitwidth=32, name="alu_result")
-    #     mem_wb_regwrite = self.route_future_pipeline_reg(3, bitwidth=1, name="regwrite")
-    #     mem_wb_write_register = self.route_future_pipeline_reg(3, bitwidth=5, name="write_register")
+        mem_wb_alu_result = self.route_future_pipeline_reg(3, bitwidth=32, name="write_data")
+        mem_wb_regwrite = self.route_future_pipeline_reg(3, bitwidth=1, name="regwrite")
+        mem_wb_write_register = self.route_future_pipeline_reg(3, bitwidth=5, name="write_register")
 
-    #     # tests for ex_mem registers
-    #     ex_mem_regwrite_enabled = ex_mem_regwrite == 1
-    #     ex_mem_write_register_is_nonzero = ex_mem_write_register != 0
+        # tests for ex_mem registers
+        ex_mem_regwrite_enabled = ex_mem_regwrite == 1
+        ex_mem_write_register_is_nonzero = ex_mem_write_register != 0
 
-    #     ex_mem_write_register_eq_rs = ex_mem_write_register == self.rs
-    #     ex_mem_write_register_eq_rt = ex_mem_write_register == self.rt
+        ex_mem_write_register_eq_rs = ex_mem_write_register == self.rs
+        ex_mem_write_register_eq_rt = ex_mem_write_register == self.rt
 
-    #     # tests for mem_wb registers
-    #     mem_wb_regwrite_enabled = mem_wb_regwrite == 1
-    #     mem_wb_write_register_is_nonzero = mem_wb_write_register != 0
+        # tests for mem_wb registers
+        mem_wb_regwrite_enabled = mem_wb_regwrite == 1
+        mem_wb_write_register_is_nonzero = mem_wb_write_register != 0
 
-    #     mem_wb_write_register_eq_rs = mem_wb_write_register == self.rs
-    #     mem_wb_write_register_eq_rt = mem_wb_write_register == self.rt
+        mem_wb_write_register_eq_rs = mem_wb_write_register == self.rs
+        mem_wb_write_register_eq_rt = mem_wb_write_register == self.rt
 
-    #     # forward ex when regwrite for that stage is used, won't be written to $r0, and is one of the operands
-    #     fwd_a_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_rs
-    #     fwd_b_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_rt
+        # forward ex when regwrite for that stage is used, won't be written to $r0, and is one of the operands
+        fwd_a_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_rs
+        fwd_b_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_rt
 
-    #     # forward mem when regwrite for that stage is used, won't br written to $r0, isn't already being forwarded from ex, and is one of the operands
-    #     fwd_a_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~ex_mem_write_register_eq_rs & mem_wb_write_register_eq_rs
-    #     fwd_b_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~ex_mem_write_register_eq_rt & mem_wb_write_register_eq_rt
+        # forward mem when regwrite for that stage is used, won't br written to $r0, isn't already being forwarded from ex, and is one of the operands
+        fwd_a_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~ex_mem_write_register_eq_rs & mem_wb_write_register_eq_rs
+        fwd_b_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~ex_mem_write_register_eq_rt & mem_wb_write_register_eq_rt
 
-    #     # get the appropriate forwarding control for the forwarding selection
-    #     forward_a = self.execution_forward_ctrl(fwd_a_ex, fwd_a_mem)
-    #     forward_b = self.execution_forward_ctrl(fwd_b_ex, fwd_b_mem)
+        # get the appropriate forwarding control for the forwarding selection
+        forward_a = self.execution_forward_ctrl(fwd_a_ex, fwd_a_mem)
+        forward_b = self.execution_forward_ctrl(fwd_b_ex, fwd_b_mem)
 
-    #     # get the operand from the correct place based on the control
-    #     fwd_op_1 = self.execution_forward_op(forward_a, self.rs, ex_mem_alu_result, mem_wb_alu_result)
-    #     fwd_op_2 = self.execution_forward_op(forward_b, self.rt, ex_mem_alu_result, mem_wb_alu_result)
+        # get the operand from the correct place based on the control
+        fwd_op_1 = self.execution_forward_op(forward_a, self.rs, ex_mem_alu_result, mem_wb_alu_result)
+        fwd_op_2 = self.execution_forward_op(forward_b, self.rt, ex_mem_alu_result, mem_wb_alu_result)
 
-    #     return fwd_op_1, fwd_op_2
+        return fwd_op_1, fwd_op_2
 
 # testcore = TrivialPipelineExample()
 testcore = MipsCore(addrwidth=24)
@@ -559,13 +561,22 @@ sim = Simulation(tracer=sim_trace)
 sim.memvalue = {
     (2, 0): 0x21080003,  # addi $t0, $t0, 3
                          # loop_begin:
-    (2, 4): 0x11090006,  # beq $t0, $t1, loop_end
-    (2, 8): 0x210a0003,  # addi $t2, $t0, 3 ; delay slot awesomeness
-    (2, 12): 0x21080001, # addi $t0, $t0, 1
-    (2, 16): 0x01084820, # add $t1, $t0, $t0
-    (2, 20): 0xac090004, # sw $t1, 4($zero)
-    (2, 24): 0x8c080004, # lw $t0, 4($zero)
-    (2, 28): 0x0c000001, # jal loop_begin
+    (2, 4): 0x21290002,  # addi $t1, $t1, 2
+    # (2, 8): 0x11090008,  # beq $t0, $t1, loop_end
+    (2, 8): 0x11090009,  # beq $t0, $t1, loop_end
+    (2, 12): 0x210a0003, # addi $t2, $t0, 3 ; delay slot awesomeness
+    (2, 16): 0x21080001, # addi $t0, $t0, 1
+    (2, 20): 0x01084820, # add $t1, $t0, $t0
+    (2, 24): 0xac090004, # sw $t1, 4($zero)
+    (2, 28): 0x8c080004, # lw $t0, 4($zero)
+    # (2, 32): 0,          # nop
+    # (2, 36): 0x21090001, # addi $t1, $t0, 1
+    # (2, 40): 0x0c100001, # jal loop_begin
+    #                      # loop_end:
+    (2, 32): 0,
+    (2, 36): 0x21090001, # addi $t1, $t0, 1
+    (2, 40): 0x21280001, # addi $t0, $t1, 1
+    (2, 44): 0x0c100001, # jal loop_begin
                          # loop_end:
 }
 
