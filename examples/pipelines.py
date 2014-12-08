@@ -139,15 +139,22 @@ class MipsCore(Pipeline):
     def __init__(self, addrwidth=5):
         """ all of the cross-pipeline signals are declared here """
         self._addrwidth = addrwidth  # a compile time constant
-        self._pcsrc = WireVector(1, 'pcsrc')
-        self._if_instr = WireVector(32, 'if_instr')
-        self._jump = WireVector(1, 'jump')
-        self._stall = WireVector(1, 'stall')
-        self._computed_address = WireVector(self._addrwidth, 'computed_address')
-        self._jump_address = WireVector(self._addrwidth, 'jump_address')
-        self._write_data = WireVector(32, 'write_data')
-        self._alu_result = WireVector(32, 'alu_result')
         self._regfile = MemBlock(32, 5, 'regfile')
+
+        self._if_instr = WireVector(32, 'if_instr')
+
+        self._pc = Register(self._addrwidth, 'pc')
+        self._pcsrc = WireVector(1, 'pcsrc')
+        self._stall = WireVector(1, 'stall')
+
+        self._computed_address = WireVector(self._addrwidth, 'computed_address')
+        self._jump = WireVector(1, 'jump')
+        self._jump_address = WireVector(self._addrwidth, 'jump_address')
+
+        self._alu_result = WireVector(32, 'alu_result')
+        self._write_data = WireVector(32, 'write_data')
+
+        self._syscall = Output(1, 'syscall')
 
         super(MipsCore, self).__init__()
 
@@ -156,11 +163,10 @@ class MipsCore(Pipeline):
 
     def stage0_fetch(self):
         """ update the PC, grab the instruction from imem """
-        pc = Register(self._addrwidth, 'pc')
         imem = MemBlock(32, self._addrwidth, 'imem')
-        instr = imem[pc]
-        pc_incr = pc + 4
-        pc.next <<= mux(self._jump, mux(self._pcsrc, pc_incr, self._computed_address), self._jump_address)
+        instr = imem[self._pc]
+        pc_incr = self._pc + 4
+        self._pc.next <<= mux(self._jump, mux(self._pcsrc, pc_incr, self._computed_address), self._jump_address)
 
         self._if_instr <<= instr
         self.pc_incr = pc_incr
@@ -176,7 +182,11 @@ class MipsCore(Pipeline):
         immed = instr[0:16].sign_extended(32)
         opcode = instr[26:]
 
-        control_signals = self.main_decoder(opcode)
+        target = instr[0:26]
+        # shamt = instr[6:11]
+        funct = instr[0:6]
+
+        control_signals = self.main_decoder(opcode, funct)
 
         fwd_op_1, fwd_op_2 = self.decoder_forwarding_unit(rs, rt)
         write_register = switch(concat(control_signals["regdest1"], control_signals["regdest0"]), {
@@ -190,32 +200,25 @@ class MipsCore(Pipeline):
         jump = self.unless_stall(self._stall, control_signals["jump"])
         self._jump <<= jump
 
-        target = instr[0:26]
-        # shamt = instr[6:11]
-        funct = instr[0:6]
-
-        target_shifted = concat(target, Const(0, bitwidth=2))
-        target_absolute = concat(self.pc_incr[self._addrwidth - 4:self._addrwidth], target_shifted)
+        target_shifted = concat(Const(0, bitwidth=4), target, Const(0, bitwidth=2))
+        target_absolute = (self._pc & Const(0xf0000000)) | target_shifted
         self._jump_address <<= self.unless_stall(self._stall, target_absolute)
 
         # conditional jump (branch)
         branch = self.unless_stall(self._stall, control_signals["branch"])
 
         immed_shifted = concat(immed, Const(0, bitwidth=2))[:32]
-        self._computed_address <<= self.pc_incr + immed_shifted
+        self._computed_address <<= self._pc + 4 + immed_shifted
 
         aluop = concat(control_signals["aluop1"], control_signals["aluop0"])
-        alusrc = control_signals["alusrc"]
-        alu_op_1 = fwd_op_1
-        alu_op_2 = mux(alusrc, fwd_op_2, immed)
         alu_ctrl = self.alu_ctrl(aluop, immed)
-        alu_result, zero = self.alu(alu_ctrl, alu_op_1, alu_op_2)
-        should_branch = alu_result == 0
+        branch_result, zero = self.alu(alu_ctrl, fwd_op_1, fwd_op_2)
+        should_branch = branch_result == 0
         self._pcsrc <<= branch & should_branch
 
         self.aluop = self.unless_stall(self._stall, aluop)
         self.funct = self.unless_stall(self._stall, funct)
-        self.alusrc = self.unless_stall(self._stall, alusrc)
+        self.alusrc = self.unless_stall(self._stall, control_signals["alusrc"])
         self.branch = branch
         self.fwd_op_1 = fwd_op_1
         self.fwd_op_2 = fwd_op_2
@@ -228,10 +231,12 @@ class MipsCore(Pipeline):
         self.rt = self.unless_stall(self._stall, rt)
         self.pc_incr = self.unless_stall(self._stall, self.pc_incr)
         self.opcode = self.unless_stall(self._stall, opcode)
+        self.special = control_signals["special"]
+        self.syscall = control_signals["syscall"]
 
     def stage2_execute(self):
         """ perform the alu operations """
-        fwd_op_1, fwd_op_2 = self.execution_forwarding_unit()
+        fwd_op_1, fwd_op_2 = self.execution_forwarding_unit(self.rs, self.rt)
 
         alu_op_1 = fwd_op_1
         alu_op_2 = mux(self.alusrc, fwd_op_2, self.immed)
@@ -244,6 +249,10 @@ class MipsCore(Pipeline):
         # alu_op_2 = mux(self.alusrc, fwd_op_2, self.immed)
 
         alu_ctrl = self.alu_ctrl(self.aluop, self.immed)
+
+        # syscall support
+        self._a0, self._a1, self._a2, self._a3, self._v0 = self.execution_forwarding_unit_args()
+        self._syscall <<= self.syscall
 
         # needed for next stage and sw
         # check that regread2 is correct
@@ -302,7 +311,7 @@ class MipsCore(Pipeline):
 
         return concat(*read_datas)
 
-    def main_decoder(self, opcode):
+    def main_decoder(self, opcode, funct):
         #                       SIGNALS
         #          O O O O O O  A A A B J M M M R R R
         #          P P P P P P  L L L R U E E E E E E
@@ -320,7 +329,24 @@ class MipsCore(Pipeline):
         # jal      0 0 0 0 1 1  X X X X 1 1 0 0 1 0 1
         # addi     0 0 1 0 0 0  0 0 1 0 0 0 0 0 0 0 1
 
-        r_format_inst = opcode == "6'b000000"
+        # Special Instructions
+        # Note that for special instructions, other signals above
+        # will be turned off to prevent ill side effects.
+        #                                    SIGNALS
+        #          O O O O O O  F F F F F F  S S
+        #          P P P P P P  U U U U U U  P Y
+        #          C C C C C C  N N N N N N  E S
+        #          O O O O O O  C C C C C C  C C
+        #          D D D D D D  T T T T T T  A A
+        #  Inst    E E E E E E               L L
+        #          5 4 3 2 1 0  5 4 3 2 1 1
+        # --------------------------------------
+        # syscall  0 0 0 0 0 0  0 0 1 1 0 0  1 1
+
+        syscall_inst  = (opcode == "6'b000000") & (funct == "6'b001100")
+        special_inst  = syscall_inst
+
+        r_format_inst = (opcode == "6'b000000") & ~special_inst
         lw_inst       = opcode == "6'b100011"
         sw_inst       = opcode == "6'b101011"
         j_inst        = opcode == "6'b000010"
@@ -345,6 +371,10 @@ class MipsCore(Pipeline):
         control_signals["regdest0"]  = r_format_inst
         control_signals["regdest1"]  = jal_inst
         control_signals["regwrite"]  = r_format_inst | lw_inst | jal_inst | addi_inst
+
+        control_signals["special"]   = special_inst
+
+        control_signals["syscall"]   = syscall_inst
 
         return control_signals
 
@@ -456,9 +486,6 @@ class MipsCore(Pipeline):
         fwd_op_1 = self.decoder_forward_op(forward_a, rs, id_ex_alu_result, ex_mem_alu_result, mem_wb_write_data)
         fwd_op_2 = self.decoder_forward_op(forward_b, rt, id_ex_alu_result, ex_mem_alu_result, mem_wb_write_data)
 
-        self.forward_a = forward_a
-        self.forward_b = forward_b
-
         return fwd_op_1, fwd_op_2
 
     def decoder_hazard_unit(self):
@@ -489,7 +516,7 @@ class MipsCore(Pipeline):
             })
         return fwd_op
 
-    def execution_forwarding_unit(self):
+    def execution_forwarding_unit(self, rs, rt):
         # get a reference to some pipeline registers that don't exist yet
         ex_mem_alu_result = self.route_future_pipeline_reg(2, bitwidth=32, name="alu_result")
         ex_mem_regwrite = self.route_future_pipeline_reg(2, bitwidth=1, name="regwrite")
@@ -503,36 +530,96 @@ class MipsCore(Pipeline):
         ex_mem_regwrite_enabled = ex_mem_regwrite == 1
         ex_mem_write_register_is_nonzero = ex_mem_write_register != 0
 
-        ex_mem_write_register_eq_rs = ex_mem_write_register == self.rs
-        ex_mem_write_register_eq_rt = ex_mem_write_register == self.rt
+        ex_mem_write_register_eq_rs = ex_mem_write_register == rs
+        ex_mem_write_register_eq_rt = ex_mem_write_register == rt
 
         # tests for mem_wb registers
         mem_wb_regwrite_enabled = mem_wb_regwrite == 1
         mem_wb_write_register_is_nonzero = mem_wb_write_register != 0
 
-        mem_wb_write_register_eq_rs = mem_wb_write_register == self.rs
-        mem_wb_write_register_eq_rt = mem_wb_write_register == self.rt
+        mem_wb_write_register_eq_rs = mem_wb_write_register == rs
+        mem_wb_write_register_eq_rt = mem_wb_write_register == rt
 
         # forward ex when regwrite for that stage is used, won't be written to $r0, and is one of the operands
         fwd_a_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_rs
         fwd_b_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_rt
 
         # forward mem when regwrite for that stage is used, won't br written to $r0, isn't already being forwarded from ex, and is one of the operands
-        fwd_a_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~ex_mem_write_register_eq_rs & mem_wb_write_register_eq_rs
-        fwd_b_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~ex_mem_write_register_eq_rt & mem_wb_write_register_eq_rt
+        fwd_a_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~fwd_a_ex & mem_wb_write_register_eq_rs
+        fwd_b_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~fwd_b_ex & mem_wb_write_register_eq_rt
 
         # get the appropriate forwarding control for the forwarding selection
         forward_a = self.execution_forward_ctrl(fwd_a_ex, fwd_a_mem)
         forward_b = self.execution_forward_ctrl(fwd_b_ex, fwd_b_mem)
 
         # get the operand from the correct place based on the control
-        fwd_op_1 = self.execution_forward_op(forward_a, self.rs, ex_mem_alu_result, mem_wb_alu_result)
-        fwd_op_2 = self.execution_forward_op(forward_b, self.rt, ex_mem_alu_result, mem_wb_alu_result)
+        fwd_op_1 = self.execution_forward_op(forward_a, rs, ex_mem_alu_result, mem_wb_alu_result)
+        fwd_op_2 = self.execution_forward_op(forward_b, rt, ex_mem_alu_result, mem_wb_alu_result)
 
         return fwd_op_1, fwd_op_2
 
+    def execution_forwarding_unit_args(self, a0=Const(4, bitwidth=5), a1=Const(5, bitwidth=5), a2=Const(6, bitwidth=5), a3=Const(7, bitwidth=5), v0=Const(2, bitwidth=5)):
+        # get a reference to some pipeline registers that don't exist yet
+        ex_mem_alu_result = self.route_future_pipeline_reg(2, bitwidth=32, name="alu_result")
+        ex_mem_regwrite = self.route_future_pipeline_reg(2, bitwidth=1, name="regwrite")
+        ex_mem_write_register = self.route_future_pipeline_reg(2, bitwidth=5, name="write_register")
+
+        mem_wb_alu_result = self.route_future_pipeline_reg(3, bitwidth=32, name="write_data")
+        mem_wb_regwrite = self.route_future_pipeline_reg(3, bitwidth=1, name="regwrite")
+        mem_wb_write_register = self.route_future_pipeline_reg(3, bitwidth=5, name="write_register")
+
+        # tests for ex_mem registers
+        ex_mem_regwrite_enabled = ex_mem_regwrite == 1
+        ex_mem_write_register_is_nonzero = ex_mem_write_register != 0
+
+        ex_mem_write_register_eq_a0 = ex_mem_write_register == a0
+        ex_mem_write_register_eq_a1 = ex_mem_write_register == a1
+        ex_mem_write_register_eq_a2 = ex_mem_write_register == a2
+        ex_mem_write_register_eq_a3 = ex_mem_write_register == a3
+        ex_mem_write_register_eq_v0 = ex_mem_write_register == v0
+
+        # tests for mem_wb registers
+        mem_wb_regwrite_enabled = mem_wb_regwrite == 1
+        mem_wb_write_register_is_nonzero = mem_wb_write_register != 0
+
+        mem_wb_write_register_eq_a0 = mem_wb_write_register == a0
+        mem_wb_write_register_eq_a1 = mem_wb_write_register == a1
+        mem_wb_write_register_eq_a2 = mem_wb_write_register == a2
+        mem_wb_write_register_eq_a3 = mem_wb_write_register == a3
+        mem_wb_write_register_eq_v0 = mem_wb_write_register == v0
+
+        # forward ex when regwrite for that stage is used, won't be written to $r0, and is one of the operands
+        fwd_a_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_a0
+        fwd_b_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_a1
+        fwd_c_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_a2
+        fwd_d_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_a3
+        fwd_e_ex = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero & ex_mem_write_register_eq_v0
+
+        # forward mem when regwrite for that stage is used, won't br written to $r0, isn't already being forwarded from ex, and is one of the operands
+        fwd_a_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~fwd_a_ex & mem_wb_write_register_eq_a0
+        fwd_b_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~fwd_b_ex & mem_wb_write_register_eq_a1
+        fwd_c_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~fwd_c_ex & mem_wb_write_register_eq_a2
+        fwd_d_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~fwd_d_ex & mem_wb_write_register_eq_a3
+        fwd_e_mem = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero & ~fwd_e_ex & mem_wb_write_register_eq_v0
+
+        # get the appropriate forwarding control for the forwarding selection
+        forward_a = self.execution_forward_ctrl(fwd_a_ex, fwd_a_mem)
+        forward_b = self.execution_forward_ctrl(fwd_b_ex, fwd_b_mem)
+        forward_c = self.execution_forward_ctrl(fwd_c_ex, fwd_c_mem)
+        forward_d = self.execution_forward_ctrl(fwd_d_ex, fwd_d_mem)
+        forward_e = self.execution_forward_ctrl(fwd_e_ex, fwd_e_mem)
+
+        # get the operand from the correct place based on the control
+        fwd_op_1 = self.execution_forward_op(forward_a, a0, ex_mem_alu_result, mem_wb_alu_result)
+        fwd_op_2 = self.execution_forward_op(forward_b, a1, ex_mem_alu_result, mem_wb_alu_result)
+        fwd_op_3 = self.execution_forward_op(forward_c, a2, ex_mem_alu_result, mem_wb_alu_result)
+        fwd_op_4 = self.execution_forward_op(forward_d, a3, ex_mem_alu_result, mem_wb_alu_result)
+        fwd_op_5 = self.execution_forward_op(forward_e, v0, ex_mem_alu_result, mem_wb_alu_result)
+
+        return fwd_op_1, fwd_op_2, fwd_op_3, fwd_op_4, fwd_op_5
+
 # testcore = TrivialPipelineExample()
-testcore = MipsCore(addrwidth=24)
+testcore = MipsCore(addrwidth=32)
 
 # Simulation of the core
 sim_trace = SimulationTrace()
@@ -552,53 +639,117 @@ sim = Simulation(tracer=sim_trace)
 #     (2, 36): 0x11090006, # beq $t0, $t1, loop_end
 #     (2, 40): 0, # NOOP
 #     (2, 44): 0x8c080008, # lw $t0, 8($zero)
-#     # (2, 48): 0, # NOOP
-#     (2, 48): 0x01284020, # add $t0, $t1, $t0
-#                          # ; note: delay slot, correct behavior would have t0=10,
-#                          # ; but then t0 is overwritten next instr
+#     (2, 48): 0, # NOOP
+#     # (2, 48): 0x01284020, # add $t0, $t1, $t0
+#     #                      # ; note: delay slot, correct behavior would have t0=10,
+#     #                      # ; but then t0 is overwritten next instr
 #     (2, 52): 0x21080001, # addi $t0, $t0, 1
 #     (2, 56): 0xac080008, # sw $t0, 8($zero)
 #     (2, 60): 0x08000009, # j loop_begin
 #                          # loop_end:
+#     (2, 64): 0,          # nop
 # }
 
-# double data hazard test
-# sim.memvalue = {
-#     (2, 0): 0x20090001,
-#     (2, 4): 0x200a0002,
-#     (2, 8): 0x200b0003,
-#     (2, 12): 0x012a4820,
-#     (2, 16): 0x012b4820,
-#     (2, 20): 0x012c4820,
-# }
-
-# simple
 sim.memvalue = {
-    (2, 0): 0x21080003,  # addi $t0, $t0, 3
+    (2, 0): 0x2009000a,  # addi $t1, $zero, 10
+    (2, 4): 0x20020001,  # addi $v0, $zero, 1
+    (2, 8): 0x20030002,  # addi $v1, $zero, 1
+    (2, 12): 0x00431820, # add $v1, $v0, $v1
+    (2, 16): 0x0043202a, # slt $a0, $v0, $v1
+    (2, 20): 0x0062282a, # slt $a1, $v1, $v0
+    (2, 24): 0x00852820, # add $a1, $a0, $a1
+    (2, 28): 0xac050004, # sw $a1, 4($zero)
+    (2, 32): 0x8c030004, # lw $v1, 4($zero)
                          # loop_begin:
-    (2, 4): 0x21290002,  # addi $t1, $t1, 2
-    # (2, 8): 0x11090008,  # beq $t0, $t1, loop_end
-    (2, 8): 0x11090009,  # beq $t0, $t1, loop_end
-    (2, 12): 0x210a0003, # addi $t2, $t0, 3 ; delay slot awesomeness
-    (2, 16): 0x21080001, # addi $t0, $t0, 1
-    (2, 20): 0x01084820, # add $t1, $t0, $t0
-    (2, 24): 0xac090004, # sw $t1, 4($zero)
-    (2, 28): 0x8c080004, # lw $t0, 4($zero)
-    # (2, 32): 0,          # nop
-    # (2, 36): 0x21090001, # addi $t1, $t0, 1
-    # (2, 40): 0x0c100001, # jal loop_begin
-    #                      # loop_end:
-    (2, 32): 0,
-    (2, 36): 0x21090001, # addi $t1, $t0, 1
-    (2, 40): 0x21280001, # addi $t0, $t1, 1
-    (2, 44): 0x0c100001, # jal loop_begin
+
+    (2, 36): 0x20020001, # li $v0, 1
+    (2, 40): 0x00082020, # move $a0, $t0
+    (2, 44): 0x0000000c, # syscall
+
+    (2, 48): 0x11090006, # beq $t0, $t1, loop_end
+    (2, 52): 0, # NOOP
+    (2, 56): 0x8c080008, # lw $t0, 8($zero)
+    (2, 60): 0, # NOOP
+    # (2, 48): 0x01284020, # add $t0, $t1, $t0
+    #                      # ; note: delay slot, correct behavior would have t0=10,
+    #                      # ; but then t0 is overwritten next instr
+    (2, 64): 0x21080001, # addi $t0, $t0, 1
+    (2, 68): 0xac080008, # sw $t0, 8($zero)
+    (2, 72): 0x08000009, # j loop_begin
                          # loop_end:
+    (2, 76): 0,          # nop
+
+    (2, 80): 0x2002000a, # li $v0, 10
+    (2, 84): 0x2004002a, # li $a0, 42
+    (2, 88): 0x0000000c, # syscall
 }
 
-for i in xrange(25):
-    sim.step({})
+# simple
+# sim.memvalue = {
+#     (2, 0): 0x21080003,  # addi $t0, $t0, 3
+#                          # loop_begin:
+#     (2, 4): 0x21290001,  # addi $t1, $t1, 1
+#     # (2, 8): 0x11090008,  # beq $t0, $t1, loop_end
+#     (2, 8): 0x11090008,  # beq $t0, $t1, loop_end
+#     (2, 12): 0x210a0003, # addi $t2, $t0, 3 ; delay slot awesomeness
+#     (2, 16): 0x21080001, # addi $t0, $t0, 1
+#     (2, 20): 0x01084820, # add $t1, $t0, $t0
+#     (2, 24): 0xac090004, # sw $t1, 4($zero)
+#     (2, 28): 0x8c080004, # lw $t0, 4($zero)
+#     # (2, 32): 0,          # nop
+#     # (2, 36): 0x21090001, # addi $t1, $t0, 1
+#     # (2, 40): 0x0c100001, # jal loop_begin
+#     #                      # loop_end:
+#     (2, 32): 0,
+#     (2, 36): 0x21090001, # addi $t1, $t0, 1
+#     (2, 40): 0x21280001, # addi $t0, $t1, 1
+#     # (2, 44): 0x0c100001, # jal loop_begin
+#     (2, 44): 0x08000001, # j loop_begin
+#                          # loop_end:
+#     (2, 48): 0x20020001, # li $v0, 1
+#     (2, 52): 0x00082020, # move $a0, $t0
+#     (2, 56): 0x0000000c, # syscall
+# }
 
-sim_trace.render_trace()
+running = True
+steps = 0
+
+def sim_value(output_wire, simulation=sim):
+    return simulation.value[output_wire]
+
+def syscall_default():
+    print "Syscall %i not implemented" % (sim_value(testcore._v0))
+
+def syscall_print_int():
+    print "print_int", sim_value(testcore._a0)
+
+def syscall_exit():
+    global running
+    running = False
+    print "Exiting with return %i!" % (sim_value(testcore._a0))
+
+syscall_map = {
+    1: syscall_print_int,
+    10: syscall_exit,
+}
+
+while True:
+    if running is False:
+        break
+
+    sim.step({})
+    steps += 1
+
+    if steps > 250:
+        print "Exiting because of too many steps!"
+        running = False
+
+    # magic
+    if sim_value(testcore._syscall):
+        syscall_func = syscall_map.get(sim_value(testcore._v0), syscall_default)
+        syscall_func()
+
+# sim_trace.render_trace()
 # sim_trace.print_vcd(open("pipelines.vcd", "w"))
 # output_to_verilog(open("pipelines.v", "w"))
 
