@@ -262,12 +262,8 @@ class MipsCore(Pipeline):
 
     def stage3_memory(self):
         """ access dmem for loads and stores """
-        dmem = MemBlock(32, self._addrwidth, 'dmem')
-        EW = MemBlock.EnabledWrite
-
-        address = self.alu_result[0:self._addrwidth]
-        dmem[address] = EW(self.regread2, enable=self.memwrite)
-        read_data = dmem[address]
+        dmem = MemBlock(8, self._addrwidth, 'dmem')
+        read_data = self.read_write_mem(dmem, self.alu_result, self.regread2, self.memwrite)
 
         self.alu_result = self.alu_result
         self.read_data = read_data
@@ -286,6 +282,25 @@ class MipsCore(Pipeline):
         EW = MemBlock.EnabledWrite
         writable_register = (self.regwrite == 1) & (self.write_register != 0)
         self._regfile[self.write_register] = EW(self._write_data, enable=writable_register)
+
+    def read_write_mem(self, mem, base_address, data, memwrite):
+        # read and write from given mem starting at base_address
+        # takes _addrwidth worth of the low order bits of base_address
+        # to ensure that address width matches
+
+        # this memory is little endian
+        address = base_address[0:self._addrwidth]
+
+        EW = MemBlock.EnabledWrite
+        read_datas = []
+
+        for i in range(4):
+            offset_address = (address + i)[0:self._addrwidth]
+
+            mem[offset_address] = EW(data[i*8:i*8+8], enable=memwrite)
+            read_datas.insert(0, mem[offset_address])
+
+        return concat(*read_datas)
 
     def main_decoder(self, opcode):
         #                       SIGNALS
