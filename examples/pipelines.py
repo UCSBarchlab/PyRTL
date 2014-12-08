@@ -288,7 +288,7 @@ class MipsCore(Pipeline):
         # takes _addrwidth worth of the low order bits of base_address
         # to ensure that address width matches
 
-        # this memory is little endian
+        # this memory is big endian
         address = base_address[0:self._addrwidth]
 
         EW = MemBlock.EnabledWrite
@@ -297,8 +297,8 @@ class MipsCore(Pipeline):
         for i in range(4):
             offset_address = (address + i)[0:self._addrwidth]
 
-            mem[offset_address] = EW(data[i*8:i*8+8], enable=memwrite)
-            read_datas.insert(0, mem[offset_address])
+            mem[offset_address] = EW(data[24 - i*8: 32 - i*8], enable=memwrite)
+            read_datas.append(mem[offset_address])
 
         return concat(*read_datas)
 
