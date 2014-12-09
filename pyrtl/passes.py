@@ -120,22 +120,82 @@ def timing_analysis(block, gate_timings=None):
     return timing_map
 
 
-def advanced_timing_analysis(block, wirevector, ):
+def advanced_timing_analysis(block, gate_delay_funcs=None,):
+    """ Calculates the timing analysis while taking into account the
+    different timing delays of different gates of each type
+    Supports all valid presynthesis blocks
+    Currently doesn't support memory post synthesis
+
+    :param block: The block you want to do timing analysis on
+    :param gate_delay_funcs: a map with keys corresponding to the gate op and
+     a function returning the delay as the value
+     It takes the gate as an argument.
+     If the delay is negative (-1), the gate will be treated as the end
+     of the block
+    :return: returns a map consisting of each wirevector and the associated
+     delay
     """
+    import heapq
 
+    class WireWTiming:
+        # the purpose of this class is to allow for us to define
+        # the ordering of the objects. This is needed for the
+        # heap to function.
 
-    :param block:
-    :param wirevector:
-    :param gate_delay: a map with keys corresponding to the gate and
-    :return: returns a map consisting of each wirevector and the
-    """
+        def __init__(self, timing, wirevector):
+            self.time = timing
+            self.wirevector = wirevector
 
-    def find_blocks(wires_to_check, all_wires):
-        return set([aBlock for aBlock in block.logic if
-                    set(aBlock.args).intersection(wires_to_check) is not None
-                    and set(aBlock.args).intersection(all_wires) is set(aBlock.args)])
+        def __lt__(self, other):
+            return self.time < other.time
 
-    raise NotImplementedError
+    if gate_delay_funcs is None:
+        gate_delay_funcs = {
+            '~': lambda gate: 1,
+            '&': lambda gate: 1,
+            '|': lambda gate: 1,
+            '^': lambda gate: 1,
+            'w': lambda gate: 0,
+            '+': lambda gate: len(gate.args[0])*3,
+            '-': lambda gate: len(gate.args[0])*3,
+            '*': lambda gate: len(gate.args[0])*5,
+            '<': lambda gate: len(gate.args[0])*2,
+            '>': lambda gate: len(gate.args[0])*2,
+            '=': lambda gate: len(gate.args[0])*2,
+            'x': lambda gate: 3,
+            'c': lambda gate: 0,
+            's': lambda gate: 0,
+            'r': lambda gate: -1,
+            'm': lambda gate: 100,
+            '@': lambda gate: -1,
+        }
+
+    #  Note to developers: the code is almost identical to the standard timing analysis
+    cleared = block.wirevector_subset((wire.Input, wire.Const, wire.Register))
+    remaining = block.logic.copy()
+    timing_map = {wirevector: 0 for wirevector in cleared}
+    timing_heap = [WireWTiming(0, a_wire) for a_wire in cleared]
+    heapq.heapify(timing_heap)
+    while len(timing_heap) > 0:
+        cleared.add(heapq.heappop(timing_heap).wirevector)
+        items_to_remove = set()
+        for _gate in remaining:  # loop over logicnets not yet returned
+            if cleared.issuperset(_gate.args):  # if all args ready
+                gate_delay = gate_delay_funcs[_gate.op](_gate)
+                if gate_delay < 0:
+                    items_to_remove.add(_gate)
+                    break
+                time = max(timing_map[a_wire] for a_wire in _gate.args) + gate_delay
+                timing_map[_gate.dests[0]] = time
+                heapq.heappush(timing_heap, WireWTiming(time, _gate.dests[0]))
+                cleared.update(set(_gate.dests))  # add dests to set of ready wires
+                items_to_remove.add(_gate)
+        remaining.difference_update(items_to_remove)
+
+    if len(remaining) > 0:
+        raise core.PyrtlError("Cannot do static timing analysis due to nonregister "
+                              "and nonmemory loops in the code")
+    return timing_map
 
 
 def timing_max_length(timing_map):
