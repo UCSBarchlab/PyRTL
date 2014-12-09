@@ -121,7 +121,7 @@ def timing_analysis(block, gate_timings=None):
 
 
 def advanced_timing_analysis(block, gate_delay_funcs=None,):
-    """ Calculates the timing analysis while taking into account the
+    """ Calculates the timing analysis while allowing for
     different timing delays of different gates of each type
     Supports all valid presynthesis blocks
     Currently doesn't support memory post synthesis
@@ -193,8 +193,8 @@ def advanced_timing_analysis(block, gate_delay_funcs=None,):
         remaining.difference_update(items_to_remove)
 
     if len(remaining) > 0:
-        raise core.PyrtlError("Cannot do static timing analysis due to nonregister "
-                              "and nonmemory loops in the code")
+        raise core.PyrtlError("Cannot do static timing analysis due to nonregister,"
+                              " nonmemory loops in the code")
     return timing_map
 
 
