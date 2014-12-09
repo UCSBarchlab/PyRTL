@@ -227,7 +227,7 @@ def timing_critical_path(timing_map, block=None):
 
         if len(source_list) is not 1:
             raise core.PyrtlInternalError("The following net has the wrong number of sources:"
-                                          + str(first_wire) + ". It has " + len(source_list))
+                                          + str(first_wire) + ". It has " + str(len(source_list)))
         source = source_list[0]
         critical_path = source_list
         critical_path.extend(old_critical_path)
