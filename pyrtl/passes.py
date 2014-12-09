@@ -184,7 +184,7 @@ def advanced_timing_analysis(block, gate_delay_funcs=None,):
                 gate_delay = gate_delay_funcs[_gate.op](_gate)
                 if gate_delay < 0:
                     items_to_remove.add(_gate)
-                    break
+                    continue
                 time = max(timing_map[a_wire] for a_wire in _gate.args) + gate_delay
                 timing_map[_gate.dests[0]] = time
                 heapq.heappush(timing_heap, WireWTiming(time, _gate.dests[0]))
