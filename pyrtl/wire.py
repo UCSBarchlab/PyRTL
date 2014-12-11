@@ -61,8 +61,8 @@ class WireVector(object):
     def _raw_name(self):
         return ''.join([self.name, '/', str(self.bitwidth), self.code])
 
-    def _build_wire(self, other):
-        # Actually create and add wire to logic block
+    def _build_wirevector(self, other):
+        # Actually create and add wirevector to logic block
         # This might be called immediately from ilshift, or delayed from ConditionalUpdate
         net = core.LogicNet(
             op='w',
@@ -81,13 +81,13 @@ class WireVector(object):
     def __ilshift__(self, other):
         """ Wire assignment operator (asign other to self). """
         other = self._prepare_for_assignment(other)
-        self._build_wire(other)
+        self._build_wirevector(other)
         return self
 
     def __ior__(self, other):
         """ Conditional assignment operator (only valid under Conditional Update). """
         other = self._prepare_for_assignment(other)
-        conditional.ConditionalUpdate._build_wire(self, other)
+        conditional.ConditionalUpdate._build_wirevector(self, other)
         return self
 
     def logicop(self, other, op):
@@ -305,7 +305,7 @@ class Const(WireVector):
                 bitwidth = 1
             if bitwidth != 1:
                 raise core.PyrtlError('error, boolean has bitwidth not equal to 1')
-        elif isinstance(val, int):
+        if isinstance(val, int):
             num = val
             # infer bitwidth if it is not specified explicitly
             if bitwidth is None:

@@ -55,7 +55,7 @@ class ConditionalUpdate(object):
         self.predicate_on_deck = shortcut_condition
         self.conditions_list_stack = [[]]
         self.register_predicate_map = {}  # map reg -> [(pred, rhs), ...]
-        self.wire_predicate_map = {}  # map wirevector -> [(pred, rhs), ...]
+        self.wirevector_predicate_map = {}  # map wirevector -> [(pred, rhs), ...]
         self.memblock_write_predicate_map = {}  # map mem -> [(pred, addr, data, enable), ...]
 
     def __enter__(self):
@@ -80,6 +80,7 @@ class ConditionalUpdate(object):
         self.conditions_list_stack.pop()
         ConditionalUpdate.depth -= 1
         if self.depth == 0:
+            self._finalize_wirevectors()
             self._finalize_registers()
             self._finalize_memblocks()
             ConditionalUpdate.current = None
@@ -102,24 +103,23 @@ class ConditionalUpdate(object):
         return cls.depth > 0
 
     @classmethod
-    def _build_wire(cls, wire, rhs):
+    def _build_wirevector(cls, wirevector, rhs):
         """Stores the wire assignment details until finalize is called."""
         if cls.depth < 1:
             raise core.PyrtlError('error, conditional assignment "|=" only valid under a condition')
         p = cls.current._current_select()
         # if map entry not there, set to [], then append the tuple (p, rhs)
-        cls.current.wire_predicate_map.setdefault(wire, []).append((p, rhs))
+        cls.current.wirevector_predicate_map.setdefault(wirevector, []).append((p, rhs))
 
-    @classmethod
-    def _finalize_wires(cls, wire, rhs):
-        """Build the required muxes and call back to WireVector to finalize the wire build."""
+    def _finalize_wirevectors(self):
+        """Build the required muxes and call back to WireVector to finalize the wirevector build."""
         from helperfuncs import mux
-        for wire in self.wire_predicate_map:
-            result = wire # ADD DEFAULT CHECK
-            wirepredlist = self.wire_predicate_map[wire]
-            for p, rhs in wirepredlist:
+        for wirevector in self.wirevector_predicate_map:
+            result = wire.Const(0) # ADD DEFAULT CHECK
+            wirevector_predlist = self.wirevector_predicate_map[wirevector]
+            for p, rhs in wirevector_predlist:
                 result = mux(p, truecase=rhs, falsecase=result)
-            wire._build_wire(result)
+            wirevector._build_wirevector(result)
 
     @classmethod
     def _build_register(cls, reg, rhs):
