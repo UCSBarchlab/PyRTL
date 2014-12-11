@@ -61,16 +61,33 @@ class WireVector(object):
     def _raw_name(self):
         return ''.join([self.name, '/', str(self.bitwidth), self.code])
 
-    def __ilshift__(self, other):
-        other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
-        if self.bitwidth is None:
-            self.bitwidth = other.bitwidth
+    def _build_wire(self, other):
+        # Actually create and add wire to logic block
+        # This might be called immediately from ilshift, or delayed from ConditionalUpdate
         net = core.LogicNet(
             op='w',
             op_param=None,
             args=(other,),
             dests=(self,))
         self.block.add_net(net)
+
+    def _prepare_for_assignment(self, rhs):
+        # Convert right-hand-side to wires and propagate bitwidth if necessary
+        rhs = helperfuncs.as_wires(rhs, bitwidth=self.bitwidth, block=self.block)
+        if self.bitwidth is None:
+            self.bitwidth = rhs.bitwidth
+        return rhs
+    
+    def __ilshift__(self, other):
+        """ Wire assignment operator (asign other to self). """
+        other = self._prepare_for_assignment(other)
+        self._build_wire(other)
+        return self
+
+    def __ior__(self, other):
+        """ Conditional assignment operator (only valid under Conditional Update). """
+        other = self._prepare_for_assignment(other)
+        conditional.ConditionalUpdate._build_wire(self, other)
         return self
 
     def logicop(self, other, op):
@@ -117,11 +134,16 @@ class WireVector(object):
     def __rand__(self, other):
         return self.logicop(other, '&')
 
+    def __iand__(self, other):
+        raise PyrtlError('error, operation not allowed on WireVectors')
+
     def __or__(self, other):
         return self.logicop(other, '|')
 
     def __ror__(self, other):
         return self.logicop(other, '|')
+
+    # __ior__ used for conditional assignment above
 
     def __xor__(self, other):
         return self.logicop(other, '^')
@@ -129,11 +151,17 @@ class WireVector(object):
     def __rxor__(self, other):
         return self.logicop(other, '^')
 
+    def __ixor__(self, other):
+        raise PyrtlError('error, operation not allowed on WireVectors')
+
     def __add__(self, other):
         return self.logicop(other, '+')
 
     def __radd__(self, other):
         return self.logicop(other, '+')
+
+    def __iadd__(self, other):
+        raise PyrtlError('error, operation not allowed on WireVectors')
 
     def __sub__(self, other):
         return self.logicop(other, '-')
@@ -141,11 +169,17 @@ class WireVector(object):
     def __rsub__(self, other):
         return self.logicop(other, '-')
 
+    def __isub__(self, other):
+        raise PyrtlError('error, operation not allowed on WireVectors')
+
     def __mul__(self, other):
         return self.logicop(other, '*')
 
     def __rmul__(self, other):
         return self.logicop(other, '*')
+
+    def __imul__(self, other):
+        raise PyrtlError('error, operation not allowed on WireVectors')
 
     def __lt__(self, other):
         return self.logicop(other, '<')
@@ -265,7 +299,13 @@ class Const(WireVector):
 
     def __init__(self, val, bitwidth=None, block=None):
         """ Construct a constant implementation at initialization """
-        if isinstance(val, int):
+        if isinstance(val, bool):
+            num = int(val)
+            if bitwidth is None:
+                bitwidth = 1
+            if bitwidth != 1:
+                raise core.PyrtlError('error, boolean has bitwidth not equal to 1')
+        elif isinstance(val, int):
             num = val
             # infer bitwidth if it is not specified explicitly
             if bitwidth is None:
@@ -340,15 +380,21 @@ class Register(WireVector):
     # r.next = 5    -- error
 
     class _Next(object):
+        """ This is the type returned by "r.next". """
         def __init__(self, reg):
             self.reg = reg
 
         def __ilshift__(self, other):
             return self.reg._next_ilshift(other)
 
+        def __ior__(self, other):
+            return self.reg._next_ior(other)
+
     class _NextSetter(object):
-        def __init__(self, rhs):
+        """ This is the type returned by __ilshift__ which r.next will be assigned. """
+        def __init__(self, rhs, is_conditional):
             self.rhs = rhs
+            self.is_conditional = is_conditional
 
     def __init__(self, bitwidth, name=None, block=None):
         super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block)
@@ -361,20 +407,29 @@ class Register(WireVector):
     def __ilshift__(self, other):
         raise core.PyrtlError('error, you cannot set registers directly, net .next instead')
 
+    def __ior__(self, other):
+        raise core.PyrtlError('error, you cannot set registers directly, net .next instead')
+
     def _next_ilshift(self, other):
         other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
         if self.bitwidth is None:
             self.bitwidth = other.bitwidth
-        return Register._NextSetter(other)
+        return Register._NextSetter(other, is_conditional=False)
+
+    def _next_ior(self, other):
+        other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
+        if self.bitwidth is None:
+            self.bitwidth = other.bitwidth
+        return Register._NextSetter(other, is_conditional=True)
 
     @next.setter
     def next(self, nextsetter):
         if not isinstance(nextsetter, Register._NextSetter):
-            raise core.PyrtlError('error, .next values should only be set with the "<<=" operator')
+            raise core.PyrtlError('error, .next should be set with "<<=" or "|=" operators')
         elif self.reg_in is not None:
             raise core.PyrtlError('error, .next value should be set once and only once')
-        elif conditional.ConditionalUpdate.currently_under_condition():
-            conditional.ConditionalUpdate._build_register(self, nextsetter.rhs)
+        elif nextsetter.is_conditional:
+            conditional.ConditionalUpdate._build_register(self, nextsetter.rhs)            
         else:
             self._build_register(nextsetter.rhs)
 

@@ -22,13 +22,3 @@ class TestBlock(unittest.TestCase):
         sim_trace.print_trace(output)
         print output.getvalue()
         self.assertEqual(output.getvalue(), correct_string)
-
-    def test_basic_true_condition(self):
-        i = pyrtl.Register(bitwidth=3, name='r')
-        x = pyrtl.WireVector(bitwidth=3, name='x')
-        y = pyrtl.WireVector(bitwidth=3, name='y')
-        i.next <<= i + 1
-        d = pyrtl.m_if(i>3, {x:5}, {y:3})
-        x <<= d[x]
-        y <<= d[y]
-        self.check_trace('r 01230123\n')

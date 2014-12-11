@@ -25,6 +25,7 @@ def as_wires(val, bitwidth=None, block=None):
     block = core.working_block(block)
 
     if isinstance(val, (int, basestring)):
+        # note that this case captures bool as well (as bools are instances of ints)
         return wire.Const(val, bitwidth=bitwidth, block=block)
     elif not isinstance(val, wire.WireVector):
         raise core.PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
@@ -96,25 +97,6 @@ def mux(select, falsecase, truecase):
         dests=(outwire,))
     outwire.block.add_net(net)
     return outwire
-
-
-def m_if(predicate, m_then, m_else=None, m_default=None):
-    if m_else is None:
-        m_else = {}
-    if m_default is None:
-        m_default = {}
-    d = {}
-    c0 = wire.Const(0)
-    for k in m_then.viewkeys() & m_else.viewkeys():
-        d[k] = mux(predicate, truecase=m_then[k], falsecase=m_else[k])
-    # if it is only in the then clause and default, select between those
-    for k in m_then.viewkeys() - m_else.viewkeys():
-        default_wire = m_default.get(k, c0)
-        d[k] = mux(predicate, truecase=m_then[k], falsecase=default_wire)
-    for k in m_else.viewkeys() - m_then.viewkeys():
-        default_wire = m_default.get(k, c0)
-        d[k] = mux(predicate, truecase=default_wire, falsecase=m_else[k])
-    return d
 
 
 def get_block(*arglist):

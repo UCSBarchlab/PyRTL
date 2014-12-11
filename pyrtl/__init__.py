@@ -28,7 +28,6 @@ from helperfuncs import and_all_bits
 from helperfuncs import or_all_bits
 from helperfuncs import xor_all_bits
 from helperfuncs import parity
-from helperfuncs import m_if
 
 # memory blocks
 from memblock import MemBlock

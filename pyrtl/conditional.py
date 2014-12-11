@@ -55,6 +55,7 @@ class ConditionalUpdate(object):
         self.predicate_on_deck = shortcut_condition
         self.conditions_list_stack = [[]]
         self.register_predicate_map = {}  # map reg -> [(pred, rhs), ...]
+        self.wire_predicate_map = {}  # map wirevector -> [(pred, rhs), ...]
         self.memblock_write_predicate_map = {}  # map mem -> [(pred, addr, data, enable), ...]
 
     def __enter__(self):
@@ -101,10 +102,30 @@ class ConditionalUpdate(object):
         return cls.depth > 0
 
     @classmethod
+    def _build_wire(cls, wire, rhs):
+        """Stores the wire assignment details until finalize is called."""
+        if cls.depth < 1:
+            raise core.PyrtlError('error, conditional assignment "|=" only valid under a condition')
+        p = cls.current._current_select()
+        # if map entry not there, set to [], then append the tuple (p, rhs)
+        cls.current.wire_predicate_map.setdefault(wire, []).append((p, rhs))
+
+    @classmethod
+    def _finalize_wires(cls, wire, rhs):
+        """Build the required muxes and call back to WireVector to finalize the wire build."""
+        from helperfuncs import mux
+        for wire in self.wire_predicate_map:
+            result = wire # ADD DEFAULT CHECK
+            wirepredlist = self.wire_predicate_map[wire]
+            for p, rhs in wirepredlist:
+                result = mux(p, truecase=rhs, falsecase=result)
+            wire._build_wire(result)
+
+    @classmethod
     def _build_register(cls, reg, rhs):
         """Stores the register details until finalize is called."""
-        if cls.depth == 0:
-            raise core.PyrtlError('error, you are doing *something* wrong with ConditionalUpdate')
+        if cls.depth < 1:
+            raise core.PyrtlError('error, conditional assignment "|=" only valid under a condition')
         p = cls.current._current_select()
         # if map entry not there, set to [], then append the tuple (p, rhs)
         cls.current.register_predicate_map.setdefault(reg, []).append((p, rhs))
@@ -113,7 +134,7 @@ class ConditionalUpdate(object):
         """Build the required muxes and call back to Register to finalize the register build."""
         from helperfuncs import mux
         for reg in self.register_predicate_map:
-            result = reg  # TODO: add check for default case, not feedback then
+            result = reg  
             # TODO: right now this is totally not optimzied, should use muxes
             # in conjuction with predicates to encode efficiently.
             regpredlist = self.register_predicate_map[reg]
