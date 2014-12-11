@@ -115,7 +115,7 @@ class ConditionalUpdate(object):
         """Build the required muxes and call back to WireVector to finalize the wirevector build."""
         from helperfuncs import mux
         for wirevector in self.wirevector_predicate_map:
-            result = wire.Const(0) # ADD DEFAULT CHECK
+            result = wire.Const(0)  # default value
             wirevector_predlist = self.wirevector_predicate_map[wirevector]
             for p, rhs in wirevector_predlist:
                 result = mux(p, truecase=rhs, falsecase=result)
@@ -134,7 +134,7 @@ class ConditionalUpdate(object):
         """Build the required muxes and call back to Register to finalize the register build."""
         from helperfuncs import mux
         for reg in self.register_predicate_map:
-            result = reg  
+            result = reg
             # TODO: right now this is totally not optimzied, should use muxes
             # in conjuction with predicates to encode efficiently.
             regpredlist = self.register_predicate_map[reg]

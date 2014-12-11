@@ -77,7 +77,7 @@ class WireVector(object):
         if self.bitwidth is None:
             self.bitwidth = rhs.bitwidth
         return rhs
-    
+
     def __ilshift__(self, other):
         """ Wire assignment operator (asign other to self). """
         other = self._prepare_for_assignment(other)
@@ -429,7 +429,7 @@ class Register(WireVector):
         elif self.reg_in is not None:
             raise core.PyrtlError('error, .next value should be set once and only once')
         elif nextsetter.is_conditional:
-            conditional.ConditionalUpdate._build_register(self, nextsetter.rhs)            
+            conditional.ConditionalUpdate._build_register(self, nextsetter.rhs)
         else:
             self._build_register(nextsetter.rhs)
 
