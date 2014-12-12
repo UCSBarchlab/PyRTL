@@ -120,13 +120,14 @@ def timing_analysis(block, gate_timings=None):
     return timing_map
 
 
-def advanced_timing_analysis(block, gate_delay_funcs=None,):
+def advanced_timing_analysis(block=None, gate_delay_funcs=None,):
     """ Calculates the timing analysis while allowing for
     different timing delays of different gates of each type
     Supports all valid presynthesis blocks
     Currently doesn't support memory post synthesis
 
-    :param block: The block you want to do timing analysis on
+    :param block: The block you want to do timing analysis on. The default is
+     the current working block.
     :param gate_delay_funcs: a map with keys corresponding to the gate op and
      a function returning the delay as the value
      It takes the gate as an argument.
@@ -149,6 +150,7 @@ def advanced_timing_analysis(block, gate_delay_funcs=None,):
         def __lt__(self, other):
             return self.time < other.time
 
+    block = core.working_block(block)
     if gate_delay_funcs is None:
         gate_delay_funcs = {
             '~': lambda gate: 1,
