@@ -232,7 +232,7 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
                                      name='memory')
         self.output1 <<= self.memory[self.read_addr1]
         self.output2 <<= self.memory[self.read_addr2]
-        self.memory[self.write_addr] = self.write_data
+        self.memory[self.write_addr] <<= self.write_data
 
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()

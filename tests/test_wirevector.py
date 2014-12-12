@@ -149,18 +149,23 @@ class TestRTLMemBlockDesign(unittest.TestCase):
         memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
         self.output1 <<= memory[self.mem_read_address1]
         self.output2 <<= memory[self.mem_read_address2]
-        memory[self.mem_write_address] = self.mem_write_data
+        memory[self.mem_write_address] <<= self.mem_write_data
 
     def test_memblock_with_write_enable_with_equalsign(self):
         memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
         we = pyrtl.Const(1, bitwidth=1)
         self.output1 <<= memory[self.mem_read_address1]
         self.output2 <<= memory[self.mem_read_address2]
-        memory[self.mem_write_address] = pyrtl.MemBlock.EnabledWrite(self.mem_write_data, enable=we)
+        memory[self.mem_write_address] <<= pyrtl.MemBlock.EnabledWrite(self.mem_write_data, enable=we)
 
-    def test_memblock_with_write_enable_with_shiftset(self):
-        testmissing()
+    def test_memblock_direct_assignment_error(self):
+        memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
+        with self.assertRaises(pyrtl.PyrtlError):
+            memory[self.mem_write_address] = self.mem_write_data
 
+    def test_memblock_direct_assignment_error(self):
+        memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
+        memory[self.mem_write_address] <<= 5
 
 if __name__ == "__main__":
     unittest.main()

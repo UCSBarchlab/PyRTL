@@ -13,6 +13,7 @@ appropriate_register_type: return the register needed to capture the given type
 
 import core
 import wire
+import memblock
 
 
 # -----------------------------------------------------------------
@@ -20,21 +21,31 @@ import wire
 #  |__| |__  |    |__) |__  |__) /__`
 #  |  | |___ |___ |    |___ |  \ .__/
 #
-def as_wires(val, bitwidth=None, block=None):
-    """ Return wires from val which may be wires or int. """
+
+def as_wires(val, bitwidth=None, truncating=True, block=None):
+    """ Return wires from val which may be wires, integers, strings, or bools.
+
+    If the option "truncating" is set to false as_wires will never drop
+    bits in doing the conversion -- otherwise it will drop most-significant-bits
+    to acheive the desired bitwidth (if one is specified).  This function is used by
+    most operations in an attempt to coerce values into WireVectors (for example,
+    operations such as "x+1" where "1" needs to be converted to a Const WireVectors.)
+    """
     block = core.working_block(block)
 
     if isinstance(val, (int, basestring)):
         # note that this case captures bool as well (as bools are instances of ints)
         return wire.Const(val, bitwidth=bitwidth, block=block)
+    elif isinstance(val, memblock._MemIndexed):
+        return val.mem._readaccess(val.index)
     elif not isinstance(val, wire.WireVector):
         raise core.PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
     elif bitwidth == '0':
         raise core.PyrtlError('error, bitwidth must be >= 1')
-    elif bitwidth and bitwidth < val.bitwidth:
-        return val[:bitwidth]  # truncate the upper bits
     elif bitwidth and bitwidth > val.bitwidth:
         return val.extended(bitwidth)  # extend appropriately
+    elif bitwidth and truncating and bitwidth < val.bitwidth:
+        return val[:bitwidth]  # truncate the upper bits
     else:
         return val
 

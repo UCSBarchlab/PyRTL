@@ -135,7 +135,7 @@ class WireVector(object):
         return self.logicop(other, '&')
 
     def __iand__(self, other):
-        raise PyrtlError('error, operation not allowed on WireVectors')
+        raise core.PyrtlError('error, operation not allowed on WireVectors')
 
     def __or__(self, other):
         return self.logicop(other, '|')
@@ -152,7 +152,7 @@ class WireVector(object):
         return self.logicop(other, '^')
 
     def __ixor__(self, other):
-        raise PyrtlError('error, operation not allowed on WireVectors')
+        raise core.PyrtlError('error, operation not allowed on WireVectors')
 
     def __add__(self, other):
         return self.logicop(other, '+')
@@ -161,7 +161,7 @@ class WireVector(object):
         return self.logicop(other, '+')
 
     def __iadd__(self, other):
-        raise PyrtlError('error, operation not allowed on WireVectors')
+        raise core.PyrtlError('error, operation not allowed on WireVectors')
 
     def __sub__(self, other):
         return self.logicop(other, '-')
@@ -170,7 +170,7 @@ class WireVector(object):
         return self.logicop(other, '-')
 
     def __isub__(self, other):
-        raise PyrtlError('error, operation not allowed on WireVectors')
+        raise core.PyrtlError('error, operation not allowed on WireVectors')
 
     def __mul__(self, other):
         return self.logicop(other, '*')
@@ -179,7 +179,7 @@ class WireVector(object):
         return self.logicop(other, '*')
 
     def __imul__(self, other):
-        raise PyrtlError('error, operation not allowed on WireVectors')
+        raise core.PyrtlError('error, operation not allowed on WireVectors')
 
     def __lt__(self, other):
         return self.logicop(other, '<')
