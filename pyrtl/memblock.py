@@ -16,6 +16,9 @@ import conditional
 #   |  | |___  |  | \__/ |  \  |     |__) |___ \__/ \__, |  \
 #
 
+# FIXME: right now read port as build unconditionally and write ports assume
+# that only one port is under control of the conditional
+
 # MemBlock supports any number of the following operations:
 # read: d = mem[address]
 # write: mem[address] = d
