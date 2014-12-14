@@ -61,6 +61,7 @@ class Pipeline(object):
         else:
             return self._pipeline_register_map[next_stage][name]
 
+
 class SwitchDefaultType(object):
     # __slots__ = () if you want to save a few bytes
     def __init__(self, val=None):
@@ -84,6 +85,7 @@ class SwitchDefaultType(object):
             return self._value
 
 SwitchDefault = SwitchDefaultType()
+
 
 def switch(ctrl, logic_dict):
     """ switch finds the matching key in logic_dict and returns the value.
@@ -174,7 +176,8 @@ class MipsCore(Pipeline):
         # instr = imem[self._pc]
         instr = self.read_mem(self._umem, self._pc)
         pc_incr = self._pc + 4
-        tentative_pc = mux(self._jump, mux(self._pcsrc, pc_incr, self._computed_address), self._jump_address)
+        tentative_pc = mux(self._jump,
+                           mux(self._pcsrc, pc_incr, self._computed_address), self._jump_address)
         self._pc.next <<= mux(self._override_pc, tentative_pc, self._in_pc)
 
         self._if_instr <<= instr
@@ -214,10 +217,13 @@ class MipsCore(Pipeline):
 
         target_register = fwd_op_1
 
-        self._jump_address <<= self.unless_stall(self._stall, mux(control_signals["jumpreg"], target_absolute, target_register))
+        self._jump_address <<= self.unless_stall(self._stall,
+                                                 mux(control_signals["jumpreg"],
+                                                     target_absolute, target_register))
 
         # conditional jump (branch)
-        branch = self.unless_stall(self._stall, concat(control_signals["branch1"], control_signals["branch0"]))
+        branch = self.unless_stall(self._stall,
+                                   concat(control_signals["branch1"], control_signals["branch0"]))
 
         immed_shifted = concat(immed, Const(0, bitwidth=2))[:32]
         self._computed_address <<= self._pc + immed_shifted
@@ -239,9 +245,12 @@ class MipsCore(Pipeline):
         self.fwd_op_2 = fwd_op_2
         self.immed = self.unless_stall(self._stall, immed)
         self.memtoreg = self.unless_stall(self._stall,
-                            concat(control_signals["memtoreg2"], control_signals["memtoreg1"], control_signals["memtoreg0"]))
+                                          concat(control_signals["memtoreg2"],
+                                                 control_signals["memtoreg1"],
+                                                 control_signals["memtoreg0"]))
         self.memwrite = self.unless_stall(self._stall,
-                            concat(control_signals["memwrite1"], control_signals["memwrite0"]))
+                                          concat(control_signals["memwrite1"],
+                                                 control_signals["memwrite0"]))
         self.regwrite = self.unless_stall(self._stall, control_signals["regwrite"])
         self.rs = self.unless_stall(self._stall, rs)
         self.rt = self.unless_stall(self._stall, rt)
@@ -267,8 +276,8 @@ class MipsCore(Pipeline):
         alu_ctrl = self.alu_ctrl(self.aluop, self.immed)
 
         # syscall support
-        registers = [Const(reg, bitwidth=5) for reg in [2, 4, 5, 6, 7]]
-        self._v0, self._a0, self._a1, self._a2, self._a3 = self.execution_forwarding_unit(*registers)
+        regs = [Const(reg, bitwidth=5) for reg in [2, 4, 5, 6, 7]]
+        self._v0, self._a0, self._a1, self._a2, self._a3 = self.execution_forwarding_unit(*regs)
         self._syscall <<= self.syscall
 
         # needed for next stage and sw
@@ -309,7 +318,7 @@ class MipsCore(Pipeline):
 
         EW = MemBlock.EnabledWrite
         writable_register = (self.regwrite == 1) & (self.write_register != 0)
-        self._regfile[self.write_register] = EW(self._write_data, enable=writable_register)
+        self._regfile[self.write_register] <<= EW(self._write_data, enable=writable_register)
 
     def read_mem(self, mem, base_address):
         # this memory is big endian
@@ -343,7 +352,7 @@ class MipsCore(Pipeline):
             else:
                 enable_memwrite = ~memwrite[1] & memwrite[0]
 
-            mem[offset_address] = EW(data[24 - i*8 : 32 - i*8], enable=enable_memwrite)
+            mem[offset_address] <<= EW(data[24 - i*8:32 - i*8], enable=enable_memwrite)
             read_datas.append(mem[offset_address])
 
         return concat(*read_datas)
@@ -355,8 +364,11 @@ class MipsCore(Pipeline):
         modified and extra logic in the appropriate stage is added.
 
         The instruction support is good enough for most small C programs that do not depend on libc.
-        A good reference for instructions: https://engineering.purdue.edu/~ece437l/labs/lab3/files/MIPS_ISA.pdf
-        A more general reference: http://www.ece.cmu.edu/~ece447/s13/lib/exe/fetch.php?media=md00082-2b-mips32int-afp-05.01.pdf
+        A good reference for instructions:
+            https://engineering.purdue.edu/~ece437l/labs/lab3/files/MIPS_ISA.pdf
+        A more general reference:
+            http://www.ece.cmu.edu/~ece447/s13/lib/exe/fetch.php?media=md00082-2b-mips32int-afp-05.01.pdf
+
         Note that the current target is MIPS I/R2000 without coprocessor or floating point support.
         """
         #                       SIGNALS
@@ -398,34 +410,35 @@ class MipsCore(Pipeline):
         # syscall  0 0 0 0 0 0  0 0 1 1 0 0  1 1 0
         # jr       0 0 0 0 0 0  0 0 1 0 0 0  1 0 1
 
-        syscall_inst  = (opcode == "6'b000000") & (funct == "6'b001100")
-        jr_inst       = (opcode == "6'b000000") & (funct == "6'b001000")
-        special_inst  = syscall_inst | jr_inst
+        syscall_inst = (opcode == "6'b000000") & (funct == "6'b001100")
+        jr_inst = (opcode == "6'b000000") & (funct == "6'b001000")
+        special_inst = syscall_inst | jr_inst
 
         r_format_inst = (opcode == "6'b000000") & ~special_inst
-        lw_inst       = opcode == "6'b100011"
-        lbu_inst      = opcode == "6'b100100"
-        sw_inst       = opcode == "6'b101011"
-        sb_inst       = opcode == "6'b101000"
-        beq_inst      = opcode == "6'b000100"
-        bne_inst      = opcode == "6'b000101"
-        bal_inst      = opcode == "6'b000001"
-        j_inst        = opcode == "6'b000010"
-        jal_inst      = opcode == "6'b000011"
-        addi_inst     = opcode == "6'b001000"
-        addiu_inst    = opcode == "6'b001001"
-        slti_inst     = opcode == "6'b001010"
+        lw_inst = opcode == "6'b100011"
+        lbu_inst = opcode == "6'b100100"
+        sw_inst = opcode == "6'b101011"
+        sb_inst = opcode == "6'b101000"
+        beq_inst = opcode == "6'b000100"
+        bne_inst = opcode == "6'b000101"
+        bal_inst = opcode == "6'b000001"
+        j_inst = opcode == "6'b000010"
+        jal_inst = opcode == "6'b000011"
+        addi_inst = opcode == "6'b001000"
+        addiu_inst = opcode == "6'b001001"
+        slti_inst = opcode == "6'b001010"
 
         control_signals = {}
 
-        control_signals["aluop0"]    = beq_inst | bne_inst | bal_inst
-        control_signals["aluop1"]    = r_format_inst | slti_inst
+        control_signals["aluop0"] = beq_inst | bne_inst | bal_inst
+        control_signals["aluop1"] = r_format_inst | slti_inst
 
-        control_signals["alusrc"]    = lw_inst | lbu_inst | sw_inst | sb_inst | addi_inst | addiu_inst | slti_inst
+        control_signals["alusrc"] = lw_inst | lbu_inst | sw_inst | sb_inst | \
+            addi_inst | addiu_inst | slti_inst
 
-        control_signals["branch0"]   = beq_inst | bal_inst
-        control_signals["branch1"]   = bne_inst
-        control_signals["jump"]      = j_inst | jal_inst | jr_inst
+        control_signals["branch0"] = beq_inst | bal_inst
+        control_signals["branch1"] = bne_inst
+        control_signals["jump"] = j_inst | jal_inst | jr_inst
 
         control_signals["memtoreg0"] = lw_inst
         control_signals["memtoreg1"] = lbu_inst
@@ -433,14 +446,15 @@ class MipsCore(Pipeline):
         control_signals["memwrite0"] = sw_inst
         control_signals["memwrite1"] = sb_inst
 
-        control_signals["regdest0"]  = r_format_inst
-        control_signals["regdest1"]  = jal_inst | bal_inst
-        control_signals["regwrite"]  = r_format_inst | lw_inst | lbu_inst | jal_inst | bal_inst | addi_inst | addiu_inst | slti_inst
+        control_signals["regdest0"] = r_format_inst
+        control_signals["regdest1"] = jal_inst | bal_inst
+        control_signals["regwrite"] = r_format_inst | lw_inst | lbu_inst | \
+            jal_inst | bal_inst | addi_inst | addiu_inst | slti_inst
 
-        control_signals["special"]   = special_inst
+        control_signals["special"] = special_inst
 
-        control_signals["syscall"]   = syscall_inst
-        control_signals["jumpreg"]   = jr_inst
+        control_signals["syscall"] = syscall_inst
+        control_signals["jumpreg"] = jr_inst
 
         return control_signals
 
@@ -485,7 +499,8 @@ class MipsCore(Pipeline):
             })
         return fwd_ctrl
 
-    def decoder_forward_op(self, fwd_ctrl, register, id_ex_alu_result, ex_mem_alu_result, mem_wb_alu_result):
+    def decoder_forward_op(self, fwd_ctrl, register,
+                           id_ex_alu_result, ex_mem_alu_result, mem_wb_alu_result):
         fwd_op = switch(fwd_ctrl, {
             SwitchDefault("3'b000"): self._regfile[register],
             "3'b001": mem_wb_alu_result,
@@ -549,8 +564,10 @@ class MipsCore(Pipeline):
         forward_b = self.decoder_forward_ctrl(fwd_b_id, fwd_b_ex, fwd_b_mem)
 
         # get the operand from the correct place based on the control
-        fwd_op_1 = self.decoder_forward_op(forward_a, rs, id_ex_alu_result, ex_mem_alu_result, mem_wb_write_data)
-        fwd_op_2 = self.decoder_forward_op(forward_b, rt, id_ex_alu_result, ex_mem_alu_result, mem_wb_write_data)
+        fwd_op_1 = self.decoder_forward_op(forward_a, rs,
+                                           id_ex_alu_result, ex_mem_alu_result, mem_wb_write_data)
+        fwd_op_2 = self.decoder_forward_op(forward_b, rt,
+                                           id_ex_alu_result, ex_mem_alu_result, mem_wb_write_data)
 
         return fwd_op_1, fwd_op_2
 
@@ -563,7 +580,8 @@ class MipsCore(Pipeline):
         if_id_rs = if_id_instr[21:26]
         if_id_rt = if_id_instr[21:26]
 
-        return (id_ex_memtoreg[0] | (id_ex_memtoreg[1] & ~id_ex_memtoreg[2])) & ((id_ex_write_register == if_id_rs) | (id_ex_write_register == if_id_rt))
+        return (id_ex_memtoreg[0] | (id_ex_memtoreg[1] & ~id_ex_memtoreg[2])) & \
+            ((id_ex_write_register == if_id_rs) | (id_ex_write_register == if_id_rt))
 
     def execution_forward_ctrl(self, fwd_ex, fwd_mem):
         fwd_ctrl = switch(concat(fwd_ex, fwd_mem), {
@@ -604,19 +622,25 @@ class MipsCore(Pipeline):
 
         mem_wb_write_register_eq_reg = [mem_wb_write_register == reg for reg in registers]
 
-        # forward ex when regwrite for that stage is used, won't be written to $r0, and is one of the operands
+        # forward ex when regwrite for that stage is used, won't be written to $r0,
+        # and is one of the operands
         fwd_ex_base = ex_mem_regwrite_enabled & ex_mem_write_register_is_nonzero
         fwd_ex = [fwd_ex_base & reg for reg in ex_mem_write_register_eq_reg]
 
-        # forward mem when regwrite for that stage is used, won't br written to $r0, isn't already being forwarded from ex, and is one of the operands
+        # forward mem when regwrite for that stage is used, won't br written to $r0,
+        # isn't already being forwarded from ex, and is one of the operands
         fwd_mem_base = mem_wb_regwrite_enabled & mem_wb_write_register_is_nonzero
-        fwd_mem = [fwd_mem_base & ~fwd_ex[i] & mem_wb_write_register_eq_reg[i] for i in range(len(registers))]
+        fwd_mem = [fwd_mem_base & ~fwd_ex[i] & mem_wb_write_register_eq_reg[i]
+                   for i in range(len(registers))]
 
         # get the appropriate forwarding control for the forwarding selection
-        forward_reg = [self.execution_forward_ctrl(fwd_ex[i], fwd_mem[i]) for i in range(len(registers))]
+        forward_reg = [self.execution_forward_ctrl(fwd_ex[i], fwd_mem[i])
+                       for i in range(len(registers))]
 
         # get the operand from the correct place based on the control
-        fwd_op = [self.execution_forward_op(forward_reg[i], registers[i], ex_mem_alu_result, mem_wb_alu_result) for i in range(len(registers))]
+        fwd_op = [self.execution_forward_op(forward_reg[i], registers[i],
+                                            ex_mem_alu_result, mem_wb_alu_result)
+                  for i in range(len(registers))]
 
         return fwd_op
 
@@ -643,15 +667,15 @@ memvalue = {
     #     0x400006: 0x00,
     #     0x400007: 0x01,
     #     0x400008: 0xa0, # sb $t1, 1($zero) ; 0xa0090001
-    #     0x400009: 0x09, 
+    #     0x400009: 0x09,
     #     0x40000a: 0x00,
     #     0x40000b: 0x01,
     #     0x40000c: 0x90, # lbu $t2, 1($zero) ; 0x900a0001
-    #     0x40000d: 0x0a, 
+    #     0x40000d: 0x0a,
     #     0x40000e: 0x00,
     #     0x40000f: 0x04,
     #     0x400010: 0x0c, # jal begin ; 0x0c100000
-    #     0x400011: 0x10, 
+    #     0x400011: 0x10,
     #     0x400012: 0x00,
     #     0x400013: 0x00,
     # }
@@ -662,24 +686,37 @@ sim.initialize(memory_value_map=memvalue)
 running = True
 steps = 0
 
+
 def sim_value(output_wire, simulation=sim):
     return simulation.value[output_wire]
 
+
 def syscall_c_dispatch():
-    actual_syscall_func = syscall_map.get(sim_value(testcore._v0) + sim_value(testcore._a0), syscall_default)
+    actual_syscall_func = syscall_map.get(sim_value(testcore._v0) + sim_value(testcore._a0),
+                                          syscall_default)
 
     if actual_syscall_func != syscall_c_dispatch:
         # due to how calling syscall() in c is done we need to shift over the actual args
-        actual_syscall_func(v0=None, a0=sim_value(testcore._a1), a1=sim_value(testcore._a2), a2=sim_value(testcore._a3), a3=None)
+        actual_syscall_func(v0=None, a0=sim_value(testcore._a1),
+                            a1=sim_value(testcore._a2), a2=sim_value(testcore._a3), a3=None)
 
-def syscall_default(v0=sim_value(testcore._v0), a0=sim_value(testcore._a0), a1=sim_value(testcore._a1), a2=sim_value(testcore._a2), a3=sim_value(testcore._a3)):
+
+def syscall_default(v0=sim_value(testcore._v0),
+                    a0=sim_value(testcore._a0), a1=sim_value(testcore._a1),
+                    a2=sim_value(testcore._a2), a3=sim_value(testcore._a3)):
     print "Syscall %i not implemented" % (v0)
     print "v0", v0, "a0", a0, "a1", a1, "a2", a2, "a3", a3
 
-def syscall_print_int(v0=sim_value(testcore._v0), a0=sim_value(testcore._a0), a1=sim_value(testcore._a1), a2=sim_value(testcore._a2), a3=sim_value(testcore._a3)):
+
+def syscall_print_int(v0=sim_value(testcore._v0),
+                      a0=sim_value(testcore._a0), a1=sim_value(testcore._a1),
+                      a2=sim_value(testcore._a2), a3=sim_value(testcore._a3)):
     print "print_int %i" % (a0)
 
-def syscall_exit(v0=sim_value(testcore._v0), a0=sim_value(testcore._a0), a1=sim_value(testcore._a1), a2=sim_value(testcore._a2), a3=sim_value(testcore._a3)):
+
+def syscall_exit(v0=sim_value(testcore._v0),
+                 a0=sim_value(testcore._a0), a1=sim_value(testcore._a1),
+                 a2=sim_value(testcore._a2), a3=sim_value(testcore._a3)):
     global running
     running = False
     print "Exiting with return %i!" % (a0)
