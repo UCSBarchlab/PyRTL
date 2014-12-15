@@ -21,9 +21,53 @@ def area_estimation(tech_in_nm, block=None):
 
     The tech_in_nm is the size of the circuit technology to be estimated,
     with 65 being 65nm and 250 being 0.25um for example.  The area returned
-    is in the units of square mm.  The estimates are VERY simple
+    is in the units of square mm.  
     """
-    raise NotImplementedError
+    def mem_area_estimate(tech_in_nm, bits, ports):
+        # http://www.cs.ucsb.edu/~sherwood/pubs/ICCD-srammodel.pdf
+        tech_in_um = tech_in_nm * 1000
+        return 0.001 * tech_in_um^2.07 * bits^0.9 * ports^0.7 + 0.0048
+
+    def gatecount_estimate(net):
+        if net.op in 'w~sc':
+            return 0
+        elif net.op in '&|':
+            return 3 * len(net.arg[0])
+        elif net.op in '^=<>x':
+            return 18 * len(net.arg[0])
+        elif net.op == 'r':
+            return 20 * len(net.arg[0])
+        elif net.op in '+-':
+            return 21 * len(net.arg[0])
+        elif net.op == '*':
+            return 350 * len(net.arg[0])
+        elif net.op in 'm@':
+            return 0 # memories handled elsewhere
+        else:
+            raise core.PyrtlInternalError('Unable to estimate the following net '
+                                          'due to unimplemented op :\n%s' % str(net))
+
+    block_in = core.working_block(block)
+    sum_area = 0
+
+    # first, sum up the area of all of the logic elements (including registers)
+    for net in block.logic:
+        gates = gatecount_estimate(net)
+        # 854 Kgate/mm2 -- http://www.tsmc.com/english/dedicatedFoundry/technology/65nm.htm
+        area_in_65nm = gates / 854000.0
+        # scaling down from 65nm
+        area = area_in_65nm / (65.0/tech_in_nm)^2
+        sum_area += area
+
+    # now sum up the area of the memories
+    for mem in set(net.op_param[1] for net in block.logic if net.op in '@m'):
+        bits = 2^mem.addrwidth * mem.bitwidth
+        read_ports = len(self.readport_nets)
+        write_ports = len(self.writeport_nets)
+        ports = max(read_ports, write_ports)
+        sum_area += mem_area_estimate(tech_in_nm, bits, ports)
+
+    return sum_area
 
 
 # --------------------------------------------------------------------
@@ -266,6 +310,29 @@ def print_analysis(block, wirevector_timing_map, ):
 #
 
 
+def optimize(update_working_block=True, block=None):
+    """ Return an optimized version of a synthesized hardware block. """
+    block = core.working_block(block)
+    for net in block.logic:
+        if net.op not in set('r|&~^w'):
+            raise core.PyrtlError('error, optimization only works on post-synthesis blocks')
+    if not update_working_block:
+        block = copy.deepcopy(block)
+
+    if core.debug_mode:
+        block.sanity_check()
+        _remove_wire_nets(block)
+        block.sanity_check()
+        _constant_propagation(block)
+        block.sanity_check()
+        _remove_unlistened_nets(block)
+    else:
+        _remove_wire_nets(block)
+        _constant_propagation(block)
+        _remove_unlistened_nets(block)
+    return block
+
+
 def _remove_wire_nets(block):
     """ Remove all wire nodes from the block. """
 
@@ -302,29 +369,6 @@ def _remove_wire_nets(block):
         block.wirevector_set.remove(dead_wirevector)
 
     block.sanity_check()
-
-
-def optimize(update_working_block=True, block=None):
-    """ Return an optimized version of a synthesized hardware block. """
-    block = core.working_block(block)
-    for net in block.logic:
-        if net.op not in set('r|&~^w'):
-            raise core.PyrtlError('error, optimization only works on post-synthesis blocks')
-    if not update_working_block:
-        block = copy.deepcopy(block)
-
-    if core.debug_mode:
-        block.sanity_check()
-        _remove_wire_nets(block)
-        block.sanity_check()
-        _constant_propagation(block)
-        block.sanity_check()
-        _remove_unlistened_nets(block)
-    else:
-        _remove_wire_nets(block)
-        _constant_propagation(block)
-        _remove_unlistened_nets(block)
-    return block
 
 
 def _constant_propagation(block):
@@ -517,13 +561,19 @@ def synthesize(update_working_block=True, block=None):
     and sequential elements of registers (which are one bit as well).
     Because memories cannot be broken down to bit-level operations they
     are extracted from the design and made into new input/output interfaces.
+    Synthesize returns tuple of the new block and a map:
+    (original wirevector, bit number) -> new wirevector
+
+    :param updated_working_block: Boolean specifying if working block update
+    :param block: The block you want to synthesize
+    :return: Tuple of new block and mapping
     """
 
     block_in = core.working_block(block)
     block_out = core.Block()
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^rw')
-    wirevector_map = block_in.wirevector_map  # map from (vector,index) -> new_wire
+    wirevector_map = {}  # map from (vector,index) -> new_wire
     uid = 0  # used for unique names
 
     # First step, create all of the new wires for the new block
@@ -550,7 +600,7 @@ def synthesize(update_working_block=True, block=None):
     block_out.wirevector_map = wirevector_map
     if update_working_block:
         core.set_working_block(block_out)
-    return block_out
+    return block_out, wirevector_map
 
 
 def _decompose(net, wv_map, block_out):
