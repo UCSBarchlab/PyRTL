@@ -21,12 +21,12 @@ def area_estimation(tech_in_nm, block=None):
 
     The tech_in_nm is the size of the circuit technology to be estimated,
     with 65 being 65nm and 250 being 0.25um for example.  The area returned
-    is in the units of square mm.  
+    is in the units of square mm.
     """
     def mem_area_estimate(tech_in_nm, bits, ports):
         # http://www.cs.ucsb.edu/~sherwood/pubs/ICCD-srammodel.pdf
         tech_in_um = tech_in_nm * 1000
-        return 0.001 * tech_in_um^2.07 * bits^0.9 * ports^0.7 + 0.0048
+        return 0.001 * tech_in_um**2.07 * bits**0.9 * ports**0.7 + 0.0048
 
     def gatecount_estimate(net):
         if net.op in 'w~sc':
@@ -42,7 +42,7 @@ def area_estimation(tech_in_nm, block=None):
         elif net.op == '*':
             return 350 * len(net.arg[0])
         elif net.op in 'm@':
-            return 0 # memories handled elsewhere
+            return 0  # memories handled elsewhere
         else:
             raise core.PyrtlInternalError('Unable to estimate the following net '
                                           'due to unimplemented op :\n%s' % str(net))
@@ -56,14 +56,14 @@ def area_estimation(tech_in_nm, block=None):
         # 854 Kgate/mm2 -- http://www.tsmc.com/english/dedicatedFoundry/technology/65nm.htm
         area_in_65nm = gates / 854000.0
         # scaling down from 65nm
-        area = area_in_65nm / (65.0/tech_in_nm)^2
+        area = area_in_65nm / (65.0/tech_in_nm)**2
         sum_area += area
 
     # now sum up the area of the memories
-    for mem in set(net.op_param[1] for net in block.logic if net.op in '@m'):
-        bits = 2^mem.addrwidth * mem.bitwidth
-        read_ports = len(self.readport_nets)
-        write_ports = len(self.writeport_nets)
+    for mem in set(net.op_param[1] for net in block.logic_subset('@m')):
+        bits = 2**mem.addrwidth * mem.bitwidth
+        read_ports = len(mem.readport_nets)
+        write_ports = len(mem.writeport_nets)
         ports = max(read_ports, write_ports)
         sum_area += mem_area_estimate(tech_in_nm, bits, ports)
 
@@ -597,7 +597,6 @@ def synthesize(update_working_block=True, block=None):
     for net in block_in.logic:
         _decompose(net, wirevector_map, block_out)
 
-    block_out.wirevector_map = wirevector_map
     if update_working_block:
         core.set_working_block(block_out)
     return block_out, wirevector_map
@@ -706,3 +705,25 @@ def _generate_add(a, b, cin):
         msbits, cout = _generate_add(a[1:], b[1:], ripplecarry)
         sumbits = lsbit + msbits  # append to lsb to the lowest bits
     return sumbits, cout
+
+
+def extract_memories(update_working_block=True, block=None):
+    """ Extract the memories from the block.
+
+    :param updated_working_block: Boolean specifying if working block update
+    :param block: The block you want to extract memories from
+    :return: Tuple of new block and mapping of ports -> inputs/outputs
+    """
+
+    block_in = core.working_block(block)
+    block_out = core.Block()
+    wirevector_map = {}
+
+    for net in block.logic:
+        if net.op == 'm':
+        elif net.op == '@':
+        else:
+
+    if update_working_block:
+        core.set_working_block(block_out)
+    return block_out, mem_map

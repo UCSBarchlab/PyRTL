@@ -43,4 +43,6 @@ make html
 cd ..
 check_exit_code $? "Docs failed to build. Exiting."
 
+#nosetests --with-coverage --cover-erase --cover-html
+
 exit 0
