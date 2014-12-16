@@ -557,22 +557,24 @@ def synthesize(update_working_block=True, block=None):
     Takes as input a block (default to working block) and creates a new
     block which is identical in function but uses only single bit gates
     and excludes many of the more complicated primitives.  The new block
-    should only consist of the combination elements of w, &, |, ^, and ~.
-    and sequential elements of registers (which are one bit as well).
-    Because memories cannot be broken down to bit-level operations they
-    are extracted from the design and made into new input/output interfaces.
-    Synthesize returns tuple of the new block and a map:
-    (original wirevector, bit number) -> new wirevector
+    should consist *almost* exclusively of the combination elements 
+    of w, &, |, ^, and ~ and sequential elements of registers (which are
+    one bit as well).  The two exceptions are for inputs/outputs (so that
+    we can keep the same interface) which are immediately broken down into
+    the individual bits and memories.  Memories (read and write ports) which
+    require the reassembly and disassembly of the wirevectors immediately
+    before and after.  There are the only two places where 'c' and 's' ops
+    should exist.
 
     :param updated_working_block: Boolean specifying if working block update
     :param block: The block you want to synthesize
-    :return: Tuple of new block and mapping
+    :return: The newly synthesized block.
     """
 
     block_in = core.working_block(block)
     block_out = core.Block()
     # resulting block should only have one of a restricted set of net ops
-    block_out.legal_ops = set('~&|^rw')
+    block_out.legal_ops = set('~&|^rwcsm@')
     wirevector_map = {}  # map from (vector,index) -> new_wire
     uid = 0  # used for unique names
 
@@ -587,22 +589,32 @@ def synthesize(update_working_block=True, block=None):
                 new_val = (wirevector.val >> i) & 0x1
                 new_wirevector = wire.Const(bitwidth=1, val=new_val, block=block_out)
             else:
-                # build the appropriately typed wire (maintaining input/output)
-                wirevector_type = type(wirevector)
-                new_wirevector = wirevector_type(name=new_name, bitwidth=1, block=block_out)
+                new_wirevector = wire.WireVector(name=new_name, bitwidth=1, block=block_out)
             wirevector_map[(wirevector, i)] = new_wirevector
+
+    # Now connect up the inputs and outputs to maintain the interface
+    for wirevector in block_in.wirevector_subset(wire.Input):
+        input_vector = wire.Input(name=wirevector.name, bitwidth=len(wirevector), block=block_out)
+        for i in range(len(wirevector)):
+            wirevector_map[(wirevector, i)] <<= input_vector[i]
+    for wirevector in block_in.wirevector_subset(wire.Output):
+        output_vector = wire.Output(name=wirevector.name, bitwidth=len(wirevector), block=block_out)
+        # the "reversed" is needed because most significant bit comes first in concat
+        output_bits = [wirevector_map[(wirevector, i)] for i in reversed(range(len(output_vector)))]
+        output_vector <<= helperfuncs.concat(*output_bits)
 
     # Now that we have all the wires built and mapped, walk all the blocks
     # and map the logic to the equivalent set of primitives in the system
+    out_mems = set()
     for net in block_in.logic:
-        _decompose(net, wirevector_map, block_out)
+        _decompose(net, wirevector_map, out_mems, block_out)
 
     if update_working_block:
         core.set_working_block(block_out)
-    return block_out, wirevector_map
+    return block_out
 
 
-def _decompose(net, wv_map, block_out):
+def _decompose(net, wv_map, mems, block_out):
     """ Add the wires and logicnets to block_out and wv_map to decompose net """
 
     def arg(x, i):
@@ -676,6 +688,39 @@ def _decompose(net, wv_map, block_out):
         destlist = sumbits + [cout]
         for i in destlen():
             assign_dest(i, destlist[i])
+    elif net.op == 'm':
+        arg0list = [arg(0, i) for i in range(len(net.args[0]))]
+        addr = helperfuncs.concat(*reversed(arg0list))
+        memid, mem = net.op_param
+        if mem not in out_mem:
+            new_mem = memblock.MemBlock(
+                bitwidth=mem.bitwidth, 
+                addrwidth=mem.addrwidth,
+                name=mem.name, 
+                block=block_out) 
+            out_mem.add(new_mem)
+        else:
+            new_mem = out_mem[mem]
+        data = as_wires(new_mem[addr])
+        for i in destlen():
+            assign_dest(i, data[i])
+    elif net.op == '@':
+        addrlist = [arg(0, i) for i in range(len(net.args[0]))]
+        addr = helperfuncs.concat(*reversed(addrlist))
+        datalist = [arg(1, i) for i in range(len(net.args[1]))]
+        data = helperfuncs.concat(*reversed(datalist))
+        enable = arg(2, 0)
+        memid, mem = net.op_param
+        if mem not in out_mem:
+            new_mem = memblock.MemBlock(
+                bitwidth=mem.bitwidth, 
+                addrwidth=mem.addrwidth,
+                name=mem.name, 
+                block=block_out) 
+            out_mem.add(new_mem)
+        else:
+            new_mem = out_mem[mem]
+        new_mem[addr] <<= memblock.MemBlock.EnabledWrite(data=data, enable=enable)
     else:
         raise core.PyrtlInternalError('Unable to synthesize the following net '
                                       'due to unimplemented op :\n%s' % str(net))
@@ -705,25 +750,3 @@ def _generate_add(a, b, cin):
         msbits, cout = _generate_add(a[1:], b[1:], ripplecarry)
         sumbits = lsbit + msbits  # append to lsb to the lowest bits
     return sumbits, cout
-
-
-def extract_memories(update_working_block=True, block=None):
-    """ Extract the memories from the block.
-
-    :param updated_working_block: Boolean specifying if working block update
-    :param block: The block you want to extract memories from
-    :return: Tuple of new block and mapping of ports -> inputs/outputs
-    """
-
-    block_in = core.working_block(block)
-    block_out = core.Block()
-    wirevector_map = {}
-
-    for net in block.logic:
-        if net.op == 'm':
-        elif net.op == '@':
-        else:
-
-    if update_working_block:
-        core.set_working_block(block_out)
-    return block_out, mem_map
