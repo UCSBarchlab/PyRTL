@@ -1,8 +1,10 @@
 from pyrtl import *
 
+
 def main():
-    #test_simple_mult()
+    # test_simple_mult()
     test_wallace_tree()
+
 
 def simple_mult(A, B, start, done):
     """Build a slow, small multiplier using the simple shift-and-add algorithm. Requires very small
@@ -29,12 +31,13 @@ def simple_mult(A, B, start, done):
         with condition(~aiszero):  # don't run when there's no work to do
             areg.next |= areg[1:]  # right shift
             breg.next |= concat(breg, "1'b0")  # left shift
-            
+
             # "Multply" shifted breg by LSB of areg by conditionally adding
             with condition(areg[0]):
                 accum.next |= accum + breg  # adds to accum only when LSB of areg is 1
 
     return accum
+
 
 def test_simple_mult():
 
@@ -55,6 +58,7 @@ def test_simple_mult():
 
     sim_trace.render_trace()
 
+
 def wallace_tree(A, B):
     """Build an unclocked multiplier for inputs A and B using a Wallace Tree.
     Delay is order NlogN, while area is order N^2.
@@ -62,25 +66,26 @@ def wallace_tree(A, B):
     """
 
     # AND every bit of A with every bit of B (N^2 results) and store by "weight" (bit-position)
-    bits = {weight:[] for weight in range(len(A) + len(B))}
-    for i,a in enumerate(A):
-        for j,b in enumerate(B):
-            bits[i+j].append(a & b) 
+    bits = {weight: [] for weight in range(len(A) + len(B))}
+    for i, a in enumerate(A):
+        for j, b in enumerate(B):
+            bits[i+j].append(a & b)
 
     # Add together wires of the same weight. Sum keeps that weight; cout goes to the next bit up.
     result = bits[0][0]  # Start with bit 0, we'll add concatenate bits to the left
     for i in range(1, len(A) + len(B)):  # Start with low weights and move up
         while len(bits[i]) >= 3:  # Reduce with Full Adders until < 3 wires
-            a,b,cin = bits[i].pop(0), bits[i].pop(0), bits[i].pop(0)
+            a, b, cin = bits[i].pop(0), bits[i].pop(0), bits[i].pop(0)
             bits[i].append(a ^ b ^ cin)  # sum bit keeps this weight
-            bits[i+1].append( (a & b) | (b & cin) | (a & cin) )  # cout goes up one weight
+            bits[i+1].append((a & b) | (b & cin) | (a & cin))  # cout goes up one weight
         if len(bits[i]) == 2:  # Reduce with a Half Adder if exactly 2 wires
-            a,b = bits[i].pop(0), bits[i].pop(0)
+            a, b = bits[i].pop(0), bits[i].pop(0)
             bits[i].append(a ^ b)  # sum bit keeps this weight
             bits[i+1].append(a & b)  # cout goes up one weight
         if len(bits[i]) == 1:  # Remaining wire is the answer for this bit
             result = concat(bits[i][0], result)
     return result
+
 
 def test_wallace_tree():
 
