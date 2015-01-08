@@ -214,11 +214,32 @@ class Block(object):
             return None
 
     def __iter__(self):
-        """Return a generator object that yields the block's LogicNets in topological order.
+        """ BlockIterator iterates over the block passed on init in topographic order.
+            The input is a Block, and when a LogicNet is returned it is always the case
+            that all of it's "parents" have already been returned earlier in the iteration.
 
-        A LogicNet is never returned before all of its dependent LogicNets have been seen;
-        this is the only guarantee on the order of the returned LogicNets."""
-        return BlockIterator(self)
+            Note: this method will throw an error if there are loops in the
+            logic that do not involve registers"""
+        cleared = self.wirevector_subset((wire.Input, wire.Const, wire.Register))
+        remaining = self.logic.copy()
+        prev_remain = len(self.logic) + 1  # to make sure it actually runs
+        while len(remaining) < prev_remain:
+            prev_remain = len(remaining)
+            iteration_gates = set()
+            for gate in remaining:  # loop over logicnets not yet returned
+                if all([arg in cleared for arg in gate.args]):  # if all args ready
+                    iteration_gates.add(gate)
+                    yield gate
+
+            for gate in iteration_gates:
+                cleared.update(set(gate.dests))  # add dests to set of ready wires
+                remaining.remove(gate)  # remove gate from set of to return
+
+        if len(remaining) is not 0:
+            raise PyrtlError("Failure in Block Iterator due to non-register loops")
+
+        # raise StopIteration
+        # return BlockIterator(self)
 
     def sanity_check(self):
         """ Check block and throw PyrtlError or PyrtlInternalError if there is an issue.
@@ -398,39 +419,6 @@ class Block(object):
     def next_memid(cls):
         cls._memid_count += 1
         return cls._memid_count
-
-
-class BlockIterator():
-    """ BlockIterator iterates over the block passed on init in topographic order.
-        The input is a Block, and when a LogicNet is returned it is always the case
-        that all of it's "parents" have already been returned earlier in the iteration.
-
-        Note: this method will throw an error if there are loops in the
-        logic that do not involve registers"""
-
-    def __init__(self, block):
-        self.block = block
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        cleared = self.block.wirevector_subset(wire.Input)\
-            .union(self.block.wirevector_subset(wire.Register))
-        remaining = self.block.logic.copy()
-        prev_remain = len(self.block.logic)
-        while len(remaining) > prev_remain:
-            prev_remain = len(remaining)
-            for gate in remaining:  # loop over logicnets not yet returned
-                if all([arg in cleared for arg in gate.args]):  # if all args ready
-                    cleared.update(set(gate.dests))  # add dests to set of ready wires
-                    remaining.remove(gate)  # remove gate from set of to return
-                    yield gate
-
-        if remaining:
-            raise PyrtlError("Failure in Block Iterator due to non-register loops")
-
-        raise StopIteration
 
 # -----------------------------------------------------------------------
 #          __   __               __      __        __   __
