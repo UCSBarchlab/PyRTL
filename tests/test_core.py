@@ -30,6 +30,32 @@ class TestBlock(unittest.TestCase):
     def test_sanity_check(self):
         testmissing()
 
+    def test_block_iterators(self):
+        # testing to see that it properly runs a trivial case
+        inwire = pyrtl.Input(bitwidth=1, name="inwire1")
+        inwire2 = pyrtl.Input(bitwidth=1)
+        inwire3 = pyrtl.Input(bitwidth=1)
+        tempwire = pyrtl.WireVector()
+        tempwire2 = pyrtl.WireVector()
+        outwire = pyrtl.Output()
+
+
+        tempwire <<= inwire | inwire2
+        tempwire2 <<= ~tempwire
+        outwire <<= tempwire2 & inwire3
+
+        block = pyrtl.working_block()
+
+        i = 0
+        for net in block:
+            if i > 1000:
+                break
+            i += 1
+            print str(net)
+
+        for net in block.logic:
+            print net
+
 
 if __name__ == "__main__":
     unittest.main()
