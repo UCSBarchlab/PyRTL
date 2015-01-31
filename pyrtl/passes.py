@@ -8,6 +8,7 @@ import copy
 import core
 import wire
 import helperfuncs
+import memblock
 
 # --------------------------------------------------------------------
 #         __   ___          ___  __  ___              ___    __
@@ -692,15 +693,15 @@ def _decompose(net, wv_map, mems, block_out):
         arg0list = [arg(0, i) for i in range(len(net.args[0]))]
         addr = helperfuncs.concat(*reversed(arg0list))
         memid, mem = net.op_param
-        if mem not in out_mem:
+        if mem not in mems:
             new_mem = memblock.MemBlock(
                 bitwidth=mem.bitwidth, 
                 addrwidth=mem.addrwidth,
                 name=mem.name, 
                 block=block_out) 
-            out_mem.add(new_mem)
+            mems.add(new_mem)
         else:
-            new_mem = out_mem[mem]
+            new_mem = mems[mem]
         data = as_wires(new_mem[addr])
         for i in destlen():
             assign_dest(i, data[i])
@@ -711,15 +712,15 @@ def _decompose(net, wv_map, mems, block_out):
         data = helperfuncs.concat(*reversed(datalist))
         enable = arg(2, 0)
         memid, mem = net.op_param
-        if mem not in out_mem:
+        if mem not in mems:
             new_mem = memblock.MemBlock(
                 bitwidth=mem.bitwidth, 
                 addrwidth=mem.addrwidth,
                 name=mem.name, 
                 block=block_out) 
-            out_mem.add(new_mem)
+            mems.add(new_mem)
         else:
-            new_mem = out_mem[mem]
+            new_mem = mems[mem]
         new_mem[addr] <<= memblock.MemBlock.EnabledWrite(data=data, enable=enable)
     else:
         raise core.PyrtlInternalError('Unable to synthesize the following net '
