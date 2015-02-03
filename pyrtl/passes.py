@@ -314,9 +314,6 @@ def print_analysis(block, wirevector_timing_map, ):
 def optimize(update_working_block=True, block=None):
     """ Return an optimized version of a synthesized hardware block. """
     block = core.working_block(block)
-    for net in block.logic:
-        if net.op not in set('r|&~^w'):
-            raise core.PyrtlError('error, optimization only works on post-synthesis blocks')
     if not update_working_block:
         block = copy.deepcopy(block)
 
@@ -460,9 +457,8 @@ def _constant_prop_pass(block):
             elif net_checking.op in one_var_ops:
                 output = one_var_ops[net_checking.op](net_checking.args[0].val)
             else:
-                raise core.PyrtlInternalError('net with invalid op code, '
-                                              + net_checking.op + ' found')
-
+                # this is for nets that we are not modifying (eg spliting, and memory)
+                return
             replace_net_with_const(output)
 
     def find_producer(x):
@@ -517,10 +513,16 @@ def _remove_unlistened_nets(block):
         listened_wires_prev = listened_wires_cur
 
         for net in block.logic:
-            if (net.dests[0] in listened_wires_prev) and net not in listened_nets:
+            if any(( destWire in listened_wires_prev) for destWire in net.dests) and net not in listened_nets:
                 listened_nets.add(net)
                 for arg_wire in net.args:
                     listened_wires_cur.add(arg_wire)
+
+    # now I need to add back the interface for the inputs that were removed
+    for net in block.logic:
+        if net.op is 's' and isinstance(net.args[0], wire.Input) and net not in listened_nets:
+            listened_nets.add(net)
+            # notify the user that this net is useless
 
     block.logic = listened_nets
     _remove_unused_wires(block, "unlistened net removal")

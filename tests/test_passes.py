@@ -332,6 +332,33 @@ class TestPasses(unittest.TestCase):
         timing_max_length = pyrtl.timing_max_length(timing_map)
         critical_path = pyrtl.timing_critical_path(timing_map)
 
+    def test_all_mem_1(self):
+        readAdd1 = pyrtl.Input(bitwidth=3)
+        readAdd2 = pyrtl.Input(bitwidth=3)
+        writeAdd1 = pyrtl.Input(bitwidth=3)
+        writeAdd2 = pyrtl.Input(bitwidth=3)
+        readData1 = pyrtl.Input(bitwidth=3)
+        readData2 = pyrtl.Input(bitwidth=3)
+
+        dataOut = pyrtl.Output(bitwidth=3)
+
+        memory = pyrtl.MemBlock(3,3)
+
+        memory[readAdd1 & readAdd2] <<= readData1 ^ readData2
+        dataOut <<= memory[writeAdd1 | writeAdd2]
+
+        block = pyrtl.working_block()
+        timing_map = pyrtl.advanced_timing_analysis(block)
+        # timing_max_length = pyrtl.timing_max_length(timing_map)
+        # critical_path = pyrtl.timing_critical_path(timing_map)
+
+        pyrtl.synthesize()
+        pyrtl.optimize()
+
+        block = pyrtl.working_block()
+        timing_map = pyrtl.advanced_timing_analysis(block)
+        # timing_max_length = pyrtl.timing_max_length(timing_map)
+        # critical_path = pyrtl.timing_critical_path(timing_map)
 
 
 if __name__ == "__main__":
