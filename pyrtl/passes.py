@@ -513,8 +513,10 @@ def synthesize(update_working_block=True, block=None):
             if isinstance(wirevector, wire.Const):
                 new_val = (wirevector.val >> i) & 0x1
                 new_wirevector = wire.Const(bitwidth=1, val=new_val, block=block_out)
-            else:
+            elif isinstance(wirevector, (wire.Input, wire.Output)):
                 new_wirevector = wire.WireVector(name=new_name, bitwidth=1, block=block_out)
+            else:
+                new_wirevector = wirevector.__class__(name=new_name, bitwidth=1, block=block_out)
             wirevector_map[(wirevector, i)] = new_wirevector
 
     # Now connect up the inputs and outputs to maintain the interface
