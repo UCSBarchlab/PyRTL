@@ -145,15 +145,21 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
                     items_to_remove.add(_gate)
                     continue
                 time = max(timing_map[a_wire] for a_wire in _gate.args) + gate_delay
-                timing_map[_gate.dests[0]] = time
-                heapq.heappush(timing_heap, WireWTiming(time, _gate.dests[0]))
+                for dest_wire in _gate.dests:
+                    timing_map[dest_wire] = time
+                    heapq.heappush(timing_heap, WireWTiming(time, dest_wire))
                 cleared.update(set(_gate.dests))  # add dests to set of ready wires
                 items_to_remove.add(_gate)
         remaining.difference_update(items_to_remove)
 
     if len(remaining) > 0:
-        raise core.PyrtlError("Cannot do static timing analysis due to nonregister,"
-                              " nonmemory loops in the code")
+        blockStr = ""
+        for a_net in remaining:
+            blockStr = blockStr + str(a_net) + "\n"
+        blockStr = ("Cannot do static timing analysis due to nonregister,"
+            "nonmemory loops in the code \n"
+            "The unprocesssed blocks are: \n") + blockStr
+        raise core.PyrtlError( blockStr)
     return timing_map
 
 
@@ -415,7 +421,11 @@ def _remove_unlistened_nets(block):
     prev_listened_net_count = 0
 
     for a_net in block.logic:
-        if isinstance(a_net.dests[0], wire.Output):
+        if a_net.op in 'm@':
+            listened_nets.add(a_net)
+            for arg_wire in a_net.args:
+                listened_wires_cur.add(arg_wire)
+        elif isinstance(a_net.dests[0], wire.Output):
             listened_nets.add(a_net)
             for arg_wire in a_net.args:
                 listened_wires_cur.add(arg_wire)
@@ -616,7 +626,7 @@ def _decompose(net, wv_map, mems, block_out):
             mems.add(new_mem)
         else:
             new_mem = mems[mem]
-        data = as_wires(new_mem[addr])
+        data = helperfuncs.as_wires(new_mem[addr])
         for i in destlen():
             assign_dest(i, data[i])
     elif net.op == '@':
