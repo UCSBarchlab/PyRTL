@@ -49,16 +49,14 @@ def area_estimation(tech_in_nm, block=None):
                                           'due to unimplemented op :\n%s' % str(net))
 
     block_in = core.working_block(block)
-    sum_area = 0
 
     # first, sum up the area of all of the logic elements (including registers)
-    for net in block.logic:
-        gates = gatecount_estimate(net)
-        # 854 Kgate/mm2 -- http://www.tsmc.com/english/dedicatedFoundry/technology/65nm.htm
-        area_in_65nm = gates / 854000.0
-        # scaling down from 65nm
-        area = area_in_65nm / (65.0/tech_in_nm)**2
-        sum_area += area
+    num_gates = sum(gatecount_estimate(a_net) for a_net in block.logic)
+
+    # 854 Kgate/mm2 -- http://www.tsmc.com/english/dedicatedFoundry/technology/65nm.htm
+    area_in_65nm = num_gates / 854000.0
+    # scaling down from 65nm
+    sum_area = area_in_65nm / (65.0/tech_in_nm)**2
 
     # now sum up the area of the memories
     for mem in set(net.op_param[1] for net in block.logic_subset('@m')):
@@ -482,7 +480,7 @@ def synthesize(update_working_block=True, block=None):
     Takes as input a block (default to working block) and creates a new
     block which is identical in function but uses only single bit gates
     and excludes many of the more complicated primitives.  The new block
-    should consist *almost* exclusively of the combination elements 
+    should consist *almost* exclusively of the combination elements
     of w, &, |, ^, and ~ and sequential elements of registers (which are
     one bit as well).  The two exceptions are for inputs/outputs (so that
     we can keep the same interface) which are immediately broken down into
@@ -621,10 +619,10 @@ def _decompose(net, wv_map, mems, block_out):
         memid, mem = net.op_param
         if mem not in mems:
             new_mem = memblock.MemBlock(
-                bitwidth=mem.bitwidth, 
+                bitwidth=mem.bitwidth,
                 addrwidth=mem.addrwidth,
-                name=mem.name, 
-                block=block_out) 
+                name=mem.name,
+                block=block_out)
             mems.add(new_mem)
         else:
             new_mem = mems[mem]
@@ -640,10 +638,10 @@ def _decompose(net, wv_map, mems, block_out):
         memid, mem = net.op_param
         if mem not in mems:
             new_mem = memblock.MemBlock(
-                bitwidth=mem.bitwidth, 
+                bitwidth=mem.bitwidth,
                 addrwidth=mem.addrwidth,
-                name=mem.name, 
-                block=block_out) 
+                name=mem.name,
+                block=block_out)
             mems.add(new_mem)
         else:
             new_mem = mems[mem]
