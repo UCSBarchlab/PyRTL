@@ -48,8 +48,7 @@ class TestBlock(unittest.TestCase):
 
         i = 0
         for net in block:
-            if i > 1000:
-                break
+            self.assertFalse(i > 100, "Too many iterations happened")
             i += 1
             print str(net)
 
