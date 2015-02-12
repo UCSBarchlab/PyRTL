@@ -8,6 +8,7 @@ import copy
 import core
 import wire
 import helperfuncs
+import memblock
 
 # --------------------------------------------------------------------
 #         __   ___          ___  __  ___              ___    __
@@ -21,9 +22,51 @@ def area_estimation(tech_in_nm, block=None):
 
     The tech_in_nm is the size of the circuit technology to be estimated,
     with 65 being 65nm and 250 being 0.25um for example.  The area returned
-    is in the units of square mm.  The estimates are VERY simple
+    is in the units of square mm.
     """
-    raise NotImplementedError
+    def mem_area_estimate(tech_in_nm, bits, ports):
+        # http://www.cs.ucsb.edu/~sherwood/pubs/ICCD-srammodel.pdf
+        tech_in_um = tech_in_nm * 1000
+        return 0.001 * tech_in_um**2.07 * bits**0.9 * ports**0.7 + 0.0048
+
+    def gatecount_estimate(net):
+        if net.op in 'w~sc':
+            return 0
+        elif net.op in '&|':
+            return 3 * len(net.arg[0])
+        elif net.op in '^=<>x':
+            return 18 * len(net.arg[0])
+        elif net.op == 'r':
+            return 20 * len(net.arg[0])
+        elif net.op in '+-':
+            return 21 * len(net.arg[0])
+        elif net.op == '*':
+            return 350 * len(net.arg[0])
+        elif net.op in 'm@':
+            return 0  # memories handled elsewhere
+        else:
+            raise core.PyrtlInternalError('Unable to estimate the following net '
+                                          'due to unimplemented op :\n%s' % str(net))
+
+    block_in = core.working_block(block)
+
+    # first, sum up the area of all of the logic elements (including registers)
+    num_gates = sum(gatecount_estimate(a_net) for a_net in block.logic)
+
+    # 854 Kgate/mm2 -- http://www.tsmc.com/english/dedicatedFoundry/technology/65nm.htm
+    area_in_65nm = num_gates / 854000.0
+    # scaling down from 65nm
+    sum_area = area_in_65nm / (65.0/tech_in_nm)**2
+
+    # now sum up the area of the memories
+    for mem in set(net.op_param[1] for net in block.logic_subset('@m')):
+        bits = 2**mem.addrwidth * mem.bitwidth
+        read_ports = len(mem.readport_nets)
+        write_ports = len(mem.writeport_nets)
+        ports = max(read_ports, write_ports)
+        sum_area += mem_area_estimate(tech_in_nm, bits, ports)
+
+    return sum_area
 
 
 # --------------------------------------------------------------------
@@ -32,95 +75,7 @@ def area_estimation(tech_in_nm, block=None):
 #    |  |  |  | | | \| \__>     /    \| \| /~~\ |_  |   .__/ |  .__/
 #
 
-def quick_timing_analysis(block):
-    """ Calculates a quick timing analysis. For large blocks, this will be
-    around 10x as fast as the 'normal' timing analysis (though performance
-    is very dependent on your code structure)
-
-    This will not take into account that 'w' nets have zero delay
-
-    :param block: The block you want to do timing analysis on
-    :return: A map with wires as keys and the associated timing as the value
-    """
-    cleared = block.wirevector_subset((wire.Input, wire.Const, wire.Register))
-    remaining = block.logic.copy().difference(block.logic_subset('r'))
-    num_prev_remaining = len(remaining)+1
-    timing_map = {wirevector: 0 for wirevector in cleared}
-    time = 0
-    while len(remaining) < num_prev_remaining:
-        num_prev_remaining = len(remaining)
-        time += 1
-        items_to_remove = set()
-        new_cleared = set()
-        for gate in remaining:  # loop over logicnets not yet returned
-            if cleared.issuperset(gate.args):  # if all args ready
-                timing_map[gate.dests[0]] = time
-                new_cleared.update(set(gate.dests))  # add dests to set of ready wires
-                items_to_remove.add(gate)
-        remaining.difference_update(items_to_remove)
-        cleared.update(new_cleared)
-
-    if len(remaining) > 0:
-        raise core.PyrtlError("Cannot do static timing analysis due to nonregister "
-                              "loops in the code")
-    return timing_map
-
-
-def timing_analysis(block, gate_timings=None):
-    """ Calculates the timing analysis while taking into account the
-    different timing delays of each type of gate
-
-    :param block: The block you want to do timing analysis on
-    :param gate_timings: a map of the gate op to the timing delay for the op
-    if none is specified, a default gate timing is used
-    :return: A map with wires as keys and the associated timing as the value
-    """
-    import heapq
-
-    class WireWTiming:
-        # the purpose of this class is to allow for us to define
-        # the ordering of the objects. This is needed for the
-        # heap to function.
-
-        def __init__(self, timing, wirevector):
-            self.time = timing
-            self.wirevector = wirevector
-
-        def __lt__(self, other):
-            return self.time < other.time
-
-    if gate_timings is None:
-        gate_timings = {
-            '~': 1,
-            '&': 1,
-            '|': 1,
-            '^': 1,
-            'w': 0,
-        }
-    cleared = block.wirevector_subset((wire.Input, wire.Const, wire.Register))
-    remaining = block.logic.copy().difference(block.logic_subset('r'))
-    timing_map = {wirevector: 0 for wirevector in cleared}
-    timing_heap = [WireWTiming(0, a_wire) for a_wire in cleared]
-    heapq.heapify(timing_heap)
-    while len(timing_heap) > 0:
-        cleared.add(heapq.heappop(timing_heap).wirevector)
-        items_to_remove = set()
-        for gate in remaining:  # loop over logicnets not yet returned
-            if cleared.issuperset(gate.args):  # if all args ready
-                time = max(timing_map[a_wire] for a_wire in gate.args) + gate_timings[gate.op]
-                timing_map[gate.dests[0]] = time
-                heapq.heappush(timing_heap, WireWTiming(time, gate.dests[0]))
-                cleared.update(set(gate.dests))  # add dests to set of ready wires
-                items_to_remove.add(gate)
-        remaining.difference_update(items_to_remove)
-
-    if len(remaining) > 0:
-        raise core.PyrtlError("Cannot do static timing analysis due to nonregister "
-                              "loops in the code")
-    return timing_map
-
-
-def advanced_timing_analysis(block=None, gate_delay_funcs=None,):
+def timing_analysis(block=None, gate_delay_funcs=None,):
     """ Calculates the timing analysis while allowing for
     different timing delays of different gates of each type
     Supports all valid presynthesis blocks
@@ -188,15 +143,21 @@ def advanced_timing_analysis(block=None, gate_delay_funcs=None,):
                     items_to_remove.add(_gate)
                     continue
                 time = max(timing_map[a_wire] for a_wire in _gate.args) + gate_delay
-                timing_map[_gate.dests[0]] = time
-                heapq.heappush(timing_heap, WireWTiming(time, _gate.dests[0]))
+                for dest_wire in _gate.dests:
+                    timing_map[dest_wire] = time
+                    heapq.heappush(timing_heap, WireWTiming(time, dest_wire))
                 cleared.update(set(_gate.dests))  # add dests to set of ready wires
                 items_to_remove.add(_gate)
         remaining.difference_update(items_to_remove)
 
     if len(remaining) > 0:
-        raise core.PyrtlError("Cannot do static timing analysis due to nonregister,"
-                              " nonmemory loops in the code")
+        blockStr = ""
+        for a_net in remaining:
+            blockStr = blockStr + str(a_net) + "\n"
+        blockStr = ("Cannot do static timing analysis due to nonregister,"
+            "nonmemory loops in the code \n"
+            "The unprocesssed blocks are: \n") + blockStr
+        raise core.PyrtlError( blockStr)
     return timing_map
 
 
@@ -266,6 +227,26 @@ def print_analysis(block, wirevector_timing_map, ):
 #
 
 
+def optimize(update_working_block=True, block=None):
+    """ Return an optimized version of a synthesized hardware block. """
+    block = core.working_block(block)
+    if not update_working_block:
+        block = copy.deepcopy(block)
+
+    if core.debug_mode:
+        block.sanity_check()
+        _remove_wire_nets(block)
+        block.sanity_check()
+        _constant_propagation(block)
+        block.sanity_check()
+        _remove_unlistened_nets(block)
+    else:
+        _remove_wire_nets(block)
+        _constant_propagation(block)
+        _remove_unlistened_nets(block)
+    return block
+
+
 def _remove_wire_nets(block):
     """ Remove all wire nodes from the block. """
 
@@ -302,29 +283,6 @@ def _remove_wire_nets(block):
         block.wirevector_set.remove(dead_wirevector)
 
     block.sanity_check()
-
-
-def optimize(update_working_block=True, block=None):
-    """ Return an optimized version of a synthesized hardware block. """
-    block = core.working_block(block)
-    for net in block.logic:
-        if net.op not in set('r|&~^w'):
-            raise core.PyrtlError('error, optimization only works on post-synthesis blocks')
-    if not update_working_block:
-        block = copy.deepcopy(block)
-
-    if core.debug_mode:
-        block.sanity_check()
-        _remove_wire_nets(block)
-        block.sanity_check()
-        _constant_propagation(block)
-        block.sanity_check()
-        _remove_unlistened_nets(block)
-    else:
-        _remove_wire_nets(block)
-        _constant_propagation(block)
-        _remove_unlistened_nets(block)
-    return block
 
 
 def _constant_propagation(block):
@@ -415,9 +373,8 @@ def _constant_prop_pass(block):
             elif net_checking.op in one_var_ops:
                 output = one_var_ops[net_checking.op](net_checking.args[0].val)
             else:
-                raise core.PyrtlInternalError('net with invalid op code, '
-                                              + net_checking.op + ' found')
-
+                # this is for nets that we are not modifying (eg spliting, and memory)
+                return
             replace_net_with_const(output)
 
     def find_producer(x):
@@ -462,7 +419,11 @@ def _remove_unlistened_nets(block):
     prev_listened_net_count = 0
 
     for a_net in block.logic:
-        if isinstance(a_net.dests[0], wire.Output):
+        if a_net.op in 'm@':
+            listened_nets.add(a_net)
+            for arg_wire in a_net.args:
+                listened_wires_cur.add(arg_wire)
+        elif isinstance(a_net.dests[0], wire.Output):
             listened_nets.add(a_net)
             for arg_wire in a_net.args:
                 listened_wires_cur.add(arg_wire)
@@ -472,10 +433,16 @@ def _remove_unlistened_nets(block):
         listened_wires_prev = listened_wires_cur
 
         for net in block.logic:
-            if (net.dests[0] in listened_wires_prev) and net not in listened_nets:
+            if any(( destWire in listened_wires_prev) for destWire in net.dests) and net not in listened_nets:
                 listened_nets.add(net)
                 for arg_wire in net.args:
                     listened_wires_cur.add(arg_wire)
+
+    # now I need to add back the interface for the inputs that were removed
+    for net in block.logic:
+        if net.op is 's' and isinstance(net.args[0], wire.Input) and net not in listened_nets:
+            listened_nets.add(net)
+            # notify the user that this net is useless
 
     block.logic = listened_nets
     _remove_unused_wires(block, "unlistened net removal")
@@ -513,17 +480,25 @@ def synthesize(update_working_block=True, block=None):
     Takes as input a block (default to working block) and creates a new
     block which is identical in function but uses only single bit gates
     and excludes many of the more complicated primitives.  The new block
-    should only consist of the combination elements of w, &, |, ^, and ~.
-    and sequential elements of registers (which are one bit as well).
-    Because memories cannot be broken down to bit-level operations they
-    are extracted from the design and made into new input/output interfaces.
+    should consist *almost* exclusively of the combination elements
+    of w, &, |, ^, and ~ and sequential elements of registers (which are
+    one bit as well).  The two exceptions are for inputs/outputs (so that
+    we can keep the same interface) which are immediately broken down into
+    the individual bits and memories.  Memories (read and write ports) which
+    require the reassembly and disassembly of the wirevectors immediately
+    before and after.  There are the only two places where 'c' and 's' ops
+    should exist.
+
+    :param updated_working_block: Boolean specifying if working block update
+    :param block: The block you want to synthesize
+    :return: The newly synthesized block.
     """
 
     block_in = core.working_block(block)
     block_out = core.Block()
     # resulting block should only have one of a restricted set of net ops
-    block_out.legal_ops = set('~&|^rw')
-    wirevector_map = block_in.wirevector_map  # map from (vector,index) -> new_wire
+    block_out.legal_ops = set('~&|^rwcsm@')
+    wirevector_map = {}  # map from (vector,index) -> new_wire
     uid = 0  # used for unique names
 
     # First step, create all of the new wires for the new block
@@ -536,24 +511,35 @@ def synthesize(update_working_block=True, block=None):
             if isinstance(wirevector, wire.Const):
                 new_val = (wirevector.val >> i) & 0x1
                 new_wirevector = wire.Const(bitwidth=1, val=new_val, block=block_out)
+            elif isinstance(wirevector, (wire.Input, wire.Output)):
+                new_wirevector = wire.WireVector(name=new_name, bitwidth=1, block=block_out)
             else:
-                # build the appropriately typed wire (maintaining input/output)
-                wirevector_type = type(wirevector)
-                new_wirevector = wirevector_type(name=new_name, bitwidth=1, block=block_out)
+                new_wirevector = wirevector.__class__(name=new_name, bitwidth=1, block=block_out)
             wirevector_map[(wirevector, i)] = new_wirevector
+
+    # Now connect up the inputs and outputs to maintain the interface
+    for wirevector in block_in.wirevector_subset(wire.Input):
+        input_vector = wire.Input(name=wirevector.name, bitwidth=len(wirevector), block=block_out)
+        for i in range(len(wirevector)):
+            wirevector_map[(wirevector, i)] <<= input_vector[i]
+    for wirevector in block_in.wirevector_subset(wire.Output):
+        output_vector = wire.Output(name=wirevector.name, bitwidth=len(wirevector), block=block_out)
+        # the "reversed" is needed because most significant bit comes first in concat
+        output_bits = [wirevector_map[(wirevector, i)] for i in reversed(range(len(output_vector)))]
+        output_vector <<= helperfuncs.concat(*output_bits)
 
     # Now that we have all the wires built and mapped, walk all the blocks
     # and map the logic to the equivalent set of primitives in the system
+    out_mems = set()
     for net in block_in.logic:
-        _decompose(net, wirevector_map, block_out)
+        _decompose(net, wirevector_map, out_mems, block_out)
 
-    block_out.wirevector_map = wirevector_map
     if update_working_block:
         core.set_working_block(block_out)
     return block_out
 
 
-def _decompose(net, wv_map, block_out):
+def _decompose(net, wv_map, mems, block_out):
     """ Add the wires and logicnets to block_out and wv_map to decompose net """
 
     def arg(x, i):
@@ -627,6 +613,39 @@ def _decompose(net, wv_map, block_out):
         destlist = sumbits + [cout]
         for i in destlen():
             assign_dest(i, destlist[i])
+    elif net.op == 'm':
+        arg0list = [arg(0, i) for i in range(len(net.args[0]))]
+        addr = helperfuncs.concat(*reversed(arg0list))
+        memid, mem = net.op_param
+        if mem not in mems:
+            new_mem = memblock.MemBlock(
+                bitwidth=mem.bitwidth,
+                addrwidth=mem.addrwidth,
+                name=mem.name,
+                block=block_out)
+            mems.add(new_mem)
+        else:
+            new_mem = mems[mem]
+        data = helperfuncs.as_wires(new_mem[addr])
+        for i in destlen():
+            assign_dest(i, data[i])
+    elif net.op == '@':
+        addrlist = [arg(0, i) for i in range(len(net.args[0]))]
+        addr = helperfuncs.concat(*reversed(addrlist))
+        datalist = [arg(1, i) for i in range(len(net.args[1]))]
+        data = helperfuncs.concat(*reversed(datalist))
+        enable = arg(2, 0)
+        memid, mem = net.op_param
+        if mem not in mems:
+            new_mem = memblock.MemBlock(
+                bitwidth=mem.bitwidth,
+                addrwidth=mem.addrwidth,
+                name=mem.name,
+                block=block_out)
+            mems.add(new_mem)
+        else:
+            new_mem = mems[mem]
+        new_mem[addr] <<= memblock.MemBlock.EnabledWrite(data=data, enable=enable)
     else:
         raise core.PyrtlInternalError('Unable to synthesize the following net '
                                       'due to unimplemented op :\n%s' % str(net))
