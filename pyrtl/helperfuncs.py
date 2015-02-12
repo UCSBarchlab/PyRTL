@@ -130,7 +130,6 @@ def get_block(*arglist):
 
 def concat(*args):
     """ Take any number of wire vector params and return a wire vector concatinating them.
-    
     The arguments should be WireVectors (or convertable to WireVectors through as_wires).
     The concatination order places the MSB as arg[0] with less signficant bits following."""
 

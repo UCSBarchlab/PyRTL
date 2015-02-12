@@ -155,9 +155,9 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
         for a_net in remaining:
             blockStr = blockStr + str(a_net) + "\n"
         blockStr = ("Cannot do static timing analysis due to nonregister,"
-            "nonmemory loops in the code \n"
-            "The unprocesssed blocks are: \n") + blockStr
-        raise core.PyrtlError( blockStr)
+                    "nonmemory loops in the code \n"
+                    "The unprocesssed blocks are: \n") + blockStr
+        raise core.PyrtlError(blockStr)
     return timing_map
 
 
@@ -433,10 +433,11 @@ def _remove_unlistened_nets(block):
         listened_wires_prev = listened_wires_cur
 
         for net in block.logic:
-            if any(( destWire in listened_wires_prev) for destWire in net.dests) and net not in listened_nets:
-                listened_nets.add(net)
-                for arg_wire in net.args:
-                    listened_wires_cur.add(arg_wire)
+            if net not in listened_nets:
+                if any((destWire in listened_wires_prev) for destWire in net.dests):
+                    listened_nets.add(net)
+                    for arg_wire in net.args:
+                        listened_wires_cur.add(arg_wire)
 
     # now I need to add back the interface for the inputs that were removed
     for net in block.logic:
