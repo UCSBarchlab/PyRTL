@@ -48,9 +48,7 @@ from inputoutput import output_verilog_testbench
 from passes import synthesize
 from passes import optimize
 from passes import area_estimation
-from passes import quick_timing_analysis
 from passes import timing_analysis
-from passes import advanced_timing_analysis
 from passes import timing_max_length
 from passes import print_max_length
 from passes import timing_critical_path
