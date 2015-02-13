@@ -212,21 +212,6 @@ class TestPasses(unittest.TestCase):
         self.assertEqual(block_max_time, 3)
         pyrtl.timing_critical_path(timing_map)
 
-    def test_timing_normal_adv_case_1(self):
-        inwire1 = pyrtl.Input(bitwidth=3, name="input1")
-        inwire2 = pyrtl.Input(bitwidth=3, name="input2")
-        outwire = pyrtl.Output(bitwidth=4, name="output")
-
-        outwire <<= inwire1 + inwire2
-
-        # testing that this actually properly executes
-        pyrtl.synthesize()
-        pyrtl.optimize()
-        block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        block_max_time = pyrtl.timing_max_length(timing_map)
-        pyrtl.timing_critical_path(timing_map)
-
     def test_timing_error(self):
         inwire = pyrtl.Input(bitwidth=1)
         inwire2 = pyrtl.Input(bitwidth=1)
@@ -266,20 +251,6 @@ class TestPasses(unittest.TestCase):
         timing_map = pyrtl.timing_analysis(block)
         block_max_time = pyrtl.timing_max_length(timing_map)
         self.assertEqual(block_max_time, 1)
-
-    def test_timing_normal_synth_adder(self):
-        inwire1 = pyrtl.Input(bitwidth=3)
-        inwire2 = pyrtl.Input(bitwidth=3)
-        outwire = pyrtl.Output(bitwidth=4)
-
-        outwire <<= inwire1 + inwire2
-
-        # testing that this actually properly executes
-        pyrtl.synthesize()
-        pyrtl.optimize()
-        block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        block_max_time = pyrtl.timing_max_length(timing_map)
 
     def test_timing_advanced_1(self):
         inwire = pyrtl.Input(bitwidth=1)
