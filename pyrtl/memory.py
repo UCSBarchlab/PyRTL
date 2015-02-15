@@ -40,13 +40,7 @@ class _MemIndexed(collections.namedtuple('_MemIndexed', 'mem, index')):
         return _MemAssignment(rhs=other, is_conditional=True)
 
 
-class MemBlock(object):
-    """ An object for specifying block memories """
-
-    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
-
-    # data <<= memory[addr]  (infer read port)
-    # memory[addr] <<= data  (infer write port)
+class _MemReadBase(object):
     def __init__(self,  bitwidth, addrwidth, name=None, block=None):
 
         self.block = core.working_block(block)
@@ -61,7 +55,6 @@ class MemBlock(object):
         self.name = name
         self.addrwidth = addrwidth
         self.readport_nets = []
-        self.writeport_nets = []
         self.id = core.Block.next_memid()
 
     def __getitem__(self, item):
@@ -74,6 +67,32 @@ class MemBlock(object):
     def _readaccess(self, addr):
         # FIXME: add conditional read ports
         return self._build_read_port(addr)
+
+    def _build_read_port(self, addr):
+        data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
+        readport_net = core.LogicNet(
+            op='m',
+            op_param=(self.id, self),
+            args=(addr,),
+            dests=(data,))
+        self.block.add_net(readport_net)
+        self.readport_nets.append(readport_net)
+        return data
+
+    def __setitem__(self, key, value):
+        raise core.PyrtlInternalError("error, invalid call __setitem__ made on _MemReadBase")
+
+
+class MemBlock(_MemReadBase):
+    """ An object for specifying block memories """
+
+    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
+
+    # data <<= memory[addr]  (infer read port)
+    # memory[addr] <<= data  (infer write port)
+    def __init__(self, bitwidth, addrwidth, name=None, block=None):
+        super(MemBlock, self).__init__(bitwidth, addrwidth, name, block)
+        self.writeport_nets = []
 
     def __setitem__(self, item, assignment):
         if isinstance(assignment, _MemAssignment):
@@ -104,17 +123,6 @@ class MemBlock(object):
             conditional.ConditionalUpdate._build_write_port(self, addr, data, enable)
         else:
             self._build_write_port(addr, data, enable)
-
-    def _build_read_port(self, addr):
-        data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
-        readport_net = core.LogicNet(
-            op='m',
-            op_param=(self.id, self),
-            args=(addr,),
-            dests=(data,))
-        self.block.add_net(readport_net)
-        self.readport_nets.append(readport_net)
-        return data
 
     def _build_write_port(self, addr, data, enable):
         writeport_net = core.LogicNet(
