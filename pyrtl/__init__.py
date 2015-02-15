@@ -29,7 +29,7 @@ from helperfuncs import xor_all_bits
 from helperfuncs import parity
 
 # memory blocks
-from memblock import MemBlock
+from memory import MemBlock
 
 # conditional updates
 from conditional import ConditionalUpdate

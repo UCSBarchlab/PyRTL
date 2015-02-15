@@ -3,7 +3,7 @@ import collections
 import sys
 import re
 import wire
-import memblock
+import memory
 
 
 # -----------------------------------------------------------------
@@ -371,7 +371,7 @@ class Block(object):
                 raise PyrtlInternalError('error, mem op requires 2 op_params in tuple')
             if not isinstance(net.op_param[0], int):
                 raise PyrtlInternalError('error, mem op requires first operand as int')
-            if not isinstance(net.op_param[1], memblock.MemBlock):
+            if not isinstance(net.op_param[1], memory.MemBlock):
                 raise PyrtlInternalError('error, mem op requires second operand MemBlock')
 
         # check destination validity
