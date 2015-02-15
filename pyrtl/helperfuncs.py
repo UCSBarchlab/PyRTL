@@ -30,13 +30,13 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
     most operations in an attempt to coerce values into WireVectors (for example,
     operations such as "x+1" where "1" needs to be converted to a Const WireVectors.)
     """
-    import memblock  # import here to avoid cylic dependence memblock->wire->helper->memblock
+    import memory
     block = core.working_block(block)
 
     if isinstance(val, (int, basestring)):
         # note that this case captures bool as well (as bools are instances of ints)
         return wire.Const(val, bitwidth=bitwidth, block=block)
-    elif isinstance(val, memblock._MemIndexed):
+    elif isinstance(val, memory._MemIndexed):
         return val.mem._readaccess(val.index)
     elif not isinstance(val, wire.WireVector):
         raise core.PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
