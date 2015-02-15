@@ -16,8 +16,6 @@ import conditional
 #   |  | |___  |  | \__/ |  \  |     |__) |___ \__/ \__, |  \
 #
 
-# FIXME: right now read port as build unconditionally and write ports assume
-# that only one port is under control of the conditional
 
 # MemBlock supports any number of the following operations:
 # read: d = mem[address]
@@ -41,6 +39,12 @@ class _MemIndexed(collections.namedtuple('_MemIndexed', 'mem, index')):
 
 
 class _MemReadBase(object):
+    """This is the base class for the memories and ROM blocks and
+    it implements the read and initialization operations needed for
+    both of them"""
+
+    # FIXME: right now read port as build unconditionally
+
     def __init__(self,  bitwidth, addrwidth, name=None, block=None):
 
         self.block = core.working_block(block)
@@ -84,7 +88,8 @@ class _MemReadBase(object):
 
 
 class MemBlock(_MemReadBase):
-    """ An object for specifying block memories """
+    """ An object for specifying read and write enabled block memories """
+    # FIXME: write ports assume that only one port is under control of the conditional
 
     EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
 
