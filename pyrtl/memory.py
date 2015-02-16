@@ -138,3 +138,27 @@ class MemBlock(_MemReadBase):
         self.block.add_net(writeport_net)
         self.writeport_nets.append(writeport_net)
 
+
+class RomBlock(_MemReadBase):
+    """ RomBlocks are the read only memory format in PYRTL
+        By default, they synthesize down to transistor-based
+        logic during synthesis
+
+
+    """
+    def __init__(self, bitwidth, addrwidth, data, name=None, block=None):
+        """
+        :param bitwidth: The bitwidth of the parameters
+        :param addrwidth: The bitwidth of the address bus
+        :param data: This can either be a function or an array that maps
+        an address as an input to a result as an output
+        """
+        super(RomBlock, self).__init__(bitwidth, addrwidth, name, block)
+        self.data = data
+
+    def _get_read_data(self, address):
+        import types
+        if address < 0 or address > 2**self.addrwidth -1:
+            raise core.PyrtlError("Error: Invalid address, "+ str(address) + " specified")
+        if isinstance(self.data, types.FunctionType):
+
