@@ -158,7 +158,20 @@ class RomBlock(_MemReadBase):
 
     def _get_read_data(self, address):
         import types
-        if address < 0 or address > 2**self.addrwidth -1:
-            raise core.PyrtlError("Error: Invalid address, "+ str(address) + " specified")
+        if address < 0 or address > 2**self.addrwidth - 1:
+            raise core.PyrtlError("Error: Invalid address, " + str(address) + " specified")
         if isinstance(self.data, types.FunctionType):
+            try:
+                value = self.data(address)
+            except Exception:
+                raise core.PyrtlError("Invalid data function for RomBlock")
+        else:
+            try:
+                value = self.data[address]
+            except TypeError:
+                raise core.PyrtlError("invalid type for RomBlock data object")
 
+        if value < 0 or value >= 2**self.bitwidth:
+            raise core.PyrtlError("invalid value for RomBlock data")
+
+        return value
