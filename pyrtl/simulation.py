@@ -4,6 +4,7 @@ import re
 import time
 import core
 import wire
+import memory
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -66,6 +67,13 @@ class Simulation(object):
                         raise core.PyrtlError('error, address outside of bounds')
                     self.memvalue[(mem.id, addr)] = val
                     # TODO: warn if value larger than fits in bitwidth
+
+        # set ROMs to their default values
+        for romNet in self.block.logic_subset('m'):
+            rom = romNet.op_param[1]
+            if isinstance(rom, memory.RomBlock) and rom not in memory_value_map:
+                mem_map = {i: rom._get_read_data(i) for i in range(0, 2**romNet.addrwidth-1)}
+                memory_value_map[rom] = mem_map
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
