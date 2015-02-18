@@ -156,7 +156,8 @@ class WireVector(object):
         return self.logicop(other, '-')
 
     def __rsub__(self, other):
-        return self.logicop(other, '-')
+        other = helperfuncs.as_wires(other, block=self.block)
+        return other.logicop(self, '-')
 
     def __isub__(self, other):
         raise core.PyrtlError('error, operation not allowed on WireVectors')
