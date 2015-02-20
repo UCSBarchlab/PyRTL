@@ -186,7 +186,8 @@ def timing_critical_path(timing_map, block=None):
             critical_paths.append((first_wire, old_critical_path))
             return
 
-        source_list = [anet for anet in block.logic if anet.dests[0] is first_wire]
+        source_list = [anet for anet in block.logic if any(
+            (destWire is first_wire) for destWire in anet.dests)]
 
         if len(source_list) is not 1:
             raise core.PyrtlInternalError("The following net has the wrong number of sources:"
