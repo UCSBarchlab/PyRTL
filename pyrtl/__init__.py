@@ -30,6 +30,7 @@ from helperfuncs import parity
 
 # memory blocks
 from memory import MemBlock
+from memory import RomBlock
 
 # conditional updates
 from conditional import ConditionalUpdate
