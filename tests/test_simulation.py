@@ -37,7 +37,7 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
     def test_or_simulation(self):
         result = self.r | pyrtl.Const(4, bitwidth=self.bitwidth)
         self.r.next <<= result
-        self.assertEqual(len(result), self.bitwidth)        
+        self.assertEqual(len(result), self.bitwidth)
         self.check_trace('r 04444444\n')
 
     def test_xor_simulation(self):
@@ -228,11 +228,11 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
         self.read_addr2 = pyrtl.Input(self.addrwidth)
         self.write_addr = pyrtl.Input(self.addrwidth)
         self.write_data = pyrtl.Input(self.bitwidth)
-        self.memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
-                                     name='memory')
-        self.output1 <<= self.memory[self.read_addr1]
-        self.output2 <<= self.memory[self.read_addr2]
-        self.memory[self.write_addr] <<= self.write_data
+        self.rom = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
+                                  name='rom')
+        self.output1 <<= self.rom[self.read_addr1]
+        self.output2 <<= self.rom[self.read_addr2]
+        self.rom[self.write_addr] <<= self.write_data
 
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()
@@ -260,6 +260,58 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
         self.sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
+
+class TestRTLRomBlockSimulation(unittest.TestCase):
+
+    def tearDown(self):
+        pyrtl.reset_working_block()
+
+    def generate_expected_output(self, data_tuples, length):
+        """dataTuple is in a series of tuples in  (name, function) format
+            the function takes in a single argument, length
+           length is the number of steps in the length """
+
+        outString = ""
+        for tuple in data_tuples:
+            outString = outString + tuple[0] + " "
+            for time in range(0, length - 1):
+                outString += str(tuple[1](time))
+            outString += '\n'
+        return outString
+
+    def compareIO(self, sim_trace_a, expected_output):
+        output = StringIO.StringIO()
+        sim_trace_a.print_trace(output)
+        self.assertEqual(output.getvalue(), expected_output)
+
+    def test_function_RomBlock(self):
+
+        def rom_data_function(add):
+            return int((add + 5)/2)
+
+        pyrtl.reset_working_block()
+        self.bitwidth = 4
+        self.addrwidth = 4
+        self.output1 = pyrtl.Output(self.bitwidth, "o1")
+        self.output2 = pyrtl.Output(self.bitwidth, "o2")
+        self.read_addr1 = pyrtl.Input(self.addrwidth)
+        self.read_addr2 = pyrtl.Input(self.addrwidth)
+        self.rom = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
+                                  name='rom', data=rom_data_function)
+        self.output1 <<= self.rom[self.read_addr1]
+        self.output2 <<= self.rom[self.read_addr2]
+        # build the actual simulation environment
+        self.sim_trace = pyrtl.SimulationTrace()
+        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+
+        input_signals = {}
+        for i in range(0, 5):
+            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2*i}
+            self.sim.step(input_signals[i])
+
+        exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x)),
+                                                ("o2", lambda x: rom_data_function(2*x))), 6)
+        self.compareIO(self.sim_trace, exp_out)
 
 if __name__ == '__main__':
     unittest.main()
