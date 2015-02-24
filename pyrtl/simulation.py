@@ -68,12 +68,14 @@ class Simulation(object):
                     self.memvalue[(mem.id, addr)] = val
                     # TODO: warn if value larger than fits in bitwidth
 
+
+        defined_roms = []
         # set ROMs to their default values
         for romNet in self.block.logic_subset('m'):
             rom = romNet.op_param[1]
-            if isinstance(rom, memory.RomBlock) and rom not in memory_value_map:
-                mem_map = {i: rom._get_read_data(i) for i in range(0, 2**romNet.addrwidth-1)}
-                memory_value_map[rom] = mem_map
+            if isinstance(rom, memory.RomBlock) and rom not in defined_roms:
+                for address in range(0, 2**rom.addrwidth-1):
+                    self.memvalue[(rom.id, address)] = rom._get_read_data(address)
 
         # set all other variables to default value
         for w in self.block.wirevector_set:

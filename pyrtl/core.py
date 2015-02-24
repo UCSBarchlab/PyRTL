@@ -387,8 +387,8 @@ class Block(object):
                 raise PyrtlInternalError('error, mem op requires 2 op_params in tuple')
             if not isinstance(net.op_param[0], int):
                 raise PyrtlInternalError('error, mem op requires first operand as int')
-            if not isinstance(net.op_param[1], memory.MemBlock):
-                raise PyrtlInternalError('error, mem op requires second operand MemBlock')
+            if not isinstance(net.op_param[1], memory._MemReadBase):
+                raise PyrtlInternalError('error, mem op requires second operand of a memory type')
 
         # check destination validity
         if net.op in 'w~&|^r' and net.dests[0].bitwidth > net.args[0].bitwidth:
