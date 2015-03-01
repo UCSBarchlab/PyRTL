@@ -313,5 +313,39 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
                                                 ("o2", lambda x: rom_data_function(2*x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
+    def test_function_RomBlock_with_optimization(self):
+
+        def rom_data_function(add):
+            return int((add + 5)/2)
+
+        pyrtl.reset_working_block()
+        self.bitwidth = 4
+        self.addrwidth = 4
+        self.output1 = pyrtl.Output(self.bitwidth, "o1")
+        self.output2 = pyrtl.Output(self.bitwidth, "o2")
+        self.read_out = pyrtl.WireVector(self.bitwidth)
+        self.read_addr1 = pyrtl.Input(self.addrwidth, name="read_addr1")
+        self.read_addr2 = pyrtl.Input(self.addrwidth, name="read_addr2")
+        self.rom = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
+                                  name='rom', data=rom_data_function)
+        self.read_out <<= self.rom[self.read_addr1]
+        self.output1 <<= self.read_out - 1
+        self.output2 <<= self.rom[self.read_addr2]
+
+        pyrtl.synthesize()
+        pyrtl.optimize()
+        # build the actual simulation environment
+        self.sim_trace = pyrtl.SimulationTrace()
+        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+
+        input_signals = {}
+        for i in range(0, 5):
+            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2*i}
+            self.sim.step(input_signals[i])
+
+        exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x) - 1),
+                                                 ("o2", lambda x: rom_data_function(2*x))), 6)
+        self.compareIO(self.sim_trace, exp_out)
+
 if __name__ == '__main__':
     unittest.main()
