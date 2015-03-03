@@ -501,6 +501,7 @@ def synthesize(update_working_block=True, block=None):
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^rwcsm@')
     wirevector_map = {}  # map from (vector,index) -> new_wire
+    io_map = {} # map from presynth inputs and outputs to postsynth inputs and outputs
     uid = 0  # used for unique names
 
     # First step, create all of the new wires for the new block
@@ -522,10 +523,12 @@ def synthesize(update_working_block=True, block=None):
     # Now connect up the inputs and outputs to maintain the interface
     for wirevector in block_in.wirevector_subset(wire.Input):
         input_vector = wire.Input(name=wirevector.name, bitwidth=len(wirevector), block=block_out)
+        io_map[wirevector] = input_vector
         for i in range(len(wirevector)):
             wirevector_map[(wirevector, i)] <<= input_vector[i]
     for wirevector in block_in.wirevector_subset(wire.Output):
         output_vector = wire.Output(name=wirevector.name, bitwidth=len(wirevector), block=block_out)
+        io_map[wirevector] = output_vector
         # the "reversed" is needed because most significant bit comes first in concat
         output_bits = [wirevector_map[(wirevector, i)] for i in reversed(range(len(output_vector)))]
         output_vector <<= helperfuncs.concat(*output_bits)
@@ -538,7 +541,7 @@ def synthesize(update_working_block=True, block=None):
 
     if update_working_block:
         core.set_working_block(block_out)
-    return block_out
+    return block_out, io_map
 
 
 def _decompose(net, wv_map, mems, block_out):
