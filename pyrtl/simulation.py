@@ -18,7 +18,7 @@ class Simulation(object):
 
     def __init__(
             self, register_value_map=None, memory_value_map=None,
-            default_value=0, tracer=None, block=None):
+            default_value=0, tracer=None, block=None, io_map=None):
         """ Creates object and initializes it with self.initialize. """
 
         block = core.working_block(block)
@@ -31,6 +31,7 @@ class Simulation(object):
         self.tracer = tracer
         self.initialize(register_value_map, memory_value_map)
         self.max_iter = 1000
+        self.io_map = io_map
 
     def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
         """ Sets the wire, register, and memory values to default or as specified.
@@ -91,19 +92,26 @@ class Simulation(object):
 
         # Check that all Input have a corresponding provided_input
         input_set = self.block.wirevector_subset(wire.Input)
+        supplied_inputs = set()
         for i in input_set:
-            if i not in provided_inputs:
-                raise core.PyrtlError(
-                    'Input "%s" has no input value specified'
-                    % i.name)
+            sim_wire = i
+            while sim_wire not in provided_inputs:
+                if sim_wire in self.io_map:
+                    sim_wire = self.io_map[sim_wire]
+                else:
+                    raise core.PyrtlError(
+                        'Input "%s" has no input value specified \n you might'
+                        'need to add a wirevector map'
+                        % i.name)
+            self.value[sim_wire] = provided_inputs[i]
+            supplied_inputs.add(sim_wire)
 
         # Check that only inputs are specified, and set the values
-        for i in provided_inputs:
-            if i not in input_set:
+        if input_set != supplied_inputs:
+            for i in supplied_inputs.difference(input_set):
                 raise core.PyrtlError(
                     'step provided a value for input for "%s" which is '
                     'not a known input' % i.name)
-            self.value[i] = provided_inputs[i]
 
         # Do all of the clock-edge triggered operations based off of the priors
         for net in self.block.logic:

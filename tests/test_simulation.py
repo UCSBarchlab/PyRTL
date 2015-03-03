@@ -332,11 +332,12 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
         self.output1 <<= self.read_out - 1
         self.output2 <<= self.rom[self.read_addr2]
 
-        pyrtl.synthesize()
+        synth_out = pyrtl.synthesize()
+        io_map = synth_out[1]
         pyrtl.optimize()
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()
-        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+        self.sim = pyrtl.Simulation(tracer=self.sim_trace, io_map=io_map)
 
         input_signals = {}
         for i in range(0, 5):
