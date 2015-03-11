@@ -15,7 +15,7 @@ def barrel_shifter(bitwidth, logbitwidth, shiftIn, bitIn, direction, amount):
     print len(val)
     print len(appendval)
     for i in range(logbitwidth):
-        shamt = pow(2,i)
+        shamt = pow(2, i)
         newval = mux(direction, truecase=val[:-shamt], falsecase=val[shamt:])
         print len(newval)
         newval = mux(direction, truecase=concat(newval, appendval), 
@@ -26,28 +26,3 @@ def barrel_shifter(bitwidth, logbitwidth, shiftIn, bitIn, direction, amount):
         print len(appendval)
 
     return val
-
-
-
-inval = Input(8,'inval')
-outval = Output(8,'output')
-bitIn = Input(1, 'bitIn')
-direction = Input(1, 'dir')
-shamt = Input(3, 'shamt')
-
-outval <<= barrel_shifter(8, 3, inval, bitIn, direction, shamt)
-
-sim_inputs = {
-    inval:     '1111111111111111',
-    bitIn:     '1111111111111111',
-    direction: '0000000011111111',
-    shamt:     '0123456701234567'
-    
-}
-
-sim_trace = SimulationTrace()
-sim = Simulation(tracer=sim_trace)
-for cycle in range(len(sim_inputs[inval])):
-    sim.step({w: int(v[cycle]) for w,v in sim_inputs.items()})
-
-sim_trace.render_trace()
