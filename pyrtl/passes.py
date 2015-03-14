@@ -623,11 +623,7 @@ def _decompose(net, wv_map, mems, block_out):
         addr = helperfuncs.concat(*reversed(arg0list))
         memid, mem = net.op_param
         if mem not in mems:
-            new_mem = memory.MemBlock(
-                bitwidth=mem.bitwidth,
-                addrwidth=mem.addrwidth,
-                name=mem.name,
-                block=block_out)
+            new_mem = mem._make_copy(block_out)
             mems[mem] = new_mem
             new_mem.id = mem.id
         else:
@@ -643,11 +639,7 @@ def _decompose(net, wv_map, mems, block_out):
         enable = arg(2, 0)
         memid, mem = net.op_param
         if mem not in mems:
-            new_mem = memory.MemBlock(
-                bitwidth=mem.bitwidth,
-                addrwidth=mem.addrwidth,
-                name=mem.name,
-                block=block_out)
+            new_mem = mem._make_copy(block_out)
             mems[mem] = new_mem
             new_mem.id = mem.id
         else:
