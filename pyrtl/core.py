@@ -34,11 +34,27 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
     The details of what is allowed in each of these fields is defined
     in the comments of Block, and is checked by block.sanity_check
     """
+
     def __str__(self):
         rhs = ', '.join([str(x) for x in self.args])
         lhs = ', '.join([str(x) for x in self.dests])
         options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
-        return ' '.join([lhs, '<--', self.op, '--', rhs, options])
+
+        if self.op in 'w~&|^+-*<>=xcsr':
+            retval = ''.join([lhs, '  <-- ', self.op, ' --  ', rhs, ' ', options])
+        elif self.op is 'm':
+            memid, memblock = self.op_param
+            extrainfo = 'memid=' + str(memid)
+            retval = ''.join([lhs, '  <-- m --  ', memblock.name, '[', rhs, '] (', extrainfo, ')'])
+        elif self.op is '@':
+            memid, memblock = self.op_param
+            addr, data, we = [str(x) for x in self.args]
+            extrainfo = 'memid=' + str(memid)
+            retval = ''.join([memblock.name, '[', addr, '] <-- @ --  ', data,
+                             ' we=', we, ' (', extrainfo, ')'])
+        else:
+            raise PyrtlInternalError('error, unknown op')
+        return retval
 
     def __eq__(self, other):
         # We can't be going and calling __eq__ recursively on the logic nets for all of
