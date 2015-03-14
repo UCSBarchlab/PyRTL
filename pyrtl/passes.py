@@ -496,11 +496,11 @@ def synthesize(update_working_block=True, block=None):
     """
 
     block_in = core.working_block(block)
-    block_out = core.Block()
+    block_out = core._PostSynthBlock()
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^rwcsm@')
     wirevector_map = {}  # map from (vector,index) -> new_wire
-    io_map = {} # map from presynth inputs and outputs to postsynth inputs and outputs
+    io_map = block_out.io_map # map from presynth inputs and outputs to postsynth inputs and outputs
     uid = 0  # used for unique names
 
     # First step, create all of the new wires for the new block
@@ -534,13 +534,13 @@ def synthesize(update_working_block=True, block=None):
 
     # Now that we have all the wires built and mapped, walk all the blocks
     # and map the logic to the equivalent set of primitives in the system
-    out_mems = set()
+    out_mems = block_out.mem_map  # dictionary: PreSynth Map -> PostSynth Map
     for net in block_in.logic:
         _decompose(net, wirevector_map, out_mems, block_out)
 
     if update_working_block:
         core.set_working_block(block_out)
-    return block_out, io_map
+    return block_out
 
 
 def _decompose(net, wv_map, mems, block_out):
@@ -627,7 +627,8 @@ def _decompose(net, wv_map, mems, block_out):
                 addrwidth=mem.addrwidth,
                 name=mem.name,
                 block=block_out)
-            mems.add(new_mem)
+            mems[mem] = new_mem
+            new_mem.id = mem.id
         else:
             new_mem = mems[mem]
         data = helperfuncs.as_wires(new_mem[addr])
@@ -646,7 +647,8 @@ def _decompose(net, wv_map, mems, block_out):
                 addrwidth=mem.addrwidth,
                 name=mem.name,
                 block=block_out)
-            mems.add(new_mem)
+            mems[mem] = new_mem
+            new_mem.id = mem.id
         else:
             new_mem = mems[mem]
         new_mem[addr] <<= memory.MemBlock.EnabledWrite(data=data, enable=enable)

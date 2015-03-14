@@ -420,6 +420,18 @@ class Block(object):
         cls._memid_count += 1
         return cls._memid_count
 
+
+class _PostSynthBlock(Block):
+    """ This is a block with extra metadata required to maintain the
+    pre synthesis interface post synthesis
+    """
+
+    def __init__(self):
+        super(_PostSynthBlock, self).__init__()
+        self.io_map = {}
+        self.mem_map = {}
+
+
 # -----------------------------------------------------------------------
 #          __   __               __      __        __   __
 #    |  | /  \ |__) |__/ | |\ | / _`    |__) |    /  \ /  ` |__/
