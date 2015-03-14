@@ -202,13 +202,12 @@ class TestRTLSimulationTraceWithMux(unittest.TestCase):
         pass
 
     def test_adder_simulation(self):
-        input_signals = {}
-        input_signals[0] = {self.a: 0, self.b: 1, self.sel: 1}
-        input_signals[1] = {self.a: 0, self.b: 2, self.sel: 1}
-        input_signals[2] = {self.a: 0, self.b: 0, self.sel: 1}
-        input_signals[3] = {self.a: 1, self.b: 1, self.sel: 0}
-        input_signals[4] = {self.a: 2, self.b: 1, self.sel: 0}
-        input_signals[5] = {self.a: 0, self.b: 1, self.sel: 0}
+        input_signals = {0: {self.a: 0, self.b: 1, self.sel: 1},
+                         1: {self.a: 0, self.b: 2, self.sel: 1},
+                         2: {self.a: 0, self.b: 0, self.sel: 1},
+                         3: {self.a: 1, self.b: 1, self.sel: 0},
+                         4: {self.a: 2, self.b: 1, self.sel: 0},
+                         5: {self.a: 0, self.b: 1, self.sel: 0}}
         for i in xrange(6):
             self.sim.step(input_signals[i])
 
@@ -284,6 +283,7 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
         self.sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
+
 class TestRTLRomBlockSimulation(unittest.TestCase):
 
     def tearDown(self):
@@ -294,13 +294,13 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
             the function takes in a single argument, length
            length is the number of steps in the length """
 
-        outString = ""
+        out_string = ""
         for tuple in data_tuples:
-            outString = outString + tuple[0] + " "
+            out_string = out_string + tuple[0] + " "
             for time in range(0, length - 1):
-                outString += str(tuple[1](time))
-            outString += '\n'
-        return outString
+                out_string += str(tuple[1](time))
+            out_string += '\n'
+        return out_string
 
     def compareIO(self, sim_trace_a, expected_output):
         output = StringIO.StringIO()

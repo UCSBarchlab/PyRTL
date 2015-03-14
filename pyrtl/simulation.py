@@ -64,14 +64,13 @@ class Simulation(object):
         # set memories to their passed values
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
-                if isinstance(self.block,core._PostSynthBlock):
+                if isinstance(self.block, core._PostSynthBlock):
                     mem = self.block.mem_map[mem]
                 for (addr, val) in mem_map.items():
                     if addr < 0 or addr >= 2**mem.addrwidth:
                         raise core.PyrtlError('error, address outside of bounds')
                     self.memvalue[(mem.id, addr)] = val
                     # TODO: warn if value larger than fits in bitwidth
-
 
         defined_roms = []
         # set ROMs to their default values
@@ -111,7 +110,7 @@ class Simulation(object):
         if input_set != supplied_inputs:
             for i in input_set.difference(supplied_inputs):
                 raise core.PyrtlError(
-                    'Input "%s" has no input value specified'  % i.name)
+                    'Input "%s" has no input value specified' % i.name)
 
         # Do all of the clock-edge triggered operations based off of the priors
         for net in self.block.logic:
