@@ -188,4 +188,3 @@ class RomBlock(_MemReadBase):
         if block is None:
             block = self.block
         return RomBlock(self.bitwidth, self.addrwidth, self.data, self.name, block,)
-
