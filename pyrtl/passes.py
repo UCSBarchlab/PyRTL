@@ -151,13 +151,13 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
         remaining.difference_update(items_to_remove)
 
     if len(remaining) > 0:
-        blockStr = ""
+        block_str = ""
         for a_net in remaining:
-            blockStr = blockStr + str(a_net) + "\n"
-        blockStr = ("Cannot do static timing analysis due to nonregister,"
+            block_str = block_str + str(a_net) + "\n"
+        block_str = ("Cannot do static timing analysis due to nonregister,"
                     "nonmemory loops in the code \n"
-                    "The unprocesssed blocks are: \n") + blockStr
-        raise core.PyrtlError(blockStr)
+                    "The unprocesssed blocks are: \n") + block_str
+        raise core.PyrtlError(block_str)
     return timing_map
 
 
@@ -501,7 +501,7 @@ def synthesize(update_working_block=True, block=None):
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^rwcsm@')
     wirevector_map = {}  # map from (vector,index) -> new_wire
-    io_map = block_out.io_map # map from presynth inputs and outputs to postsynth inputs and outputs
+    io_map = block_out.io_map  # map from presynth inputs and outputs to postsynth inputs and outputs
     uid = 0  # used for unique names
 
     # First step, create all of the new wires for the new block
