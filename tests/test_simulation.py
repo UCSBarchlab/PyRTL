@@ -236,12 +236,12 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
 
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()
-        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
 
     def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_simple_memblock(self):
+        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
         input_signals = {}
         input_signals[0] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 4,
                             self.write_data: 5}
@@ -260,6 +260,30 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
         self.sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
+    def test_synth_simple_memblock(self):
+
+        synth_out = pyrtl.synthesize()
+        io_map = synth_out[1]
+        pyrtl.optimize()
+        self.sim_trace = pyrtl.SimulationTrace()
+        self.sim = pyrtl.Simulation(tracer=self.sim_trace, io_map=io_map)
+        input_signals = {}
+        input_signals[0] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 4,
+                            self.write_data: 5}
+        input_signals[1] = {self.read_addr1: 4, self.read_addr2: 1, self.write_addr: 0,
+                            self.write_data: 5}
+        input_signals[2] = {self.read_addr1: 0, self.read_addr2: 4, self.write_addr: 1,
+                            self.write_data: 6}
+        input_signals[3] = {self.read_addr1: 1, self.read_addr2: 1, self.write_addr: 0,
+                            self.write_data: 0}
+        input_signals[4] = {self.read_addr1: 6, self.read_addr2: 0, self.write_addr: 6,
+                            self.write_data: 7}
+        for i in xrange(5):
+            self.sim.step(input_signals[i])
+
+        output = StringIO.StringIO()
+        self.sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
 class TestRTLRomBlockSimulation(unittest.TestCase):
 
@@ -323,18 +347,20 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
         self.addrwidth = 4
         self.output1 = pyrtl.Output(self.bitwidth, "o1")
         self.output2 = pyrtl.Output(self.bitwidth, "o2")
-        self.read_out = pyrtl.WireVector(self.bitwidth)
-        self.read_addr1 = pyrtl.Input(self.addrwidth, name="read_addr1")
-        self.read_addr2 = pyrtl.Input(self.addrwidth, name="read_addr2")
+        # self.output3 = pyrtl.Output(self.bitwidth, "o3")
+        # self.read_out = pyrtl.WireVector(self.bitwidth)
+        self.read_addr1 = pyrtl.Input(self.addrwidth)
+        self.read_addr2 = pyrtl.Input(self.addrwidth)
         self.rom = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
                                   name='rom', data=rom_data_function)
-        self.read_out <<= self.rom[self.read_addr1]
-        self.output1 <<= self.read_out - 1
+        # self.read_out <<= self.rom[self.read_addr1]
+        # self.output1 <<= self.read_out - 1
+        self.output1 <<= self.rom[self.read_addr1]
         self.output2 <<= self.rom[self.read_addr2]
 
         synth_out = pyrtl.synthesize()
         io_map = synth_out[1]
-        pyrtl.optimize()
+        # pyrtl.optimize()
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()
         self.sim = pyrtl.Simulation(tracer=self.sim_trace, io_map=io_map)
@@ -342,9 +368,11 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
         input_signals = {}
         for i in range(0, 5):
             input_signals[i] = {self.read_addr1: i, self.read_addr2: 2*i}
+            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2*i}
             self.sim.step(input_signals[i])
 
-        exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x) - 1),
+        # exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x) - 1),
+        exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x)),
                                                  ("o2", lambda x: rom_data_function(2*x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
