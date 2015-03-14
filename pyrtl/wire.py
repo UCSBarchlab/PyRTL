@@ -224,6 +224,13 @@ class WireVector(object):
     def __len__(self):
         return self.bitwidth
 
+    def __enter__(self):
+        raise core.PyrtlError('error, WireVector cannot be used directly as a context.  '
+                              '(you might be missing a ConditionalUpdate in your "with" block?)')
+
+    def __exit__(self, type, value, tb):
+        pass  # needed to allow the error raised in __enter__ to propagate up to the user
+
     def sign_extended(self, bitwidth):
         """ return a sign extended wirevector derived from self """
         return self._extend_with_bit(bitwidth, self[-1])

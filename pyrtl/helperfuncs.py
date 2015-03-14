@@ -13,7 +13,6 @@ appropriate_register_type: return the register needed to capture the given type
 
 import core
 import wire
-import memblock
 
 
 # -----------------------------------------------------------------
@@ -31,6 +30,7 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
     most operations in an attempt to coerce values into WireVectors (for example,
     operations such as "x+1" where "1" needs to be converted to a Const WireVectors.)
     """
+    import memblock  # import here to avoid cylic dependence memblock->wire->helper->memblock
     block = core.working_block(block)
 
     if isinstance(val, (int, basestring)):

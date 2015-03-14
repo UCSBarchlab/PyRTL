@@ -269,6 +269,28 @@ class TestWireConditionalBlock(unittest.TestCase):
             o |= 1
         self.check_trace('i 01230123\no 11101110\n')
 
+    def test_condition_nice_error_message_nested(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            i = pyrtl.Register(bitwidth=2, name='i')
+            o = pyrtl.WireVector(bitwidth=2, name='o')
+            i.next <<= i + 1
+            with pyrtl.ConditionalUpdate() as condition:
+                with condition(i<=2):
+                    with condition(i==0):
+                        o |= 2
+                    with i==1:
+                        o |= 1
+                with condition.default:
+                    o |= 0
+
+    def test_condition_nice_error_message_shortcut(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            i = pyrtl.Register(bitwidth=2, name='i')
+            o = pyrtl.WireVector(bitwidth=2, name='o')
+            i.next <<= i + 1
+            with i<=2:
+                o |= 1
+
 
 if __name__ == "__main__":
     unittest.main()
