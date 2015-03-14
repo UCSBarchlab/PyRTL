@@ -18,7 +18,7 @@ class Simulation(object):
 
     def __init__(
             self, register_value_map=None, memory_value_map=None,
-            default_value=0, tracer=None, block=None, io_map=None):
+            default_value=0, tracer=None, block=None):
         """ Creates object and initializes it with self.initialize. """
 
         block = core.working_block(block)
@@ -31,7 +31,8 @@ class Simulation(object):
         self.tracer = tracer
         self.initialize(register_value_map, memory_value_map)
         self.max_iter = 1000
-        self.io_map = io_map
+        if isinstance(self.block, core._PostSynthBlock):
+            self.io_map = self.block.io_map
 
     def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
         """ Sets the wire, register, and memory values to default or as specified.
@@ -63,6 +64,8 @@ class Simulation(object):
         # set memories to their passed values
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
+                if isinstance(self.block,core._PostSynthBlock):
+                    mem = self.block.mem_map[mem]
                 for (addr, val) in mem_map.items():
                     if addr < 0 or addr >= 2**mem.addrwidth:
                         raise core.PyrtlError('error, address outside of bounds')
@@ -75,6 +78,8 @@ class Simulation(object):
         for romNet in self.block.logic_subset('m'):
             rom = romNet.op_param[1]
             if isinstance(rom, memory.RomBlock) and rom not in defined_roms:
+                if isinstance(self.block, core._PostSynthBlock):
+                    rom = self.block.mem_map[rom]
                 for address in range(0, 2**rom.addrwidth-1):
                     self.memvalue[(rom.id, address)] = rom._get_read_data(address)
 
@@ -95,14 +100,12 @@ class Simulation(object):
         supplied_inputs = set()
         for i in provided_inputs:
             sim_wire = i
-            while sim_wire not in input_set:
-                if sim_wire in self.io_map:
-                    sim_wire = self.io_map[sim_wire]
-                else:
-                    raise core.PyrtlError(
-                        'step provided a value for input for "%s" which is '
-                        'not a known input \n you might'
-                        'need to add a wirevector map' % i.name)
+            if isinstance(self.block, core._PostSynthBlock):
+                sim_wire = self.io_map[sim_wire]
+            if sim_wire not in input_set:
+                raise core.PyrtlError(
+                    'step provided a value for input for "%s" which is '
+                    'not a known input ' % i.name)
             self.value[sim_wire] = provided_inputs[i]
             supplied_inputs.add(sim_wire)
 
