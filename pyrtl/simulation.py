@@ -32,7 +32,7 @@ class Simulation(object):
         self.initialize(register_value_map, memory_value_map)
         self.max_iter = 1000
         if isinstance(self.block, core._PostSynthBlock):
-            self.io_map = self.block.io_map
+            self.io_map = self.block.io_map  # pylint: disable=maybe-no-member
 
     def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
         """ Sets the wire, register, and memory values to default or as specified.
@@ -65,7 +65,7 @@ class Simulation(object):
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
                 if isinstance(self.block, core._PostSynthBlock):
-                    mem = self.block.mem_map[mem]
+                    mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
                 for (addr, val) in mem_map.items():
                     if addr < 0 or addr >= 2**mem.addrwidth:
                         raise core.PyrtlError('error, address outside of bounds')
