@@ -86,6 +86,9 @@ class _MemReadBase(object):
     def __setitem__(self, key, value):
         raise core.PyrtlInternalError("error, invalid call __setitem__ made on _MemReadBase")
 
+    def _make_copy(self, block):
+        pass
+
 
 class MemBlock(_MemReadBase):
     """ An object for specifying read and write enabled block memories """
@@ -138,6 +141,11 @@ class MemBlock(_MemReadBase):
         self.block.add_net(writeport_net)
         self.writeport_nets.append(writeport_net)
 
+    def _make_copy(self, block=None):
+        if block is None:
+            block = self.block
+        return MemBlock(self.bitwidth, self.addrwidth, self.name, block)
+
 
 class RomBlock(_MemReadBase):
     """ RomBlocks are the read only memory format in PYRTL
@@ -175,3 +183,9 @@ class RomBlock(_MemReadBase):
             raise core.PyrtlError("invalid value for RomBlock data")
 
         return value
+
+    def _make_copy(self, block=None):
+        if block is None:
+            block = self.block
+        return RomBlock(self.bitwidth, self.addrwidth, self.data, self.name, block,)
+

@@ -78,8 +78,6 @@ class Simulation(object):
         for romNet in self.block.logic_subset('m'):
             rom = romNet.op_param[1]
             if isinstance(rom, memory.RomBlock) and rom not in defined_roms:
-                if isinstance(self.block, core._PostSynthBlock):
-                    rom = self.block.mem_map[rom]
                 for address in range(0, 2**rom.addrwidth-1):
                     self.memvalue[(rom.id, address)] = rom._get_read_data(address)
 
