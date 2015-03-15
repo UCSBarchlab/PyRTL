@@ -1,5 +1,4 @@
 import sys
-import numpy as np
 sys.path.append("..")
 import pyrtl
 from pyrtl import *
@@ -24,8 +23,8 @@ rdata2 = Output(32, 'rdata2')
 # Instantiate ports
 rdata1 <<= mem1[raddr]
 rdata2 <<= mem2[raddr]
-mem1[waddr] = WE(wdata, we)  # Uses input wire
-mem2[count] = WE(wdata, we)  # Uses count register
+mem1[waddr] <<= WE(wdata, we)  # Uses input wire
+mem2[count] <<= WE(wdata, we)  # Uses count register
 
 # increment count regsiter on each write
 count.next <<= mux(we, falsecase=count, truecase=count + 1)

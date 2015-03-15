@@ -23,7 +23,7 @@ echo
 echo ===== Checking PEP8 Style ============================================
 pep8 --max-line-length=100 pyrtl/*.py
 check_exit_code $? 'PyRTL core pep8 check failed. Exiting.'
-pep8 --max-line-length=100 examples/*.py examples/**/*.py
+pep8 --max-line-length=100 examples/*.py
 check_exit_code $? 'PyRTL examples pep8 check failed. Exiting.'
 
 echo 
