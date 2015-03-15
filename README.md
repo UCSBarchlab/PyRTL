@@ -28,18 +28,18 @@ The docs are also available, just run `./checkcode` once and it will build the d
 
 * All major functionality should have set of unit tests covering and documenting their use
 * All public functions and methods should have useful docstrings
-* All code needs to conform to PEP8(https://www.python.org/dev/peps/pep-0008/) conventions
+* All code needs to conform to [PEP8](https://www.python.org/dev/peps/pep-0008/) conventions
 
 *Workflow*
 
 * A useful reference for working with Git is this [Git tutorial](https://www.atlassian.com/git/tutorials/)
-* The "master" branch should always be stable and is updated only on major revisions (with merge from "development" by Sherwood)
+* The "master" branch should always be stable and is updated only on major revisions (with a merge from "development" by Sherwood)
 * The "development" branch is the primary stable working branch (anyone can push)
 * Both "master" and "development" are automatically checked for full unit-test passing and PEP8 compliance with [Travis CI](https://travis-ci.com/)
 * Before pushing code to "development" make sure you pass "./checkcode" which is the same test as Travis CI will do
 * Any changes to stuff in PyRTL/pyrtl/ directory should be discussed before push to development
-* Bugs and minor enhancements tracked directly through the (issue tracker)[https://github.com/UCSBarchlab/PyRTL/issues]
-* Ideas for projects and major enhancements described on the (PyRTL-Projects Wiki Page)[https://github.com/UCSBarchlab/PyRTL/wiki]
+* Bugs and minor enhancements tracked directly through the [issue tracker](https://github.com/UCSBarchlab/PyRTL/issues)
+* Ideas for projects and major enhancements described on the [PyRTL-Projects Wiki Page](https://github.com/UCSBarchlab/PyRTL/wiki)
 * Anyone can add to, extended, or refine ideas on the wiki (anyone can edit)
 * If you start working on a project, please add an issue in the issue tracker and assign yourself to it for coordination
 * When posting a bug please post a small chunk of code that captures the bug, e.g. [Issue #56](https://github.com/UCSBarchlab/PyRTL/issues/56)
