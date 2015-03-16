@@ -29,7 +29,7 @@ The docs are also available, just run `./checkcode` once and it will build the d
 * All major functionality should have set of unit tests covering and documenting their use
 * All public functions and methods should have useful docstrings
 * All code needs to conform to [PEP8](https://www.python.org/dev/peps/pep-0008/) conventions
-* No root-level depedencies on external libs, import locally if required for special functions
+* No root-level dependencies on external libs, import locally if required for special functions
 
 *Workflow*
 
@@ -45,3 +45,26 @@ The docs are also available, just run `./checkcode` once and it will build the d
 * If you start working on a project, please add an issue in the issue tracker and assign yourself to it for coordination
 * When posting a bug please post a small chunk of code that captures the bug, e.g. [Issue #56](https://github.com/UCSBarchlab/PyRTL/issues/56)
 * When pushing a fix to a bug or enhancement please reference issue number in commit message, e.g. [Fix to Issue #56](https://github.com/UCSBarchlab/PyRTL/commit/1d5730db168a9e4490c580cb930075715468047a)
+
+### Related Projects
+
+[MyHDL](http://www.myhdl.org/) is a neat Python hardware project built around generators and decorators.  The semantics of this embedded language
+are close to Verilog and unlike PyRTL, MyHDL allows asynchronous logic and higher level modeling.  Also like Verilog, only a structural
+"convertible subset" of the language can be automatically synthesized into real hardware.  PyRTL requires all logic to be both synchronous
+and synthesizable which avoids a common trap for beginners, it elaborates the design during execution allowing the full power of python
+in describing recursive or complex hardware structures, and allows for hardware synthesis, simulation, test bench creation, and optimization
+all in the same framework.
+
+[Chisel](https://chisel.eecs.berkeley.edu/) is a project with similar goals to PyRTL but is based instead in Scala.  Using the Scala
+embedded language features and rich type system, Chisel is (like PyRTL) a elaborate-through-execution hardware design language.  With support
+for signed types, named hierarchies of wires useful for hardware protocols, and a neat control structure call "when" that inspired our
+ConditionalUpdate contexts, Chisel is a powerful tool used in some great research projects including OpenRISC.  Unlike Chisel, PyRTL has
+concentrated on a complete tool chain which is useful for instructional projects, and provides a clearly defined and relatively easy to
+manipulate intermediate structure in the class Block (often times call pyrtl.core) which allows rapid prototyping of hardware analysis
+routines which can then be codesigned with the architecture.
+
+[Yosys](http://www.clifford.at/yosys/) is an open source tool for Verilog RTL synthesis. It supports a huge subset of the Verilog-2005
+semantics and provides a basic set of synthesis algorithms.  The goals of this this tool are quite different from PyRTL, but the two
+play very nicely together in that PyRTL can output Verilog that can then be synthesized through Yosys.  Likewise Yosys can take
+Verilog designs and synthesize them to a very simple library of gates and output them as a "blif" file which can then be read in by
+PyRTL.
