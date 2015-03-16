@@ -31,8 +31,6 @@ class Simulation(object):
         self.tracer = tracer
         self.initialize(register_value_map, memory_value_map)
         self.max_iter = 1000
-        if isinstance(self.block, core._PostSynthBlock):
-            self.io_map = self.block.io_map  # pylint: disable=maybe-no-member
 
     def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
         """ Sets the wire, register, and memory values to default or as specified.
@@ -64,7 +62,7 @@ class Simulation(object):
         # set memories to their passed values
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
-                if isinstance(self.block, core._PostSynthBlock):
+                if isinstance(self.block, core.PostSynthBlock):
                     mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
                 for (addr, val) in mem_map.items():
                     if addr < 0 or addr >= 2**mem.addrwidth:
@@ -97,8 +95,8 @@ class Simulation(object):
         supplied_inputs = set()
         for i in provided_inputs:
             sim_wire = i
-            if isinstance(self.block, core._PostSynthBlock):
-                sim_wire = self.io_map[sim_wire]
+            if isinstance(self.block, core.PostSynthBlock):
+                sim_wire = self.block.io_map[sim_wire]  # pylint: disable=maybe-no-member
             if sim_wire not in input_set:
                 raise core.PyrtlError(
                     'step provided a value for input for "%s" which is '

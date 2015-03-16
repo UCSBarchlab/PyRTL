@@ -437,13 +437,13 @@ class Block(object):
         return cls._memid_count
 
 
-class _PostSynthBlock(Block):
+class PostSynthBlock(Block):
     """ This is a block with extra metadata required to maintain the
     pre synthesis interface post synthesis
     """
 
     def __init__(self):
-        super(_PostSynthBlock, self).__init__()
+        super(PostSynthBlock, self).__init__()
         self.io_map = {}
         self.mem_map = {}
 

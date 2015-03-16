@@ -1,7 +1,7 @@
 Memory Block
 ============
 
-.. automodule:: pyrtl.memblock
+.. automodule:: pyrtl.memory
    :members:
    :show-inheritance:
    :special-members:

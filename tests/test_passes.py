@@ -3,9 +3,63 @@ import pyrtl
 import pyrtl.core
 import pyrtl.wire
 import pyrtl.passes
+import StringIO
 
 from helperfunctions import testmissing
 
+"""
+class TestSynthesis(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.bitwidth = 3
+        self.r = pyrtl.Register(bitwidth=self.bitwidth, name='r')
+
+    def tearDown(self):
+        pyrtl.reset_working_block()
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in xrange(8):
+            sim.step({})
+        output = StringIO.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_not_simulation(self):
+        self.r.next <<= ~ self.r
+        self.check_trace('r 07070707\n')
+
+    def test_not_simulation(self):
+        self.r.next <<= ~ self.r
+        self.check_trace('r 07070707\n')
+
+    def test_and_simulation(self):
+        self.r.next <<= (~ self.r) & pyrtl.Const(6, bitwidth=self.bitwidth)
+        self.check_trace('r 06060606\n')
+
+    def test_or_simulation(self):
+        result = self.r | pyrtl.Const(4, bitwidth=self.bitwidth)
+        self.r.next <<= result
+        self.assertEqual(len(result), self.bitwidth)
+        self.check_trace('r 04444444\n')
+
+    def test_xor_simulation(self):
+        self.r.next <<= self.r ^ pyrtl.Const(4, bitwidth=self.bitwidth)
+        self.check_trace('r 04040404\n')
+
+    def test_plus_simulation(self):
+        self.r.next <<= self.r + pyrtl.Const(2, bitwidth=self.bitwidth)
+        self.check_trace('r 02460246\n')
+
+    def test_minus_simulation(self):
+        self.r.next <<= self.r - pyrtl.Const(1, bitwidth=self.bitwidth)
+        self.check_trace('r 07654321\n')
+
+    def test_const_nobitwidth_simulation(self):
+        self.r.next <<= self.r - pyrtl.Const(1)
+        self.check_trace('r 07654321\n')
+"""
 
 class TestPasses(unittest.TestCase):
     def setUp(self):

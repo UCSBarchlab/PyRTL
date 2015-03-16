@@ -29,6 +29,7 @@ The docs are also available, just run `./checkcode` once and it will build the d
 * All major functionality should have set of unit tests covering and documenting their use
 * All public functions and methods should have useful docstrings
 * All code needs to conform to [PEP8](https://www.python.org/dev/peps/pep-0008/) conventions
+* No root-level depedencies on external libs, import locally if required for special functions
 
 *Workflow*
 

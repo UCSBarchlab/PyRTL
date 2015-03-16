@@ -491,13 +491,20 @@ def synthesize(update_working_block=True, block=None):
     before and after.  There are the only two places where 'c' and 's' ops
     should exist.
 
+    The block that results from synthesis is actually of type
+    "PostSynthesisBlock" which contains a mapping from the original inputs
+    and outputs to the inputs and outputs of this block.  This is used during
+    simulation to map the input/outputs so that the same testbench can be
+    used both pre and post synthesis (see documentation for Simulation for
+    more details).
+
     :param updated_working_block: Boolean specifying if working block update
     :param block: The block you want to synthesize
-    :return: The newly synthesized block.
+    :return: The newly synthesized block (of type PostSynthesisBlock).
     """
 
     block_in = core.working_block(block)
-    block_out = core._PostSynthBlock()
+    block_out = core.PostSynthBlock()
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^rwcsm@')
     wirevector_map = {}  # map from (vector,index) -> new_wire
@@ -610,6 +617,23 @@ def _decompose(net, wv_map, mems, block_out):
         destlist = sumbits + [cout]
         for i in destlen():
             assign_dest(i, destlist[i])
+
+    elif net.op == '>':
+        # if xi = Ai==Bi then
+        # A>B = A3 & ~B3 | A2 & ~B2 & x3 | A1 & ~B1 & x3 & x2 | A0 & ~B0 & x3 & x2 & x1
+        bitlen = len(net.args[0])
+        # Compute the xi above, but don't compute x0 (put None in it's place)
+        x = [~(arg(0, i) ^ arg(1, i)) for i in range(1, bitlen)]
+        x.insert(0, None)
+        # OR over all the terms
+        result = None
+        for i in range(0, bitlen):
+            term = arg(0, i) & ~arg(1, i)
+            for j in range(i+1, bitlen):
+                term = term & x[j]
+            result = (term) if result is None else (result | term)
+        assign_dest(0, result)
+
     elif net.op == '-':
         arg0list = [arg(0, i) for i in range(len(net.args[0]))]
         arg1list = [~arg(1, i) for i in range(len(net.args[1]))]
