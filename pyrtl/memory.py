@@ -48,7 +48,7 @@ class _MemReadBase(object):
     def __init__(self,  bitwidth, addrwidth, name=None, block=None):
 
         self.block = core.working_block(block)
-        name = self.block.next_tempvar_name(name)
+        name = core.next_tempvar_name(name)
 
         if bitwidth <= 0:
             raise core.PyrtlError('error, bitwidth must be >= 1')
@@ -59,7 +59,7 @@ class _MemReadBase(object):
         self.name = name
         self.addrwidth = addrwidth
         self.readport_nets = []
-        self.id = core.Block.next_memid()
+        self.id = core.next_memid()
 
     def __getitem__(self, item):
         from helperfuncs import as_wires

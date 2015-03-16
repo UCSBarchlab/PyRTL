@@ -7,7 +7,6 @@ import StringIO
 
 from helperfunctions import testmissing
 
-"""
 class TestSynthesis(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -56,6 +55,11 @@ class TestSynthesis(unittest.TestCase):
         self.r.next <<= self.r - pyrtl.Const(1, bitwidth=self.bitwidth)
         self.check_trace('r 07654321\n')
 
+    def test_minus_simulationx(self):
+        self.r.next <<= self.r - pyrtl.Const(1, bitwidth=self.bitwidth)
+        self.check_trace('r 07654321\n')
+
+"""
     def test_const_nobitwidth_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1)
         self.check_trace('r 07654321\n')

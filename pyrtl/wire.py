@@ -40,7 +40,7 @@ class WireVector(object):
 
     def __init__(self, bitwidth=None, name=None, block=None):
         self.block = core.working_block(block)
-        self.name = self.block.next_tempvar_name(name)
+        self.name = core.next_tempvar_name(name)
         if bitwidth is not None and bitwidth <= 0:
             raise core.PyrtlError('error, bitwidth must be >= 1')
         self.bitwidth = bitwidth
@@ -339,7 +339,7 @@ class Const(WireVector):
                 'error constant "%s" cannot fit in the specified %d bits'
                 % (str(num), bitwidth))
 
-        name = core.Block.next_constvar_name(num)
+        name = core.next_constvar_name(num)
 
         # initialize the WireVector
         super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)

@@ -408,34 +408,6 @@ class Block(object):
         if net.op == 'm' and net.dests[0].bitwidth != net.op_param[1].bitwidth:
             raise PyrtlInternalError('error, mem read dest bitwidth mismatch')
 
-    # some unique name class methods useful internally
-    _tempvar_count = 1
-    _memid_count = 0
-
-    def next_tempvar_name(self, name=None):
-        cls = type(self)
-        if name is None:
-            wire_name = ''.join(['tmp', str(cls._tempvar_count)])
-            cls._tempvar_count += 1
-        else:
-            if name.lower() in ['clk', 'clock']:
-                raise PyrtlError('Clock signals should never be explicit')
-            wire_name = name
-        if wire_name in self.wirevector_by_name:
-            raise PyrtlError('duplicate name "%s" added' % wire_name)
-        return wire_name
-
-    @classmethod
-    def next_constvar_name(cls, val):
-        wire_name = ''.join(['const', str(cls._tempvar_count), '_', str(val)])
-        cls._tempvar_count += 1
-        return wire_name
-
-    @classmethod
-    def next_memid(cls):
-        cls._memid_count += 1
-        return cls._memid_count
-
 
 class PostSynthBlock(Block):
     """ This is a block with extra metadata required to maintain the
@@ -459,6 +431,37 @@ class PostSynthBlock(Block):
 # The argument "singleton_block" should never be passed.
 _singleton_block = Block()
 debug_mode = False
+
+# some functions for generating unique names.  Keeping them synced
+# between subclasses of Block was problematic, so instead they should just
+# be kept as global
+_tempvar_count = 1
+_memid_count = 0
+
+
+def next_constvar_name(val):
+    global _tempvar_count
+    wire_name = ''.join(['const', str(_tempvar_count), '_', str(val)])
+    _tempvar_count += 1
+    return wire_name
+
+
+def next_memid():
+    global _memid_count
+    _memid_count += 1
+    return _memid_count
+
+
+def next_tempvar_name(name=None):
+    global _tempvar_count
+    if name is None:
+        wire_name = ''.join(['tmp', str(_tempvar_count)])
+        _tempvar_count += 1
+    else:
+        if name.lower() in ['clk', 'clock']:
+            raise PyrtlError('Clock signals should never be explicit')
+        wire_name = name
+    return wire_name
 
 
 def working_block(block=None):
