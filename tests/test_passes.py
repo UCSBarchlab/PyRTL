@@ -17,6 +17,9 @@ class TestSynthesis(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
+        ### should all these tests still work post synthesis?
+        #pyrtl.synthesize() 
+        #pyrtl.optimize()
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in xrange(8):
@@ -59,11 +62,9 @@ class TestSynthesis(unittest.TestCase):
         self.r.next <<= self.r - pyrtl.Const(1, bitwidth=self.bitwidth)
         self.check_trace('r 07654321\n')
 
-"""
     def test_const_nobitwidth_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1)
         self.check_trace('r 07654321\n')
-"""
 
 class TestPasses(unittest.TestCase):
     def setUp(self):

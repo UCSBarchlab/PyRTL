@@ -18,8 +18,15 @@ class Simulation(object):
 
     def __init__(
             self, register_value_map=None, memory_value_map=None,
-            default_value=0, tracer=None, block=None):
-        """ Creates object and initializes it with self.initialize. """
+            default_value=0, tracer=None, use_postsynth_map_if_available=True, block=None):
+        """ Creates object and initializes it with self.initialize.
+
+        register_value_map, memory_value_map, and default_value are passed on to initialize.
+        tracer is an instance of SimulationTrace used to store execution results.
+        use_postsynth_map_if_available will map the I/O to the block from the
+        pre-synthesis block so the names and outputs can be used or generated respectively.
+        block is the hardware block to be traced (which might be of type PostSynthesisBlock).
+        """
 
         block = core.working_block(block)
         block.sanity_check()  # check that this is a good hw block
@@ -31,6 +38,7 @@ class Simulation(object):
         self.tracer = tracer
         self.initialize(register_value_map, memory_value_map)
         self.max_iter = 1000
+        self.use_postsynth_map = use_postsynth_map_if_available
 
     def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
         """ Sets the wire, register, and memory values to default or as specified.
@@ -95,7 +103,7 @@ class Simulation(object):
         supplied_inputs = set()
         for i in provided_inputs:
             sim_wire = i
-            if isinstance(self.block, core.PostSynthBlock):
+            if isinstance(self.block, core.PostSynthBlock) and self.use_postsynth_map:
                 sim_wire = self.block.io_map[sim_wire]  # pylint: disable=maybe-no-member
             if sim_wire not in input_set:
                 raise core.PyrtlError(
@@ -322,6 +330,7 @@ class SimulationTrace(object):
             if (
                name.startswith('tmp')
                or name.startswith('const')
+               # or name.startswith('synth_')
                or name.endswith("'")
                ):
                 return True
