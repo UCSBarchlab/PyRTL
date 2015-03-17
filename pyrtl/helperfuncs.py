@@ -37,6 +37,7 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
         # note that this case captures bool as well (as bools are instances of ints)
         return wire.Const(val, bitwidth=bitwidth, block=block)
     elif isinstance(val, memory._MemIndexed):
+        # covert to a memory read when the value is actually used
         return val.mem._readaccess(val.index)
     elif not isinstance(val, wire.WireVector):
         raise core.PyrtlError('error, expecting a wirevector, int, or verilog-style const string')

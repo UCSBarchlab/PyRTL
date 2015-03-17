@@ -43,7 +43,7 @@ class TestRTLMemBlockDesign(unittest.TestCase):
         memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
         memory[self.mem_write_address] <<= 5
 
-""" -- TEST for Error comparing Mem reads #57
+    # test does not check functionality, just that it will generate hardware
     def test_memblock_to_memblock_direct_operation(self):
         memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
         temp = (memory[self.mem_read_address1] == memory[self.mem_read_address2])
@@ -54,7 +54,7 @@ class TestRTLMemBlockDesign(unittest.TestCase):
         temp = (memory[self.mem_read_address1] - memory[self.mem_read_address2])
         temp = (memory[self.mem_read_address1] * memory[self.mem_read_address2])
         self.output1 <<= temp
-"""
+
 
 if __name__ == "__main__":
     unittest.main()

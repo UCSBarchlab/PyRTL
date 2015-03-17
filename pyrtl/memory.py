@@ -28,14 +28,45 @@ import conditional
 _MemAssignment = collections.namedtuple('_MemAssignment', 'rhs, is_conditional')
 
 
-class _MemIndexed(collections.namedtuple('_MemIndexed', 'mem, index')):
-    """ Object used internally to route memory assigns correctly. """
+class _MemIndexed(wire.WireVector):
+    """ Object used internally to route memory assigns correctly.
+
+    The normal PyRTL user should never need to be aware that this class exists,
+    hence the underscore in the name.  It presents a very similar interface to
+    wiresVectors (all of the normal wirevector operations should still work),
+    but if you try to *set* the value with <<= or |= then it will generate a
+    _MemAssignment object rather than the normal wire assignment. """
+
+    def __init__(self, mem, index):
+        self.mem = mem
+        self.index = index
 
     def __ilshift__(self, other):
         return _MemAssignment(rhs=other, is_conditional=False)
 
     def __ior__(self, other):
         return _MemAssignment(rhs=other, is_conditional=True)
+
+    def logicop(self, other, op):
+        return helperfuncs.as_wires(self).logicop(other, op)
+
+    def __invert__(self):
+        return helperfuncs.as_wires(self).__invert__()
+
+    def __getitem__(self, item):
+        return helperfuncs.as_wires(self).__getitem__(item)
+
+    def __len__(self):
+        return self.mem.bitwidth
+
+    def sign_extended(self, bitwidth):
+        return helperfuncs.as_wires(self).sign_extended(bitwidth)
+
+    def zero_extended(self, bitwidth):
+        return helperfuncs.as_wires(self).zero_extended(bitwidth)
+
+    def extended(self, bitwidth):
+        return helperfuncs.as_wires(self).extended(bitwidth)
 
 
 class _MemReadBase(object):
