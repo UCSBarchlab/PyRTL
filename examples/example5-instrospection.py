@@ -38,11 +38,10 @@ class SimplePipeline(object):
             # do not do anything tricky with variables starting with '_'
             object.__setattr__(self, name, value)
         else:
-            rtype = pyrtl.appropriate_register_type(value)
             next_stage = self._current_stage_num + 1
             pipereg_id = str(self._current_stage_num) + 'to' + str(next_stage)
             rname = 'pipereg_' + pipereg_id + '_' + name
-            new_pipereg = rtype(bitwidth=len(value), name=rname)
+            new_pipereg = pyrtl.Register(bitwidth=len(value), name=rname)
             if next_stage not in self._pipeline_register_map:
                 self._pipeline_register_map[next_stage] = {}
             self._pipeline_register_map[next_stage][name] = new_pipereg

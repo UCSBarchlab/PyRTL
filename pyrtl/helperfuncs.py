@@ -8,7 +8,6 @@ parity: same as xor_all_bits
 mux: generate a multiplexer
 concat: concatenate multiple wirevectors into one long vector
 get_block: get the block of the arguments, throw error if they are different
-appropriate_register_type: return the register needed to capture the given type
 """
 
 import core
@@ -44,7 +43,7 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
     elif bitwidth == '0':
         raise core.PyrtlError('error, bitwidth must be >= 1')
     elif bitwidth and bitwidth > val.bitwidth:
-        return val.extended(bitwidth)  # extend appropriately
+        return val.zero_extended(bitwidth)
     elif bitwidth and truncating and bitwidth < val.bitwidth:
         return val[:bitwidth]  # truncate the upper bits
     else:
@@ -96,9 +95,9 @@ def mux(select, falsecase, truecase):
     if len(select) != 1:
         raise core.PyrtlError('error, select input to the mux must be 1-bit wirevector')
     if len(a) < len(b):
-        a = a.extended(len(b))
+        a = a.zero_extended(len(b))
     elif len(b) < len(a):
-        b = b.extended(len(a))
+        b = b.zero_extended(len(a))
     resultlen = len(a)  # both are the same length now
 
     outwire = wire.WireVector(bitwidth=resultlen, block=block)
@@ -150,17 +149,3 @@ def concat(*args):
             dests=(outwire,))
         outwire.block.add_net(net)
         return outwire
-
-
-def appropriate_register_type(t):
-    """ take a type t, return a type which is appropriate for registering t (signed or unsigned)."""
-
-    if isinstance(t, (wire.Output, wire.Const)):
-        # includes signed versions
-        raise core.PyrtlError('error, no appropriate register type for outputs or constants')
-    elif isinstance(t, (wire.SignedWireVector, wire.SignedInput, wire.SignedRegister)):
-        return wire.SignedRegister
-    elif isinstance(t, (wire.WireVector, wire.Input, wire.Register)):
-        return wire.Register
-    else:
-        raise core.PyrtlError('error, unknown type "%s" passed as argument' % str(type(t)))

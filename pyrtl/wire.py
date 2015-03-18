@@ -5,7 +5,7 @@ Types defined in this file include:
 WireVector: the base class for ordered collections of wires
 Input: a wire vector that receives an input for a block
 Output: a wire vector that defines an output for a block
-Const: a wire vector fed by an unsigned constant
+Const: a wire vector fed by a constant
 Register: a wire vector that is latched each cycle
 """
 
@@ -41,6 +41,8 @@ class WireVector(object):
     def __init__(self, bitwidth=None, name=None, block=None):
         self.block = core.working_block(block)
         self.name = core.next_tempvar_name(name)
+        if bitwidth is not None and isinstance(bitwidth, int) is False:
+            raise core.PyrtlError('parameter "bitwidth" needs to be an int or left unspecificed')
         if bitwidth is not None and bitwidth <= 0:
             raise core.PyrtlError('error, bitwidth must be >= 1')
         self.bitwidth = bitwidth
@@ -86,9 +88,9 @@ class WireVector(object):
 
         # check size of operands
         if len(a) < len(b):
-            a = a.extended(len(b))
+            a = a.zero_extended(len(b))
         elif len(b) < len(a):
-            b = b.extended(len(a))
+            b = b.zero_extended(len(a))
         resultlen = len(a)  # both are the same length now
 
         # some operations actually create more or less bits
@@ -239,10 +241,6 @@ class WireVector(object):
         """ return a zero extended wirevector derived from self """
         return self._extend_with_bit(bitwidth, Const(0, bitwidth=1, block=self.block))
 
-    def extended(self, bitwidth):
-        """ return wirevector extended as the default rule for the class """
-        return self.zero_extended(bitwidth)
-
     def _extend_with_bit(self, bitwidth, extbit):
         numext = bitwidth - self.bitwidth
         if numext == 0:
@@ -291,27 +289,54 @@ class Output(WireVector):
 
 
 class Const(WireVector):
-    """ A WireVector representation of an unsigned integer constant """
+    """ A WireVector representation of a constant value
+
+    Converts from bool, integer, or verilog-style strings to a constant
+    of the specified bitwidth.  If the bitwidth is too short to represent
+    the specified constant then an error is raised.  If a possitive
+    integer is specified the bitwidth can be infered from the constant.
+    If a negative integer is provided it is converted to a two's complement
+    representation of the specified bitwidth."""
+
     code = 'C'
 
     def __init__(self, val, bitwidth=None, block=None):
         """ Construct a constant implementation at initialization """
+        if bitwidth is not None:
+            if not isinstance(bitwidth, int):
+                raise core.PyrtlError(
+                    'bitwidth must be from type int, instead Const was passed "%s" of type %s'
+                    % (str(bitwidth), type(bitwidth)))
+            if bitwidth < 0:
+                raise core.PyrtlError('you are trying a negative bitwidth? awesome but wrong')
+
         if isinstance(val, bool):
             num = int(val)
             if bitwidth is None:
                 bitwidth = 1
             if bitwidth != 1:
                 raise core.PyrtlError('error, boolean has bitwidth not equal to 1')
-        if isinstance(val, int):
-            num = val
-            # infer bitwidth if it is not specified explicitly
-            if bitwidth is None:
-                bitwidth = len(bin(num))-2  # the -2 for the "0b" at the start of the string
+        elif isinstance(val, int):
+            if val >= 0:
+                num = val
+                # infer bitwidth if it is not specified explicitly
+                if bitwidth is None:
+                    bitwidth = len(bin(num))-2  # the -2 for the "0b" at the start of the string
+            else:  # val is negative
+                if bitwidth is None:
+                    raise core.PyrtlError(
+                        'negative Const values must have bitwidth declared explicitly')
+                if (val >> bitwidth-1) != -1:
+                    raise core.PyrtlError('insufficient bits for negative number')
+                mask = ((1 << bitwidth)-1)
+                num = val & mask  # result is a twos complement value
         elif isinstance(val, basestring):
             if bitwidth is not None:
                 raise core.PyrtlError('error, bitwidth parameter of const should be'
                                       ' unspecified when the const is created from a string'
                                       ' (instead use verilog style specification)')
+            if val.startswith('-'):
+                raise core.PyrtlError('verilog-style consts must be positive')
             split_string = string.split(val, "'")
             if len(split_string) != 2:
                 raise core.PyrtlError('error, string for Const not in verilog style format')
@@ -322,18 +347,11 @@ class Const(WireVector):
                 raise core.PyrtlError('error, string for Const not in verilog style format')
         else:
             raise core.PyrtlError('error, the value of Const is of an improper type, "%s"'
-                                  'proper types are int and string' % type(val))
+                                  'proper types are bool, int, and string' % type(val))
 
-        if not isinstance(bitwidth, int):
-            raise core.PyrtlError(
-                'error, bitwidth must be from type int, instead Const was passed "%s" of type %s'
-                % (str(bitwidth), type(bitwidth)))
         if num < 0:
-            raise core.PyrtlError(
-                'error, Const is only for unsigned numbers and must be positive')
-        if bitwidth < 0:
-            raise core.PyrtlError(
-                'error, you are trying a negative bitwidth? awesome but wrong')
+            raise core.PyrtlInternalError(
+                'Const somehow evaluating to negative integer after checks')
         if (num >> bitwidth) != 0:
             raise core.PyrtlError(
                 'error constant "%s" cannot fit in the specified %d bits'
@@ -436,49 +454,3 @@ class Register(WireVector):
         self.reg_in = next
         net = core.LogicNet('r', None, args=(self.reg_in,), dests=(self,))
         self.block.add_net(net)
-
-
-# ----------------------------------------------------------------
-#   __     __        ___  __           ___  __  ___  __   __   __
-#  /__` | / _` |\ | |__  |  \    \  / |__  /  `  |  /  \ |__) /__`
-#  .__/ | \__> | \| |___ |__/     \/  |___ \__,  |  \__/ |  \ .__/
-#
-
-class SignedWireVector(WireVector):
-    """ Same as WireVector but when extended it will use MSb. """
-    code = 'SW'
-
-    def extended(self, bitwidth):
-        return self.sign_extended(bitwidth)
-
-
-class SignedInput(Input):
-    """ Same as Input but when extended it will use MSb. """
-    code = 'SI'
-
-    def extended(self, bitwidth):
-        return self.sign_extended(bitwidth)
-
-
-class SignedOutput(Output):
-    """ Same as Output but when extended it will use MSb. """
-    code = 'SO'
-
-    def extended(self, bitwidth):
-        return self.sign_extended(bitwidth)
-
-
-class SignedConst(Const):
-    """ Same as Const but when extended it will use MSb. """
-    code = 'SC'
-
-    def extended(self, bitwidth):
-        return self.sign_extended(bitwidth)
-
-
-class SignedRegister(Register):
-    """ Same as Register but when extended it will use MSb. """
-    code = 'SR'
-
-    def extended(self, bitwidth):
-        return self.sign_extended(bitwidth)

@@ -71,6 +71,24 @@ class TestConst(unittest.TestCase):
         self.assertTrue(c.val == 1)
         self.assertTrue(c.bitwidth == 5)
 
+    def test_const_neg_integers(self):
+        c = pyrtl.Const(-1, bitwidth=5)
+        self.assertTrue(c.val == 0b11111)
+        self.assertTrue(c.bitwidth == 5)
+
+        c = pyrtl.Const(-2, bitwidth=3)
+        self.assertTrue(c.val == 0b110)
+        self.assertTrue(c.bitwidth == 3)
+
+        c = pyrtl.Const(-5, bitwidth=4)
+        self.assertTrue(c.val == 0b1011)
+        self.assertTrue(c.bitwidth == 4)
+
+    def test_const_bad_neg_integers(self):
+        # check that bitwidth is required
+        self.assertRaises(pyrtl.PyrtlError, pyrtl.Const, -4)
+        self.assertRaises(pyrtl.PyrtlError, pyrtl.Const, -4, 2)
+
     def test_const_string(self):
         c = pyrtl.Const("1'1")
         self.assertTrue(c.val == 1)
