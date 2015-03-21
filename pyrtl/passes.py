@@ -112,6 +112,7 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
             '&': lambda gate: 1,
             '|': lambda gate: 1,
             '^': lambda gate: 1,
+            'n': lambda gate: 1,
             'w': lambda gate: 0,
             '+': lambda gate: len(gate.args[0])*3,
             '-': lambda gate: len(gate.args[0])*3,
@@ -337,6 +338,7 @@ def _constant_prop_pass(block):
             '&': lambda l, r: l & r,
             '|': lambda l, r: l | r,
             '^': lambda l, r: l ^ r,
+            'n': lambda l, r: 1-(l & r),
         }
         num_constants = 0
         for arg_wires in net_checking.args:
@@ -506,7 +508,7 @@ def synthesize(update_working_block=True, block=None):
     block_in = core.working_block(block)
     block_out = core.PostSynthBlock()
     # resulting block should only have one of a restricted set of net ops
-    block_out.legal_ops = set('~&|^rwcsm@')
+    block_out.legal_ops = set('~&|^nrwcsm@')
     wirevector_map = {}  # map from (vector,index) -> new_wire
     io_map = block_out.io_map  # map from presynth inputs and outputs to postsynth i/o
     uid = 0  # used for unique names
@@ -581,6 +583,9 @@ def _decompose(net, wv_map, mems, block_out):
     elif net.op == '^':
         for i in destlen():
             assign_dest(i, arg(0, i) ^ arg(1, i))
+    elif net.op == 'n':
+        for i in destlen():
+            assign_dest(i, arg(0, i).nand(arg(1, i)))
     elif net.op == '=':
         # The == operator is implemented with a nor of xors.
         temp_result = arg(0, 0) ^ arg(1, 0)
@@ -736,7 +741,7 @@ def copy_net(block_out, net, temp_wv_net, mems):
 
 def nand_synth(block=core.working_block()):
     """
-    Synthesizes a decomposed block into one consisting of nands and inverters
+    Synthesizes an and-inverter block into one consisting of nands and inverters
     :param block: The block to synthesize
     :return: The resulting block
     """
@@ -772,8 +777,8 @@ def and_inverter_synth(block=core.working_block()):
     def arg(arg_w):
         return temp_wv_map[net.args[arg_w]]
 
-    def assign_dest(toAssign):
-        temp_wv_map[net.dests[0]] <<= toAssign
+    def assign_dest(to_assign):
+        temp_wv_map[net.dests[0]] <<= to_assign
 
     for net in block_in:
         if net.op == '|':
