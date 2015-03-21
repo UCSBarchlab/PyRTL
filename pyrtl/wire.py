@@ -233,6 +233,11 @@ class WireVector(object):
     def __exit__(self, type, value, tb):
         pass  # needed to allow the error raised in __enter__ to propagate up to the user
 
+    # more functions for wires
+    def nand(self, other):
+        return self.logicop(other, 'n')
+
+
     def sign_extended(self, bitwidth):
         """ return a sign extended wirevector derived from self """
         return self._extend_with_bit(bitwidth, self[-1])

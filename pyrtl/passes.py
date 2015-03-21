@@ -688,6 +688,106 @@ def _decompose(net, wv_map, mems, block_out):
     return
 
 
+def _synth_base(block):
+    """
+    This is a generic function to copy the wirevectors for another round of
+    synthesis This does not split a wirevector with multiple wires.
+    :param block: The block to change
+    :return: the resulting block and a wirevector map
+    """
+    import copy
+    block_in = core.working_block(block)
+    if not isinstance(block_in, core.PostSynthBlock):
+        raise core.PyrtlError("Synth_base only works on post synth blocks")
+    block_out = core.PostSynthBlock()
+    temp_wv_map = {}
+    for wirevector in block_in.wirevector_subset():
+        new_wv = copy.copy(wirevector)
+        new_wv.block = block_out
+        new_wv.name = core.next_tempvar_name()
+        temp_wv_map[wirevector] = new_wv
+
+    # TODO: figure out the real map
+    return block_out, temp_wv_map
+
+def copy_net(block_out, net, temp_wv_net, mems):
+    """This function makes a copy of all nets passed to it for synth uses
+    """
+    import copy
+    if net.op in "~&|^nrwcsm@":
+        new_args = (temp_wv_net[a_arg] for a_arg in net.args)
+        new_dests = (temp_wv_net[a_dest] for a_dest in net.dest)
+        new_param = copy.copy(net.op_param)
+        if net.op in "m@":
+            memid, mem = net.op_param
+            if mem not in mems:
+                new_mem = mem._make_copy(block_out)
+                mems[mem] = new_mem
+                new_mem.id = mem.id
+            else:
+                new_mem = mems[mem]
+            new_param = (new_mem.id, new_mem)
+
+        new_net = core.LogicNet(net.op, new_param, args=new_args, dests=new_dests)
+        block_out.add_net(new_net)
+    else:
+        raise core.PyrtlInternalError("Invalid op code :" + net.op + " found.")
+
+
+def nand_synth(block=core.working_block()):
+    """
+    Synthesizes a decomposed block into one consisting of nands and inverters
+    :param block: The block to synthesize
+    :return: The resulting block
+    """
+    block_in = core.working_block(block)
+    block_out, temp_wv_map = _synth_base(block)
+    block_out.legal_ops = set('~norwcsm@')
+    mems = {}
+
+    def arg(arg_w):
+        return temp_wv_map[net.args[arg_w]]
+
+    def assign_dest(toAssign):
+        temp_wv_map[net.dests[0]] <<= toAssign
+
+    for net in block_in:
+        if net.op == '&':
+            assign_dest(~(arg(0).nand(arg(1))))
+        else:
+            copy_net(block_out, net, temp_wv_map, mems)
+
+
+def and_inverter_synth(block=core.working_block()):
+    """
+    Synthesizes a decomposed block into one consisting of ands and inverters
+    :param block: The block to synthesize
+    :return: The resulting block
+    """
+    block_in = core.working_block(block)
+    block_out, temp_wv_map = _synth_base(block)
+    block_out.legal_ops = set('~&rwcsm@')
+    mems = {}
+
+    def arg(arg_w):
+        return temp_wv_map[net.args[arg_w]]
+
+    def assign_dest(toAssign):
+        temp_wv_map[net.dests[0]] <<= toAssign
+
+    for net in block_in:
+        if net.op == '|':
+            assign_dest(~(~arg(0) & ~arg(1)))
+        elif net.op == '^':
+            all_1 = arg(0) & arg(1)
+            all_0 = ~arg(0) & ~arg(1)
+            assign_dest(all_0 & ~all_1)
+        elif net.op == 'n':
+            assign_dest(~(arg(0) & arg(1)))
+        else:
+            copy_net(block_out, net, temp_wv_map, mems)
+
+
 def _generate_one_bit_add(a, b, cin):
     """ Generates hardware for a 1-bit full adder.
         Input: 3 1-bit wire vectors
