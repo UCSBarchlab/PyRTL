@@ -128,7 +128,6 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
             '@': lambda gate: -1,
         }
 
-    #  Note to developers: the code is almost identical to the standard timing analysis
     cleared = block.wirevector_subset((wire.Input, wire.Const, wire.Register))
     remaining = block.logic.copy()
     timing_map = {wirevector: 0 for wirevector in cleared}
@@ -706,16 +705,20 @@ def _synth_base(block):
         raise core.PyrtlError("Synth_base only works on post synth blocks")
     block_out = core.PostSynthBlock()
     temp_wv_map = {}
+    temp_io_map = {}
     for wirevector in block_in.wirevector_subset():
         new_wv = copy.copy(wirevector)
         new_wv.block = block_out
         new_wv.name = core.next_tempvar_name()
         temp_wv_map[wirevector] = new_wv
+        if isinstance(wirevector, (wire.Input, wire.Output)):
+            temp_io_map[wirevector] = new_wv
 
+    block_out.io_map = {orig_wire: temp_io_map[v] for (orig_wire, v) in block_in.io_map}
     # TODO: figure out the real map
     return block_out, temp_wv_map
 
-def copy_net(block_out, net, temp_wv_net, mems):
+def _copy_net(block_out, net, temp_wv_net, mems):
     """This function makes a copy of all nets passed to it for synth uses
     """
     import copy
@@ -723,6 +726,7 @@ def copy_net(block_out, net, temp_wv_net, mems):
         new_args = (temp_wv_net[a_arg] for a_arg in net.args)
         new_dests = (temp_wv_net[a_dest] for a_dest in net.dest)
         new_param = copy.copy(net.op_param)
+        # special stuff for copying memories
         if net.op in "m@":
             memid, mem = net.op_param
             if mem not in mems:
@@ -742,7 +746,7 @@ def copy_net(block_out, net, temp_wv_net, mems):
 def nand_synth(block=core.working_block()):
     """
     Synthesizes an and-inverter block into one consisting of nands and inverters
-    :param block: The block to synthesize
+    :param block: The block to synthesize.
     :return: The resulting block
     """
     block_in = core.working_block(block)
@@ -759,8 +763,13 @@ def nand_synth(block=core.working_block()):
     for net in block_in:
         if net.op == '&':
             assign_dest(~(arg(0).nand(arg(1))))
+        elif net.op == '|':
+            assign_dest((~arg(0)).nand(~arg(1)))
+        elif net.op == '^':
+            temp_0 = arg(0).nand(arg(1))
+            assign_dest(temp_0.nand(arg(0)).nand(temp_0.nand(arg(1))))
         else:
-            copy_net(block_out, net, temp_wv_map, mems)
+            _copy_net(block_out, net, temp_wv_map, mems)
 
 
 def and_inverter_synth(block=core.working_block()):
@@ -790,7 +799,7 @@ def and_inverter_synth(block=core.working_block()):
         elif net.op == 'n':
             assign_dest(~(arg(0) & arg(1)))
         else:
-            copy_net(block_out, net, temp_wv_map, mems)
+            _copy_net(block_out, net, temp_wv_map, mems)
 
 
 def _generate_one_bit_add(a, b, cin):
