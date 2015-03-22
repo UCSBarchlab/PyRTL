@@ -718,6 +718,7 @@ def _synth_base(block):
     # TODO: figure out the real map
     return block_out, temp_wv_map
 
+
 def _copy_net(block_out, net, temp_wv_net, mems):
     """This function makes a copy of all nets passed to it for synth uses
     """
