@@ -54,7 +54,7 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
 
     def test_multiply_simulation(self):
         self.r.next <<= self.r * pyrtl.Const(2, bitwidth=self.bitwidth) + \
-                        pyrtl.Const(1, bitwidth=self.bitwidth)
+            pyrtl.Const(1, bitwidth=self.bitwidth)
         self.check_trace('r 01377777\n')
 
     def test_const_nobitwidth_simulation(self):

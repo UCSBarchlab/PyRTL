@@ -6,6 +6,8 @@ import StringIO
 from helperfunctions import testmissing
 
 # ---------------------------------------------------------------
+
+
 class TestBlock(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -49,7 +51,7 @@ class TestBlock(unittest.TestCase):
     def test_basic_simple_condition_1(self):
         r = pyrtl.Register(bitwidth=2, name='r')
         with pyrtl.ConditionalUpdate() as condition:
-            with condition(r<2):
+            with condition(r < 2):
                 r.next |= r + 1
         self.check_trace('r 01222222\n')
 
@@ -61,7 +63,7 @@ class TestBlock(unittest.TestCase):
             with condition(c):
                 i.next |= i + 1
         with pyrtl.ConditionalUpdate() as condition:
-            with condition(i==2):
+            with condition(i == 2):
                 r.next |= r + 1
         self.check_trace('i 01230123\nr 00011112\n')
 
@@ -71,7 +73,7 @@ class TestBlock(unittest.TestCase):
         r = pyrtl.Register(bitwidth=2, name='r')
         with pyrtl.ConditionalUpdate(c):
             i.next |= i + 1
-        with pyrtl.ConditionalUpdate(i==2):
+        with pyrtl.ConditionalUpdate(i == 2):
             r.next |= r + 1
         self.check_trace('i 01230123\nr 00011112\n')
 

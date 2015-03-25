@@ -7,6 +7,7 @@ import StringIO
 
 from helperfunctions import testmissing
 
+
 class TestSynthesis(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -17,7 +18,7 @@ class TestSynthesis(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
-        ### should all these tests still work post synthesis?
+        # should all these tests still work post synthesis?
         #pyrtl.synthesize() 
         #pyrtl.optimize()
         sim_trace = pyrtl.SimulationTrace()
@@ -65,6 +66,7 @@ class TestSynthesis(unittest.TestCase):
     def test_const_nobitwidth_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1)
         self.check_trace('r 07654321\n')
+
 
 class TestPasses(unittest.TestCase):
     def setUp(self):

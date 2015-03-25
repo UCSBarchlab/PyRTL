@@ -2,6 +2,7 @@ import pyrtl
 
 # ------------------------------------------------------
 
+
 def testmissing():
     """ called when a test is just stubbed in """
     # raise NotImplementedError
@@ -36,7 +37,7 @@ def generate_full_adder(a, b, cin=None):
 def generate_one_bit_mux(a, b, sel):
     """Generates a one-bit multiplexor"""
     assert len(a) == len(b) == len(sel) == 1
-    out = ( b & sel ) | ( a & ~sel)
+    out = (b & sel) | (a & ~sel)
     return out
 
 

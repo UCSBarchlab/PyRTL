@@ -6,6 +6,8 @@ import StringIO
 from helperfunctions import testmissing
 
 # ---------------------------------------------------------------
+
+
 class TestBlock(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

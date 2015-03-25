@@ -39,7 +39,6 @@ class TestBlock(unittest.TestCase):
         tempwire2 = pyrtl.WireVector()
         outwire = pyrtl.Output()
 
-
         tempwire <<= inwire | inwire2
         tempwire2 <<= ~tempwire
         outwire <<= tempwire2 & inwire3

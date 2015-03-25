@@ -758,8 +758,8 @@ def nand_synth(block=core.working_block()):
     def arg(arg_w):
         return temp_wv_map[net.args[arg_w]]
 
-    def assign_dest(toAssign):
-        temp_wv_map[net.dests[0]] <<= toAssign
+    def assign_dest(to_assign):
+        temp_wv_map[net.dests[0]] <<= to_assign
 
     for net in block_in:
         if net.op == '&':
