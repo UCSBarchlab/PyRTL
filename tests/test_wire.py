@@ -145,4 +145,3 @@ class TestRTLAdderDesign(unittest.TestCase):
             self.assertTrue(isinstance(r, pyrtl.Register))
             self.assertTrue(isinstance(cout, pyrtl.WireVector))
             pyrtl.reset_working_block()
-

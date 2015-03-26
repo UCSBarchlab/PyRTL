@@ -19,8 +19,8 @@ class TestSynthesis(unittest.TestCase):
 
     def check_trace(self, correct_string):
         # should all these tests still work post synthesis?
-        #pyrtl.synthesize() 
-        #pyrtl.optimize()
+        # pyrtl.synthesize()
+        # pyrtl.optimize()
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in xrange(8):
@@ -375,16 +375,16 @@ class TestPasses(unittest.TestCase):
 
         block = pyrtl.working_block()
         timing_map = pyrtl.timing_analysis(block)
-        # timing_max_length = pyrtl.timing_max_length(timing_map)
-        # critical_path = pyrtl.timing_critical_path(timing_map)
+        timing_max_length = pyrtl.timing_max_length(timing_map)
+        critical_path = pyrtl.timing_critical_path(timing_map)
 
         pyrtl.synthesize()
         pyrtl.optimize()
 
         block = pyrtl.working_block()
         timing_map = pyrtl.timing_analysis(block)
-        # timing_max_length = pyrtl.timing_max_length(timing_map)
-        # critical_path = pyrtl.timing_critical_path(timing_map)
+        timing_max_length = pyrtl.timing_max_length(timing_map)
+        critical_path = pyrtl.timing_critical_path(timing_map)
 
 
 if __name__ == "__main__":

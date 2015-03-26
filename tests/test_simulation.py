@@ -357,7 +357,7 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
         self.output1 <<= self.rom[self.read_addr1]
         self.output2 <<= self.rom[self.read_addr2]
 
-        synth_out = pyrtl.synthesize()
+        pyrtl.synthesize()
         pyrtl.optimize()
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()

@@ -82,9 +82,9 @@ class TestBlock(unittest.TestCase):
         i.next <<= i + 1
         r = pyrtl.Register(bitwidth=2, name='r')
         with pyrtl.ConditionalUpdate() as condition:
-            with condition(i==2):
+            with condition(i == 2):
                 r.next |= r + 1
-            with condition(i==3):
+            with condition(i == 3):
                 r.next |= r - 1
         self.check_trace('i 01230123\nr 00010001\n')
 
@@ -93,9 +93,9 @@ class TestBlock(unittest.TestCase):
         i.next <<= i + 1
         r = pyrtl.Register(bitwidth=2, name='r')
         with pyrtl.ConditionalUpdate() as condition:
-            with condition(i==2):
-                r.next |= r 
-            with condition(i==3):
+            with condition(i == 2):
+                r.next |= r
+            with condition(i == 3):
                 r.next |= r - 1
             with condition.default:
                 r.next |= r + 1
@@ -106,9 +106,9 @@ class TestBlock(unittest.TestCase):
         i.next <<= i + 1
         r = pyrtl.Register(bitwidth=2, name='r')
         with pyrtl.ConditionalUpdate() as condition:
-            with condition(i==2):
-                r.next |= r 
-            with condition(i==3):
+            with condition(i == 2):
+                r.next |= r
+            with condition(i == 3):
                 r.next |= r - 1
             with condition.default:
                 r.next |= r + 1
@@ -119,7 +119,7 @@ class TestBlock(unittest.TestCase):
         i.next <<= i + 1
         r = pyrtl.Register(bitwidth=3, name='r')
         with pyrtl.ConditionalUpdate() as condition:
-            with condition((i==2) | (i==3)):
+            with condition((i == 2) | (i == 3)):
                 with condition(r < 3):
                     r.next |= r + 2
                 with condition.default:
@@ -138,7 +138,6 @@ class TestBlock(unittest.TestCase):
                     r.next |= r - 1
         self.check_trace('i 01230123\nr 02432466\n')
 
-
     def test_error_on_unconditioned_update_in_under_conditional(self):
         with self.assertRaises(pyrtl.PyrtlError):
             c = pyrtl.Const(1)
@@ -155,6 +154,8 @@ class TestBlock(unittest.TestCase):
             o |= c
 
 # ---------------------------------------------------------------
+
+
 class TestMemConditionalBlock(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -178,7 +179,7 @@ class TestMemConditionalBlock(unittest.TestCase):
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
         with pyrtl.ConditionalUpdate() as condition:
-            with condition(i<=2):
+            with condition(i <= 2):
                 m[i] |= i
         o <<= m[i]
         self.check_trace('i 01230123\no 00000120\n')
@@ -190,7 +191,7 @@ class TestMemConditionalBlock(unittest.TestCase):
         i.next <<= i + 1
         addr = i[0:2]
         with pyrtl.ConditionalUpdate() as condition:
-            with condition(i<4):
+            with condition(i < 4):
                 m[addr] |= i
             with condition.default:
                 with condition(addr[0]):
@@ -200,6 +201,8 @@ class TestMemConditionalBlock(unittest.TestCase):
         self.check_trace('i 01234567\no 00000123\n')
 
 # ---------------------------------------------------------------
+
+
 class TestWireConditionalBlock(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -222,7 +225,7 @@ class TestWireConditionalBlock(unittest.TestCase):
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
         with pyrtl.ConditionalUpdate() as condition:
-            with condition(i<=2):
+            with condition(i <= 2):
                 o |= 1
             with condition.default:
                 o |= 0
@@ -244,8 +247,8 @@ class TestWireConditionalBlock(unittest.TestCase):
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
         with pyrtl.ConditionalUpdate() as condition:
-            with condition(i<=2):
-                with condition(i==0):
+            with condition(i <= 2):
+                with condition(i == 0):
                     o |= 2
                 with condition.default:
                     o |= 1
@@ -258,7 +261,7 @@ class TestWireConditionalBlock(unittest.TestCase):
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
         with pyrtl.ConditionalUpdate() as condition:
-            with condition(i<=2):
+            with condition(i <= 2):
                 o |= 1
             # default to zero
         self.check_trace('i 01230123\no 11101110\n')
@@ -267,7 +270,7 @@ class TestWireConditionalBlock(unittest.TestCase):
         i = pyrtl.Register(bitwidth=2, name='i')
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
-        with pyrtl.ConditionalUpdate(i<=2):
+        with pyrtl.ConditionalUpdate(i <= 2):
             o |= 1
         self.check_trace('i 01230123\no 11101110\n')
 
@@ -277,10 +280,10 @@ class TestWireConditionalBlock(unittest.TestCase):
             o = pyrtl.WireVector(bitwidth=2, name='o')
             i.next <<= i + 1
             with pyrtl.ConditionalUpdate() as condition:
-                with condition(i<=2):
-                    with condition(i==0):
+                with condition(i <= 2):
+                    with condition(i == 0):
                         o |= 2
-                    with i==1:
+                    with i == 1:
                         o |= 1
                 with condition.default:
                     o |= 0
@@ -290,7 +293,7 @@ class TestWireConditionalBlock(unittest.TestCase):
             i = pyrtl.Register(bitwidth=2, name='i')
             o = pyrtl.WireVector(bitwidth=2, name='o')
             i.next <<= i + 1
-            with i<=2:
+            with i <= 2:
                 o |= 1
 
 
