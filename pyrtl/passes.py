@@ -714,6 +714,7 @@ def _synth_base(block):
         if isinstance(wirevector, (wire.Input, wire.Output)):
             temp_io_map[wirevector] = new_wv
 
+    # pylint: disable=maybe-no-member
     block_out.io_map = {orig_wire: temp_io_map[v] for (orig_wire, v) in block_in.io_map}
     # TODO: figure out the real map
     return block_out, temp_wv_map

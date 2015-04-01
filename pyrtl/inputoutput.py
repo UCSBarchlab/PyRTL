@@ -5,6 +5,7 @@ Each of the functions in inputoutput take a block and a file descriptor.
 The functions provided either read the file and update the Block
 accordingly, or write information from the Block out to the file.
 """
+from random import randint
 
 import sys
 import re
@@ -13,6 +14,7 @@ import collections
 import core
 import wire
 import helperfuncs
+import spice_templates
 
 
 # -----------------------------------------------------------------
@@ -479,3 +481,132 @@ def output_verilog_testbench(file, simulation_trace=None, block=None):
     print >> file, '        $finish;'
     print >> file, '    end'
     print >> file, 'endmodule'
+
+
+# ---------------------------------
+#   _____ _____ _____ _____ ______
+#  / ____|  __ \_   _/ ____|  ____|
+# | (___ | |__) || || |    | |__
+#  \___ \|  ___/ | || |    |  __|
+#  ____) | |    _| || |____| |____
+# |_____/|_|   |_____\_____|______|
+#
+
+# used to create intermediate nodes/wires
+SPICE_NODES = 0
+SPICE_FETS = 0
+
+
+def _new_fet():
+    global SPICE_FETS
+    SPICE_FETS += 1
+    return "M"+str(SPICE_FETS)
+
+
+def _new_node():
+    global SPICE_NODES
+    SPICE_NODES += 1
+    return "N"+str(SPICE_NODES)
+
+
+def _render_nand(output_file, a, b, out):
+    print >> output_file, spice_templates.NAND_TEMPLATE.format(
+        InputA=a, InputB=b, output=out, M1=_new_fet(), M2=_new_fet(),
+        M3=_new_fet(), M4=_new_fet(), node=_new_node()
+    )
+
+
+def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_step="1ms"):
+    """
+    Write SPICE model to output file.
+
+    :param output_file: Opened file-like object.
+    :return: None
+    """
+    working_block = core.working_block(block)
+    operator_set = set('~&|^rwcsm@')
+
+    # build alias table
+    alias_table = {}    # alias table maps source wire name to their destination wire names
+    for net in working_block.logic:
+        if net.op == "w" and isinstance(net.dests[0], wire.Output):
+            alias_table[net.args[0].name] = net.dests[0].name
+        elif isinstance(net.args[0], wire.Input):
+            alias_table[net.dests[0].name] = net.args[0].name
+
+    # print >> output_file, repr(alias_table)
+
+    # convenience function for alias table
+    def alias(name):
+        if name in alias_table.keys():
+            return alias_table[name]
+        return name
+
+    # comment on top
+    print >> output_file, "* SPICE export from PyRTL"
+
+    # setup power source
+    print >> output_file, "Vdd Vdd 0 5"
+
+    for net in working_block.logic:
+        # do some checks to make sure our working block is sane.
+        if net.op not in operator_set:
+            error_msg = "Illegal operator {} in block logic. ".format(str(net.op))
+            error_msg += "Please synthesize/optimize design before exporting to SPICE."
+            raise core.PyrtlError(error_msg)
+        if len(net.args) > 2:
+            error_msg = "Logic net `{}` has the wrong number of args ({}). "\
+                .format(str(net), str(len(net.args)))
+            error_msg += "Please synthesize/optimize design before exporting to SPICE."
+            raise core.PyrtlError(error_msg)
+
+        # start by processing inputs
+        # TODO: deal with multiple inputs? This may be a select logicnet
+        if isinstance(net.args[0], wire.Input):
+            # for inputs, create a new voltage source to drive a new input
+            input_wire = net.args[0]
+            period = randint(2, 10)
+            on = period/2
+            print >> output_file, "V{name} {node} 0 PULSE(0 5 0 0 0 {on} {period})".format(
+                name=alias(input_wire.name), node=alias(net.dests[0].name),
+                on=str(on), period=str(period))
+        elif net.op == '&':
+            # for AND, do NAND and invert it
+            intermediate_node = _new_node()
+            _render_nand(output_file,
+                         alias(net.args[0].name), alias(net.args[1].name), intermediate_node)
+            _render_nand(output_file,
+                         intermediate_node, intermediate_node, alias(net.dests[0].name))
+        elif net.op == "|":
+            # handle OR; invert both inputs and put those through another NAND
+            intermediate_a = _new_node()
+            intermediate_b = _new_node()
+            _render_nand(output_file,
+                         alias(net.args[0].name), alias(net.args[0].name), intermediate_a)
+            _render_nand(output_file,
+                         alias(net.args[1].name), alias(net.args[1].name), intermediate_b)
+            _render_nand(output_file,
+                         intermediate_a, intermediate_b, alias(net.dests[0].name))
+        elif net.op == "^":
+            # XOR
+            a_nand_b = _new_node()
+            tim = _new_node()
+            sherwood = _new_node()
+            _render_nand(output_file, alias(net.args[0].name), alias(net.args[1].name), a_nand_b)
+            _render_nand(output_file, alias(net.args[0].name), a_nand_b, tim)
+            _render_nand(output_file, alias(net.args[1].name), a_nand_b, sherwood)
+            _render_nand(output_file, tim, sherwood, alias(net.dests[0].name))
+        elif net.op == 'w':
+            # print >> output_file, "* {} is {}".format(net.dests[0].name, net.args[0].name)
+            # do nothing for now?
+            pass
+        else:
+            print >> output_file, repr(net)
+
+    # print footer
+    print >> output_file, ".model NMOS NMOS"
+    print >> output_file, ".model PMOS PMOS"
+    print >> output_file, ".tran 0 {sim_time} 0 {sim_min_step}"\
+        .format(sim_time=sim_time, sim_min_step=sim_min_step)
+    print >> output_file, ".backanno"
+    print >> output_file, ".end"
