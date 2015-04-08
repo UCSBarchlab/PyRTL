@@ -22,7 +22,7 @@ from pyrtl import *
 mem1 = MemBlock(bitwidth=32, addrwidth=3, name='mem')
 mem2 = MemBlock(32, 3, 'mem')
 
-# One memory will use input as write address, the other a register
+# One memory will receive the write address from an input, the other, a register
 waddr = Input(3, 'waddr')
 count = Register(3, 'count')
 
@@ -79,7 +79,7 @@ simvals = {
 }
 
 # for simulation purposes, we can give the spots in memory an initial value
-# note that in real circuits, the values are initially undefined
+# note that in the actual circuit, the values are initially undefined
 # below, we are building the data with which to initialize memory
 mem1_init = {addr: 9 for addr in range(8)}
 mem2_init = {addr: 9 for addr in range(8)}
@@ -95,3 +95,51 @@ sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=memvals)
 for cycle in range(len(simvals[we])):
     sim.step({k: int(v[cycle]) for k, v in simvals.items()})
 sim_trace.render_trace()
+
+# cleanup in preparation for the rom example
+pyrtl.reset_working_block()
+
+# --- Part 2: ROMs -----------------------------------------------------------
+
+# ROMs are another type of memory. Unlike normal memories, ROMs are read only
+# and therefore only have read ports. They are used to store predefined data
+
+# There are two different ways to define the data stored in the ROMs
+# either through passing a function or though a list or tuple
+
+
+def rom_data_func(address):
+    return 15 - 2 * address
+
+rom_data_array = [15, 13, 11, 9, 7, 5, 3, 1]
+
+# Now we will make the ROM blocks. ROM blocks are similar to memory blocks
+# but because they are read only, they also need to be passed in a set of
+# data to be
+rom1 = RomBlock(bitwidth=4, addrwidth=3, data=rom_data_func)
+rom2 = RomBlock(4, 3, rom_data_array)
+
+rom_add_1 = Input(3, "rom_in")
+rom_add_2 = Input(3, "rom_in_2")
+
+rom_out_1 = Output(4, "rom_out_1")
+rom_out_2 = Output(4, "rom_out_2")
+rom_out_3 = Output(4, "rom_out_3")
+
+cmp_out = Output(1, "cmp_out")
+
+# Because output wirevectors cannot be used as the source for other nets,
+# in order to use the rom outputs in two different places, we must instead
+# assign them to a temporary variable.
+
+temp1 = rom1[rom_add_1]
+temp2 = rom2[rom_add_1]
+
+rom_out_3 <<= rom2[rom_add_2]
+
+
+rom_out_1 <<= temp1
+rom_out_2 <<= temp2
+
+cmp_out <<= temp1 == temp2
+
