@@ -1,3 +1,6 @@
+import sys
+sys.path.append("..")
+
 from pyrtl import *
 
 
@@ -59,42 +62,89 @@ def test_simple_mult():
     sim_trace.render_trace()
 
 
+def checkDone(array, array_length):
+    for i in range(1, array_length):
+        if len(array[i]) >= 3:
+            return False
+    return True
+
 def wallace_tree(A, B):
     """Build an unclocked multiplier for inputs A and B using a Wallace Tree.
     Delay is order NlogN, while area is order N^2.
     (Actually, the way I wrote this, I think it's a Dadda multiplier).
     """
-
+   
     # AND every bit of A with every bit of B (N^2 results) and store by "weight" (bit-position)
-    bits = {weight: [] for weight in range(len(A) + len(B))}
+    #bits = {weight: [] for weight in range(len(A) + len(B))}
+    bits_length = (len(A) + len(B))
+
+    bits = [ [] for weight in range(bits_length) ]
+    print bits
     for i, a in enumerate(A):
         for j, b in enumerate(B):
             bits[i+j].append(a & b)
 
+    deferred = [ [] for weight in range(bits_length) ]
     # Add together wires of the same weight. Sum keeps that weight; cout goes to the next bit up.
     result = bits[0][0]  # Start with bit 0, we'll add concatenate bits to the left
-    for i in range(1, len(A) + len(B)):  # Start with low weights and move up
-        while len(bits[i]) >= 3:  # Reduce with Full Adders until < 3 wires
+
+    while not all([len(i) <= 2 for i in bits]):
+        print "entering again"
+        for i in range(1, bits_length):  # Start with low weights and move up
+            print 
+
+            while len(bits[i]) >= 3:  # Reduce with Full Adders until < 3 wires
+                print "reducing 3 for " + str(i)
+                a, b, cin = bits[i].pop(0), bits[i].pop(0), bits[i].pop(0)
+                deferred[i].append(a ^ b ^ cin)  # sum bit keeps this weight
+                deferred[i+1].append((a & b) | (b & cin) | (a & cin))  # cout goes up one weight
+            if len(bits[i]) == 2:  # Reduce with a Half Adder if exactly 2 wires
+                print "reducing 2 for " + str(i)
+                a, b = bits[i].pop(0), bits[i].pop(0)
+                deferred[i].append(a ^ b)  # sum bit keeps this weight
+                if(i + 1 < bits_length):
+                    deferred[i+1].append(a & b)  # cout goes up one weight
+            if len(bits[i]) == 1:  # Remaining wire is the answer for this bit
+                print "reducing 1 for " + str(i)
+                deferred[i].append(bits[i][0])
+                #result = concat(bits[i][0], result)
+
+            if i >= bits_length - 1:
+                bits = deferred
+                deferred = [ [] for weight in range(bits_length) ]
+    
+
+    for i in range(1, bits_length):
+        print len(bits[i])
+
+    print
+    
+    for i in range(1, bits_length):
+        print len(bits[i])
+        if len(bits[i]) == 3:
             a, b, cin = bits[i].pop(0), bits[i].pop(0), bits[i].pop(0)
-            bits[i].append(a ^ b ^ cin)  # sum bit keeps this weight
-            bits[i+1].append((a & b) | (b & cin) | (a & cin))  # cout goes up one weight
-        if len(bits[i]) == 2:  # Reduce with a Half Adder if exactly 2 wires
+            if(i + 1 < bits_length):
+                bits[i + 1].append((a & b) | (b & cin) | (a & cin))  # cout goes up one weight
+            result = concat(a ^ b ^ cin, result)
+        if len(bits[i]) == 2:
             a, b = bits[i].pop(0), bits[i].pop(0)
-            bits[i].append(a ^ b)  # sum bit keeps this weight
-            bits[i+1].append(a & b)  # cout goes up one weight
-        if len(bits[i]) == 1:  # Remaining wire is the answer for this bit
+            if(i + 1 < bits_length):
+                bits[i + 1].append(a & b)
+            result = concat(a ^ b, result)
+        if len(bits[i]) == 1:
             result = concat(bits[i][0], result)
+
     return result
 
 
 def test_wallace_tree():
 
-    a, b = Input(8, "a"), Input(8, "b")
-    product = Output(16, "product")
+    a, b = Input(16, "a"), Input(16, "b")
+    product = Output(32, "product")
 
     product <<= wallace_tree(a, b)
 
-    aval, bval = 12, 19
+    aval, bval = 12, 6
     trueval = Output(16, "Answer")
     trueval <<= aval * bval
 
