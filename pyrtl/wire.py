@@ -77,6 +77,9 @@ class WireVector(object):
 
     def __ior__(self, other):
         """ Conditional assignment operator (only valid under Conditional Update). """
+        if not self.bitwidth:
+            raise core.PyrtlError('Conditional assignment only defined on '
+                                  'WireVectors with pre-defined bitwidths')
         other = self._prepare_for_assignment(other)
         conditional.ConditionalUpdate._build_wirevector(self, other)
         return self
@@ -437,8 +440,9 @@ class Register(WireVector):
 
     def _next_ior(self, other):
         other = helperfuncs.as_wires(other, bitwidth=self.bitwidth, block=self.block)
-        if self.bitwidth is None:
-            self.bitwidth = other.bitwidth
+        if not self.bitwidth:
+            raise core.PyrtlError('Conditional assignment only defined on '
+                                  'Registers with pre-defined bitwidths')
         return Register._NextSetter(other, is_conditional=True)
 
     @next.setter

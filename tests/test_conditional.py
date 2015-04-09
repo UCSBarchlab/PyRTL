@@ -296,6 +296,16 @@ class TestWireConditionalBlock(unittest.TestCase):
             with i <= 2:
                 o |= 1
 
+    def test_condition_error_when_assigned_wire_has_unspecified_bitwidth(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            i = pyrtl.Register(bitwidth=2, name='i')
+            o = pyrtl.WireVector(name='o')
+            i.next <<= i + 1
+            with pyrtl.ConditionalUpdate() as condition:
+                with condition(i <= 2):
+                    o |= 1
+                with condition.default:
+                    o |= 0
 
 if __name__ == "__main__":
     unittest.main()
