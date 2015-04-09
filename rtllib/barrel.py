@@ -18,7 +18,7 @@ def barrel_shifter(bitwidth, logbitwidth, shiftIn, bitIn, direction, amount):
     for i in range(logbitwidth):
         shamt = pow(2, i)  # stages shift 1,2,4,8,...
         newval = mux(direction, truecase=val[:-shamt], falsecase=val[shamt:])
-        newval = mux(direction, truecase=concat(newval, appendval), 
+        newval = mux(direction, truecase=concat(newval, appendval),
                      falsecase=concat(appendval, newval))  # Build shifted value for this stage
         # mux shifted vs. unshifted by using i-th bit of shift amount signal
         val = mux(amount[i], truecase=newval, falsecase=val)

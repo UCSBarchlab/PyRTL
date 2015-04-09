@@ -137,9 +137,26 @@ temp2 = rom2[rom_add_1]
 
 rom_out_3 <<= rom2[rom_add_2]
 
+# now we will connect the rest of the outputs together
 
 rom_out_1 <<= temp1
 rom_out_2 <<= temp2
 
 cmp_out <<= temp1 == temp2
 
+# now we will create a new set of simulation values
+
+simvals = {
+    rom_add_1: "76543210128372",
+    rom_add_2: "02064726372513",
+}
+
+# now run the simulation like before. Note that for ROMs, we do not
+# supply a memory value map because ROMs are defined with the values
+# predefined
+
+sim_trace = pyrtl.SimulationTrace()
+sim = pyrtl.Simulation(tracer=sim_trace)
+for cycle in range(len(simvals[rom_add_1])):
+    sim.step({k: int(v[cycle]) for k, v in simvals.items()})
+sim_trace.render_trace()
