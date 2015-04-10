@@ -109,6 +109,17 @@ class Simulation(object):
                 raise core.PyrtlError(
                     'step provided a value for input for "%s" which is '
                     'not a known input ' % i.name)
+            if not isinstance(provided_inputs[i], int) or provided_inputs[i] < 0:
+                raise core.PyrtlError(
+                    'step provided an input "%s" which is not a valid '
+                    'positive integer' % provided_inputs[i])
+            if len(bin(provided_inputs[i]))-2 > sim_wire.bitwidth:
+                raise core.PyrtlError(
+                    'the bitwidth for "%s" is %d, but the provided input '
+                    '%d requires %d bits to represent'
+                    % (sim_wire.name, sim_wire.bitwidth,
+                       provided_inputs[i], len(bin(provided_inputs[i]))-2))
+
             self.value[sim_wire] = provided_inputs[i]
             supplied_inputs.add(sim_wire)
 

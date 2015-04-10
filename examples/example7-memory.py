@@ -75,7 +75,7 @@ simvals = {
     we:        "00111111110000000000000000",
     waddr:     "00012345670000000000000000",
     wdata:     "00123456789990000000000000",
-    raddr:     "00000000000000000123456789"
+    raddr:     "00000000000000000123456777"
 }
 
 # for simulation purposes, we can give the spots in memory an initial value
@@ -147,7 +147,7 @@ cmp_out <<= temp1 == temp2
 # now we will create a new set of simulation values
 
 simvals = {
-    rom_add_1: "76543210128372",
+    rom_add_1: "76543210127372",
     rom_add_2: "02064726372513",
 }
 

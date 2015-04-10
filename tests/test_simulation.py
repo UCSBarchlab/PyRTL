@@ -89,6 +89,24 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.r.next <<= 1 + self.r
         self.check_trace('r 01234567\n')
 
+class TestRTLSimulationInputValidation(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def tearDown(self):
+        pyrtl.reset_working_block()
+
+    def test_input_out_of_bitwidth(self):
+        counter = pyrtl.Register(bitwidth=3, name='counter')
+        i = pyrtl.Input(bitwidth=2, name='i')
+        counter.next <<= counter + i
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for cycle in range(4):
+            sim.step({i: cycle})
+        with self.assertRaises(pyrtl.PyrtlError):
+            sim.step({i: 5})
 
 class TestRTLSimulationTraceWithAdder(unittest.TestCase):
     def setUp(self):
