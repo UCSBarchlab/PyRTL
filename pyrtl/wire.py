@@ -246,7 +246,7 @@ class WireVector(object):
 
     def zero_extended(self, bitwidth):
         """ return a zero extended wirevector derived from self """
-        return self._extend_with_bit(bitwidth, Const(0, bitwidth=1, block=self.block))
+        return self._extend_with_bit(bitwidth, 0)
 
     def _extend_with_bit(self, bitwidth, extbit):
         numext = bitwidth - self.bitwidth
@@ -257,6 +257,8 @@ class WireVector(object):
                 'error, zero_extended cannot reduce the number of bits')
         else:
             from helperfuncs import concat
+            if isinstance(extbit, int):
+                extbit = Const(0, bitwidth=extbit, block=self.block)
             extvector = WireVector(bitwidth=numext, block=self.block)
             net = core.LogicNet(
                 op='s',
