@@ -7,6 +7,7 @@ from pyrtl import *
 def main():
     # test_simple_mult()
     test_wallace_tree()
+    #time_mult()
 
 
 def simple_mult(A, B, start, done):
@@ -73,13 +74,13 @@ def wallace_tree(A, B):
     Delay is order NlogN, while area is order N^2.
     (Actually, the way I wrote this, I think it's a Dadda multiplier).
     """
-   
+    import adders
     # AND every bit of A with every bit of B (N^2 results) and store by "weight" (bit-position)
     #bits = {weight: [] for weight in range(len(A) + len(B))}
     bits_length = (len(A) + len(B))
 
     bits = [ [] for weight in range(bits_length) ]
-    print bits
+    #print bits
     for i, a in enumerate(A):
         for j, b in enumerate(B):
             bits[i+j].append(a & b)
@@ -89,23 +90,24 @@ def wallace_tree(A, B):
     result = bits[0][0]  # Start with bit 0, we'll add concatenate bits to the left
 
     while not all([len(i) <= 2 for i in bits]):
-        print "entering again"
+
         for i in range(1, bits_length):  # Start with low weights and move up
-            print 
+            #print 
 
             while len(bits[i]) >= 3:  # Reduce with Full Adders until < 3 wires
-                print "reducing 3 for " + str(i)
+                #print "reducing 3 for " + str(i)
                 a, b, cin = bits[i].pop(0), bits[i].pop(0), bits[i].pop(0)
                 deferred[i].append(a ^ b ^ cin)  # sum bit keeps this weight
-                deferred[i+1].append((a & b) | (b & cin) | (a & cin))  # cout goes up one weight
+                if(i + 1 < bits_length):
+                    deferred[i+1].append((a & b) | (b & cin) | (a & cin))  # cout goes up one weight
             if len(bits[i]) == 2:  # Reduce with a Half Adder if exactly 2 wires
-                print "reducing 2 for " + str(i)
+                #print "reducing 2 for " + str(i)
                 a, b = bits[i].pop(0), bits[i].pop(0)
                 deferred[i].append(a ^ b)  # sum bit keeps this weight
                 if(i + 1 < bits_length):
                     deferred[i+1].append(a & b)  # cout goes up one weight
             if len(bits[i]) == 1:  # Remaining wire is the answer for this bit
-                print "reducing 1 for " + str(i)
+                #print "reducing 1 for " + str(i)
                 deferred[i].append(bits[i][0])
                 #result = concat(bits[i][0], result)
 
@@ -113,14 +115,45 @@ def wallace_tree(A, B):
                 bits = deferred
                 deferred = [ [] for weight in range(bits_length) ]
     
-
+    
     for i in range(1, bits_length):
         print len(bits[i])
 
     print
     
+    num1 = []
+    num2 = []
+
+    weve_seen_a_two = False
     for i in range(1, bits_length):
-        print len(bits[i])
+        if not weve_seen_a_two: 
+            result = concat(bits[i][0], result)
+        if len(bits[i]) == 2:
+            weve_seen_a_two = True
+        if weve_seen_a_two and len(bits[i]) == 2: 
+            num1.insert(0, bits[i][0])
+            num2.insert(0, bits[i][1])
+        if weve_seen_a_two and len(bits[i]) == 1 and i < bits_length - 1:
+            num2.insert(0, bits[i][0])
+    
+
+    #concat(*num1)   
+    print len(num1) , len(num2)
+
+    test1 = Output(len(num1),"test1")
+    test2 = Output(len(num2),"test2")
+    test1 <<= concat(*num1)
+    test2 <<= concat(*num2)
+    print result
+
+    kogge_result = adders.kogge_stone(concat(*num1),concat(*num2))
+    
+    result = concat(kogge_result, result)
+    result = result[:-1]
+    print result
+    '''
+    for i in range(1, bits_length):
+        #print len(bits[i])
         if len(bits[i]) == 3:
             a, b, cin = bits[i].pop(0), bits[i].pop(0), bits[i].pop(0)
             if(i + 1 < bits_length):
@@ -133,18 +166,30 @@ def wallace_tree(A, B):
             result = concat(a ^ b, result)
         if len(bits[i]) == 1:
             result = concat(bits[i][0], result)
-
+    '''
     return result
+
+
+def time_mult():
+    x = 1
+    a, b = Input(x, "a"), Input(x, "b")
+    product = Output(2*x, "product")
+
+    product <<= wallace_tree(a, b)
+
+    timing_map = timing_analysis()
+
+    print_max_length(timing_map)
 
 
 def test_wallace_tree():
 
-    a, b = Input(16, "a"), Input(16, "b")
-    product = Output(32, "product")
+    a, b = Input(4, "a"), Input(4, "b")
+    product = Output(8, "product")
 
     product <<= wallace_tree(a, b)
 
-    aval, bval = 12, 6
+    aval, bval = 3, 4
     trueval = Output(16, "Answer")
     trueval <<= aval * bval
 
