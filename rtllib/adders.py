@@ -1,6 +1,8 @@
 import sys
 sys.path.append("..")
+import pyrtl
 from pyrtl import *
+import libutils
 
 
 def main():
@@ -8,13 +10,10 @@ def main():
 
 
 def kogge_stone(A, B):
-    if len(A) < len(B):
-        A = A.zero_extend(len(B))
-    elif len(A) > len(B):
-        B = B.zero_extend(len(A))
+    A, B = libutils.match_bitwidth(A, B)
 
     prop_bit = [a ^ b for a, b in zip(A, B)]
-    prop_orig = [x for x in prop_bit]  # just making a copy
+    prop_orig = prop_bit[:]  # just making a copy
     gen_bit = [a & b for a, b in zip(A, B)]
     prop_dist = 1
 
@@ -37,6 +36,7 @@ def kogge_stone(A, B):
 
 
 def test_kogge_stone_1():
+    reset_working_block()
     a, b = Input(32, "a"), Input(32, "b")
     sum = Output(33, "sum")
     sum <<= kogge_stone(a, b)
