@@ -131,10 +131,7 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
     cleared = block.wirevector_subset((wire.Input, wire.Const, wire.Register))
     remaining = block.logic.copy()
     timing_map = {wirevector: 0 for wirevector in cleared}
-    timing_heap = [WireWTiming(0, a_wire) for a_wire in cleared]
-    heapq.heapify(timing_heap)
-    while len(timing_heap) > 0:
-        cleared.add(heapq.heappop(timing_heap).wirevector)
+    while len(remaining) > 0:
         items_to_remove = set()
         for _gate in remaining:  # loop over logicnets not yet returned
             if cleared.issuperset(_gate.args):  # if all args ready
@@ -145,19 +142,20 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
                 time = max(timing_map[a_wire] for a_wire in _gate.args) + gate_delay
                 for dest_wire in _gate.dests:
                     timing_map[dest_wire] = time
-                    heapq.heappush(timing_heap, WireWTiming(time, dest_wire))
                 cleared.update(set(_gate.dests))  # add dests to set of ready wires
                 items_to_remove.add(_gate)
+
+        if len(items_to_remove) == 0:
+            block_str = ""
+            for a_net in remaining:
+                block_str = block_str + str(a_net) + "\n"
+            block_str = ("Cannot do static timing analysis due to nonregister,"
+                         "nonmemory loops in the code \n"
+                         "The unprocesssed blocks are: \n") + block_str
+            raise core.PyrtlError(block_str)
+
         remaining.difference_update(items_to_remove)
 
-    if len(remaining) > 0:
-        block_str = ""
-        for a_net in remaining:
-            block_str = block_str + str(a_net) + "\n"
-        block_str = ("Cannot do static timing analysis due to nonregister,"
-                     "nonmemory loops in the code \n"
-                     "The unprocesssed blocks are: \n") + block_str
-        raise core.PyrtlError(block_str)
     return timing_map
 
 
@@ -505,6 +503,7 @@ def synthesize(update_working_block=True, block=None):
     """
 
     block_in = core.working_block(block)
+    block_in.sanity_check()  # before going further, make sure that pressynth is valid
     block_out = core.PostSynthBlock()
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^nrwcsm@')
