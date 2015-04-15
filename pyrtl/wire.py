@@ -258,7 +258,7 @@ class WireVector(object):
         else:
             from helperfuncs import concat
             if isinstance(extbit, int):
-                extbit = Const(0, bitwidth=extbit, block=self.block)
+                extbit = Const(0, bitwidth=numext, block=self.block)
             extvector = WireVector(bitwidth=numext, block=self.block)
             net = core.LogicNet(
                 op='s',
