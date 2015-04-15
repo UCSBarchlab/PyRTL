@@ -91,19 +91,6 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
     :return: returns a map consisting of each wirevector and the associated
      delay
     """
-    import heapq
-
-    class WireWTiming:
-        # the purpose of this class is to allow for us to define
-        # the ordering of the objects. This is needed for the
-        # heap to function.
-
-        def __init__(self, timing, wirevector):
-            self.time = timing
-            self.wirevector = wirevector
-
-        def __lt__(self, other):
-            return self.time < other.time
 
     block = core.working_block(block)
     if gate_delay_funcs is None:
@@ -146,12 +133,9 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
                 items_to_remove.add(_gate)
 
         if len(items_to_remove) == 0:
-            block_str = ""
-            for a_net in remaining:
-                block_str = block_str + str(a_net) + "\n"
-            block_str = ("Cannot do static timing analysis due to nonregister,"
-                         "nonmemory loops in the code \n"
-                         "The unprocesssed blocks are: \n") + block_str
+            block_str = ''.join([str(a_net) + "\n" for a_net in remaining])
+            block_str = ("Cannot do static timing analysis due to nonregister, nonmemory "
+                         "loops in the code \n The unprocesssed blocks are: \n") + block_str
             raise core.PyrtlError(block_str)
 
         remaining.difference_update(items_to_remove)
