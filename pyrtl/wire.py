@@ -49,6 +49,10 @@ class WireVector(object):
         # finally, add the wirevector to the block
         self.block.add_wirevector(self)
 
+        if core.wirevector_trace_call_stack:
+            import traceback
+            self.init_call_stack = traceback.format_stack()
+
     def __str__(self):
         return ''.join([self.name, '/', str(self.bitwidth), self.code])
 
@@ -258,7 +262,7 @@ class WireVector(object):
         else:
             from helperfuncs import concat
             if isinstance(extbit, int):
-                extbit = Const(0, bitwidth=numext, block=self.block)
+                extbit = Const(0, bitwidth=1, block=self.block)
             extvector = WireVector(bitwidth=numext, block=self.block)
             net = core.LogicNet(
                 op='s',

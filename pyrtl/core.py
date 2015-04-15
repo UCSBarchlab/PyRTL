@@ -432,6 +432,9 @@ class PostSynthBlock(Block):
 _singleton_block = Block()
 debug_mode = False
 
+# refined options under debug mode
+wirevector_trace_call_stack = False
+
 # some functions for generating unique names.  Keeping them synced
 # between subclasses of Block was problematic, so instead they should just
 # be kept as global
@@ -500,3 +503,5 @@ def set_debug_mode(debug=True):
     """ Set the global debug mode. """
     global debug_mode
     debug_mode = debug
+    global wirevector_trace_call_stack
+    wirevector_trace_call_stack = debug
