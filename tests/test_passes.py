@@ -68,7 +68,7 @@ class TestSynthesis(unittest.TestCase):
         self.check_trace('r 07654321\n')
 
 
-class TestPasses(unittest.TestCase):
+class TestOptimization(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -221,8 +221,37 @@ class TestPasses(unittest.TestCase):
         self.assertEqual(len(block.wirevector_set), 2)
         self.assertEqual(self.num_wire_of_type(pyrtl.wire.Const, block), 1)
 
+
+class TestSynthOptTiming(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def tearDown(self):
+        pyrtl.reset_working_block()
+
     def test_sanity_check(self):
         testmissing()
+
+    def timing_t_procedure(self, timing_val=None, opt_timing_val=None):
+        # if there is a nondefault timing val supplied, then it will check
+        # to make sure that the timing matches
+        # this is a subprocess to do the synth and timing
+        block = pyrtl.working_block()
+        timing_map = pyrtl.timing_analysis(block)
+        timing_max_length = pyrtl.timing_max_length(timing_map)
+        if timing_val is not None:
+            self.assertEqual(timing_max_length, timing_val)
+        critical_path = pyrtl.timing_critical_path(timing_map)
+
+        pyrtl.synthesize()
+        pyrtl.optimize()
+
+        block = pyrtl.working_block()
+        timing_map = pyrtl.timing_analysis(block)
+        timing_max_length = pyrtl.timing_max_length(timing_map)
+        if opt_timing_val is not None:
+            self.assertEqual(timing_max_length, opt_timing_val)
+        critical_path = pyrtl.timing_critical_path(timing_map)
 
     def test_const_folding_complex_1(self):
         output = pyrtl.Output(bitwidth=3, name='output')
@@ -231,12 +260,7 @@ class TestPasses(unittest.TestCase):
         output <<= counter
 
         # just to check that something like this will run properly
-        pyrtl.synthesize()
-        block = pyrtl.working_block()
-        pyrtl.optimize()
-        block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        block_max_time = pyrtl.timing_max_length(timing_map)
+        self.timing_t_procedure()
 
     def test_timing_basic_1(self):
         inwire = pyrtl.Input(bitwidth=1)
@@ -244,40 +268,22 @@ class TestPasses(unittest.TestCase):
         outwire = pyrtl.Output()
 
         outwire <<= inwire | inwire2
-        pyrtl.synthesize()
-        pyrtl.optimize()
-        block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        block_max_time = pyrtl.timing_max_length(timing_map)
-        self.assertEqual(block_max_time, 1)
-        # should remove the and block and replace it with a
+        self.timing_t_procedure(1, 1)
 
     def test_timing_basic_2(self):
-        inwire = pyrtl.Input(bitwidth=1)
-        inwire2 = pyrtl.Input(bitwidth=1)
+        inwire, inwire2 = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=1)
         inwire3 = pyrtl.Input(bitwidth=1)
-        tempwire = pyrtl.WireVector()
-        tempwire2 = pyrtl.WireVector()
+        tempwire, tempwire2 = pyrtl.WireVector(), pyrtl.WireVector()
         outwire = pyrtl.Output()
 
         tempwire <<= inwire | inwire2
         tempwire2 <<= ~tempwire
         outwire <<= tempwire2 & inwire3
-        pyrtl.synthesize()
-        pyrtl.optimize()
-        block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        block_max_time = pyrtl.timing_max_length(timing_map)
-        # this is because a stealth wire block gets added to the logic net
-
-        self.assertEqual(block_max_time, 3)
-        pyrtl.timing_critical_path(timing_map)
+        self.timing_t_procedure(3, 3)
 
     def test_timing_error(self):
-        inwire = pyrtl.Input(bitwidth=1)
-        inwire2 = pyrtl.Input(bitwidth=1)
-        tempwire = pyrtl.WireVector(bitwidth=1)
-        tempwire2 = pyrtl.WireVector(bitwidth=1)
+        inwire, inwire2 = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=1)
+        tempwire, tempwire2 = pyrtl.WireVector(1), pyrtl.WireVector(1)
         outwire = pyrtl.Output()
 
         tempwire <<= ~(inwire & tempwire2)
@@ -295,8 +301,7 @@ class TestPasses(unittest.TestCase):
 
     def test_synth_optimization_and_timing_1(self):
         inwire = pyrtl.Input(bitwidth=1)
-        tempwire0 = pyrtl.WireVector(bitwidth=1)
-        tempwire1 = pyrtl.WireVector(bitwidth=1)
+        tempwire0, tempwire1 = pyrtl.WireVector(bitwidth=1), pyrtl.WireVector(bitwidth=1)
         tempwire2 = pyrtl.WireVector(bitwidth=1)
         outwire = pyrtl.Output()
 
@@ -304,67 +309,34 @@ class TestPasses(unittest.TestCase):
         tempwire1 <<= tempwire0
         tempwire2 <<= tempwire1
         outwire <<= ~tempwire2
-        pyrtl.synthesize()
-        pyrtl.optimize()
+        self.timing_t_procedure(1, 1)
         block = pyrtl.working_block()
-        # TODO: fix the function for wire deletion so that len(..) ==1
         self.assertEqual(len(block.logic), 3)
-        timing_map = pyrtl.timing_analysis(block)
-        block_max_time = pyrtl.timing_max_length(timing_map)
-        self.assertEqual(block_max_time, 1)
+
 
     def test_timing_advanced_1(self):
-        inwire = pyrtl.Input(bitwidth=1)
-        inwire2 = pyrtl.Input(bitwidth=1)
+        inwire, inwire2 = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=1)
+        tempwire, tempwire2 = pyrtl.WireVector(), pyrtl.WireVector()
         inwire3 = pyrtl.Input(bitwidth=1)
-        tempwire = pyrtl.WireVector()
-        tempwire2 = pyrtl.WireVector()
         outwire = pyrtl.Output()
 
         tempwire <<= inwire | inwire2
         tempwire2 <<= ~tempwire
         outwire <<= tempwire2 & inwire3
-        block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        timing_max_length = pyrtl.timing_max_length(timing_map)
-        self.assertEqual(timing_max_length, 3)
-        critical_path = pyrtl.timing_critical_path(timing_map)
-
-        pyrtl.synthesize()
-        pyrtl.optimize()
-
-        block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        timing_max_length = pyrtl.timing_max_length(timing_map)
-        self.assertEqual(timing_max_length, 3)
-        critical_path = pyrtl.timing_critical_path(timing_map)
+        self.timing_t_procedure(3, 3)
 
     def test_timing_adv_synth_adder(self):
-        inwire1 = pyrtl.Input(bitwidth=3)
-        inwire2 = pyrtl.Input(bitwidth=3)
+        inwire1, inwire2 = pyrtl.Input(bitwidth=3), pyrtl.Input(bitwidth=3)
         outwire = pyrtl.Output(bitwidth=4)
 
         outwire <<= inwire1 + inwire2
         block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        timing_max_length = pyrtl.timing_max_length(timing_map)
-        critical_path = pyrtl.timing_critical_path(timing_map)
-
-        pyrtl.synthesize()
-        pyrtl.optimize()
-
-        block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        timing_max_length = pyrtl.timing_max_length(timing_map)
-        critical_path = pyrtl.timing_critical_path(timing_map)
+        self.timing_t_procedure()
 
     def test_all_mem_1(self):
-        readAdd1 = pyrtl.Input(bitwidth=3)
-        readAdd2 = pyrtl.Input(bitwidth=3)
-        writeAdd1 = pyrtl.Input(bitwidth=3)
-        writeAdd2 = pyrtl.Input(bitwidth=3)
-        readData1 = pyrtl.Input(bitwidth=3)
-        readData2 = pyrtl.Input(bitwidth=3)
+        readAdd1, readAdd2 = pyrtl.Input(bitwidth=3), pyrtl.Input(bitwidth=3)
+        writeAdd1, writeAdd2 = pyrtl.Input(bitwidth=3), pyrtl.Input(bitwidth=3)
+        readData1, readData2 = pyrtl.Input(bitwidth=3), pyrtl.Input(bitwidth=3)
 
         dataOut = pyrtl.Output(bitwidth=3)
 
@@ -372,19 +344,6 @@ class TestPasses(unittest.TestCase):
 
         memory[readAdd1 & readAdd2] <<= readData1 ^ readData2
         dataOut <<= memory[writeAdd1 | writeAdd2]
-
-        block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        timing_max_length = pyrtl.timing_max_length(timing_map)
-        critical_path = pyrtl.timing_critical_path(timing_map)
-
-        pyrtl.synthesize()
-        pyrtl.optimize()
-
-        block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        timing_max_length = pyrtl.timing_max_length(timing_map)
-        critical_path = pyrtl.timing_critical_path(timing_map)
 
 
 if __name__ == "__main__":
