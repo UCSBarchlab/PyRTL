@@ -10,5 +10,3 @@ def match_bitwidth(*args):
     """
     max_len = max(len(wv) for wv in args)
     return (wv.zero_extended(max_len) for wv in args)
-
-

@@ -38,4 +38,3 @@ class TestAdders(unittest.TestCase):
         sim_trace.render_trace(symbol_len=12)
         assert (adder_result == true_result)
         print "test passed!"
-
