@@ -1,6 +1,5 @@
 import unittest
 import pyrtl
-from pyrtl import *
 import rtllib
 from rtllib import adders
 
@@ -13,8 +12,8 @@ class TestKogge(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_kogge_stone_1(self):
-        a, b = Input(35, "a"), Input(32, "b")
-        sum = Output(36, "sum")
+        a, b = pyrtl.Input(35, "a"), pyrtl.Input(32, "b")
+        sum = pyrtl.Output(36, "sum")
         sum <<= adders.kogge_stone(a, b)
 
         # import random
@@ -28,8 +27,8 @@ class TestKogge(unittest.TestCase):
                  1177093299, 872396978, 3052657213L, 3076295239L, 2784261621L, 1351851103,
                  2736090721L, 1560635723, 2032723202, 1942488293, 2137620320, 3248404693L]
 
-        sim_trace = SimulationTrace()
-        sim = Simulation(tracer=sim_trace)
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
         for cycle in range(len(xvals)):
             sim.step({a: xvals[cycle], b: yvals[cycle]})
 

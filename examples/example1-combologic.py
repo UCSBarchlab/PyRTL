@@ -23,6 +23,7 @@ import pyrtl
 # in all of the below code -- it is easiest to start with the way wires work.
 
 # --- Step 1: Define Logic -------------------------------------------------
+
 # One of the most fundamental types in PyRTL is the "WireVector" which is acts
 # very much like a python list of 1-bit wires.  Unlike a normal list though the
 # number of bits is explicitly declared.
@@ -94,6 +95,8 @@ for cycle in xrange(15):
 # "render_trace" with some size information.
 print '--- One Bit Adder Simulation ---'
 sim_trace.render_trace(symbol_len=5, segment_size=5)
+
+# --- Verification of Simulated Design ---------------------------------------
 
 # Now finally, let's check the trace to make sure that sum and cout are actually
 # the right values when compared to a python's addition operation.  Note that

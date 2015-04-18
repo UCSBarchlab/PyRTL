@@ -94,10 +94,7 @@ def mux(select, falsecase, truecase):
 
     if len(select) != 1:
         raise core.PyrtlError('error, select input to the mux must be 1-bit wirevector')
-    if len(a) < len(b):
-        a = a.zero_extended(len(b))
-    elif len(b) < len(a):
-        b = b.zero_extended(len(a))
+    a, b = match_bitwidth(a, b)
     resultlen = len(a)  # both are the same length now
 
     outwire = wire.WireVector(bitwidth=resultlen, block=block)

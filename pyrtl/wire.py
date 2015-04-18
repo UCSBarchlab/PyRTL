@@ -94,10 +94,7 @@ class WireVector(object):
         b = helperfuncs.as_wires(b, block=self.block)
 
         # check size of operands
-        if len(a) < len(b):
-            a = a.zero_extended(len(b))
-        elif len(b) < len(a):
-            b = b.zero_extended(len(a))
+        a, b = helperfuncs.match_bitwidth(a, b)
         resultlen = len(a)  # both are the same length now
 
         # some operations actually create more or less bits
