@@ -5,7 +5,7 @@ import rtllib
 from rtllib import adders
 
 
-class TestAdders(unittest.TestCase):
+class TestKogge(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -13,8 +13,8 @@ class TestAdders(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_kogge_stone_1(self):
-        a, b = Input(32, "a"), Input(32, "b")
-        sum = Output(33, "sum")
+        a, b = Input(35, "a"), Input(32, "b")
+        sum = Output(36, "sum")
         sum <<= adders.kogge_stone(a, b)
 
         # import random
@@ -38,3 +38,6 @@ class TestAdders(unittest.TestCase):
         sim_trace.render_trace(symbol_len=12)
         assert (adder_result == true_result)
         print "test passed!"
+
+    def test_kogge_stone_2(self):
+        pass

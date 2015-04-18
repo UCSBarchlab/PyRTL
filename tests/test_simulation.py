@@ -392,5 +392,25 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
                                                  ("o2", lambda x: rom_data_function(2*x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
+    def test_rom_error(self):
+        rom_data_array = [15, 13, 11, 9, 7, 5, 3, 1]
+        rom1 = pyrtl.RomBlock(bitwidth=4, addrwidth=3, data=rom_data_array)
+        rom_add_1 = pyrtl.Input(3, "rom_in")
+        rom_out_1 = pyrtl.Output(4, "rom_out_1")
+        rom_out_1 <<= rom1[rom_add_1]
+
+        def bad_sim():
+            simvals = {
+                rom_add_1: "392081",
+                # rom_add_1: "0989489891"
+            }
+            sim_trace = pyrtl.SimulationTrace()
+            sim = pyrtl.Simulation(tracer=sim_trace)
+            for cycle in range(len(simvals[rom_add_1])):
+                sim.step({k: int(v[cycle]) for k, v in simvals.items()})
+            sim_trace.render_trace()
+
+        self.assertRaises(pyrtl.PyrtlError, bad_sim)
+
 if __name__ == '__main__':
     unittest.main()
