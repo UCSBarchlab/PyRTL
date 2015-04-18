@@ -232,7 +232,7 @@ class TestSynthOptTiming(unittest.TestCase):
     def test_sanity_check(self):
         testmissing()
 
-    def timing_t_procedure(self, timing_val=None, opt_timing_val=None):
+    def everything_t_procedure(self, timing_val=None, opt_timing_val=None):
         # if there is a nondefault timing val supplied, then it will check
         # to make sure that the timing matches
         # this is a subprocess to do the synth and timing
@@ -253,6 +253,21 @@ class TestSynthOptTiming(unittest.TestCase):
             self.assertEqual(timing_max_length, opt_timing_val)
         critical_path = pyrtl.timing_critical_path(timing_map)
 
+        pyrtl.and_inverter_synth()
+        pyrtl.optimize()
+
+        block = pyrtl.working_block()
+        timing_map = pyrtl.timing_analysis(block)
+        timing_max_length = pyrtl.timing_max_length(timing_map)
+
+        pyrtl.nand_synth()
+        pyrtl.optimize()
+
+        block = pyrtl.working_block()
+        timing_map = pyrtl.timing_analysis(block)
+        timing_max_length = pyrtl.timing_max_length(timing_map)
+        pyrtl.working_block().sanity_check()
+
     def test_const_folding_complex_1(self):
         output = pyrtl.Output(bitwidth=3, name='output')
         counter = pyrtl.Register(bitwidth=3, name='counter')
@@ -260,15 +275,7 @@ class TestSynthOptTiming(unittest.TestCase):
         output <<= counter
 
         # just to check that something like this will run properly
-        self.timing_t_procedure()
-
-    def test_timing_basic_1(self):
-        inwire = pyrtl.Input(bitwidth=1)
-        inwire2 = pyrtl.Input(bitwidth=1)
-        outwire = pyrtl.Output()
-
-        outwire <<= inwire | inwire2
-        self.timing_t_procedure(1, 1)
+        self.everything_t_procedure()
 
     def test_timing_basic_2(self):
         inwire, inwire2 = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=1)
@@ -279,7 +286,7 @@ class TestSynthOptTiming(unittest.TestCase):
         tempwire <<= inwire | inwire2
         tempwire2 <<= ~tempwire
         outwire <<= tempwire2 & inwire3
-        self.timing_t_procedure(3, 3)
+        self.everything_t_procedure(3, 3)
 
     def test_timing_error(self):
         inwire, inwire2 = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=1)
@@ -299,7 +306,7 @@ class TestSynthOptTiming(unittest.TestCase):
 
         self.assertRaises(pyrtl.PyrtlError, doAllOps)
 
-    def test_synth_optimization_and_timing_1(self):
+    def test_wirevector_1(self):
         inwire = pyrtl.Input(bitwidth=1)
         tempwire0, tempwire1 = pyrtl.WireVector(bitwidth=1), pyrtl.WireVector(bitwidth=1)
         tempwire2 = pyrtl.WireVector(bitwidth=1)
@@ -309,12 +316,11 @@ class TestSynthOptTiming(unittest.TestCase):
         tempwire1 <<= tempwire0
         tempwire2 <<= tempwire1
         outwire <<= ~tempwire2
-        self.timing_t_procedure(1, 1)
+        self.everything_t_procedure(1, 1)
         block = pyrtl.working_block()
         self.assertEqual(len(block.logic), 3)
 
-
-    def test_timing_advanced_1(self):
+    def test_combo_1(self):
         inwire, inwire2 = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=1)
         tempwire, tempwire2 = pyrtl.WireVector(), pyrtl.WireVector()
         inwire3 = pyrtl.Input(bitwidth=1)
@@ -323,15 +329,14 @@ class TestSynthOptTiming(unittest.TestCase):
         tempwire <<= inwire | inwire2
         tempwire2 <<= ~tempwire
         outwire <<= tempwire2 & inwire3
-        self.timing_t_procedure(3, 3)
+        self.everything_t_procedure(3, 3)
 
-    def test_timing_adv_synth_adder(self):
+    def test_adder(self):
         inwire1, inwire2 = pyrtl.Input(bitwidth=3), pyrtl.Input(bitwidth=3)
         outwire = pyrtl.Output(bitwidth=4)
 
         outwire <<= inwire1 + inwire2
-        block = pyrtl.working_block()
-        self.timing_t_procedure()
+        self.everything_t_procedure()
 
     def test_all_mem_1(self):
         readAdd1, readAdd2 = pyrtl.Input(bitwidth=3), pyrtl.Input(bitwidth=3)
