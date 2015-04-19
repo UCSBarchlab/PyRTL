@@ -138,6 +138,21 @@ class TestBlock(unittest.TestCase):
                     r.next |= r - 1
         self.check_trace('i 01230123\nr 02432466\n')
 
+    def test_two_signals_under_default_condition(self):
+        i = pyrtl.Register(bitwidth=2, name='i')
+        i.next <<= i + 1
+        r1 = pyrtl.Register(bitwidth=3, name='r1')
+        r2 = pyrtl.Register(bitwidth=3, name='r2')
+        with pyrtl.ConditionalUpdate() as condition:
+            with condition(i < 2):
+                r1.next |= r1 + 1
+            with condition(i < 3):
+                r2.next |= r2 + 1
+            with condition.default:
+                r2.next |= 3
+        self.check_trace(' i 01230123\nr1 01222344\nr2 00013334\n')
+ 
+ 
     def test_error_on_unconditioned_update_in_under_conditional(self):
         with self.assertRaises(pyrtl.PyrtlError):
             c = pyrtl.Const(1)

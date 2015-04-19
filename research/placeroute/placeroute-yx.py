@@ -1,10 +1,11 @@
 import random
 import sys
-import core
+sys.path.append("../..")
+import pyrtl
 
 def place_and_route(block=None):
     import numpy as np
-    block = core.working_block(block)
+    block = pyrtl.working_block(block)
 
     # extract connection graph
     connection_graph = {
