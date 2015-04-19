@@ -23,6 +23,7 @@ from helperfuncs import and_all_bits
 from helperfuncs import or_all_bits
 from helperfuncs import xor_all_bits
 from helperfuncs import parity
+from helperfuncs import match_bitwidth
 
 # memory blocks
 from memory import MemBlock
@@ -44,6 +45,8 @@ from inputoutput import output_to_spice
 
 # different analysis and transform passes
 from passes import synthesize
+from passes import nand_synth
+from passes import and_inverter_synth
 from passes import optimize
 from passes import area_estimation
 from passes import timing_analysis

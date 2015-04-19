@@ -109,7 +109,7 @@ class Simulation(object):
                 raise core.PyrtlError(
                     'step provided a value for input for "%s" which is '
                     'not a known input ' % i.name)
-            if not isinstance(provided_inputs[i], int) or provided_inputs[i] < 0:
+            if not isinstance(provided_inputs[i], (int, long)) or provided_inputs[i] < 0:
                 raise core.PyrtlError(
                     'step provided an input "%s" which is not a valid '
                     'positive integer' % provided_inputs[i])

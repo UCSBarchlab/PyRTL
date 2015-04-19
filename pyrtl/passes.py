@@ -91,19 +91,6 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
     :return: returns a map consisting of each wirevector and the associated
      delay
     """
-    import heapq
-
-    class WireWTiming:
-        # the purpose of this class is to allow for us to define
-        # the ordering of the objects. This is needed for the
-        # heap to function.
-
-        def __init__(self, timing, wirevector):
-            self.time = timing
-            self.wirevector = wirevector
-
-        def __lt__(self, other):
-            return self.time < other.time
 
     block = core.working_block(block)
     if gate_delay_funcs is None:
@@ -131,10 +118,7 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
     cleared = block.wirevector_subset((wire.Input, wire.Const, wire.Register))
     remaining = block.logic.copy()
     timing_map = {wirevector: 0 for wirevector in cleared}
-    timing_heap = [WireWTiming(0, a_wire) for a_wire in cleared]
-    heapq.heapify(timing_heap)
-    while len(timing_heap) > 0:
-        cleared.add(heapq.heappop(timing_heap).wirevector)
+    while len(remaining) > 0:
         items_to_remove = set()
         for _gate in remaining:  # loop over logicnets not yet returned
             if cleared.issuperset(_gate.args):  # if all args ready
@@ -145,19 +129,17 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
                 time = max(timing_map[a_wire] for a_wire in _gate.args) + gate_delay
                 for dest_wire in _gate.dests:
                     timing_map[dest_wire] = time
-                    heapq.heappush(timing_heap, WireWTiming(time, dest_wire))
                 cleared.update(set(_gate.dests))  # add dests to set of ready wires
                 items_to_remove.add(_gate)
+
+        if len(items_to_remove) == 0:
+            block_str = ''.join([str(a_net) + "\n" for a_net in remaining])
+            block_str = ("Cannot do static timing analysis due to nonregister, nonmemory "
+                         "loops in the code \n The unprocesssed blocks are: \n") + block_str
+            raise core.PyrtlError(block_str)
+
         remaining.difference_update(items_to_remove)
 
-    if len(remaining) > 0:
-        block_str = ""
-        for a_net in remaining:
-            block_str = block_str + str(a_net) + "\n"
-        block_str = ("Cannot do static timing analysis due to nonregister,"
-                     "nonmemory loops in the code \n"
-                     "The unprocesssed blocks are: \n") + block_str
-        raise core.PyrtlError(block_str)
     return timing_map
 
 
@@ -489,7 +471,7 @@ def synthesize(update_working_block=True, block=None):
     we can keep the same interface) which are immediately broken down into
     the individual bits and memories.  Memories (read and write ports) which
     require the reassembly and disassembly of the wirevectors immediately
-    before and after.  There are the only two places where 'c' and 's' ops
+    before and after.  There arethe only two places where 'c' and 's' ops
     should exist.
 
     The block that results from synthesis is actually of type
@@ -505,6 +487,7 @@ def synthesize(update_working_block=True, block=None):
     """
 
     block_in = core.working_block(block)
+    block_in.sanity_check()  # before going further, make sure that pressynth is valid
     block_out = core.PostSynthBlock()
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^nrwcsm@')
@@ -692,30 +675,33 @@ def _decompose(net, wv_map, mems, block_out):
     return
 
 
-def _synth_base(block):
+def _synth_base(block_in, synth_name="synth"):
     """
     This is a generic function to copy the wirevectors for another round of
     synthesis This does not split a wirevector with multiple wires.
     :param block: The block to change
+    :param synth_name: a name to prepend to all new copies of a wire
     :return: the resulting block and a wirevector map
     """
     import copy
-    block_in = core.working_block(block)
+    block_in.sanity_check()  # make sure that everything is valid
     if not isinstance(block_in, core.PostSynthBlock):
         raise core.PyrtlError("Synth_base only works on post synth blocks")
     block_out = core.PostSynthBlock()
     temp_wv_map = {}
     temp_io_map = {}
     for wirevector in block_in.wirevector_subset():
-        new_wv = copy.copy(wirevector)
-        new_wv.block = block_out
-        new_wv.name = core.next_tempvar_name()
+        new_name = '_'.join([synth_name, str(wirevector)])
+        if isinstance(wirevector, wire.Const):
+            new_wv = wire.Const(bitwidth=1, val=wirevector.val, block=block_out)
+        else:
+            new_wv = wirevector.__class__(wirevector.bitwidth, new_name, block_out)
         temp_wv_map[wirevector] = new_wv
         if isinstance(wirevector, (wire.Input, wire.Output)):
             temp_io_map[wirevector] = new_wv
 
     # pylint: disable=maybe-no-member
-    block_out.io_map = {orig_wire: temp_io_map[v] for (orig_wire, v) in block_in.io_map}
+    block_out.io_map = {orig_wire: temp_io_map[v] for (orig_wire, v) in block_in.io_map.iteritems()}
     # TODO: figure out the real map
     return block_out, temp_wv_map
 
@@ -725,8 +711,8 @@ def _copy_net(block_out, net, temp_wv_net, mems):
     """
     import copy
     if net.op in "~&|^nrwcsm@":
-        new_args = (temp_wv_net[a_arg] for a_arg in net.args)
-        new_dests = (temp_wv_net[a_dest] for a_dest in net.dest)
+        new_args = tuple(temp_wv_net[a_arg] for a_arg in net.args)
+        new_dests = tuple(temp_wv_net[a_dest] for a_dest in net.dests)
         new_param = copy.copy(net.op_param)
         # special stuff for copying memories
         if net.op in "m@":
@@ -745,14 +731,14 @@ def _copy_net(block_out, net, temp_wv_net, mems):
         raise core.PyrtlInternalError("Invalid op code :" + net.op + " found.")
 
 
-def nand_synth(block=core.working_block()):
+def nand_synth(block=None):
     """
-    Synthesizes an and-inverter block into one consisting of nands and inverters
+    Synthesizes an Post-Synthesis block into one consisting of nands and inverters
     :param block: The block to synthesize.
     :return: The resulting block
     """
     block_in = core.working_block(block)
-    block_out, temp_wv_map = _synth_base(block)
+    block_out, temp_wv_map = _synth_base(block_in, "nand")
     block_out.legal_ops = set('~norwcsm@')
     mems = {}
 
@@ -774,14 +760,14 @@ def nand_synth(block=core.working_block()):
             _copy_net(block_out, net, temp_wv_map, mems)
 
 
-def and_inverter_synth(block=core.working_block()):
+def and_inverter_synth(block=None):
     """
     Synthesizes a decomposed block into one consisting of ands and inverters
     :param block: The block to synthesize
     :return: The resulting block
     """
     block_in = core.working_block(block)
-    block_out, temp_wv_map = _synth_base(block)
+    block_out, temp_wv_map = _synth_base(block_in, "andInv")
     block_out.legal_ops = set('~&rwcsm@')
     mems = {}
 

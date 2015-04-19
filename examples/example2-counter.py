@@ -59,7 +59,7 @@ def ripple_add(a, b, cin=0):
 # Now let's build a 3-bit counter from our N-bit ripple carry adder.
 
 counter = pyrtl.Register(bitwidth=3, name='counter')
-sum, cout = ripple_add(counter, pyrtl.Const("3'b001"))
+sum, cout = ripple_add(counter, pyrtl.Const("1'b1"))
 counter.next <<= sum
 
 # A couple new things in the above code.  The two remaining types of basic

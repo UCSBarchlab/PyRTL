@@ -49,6 +49,10 @@ class WireVector(object):
         # finally, add the wirevector to the block
         self.block.add_wirevector(self)
 
+        if core.wirevector_trace_call_stack:
+            import traceback
+            self.init_call_stack = traceback.format_stack()
+
     def __str__(self):
         return ''.join([self.name, '/', str(self.bitwidth), self.code])
 
@@ -90,10 +94,7 @@ class WireVector(object):
         b = helperfuncs.as_wires(b, block=self.block)
 
         # check size of operands
-        if len(a) < len(b):
-            a = a.zero_extended(len(b))
-        elif len(b) < len(a):
-            b = b.zero_extended(len(a))
+        a, b = helperfuncs.match_bitwidth(a, b)
         resultlen = len(a)  # both are the same length now
 
         # some operations actually create more or less bits
@@ -246,7 +247,7 @@ class WireVector(object):
 
     def zero_extended(self, bitwidth):
         """ return a zero extended wirevector derived from self """
-        return self._extend_with_bit(bitwidth, Const(0, bitwidth=1, block=self.block))
+        return self._extend_with_bit(bitwidth, 0)
 
     def _extend_with_bit(self, bitwidth, extbit):
         numext = bitwidth - self.bitwidth
@@ -257,6 +258,8 @@ class WireVector(object):
                 'error, zero_extended cannot reduce the number of bits')
         else:
             from helperfuncs import concat
+            if isinstance(extbit, int):
+                extbit = Const(0, bitwidth=1, block=self.block)
             extvector = WireVector(bitwidth=numext, block=self.block)
             net = core.LogicNet(
                 op='s',
