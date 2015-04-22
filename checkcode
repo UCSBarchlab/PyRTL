@@ -25,6 +25,8 @@ pep8 --max-line-length=100 pyrtl/*.py
 check_exit_code $? 'PyRTL core pep8 check failed. Exiting.'
 pep8 --max-line-length=100 examples/*.py
 check_exit_code $? 'PyRTL examples pep8 check failed. Exiting.'
+pep8 --max-line-length=100 rtllib/*.py
+check_exit_code $? 'PyRTL library pep8 check failed. Exiting.'
 
 echo 
 echo ===== Checking for Common Errors =====================================
@@ -32,6 +34,8 @@ pylint -E pyrtl/*.py
 check_exit_code $? 'PyRTL core lint check failed. Exiting.'
 pylint -E examples/*.py
 check_exit_code $? 'PyRTL example link check failed. Exiting.'
+pylint -E rtllib/*.py
+check_exit_code $? 'PyRTL library link check failed. Exiting.'
 
 echo
 echo 'Tests passed.'
