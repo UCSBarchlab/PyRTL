@@ -193,8 +193,8 @@ def timing_critical_path(timing_map, block=None):
     for cp_with_num in enumerate(critical_paths):
         print "Critical path", cp_with_num[0], ":"
         print line_indent, "The first wire is:", cp_with_num[1][0]
-        for block in cp_with_num[1][1]:
-            print line_indent, (block)
+        for net in cp_with_num[1][1]:
+            print line_indent, (net)
         print
 
     return critical_paths
@@ -731,7 +731,7 @@ def _copy_net(block_out, net, temp_wv_net, mems):
         raise core.PyrtlInternalError("Invalid op code :" + net.op + " found.")
 
 
-def nand_synth(block=None):
+def nand_synth(block=None, update_working_block=True):
     """
     Synthesizes an Post-Synthesis block into one consisting of nands and inverters
     :param block: The block to synthesize.
@@ -759,8 +759,12 @@ def nand_synth(block=None):
         else:
             _copy_net(block_out, net, temp_wv_map, mems)
 
+    if update_working_block:
+        core.set_working_block(block_out)
+    return block_out
 
-def and_inverter_synth(block=None):
+
+def and_inverter_synth(block=None, update_working_block=True):
     """
     Synthesizes a decomposed block into one consisting of ands and inverters
     :param block: The block to synthesize
@@ -789,6 +793,9 @@ def and_inverter_synth(block=None):
         else:
             _copy_net(block_out, net, temp_wv_map, mems)
 
+    if update_working_block:
+        core.set_working_block(block_out)
+    return block_out
 
 def _generate_one_bit_add(a, b, cin):
     """ Generates hardware for a 1-bit full adder.
