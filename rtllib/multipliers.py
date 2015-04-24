@@ -190,6 +190,43 @@ def test_wallace_tree():
     sim_trace.render_trace()
 
 
+def another_montgomery_multiplier(A,B,N):
+    assert len(A) == len(B) == len(N)
+    k = len(A)
+    P = 0
+    for i in range(0, k):
+        P = P + (A & B[i].sign_extended(k))
+        # P.name = "p_afteraddition" + str(i)
+        with ConditionalUpdate(P[0] == 1):
+            P = P + N
+        P = P[1:]
+        # P.name = "p_after_division" + str(i)
+    with ConditionalUpdate(P > N):
+        P = P - N
+    # P.name = "p_final"
+
+    # round 2
+    newP = 0
+    r = WireVector(bitwidth = k + 1)
+    r <<= 2**k #this is 16 -> do temp*16%13  = 12
+    for i in range(0, k):
+        newP = newP + (P & r[i].sign_extended(len(P)))
+        newP.name = "p_afteraddition" + str(i)
+        with ConditionalUpdate(newP[0] == Const(1)):
+            newP = newP + N
+            newP.name = "p_after_modulus" + str(i)
+        newP = newP[1:]
+        newP.name = "p_after_division" + str(i)
+    with ConditionalUpdate(newP > N):
+        newP = newP - N
+    newP.name = "p_final"
+
+    return newP
+
+
+
+
+
 def montgomery_multiplier(A, B, N):
     '''Performs montgomery modulus where N is the modulus, A is the multiplicand,
     and B is the multiplier. Output is of the format S = A * B * R^-1 mod N,
@@ -198,18 +235,19 @@ def montgomery_multiplier(A, B, N):
     assert len(A) == len(B) == len(N)
 
     k = len(A)
+    r = 2**k
     #result = WireVector(bitwidth = k)
     result = 0
 
     for i in range(0, k):
-        print 
+        print
         a_and_b = A & B[i]
-        
+
         q = (result +(a_and_b))[0]
         print q
         result = (result + a_and_b + (q & N))[1:]
         print result
-        
+
         print result
 
     for net in working_block().logic:
@@ -224,19 +262,21 @@ def montgomery_multiplier(A, B, N):
 def test_modulus():
     input_length = 4
     a, b, n = Input(input_length, "a"), Input(input_length, "b"), Input(input_length, "n")
-    modded = Output(input_length, "Modulus")
-    
-    modded <<= montgomery_multiplier(a, b, n)
 
-    aval, bval, nval = 7, 3, 5
+    modded = Output(input_length*2, "Modulus")
+
+
+    modded <<= another_montgomery_multiplier(a, b, n)
+
+    print "modded: ",modded
+
+    aval, bval, nval = 7, 11, 13
     trueval = Output(16, "True Answer")
     trueval <<= (aval * bval) % nval
 
     sim_trace = SimulationTrace()
     sim = Simulation(tracer=sim_trace)
     sim.step({a: aval, b: bval, n: nval})
-    for cycle in range(14):
-        sim.step({a: 0, b: 0, n: 0})
 
     sim_trace.render_trace()
 if __name__ == "__main__":
