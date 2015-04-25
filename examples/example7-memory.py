@@ -11,6 +11,7 @@ sys.path.append("..")  # needed only if not installed
 
 import pyrtl
 from pyrtl import *
+import random
 
 # --- Part 1: Memories -------------------------------------------------------
 
@@ -109,24 +110,21 @@ pyrtl.reset_working_block()
 
 
 def rom_data_func(address):
-    return 15 - 2 * address
+    return 31 - 2 * address
 
-rom_data_array = [15, 13, 11, 9, 7, 5, 3, 1]
+rom_data_array = [rom_data_func(a) for a in range(14)]
 
 # Now we will make the ROM blocks. ROM blocks are similar to memory blocks
 # but because they are read only, they also need to be passed in a set of
-# data to be
-rom1 = RomBlock(bitwidth=4, addrwidth=3, data=rom_data_func)
-rom2 = RomBlock(4, 3, rom_data_array)
+# data to be initialized as
 
-rom_add_1 = Input(3, "rom_in")
-rom_add_2 = Input(3, "rom_in_2")
+rom1 = RomBlock(bitwidth=5, addrwidth=4, data=rom_data_func)
+rom2 = RomBlock(5, 4, rom_data_array)
 
-rom_out_1 = Output(4, "rom_out_1")
-rom_out_2 = Output(4, "rom_out_2")
-rom_out_3 = Output(4, "rom_out_3")
+rom_add_1, rom_add_2 = Input(4, "rom_in"), Input(4, "rom_in_2")
 
-cmp_out = Output(1, "cmp_out")
+rom_out_1, rom_out_2 = Output(5, "rom_out_1"), Output(5, "rom_out_2")
+rom_out_3, cmp_out = Output(5, "rom_out_3"), Output(1, "cmp_out")
 
 # Because output wirevectors cannot be used as the source for other nets,
 # in order to use the rom outputs in two different places, we must instead
@@ -144,19 +142,29 @@ rom_out_2 <<= temp2
 
 cmp_out <<= temp1 == temp2
 
-# now we will create a new set of simulation values
+# One of the things that is useful to have is repeatability, However, we
+# also don't want the hassle of typing out a set of values to test. One
+# solution in this case is to seed random and then pulling out 'random'
+# numbers from it.
+
+random.seed(4839483)
+
+# Now we will create a new set of simulation values. In this case, since we
+# want to use simulation values that are larger than 9 we cannot use the
+# trick used in previous examples to parse values. The two ways we are doing
+# it below are both valid ways of making larger values
 
 simvals = {
-    rom_add_1: "76543210127372",
-    rom_add_2: "02064726372513",
+    rom_add_1: [1, 11, 4, 2, 7, 8, 2, 4, 5, 13, 15, 3, 4, 4, 4, 8, 12, 13, 2, 1],
+    rom_add_2: [random.randrange(0, 16) for i in range(20)]
 }
 
-# now run the simulation like before. Note that for ROMs, we do not
+# Now run the simulation like before. Note that for ROMs, we do not
 # supply a memory value map because ROMs are defined with the values
-# predefined
+# predefined.
 
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
 for cycle in range(len(simvals[rom_add_1])):
-    sim.step({k: int(v[cycle]) for k, v in simvals.items()})
+    sim.step({k: v[cycle] for k, v in simvals.items()})
 sim_trace.render_trace()
