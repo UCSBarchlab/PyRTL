@@ -43,5 +43,29 @@ def kogge_stone(A, B, cin=0):
     return result
 
 
+def one_bit_add(a, b, cin):
+    assert len(a) == len(b) == 1  # len returns the bitwidth
+    sum = a ^ b ^ cin
+    cout = a & b | a & cin | b & cin
+    return sum, cout
+
+
+def ripple_add(a, b, cin=0):
+    a, b = libutils.match_bitwidth(a, b)
+
+    def ripple_add_partial(a, b, cin=0):  # this actually makes less s anc c blocks
+        assert len(a) == len(b)
+        if len(a) == 1:
+            sumbits, cout = one_bit_add(a, b, cin)
+        else:
+            lsbit, ripplecarry = one_bit_add(a[0], b[0], cin)
+            msbits, cout = ripple_add_partial(a[1:], b[1:], ripplecarry)
+            sumbits = pyrtl.concat(msbits, lsbit)
+        return sumbits, cout
+
+    sumbits, cout = ripple_add_partial(a, b, cin)
+    return concat(cout, sumbits)
+
+
 if __name__ == "__main__":
     main()
