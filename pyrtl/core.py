@@ -40,7 +40,7 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         lhs = ', '.join([str(x) for x in self.dests])
         options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
 
-        if self.op in 'w~&|^+-*<>=xcsr':
+        if self.op in 'w~&|^n+-*<>=xcsr':
             retval = ''.join([lhs, '  <-- ', self.op, ' --  ', rhs, ' ', options])
         elif self.op is 'm':
             memid, memblock = self.op_param

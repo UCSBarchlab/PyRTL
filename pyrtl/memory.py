@@ -206,6 +206,9 @@ class RomBlock(_MemReadBase):
                 value = self.data[address]
             except TypeError:
                 raise core.PyrtlError("invalid type for RomBlock data object")
+            except IndexError:
+                raise core.PyrtlError("An access to rom " + self.name +
+                                      " index " + str(address) + " is out of range")
 
         if value < 0 or value >= 2**self.bitwidth:
             raise core.PyrtlError("invalid value for RomBlock data")
