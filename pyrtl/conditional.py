@@ -151,7 +151,8 @@ class ConditionalUpdate(object):
     def _build_write_port(cls, mem, addr, data, enable):
         """Stores the write-port details until finalize is called."""
         if cls.depth == 0:
-            raise core.PyrtlError('error, you are doing *something* wrong with ConditionalUpdate')
+            raise core.PyrtlError('attempting to use conditional assign "|="'
+                                  ' while not in a ConditionalUpdate context')
         p = cls.current._current_select()
         # if map entry not there, set to [], then append the tuple (p, ...)
         cls.current.memblock_write_predicate_map.setdefault(mem, []).append((p, addr, data, enable))

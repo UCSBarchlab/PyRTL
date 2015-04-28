@@ -797,6 +797,7 @@ def and_inverter_synth(block=None, update_working_block=True):
         core.set_working_block(block_out)
     return block_out
 
+
 def _generate_one_bit_add(a, b, cin):
     """ Generates hardware for a 1-bit full adder.
         Input: 3 1-bit wire vectors
