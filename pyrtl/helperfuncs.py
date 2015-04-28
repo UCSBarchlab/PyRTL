@@ -113,13 +113,22 @@ def get_block(*arglist):
     If any of the arguments come from different blocks, throw an error.
     If none of the arguments are wirevectors, return the working_block.
     """
+    import memory
+
     block = None
     for arg in arglist:
-        if isinstance(arg, wire.WireVector):
-            if block and block is not arg.block:
-                raise core.PyrtlError('get_block passed WireVectors from differnt blocks')
-            else:
-                block = arg.block
+        if isinstance(arg, memory._MemIndexed):
+            argblock = arg.mem.block
+        elif isinstance(arg, wire.WireVector):
+            argblock = arg.block
+        else:
+            argblock = None
+
+        if block and block is not argblock:
+            raise core.PyrtlError('get_block passed WireVectors from different blocks')
+        else:
+            block = argblock
+
     # use working block is block is still None
     block = core.working_block(block)
     return block
