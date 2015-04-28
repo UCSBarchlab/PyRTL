@@ -8,7 +8,8 @@ def main():
     # test_simple_mult()
     # test_wallace_tree()
     # test_wallace_timing()
-    test_modulus()
+    # test_modulus()
+    test_conditional()
 
 
 def simple_mult(A, B, start, done):
@@ -44,6 +45,45 @@ def simple_mult(A, B, start, done):
 
     return accum
 
+
+
+def conditional_broken(A, B, C):
+
+    #not_zero_vector = Const(2**2, bitwidth=3)
+    all_ones = Const(1, bitwidth=3)
+    #zero_vector = WireVector(bitwidth=3)
+    #output = WireVector(bitwidth=3)
+
+    zero_vector = WireVector(bitwidth=3)
+    zero_vector <<= 5
+
+    zero_vector.name = "it_is_four"
+
+    #with ConditionalUpdate(zero_vector[0] == 1):
+    zero_vector <<= mux(zero_vector[0] == 1, zero_vector, zero_vector + all_ones)  
+
+    zero_vector.name = "what is it"
+
+    return zero_vector
+
+
+def test_conditional():
+    input_length = 4
+    a, b, n = Input(input_length, "ignore"), Input(input_length, "ignore2"), Input(input_length, "ignore3")
+
+    modded = Output(input_length*2, "ignore4")
+
+
+    modded <<= conditional_broken(a, b, n)
+
+    aval, bval, nval = 1, 2, 3
+
+
+    sim_trace = SimulationTrace()
+    sim = Simulation(tracer=sim_trace)
+    sim.step({a: aval, b: bval, n: nval})
+
+    sim_trace.render_trace()
 
 def test_simple_mult():
 
@@ -193,17 +233,20 @@ def test_wallace_tree():
 def another_montgomery_multiplier(A,B,N):
     assert len(A) == len(B) == len(N)
     k = len(A)
-    P = 0
+
+    P = Const(0,)
     for i in range(0, k):
         P = P + (A & B[i].sign_extended(k))
-        # P.name = "p_afteraddition" + str(i)
+        P.name = "p_after_addition" + str(i)
         with ConditionalUpdate(P[0] == 1):
-            P = P + N
+            P |= P + N
+            # P.name = "p_after_modulus" + str(i)
         P = P[1:]
-        # P.name = "p_after_division" + str(i)
+        P.name = "p_after_division" + str(i)
     with ConditionalUpdate(P > N):
         P = P - N
-    # P.name = "p_final"
+    
+    P.name = "p_halfway"
 
     # round 2
     newP = 0
@@ -211,21 +254,18 @@ def another_montgomery_multiplier(A,B,N):
     r <<= 2**k #this is 16 -> do temp*16%13  = 12
     for i in range(0, k):
         newP = newP + (P & r[i].sign_extended(len(P)))
-        newP.name = "p_afteraddition" + str(i)
-        with ConditionalUpdate(newP[0] == Const(1)):
-            newP = newP + N
-            newP.name = "p_after_modulus" + str(i)
+
+        # newP.name = "p_afteraddition" + str(i)
+        with ConditionalUpdate(newP[0] == 1):
+            newP |= newP + N
+            # newP.name = "p_after_modulus" + str(i)
         newP = newP[1:]
-        newP.name = "p_after_division" + str(i)
+        # newP.name = "p_after_division" + str(i)
     with ConditionalUpdate(newP > N):
-        newP = newP - N
-    newP.name = "p_final"
+        newP |= newP - N
+    # newP.name = "p_final"
 
     return newP
-
-
-
-
 
 def montgomery_multiplier(A, B, N):
     '''Performs montgomery modulus where N is the modulus, A is the multiplicand,
