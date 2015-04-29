@@ -8,8 +8,8 @@ def main():
     # test_simple_mult()
     # test_wallace_tree()
     # test_wallace_timing()
-    # test_modulus()
-    test_conditional()
+     test_modulus()
+    # test_conditional()
 
 
 def simple_mult(A, B, start, done):
@@ -231,73 +231,61 @@ def test_wallace_tree():
 
 
 def another_montgomery_multiplier(A,B,N):
+    
     assert len(A) == len(B) == len(N)
     k = len(A)
 
-    P = Const(0,)
+    P = WireVector(bitwidth = k)
+    P <<= 0 
+
+
     for i in range(0, k):
+        #temp <<= 0
         P = P + (A & B[i].sign_extended(k))
-        P.name = "p_after_addition" + str(i)
-        with ConditionalUpdate(P[0] == 1):
-            P |= P + N
-            # P.name = "p_after_modulus" + str(i)
+        #P.name = "p_after_addition" + str(i)
+
+        #with ConditionalUpdate(P[0] == 1):
+        #    P |= P + N 
+        P = mux(P[0] == 1, falsecase = P, truecase = P + N)  
+        #P.name = "p_after_modulus" + str(i)
+
         P = P[1:]
-        P.name = "p_after_division" + str(i)
-    with ConditionalUpdate(P > N):
-        P = P - N
+        #P.name = "p_after_division" + str(i)
+
+    #with ConditionalUpdate(P > N):
+    #    P = P - N
+    P = mux(P >= N, falsecase = P, truecase = P - N)  
     
     P.name = "p_halfway"
-
+    
     # round 2
-    newP = 0
-    r = WireVector(bitwidth = k + 1)
-    r <<= 2**k #this is 16 -> do temp*16%13  = 12
-    for i in range(0, k):
-        newP = newP + (P & r[i].sign_extended(len(P)))
+    newP = WireVector(bitwidth = k)
+    newP <<= 0
 
-        # newP.name = "p_afteraddition" + str(i)
-        with ConditionalUpdate(newP[0] == 1):
-            newP |= newP + N
-            # newP.name = "p_after_modulus" + str(i)
+    r = Const(9, bitwidth = k)
+    #r <<= 2**k #this is 16 -> do temp*16%13  = 12
+
+    for i in range(0, k):
+        newP = newP + (r & P[i].sign_extended(len(r)))
+
+        newP.name = "p_afteraddition" + str(i)
+        #with ConditionalUpdate(newP[0] == 1):
+        #    newP |= newP + N
+        newP = mux(newP[0] == 1, falsecase = newP, truecase = newP + N)  
+        newP.name = "p_after_modulus" + str(i)
+
         newP = newP[1:]
-        # newP.name = "p_after_division" + str(i)
-    with ConditionalUpdate(newP > N):
-        newP |= newP - N
-    # newP.name = "p_final"
+        newP.name = "p_after_division" + str(i)
 
+    #with ConditionalUpdate(newP > N):
+    #    newP |= newP - N
+    newP = mux(newP >= N, falsecase = newP, truecase = newP - N)  
+    newP.name = "p_final"
+    
     return newP
+    
+    #return P
 
-def montgomery_multiplier(A, B, N):
-    '''Performs montgomery modulus where N is the modulus, A is the multiplicand,
-    and B is the multiplier. Output is of the format S = A * B * R^-1 mod N,
-    where R = 2^k mod N and 0 <= S < N
-    '''
-    assert len(A) == len(B) == len(N)
-
-    k = len(A)
-    r = 2**k
-    #result = WireVector(bitwidth = k)
-    result = 0
-
-    for i in range(0, k):
-        print
-        a_and_b = A & B[i]
-
-        q = (result +(a_and_b))[0]
-        print q
-        result = (result + a_and_b + (q & N))[1:]
-        print result
-
-        print result
-
-    for net in working_block().logic:
-        print net
-    if len(result) >= len(N):
-        result = result - N
-
-    print k , result
-
-    return result
 
 def test_modulus():
     input_length = 4
@@ -307,10 +295,13 @@ def test_modulus():
 
 
     modded <<= another_montgomery_multiplier(a, b, n)
-
-    print "modded: ",modded
-
-    aval, bval, nval = 7, 11, 13
+    # A B N  Magic 
+    # 3 7 5  1
+    # A Magic N => x
+    # B Magic N => y
+    # x * y N => z 
+    # z Magic N => result
+    aval, bval, nval = 4, 1, 5
     trueval = Output(16, "True Answer")
     trueval <<= (aval * bval) % nval
 
