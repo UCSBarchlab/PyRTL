@@ -97,7 +97,7 @@ class TestBlock(unittest.TestCase):
                 r.next |= r
             with condition(i == 3):
                 r.next |= r - 1
-            with condition.default:
+            with condition.fallthrough:
                 r.next |= r + 1
         self.check_trace('i 01230123\nr 01221233\n')
 
@@ -110,7 +110,7 @@ class TestBlock(unittest.TestCase):
                 r.next |= r
             with condition(i == 3):
                 r.next |= r - 1
-            with condition.default:
+            with condition.fallthrough:
                 r.next |= r + 1
         self.check_trace('i 01230123\nr 01221233\n')
 
@@ -122,7 +122,7 @@ class TestBlock(unittest.TestCase):
             with condition((i == 2) | (i == 3)):
                 with condition(r < 3):
                     r.next |= r + 2
-                with condition.default:
+                with condition.fallthrough:
                     r.next |= r + 1
         self.check_trace('i 01230123\nr 00024445\n')
 
@@ -133,7 +133,7 @@ class TestBlock(unittest.TestCase):
         with pyrtl.ConditionalUpdate() as condition:
             with condition(i < 2):
                 r.next |= r + 2
-            with condition.default:
+            with condition.fallthrough:
                 with condition(r < 6):
                     r.next |= r - 1
         self.check_trace('i 01230123\nr 02432466\n')
@@ -148,7 +148,7 @@ class TestBlock(unittest.TestCase):
                 r1.next |= r1 + 1
             with condition(i < 3):
                 r2.next |= r2 + 1
-            with condition.default:
+            with condition.fallthrough:
                 r2.next |= 3
         self.check_trace(' i 01230123\nr1 01222344\nr2 00013334\n')
  
@@ -208,7 +208,7 @@ class TestMemConditionalBlock(unittest.TestCase):
         with pyrtl.ConditionalUpdate() as condition:
             with condition(i < 4):
                 m[addr] |= i
-            with condition.default:
+            with condition.fallthrough:
                 with condition(addr[0]):
                     # this should happen every time because no
                     # state is being updated!
@@ -242,7 +242,7 @@ class TestWireConditionalBlock(unittest.TestCase):
         with pyrtl.ConditionalUpdate() as condition:
             with condition(i <= 2):
                 o |= 1
-            with condition.default:
+            with condition.fallthrough:
                 o |= 0
         self.check_trace('i 01230123\no 11101110\n')
 
@@ -253,7 +253,7 @@ class TestWireConditionalBlock(unittest.TestCase):
         with pyrtl.ConditionalUpdate() as condition:
             with condition(i[0] == True):
                 o |= 1
-            with condition.default:
+            with condition.fallthrough:
                 o |= 0
         self.check_trace('i 01230123\no 01010101\n')
 
@@ -265,9 +265,9 @@ class TestWireConditionalBlock(unittest.TestCase):
             with condition(i <= 2):
                 with condition(i == 0):
                     o |= 2
-                with condition.default:
+                with condition.fallthrough:
                     o |= 1
-            with condition.default:
+            with condition.fallthrough:
                 o |= 0
         self.check_trace('i 01230123\no 21102110\n')
 
@@ -300,7 +300,7 @@ class TestWireConditionalBlock(unittest.TestCase):
                         o |= 2
                     with i == 1:
                         o |= 1
-                with condition.default:
+                with condition.fallthrough:
                     o |= 0
 
     def test_condition_nice_error_message_shortcut(self):
@@ -319,7 +319,7 @@ class TestWireConditionalBlock(unittest.TestCase):
             with pyrtl.ConditionalUpdate() as condition:
                 with condition(i <= 2):
                     o |= 1
-                with condition.default:
+                with condition.fallthrough:
                     o |= 0
 
 if __name__ == "__main__":

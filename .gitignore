@@ -41,3 +41,6 @@ nosetests.xml
 
 # pycharm
 .idea
+
+# Stuff specifically for PyRTL
+spice.net

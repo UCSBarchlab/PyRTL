@@ -144,7 +144,7 @@ def attempt3_hardware_fibonacci(n, req, bitwidth):
             i.next |= 0
             a.next |= 0
             b.next |= 1
-        with condition.default:
+        with condition.fallthrough:
             i.next |= i + 1
             a.next |= b
             b.next |= a + b

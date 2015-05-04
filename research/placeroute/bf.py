@@ -42,14 +42,14 @@ pc.next <<= mux(
 with pyrtl.ConditionalUpdate() as condition:
     with condition(pc_backwards):
         pc |= pc - 1
-    with condition.default:
+    with condition.fallthrough:
         pc |= pc + 1
 
 # DepthCount update logic
 with pyrtl.ConditionalUpdate() as condition:
     with condition(dc_zero):
         pc |= pc - 1
-    with condition.default:
+    with condition.fallthrough:
         pc |= pc + 1
 
 
@@ -100,7 +100,7 @@ with pyrtl.ConditionalUpdate() as condition:
             with condition(depthcount==0):
                 pc.next |= pc + 1
                 state.next |= EXE
-            with condition.default:
+            with condition.fallthrough:
                 pc.next |= pc - 1    
 
 sim_trace = pyrtl.SimulationTrace()

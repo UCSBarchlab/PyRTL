@@ -219,7 +219,7 @@ class Block(object):
     def get_wirevector_by_name(self, name, strict=False):
         """Return the wirevector matching name.
 
-        By default, if a matching wirevector cannot be found the value None is
+        By fallthrough, if a matching wirevector cannot be found the value None is
         returned.  However, if the argument strict is set to True, then this will
         instead throw a PyrtlError when no match is found."""
         if name in self.wirevector_by_name:

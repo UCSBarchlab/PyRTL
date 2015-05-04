@@ -30,11 +30,11 @@ class ConditionalUpdate(object):
     >       with condition(c):
     >           r.next <<= z  # set when a is false and c is true
     >           r2.next <<= z
-    >       with condition.default:
+    >       with condition.fallthrough:
     >           r.next <<= w  # a is false and c is false
 
     In addition to this longer form, there is a shortcut version for
-    dealing with just a single condition (there is no default or nesting
+    dealing with just a single condition (there is no fallthrough or nesting
     of conditions possible in this shorter form.
 
     >   r = Register()
@@ -92,10 +92,17 @@ class ConditionalUpdate(object):
         return self
 
     @property
-    def default(self):
-        """Property used to enter the context of the default case."""
+    def fallthrough(self):
+        """Property used to enter the context of the fallthrough case. This is the case
+        where all the other cases evaluated to false"""
         self.predicate_on_deck = True
         return self
+
+    @property
+    def default(self):
+        """Property used to specify values that are not assigned a value by a matched up case
+        (Note that only one condition (other than this) gets matched up with any given
+        wirevector) """
 
     @classmethod
     def currently_under_condition(cls):

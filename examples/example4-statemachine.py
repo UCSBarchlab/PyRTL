@@ -44,7 +44,7 @@ with pyrtl.ConditionalUpdate() as condition:
             state.next |= TOK3
         with condition(state == TOK3):
             state.next |= DISPENSE  # 4th token received, go to dispense
-        with condition.default:  # token received but in state where we can't handle it
+        with condition.fallthrough:  # token received but in state where we can't handle it
             state.next |= REFUND
     # unconditional transition from these two states back to wait state
     # NOTE: the parens are needed because in Python the "|" operator is lower precedence
