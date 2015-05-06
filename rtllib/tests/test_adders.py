@@ -19,12 +19,12 @@ class TestAdders(unittest.TestCase):
 
     def adder2_t_base_1(self, adder_func):
         # a generic test for add
+        # adder_func is the function for the adder that we wish to test
         a, b = pyrtl.Input(35, "a"), pyrtl.Input(32, "b")
         sum = pyrtl.Output(36, "sum")
         sum <<= adder_func(a, b)
-
-        xvals = [int(2**random.uniform(1, 32) - 2) for i in range(40)]
-        yvals = [int(2**random.uniform(1, 32) - 2) for i in range(40)]
+        xvals = [int(2**random.uniform(1, 32) - 2) for _ in range(40)]
+        yvals = [int(2**random.uniform(1, 32) - 2) for _ in range(40)]
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)

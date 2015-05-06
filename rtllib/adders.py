@@ -16,7 +16,7 @@ def kogge_stone(A, B, cin=0):
     :param cin: An optimal carry Wirevector or value
     :return: a Wirevector representing the output of the adder
 
-    The Kogge-Stone adder is a fast tree-based addder with O(log(n))
+    The Kogge-Stone adder is a fast tree-based adder with O(log(n))
     propagation delay, useful for performance critical designs. However,
     it has O(n log(n)) area usage, and large fan out.
     """
