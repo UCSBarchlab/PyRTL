@@ -2,6 +2,7 @@ import sys
 sys.path.append("..")
 import io
 from pyrtl import *
+import adders
 
 
 def main():
@@ -85,27 +86,8 @@ def test_conditional():
 
     sim_trace.render_trace()
 
-def test_simple_mult():
 
-    a, b, start = Input(8, "a"), Input(8, "b"), Input(1, "start")
-    done, product = Output(1, "done"), Output(16, "product")
-
-    product <<= simple_mult(a, b, start, done)
-
-    aval, bval = 12, 19
-    trueval = Output(16, "Answer")
-    trueval <<= aval * bval
-
-    sim_trace = SimulationTrace()
-    sim = Simulation(tracer=sim_trace)
-    sim.step({a: aval, b: bval, start: 1})
-    for cycle in range(14):
-        sim.step({a: 0, b: 0, start: 0})
-
-    sim_trace.render_trace()
-
-
-def wallace_tree(A, B):
+def wallace_tree(A, B, adder_func=adders.kogge_stone):
     """Build an unclocked multiplier for inputs A and B using a Wallace Tree.
     Delay is order logN, while area is order N^2. It's very important to note that
     the delay is computed only for gates, and not for wires too, and the wire
@@ -120,7 +102,6 @@ def wallace_tree(A, B):
     vectors left. When there are 2 wire vectors left, you simply run the
     2 wire vectors through a Kogge-Stone adder.
     """
-    import adders
 
     bits_length = (len(A) + len(B))
 
@@ -186,10 +167,10 @@ def wallace_tree(A, B):
             num2.insert(0, bits[i][0])
 
     # Pass the wire vectors through a kogge_stone adder
-    kogge_result = adders.kogge_stone(concat(*num1), concat(*num2))
+    adder_result = adder_func(concat(*num1), concat(*num2))
 
     # Concatenate the results, and then return them.
-    result = concat(kogge_result, result)
+    result = concat(adder_result, result)
 
     # Perhaps here we should slice off the overflow bit, if it exceeds bit_length?
     # result = result[:-1]
@@ -207,27 +188,6 @@ def test_wallace_timing():
     timing_map = timing_analysis()
 
     print_max_length(timing_map)
-
-
-def test_wallace_tree():
-
-    input_length = 16
-    a, b = Input(input_length, "a"), Input(input_length, "b")
-    product = Output(2 * input_length, "Wallace Answer")
-
-    product <<= wallace_tree(a, b)
-
-    aval, bval = 20, 4
-    trueval = Output(16, "True Answer")
-    trueval <<= aval * bval
-
-    sim_trace = SimulationTrace()
-    sim = Simulation(tracer=sim_trace)
-    sim.step({a: aval, b: bval})
-    for cycle in range(14):
-        sim.step({a: 0, b: 0})
-
-    sim_trace.render_trace()
 
 
 def extended_gcd(aa, bb):
