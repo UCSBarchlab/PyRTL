@@ -232,6 +232,9 @@ class TestSynthOptTiming(unittest.TestCase):
     def test_sanity_check(self):
         testmissing()
 
+    def num_net_of_type(self, netOp, block):
+        return len([net for net in block.logic if net[0] == netOp])
+
     def everything_t_procedure(self, timing_val=None, opt_timing_val=None):
         # if there is a nondefault timing val supplied, then it will check
         # to make sure that the timing matches
@@ -259,6 +262,8 @@ class TestSynthOptTiming(unittest.TestCase):
         block = pyrtl.working_block()
         timing_map = pyrtl.timing_analysis(block)
         timing_max_length = pyrtl.timing_max_length(timing_map)
+        self.assertEqual(self.num_net_of_type('|', block), 0)
+        self.assertEqual(self.num_net_of_type('^', block), 0)
 
         pyrtl.nand_synth()
         pyrtl.optimize()
@@ -266,7 +271,10 @@ class TestSynthOptTiming(unittest.TestCase):
         block = pyrtl.working_block()
         timing_map = pyrtl.timing_analysis(block)
         timing_max_length = pyrtl.timing_max_length(timing_map)
-        pyrtl.working_block().sanity_check()
+        block.sanity_check()
+        self.assertEqual(self.num_net_of_type('|', block), 0)
+        self.assertEqual(self.num_net_of_type('&', block), 0)
+        self.assertEqual(self.num_net_of_type('^', block), 0)
 
     def test_const_folding_complex_1(self):
         output = pyrtl.Output(bitwidth=3, name='output')
