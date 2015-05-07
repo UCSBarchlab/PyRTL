@@ -34,7 +34,9 @@ def one_bit_add(a, b, cin):
 # length recursively and (hopefully) pythonically.  More comments after the code.
 
 def ripple_add(a, b, cin=0):
-    assert len(a) == len(b)
+    a, b = pyrtl.match_bitwidth(a, b)
+    # this function is a function that allows us to match the bitwidth of multiple
+    # different wires. By default, it zero extends the shorter bits
     if len(a) == 1:
         sumbits, cout = one_bit_add(a, b, cin)
     else:

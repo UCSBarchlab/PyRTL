@@ -112,7 +112,7 @@ pyrtl.reset_working_block()
 def rom_data_func(address):
     return 31 - 2 * address
 
-rom_data_array = [rom_data_func(a) for a in range(14)]
+rom_data_array = [rom_data_func(a) for a in range(16)]
 
 # Now we will make the ROM blocks. ROM blocks are similar to memory blocks
 # but because they are read only, they also need to be passed in a set of

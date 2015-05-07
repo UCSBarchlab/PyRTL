@@ -1,11 +1,12 @@
 import sys
-sys.path.extend(['C:\\Users\\John\\Documents\\PycharmProjects\\PyRTL'])
+sys.path.append('..')
 
 import pyrtl
-import pyrtl.core
-import pyrtl.wire
-import pyrtl.passes
 
+# Timing and area usage are key considerations of any hardware block that one
+# makes. PyRTL provides functions to do this
+
+#
 pyrtl.reset_working_block()
 constwire = pyrtl.Const(6, bitwidth=4)
 inwire2 = pyrtl.Input(bitwidth=4, name="input2")
@@ -18,7 +19,7 @@ print "Pre Synthisis:"
 pyrtl.print_max_length(timing_map)
 print ""
 
-block_max_time = pyrtl.passes.timing_max_length(timing_map)
+block_max_time = pyrtl.timing_max_length(timing_map)
 # tempxx = pyrtl.passes.timing_critical_path(timing_map)
 
 
