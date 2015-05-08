@@ -34,6 +34,7 @@ from conditional import ConditionalUpdate
 
 # block simulation support
 from simulation import Simulation
+from simulation import FastSimulation
 from simulation import SimulationTrace
 
 # input and output to file format routines

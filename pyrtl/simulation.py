@@ -274,6 +274,163 @@ class Simulation(object):
 
 
 # ----------------------------------------------------------------
+#    ___       __  ___     __
+#   |__   /\  /__`  |     /__` |  |\/|
+#   |    /~~\ .__/  |     .__/ |  |  |
+#
+
+class FastSimulation(object):
+    """A class for simulating blocks of logic step by step."""
+
+    def __init__(
+            self, register_value_map=None, memory_value_map=None,
+            default_value=0, tracer=None, block=None):
+
+        block = core.working_block(block)
+        block.sanity_check()  # check that this is a good hw block
+
+        self.block = block
+        self.default_value = default_value
+        self.tracer = tracer
+        self.context = {}
+        self.initialize(register_value_map, memory_value_map)
+
+    def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
+
+        if default_value is None:
+            default_value = self.default_value
+
+        # set registers to their values
+        reg_set = self.block.wirevector_subset(wire.Register)
+        if register_value_map is not None:
+            for r in reg_set:
+                if r in register_value_map:
+                    self.context[self.varname(r)] = register_value_map[r]
+                else:
+                    self.context[self.varname(r)] = default_value
+
+        # set constants to their set values
+        for w in self.block.wirevector_subset(wire.Const):
+            self.context[self.varname(w)] = w.val
+            assert isinstance(w.val, int)  # for now
+
+        # set memories to their passed values
+        if memory_value_map is not None:
+            for (mem, mem_map) in memory_value_map.items():
+                self.context[self.varname(mem)] = mem_map
+
+        # set all other variables to default value
+        for w in self.block.wirevector_set:
+            if w not in self.context:
+                self.context[self.varname(w)] = default_value
+
+        s = self.compiled()
+        print s
+        self.logic_function = compile(s, '<string>', 'exec')
+
+    def step(self, provided_inputs):
+        # update inputs
+        for k, v in provided_inputs.items():
+            self.context[self.varname(k)] = v
+
+        # update register values
+        if '__next' in self.context:
+            next = self.context['__next']
+            self.context['__next'] = None
+            self.context.update(next)
+
+        # propagate through logic
+        # print
+        # print '-----------------------------------'
+        # for w in self.block.wirevector_subset():
+        #     print w.name + ":  " + str(self.context[self.varname(w)])
+        exec self.logic_function in self.context
+
+        if self.tracer is not None:
+            self.tracer.add_fast_step(self)
+
+    def varname(self, val):
+        # TODO check if w.name is a legal python identifier
+        if isinstance(val, memory.MemBlock):
+            return 'fs_mem' + str(val.id)
+        else:
+            return val.name
+
+    def compiled(self):
+        """Return a string of the self.block compiled to python. """
+        prog = ''
+
+        simple_func = {  # OPS
+            'w': lambda x: x,
+            '~': lambda x: '(~' + x + ')',
+            '&': lambda l, r: '(' + l + '&' + r + ')',
+            '|': lambda l, r: '(' + l + '|' + r + ')',
+            '^': lambda l, r: '(' + l + '^' + r + ')',
+            '+': lambda l, r: '(' + l + '+' + r + ')',
+            '-': lambda l, r: '(' + l + '-' + r + ')',
+            '*': lambda l, r: '(' + l + '*' + r + ')',
+            '<': lambda l, r: 'int(' + l + '<' + r + ')',
+            '>': lambda l, r: 'int(' + l + '>' + r + ')',
+            '=': lambda l, r: 'int(' + l + '==' + r + ')'
+            }
+
+        for net in self.block:
+            if net.op in simple_func:
+                argvals = [self.varname(arg) for arg in net.args]
+                result = simple_func[net.op](*argvals)
+                mask = str((1 << len(net.dests[0])) - 1)
+                prog += self.varname(net.dests[0]) + ' = ' + mask + ' & ' + result + '\n'
+            elif net.op == 'x':
+                select = self.varname(net.args[0])
+                a = self.varname(net.args[1])
+                b = self.varname(net.args[2])
+                mask = str((1 << len(net.dests[0])) - 1)
+                result = self.varname(net.dests[0])
+                prog += '%s = %s & ((%s) if (%s==0) else (%s))\n' %\
+                        (result, mask, a, select, b)
+            elif net.op == 'c':
+                result = self.varname(net.dests[0])
+                mask = str((1 << len(net.dests[0])) - 1)
+                expr = ''
+                for i in range(len(net.args)):
+                    if expr is not '':
+                        expr += ' | '
+                    shiftby = str(sum(len(net.args[j]) for j in range(i+1, len(net.args))))
+                    expr += '(%s << %s)' % (self.varname(net.args[i]), shiftby)
+                prog += '%s = %s & (%s)\n' % (result, mask, expr)
+            elif net.op == 's':
+                source = self.varname(net.args[0])
+                result = self.varname(net.dests[0])
+                mask = str((1 << len(net.dests[0])) - 1)
+                expr = ''
+                i = 0
+                for b in net.op_param:
+                    if expr is not '':
+                        expr += ' | '
+                    bit = '(0x1 & (%s >> %d))' % (source, b)
+                    expr += '(%s << %d)' % (bit, i)
+                    i += 1
+                prog += '%s = %s & (%s)\n' % (result, mask, expr)
+
+            elif net.op == 'm':
+                # memories act async for reads
+                memid = net.op_param[0]
+                read_addr = self.varname(net.args[0])
+                index = '(%d, %s)' % (memid, read_addr)
+                result = self.varname(net.dests[0])
+                mask = str((1 << len(net.dests[0])) - 1)
+                expr = 'fs_mem%d.get(%s, %s)' % (memid, index, self.default_value)
+                prog += '%s = %s & (%s)\n' % (result, mask, expr)
+                
+            elif net.op == 'r' or net.op == '@':
+                pass  # registers and memory write ports have no logic function
+            else:
+                raise core.PyrtlError('FastSimulation cannot handle primitive "%s"' % net.op)
+
+        return prog
+
+
+# ----------------------------------------------------------------
 #    ___  __        __   ___
 #     |  |__)  /\  /  ` |__
 #     |  |  \ /~~\ \__, |___
@@ -372,6 +529,11 @@ class SimulationTrace(object):
                                   'to track (try passing name to WireVector)')
         for w in self.trace:
             self.trace[w].append(value_map[w])
+
+    def add_fast_step(self, fastsim):
+        """ Add the fastsim context to the trace. """
+        for w in self.trace:
+            self.trace[w].append(fastsim.context[fastsim.varname(w)])
 
     def print_trace(self, file=sys.stdout):
         if len(self.trace) == 0:

@@ -281,12 +281,12 @@ def output_to_trivialgraph(file, block=None):
     for (frm, to) in edges:
         print >> file, frm, to, edge_names.get((frm, to), '')
 
+
 # ----------------------------------------------------------------
 #         ___  __          __   __
 #   \  / |__  |__) | |    /  \ / _`
 #    \/  |___ |  \ | |___ \__/ \__>
 #
-
 
 def output_to_verilog(file, block=None):
     """ Walk the block and output it in verilog format to the open file """
