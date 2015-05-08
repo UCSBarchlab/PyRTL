@@ -280,7 +280,7 @@ class Simulation(object):
 #
 
 class FastSimulation(object):
-    """A class for simulating blocks of logic step by step."""
+    """A class for running JIT implementations of blocks."""
 
     def __init__(
             self, register_value_map=None, memory_value_map=None,
@@ -312,7 +312,6 @@ class FastSimulation(object):
         # set constants to their set values
         for w in self.block.wirevector_subset(wire.Const):
             self.context[self.varname(w)] = w.val
-            assert isinstance(w.val, int)  # for now
 
         # set memories to their passed values
         if memory_value_map is not None:
@@ -321,29 +320,33 @@ class FastSimulation(object):
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
-            if w not in self.context:
+            if self.varname(w) not in self.context:
                 self.context[self.varname(w)] = default_value
 
         s = self.compiled()
-        print s
         self.logic_function = compile(s, '<string>', 'exec')
 
     def step(self, provided_inputs):
+
+        #for w in self.block.wirevector_subset():
+        #    print "%s [%s]:  %s" % (self.varname(w), w, str(self.context[self.varname(w)]))
+
+        # update state
+        for net in self.block.logic:  # walk through the nets unordered
+            if net.op == 'r':
+                dest = net.dests[0]
+                arg = net.args[0]
+                mask = (1 << len(dest)) - 1
+                # print '%s [%d]  <====  %s [%d]' % (dest, self.context[self.varname(dest)], arg, self.context[self.varname(arg)])
+                self.context[self.varname(dest)] = mask & self.context[self.varname(arg)]
+            elif net.op == '@':
+                pass  # WRITE ME!!!!!!!!!!!
+
         # update inputs
         for k, v in provided_inputs.items():
             self.context[self.varname(k)] = v
 
-        # update register values
-        if '__next' in self.context:
-            next = self.context['__next']
-            self.context['__next'] = None
-            self.context.update(next)
-
         # propagate through logic
-        # print
-        # print '-----------------------------------'
-        # for w in self.block.wirevector_subset():
-        #     print w.name + ":  " + str(self.context[self.varname(w)])
         exec self.logic_function in self.context
 
         if self.tracer is not None:
@@ -375,6 +378,7 @@ class FastSimulation(object):
             }
 
         for net in self.block:
+            prog += '#  ' + str(net) + '\n'
             if net.op in simple_func:
                 argvals = [self.varname(arg) for arg in net.args]
                 result = simple_func[net.op](*argvals)
@@ -511,6 +515,9 @@ class SimulationTrace(object):
                 for w in block.wirevector_set
                 if not is_internal_name(w.name)
                 }
+        elif wirevector_subset is 'all':
+            self.trace = {w: [] for w in block.wirevector_set}
+            print self.trace
         else:
             self.trace = {w: [] for w in wirevector_subset}
 
