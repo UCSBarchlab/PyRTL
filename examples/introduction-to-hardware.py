@@ -131,14 +131,14 @@ def attempt3_hardware_fibonacci(n, bitwidth):
 # enough along that we can simulate the design and see what happens...
 
 
-def attempt3_hardware_fibonacci(n, req, bitwidth):
+def attempt4_hardware_fibonacci(n, req, bitwidth):
     a = pyrtl.Register(bitwidth, 'a')
     b = pyrtl.Register(bitwidth, 'b')
     i = pyrtl.Register(bitwidth, 'i')
     local_n = pyrtl.Register(bitwidth, 'local_n')
     done = pyrtl.WireVector(bitwidth=1, name='done')
 
-    with ConditionalUpdate() as condition:
+    with pyrtl.ConditionalUpdate() as condition:
         with condition(req):
             local_n.next |= n
             i.next |= 0

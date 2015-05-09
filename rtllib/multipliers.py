@@ -9,7 +9,7 @@ def main():
     # test_simple_mult()
     # test_wallace_tree()
     # test_wallace_timing()
-     test_modulus()
+    test_modulus()
     # test_conditional()
 
 
@@ -47,21 +47,20 @@ def simple_mult(A, B, start, done):
     return accum
 
 
-
 def conditional_broken(A, B, C):
 
-    #not_zero_vector = Const(2**2, bitwidth=3)
+    # not_zero_vector = Const(2**2, bitwidth=3)
     all_ones = Const(1, bitwidth=3)
-    #zero_vector = WireVector(bitwidth=3)
-    #output = WireVector(bitwidth=3)
+    # zero_vector = WireVector(bitwidth=3)
+    # output = WireVector(bitwidth=3)
 
     zero_vector = WireVector(bitwidth=3)
     zero_vector <<= 5
 
     zero_vector.name = "it_is_four"
 
-    #with ConditionalUpdate(zero_vector[0] == 1):
-    zero_vector <<= mux(zero_vector[0] == 1, zero_vector, zero_vector + all_ones)  
+    # with ConditionalUpdate(zero_vector[0] == 1):
+    zero_vector <<= mux(zero_vector[0] == 1, zero_vector, zero_vector + all_ones)
 
     zero_vector.name = "what is it"
 
@@ -70,15 +69,13 @@ def conditional_broken(A, B, C):
 
 def test_conditional():
     input_length = 4
-    a, b, n = Input(input_length, "ignore"), Input(input_length, "ignore2"), Input(input_length, "ignore3")
+    a, b, n = [Input(input_length, name) for name in 'ignore ingore2 ignore3'.split()]
 
     modded = Output(input_length*2, "ignore4")
-
 
     modded <<= conditional_broken(a, b, n)
 
     aval, bval, nval = 1, 2, 3
-
 
     sim_trace = SimulationTrace()
     sim = Simulation(tracer=sim_trace)
@@ -198,68 +195,66 @@ def extended_gcd(aa, bb):
         x, lastx = lastx - quotient*x, x
         y, lasty = lasty - quotient*y, y
     return lastremainder, lastx * (-1 if aa < 0 else 1), lasty * (-1 if bb < 0 else 1)
- 
+
+
 def modinv(a, m):
     g, x, y = extended_gcd(a, m)
     if g != 1:
         raise ValueError
     return x % m
 
-def another_montgomery_multiplier(A,B,N):
-    
+
+def another_montgomery_multiplier(A, B, N):
     assert len(A) == len(B) == len(N)
     k = len(A)
 
-    P = WireVector(bitwidth = k)
-    P <<= 0 
-
+    P = WireVector(bitwidth=k)
+    P <<= 0
 
     for i in range(0, k):
-        #temp <<= 0
+        # temp <<= 0
         P = P + (A & B[i].sign_extended(k))
-        #P.name = "p_after_addition" + str(i)
+        # P.name = "p_after_addition" + str(i)
 
-        #with ConditionalUpdate(P[0] == 1):
-        #    P |= P + N 
-        P = mux(P[0] == 1, falsecase = P, truecase = P + N)  
-        #P.name = "p_after_modulus" + str(i)
+        # with ConditionalUpdate(P[0] == 1):
+        #    P |= P + N
+        P = mux(P[0] == 1, falsecase=P, truecase=(P + N))
+        # P.name = "p_after_modulus" + str(i)
 
         P = P[1:]
-        #P.name = "p_after_division" + str(i)
+        # P.name = "p_after_division" + str(i)
 
-    #with ConditionalUpdate(P > N):
+    # with ConditionalUpdate(P > N):
     #    P = P - N
-    P = mux(P >= N, falsecase = P, truecase = P - N)  
-    
+    P = mux(P >= N, falsecase=P, truecase=(P - N))
+
     P.name = "p_halfway"
-    
+
     # round 2
-    newP = WireVector(bitwidth = k)
+    newP = WireVector(bitwidth=k)
     newP <<= 0
 
-    r = Const(9, bitwidth = k)
-    #r <<= 2**k #this is 16 -> do temp*16%13  = 12
+    r = Const(9, bitwidth=k)
+    # r <<= 2**k #this is 16 -> do temp*16%13  = 12
 
     for i in range(0, k):
         newP = newP + (r & P[i].sign_extended(len(r)))
 
         newP.name = "p_afteraddition" + str(i)
-        #with ConditionalUpdate(newP[0] == 1):
+        # with ConditionalUpdate(newP[0] == 1):
         #    newP |= newP + N
-        newP = mux(newP[0] == 1, falsecase = newP, truecase = newP + N)  
+        newP = mux(newP[0] == 1, falsecase=newP, truecase=(newP + N))
         newP.name = "p_after_modulus" + str(i)
 
         newP = newP[1:]
         newP.name = "p_after_division" + str(i)
 
-    #with ConditionalUpdate(newP > N):
+    # with ConditionalUpdate(newP > N):
     #    newP |= newP - N
-    newP = mux(newP >= N, falsecase = newP, truecase = newP - N)  
+    newP = mux(newP >= N, falsecase=newP, truecase=(newP - N))
     newP.name = "p_final"
-    
+
     return newP
-    
-    #return P
 
 
 def test_modulus():
@@ -268,16 +263,15 @@ def test_modulus():
 
     modded = Output(input_length*2, "Modulus")
 
-
     modded <<= another_montgomery_multiplier(a, b, n)
 
     print modinv(16, 11)
 
-    # A B N  Magic 
+    # A B N  Magic
     # 3 7 5  1
     # A Magic N => x
     # B Magic N => y
-    # x * y N => z 
+    # x * y N => z
     # z Magic N => result
     aval, bval, nval = 4, 1, 5
     trueval = Output(16, "True Answer")
@@ -288,5 +282,7 @@ def test_modulus():
     sim.step({a: aval, b: bval, n: nval})
 
     sim_trace.render_trace()
+
+
 if __name__ == "__main__":
     main()
