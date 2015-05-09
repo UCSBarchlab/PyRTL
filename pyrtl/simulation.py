@@ -313,10 +313,12 @@ class FastSimulation(object):
         for w in self.block.wirevector_subset(wire.Const):
             self.context[self.varname(w)] = w.val
 
-        # set memories to their passed values
+        # set memories to their passed values or default value
+        self.context['fastsim_mem'] = {}
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
-                self.context[self.varname(mem)] = mem_map
+                for addr, value in mem_map.items():
+                    self.context['fastsim_mem'][(mem.id, addr)] = value
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
@@ -327,20 +329,20 @@ class FastSimulation(object):
         self.logic_function = compile(s, '<string>', 'exec')
 
     def step(self, provided_inputs):
-
-        #for w in self.block.wirevector_subset():
-        #    print "%s [%s]:  %s" % (self.varname(w), w, str(self.context[self.varname(w)]))
-
         # update state
         for net in self.block.logic:  # walk through the nets unordered
             if net.op == 'r':
                 dest = net.dests[0]
                 arg = net.args[0]
                 mask = (1 << len(dest)) - 1
-                # print '%s [%d]  <====  %s [%d]' % (dest, self.context[self.varname(dest)], arg, self.context[self.varname(arg)])
                 self.context[self.varname(dest)] = mask & self.context[self.varname(arg)]
             elif net.op == '@':
-                pass  # WRITE ME!!!!!!!!!!!
+                memid = net.op_param[0]
+                write_addr = self.context[self.varname(net.args[0])]
+                write_val = self.context[self.varname(net.args[1])]
+                write_enable = self.context[self.varname(net.args[2])]
+                if write_enable:
+                    self.context['fastsim_mem'][(memid, write_addr)] = write_val
 
         # update inputs
         for k, v in provided_inputs.items():
@@ -423,9 +425,9 @@ class FastSimulation(object):
                 index = '(%d, %s)' % (memid, read_addr)
                 result = self.varname(net.dests[0])
                 mask = str((1 << len(net.dests[0])) - 1)
-                expr = 'fs_mem%d.get(%s, %s)' % (memid, index, self.default_value)
-                prog += '%s = %s & (%s)\n' % (result, mask, expr)
-                
+                expr = 'fastsim_mem.get(%s, %s)' % (index, self.default_value)
+                prog += '%s = %s & %s\n' % (result, mask, expr)
+
             elif net.op == 'r' or net.op == '@':
                 pass  # registers and memory write ports have no logic function
             else:
