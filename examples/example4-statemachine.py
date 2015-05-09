@@ -1,4 +1,4 @@
-""" Example 4:  A State Machine built with ConditionalUpdate
+""" Example 3:  A State Machine built with ConditionalUpdate
 
     In this example we describe how ConditionalUpdate works in the context of
     a vending machine that will dispense an item when it has received 4 tokens.

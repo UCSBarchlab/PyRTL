@@ -115,7 +115,7 @@ def get_block(*arglist):
     """
     import memory
 
-    block = None
+    blocks = set()
     for arg in arglist:
         if isinstance(arg, memory._MemIndexed):
             argblock = arg.mem.block
@@ -123,14 +123,17 @@ def get_block(*arglist):
             argblock = arg.block
         else:
             argblock = None
+        blocks.add(argblock)
 
-        if block and block is not argblock:
-            raise core.PyrtlError('get_block passed WireVectors from different blocks')
-        else:
-            block = argblock
+    blocks.difference_update({None})  # remove the non block elements
 
-    # use working block is block is still None
-    block = core.working_block(block)
+    if len(blocks) > 1:
+        raise core.PyrtlError('get_block passed WireVectors from different blocks')
+    elif len(blocks):
+        block = blocks.pop()
+    else:
+        block = core.working_block()
+
     return block
 
 
