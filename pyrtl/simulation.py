@@ -330,17 +330,19 @@ class FastSimulation(object):
 
     def step(self, provided_inputs):
         # update state
-        for net in self.block.logic:  # walk through the nets unordered
+        # MORE HERE -- walk in reverse topo order instead of making copy?
+        self.prior_context = self.context.copy()
+        for net in self.block.logic:  # unordered walk
             if net.op == 'r':
                 dest = net.dests[0]
                 arg = net.args[0]
                 mask = (1 << len(dest)) - 1
-                self.context[self.varname(dest)] = mask & self.context[self.varname(arg)]
+                self.context[self.varname(dest)] = mask & self.prior_context[self.varname(arg)]
             elif net.op == '@':
                 memid = net.op_param[0]
-                write_addr = self.context[self.varname(net.args[0])]
-                write_val = self.context[self.varname(net.args[1])]
-                write_enable = self.context[self.varname(net.args[2])]
+                write_addr = self.prior_context[self.varname(net.args[0])]
+                write_val = self.prior_context[self.varname(net.args[1])]
+                write_enable = self.prior_context[self.varname(net.args[2])]
                 if write_enable:
                     self.context['fastsim_mem'][(memid, write_addr)] = write_val
 
@@ -519,7 +521,6 @@ class SimulationTrace(object):
                 }
         elif wirevector_subset is 'all':
             self.trace = {w: [] for w in block.wirevector_set}
-            print self.trace
         else:
             self.trace = {w: [] for w in wirevector_subset}
 

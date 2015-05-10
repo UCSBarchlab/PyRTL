@@ -89,6 +89,19 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.r.next <<= 1 + self.r
         self.check_trace('r 01234567\n')
 
+    def test_bitslice_and_concat_simulation(self):
+        left = self.r[0:-1]
+        right = pyrtl.Const(1, bitwidth=1)
+        self.r.next <<= pyrtl.concat(left, right)
+        self.check_trace('r 01377777\n')
+
+    def test_bitslice2_and_concat_simulation(self):
+        left = self.r[:-1]
+        right = pyrtl.Const(1, bitwidth=1)
+        self.r.next <<= pyrtl.concat(left, right)
+        self.check_trace('r 01377777\n')
+
+
 class TestRTLSimulationInputValidation(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -276,6 +289,27 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
         output = StringIO.StringIO()
         self.sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
+
+    def test_simple2_memblock(self):
+        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+        input_signals = {}
+        input_signals[0] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x7}
+        input_signals[1] = {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 1, self.write_data: 0x6}
+        input_signals[2] = {self.read_addr1: 0, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x5}
+        input_signals[3] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x4}
+        input_signals[4] = {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 1, self.write_data: 0x3}
+        input_signals[5] = {self.read_addr1: 2, self.read_addr2: 2, self.write_addr: 2, self.write_data: 0x2}
+        input_signals[6] = {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 0, self.write_data: 0x1}
+        input_signals[7] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 1, self.write_data: 0x0}
+        input_signals[8] = {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x7}
+        input_signals[9] = {self.read_addr1: 2, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x6}
+        for i in xrange(10):
+            self.sim.step(input_signals[i])
+
+        output = StringIO.StringIO()
+        self.sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), 'o1 0077653107\no2 0076452310\n')
+
 
     def test_synth_simple_memblock(self):
 

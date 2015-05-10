@@ -42,18 +42,18 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
 
         if self.op in 'w~&|^n+-*<>=xcsr':
             retval = ''.join([lhs, '  <-- ', self.op, ' --  ', rhs, ' ', options])
-        elif self.op is 'm':
+        elif self.op == 'm':
             memid, memblock = self.op_param
             extrainfo = 'memid=' + str(memid)
             retval = ''.join([lhs, '  <-- m --  ', memblock.name, '[', rhs, '] (', extrainfo, ')'])
-        elif self.op is '@':
+        elif self.op == '@':
             memid, memblock = self.op_param
             addr, data, we = [str(x) for x in self.args]
             extrainfo = 'memid=' + str(memid)
             retval = ''.join([memblock.name, '[', addr, '] <-- @ --  ', data,
                              ' we=', we, ' (', extrainfo, ')'])
         else:
-            raise PyrtlInternalError('error, unknown op')
+            raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
         return retval
 
     def __eq__(self, other):
