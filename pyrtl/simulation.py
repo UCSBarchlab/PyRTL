@@ -330,7 +330,8 @@ class FastSimulation(object):
 
     def step(self, provided_inputs):
         # update state
-        # MORE HERE -- walk in reverse topo order instead of making copy?
+        # Note: Performance could be improved by walking backwards through block
+        # in topo order, rather than making a full copy of the state every time
         self.prior_context = self.context.copy()
         for net in self.block.logic:  # unordered walk
             if net.op == 'r':

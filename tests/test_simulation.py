@@ -101,6 +101,12 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.r.next <<= pyrtl.concat(left, right)
         self.check_trace('r 01377777\n')
 
+    def test_reg_to_reg_simulation(self):
+        self.r2 = pyrtl.Register(bitwidth=self.bitwidth, name='r2')
+        self.r.next <<= self.r2
+        self.r2.next <<= self.r + pyrtl.Const(2, bitwidth=self.bitwidth)
+        self.check_trace(' r 00224466\nr2 02244660\n')
+        
 
 class TestRTLSimulationInputValidation(unittest.TestCase):
     def setUp(self):
