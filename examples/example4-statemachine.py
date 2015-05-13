@@ -31,6 +31,10 @@ WAIT, TOK1, TOK2, TOK3, DISPENSE, REFUND = [pyrtl.Const(x, bitwidth=3) for x in 
 # with a simple mux -- for people coming from software it is important to remember that this
 # is describing a big logic function NOT an "if-then-else" clause.  All of these things will
 # execute straight through when "build_everything" is called.  More comments after the code.
+#
+# One more thing: ConditionalUpdate might not always be the best item to use.
+# if the update is simple, a regular mux(sel_wire, falsecase=f_wire, truecase=t_wire)
+# can be sufficient.
 
 with pyrtl.ConditionalUpdate() as condition:
     with condition(req_refund):  # signal of highest precedence
