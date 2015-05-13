@@ -33,7 +33,7 @@ class TestWallace(unittest.TestCase):
 
         true_result = [a * b for a, b in zip(xvals, yvals)]
         multiplier_result = sim_trace.trace[product]
-        sim_trace.render_trace(symbol_len=12)
+        sim_trace.render_trace(symbol_len=12)  # so that enough bits are printed in the render trace
         assert (multiplier_result == true_result)
         print "test passed!"
 
