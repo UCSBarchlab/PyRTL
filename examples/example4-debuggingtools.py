@@ -131,6 +131,8 @@ dummy_wv.custom_value_028493 = 13
 # this example
 pyrtl.working_block().remove_wirevector(dummy_wv)
 
+# ---- Trivial Graph Format
+
 # Finally, there is a handy way to view your hardware creations as a graph.  The function
 # output_to_trivialgraph will render your hardware a formal that you can then open with the
 # free software "yEd" (http://en.wikipedia.org/wiki/YEd).  There are options under the
