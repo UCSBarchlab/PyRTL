@@ -163,12 +163,12 @@ def montgomery_mult(a,b,n,nval,input_length):
 # except that the additions are replaced with mod multiplications
 
 def test_modulus():
-    input_length = 5
+    input_length = 10
     a, b, n = Input(input_length, "a"), Input(input_length, "b"), Input(input_length, "n")
 
     c = Output(input_length * 2, "Montgomery result")
     
-    aval, bval, nval = 12, 3, 13
+    aval, bval, nval = 371, 503, 47
 
     c <<= montgomery_mult(a,b,n,nval,input_length)
    
@@ -181,5 +181,9 @@ def test_modulus():
     sim.step({a: aval, b: bval, n: nval})
 
     sim_trace.render_trace()
+    
+    output = sim_trace.trace
+    print "Result in Decimal: " + str(output[c])
+
 if __name__ == "__main__":
     main()
