@@ -86,15 +86,43 @@ R^2 mod n * R_inverse is just R
 def montgomery_multiplier(A,B,N):
     
     #assert len(A) == len(B) == len(N)
-
     '''
 
     CHANGE P INTO A REGISTER - store it at each stage of the for loop,
     instead of adding it to the circuit
 
     '''
-    
+
     k = len(A)
+
+    P = WireVector(bitwidth = k)
+    P <<= 0 
+    
+    for i in range(0, k):
+        P = P + (A & B[i].sign_extended(k))
+        #P.name = "p_after_addition" + str(i)
+
+        P = mux(P[0] == 1, falsecase = P, truecase = P + N)  
+        #P.name = "p_after_modulus" + str(i)
+
+        P = P[1:]
+        #P.name = "p_after_division" + str(i)
+        
+    
+    P = P[:k]
+    
+    P = mux(P >= N, falsecase = P, truecase = P - N)  
+    
+    return P
+
+def mod_pro(A,B,N,k):
+    '''
+
+    CHANGE P INTO A REGISTER - store it at each stage of the for loop,
+    instead of adding it to the circuit
+
+    '''
+
 
     P = WireVector(bitwidth = k)
     P <<= 0 
@@ -109,72 +137,45 @@ def montgomery_multiplier(A,B,N):
         P = P[1:]
         #P.name = "p_after_division" + str(i)
 
+
+    P = P[:k]
+
     P = mux(P >= N, falsecase = P, truecase = P - N)  
     
     return P
 
-    #P.name = "p_halfway"
-    '''
-    newP = WireVector(bitwidth = k)
-    newP <<= 0
-
-    #wtf why does 9 just work all the time?
-    r = Const(r_inverse, bitwidth = k)
-
-    for i in range(0, k):
-        newP = newP + (r & P[i].sign_extended(len(r)))
-        #newP.name = "p_afteraddition" + str(i)
-
-        newP = mux(newP[0] == 1, falsecase = newP, truecase = newP + N)  
-        #newP.name = "p_after_modulus" + str(i)
-
-        newP = newP[1:]
-        #newP.name = "p_after_division" + str(i)
-
-    newP = mux(newP >= N, falsecase = newP, truecase = newP - N)  
-
-    #newP.name = "p_final"
-    
-    return newP
-    '''
-    
-
-
+def montgomery_mult():
+    print 'yo'
 #modular exponentiation will be just like mod addition, 
 # except that the additions are replaced with mod multiplications
 
 def test_modulus():
-    input_length = 9
+    input_length = 4
     a, b, n = Input(input_length, "a"), Input(input_length, "b"), Input(input_length, "n")
 
-    modded = Output(input_length*2, "Montgomery result")
+    c = Output(input_length * 2, "Montgomery result")
+    
 
 
-    aval, bval, nval = 256, 1, 11
+    aval, bval, nval = 15, 1, 7
+
+    precomputed_value = Const(256 % nval, bitwidth = input_length)
+    its_a_one = Const(1, bitwidth = input_length)
+
+    a_residue = WireVector(bitwidth = input_length)
+    b_residue = WireVector(bitwidth = input_length)
+    c_residue = WireVector(bitwidth = input_length)
+
     r_inverse = modinv(2**input_length, nval)
     print r_inverse 
 
-    #14
-    modded <<= montgomery_multiplier(a, b, n)
-    #9 / 5
-    #2 / 6
-    #a / 8
-    #6 / 7
 
-    
 
-    # two residues is 5 * 6 = 2
-    # 2  * 1 = 6
-    # A B N  Magic 
-    # 4 7 13  9
-    # A Magic N => x
-    # B Magic N => y
-    # x * y N => z 
-    # z Magic N => result
+    a_residue <<= mod_pro(a, precomputed_value, n, len(a))
+    b_residue <<= mod_pro(b, precomputed_value, n, len(a))
+    c_residue <<= mod_pro(a_residue, b_residue, n, len(a))
+    c <<= mod_pro(c_residue, its_a_one, n, len(a))
    
-    
-
-    
 
     trueval = Output(16, "True Answer")
     trueval <<= (aval * bval) % nval
