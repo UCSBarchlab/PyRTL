@@ -305,8 +305,8 @@ class Const(WireVector):
     of the specified bitwidth.  If the bitwidth is too short to represent
     the specified constant then an error is raised.  If a possitive
     integer is specified the bitwidth can be infered from the constant.
-    If a negative integer is provided it is converted to a two's complement
-    representation of the specified bitwidth."""
+    If a negative integer is provided in the simulation, it is converted
+    to a two's complement representation of the specified bitwidth."""
 
     code = 'C'
 
