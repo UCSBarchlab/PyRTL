@@ -123,7 +123,6 @@ def mod_pro(A,B,N,k):
 
     '''
 
-
     P = WireVector(bitwidth = k)
     P <<= 0 
 
@@ -144,8 +143,19 @@ def mod_pro(A,B,N,k):
     
     return P
 
-def montgomery_mult(a,b,n,nval,input_length):
+def mod_exp(m, e, n):
+    input_length = len(m)
 
+    precomputed_value = Const(2**(input_length * 2) % nval, bitwidth = input_length)
+
+    n_prime = modinv(m, n)
+
+    m_residue = WireVector(bitwidth = input_length)
+
+    m_residue <<= mod_pro(m, precomputed_value, n, )
+
+def montgomery_mult(a,b,n,nval):
+    input_length = len(a)
     precomputed_value = Const(2**(input_length * 2) % nval, bitwidth = input_length)
 
     its_a_one = Const(1, bitwidth = input_length)
@@ -154,10 +164,10 @@ def montgomery_mult(a,b,n,nval,input_length):
     b_residue = WireVector(bitwidth = input_length)
     c_residue = WireVector(bitwidth = input_length)
 
-    a_residue <<= mod_pro(a, precomputed_value, n, len(a))
-    b_residue <<= mod_pro(b, precomputed_value, n, len(a))
-    c_residue <<= mod_pro(a_residue, b_residue, n, len(a))
-    return mod_pro(c_residue, its_a_one, n, len(a))
+    a_residue <<= mod_pro(a, precomputed_value, n, input_length)
+    b_residue <<= mod_pro(b, precomputed_value, n, input_length)
+    c_residue <<= mod_pro(a_residue, b_residue, n, input_length)
+    return mod_pro(c_residue, its_a_one, n, input_length)
 
 #modular exponentiation will be just like mod addition, 
 # except that the additions are replaced with mod multiplications
@@ -170,7 +180,7 @@ def test_modulus():
     
     aval, bval, nval = 371, 503, 47
 
-    c <<= montgomery_mult(a,b,n,nval,input_length)
+    c <<= montgomery_mult(a,b,n,nval)
    
 
     trueval = Output(16, "True Answer")
