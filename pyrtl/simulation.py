@@ -165,7 +165,7 @@ class Simulation(object):
         default behavior is to mask the upper bits of value and return that
         new value.
         """
-        return val & ((1 << len(wirevector))-1)
+        return val & wirevector.bitmask
 
     def execute(self, net):
         """Handle the combinational logic update rules for the given net.
@@ -337,8 +337,8 @@ class FastSimulation(object):
             if net.op == 'r':
                 dest = net.dests[0]
                 arg = net.args[0]
-                mask = (1 << len(dest)) - 1
-                self.context[self.varname(dest)] = mask & self.prior_context[self.varname(arg)]
+                priorval = self.prior_context[self.varname(arg)]
+                self.context[self.varname(dest)] = dest.bitmask & priorval
             elif net.op == '@':
                 memid = net.op_param[0]
                 write_addr = self.prior_context[self.varname(net.args[0])]
@@ -348,8 +348,8 @@ class FastSimulation(object):
                     self.context['fastsim_mem'][(memid, write_addr)] = write_val
 
         # update inputs
-        for k, v in provided_inputs.items():
-            self.context[self.varname(k)] = v
+        for wire, value in provided_inputs.items():
+            self.context[self.varname(wire)] = wire.bitmask & value
 
         # propagate through logic
         exec self.logic_function in self.context
@@ -387,19 +387,19 @@ class FastSimulation(object):
             if net.op in simple_func:
                 argvals = [self.varname(arg) for arg in net.args]
                 result = simple_func[net.op](*argvals)
-                mask = str((1 << len(net.dests[0])) - 1)
+                mask = str(net.dests[0].bitmask)
                 prog += self.varname(net.dests[0]) + ' = ' + mask + ' & ' + result + '\n'
             elif net.op == 'x':
                 select = self.varname(net.args[0])
                 a = self.varname(net.args[1])
                 b = self.varname(net.args[2])
-                mask = str((1 << len(net.dests[0])) - 1)
+                mask = str(net.dests[0].bitmask)
                 result = self.varname(net.dests[0])
                 prog += '%s = %s & ((%s) if (%s==0) else (%s))\n' %\
                         (result, mask, a, select, b)
             elif net.op == 'c':
                 result = self.varname(net.dests[0])
-                mask = str((1 << len(net.dests[0])) - 1)
+                mask = str(net.dests[0].bitmask)
                 expr = ''
                 for i in range(len(net.args)):
                     if expr is not '':
@@ -410,7 +410,7 @@ class FastSimulation(object):
             elif net.op == 's':
                 source = self.varname(net.args[0])
                 result = self.varname(net.dests[0])
-                mask = str((1 << len(net.dests[0])) - 1)
+                mask = str(net.dests[0].bitmask)
                 expr = ''
                 i = 0
                 for b in net.op_param:
@@ -427,7 +427,7 @@ class FastSimulation(object):
                 read_addr = self.varname(net.args[0])
                 index = '(%d, %s)' % (memid, read_addr)
                 result = self.varname(net.dests[0])
-                mask = str((1 << len(net.dests[0])) - 1)
+                mask = str(net.dests[0].bitmask)
                 expr = 'fastsim_mem.get(%s, %s)' % (index, self.default_value)
                 prog += '%s = %s & %s\n' % (result, mask, expr)
 

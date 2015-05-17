@@ -241,12 +241,17 @@ class WireVector(object):
     def nand(self, other):
         return self.logicop(other, 'n')
 
+    @property
+    def bitmask(self):
+        """ Return an integer appropriate as a bitmask for this wirevector. """
+        return (1 << len(self)) - 1
+
     def sign_extended(self, bitwidth):
-        """ return a sign extended wirevector derived from self """
+        """ Return a sign extended wirevector derived from self """
         return self._extend_with_bit(bitwidth, self[-1])
 
     def zero_extended(self, bitwidth):
-        """ return a zero extended wirevector derived from self """
+        """ Return a zero extended wirevector derived from self """
         return self._extend_with_bit(bitwidth, 0)
 
     def _extend_with_bit(self, bitwidth, extbit):
@@ -338,8 +343,7 @@ class Const(WireVector):
                         'negative Const values must have bitwidth declared explicitly')
                 if (val >> bitwidth-1) != -1:
                     raise core.PyrtlError('insufficient bits for negative number')
-                mask = ((1 << bitwidth)-1)
-                num = val & mask  # result is a twos complement value
+                num = val & ((1 << bitwidth) - 1)  # result is a twos complement value
         elif isinstance(val, basestring):
             if bitwidth is not None:
                 raise core.PyrtlError('error, bitwidth parameter of const should be'
