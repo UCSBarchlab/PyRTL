@@ -20,22 +20,32 @@ nosetests
 check_exit_code $? 'PyRTL core nose tests failed. Exiting'
 
 echo 
-echo ===== Checking for Common Errors =====================================
+echo ===== Checking Core  =====================================
+
 pylint -E pyrtl/*.py
 check_exit_code $? 'PyRTL core lint check failed. Exiting.'
+
+pep8 --max-line-length=100 pyrtl/*.py
+check_exit_code $? 'PyRTL core pep8 check failed. Exiting.'
+
+echo 
+echo ===== Checking Examples  =====================================
+
 pylint -E examples/*.py
 check_exit_code $? 'PyRTL example link check failed. Exiting.'
+
+pep8 --max-line-length=100 examples/*.py
+check_exit_code $? 'PyRTL examples pep8 check failed. Exiting.'
+
+echo 
+echo ===== Checking rtllib ============================================
+
 pylint -E rtllib/*.py
 check_exit_code $? 'PyRTL library link check failed. Exiting.'
 
-echo 
-echo ===== Checking PEP8 Style ============================================
-pep8 --max-line-length=100 pyrtl/*.py
-check_exit_code $? 'PyRTL core pep8 check failed. Exiting.'
-pep8 --max-line-length=100 examples/*.py
-check_exit_code $? 'PyRTL examples pep8 check failed. Exiting.'
 pep8 --max-line-length=100 rtllib/*.py
 check_exit_code $? 'PyRTL library pep8 check failed. Exiting.'
+
 
 echo
 echo 'Tests passed.'
