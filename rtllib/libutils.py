@@ -1,5 +1,4 @@
 import pyrtl
-from pyrtl import *
 
 
 def match_bitwidth(*args):
