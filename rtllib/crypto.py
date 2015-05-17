@@ -5,7 +5,8 @@ from pyrtl import *
 
 
 def main():
-     test_modulus()
+     test_mod_exp()
+     #test_modulus()
 
 def extended_gcd(aa, bb):
     lastremainder, remainder = abs(aa), abs(bb)
@@ -147,12 +148,32 @@ def mod_exp(m, e, n):
     input_length = len(m)
 
     precomputed_value = Const(2**(input_length * 2) % nval, bitwidth = input_length)
+    its_a_one = Const(1, bitwidth = input_length)
 
     n_prime = modinv(m, n)
 
     m_residue = WireVector(bitwidth = input_length)
+    c_residue = WireVector(bitwidth = input_length)
 
-    m_residue <<= mod_pro(m, precomputed_value, n, )
+    m_residue <<= mod_pro(m, precomputed_value, n, input_length)
+    c_residue <<= mod_pro(its_a_one, precomputed_value, n, input_length)
+    
+def stupid_exp(m,m2,e,n,nval):
+    input_length = len(m)
+    #precomputed_value = Const(2**(input_length * 2) % nval, bitwidth = input_length)
+
+    #its_a_one = Const(1, bitwidth = input_length)
+
+    #m_residue = WireVector(bitwidth = input_length)
+   
+    #accumulator = WireVector(bitwidth = input_length)
+    accumulator = montgomery_mult(m,m2,n,nval)
+    for i in range(0, e-2):
+        #accumulator = montgomery_mult(m,m2,n,nval)
+        accumulator = montgomery_mult(accumulator,m,n,nval)
+        
+
+    return accumulator
 
 def montgomery_mult(a,b,n,nval):
     input_length = len(a)
@@ -173,12 +194,12 @@ def montgomery_mult(a,b,n,nval):
 # except that the additions are replaced with mod multiplications
 
 def test_modulus():
-    input_length = 10
+    input_length = 4
     a, b, n = Input(input_length, "a"), Input(input_length, "b"), Input(input_length, "n")
 
     c = Output(input_length * 2, "Montgomery result")
     
-    aval, bval, nval = 371, 503, 47
+    aval, bval, nval = 5, 5, 7
 
     c <<= montgomery_mult(a,b,n,nval)
    
@@ -189,6 +210,28 @@ def test_modulus():
     sim_trace = SimulationTrace()
     sim = Simulation(tracer=sim_trace)
     sim.step({a: aval, b: bval, n: nval})
+
+    sim_trace.render_trace()
+    
+    output = sim_trace.trace
+    print "Result in Decimal: " + str(output[c])
+
+def test_mod_exp():
+    input_length = 6
+    a, a2, n = Input(input_length, "a"),Input(input_length, "a2"), Input(input_length, "n")
+    
+    aval, expval, nval = 2, 5, 7
+
+    c = Output(input_length * expval, "Montgomery result")
+
+    c <<= stupid_exp(a,a2,expval,n,nval)
+
+    trueval = Output(16, "True Answer")
+    trueval <<= (aval ** expval) % nval
+
+    sim_trace = SimulationTrace()
+    sim = Simulation(tracer=sim_trace)
+    sim.step({a: aval,a2:aval, n: nval})
 
     sim_trace.render_trace()
     
