@@ -32,7 +32,7 @@ def area_estimation(tech_in_nm, block=None):
     def gatecount_estimate(net):
         if net.op in 'w~sc':
             return 0
-        elif net.op in '&|':
+        elif net.op in '&|n':
             return 3 * len(net.arg[0])
         elif net.op in '^=<>x':
             return 18 * len(net.arg[0])
@@ -98,7 +98,7 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
             '~': lambda gate: 1,
             '&': lambda gate: 1,
             '|': lambda gate: 1,
-            '^': lambda gate: 1,
+            '^': lambda gate: 3,
             'n': lambda gate: 1,
             'w': lambda gate: 0,
             '+': lambda gate: len(gate.args[0])*3,

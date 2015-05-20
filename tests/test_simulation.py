@@ -34,6 +34,10 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.r.next <<= (~ self.r) & pyrtl.Const(6, bitwidth=self.bitwidth)
         self.check_trace('r 06060606\n')
 
+    def test_nand_simulation(self):
+        self.r.next <<= self.r.nand(pyrtl.Const(6, bitwidth=self.bitwidth))
+        self.check_trace('r 07171717\n')
+
     def test_or_simulation(self):
         result = self.r | pyrtl.Const(4, bitwidth=self.bitwidth)
         self.r.next <<= result

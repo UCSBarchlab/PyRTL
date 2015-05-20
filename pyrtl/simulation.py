@@ -179,6 +179,7 @@ class Simulation(object):
             '&': lambda l, r: l & r,
             '|': lambda l, r: l | r,
             '^': lambda l, r: l ^ r,
+            'n': lambda l, r: ~(l & r),
             '+': lambda l, r: l + r,
             '-': lambda l, r: l - r,
             '*': lambda l, r: l * r,
@@ -231,7 +232,7 @@ class Simulation(object):
         semantics of the primitive ops.  Function updates self.value and
         self.memvalue accordingly (using prior_value)
         """
-        if net.op in 'w~&|^+-*<>=xcsm':
+        if net.op in 'w~&|^n+-*<>=xcsm':
             return  # stateless elements and memory-read
         else:
             if net.op == 'r':

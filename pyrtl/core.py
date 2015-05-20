@@ -115,7 +115,7 @@ class Block(object):
 
     * Most logical and arithmetic ops are pretty self explanatory, each takes
       exactly two arguments and they should perform the arithmetic or logical
-      operation specified. OPS: ('&','|','^','+','-','*').  All inputs must
+      operation specified. OPS: ('&','|','^','n','+','-','*').  All inputs must
       be the same bitwidth.  Logical operations produce as many bits as are in
       the input, while '+' and '-' produce n+1 bits, and '*' produced 2n bits.
     * In addition there are some operations for performing comparisons
@@ -167,7 +167,7 @@ class Block(object):
         self.wirevector_set = set()  # set of all wirevectors
         self.wirevector_by_name = {}  # map from name->wirevector, used for performance
         # pre-synthesis wirevectors to post-synthesis vectors
-        self.legal_ops = set('w~&|^+-*<>=xcsrm@')  # set of legal OPS
+        self.legal_ops = set('w~&|^n+-*<>=xcsrm@')  # set of legal OPS
 
     def __str__(self):
         """String form has one LogicNet per line."""
@@ -354,11 +354,11 @@ class Block(object):
         # operation specific checks on arguments
         if net.op in 'w~rs' and len(net.args) != 1:
             raise PyrtlInternalError('error, op only allowed 1 argument')
-        if net.op in '&|^+-*<>=' and len(net.args) != 2:
+        if net.op in '&|^n+-*<>=' and len(net.args) != 2:
             raise PyrtlInternalError('error, op only allowed 2 arguments')
         if net.op in 'x' and len(net.args) != 3:
             raise PyrtlInternalError('error, op only allowed 3 arguments')
-        if net.op in '&|^+-*<>=' and len(set(x.bitwidth for x in net.args)) > 1:
+        if net.op in '&|^n+-*<>=' and len(set(x.bitwidth for x in net.args)) > 1:
             raise PyrtlInternalError('error, args have mismatched bitwidths')
         if net.op == 'x' and net.args[1].bitwidth != net.args[2].bitwidth:
             raise PyrtlInternalError('error, args have mismatched bitwidths')
@@ -372,7 +372,7 @@ class Block(object):
             raise PyrtlInternalError('error, mem write enable must be 1 bit')
 
         # operation specific checks on op_params
-        if net.op in 'w~&|^+-*<>=xcr' and net.op_param is not None:
+        if net.op in 'w~&|^n+-*<>=xcr' and net.op_param is not None:
             raise PyrtlInternalError('error, op_param should be None')
         if net.op == 's':
             if not isinstance(net.op_param, tuple):
@@ -391,7 +391,7 @@ class Block(object):
                 raise PyrtlInternalError('error, mem op requires second operand of a memory type')
 
         # check destination validity
-        if net.op in 'w~&|^r' and net.dests[0].bitwidth > net.args[0].bitwidth:
+        if net.op in 'w~&|^nr' and net.dests[0].bitwidth > net.args[0].bitwidth:
             raise PyrtlInternalError('error, upper bits of destination unassigned')
         if net.op in '<>=' and net.dests[0].bitwidth != 1:
             raise PyrtlInternalError('error, destination should be of bitwidth=1')
