@@ -26,12 +26,12 @@ class TestWallace(unittest.TestCase):
                  3729934380, 2613886118, 2953151095, 147816102, 4152319597, 1997891783, 1730619637,
                  3982325303, 3295060912, 4014860795, 1922107284, 2458815385]
 
+        true_result = [i * j for i, j in zip(xvals, yvals)]
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         for cycle in range(len(xvals)):
             sim.step({a: xvals[cycle], b: yvals[cycle]})
 
-        true_result = [a * b for a, b in zip(xvals, yvals)]
         multiplier_result = sim_trace.trace[product]
         sim_trace.render_trace(symbol_len=12)  # so that enough bits are printed in the render trace
         assert (multiplier_result == true_result)

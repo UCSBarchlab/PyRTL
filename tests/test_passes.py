@@ -357,6 +357,7 @@ class TestSynthOptTiming(unittest.TestCase):
 
         memory[readAdd1 & readAdd2] <<= readData1 ^ readData2
         dataOut <<= memory[writeAdd1 | writeAdd2]
+        self.everything_t_procedure()
 
 
 if __name__ == "__main__":
