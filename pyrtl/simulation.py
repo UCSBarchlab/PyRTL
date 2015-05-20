@@ -321,6 +321,13 @@ class FastSimulation(object):
                 for addr, value in mem_map.items():
                     self.context['fastsim_mem'][(mem.id, addr)] = value
 
+        for net in self.block.logic_subset('m'):
+            mem = net.op_param[1]
+            if isinstance(mem, memory.RomBlock):
+                if self.varname(mem) not in self.context:
+                    self.context[self.varname(mem)] = mem
+
+
         # set all other variables to default value
         for w in self.block.wirevector_set:
             if self.varname(w) not in self.context:
@@ -360,7 +367,7 @@ class FastSimulation(object):
 
     def varname(self, val):
         # TODO check if w.name is a legal python identifier
-        if isinstance(val, memory.MemBlock):
+        if isinstance(val, memory._MemReadBase):
             return 'fs_mem' + str(val.id)
         else:
             return val.name
@@ -423,13 +430,18 @@ class FastSimulation(object):
                 prog += '%s = %s & (%s)\n' % (result, mask, expr)
 
             elif net.op == 'm':
-                # memories act async for reads
-                memid = net.op_param[0]
                 read_addr = self.varname(net.args[0])
-                index = '(%d, %s)' % (memid, read_addr)
-                result = self.varname(net.dests[0])
                 mask = str(net.dests[0].bitmask)
-                expr = 'fastsim_mem.get(%s, %s)' % (index, self.default_value)
+                result = self.varname(net.dests[0])
+
+                if isinstance(net.op_param[1], memory.RomBlock):
+                    expr ='%s._get_read_data(%s)' % (self.varname(net.op_param[1]), read_addr)
+                else:
+                    # memories act async for reads
+                    memid = net.op_param[0]
+                    index = '(%d, %s)' % (memid, read_addr)
+                    expr = 'fastsim_mem.get(%s, %s)' % (index, self.default_value)
+
                 prog += '%s = %s & %s\n' % (result, mask, expr)
 
             elif net.op == 'r' or net.op == '@':
