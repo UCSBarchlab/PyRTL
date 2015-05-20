@@ -35,6 +35,16 @@ class TestWallace(unittest.TestCase):
         multiplier_result = sim_trace.trace[product]
         sim_trace.render_trace(symbol_len=12)  # so that enough bits are printed in the render trace
         assert (multiplier_result == true_result)
+
+        # now test under Fastsim
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.FastSimulation(tracer=sim_trace)
+        for cycle in range(len(xvals)):
+            sim.step({a: xvals[cycle], b: yvals[cycle]})
+
+        multiplier_result = sim_trace.trace[product]
+        sim_trace.render_trace(symbol_len=12)  # so that enough bits are printed in the render trace
+        assert (multiplier_result == true_result)
         print "test passed!"
 
     def test_wallace_tree_2(self):
