@@ -228,7 +228,10 @@ class WireVector(object):
         return outwire
 
     def __len__(self):
-        return self.bitwidth
+        if self.bitwidth is None:
+            return 0
+        else:
+            return self.bitwidth
 
     def __enter__(self):
         raise core.PyrtlError('error, WireVector cannot be used directly as a context.  '
