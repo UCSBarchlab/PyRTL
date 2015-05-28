@@ -5,8 +5,9 @@ from pyrtl import *
 
 
 def main():
-     test_mod_exp()
+     #test_mod_exp()
      #test_modulus()
+     test_rsa()
 
 def extended_gcd(aa, bb):
     lastremainder, remainder = abs(aa), abs(bb)
@@ -158,14 +159,15 @@ def mod_exp(m, e, n):
     m_residue <<= mod_pro(m, precomputed_value, n, input_length)
     c_residue <<= mod_pro(its_a_one, precomputed_value, n, input_length)
     
-def stupid_exp(m,m2,e,n,nval):
+def stupid_exp(m,e,n,nval):
     input_length = len(m)
     #precomputed_value = Const(2**(input_length * 2) % nval, bitwidth = input_length)
 
     #its_a_one = Const(1, bitwidth = input_length)
 
     #m_residue = WireVector(bitwidth = input_length)
-   
+    m2 = WireVector(bitwidth = input_length)
+    m2 <<= m
     #accumulator = WireVector(bitwidth = input_length)
     accumulator = montgomery_mult(m,m2,n,nval)
     for i in range(0, e-2):
@@ -174,6 +176,28 @@ def stupid_exp(m,m2,e,n,nval):
         
 
     return accumulator
+
+def rsa_encrypt(e,m):
+    p = 5
+    q = 7
+    n = Const(35, bitwidth = 12)
+
+    nval = p * q
+
+    c = stupid_exp(m,e, n, nval)
+
+    return c
+
+def rsa_decrypt(d,m):
+    p = 5
+    q = 7
+    n = Const(35, bitwidth = 12)
+
+    nval = p * q
+
+    c = stupid_exp(m,d, n, nval)
+
+    return c
 
 def montgomery_mult(a,b,n,nval):
     input_length = len(a)
@@ -192,6 +216,8 @@ def montgomery_mult(a,b,n,nval):
 
 #modular exponentiation will be just like mod addition, 
 # except that the additions are replaced with mod multiplications
+
+
 
 def test_modulus():
     input_length = 4
@@ -218,20 +244,45 @@ def test_modulus():
 
 def test_mod_exp():
     input_length = 6
-    a, a2, n = Input(input_length, "a"),Input(input_length, "a2"), Input(input_length, "n")
+    a, n = Input(input_length, "a"), Input(input_length, "n")
     
-    aval, expval, nval = 2, 5, 7
+    aval, expval, nval = 3, 4, 7
 
     c = Output(input_length * expval, "Montgomery result")
 
-    c <<= stupid_exp(a,a2,expval,n,nval)
+    c <<= stupid_exp(a,expval,n,nval)
 
     trueval = Output(16, "True Answer")
     trueval <<= (aval ** expval) % nval
 
     sim_trace = SimulationTrace()
     sim = Simulation(tracer=sim_trace)
-    sim.step({a: aval,a2:aval, n: nval})
+    sim.step({a: aval, n: nval})
+
+    sim_trace.render_trace()
+    
+    output = sim_trace.trace
+    print "Result in Decimal: " + str(output[c])
+
+def test_rsa():
+    input_length = 6
+    m = Input(input_length, "message")
+    
+    mval = 10
+    c = WireVector(input_length * 2, "Rsa encrypted")
+
+    message_after = Output(input_length * 2, "Rsa decrypted")
+
+    c <<= rsa_encrypt(5, m)
+
+    message_after <<= rsa_decrypt(5, c)
+
+    trueval = Output(16, "True Answer")
+    trueval <<= 5
+
+    sim_trace = SimulationTrace()
+    sim = Simulation(tracer=sim_trace)
+    sim.step({ m: mval})
 
     sim_trace.render_trace()
     

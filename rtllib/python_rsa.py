@@ -2,7 +2,7 @@ def rsa(p,q,M):
     n = p*q
     totient = (p-1)*(q-1)
     print "n,totient: ",n," ,",totient
-    e = 175
+    e = 5
     print "e: ",e
     d = modinv(e,totient)
     print "d :", d
@@ -25,4 +25,4 @@ def modinv(a, m):
         raise ValueError
     return x % m
 
-print "RSA: ", rsa(13,17,22)
+print "RSA: ", rsa(5,7,10)
