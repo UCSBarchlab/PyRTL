@@ -334,7 +334,7 @@ class Const(WireVector):
                 bitwidth = 1
             if bitwidth != 1:
                 raise core.PyrtlError('error, boolean has bitwidth not equal to 1')
-        elif isinstance(val, int):
+        elif isinstance(val, (int, long)):
             if val >= 0:
                 num = val
                 # infer bitwidth if it is not specified explicitly

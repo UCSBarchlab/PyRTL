@@ -65,7 +65,7 @@ class Simulation(object):
         # set constants to their set values
         for w in self.block.wirevector_subset(wire.Const):
             self.value[w] = w.val
-            assert isinstance(w.val, int)  # for now
+            assert isinstance(w.val, (int, long))  # for now
 
         # set memories to their passed values
         if memory_value_map is not None:

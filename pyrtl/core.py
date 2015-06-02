@@ -293,8 +293,8 @@ class Block(object):
             raise PyrtlError('Unknown wires found in net:\n    %s' % bad_wire_names)
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         allwires_minus_connected = allwires_minus_connected.difference(
-            self.wirevector_subset(wire.Input))
-        #   ^ allow inputs to be unconnected
+            self.wirevector_subset((wire.Input, wire.Const)))
+        #   ^ allow inputs and consts to be unconnected
         if len(allwires_minus_connected) > 0:
             bad_wire_names = '\n    '.join(str(x) for x in allwires_minus_connected)
             raise PyrtlError('Wires declared but not connected:\n    %s' % bad_wire_names)
