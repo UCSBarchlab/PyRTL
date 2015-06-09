@@ -5,9 +5,9 @@ from pyrtl import *
 
 
 def main():
-     test_mod_exp()
+     #test_mod_exp()
      #test_modulus()
-     #test_rsa()
+     test_rsa()
 
 def extended_gcd(aa, bb):
     lastremainder, remainder = abs(aa), abs(bb)
@@ -117,11 +117,46 @@ def montgomery_multiplier(A,B,N):
     
     return P
 
+def count_bits(number):
+    return len(bin(number).split('b')[1])
+
 def mod_pro(A,B,N,k):
     '''
 
     CHANGE P INTO A REGISTER - store it at each stage of the for loop,
     instead of adding it to the circuit
+
+    '''
+
+    '''
+    p_reg = Register(k, 'i')
+    i = Register(k, 'i')
+    local_k = Register(k, 'local_k')
+
+    n_reg = Register(len(N), 'n')
+    a_reg = Register(len(A), 'a')
+    b_reg = Register(len(B), 'b')
+
+    temp_reg1 = Register(k, 'temp_reg1')
+    temp_reg2 = Register(k, 'temp_reg2')
+    temp_reg3 = Register(k, 'temp_reg3')
+
+    with pyrtl.ConditionalUpdate() as condition:
+
+        with condition(i == 0):
+            i.next |= 1
+            temp_reg1 |= 0 
+            temp_reg2 |= 0 
+            temp_reg3 |= 0 
+            p_reg |= 0
+            local_k |= k - 1
+
+        with condition.fallthrough:
+            i.next |= i + 1
+            temp_reg1.next |= p_reg + (A & B[i]].sign_extended(k))
+            temp_reg2.next |= mux(P[0] == 1, falsecase = temp_reg1, truecase = temp_reg1 + N)  
+            temp_reg3.next |= temp_reg2[1:]
+            p_reg.next |= temp_reg3
 
     '''
 
@@ -150,7 +185,7 @@ def mod_exp(m, e, n, nval):
     3, 4 ,7 
     its_a_one = Const(1, bitwidth = input_length)
 
-    exp = Const(e, bitwidth = 3)
+    exp = Const(e, bitwidth = count_bits(e))
 
     h = len(exp)
     c = WireVector(bitwidth = 12)
@@ -197,7 +232,7 @@ def rsa_encrypt(e,m):
 
     nval = p * q
 
-    c = stupid_exp(m,e, n, nval)
+    c = mod_exp(m,e, n, nval)
 
     return c
 
@@ -208,7 +243,7 @@ def rsa_decrypt(d,m):
 
     nval = p * q
 
-    c = stupid_exp(m,d, n, nval)
+    c = mod_exp(m,d, n, nval)
 
     return c
 
@@ -238,7 +273,7 @@ def test_modulus():
 
     c = Output(input_length * 2, "Montgomery result")
     
-    aval, bval, nval = 3, 3, 7
+    aval, bval, nval = 3, 2, 7
 
     c <<= montgomery_mult(a,b,n,nval)
    
@@ -259,7 +294,7 @@ def test_mod_exp():
     input_length = 6
     a, n = Input(input_length, "a"), Input(input_length, "n")
     
-    aval, expval, nval = 3, 2, 7
+    aval, expval, nval = 3, 5, 7
 
     c = Output(input_length * expval, "Montgomery result")
 
@@ -286,12 +321,16 @@ def test_rsa():
 
     message_after = Output(input_length * 2, "Rsa decrypted")
 
-    c <<= rsa_encrypt(5, m)
+    c <<= rsa_encrypt(7, m)
 
-    message_after <<= rsa_decrypt(5, c)
+    message_after <<= rsa_decrypt(7, c)
 
     trueval = Output(16, "True Answer")
-    trueval <<= 5
+    trueval <<= mval
+
+    #print len(working_block().logic)
+    #synthesize()
+    #print len(working_block().logic)
 
     sim_trace = SimulationTrace()
     sim = Simulation(tracer=sim_trace)
