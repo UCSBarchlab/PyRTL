@@ -5,9 +5,9 @@ from pyrtl import *
 
 
 def main():
-     #test_mod_exp()
+     test_mod_exp()
      #test_modulus()
-     test_rsa()
+     #test_rsa()
 
 def extended_gcd(aa, bb):
     lastremainder, remainder = abs(aa), abs(bb)
@@ -145,19 +145,32 @@ def mod_pro(A,B,N,k):
     
     return P
 
-def mod_exp(m, e, n):
+def mod_exp(m, e, n, nval):
     input_length = len(m)
-
-    precomputed_value = Const(2**(input_length * 2) % nval, bitwidth = input_length)
+    3, 4 ,7 
     its_a_one = Const(1, bitwidth = input_length)
 
-    n_prime = modinv(m, n)
+    exp = Const(e, bitwidth = 3)
 
-    m_residue = WireVector(bitwidth = input_length)
-    c_residue = WireVector(bitwidth = input_length)
+    h = len(exp)
+    c = WireVector(bitwidth = 12)
 
-    m_residue <<= mod_pro(m, precomputed_value, n, input_length)
-    c_residue <<= mod_pro(its_a_one, precomputed_value, n, input_length)
+    c <<= mux(exp[h-1] == 1, falsecase = its_a_one, truecase = m)  
+
+    c2 = WireVector(bitwidth = 12)
+    c2 <<= c
+    #c.name = "c_before_exp"
+    #c2.name = "c2_before_exp"
+    for i in range(h-2, -1, -1):
+
+        c2 = c
+
+        c = montgomery_mult(c,c2,n,nval)
+
+        c = mux(exp[i] == 1, falsecase = c, truecase = montgomery_mult(c,m,n,nval))  
+    return c
+
+
     
 def stupid_exp(m,e,n,nval):
     input_length = len(m)
@@ -225,7 +238,7 @@ def test_modulus():
 
     c = Output(input_length * 2, "Montgomery result")
     
-    aval, bval, nval = 5, 5, 7
+    aval, bval, nval = 3, 3, 7
 
     c <<= montgomery_mult(a,b,n,nval)
    
@@ -246,11 +259,11 @@ def test_mod_exp():
     input_length = 6
     a, n = Input(input_length, "a"), Input(input_length, "n")
     
-    aval, expval, nval = 3, 4, 7
+    aval, expval, nval = 3, 2, 7
 
     c = Output(input_length * expval, "Montgomery result")
 
-    c <<= stupid_exp(a,expval,n,nval)
+    c <<= mod_exp(a,expval,n,nval)
 
     trueval = Output(16, "True Answer")
     trueval <<= (aval ** expval) % nval
