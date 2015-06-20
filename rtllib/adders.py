@@ -22,9 +22,9 @@ def kogge_stone(A, B, cin=0):
     """
     A, B = libutils.match_bitwidth(A, B)
 
-    prop_bits = [a ^ b for a, b in zip(A, B)]
-    prop_orig = prop_bits[:]  # just making a copy
-    gen_bits = [a & b for a, b in zip(A, B)]
+    prop_orig = A ^ B
+    prop_bits = [i for i in prop_orig]
+    gen_bits = [i for i in A & B]
     prop_dist = 1
 
     # creation of the carry calculation
@@ -36,11 +36,9 @@ def kogge_stone(A, B, cin=0):
                 prop_bits[i] = prop_old & prop_bits[i - prop_dist]
         prop_dist *= 2
 
-    # assembling the addition result
+    # assembling the result of the addition
     gen_bits.insert(0, as_wires(cin))  # preparing the cin (and conveniently shifting the gen bits)
-    result = concat(*[g ^ p for g, p in reversed(zip(gen_bits, prop_orig))])  # need MSB first
-    result = concat(gen_bits[-1], result)  # have to add the Most Significant Bit from gen somehow
-    return result
+    return concat(*reversed(gen_bits)) ^ prop_orig
 
 
 def one_bit_add(a, b, cin):

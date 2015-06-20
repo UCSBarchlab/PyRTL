@@ -33,9 +33,7 @@ class TestAdders(unittest.TestCase):
 
         true_result = [c + d for c, d in zip(xvals, yvals)]
         adder_result = sim_trace.trace[sum]
-        sim_trace.render_trace(symbol_len=12)
-        assert (adder_result == true_result)
-        print "test passed!"
+        self.assertEqual(adder_result, true_result)
 
     def test_kogge_stone_1(self):
         self.adder2_t_base_1(adders.kogge_stone)
