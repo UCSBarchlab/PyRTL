@@ -9,7 +9,6 @@ def main():
     # test_simple_mult()
     # test_wallace_tree()
     # test_wallace_timing()
-    # test_conditional()
 
 
 def simple_mult(A, B, start, done):
@@ -44,43 +43,6 @@ def simple_mult(A, B, start, done):
                 accum.next |= accum + breg  # adds to accum only when LSB of areg is 1
 
     return accum
-
-
-def conditional_broken(A, B, C):
-
-    # not_zero_vector = Const(2**2, bitwidth=3)
-    all_ones = Const(1, bitwidth=3)
-    # zero_vector = WireVector(bitwidth=3)
-    # output = WireVector(bitwidth=3)
-
-    zero_vector = WireVector(bitwidth=3)
-    zero_vector <<= 5
-
-    zero_vector.name = "it_is_four"
-
-    # with ConditionalUpdate(zero_vector[0] == 1):
-    zero_vector <<= mux(zero_vector[0] == 1, zero_vector, zero_vector + all_ones)
-
-    zero_vector.name = "what is it"
-
-    return zero_vector
-
-
-def test_conditional():
-    input_length = 4
-    a, b, n = [Input(input_length, name) for name in 'ignore ingore2 ignore3'.split()]
-
-    modded = Output(input_length*2, "ignore4")
-
-    modded <<= conditional_broken(a, b, n)
-
-    aval, bval, nval = 1, 2, 3
-
-    sim_trace = SimulationTrace()
-    sim = Simulation(tracer=sim_trace)
-    sim.step({a: aval, b: bval, n: nval})
-
-    sim_trace.render_trace()
 
 
 def wallace_tree(A, B, adder_func=adders.kogge_stone):
