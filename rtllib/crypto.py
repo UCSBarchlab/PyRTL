@@ -5,9 +5,9 @@ from pyrtl import *
 
 
 def main():
-     #test_mod_exp()
-     test_montgomery_mult()
-     #test_rsa()
+    # test_mod_exp()
+    # test_montgomery_mult()
+    test_rsa()
 
 # These functions were used to help debug the Montgomery Multiplier, and are likely
 # useful to keep around, as they relate to the mathematics behind RSA encryption.
@@ -321,8 +321,7 @@ Phi(n) = (p - 1) * (q - 1)    # This is also known as Euler's Totient
 
 d: private exponent obtained by doing the inverse modulus of n. use our modinv() function for this
 
-
-Given these parameters, the encryption and decrpytion is actually very simple.
+Given these parameters, the encryption and decryption is actually very simple.
 
 C = M ** e (mod n)
 M = C ** d (mod n)
@@ -341,9 +340,8 @@ We decided to implement the coding strategy called DRY (do repeat yourself).
 
 Just kidding. You can clean this up if you want. I just kept it as two separate 
 functions so that it's clear what is happening. 
-
-
 '''
+
 def rsa_encrypt(e,m):
     p = 5
     q = 7
@@ -365,8 +363,6 @@ def rsa_decrypt(d,m):
     c = mod_exp(m,d, n, nval)
 
     return c
-
-
 
 
 # These codes test the montgomery multiplier, the exponentiation, and the RSA respectively.
