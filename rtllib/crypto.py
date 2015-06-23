@@ -6,8 +6,8 @@ from pyrtl import *
 
 def main():
      #test_mod_exp()
-     #test_montgomery_mult()
-     test_rsa()
+     test_montgomery_mult()
+     #test_rsa()
 
 # These functions were used to help debug the Montgomery Multiplier, and are likely
 # useful to keep around, as they relate to the mathematics behind RSA encryption.
@@ -107,8 +107,23 @@ A shift by k = dividing by k = dividing by R = multiplying by R_inverse
 So that explains why in the beginning we multiply by the precomputed_value because 
 R^2 mod n * R_inverse is just R 
 
+============================================================================================
 TODO: We should really change this to a Register based model. We didn't have time 
 to actualize it, but that could be a fun project for a new PyRTL'er!
+
+Your quest: You will have to change the mod_product function into a register based model.
+The montgomery_mult function likely will need to be changed into a state machine that will 
+reflect this new register based model.
+
+Likely what it will look like is that the montgomery_mult function will have a series of 
+conditional statements that wait for the mod_product circuits to finish computing their 
+results (in parallel for a_residue and b_residue which is cool!).
+
+Then you will have another conditional statement that waits for the c_residue to finish, and 
+it will get passed through one more circuit and then passed back to whatever function called 
+montgomery_mult
+
+============================================================================================
 '''
 
 def montgomery_mult(a,b,n,nval):
@@ -141,13 +156,28 @@ B: The multiplier
 N: The modulus value
 k: The number of bits in A, B, and N (input_length from previous function)
 
+The way that mod_product works is a lot of dense math. 
 
+Sources:
+http://alicebob.cryptoland.net/understanding-the-montgomery-reduction-algorithm/
+http://www.powershow.com/view/11a7e5-YTBmM/AreaTimeEfficient_Montgomery_Modular_Multiplication_powerpoint_ppt_presentation
+
+============================================================================================
 TODO: Change this to the register based model!!
 
-'''
-def mod_product(A,B,N,k):
-    '''
-    CHANGE P INTO A REGISTER - store P at each stage of the for loop,
+This function should store P as an intermediate value in a register, instead of chaining
+hardware units together, which is what we currently do. What we do is INCREDIBLY stupid 
+and I'm truly ashamed that I have to commit it, but I just didn't have time to 
+implement the register model. So you get to :)
+
+
+Here is our attempt at switching it to the register based model, that didn't work.
+You'll probably need to have a "done" boolean register value as well, which you will
+check from the montgomery_mult function. This done register will notify the montgomery_mult
+function and say that the mod_product function has completed.
+
+
+CHANGE P INTO A REGISTER - store P at each stage of the for loop,
     instead of adding it to the circuit
 
     p_reg = Register(k, 'i')
@@ -179,20 +209,18 @@ def mod_product(A,B,N,k):
             temp_reg3.next |= temp_reg2[1:]
             p_reg.next |= temp_reg3
 
-    '''
+============================================================================================
+
+'''
+def mod_product(A,B,N,k):
 
     P = WireVector(bitwidth = k)
     P <<= 0 
 
     for i in range(0, k):
         P = P + (A & B[i].sign_extended(k))
-        #P.name = "p_after_addition" + str(i)
-
         P = mux(P[0] == 1, falsecase = P, truecase = P + N)  
-        #P.name = "p_after_modulus" + str(i)
-
         P = P[1:]
-        #P.name = "p_after_division" + str(i)
 
 
     P = P[:k]
@@ -223,7 +251,8 @@ e: The exponent value.
 n: The WireVector that we are modding by.
 nval: The value we are modding by, that goes into n.
 
-TODO: The for loop here must be replaced with a Register based model!
+TODO: The for loop here must be replaced with a Register based model!!!
+Replace c2 with a register, and 
 
 Source (from Professor Koc himself!) : http://cryptocode.net/docs/r02.pdf
 '''
@@ -271,6 +300,50 @@ def stupid_exp(m,e,n,nval):
 
     return accumulator
 
+# # -----------------------------------------------------------------
+#  ____  ____    _      _____                             _   _             
+# |  _ \/ ___|  / \    | ____|_ __   ___ _ __ _   _ _ __ | |_(_) ___  _ __  
+# | |_) \___ \ / _ \   |  _| | '_ \ / __| '__| | | | '_ \| __| |/ _ \| '_ \ 
+# |  _ < ___) / ___ \  | |___| | | | (__| |  | |_| | |_) | |_| | (_) | | | |
+# |_| \_\____/_/   \_\ |_____|_| |_|\___|_|   \__, | .__/ \__|_|\___/|_| |_|
+#                                             |___/|_|                      
+
+'''
+These are the RSA encrpytion and decryption functions.
+
+So RSA encryption is a public-key cryptosystem that uses the parameters:
+p: distinct large prime
+q: distinct large prime
+n: p * q
+e: public exponent in the range of 1 < e < Phi(n)
+
+Phi(n) = (p - 1) * (q - 1)    # This is also known as Euler's Totient
+
+d: private exponent obtained by doing the inverse modulus of n. use our modinv() function for this
+
+
+Given these parameters, the encryption and decrpytion is actually very simple.
+
+C = M ** e (mod n)
+M = C ** d (mod n)
+
+where C is the encrypted text, and M is the original message. 
+
+For the sake of our "machine" you can extend the rsa function so that it can take in custom p and q
+and of course custome messages as well. But for now, they are just hard coded (They should be put in registers
+at the very least). 
+
+TODO: Make this work for 128 bit and 256 bit encrpytion. Currently we didn't handle this, because 
+we got errors involving Long types for pyrtl. Hopefully that will be fixed!
+
+You might notice that rsa_encrypt and rsa_decrypt are the EXACT same code. 
+We decided to implement the coding strategy called DRY (do repeat yourself).
+
+Just kidding. You can clean this up if you want. I just kept it as two separate 
+functions so that it's clear what is happening. 
+
+
+'''
 def rsa_encrypt(e,m):
     p = 5
     q = 7
@@ -294,18 +367,17 @@ def rsa_decrypt(d,m):
     return c
 
 
-#modular exponentiation will be just like mod addition, 
-# except that the additions are replaced with mod multiplications
 
 
-# This code tests the montgomery multiplication function. 
+# These codes test the montgomery multiplier, the exponentiation, and the RSA respectively.
+
 def test_montgomery_mult():
-    input_length = 4
+    input_length = 6
     a, b, n = Input(input_length, "a"), Input(input_length, "b"), Input(input_length, "n")
 
     c = Output(input_length * 2, "Montgomery result")
     
-    aval, bval, nval = 3, 2, 7
+    aval, bval, nval = 5, 9, 7
 
     c <<= montgomery_mult(a,b,n,nval)
    
@@ -349,6 +421,7 @@ def test_rsa():
     m = Input(input_length, "message")
     
     mval = 10
+
     c = WireVector(input_length * 2, "Rsa encrypted")
 
     message_after = Output(input_length * 2, "Rsa decrypted")
@@ -359,10 +432,6 @@ def test_rsa():
 
     trueval = Output(16, "True Answer")
     trueval <<= mval
-
-    #print len(working_block().logic)
-    #synthesize()
-    #print len(working_block().logic)
 
     sim_trace = SimulationTrace()
     sim = Simulation(tracer=sim_trace)
