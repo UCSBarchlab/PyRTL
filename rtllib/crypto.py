@@ -6,8 +6,11 @@ from pyrtl import *
 
 def main():
      #test_mod_exp()
-     #test_modulus()
+     #test_montgomery_mult()
      test_rsa()
+
+# These functions were used to help debug the Montgomery Multiplier, and are likely
+# useful to keep around, as they relate to the mathematics behind RSA encryption.
 
 def extended_gcd(aa, bb):
     lastremainder, remainder = abs(aa), abs(bb)
@@ -24,14 +27,34 @@ def modinv(a, m):
         raise ValueError
     return x % m
 
+# Function to count bits in an integer. Maybe move this to PyRTL core?
+def count_bits(number):
+    return len(bin(number).split('b')[1])
+
+
+# # -----------------------------------------------------------------
+#   __  __             _                                         
+#  |  \/  | ___  _ __ | |_ __ _  ___  _ __ ___   ___ _ __ _   _  
+#  | |\/| |/ _ \| '_ \| __/ _` |/ _ \| '_ ` _ \ / _ \ '__| | | | 
+#  | |  | | (_) | | | | || (_| | (_) | | | | | |  __/ |  | |_| | 
+#  |_|  |_|\___/|_| |_|\__\__, |\___/|_| |_| |_|\___|_|   \__, | 
+#        __  __       _ _ |___/     _ _                   |___/  
+#       |  \/  |_   _| | |_(_)_ __ | (_) ___ _ __                
+#       | |\/| | | | | | __| | '_ \| | |/ _ \ '__|               
+#       | |  | | |_| | | |_| | |_) | | |  __/ |                  
+#       |_|  |_|\__,_|_|\__|_| .__/|_|_|\___|_|                  
+#                            |_|                    
 
 
 '''
 Here is our current understanding of the full montgomery multiplier process.
 
-
 We would like c = a * b mod n to happen, but to do so we need to 
-go into the montgomery domain.
+go into the montgomery domain, where modulus is really easy. 
+
+Modulus is an expensive operation normally (1251258 % 17) by modulus the way you
+normally think about modulus would require trial division, and using the remainder you get. 
+That's too slow. We want it to be faster. 
 
 First we define some variables
 k = # of bits in a, b, and n
@@ -66,7 +89,7 @@ There's a lot of dense mathematics that's going on here.
 Step 1 is basically precomputing the value of R^2 mod n so that we can 
 figure out the a_residue and b_residue values, which are the values in Montgomerys domain.
 These values allow for us to do multiplication and modulus very quickly because 
-they only require 4 operations: plus, and, modulus by 2, and shift.
+they only require 4 operations: addition, bitwise and, modulus by 2, and shift.
 
 Step 2 and 3 give us the a and b residues.
 
@@ -84,51 +107,49 @@ A shift by k = dividing by k = dividing by R = multiplying by R_inverse
 So that explains why in the beginning we multiply by the precomputed_value because 
 R^2 mod n * R_inverse is just R 
 
+TODO: We should really change this to a Register based model. We didn't have time 
+to actualize it, but that could be a fun project for a new PyRTL'er!
 '''
-def montgomery_multiplier(A,B,N):
-    
-    #assert len(A) == len(B) == len(N)
-    '''
 
-    CHANGE P INTO A REGISTER - store it at each stage of the for loop,
+def montgomery_mult(a,b,n,nval):
+    input_length = len(a)
+    precomputed_value = Const(2**(input_length * 2) % nval, bitwidth = input_length)
+
+    its_a_one = Const(1, bitwidth = input_length)
+
+    a_residue = WireVector(bitwidth = input_length)
+    b_residue = WireVector(bitwidth = input_length)
+    c_residue = WireVector(bitwidth = input_length)
+
+    a_residue <<= mod_product(a, precomputed_value, n, input_length)
+    b_residue <<= mod_product(b, precomputed_value, n, input_length)
+    c_residue <<= mod_product(a_residue, b_residue, n, input_length)
+    return mod_product(c_residue, its_a_one, n, input_length)
+
+
+
+'''
+The mod_product function is where the actual "montgomery multiplication" happens.
+
+What we want to happen:
+
+return A * B mod N 
+
+It takes the following arguments:
+A: The multiplicand
+B: The multiplier
+N: The modulus value
+k: The number of bits in A, B, and N (input_length from previous function)
+
+
+TODO: Change this to the register based model!!
+
+'''
+def mod_product(A,B,N,k):
+    '''
+    CHANGE P INTO A REGISTER - store P at each stage of the for loop,
     instead of adding it to the circuit
 
-    '''
-
-    k = len(A)
-
-    P = WireVector(bitwidth = k)
-    P <<= 0 
-    
-    for i in range(0, k):
-        P = P + (A & B[i].sign_extended(k))
-        #P.name = "p_after_addition" + str(i)
-
-        P = mux(P[0] == 1, falsecase = P, truecase = P + N)  
-        #P.name = "p_after_modulus" + str(i)
-
-        P = P[1:]
-        #P.name = "p_after_division" + str(i)
-        
-    
-    P = P[:k]
-    
-    P = mux(P >= N, falsecase = P, truecase = P - N)  
-    
-    return P
-
-def count_bits(number):
-    return len(bin(number).split('b')[1])
-
-def mod_pro(A,B,N,k):
-    '''
-
-    CHANGE P INTO A REGISTER - store it at each stage of the for loop,
-    instead of adding it to the circuit
-
-    '''
-
-    '''
     p_reg = Register(k, 'i')
     i = Register(k, 'i')
     local_k = Register(k, 'local_k')
@@ -180,6 +201,32 @@ def mod_pro(A,B,N,k):
     
     return P
 
+# # -----------------------------------------------------------------
+#  __  __           _       _                                            
+# |  \/  | ___   __| |_   _| | __ _ _ __                                 
+# | |\/| |/ _ \ / _` | | | | |/ _` | '__|                                
+# | |  | | (_) | (_| | |_| | | (_| | |                                   
+# |_|__|_|\___/ \__,_|\__,_|_|\__,_|_|     _   _       _   _             
+# | ____|_  ___ __   ___  _ __   ___ _ __ | |_(_) __ _| |_(_) ___  _ __  
+# |  _| \ \/ / '_ \ / _ \| '_ \ / _ \ '_ \| __| |/ _` | __| |/ _ \| '_ \ 
+# | |___ >  <| |_) | (_) | | | |  __/ | | | |_| | (_| | |_| | (_) | | | |
+# |_____/_/\_\ .__/ \___/|_| |_|\___|_| |_|\__|_|\__,_|\__|_|\___/|_| |_|
+#            |_|                                                         
+
+'''
+Modular Exponentiation is the key to RSA encryption and decrpyption. Modular Exponentiation
+directly relies on Montgomery Multiplication, so if you haven't read that SCROLL UP RIGHT NOW.
+
+The way that mod_exp works is that it takes in 4 arguments.
+m: The number we are exponentiating. 
+e: The exponent value.
+n: The WireVector that we are modding by.
+nval: The value we are modding by, that goes into n.
+
+TODO: The for loop here must be replaced with a Register based model!
+
+Source (from Professor Koc himself!) : http://cryptocode.net/docs/r02.pdf
+'''
 def mod_exp(m, e, n, nval):
     input_length = len(m)
     3, 4 ,7 
@@ -194,8 +241,7 @@ def mod_exp(m, e, n, nval):
 
     c2 = WireVector(bitwidth = 12)
     c2 <<= c
-    #c.name = "c_before_exp"
-    #c2.name = "c2_before_exp"
+
     for i in range(h-2, -1, -1):
 
         c2 = c
@@ -247,27 +293,13 @@ def rsa_decrypt(d,m):
 
     return c
 
-def montgomery_mult(a,b,n,nval):
-    input_length = len(a)
-    precomputed_value = Const(2**(input_length * 2) % nval, bitwidth = input_length)
-
-    its_a_one = Const(1, bitwidth = input_length)
-
-    a_residue = WireVector(bitwidth = input_length)
-    b_residue = WireVector(bitwidth = input_length)
-    c_residue = WireVector(bitwidth = input_length)
-
-    a_residue <<= mod_pro(a, precomputed_value, n, input_length)
-    b_residue <<= mod_pro(b, precomputed_value, n, input_length)
-    c_residue <<= mod_pro(a_residue, b_residue, n, input_length)
-    return mod_pro(c_residue, its_a_one, n, input_length)
 
 #modular exponentiation will be just like mod addition, 
 # except that the additions are replaced with mod multiplications
 
 
-
-def test_modulus():
+# This code tests the montgomery multiplication function. 
+def test_montgomery_mult():
     input_length = 4
     a, b, n = Input(input_length, "a"), Input(input_length, "b"), Input(input_length, "n")
 
