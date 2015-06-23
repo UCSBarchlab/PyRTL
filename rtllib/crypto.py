@@ -135,7 +135,7 @@ What we want to happen:
 
 return A * B mod N 
 
-It takes the following arguments:
+It takes the following arguments
 A: The multiplicand
 B: The multiplier
 N: The modulus value
