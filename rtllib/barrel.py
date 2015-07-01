@@ -1,28 +1,36 @@
 import sys
 sys.path.append("..")
 from pyrtl import *
+import math
 
 
-def barrel_shifter(bitwidth, logbitwidth, shiftIn, bitIn, direction, amount):
-    '''Create a barrel shifter that operates on data of width bitwidth.
-    logbitwidth is the number of bits specifying the shift (e.g. 5 for 32-bit.)
-    shiftIn is the input wire; bitIn is the 1-bit wire giving the value to shift in.
-    direction should be 1 for left-shift and 0 for right.
-    amount is the number of bits to shift.
-
-    bitwidth and logbitwidth are design-time parameters (python ints).
-    The remaining inputs are pyrtl wires.'''
-
+def barrel_shifter(shift_in, bit_in, direction, shift_dist):
+    """
+    Create a barrel shifter that operates on data based on the wire width
+    :param shift_in:the input wire;
+    :param bit_in: the 1-bit wire giving the value to shift in.
+    :param direction: direction is a one bit wirevector representing shift direction
+        1 = shift down, 0 = shift up.
+    :param shift_dist: wirevector representing offset to shift
+    :return: shifted wirevector
+    """
     # Implement with logN stages muxing between shifted and un-shifted values
-    val = shiftIn
-    appendval = bitIn
-    for i in range(logbitwidth):
-        shamt = pow(2, i)  # stages shift 1,2,4,8,...
-        newval = mux(direction, truecase=val[:-shamt], falsecase=val[shamt:])
+
+    val = shift_in
+    appendval = bit_in
+    log_length = int(math.log(len(shift_in)-1, 2))
+
+    if len(shift_dist) > log_length:
+        print "Warning: for barrel shifter, the shift distance wirevector " \
+              "has bits that are not used in the barrel shifter"
+
+    for i in range(min(len(shift_dist), log_length)):  # note the one offset
+        shift_amt = pow(2, i)  # stages shift 1,2,4,8,...
+        newval = mux(direction, truecase=val[:-shift_amt], falsecase=val[shift_amt:])
         newval = mux(direction, truecase=concat(newval, appendval),
                      falsecase=concat(appendval, newval))  # Build shifted value for this stage
         # mux shifted vs. unshifted by using i-th bit of shift amount signal
-        val = mux(amount[i], truecase=newval, falsecase=val)
+        val = mux(shift_dist[i-1], truecase=newval, falsecase=val)
         appendval = concat(appendval, appendval)
 
     return val
