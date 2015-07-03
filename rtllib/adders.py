@@ -9,10 +9,10 @@ def main():
     print "You should be looking at the test case folder"
 
 
-def kogge_stone(A, B, cin=0):
+def kogge_stone(a, b, cin=0):
     """
     Creates a Kogge-Stone adder given two inputs
-    :param A, B: The two Wirevectors to add up (bitwidths don't need to match)
+    :param a, b: The two Wirevectors to add up (bitwidths don't need to match)
     :param cin: An optimal carry Wirevector or value
     :return: a Wirevector representing the output of the adder
 
@@ -20,16 +20,16 @@ def kogge_stone(A, B, cin=0):
     propagation delay, useful for performance critical designs. However,
     it has O(n log(n)) area usage, and large fan out.
     """
-    A, B = libutils.match_bitwidth(A, B)
+    a, b = libutils.match_bitwidth(a, b)
 
-    prop_orig = A ^ B
+    prop_orig = a ^ b
     prop_bits = [i for i in prop_orig]
-    gen_bits = [i for i in A & B]
+    gen_bits = [i for i in a & b]
     prop_dist = 1
 
     # creation of the carry calculation
-    while prop_dist < len(A):
-        for i in reversed(range(prop_dist, len(A))):
+    while prop_dist < len(a):
+        for i in reversed(range(prop_dist, len(a))):
             prop_old = prop_bits[i]
             gen_bits[i] = gen_bits[i] | (prop_old & gen_bits[i - prop_dist])
             if i >= prop_dist*2:  # to prevent creating unnecessary nets and wires
