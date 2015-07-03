@@ -1,9 +1,11 @@
+# coding: utf-8
 """ Introduction to Hardware Design
 
     This code works through the hardware design process with the the
     audience of software developers more in mind.  We start with the simple
     problem of designing a fibonacci sequence calculator (http://oeis.org/A000045).
 """
+
 import sys
 sys.path.append("..")
 import pyrtl
