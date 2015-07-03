@@ -45,34 +45,32 @@ def one_bit_add(a, b, cin):
     assert len(a) == len(b) == 1  # len returns the bitwidth
     sum = a ^ b ^ cin
     cout = a & b | a & cin | b & cin
-    return sum, cout
+    return pyrtl.concat(cout, sum)
 
 
 def ripple_add(a, b, cin=0):
     a, b = libutils.match_bitwidth(a, b)
-
-    def ripple_add_partial(a, b, cin=0):  # this actually makes less s anc c blocks
-        assert len(a) == len(b)
-        if len(a) == 1:
-            sumbits, cout = one_bit_add(a, b, cin)
-        else:
-            lsbit, ripplecarry = one_bit_add(a[0], b[0], cin)
-            msbits, cout = ripple_add_partial(a[1:], b[1:], ripplecarry)
-            sumbits = pyrtl.concat(msbits, lsbit)
-        return sumbits, cout
-
-    sumbits, cout = ripple_add_partial(a, b, cin)
-    return concat(cout, sumbits)
+    cin = as_wires(cin)
+    if len(a) == 1:
+        return one_bit_add(a, b, cin)
+    else:
+        lsbit, ripplecarry = one_bit_add(a[0], b[0], cin)
+        ripplecarry = one_bit_add(a[0], b[0], cin)
+        msbits = ripple_add(a[1:], b[1:], ripplecarry[1])
+        return pyrtl.concat(msbits, ripplecarry[0])
 
 def carrysave_adder(a, b, c):
-    assert len(a) == len(b)
+    """
+    Adds three wirevectors up in an efficient manner
+    :param a, b, c: the three wirevectors to add up
+    :return: a wirevector with length 2 longer than the largest input
+    """
+    libutils.match_bitwidth(a, b, c)
     partial_sum = a ^ b ^ c
     partial_shift = pyrtl.concat(0, partial_sum)
     shift_carry = (a | b) & (a | c) & (b | c)
     shift_carry_1 = pyrtl.concat(shift_carry, 0)
-    sum_1, c_out = ripple_add(partial_shift, shift_carry_1, 0)
-    sum = pyrtl.concat(c_out, sum_1)
-    return sum
+    return ripple_add(partial_shift, shift_carry_1, 0)
 
 
 if __name__ == "__main__":
