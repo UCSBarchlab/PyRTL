@@ -64,6 +64,16 @@ def ripple_add(a, b, cin=0):
     sumbits, cout = ripple_add_partial(a, b, cin)
     return concat(cout, sumbits)
 
+def carrysave_adder(a, b, c):
+    assert len(a) == len(b)
+    partial_sum = a ^ b ^ c
+    partial_shift = pyrtl.concat(0, partial_sum)
+    shift_carry = (a | b) & (a | c) & (b | c)
+    shift_carry_1 = pyrtl.concat(shift_carry, 0)
+    sum_1, c_out = ripple_add(partial_shift, shift_carry_1, 0)
+    sum = pyrtl.concat(c_out, sum_1)
+    return sum
+
 
 if __name__ == "__main__":
     main()
