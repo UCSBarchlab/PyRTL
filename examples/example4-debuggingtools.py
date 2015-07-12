@@ -7,7 +7,11 @@ PyRTL comes with various features to help you find mistakes.
 """
 
 import sys
-sys.path.append("..")
+
+# need this to get the testexamples working (need abs path)
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) +" /..")
+
 import pyrtl
 import random
 

@@ -110,7 +110,6 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.r.next <<= self.r2
         self.r2.next <<= self.r + pyrtl.Const(2, bitwidth=self.bitwidth)
         self.check_trace(' r 00224466\nr2 02244660\n')
-        
 
 class TestRTLSimulationInputValidation(unittest.TestCase):
     def setUp(self):

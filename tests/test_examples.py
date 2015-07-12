@@ -3,6 +3,7 @@ __author__ = 'John'
 import glob
 import os
 import subprocess
+import pyrtl
 
 import nose  # using the advanced features of nose to do this
 
@@ -23,5 +24,12 @@ def test_all_examples():
 # note that this function cannot start with "test"
 def example_t(file):
     print "testing file: " + file
-    subprocess.check_call("python " + file)
+    pyrtl.reset_working_block()
+    try:
+        output = subprocess.check_output("python " + file)
+        print output
+    except subprocess.CalledProcessError, e:
+        print e.output
+        raise e
+
 

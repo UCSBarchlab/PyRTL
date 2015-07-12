@@ -12,7 +12,10 @@
 # these two lines are needed only if pyrtl is not installed as a proper
 # module, or PYTHONPATH does not by default include pyrtl.
 import sys
-sys.path.append("..")
+
+# need this to get the testexamples working (need abs path)
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) +" /..")
 
 import random
 import pyrtl

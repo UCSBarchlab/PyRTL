@@ -7,7 +7,11 @@
     has other ways to store data, namely memories and ROMs.
 """
 import sys
-sys.path.append("..")  # needed only if not installed
+
+
+# need this to get the testexamples working (need abs path)
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) +" /..")
 
 import pyrtl
 from pyrtl import *
