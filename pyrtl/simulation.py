@@ -22,10 +22,11 @@ class Simulation(object):
         """ Creates object and initializes it with self.initialize.
 
         register_value_map, memory_value_map, and default_value are passed on to initialize.
-        tracer is an instance of SimulationTrace used to store execution results.
-        use_postsynth_map_if_available will map the I/O to the block from the
+
+        :param tracer: an instance of SimulationTrace used to store execution results.
+        :param use_postsynth_map_if_available: will map the I/O to the block from the
         pre-synthesis block so the names and outputs can be used or generated respectively.
-        block is the hardware block to be traced (which might be of type PostSynthesisBlock).
+        :param block: the hardware block to be traced (which might be of type PostSynthesisBlock).
         """
 
         block = core.working_block(block)
@@ -43,10 +44,11 @@ class Simulation(object):
     def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
         """ Sets the wire, register, and memory values to default or as specified.
 
-        register_value_map is a map of {Register: value}.
-        memory_value_map is a map of maps {Memory: {address: Value}}.
-        default_value is the value that all unspecified registers and memories will default to.
-        if no default_value is specified, it will use the value stored in the object (default to 0)
+        :param register_value_map: is a map of {Register: value}.
+        :param memory_value_map: is a map of maps {Memory: {address: Value}}.
+        :param default_value: is the value that all unspecified registers and memories will
+         default to. If no default_value is specified, it will use the value stored in the
+         object (default to 0)
         """
 
         self.value = {}
@@ -92,7 +94,10 @@ class Simulation(object):
                 self.value[w] = default_value
 
     def step(self, provided_inputs):
-        """ Take the simulation forward one cycle """
+        """ Take the simulation forward one cycle
+
+        :param provided_inputs: a dictionary mapping wirevectors to their values for this step
+        """
 
         # To avoid weird loops, we need a copy of the old values which
         # we can then use to make our updates from
@@ -281,7 +286,11 @@ class Simulation(object):
 #
 
 class FastSimulation(object):
-    """A class for running JIT implementations of blocks."""
+    """A class for running JIT implementations of blocks.
+
+    As of right now (7/12/2015), the interface is the same as Simulation.
+    They should still be similar in the future
+    """
 
     def __init__(
             self, register_value_map=None, memory_value_map=None,
@@ -462,11 +471,11 @@ def wave_trace_render(w, n, prior_val, current_val, symbol_len):
     """Return a unicode string encoding the given value in a  waveform.
 
     Given the inputs -
-    w - The WireVector we are rendering to a waveform
-    n - An integer from 0 to segment_len-1
-    prior_val - the value in the cycle prior to the one being rendered
-    current_val - the value to be rendered
-    symbol_len - and integer for how big to draw the current value
+    :param w: The WireVector we are rendering to a waveform
+    :param n: An integer from 0 to segment_len-1
+    :param prior_val: the value in the cycle prior to the one being rendered
+    :param current_val: the value to be rendered
+    :param symbol_len: and integer for how big to draw the current value
 
     Returns a string of printed length symbol_len that will draw the
     representation of current_val.  The input prior_val is used to
@@ -610,13 +619,13 @@ class SimulationTrace(object):
         at with "more" or "less -R" which both should handle the ASCII escape
         sequences used in rendering. render_trace takes the following optional
         arguments.
-        trace_list: A list of signals to be output in the specified order.
-        file: The place to write output, default to stdout.
-        renderer: A function that translates traces into output bytes.
-        symbol_len: The "length" of each rendered cycle in characters.
-        segment_size: Traces are broken in the segments of this number of cycles.
-        segment_delim: The character to be output between segments.
-        extra_line: A Boolean to determin if we should print a blank line between signals.
+        :param trace_list: A list of signals to be output in the specified order.
+        :param file: The place to write output, default to stdout.
+        :param renderer: A function that translates traces into output bytes.
+        :param symbol_len: The "length" of each rendered cycle in characters.
+        :param segment_size: Traces are broken in the segments of this number of cycles.
+        :param segment_delim: The character to be output between segments.
+        :param extra_line: A Boolean to determin if we should print a blank line between signals.
         """
 
         def formatted_trace_line(w, trace):

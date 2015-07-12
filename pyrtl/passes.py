@@ -154,6 +154,7 @@ def print_max_length(timing_map):
 def timing_critical_path(timing_map, block=None):
     """
     Takes a timing map and returns the critical paths of the system
+
     :param timing_map: a timing map from the timing analysis
     :return: a list containing tuples with the 'first' wire as the
     first value and the critical paths (which themselves are lists
@@ -734,6 +735,7 @@ def _copy_net(block_out, net, temp_wv_net, mems):
 def nand_synth(block=None, update_working_block=True):
     """
     Synthesizes an Post-Synthesis block into one consisting of nands and inverters
+
     :param block: The block to synthesize.
     :return: The resulting block
     """
