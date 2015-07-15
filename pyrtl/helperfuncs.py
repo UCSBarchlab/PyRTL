@@ -42,6 +42,8 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
         raise core.PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
     elif bitwidth == '0':
         raise core.PyrtlError('error, bitwidth must be >= 1')
+    elif val.bitwidth is None:
+        raise core.PyrtlError('error, attempting to use wirevector with no defined bitwidth')
     elif bitwidth and bitwidth > val.bitwidth:
         return val.zero_extended(bitwidth)
     elif bitwidth and truncating and bitwidth < val.bitwidth:

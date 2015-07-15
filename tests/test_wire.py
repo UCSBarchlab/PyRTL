@@ -38,10 +38,16 @@ class TestWireVector(unittest.TestCase):
             c = pyrtl.Register(bitwidth=3)
             c <<= 1
 
-    def test_logic_operatons(self):
+    def test_logic_operations(self):
         with self.assertRaises(pyrtl.PyrtlError):
             c = pyrtl.Register(bitwidth=1)
             c.next <<= c or True
+
+    def test_unset_bitwidth(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(1)
+            y = pyrtl.Input()
+            x <<= y
 
     def test_slice(self):
         testmissing()
