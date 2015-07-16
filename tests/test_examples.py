@@ -29,5 +29,3 @@ def example_t(file):
         output = subprocess.check_output(['python', file])
     except subprocess.CalledProcessError, e:
         raise e
-
-
