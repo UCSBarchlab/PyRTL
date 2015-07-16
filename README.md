@@ -70,3 +70,11 @@ semantics and provides a basic set of synthesis algorithms.  The goals of this t
 play very nicely together in that PyRTL can output Verilog that can then be synthesized through Yosys.  Likewise Yosys can take
 Verilog designs and synthesize them to a very simple library of gates and output them as a "blif" file which can then be read in by
 PyRTL.
+
+[PyMTL](https://github.com/cornell-brg/pymtl) is an alpha stage "open-source Python-based framework for multi-level hardware modeling".
+One of the neat things about this project is that they are trying to allow simulation and modeling at multiple different levels of the
+design from the functional level, the cycle-close level, and down to the register-transfer level (where PyRTL really is built to play).
+Like MyHDL they do some neat meta-programming tricks like parsing the Python AST to allow executable software descriptions to be (under
+certain restrictions -- sort of like verilog) automatically converted into implementable hardware.  PyRTL, on the other hand, is about
+providing a limited and composable set of data structures to be used specify and RTL implementation avoiding the distinction between
+synthesizable and non-synthesizable code (the execution is the elaboration step).
