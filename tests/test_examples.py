@@ -18,7 +18,7 @@ relative location of the examples changes
 def test_all_examples():
     x = __file__
     for file in glob.iglob(os.path.dirname(__file__) + "/../examples/*.py"):
-        yield example_t, file
+        yield example_t, os.path.realpath(file)
 
 
 # note that this function cannot start with "test"
@@ -26,10 +26,8 @@ def example_t(file):
     print "testing file: " + file
     pyrtl.reset_working_block()
     try:
-        output = subprocess.check_output("python " + file)
-        print output
+        output = subprocess.check_call("python " + file)
     except subprocess.CalledProcessError, e:
-        print e.output
         raise e
 
 
