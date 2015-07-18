@@ -46,7 +46,7 @@ def simple_mult(A, B, start, done):
     return accum
 
 
-def tree_multiplier(A, B, reducer=adders.walllace_reducer, adder_func=adders.kogge_stone):
+def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
     """
     Build an fast unclocked multiplier for inputs A and B using a Wallace or Dada Tree.
     Delay is order logN, while area is order N^2.
@@ -75,6 +75,33 @@ def tree_multiplier(A, B, reducer=adders.walllace_reducer, adder_func=adders.kog
 
     return reducer(bits, bits_length, adder_func)
 
+def fused_multiply_adder(mult_A, mult_B, add, reducer=adders.wallace_reducer,
+                         adder_func=adders.kogge_stone):
+    return generalized_FMA(((mult_A, mult_B),), (add,),reducer, adder_func )
+
+def generalized_FMA(mult_pairs, add_wires, reducer=adders.wallace_reducer,
+                         adder_func=adders.kogge_stone):
+
+    mult_max = max(len(m[0])+ len(m[1]) - 1 for m in mult_pairs)
+    add_max = max(len(x) for x in add_wires)
+
+    longest_wire_len = max(add_max, mult_max)
+    bits = [[] for i in longest_wire_len]
+
+    # first need to figure out the max length
+    for mult_pair in mult_pairs:
+        mult_a, mult_b = mult_pair
+        for i, a in enumerate(mult_a):
+            for j, b in enumerate(mult_b):
+                bits[i+j].append(a & b)
+
+    for wire in add_wires:
+        for bit, bit_loc in enumerate(wire):
+            bits[bit_loc].append(bit)
+
+    import math
+    result_bitwidth = longest_wire_len + math.ceil(len(add_wires)+ len(mult_pairs))
+    return reducer(bits, result_bitwidth, adder_func)
 
 
 def __test_wallace_timing():

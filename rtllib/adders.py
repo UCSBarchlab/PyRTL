@@ -72,7 +72,8 @@ def carrysave_adder(a, b, c):
     shift_carry_1 = pyrtl.concat(shift_carry, 0)
     return ripple_add(partial_shift, shift_carry_1, 0)
 
-def walllace_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
+
+def wallace_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
     """
     The reduction and final adding part of a dada tree. Useful for adding many numbers together
     The use of single bitwidth wires is to allow for additional flexibility
@@ -191,10 +192,45 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
     # Perhaps here we should slice off the overflow bit, if it exceeds bit_length?
     # result = result[:-1]
     if result is None:
-        return adder_result[:result_bitwidth]
+        result = adder_result
     else:
         result = concat(adder_result, result)
+    if len(result) > result_bitwidth:
         return result[:result_bitwidth]
+    else:
+        return result
+
+"""
+Some adders that utilize these tree reducers
+
+"""
+
+def fast_group_adder(wires_to_add, reducer=wallace_reducer, final_adder=kogge_stone):
+    """
+    A generalization of the carry save adder, this is designed to add many numbers
+    together in a both area and time efficient manner. Uses a tree reducer
+    to achieve this performance
+
+
+    :param [WireVector] wires_to_add: an array of wirevectors to add
+    :param reducer: the tree reducer to use
+    :param final_adder: The two value adder to use at the end
+    :return: a wirevector with the result of the addition
+      The length of the result is:
+      max(len(w) for w in wires_to_add) + ceil(len(wires_to_add))
+    """
+
+    import math
+    longest_wire_len = max(len(w) for w in wires_to_add)
+    result_bitwidth = longest_wire_len + math.ceil(len(wires_to_add))
+
+    bits = [[] for i in longest_wire_len]
+
+    for wire in wires_to_add:
+        for bit, bit_loc in enumerate(wire):
+            bits[bit_loc].append(bit)
+
+    return reducer(bits, result_bitwidth, final_adder)
 
 
 if __name__ == "__main__":
