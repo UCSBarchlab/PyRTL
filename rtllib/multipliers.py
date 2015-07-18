@@ -77,20 +77,26 @@ def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogg
 
 def fused_multiply_adder(mult_A, mult_B, add, reducer=adders.wallace_reducer,
                          adder_func=adders.kogge_stone):
-    return generalized_FMA(((mult_A, mult_B),), (add,),reducer, adder_func )
+    return generalized_fma(((mult_A, mult_B),), (add,), reducer, adder_func)
 
-def generalized_FMA(mult_pairs, add_wires, reducer=adders.wallace_reducer,
-                         adder_func=adders.kogge_stone):
+def generalized_fma(mult_pairs, add_wires, reducer=adders.wallace_reducer,
+                    adder_func=adders.kogge_stone):
 
-    mult_max = max(len(m[0])+ len(m[1]) - 1 for m in mult_pairs)
-    add_max = max(len(x) for x in add_wires)
+    # first need to figure out the max length
+    if mult_pairs:  # Need to deal with the case when it is empty
+        mult_max = max(len(m[0]) + len(m[1]) - 1 for m in mult_pairs)
+    else:
+        mult_max = 0
+
+    if add_wires:
+        add_max = max(len(x) for x in add_wires)
+    else:
+        add_max = 0
 
     longest_wire_len = max(add_max, mult_max)
     bits = [[] for i in longest_wire_len]
 
-    # first need to figure out the max length
-    for mult_pair in mult_pairs:
-        mult_a, mult_b = mult_pair
+    for mult_a, mult_b in mult_pairs:
         for i, a in enumerate(mult_a):
             for j, b in enumerate(mult_b):
                 bits[i+j].append(a & b)
