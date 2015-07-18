@@ -19,14 +19,23 @@ class Simulation(object):
     def __init__(
             self, register_value_map=None, memory_value_map=None,
             default_value=0, tracer=None, use_postsynth_map_if_available=True, block=None):
-        """ Creates object and initializes it with self.initialize.
-
-        register_value_map, memory_value_map, and default_value are passed on to initialize.
+        """
+        Creates a new circuit simulator
 
         :param tracer: an instance of SimulationTrace used to store execution results.
         :param use_postsynth_map_if_available: will map the I/O to the block from the
         pre-synthesis block so the names and outputs can be used or generated respectively.
+        :param register_value_map: is a map of {Register: value}.
+        :param memory_value_map: is a map of maps {Memory: {address: Value}}.
+        :param default_value: is the value that all unspecified registers and memories will
+         default to. If no default_value is specified, it will use the value stored in the
+         object (default to 0)
         :param block: the hardware block to be traced (which might be of type PostSynthesisBlock).
+        """
+
+        """
+        Creates object and initializes it with self._initialize.
+        register_value_map, memory_value_map, and default_value are passed on to _initialize.
         """
 
         block = core.working_block(block)
@@ -37,11 +46,11 @@ class Simulation(object):
         self.block = block
         self.default_value = default_value
         self.tracer = tracer
-        self.initialize(register_value_map, memory_value_map)
+        self._initialize(register_value_map, memory_value_map)
         self.max_iter = 1000
         self.use_postsynth_map = use_postsynth_map_if_available
 
-    def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
+    def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
         """ Sets the wire, register, and memory values to default or as specified.
 
         :param register_value_map: is a map of {Register: value}.
@@ -172,10 +181,10 @@ class Simulation(object):
         """
         return val & wirevector.bitmask
 
-    def execute(self, net):
+    def _execute(self, net):
         """Handle the combinational logic update rules for the given net.
 
-        This function, along with execute, defined the semantics
+        This function, along with edge_update, defined the semantics
         of the primitive ops.  Function updates self.value accordingly.
         """
         simple_func = {  # OPS
@@ -233,7 +242,7 @@ class Simulation(object):
         """Handle the posedge event for the simulation of the given net.
 
         Combinational logic should have no posedge behavior, but registers and
-        memory should.  This function, along with execute, defined the
+        memory should.  This function, along with _execute, defined the
         semantics of the primitive ops.  Function updates self.value and
         self.memvalue accordingly (using prior_value)
         """
@@ -264,7 +273,7 @@ class Simulation(object):
         at a later time.
         """
         if self._is_ready_to_execute(defined_set, net):
-            self.execute(net)
+            self._execute(net)
             for dest in net.dests:
                 defined_set.add(dest)
             return True
@@ -303,9 +312,9 @@ class FastSimulation(object):
         self.default_value = default_value
         self.tracer = tracer
         self.context = {}
-        self.initialize(register_value_map, memory_value_map)
+        self._initialize(register_value_map, memory_value_map)
 
-    def initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
+    def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
 
         if default_value is None:
             default_value = self.default_value
@@ -373,7 +382,8 @@ class FastSimulation(object):
         if self.tracer is not None:
             self.tracer.add_fast_step(self)
 
-    def varname(self, val):
+    @staticmethod
+    def varname(val):
         # TODO check if w.name is a legal python identifier
         if isinstance(val, memory._MemReadBase):
             return 'fs_mem' + str(val.id)
