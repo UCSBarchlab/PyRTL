@@ -336,7 +336,6 @@ class FastSimulation(object):
                 if self.varname(mem) not in self.context:
                     self.context[self.varname(mem)] = mem
 
-
         # set all other variables to default value
         for w in self.block.wirevector_set:
             if self.varname(w) not in self.context:
@@ -444,7 +443,7 @@ class FastSimulation(object):
                 result = self.varname(net.dests[0])
 
                 if isinstance(net.op_param[1], memory.RomBlock):
-                    expr ='%s._get_read_data(%s)' % (self.varname(net.op_param[1]), read_addr)
+                    expr = '%s._get_read_data(%s)' % (self.varname(net.op_param[1]), read_addr)
                 else:
                     # memories act async for reads
                     memid = net.op_param[0]

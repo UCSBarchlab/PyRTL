@@ -6,12 +6,6 @@
     a small amount of data for a single clock cycle. However, PyRTL also
     has other ways to store data, namely memories and ROMs.
 """
-import sys
-
-
-# need this to get the testexamples working (need abs path)
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) +" /..")
 
 import pyrtl
 from pyrtl import *

@@ -6,12 +6,6 @@
     Verilog of designs, export of waveforms to VCD, and a set of transforms
     that make doing netlist-level transforms and analyis directly in pyrtl easy.
 """
-import sys
-
-# sys.path.append("..")
-# need this to get the testexamples working (need abs path)
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) +" /..")
 
 import random
 import io

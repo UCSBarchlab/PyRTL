@@ -1,11 +1,5 @@
 """ Example 5: Making use of PyRTL and Introspection. """
 
-import sys
-
-# need this to get the testexamples working (need abs path)
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) +" /..")
-
 import pyrtl
 
 

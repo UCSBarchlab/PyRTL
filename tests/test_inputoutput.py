@@ -78,8 +78,8 @@ class TestSpice(unittest.TestCase):
 
         pyrtl.synthesize()
         pyrtl.optimize()
-        with open("spice.net", "w") as fp:
-            pyrtl.output_to_spice(fp)
+        with io.BytesIO() as testbuffer:
+            pyrtl.output_to_spice(testbuffer)
 
 if __name__ == "__main__":
     unittest.main()

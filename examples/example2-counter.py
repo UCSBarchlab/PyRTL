@@ -6,12 +6,6 @@
     the prior example, and then hook it to a register to count up modulo 8.
 """
 
-import sys
-
-# need this to get the testexamples working (need abs path)
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) +" /..")
-
 import pyrtl
 
 

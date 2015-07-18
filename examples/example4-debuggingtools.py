@@ -6,14 +6,8 @@ debugging as a problem may surface long after the error was made. Fortunately,
 PyRTL comes with various features to help you find mistakes.
 """
 
-import sys
-
-# need this to get the testexamples working (need abs path)
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) +" /..")
-
-import pyrtl
 import random
+import pyrtl
 
 # Setting the random seed so that this example is deterministic before we start
 random.seed(93729473)

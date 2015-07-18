@@ -1,55 +1,22 @@
-import sys
+"""
+Alpha-stage implementations of montgomery multiplier, modular exponentiation, and
+RSA encrypt/decrypt.  These have not been tested extensively and so please do not
+assume they are correct.  In addition, the current implemtnations are completely
+combintational and will blow up to be gigantic circuits very quickly.  Work is needed
+to make these iterative rather than strictly combinational.
+"""
+
 import io
-sys.path.append("..")
 from pyrtl import *
 
 
-def main():
-    # test_mod_exp()
-    # test_montgomery_mult()
-    test_rsa()
-
-# These functions were used to help debug the Montgomery Multiplier, and are likely
-# useful to keep around, as they relate to the mathematics behind RSA encryption.
+# ------------------------------------------------------------------------------------------------
+#        __       ___  __   __         ___  __                         ___    __          ___  __
+#  |\/| /  \ |\ |  |  / _` /  \  |\/| |__  |__) \ /     |\/| |  | |     |  | |__) |    | |__  |__)
+#  |  | \__/ | \|  |  \__> \__/  |  | |___ |  \  |      |  | \__/ |___  |  | |    |___ | |___ |  \
 
 
-def extended_gcd(aa, bb):
-    lastremainder, remainder = abs(aa), abs(bb)
-    x, lastx, y, lasty = 0, 1, 1, 0
-    while remainder:
-        lastremainder, (quotient, remainder) = remainder, divmod(lastremainder, remainder)
-        x, lastx = lastx - quotient*x, x
-        y, lasty = lasty - quotient*y, y
-    return lastremainder, lastx * (-1 if aa < 0 else 1), lasty * (-1 if bb < 0 else 1)
-
-
-def modinv(a, m):
-    g, x, y = extended_gcd(a, m)
-    if g != 1:
-        raise ValueError
-    return x % m
-
-
-# Function to count bits in an integer. Maybe move this to PyRTL core?
-def count_bits(number):
-    return len(bin(number).split('b')[1])
-
-
-# # -----------------------------------------------------------------
-#
-#  |  \/  | ___  _ __ | |_ __ _  ___  _ __ ___   ___ _ __ _   _
-#  | |\/| |/ _ \| '_ \| __/ _` |/ _ \| '_ ` _ \ / _ \ '__| | | |
-#  | |  | | (_) | | | | || (_| | (_) | | | | | |  __/ |  | |_| |
-#  |_|  |_|\___/|_| |_|\__\__, |\___/|_| |_| |_|\___|_|   \__, |
-#        __  __       _ _ |___/     _ _                   |___/
-#       |  \/  |_   _| | |_(_)_ __ | (_)
-#       | |\/| | | | | | __| | '_ \| | |/ _ \ '__|
-#       | |  | | |_| | | |_| | |_) | | |  __/ |
-#       |_|  |_|\__,_|_|\__|_| .__/|_|_|\___|_|
-#                            |_|
-
-
-'''
+"""
 Here is our current understanding of the full montgomery multiplier process.
 
 We would like c = a * b mod n to happen, but to do so we need to
@@ -83,7 +50,7 @@ b_residue = b * precomputed_value mod n
 
 c_residue = a_residue * b_residue mod n
 
-5) Get the c real value, converted back from the residue value (transform back from 
+5) Get the c real value, converted back from the residue value (transform back from
 montgomery domain)
 
 c = c_residue * 1 mod n
@@ -111,7 +78,6 @@ A shift by k = dividing by k = dividing by R = multiplying by R_inverse
 So that explains why in the beginning we multiply by the precomputed_value because
 R^2 mod n * R_inverse is just R
 
-============================================================================================
 TODO: We should really change this to a Register based model. We didn't have time
 to actualize it, but that could be a fun project for a new PyRTL'er!
 
@@ -126,12 +92,11 @@ results (in parallel for a_residue and b_residue which is cool!).
 Then you will have another conditional statement that waits for the c_residue to finish, and
 it will get passed through one more circuit and then passed back to whatever function called
 montgomery_mult
-
-============================================================================================
-'''
+"""
 
 
 def montgomery_mult(a, b, n, nval):
+    """ Computue a * b mod n via Montgomery's Algorithm. """
     input_length = len(a)
     precomputed_value = Const(2**(input_length * 2) % nval, bitwidth=input_length)
 
@@ -147,12 +112,12 @@ def montgomery_mult(a, b, n, nval):
     return mod_product(c_residue, its_a_one, n, input_length)
 
 
-'''
+"""
 The mod_product function is where the actual "montgomery multiplication" happens.
 
 What we want to happen:
 
-return A * B mod N 
+return A * B mod N
 
 It takes the following arguments
 A: The multiplicand
@@ -160,18 +125,17 @@ B: The multiplier
 N: The modulus value
 k: The number of bits in A, B, and N (input_length from previous function)
 
-The way that mod_product works is a lot of dense math. 
+The way that mod_product works is a lot of dense math.
 
 Sources:
 http://alicebob.cryptoland.net/understanding-the-montgomery-reduction-algorithm/
 http://www.powershow.com/view/11a7e5-YTBmM/AreaTimeEfficient_Montgomery_Modular_Multiplication_powerpoint_ppt_presentation
 
-============================================================================================
 TODO: Change this to the register based model!!
 
 This function should store P as an intermediate value in a register, instead of chaining
-hardware units together, which is what we currently do. What we do is INCREDIBLY stupid 
-and I'm truly ashamed that I have to commit it, but I just didn't have time to 
+hardware units together, which is what we currently do. What we do is INCREDIBLY stupid
+and I'm truly ashamed that I have to commit it, but I just didn't have time to
 implement the register model. So you get to :)
 
 
@@ -200,66 +164,59 @@ CHANGE P INTO A REGISTER - store P at each stage of the for loop,
 
         with condition(i == 0):
             i.next |= 1
-            temp_reg1 |= 0 
-            temp_reg2 |= 0 
-            temp_reg3 |= 0 
+            temp_reg1 |= 0
+            temp_reg2 |= 0
+            temp_reg3 |= 0
             p_reg |= 0
             local_k |= k - 1
 
         with condition.fallthrough:
             i.next |= i + 1
             temp_reg1.next |= p_reg + (A & B[i]].sign_extended(k))
-            temp_reg2.next |= mux(P[0] == 1, falsecase = temp_reg1, truecase = temp_reg1 + N)  
+            temp_reg2.next |= mux(P[0] == 1, falsecase = temp_reg1, truecase = temp_reg1 + N)
             temp_reg3.next |= temp_reg2[1:]
             p_reg.next |= temp_reg3
 
-============================================================================================
+"""
 
-'''
+
 def mod_product(A, B, N, k):
 
-    P = WireVector(bitwidth = k)
-    P <<= 0 
+    P = WireVector(bitwidth=k)
+    P <<= 0
 
     for i in range(0, k):
         P = P + (A & B[i].sign_extended(k))
-        P = mux(P[0] == 1, falsecase=P, truecase=P + N)  
+        P = mux(P[0] == 1, falsecase=P, truecase=P + N)
         P = P[1:]
-
 
     P = P[:k]
 
-    P = mux(P >= N, falsecase=P, truecase=P - N)  
-    
+    P = mux(P >= N, falsecase=P, truecase=P - N)
+
     return P
 
-# # -----------------------------------------------------------------
-#  __  __           _       _                                            
-# |  \/  | ___   __| |_   _| | __ _ _ __                                 
-# | |\/| |/ _ \ / _` | | | | |/ _` | '__|                                
-# | |  | | (_) | (_| | |_| | | (_| | |                                   
-# |_|__|_|\___/ \__,_|\__,_|_|\__,_|_|     _   _       _   _             
-# | ____|_  ___ __   ___  _ __   ___ _ __ | |_(_) __ _| |_(_) ___  _ __  
-# |  _| \ \/ / '_ \ / _ \| '_ \ / _ \ '_ \| __| |/ _` | __| |/ _ \| '_ \ 
-# | |___ >  <| |_) | (_) | | | |  __/ | | | |_| | (_| | |_| | (_) | | | |
-# |_____/_/\_\ .__/ \___/|_| |_|\___|_| |_|\__|_|\__,_|\__|_|\___/|_| |_|
-#            |_|                                                         
 
-'''
+# ----------------------------------------------------------------------------------
+#         __   __                  __      ___      __
+#   |\/| /  \ |  \ |  | |     /\  |__)    |__  \_/ |__)
+#   |  | \__/ |__/ \__/ |___ /~~\ |  \    |___ / \ |
+
+"""
 Modular Exponentiation is the key to RSA encryption and decrpyption. Modular Exponentiation
 directly relies on Montgomery Multiplication, so if you haven't read that SCROLL UP RIGHT NOW.
 
 The way that mod_exp works is that it takes in 4 arguments.
-m: The number we are exponentiating. 
+m: The number we are exponentiating.
 e: The exponent value.
 n: The WireVector that we are modding by.
 nval: The value we are modding by, that goes into n.
 
 TODO: The for loop here must be replaced with a Register based model!!!
-Replace c2 with a register, and 
+Replace c2 with a register, and
 
 Source (from Professor Koc himself!) : http://cryptocode.net/docs/r02.pdf
-'''
+"""
 
 
 def mod_exp(m, e, n, nval):
@@ -267,7 +224,7 @@ def mod_exp(m, e, n, nval):
 
     its_a_one = Const(1, bitwidth=input_length)
 
-    exp = Const(e, bitwidth=count_bits(e))
+    exp = Const(e, bitwidth=e.bit_length())
 
     h = len(exp)
     c = WireVector(bitwidth=12)
@@ -284,30 +241,12 @@ def mod_exp(m, e, n, nval):
     return c
 
 
-# stupid_exp is deprecated
+# ----------------------------------------------------------------------------------
+#  __   __           ___       __   __       __  ___    __
+# |__) /__`  /\     |__  |\ | /  ` |__) \ / |__)  |  | /  \ |\ |
+# |  \ .__/ /~~\    |___ | \| \__, |  \  |  |     |  | \__/ | \|
 
-
-def stupid_exp(m, e, n, nval):
-    input_length = len(m)
-
-    m2 = WireVector(bitwidth=input_length)
-    m2 <<= m
-
-    accumulator = montgomery_mult(m, m2, n, nval)
-    for i in range(0, e-2):
-        accumulator = montgomery_mult(accumulator, m, n, nval)
-
-    return accumulator
-
-# # -----------------------------------------------------------------
-#  ____  ____    _      _____                             _   _
-# |  _ \/ ___|  / \    | ____|_ __   ___ _ __ _   _ _ __ | |_(_) ___  _ __
-# | |_) \___ \ / _ \   |  _| | '_ \ / __| '__| | | | '_ \| __| |/ _ \| '_ \
-# |  _ < ___) / ___ \  | |___| | | | (__| |  | |_| | |_) | |_| | (_) | | | |
-# |_| \_\____/_/   \_\ |_____|_| |_|\___|_|   \__, | .__/ \__|_|\___/|_| |_|
-#                                             |___/|_|
-
-'''
+"""
 These are the RSA encrpytion and decryption functions.
 
 So RSA encryption is a public-key cryptosystem that uses the parameters:
@@ -339,7 +278,7 @@ We decided to implement the coding strategy called DRY (do repeat yourself)
 
 Just kidding. You can clean this up if you want. I just kept it as two separate
 functions so that it's clear what is happening.
-'''
+"""
 
 
 def rsa_encrypt(e, m):
@@ -366,8 +305,10 @@ def rsa_decrypt(d, m):
     return c
 
 
-# These codes test the montgomery multiplier, the exponentiation, and the RSA respectively.
-
+# ----------------------------------------------------------------
+#  ___  ___  __  ___         __
+#   |  |__  /__`  |  | |\ | / _`
+#   |  |___ .__/  |  | | \| \__>
 
 def test_montgomery_mult():
     input_length = 6
@@ -435,6 +376,44 @@ def test_rsa():
     sim_trace.render_trace()
     output = sim_trace.trace
     print "Result in Decimal: " + str(output[c])
+
+
+# These functions were used to help debug the Montgomery Multiplier, and are likely
+# useful to keep around, as they relate to the mathematics behind RSA encryption.
+
+def _rsa(p, q, M):
+    n = p * q
+    totient = (p - 1) * (q - 1)
+    print "n,totient: ", n, " ,", totient
+    e = 5
+    print "e: ", e
+    d = _modinv(e, totient)
+    print "d :", d
+    C = pow(M, e, n)
+    print "c: ", C
+    return pow(C, d, n)
+
+
+def _extended_gcd(aa, bb):
+    lastremainder, remainder = abs(aa), abs(bb)
+    x, lastx, y, lasty = 0, 1, 1, 0
+    while remainder:
+        lastremainder, (quotient, remainder) = remainder, divmod(lastremainder, remainder)
+        x, lastx = lastx - quotient*x, x
+        y, lasty = lasty - quotient*y, y
+    return lastremainder, lastx * (-1 if aa < 0 else 1), lasty * (-1 if bb < 0 else 1)
+
+
+def _modinv(a, m):
+    g, x, y = _extended_gcd(a, m)
+    if g != 1:
+        raise ValueError
+    return x % m
+
+
+def main():
+    test_rsa()
+
 
 if __name__ == "__main__":
     main()
