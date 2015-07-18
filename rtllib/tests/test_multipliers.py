@@ -14,7 +14,7 @@ class TestWallace(unittest.TestCase):
     def test_wallace_tree_1(self):
         a, b = pyrtl.Input(35, "a"), pyrtl.Input(32, "b")
         product = pyrtl.Output(64, "product")
-        product <<= multipliers.wallace_tree(a, b)
+        product <<= multipliers.tree_multiplier(a, b)
         # import random
         # x = [int(random.uniform(0, 2**32-1)) for i in range(20)]
         # y = [int(random.uniform(0, 2**32-1)) for i in range(20)]

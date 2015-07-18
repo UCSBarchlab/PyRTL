@@ -9,6 +9,7 @@ def main():
     # test_simple_mult()
     # test_wallace_tree()
     # test_wallace_timing()
+    print "look at the test case folder"
 
 
 def simple_mult(A, B, start, done):
@@ -45,20 +46,21 @@ def simple_mult(A, B, start, done):
     return accum
 
 
-def wallace_tree(A, B, adder_func=adders.kogge_stone):
-    """Build an unclocked multiplier for inputs A and B using a Wallace Tree.
-    Delay is order logN, while area is order N^2. It's very important to note that
-    the delay is computed only for gates, and not for wires too, and the wire
-    delay could be substantial.
+def tree_multiplier(A, B, reducer=adders.walllace_reducer, adder_func=adders.kogge_stone):
+    """
+    Build an fast unclocked multiplier for inputs A and B using a Wallace or Dada Tree.
+    Delay is order logN, while area is order N^2.
 
-    The Wallace Tree multiplier basically works by splitting the multiplication
+    :param Wirevector A, B: two input wires for the multiplication
+    :param function reducer: Reduce the tree using either a Dada recuder or a Wallace reducer
+      determines whether it is a Wallace tree multiplier or a Dada tree multiplier
+    :param function adder_func: an adder function that will be used to do the last addition
+    :return: the multiplied result
+    """
+
+    """
+    The two tree multipliers basically works by splitting the multiplication
     into a series of many additions, and it works by applying 'reductions'.
-    These reductions take place in the form of full-adders (3 inputs),
-    half-adders (2 inputs), or just passing a wire along (1 input).
-
-    These reductions take place as long as there are more than 2 wire
-    vectors left. When there are 2 wire vectors left, you simply run the
-    2 wire vectors through a Kogge-Stone adder.
     """
 
     bits_length = (len(A) + len(B))
@@ -71,77 +73,17 @@ def wallace_tree(A, B, adder_func=adders.kogge_stone):
         for j, b in enumerate(B):
             bits[i+j].append(a & b)
 
-    # create a list of "deferred" values, which hold the reduced bits until
-    # the end of the reduction
-    deferred = [[] for weight in range(bits_length)]
-
-    result = bits[0][0]  # Start with bit 0, we'll concatenate bits to the left
-
-    while not all([len(i) <= 2 for i in bits]):  # While there's more than 2 wire vectors left
-
-        for i in range(1, bits_length):  # Start with low weights and start reducing
-            while len(bits[i]) >= 3:  # Reduce with Full Adders until < 3 wires
-                a, b, cin = bits[i].pop(0), bits[i].pop(0), bits[i].pop(0)
-                deferred[i].append(a ^ b ^ cin)  # deferred bit keeps this sum
-                if(i + 1 < bits_length):  # watch out for index bounds
-                    deferred[i+1].append((a & b) | (b & cin) | (a & cin))  # cout goes up by one
-
-            if len(bits[i]) == 2:  # Reduce with a Half Adder if exactly 2 wires
-                a, b = bits[i].pop(0), bits[i].pop(0)
-                deferred[i].append(a ^ b)  # deferred bit keeps this sum
-                if(i + 1 < bits_length):
-                    deferred[i+1].append(a & b)  # cout goes up one weight
-
-            if len(bits[i]) == 1:  # Remaining wire is passed along the reductions
-                deferred[i].append(bits[i][0])  # deferred bit keeps this value
-
-            if i >= bits_length - 1:  # If we're done reducing for this set
-                bits = deferred  # Set bits equal to the deferred values
-                deferred = [[] for weight in range(bits_length)]  # Reset deferred to empty
-
-    # At this stage in the multiplication we have only 2 wire vectors left.
-
-    num1 = []
-    num2 = []
-    # This humorous variable tells us when we have seen the start of the overlap
-    # of the two wire vectors
-    weve_seen_a_two = False
-
-    for i in range(1, bits_length):
-
-        if len(bits[i]) == 2:  # Check if the two wire vectors overlap yet
-            weve_seen_a_two = True
-
-        if not weve_seen_a_two:  # If they have not overlapped, add the 1's to result
-            result = concat(bits[i][0], result)
-
-        # For overlapping bits, create num1 and num2
-        if weve_seen_a_two and len(bits[i]) == 2:
-            num1.insert(0, bits[i][0])
-            num2.insert(0, bits[i][1])
-
-        # If there's 1 left it's part of num2
-        if weve_seen_a_two and len(bits[i]) == 1 and i < bits_length - 1:
-            num2.insert(0, bits[i][0])
-
-    # Pass the wire vectors through a kogge_stone adder
-    adder_result = adder_func(concat(*num1), concat(*num2))
-
-    # Concatenate the results, and then return them.
-    result = concat(adder_result, result)
-
-    # Perhaps here we should slice off the overflow bit, if it exceeds bit_length?
-    # result = result[:-1]
-
-    return result
+    return reducer(bits, bits_length, adder_func)
 
 
-def test_wallace_timing():
+
+def __test_wallace_timing():
+    # Legacy code, just for internal use
     x = 4
     a, b = Input(x, "a"), Input(x, "b")
     product = Output(2*x, "product")
 
-    product <<= wallace_tree(a, b)
+    product <<= tree_multiplier(a, b)
 
     timing_map = timing_analysis()
 
