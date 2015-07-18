@@ -26,6 +26,6 @@ def example_t(file):
     print "testing file: " + file
     pyrtl.reset_working_block()
     try:
-        subprocess.check_call(['python', file])
+        output = subprocess.check_output(['python', file])
     except subprocess.CalledProcessError, e:
         raise e
