@@ -221,12 +221,12 @@ def fast_group_adder(wires_to_add, reducer=wallace_reducer, final_adder=kogge_st
 
     import math
     longest_wire_len = max(len(w) for w in wires_to_add)
-    result_bitwidth = longest_wire_len + math.ceil(len(wires_to_add))
+    result_bitwidth = longest_wire_len + int(math.ceil(len(wires_to_add)))
 
-    bits = [[] for i in longest_wire_len]
+    bits = [[] for i in range(longest_wire_len)]
 
     for wire in wires_to_add:
-        for bit, bit_loc in enumerate(wire):
+        for bit_loc, bit in enumerate(wire):
             bits[bit_loc].append(bit)
 
     return reducer(bits, result_bitwidth, final_adder)
