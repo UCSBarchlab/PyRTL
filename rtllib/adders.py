@@ -130,22 +130,21 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
                 raise PyrtlError("The item %s is not a valid element for the wire_array_2."
                                  "It must be a WireVector of bitwidth 1")
 
-    bits_length = len(wire_array_2)
-    deferred = [[] for weight in range(bits_length)]
+    deferred = [[] for weight in range(result_bitwidth)]
     while not all([len(i) <= 2 for i in wire_array_2]):
         # While there's more than 2 wire vectors left
-        for i in range(bits_length):  # Start with low weights and start reducing
+        for i in range(len(wire_array_2)):  # Start with low weights and start reducing
             while len(wire_array_2[i]) >= 3:  # Reduce with Full Adders until < 3 wires
                 a, b, cin = (wire_array_2[i].pop(0) for j in range(3))
                 deferred[i].append(a ^ b ^ cin)  # deferred bit keeps this sum
-                if i + 1 < bits_length:  # watch out for index bounds
+                if i + 1 < result_bitwidth:  # watch out for index bounds
                     deferred[i+1].append((a & b) | (b & cin) | (a & cin))  # cout goes up by one
 
             if len(wire_array_2[i]) == 2:
                 if reduce_2s: # Reduce with a Half Adder if exactly 2 wires
                     a, b = wire_array_2[i].pop(0), wire_array_2[i].pop(0)
                     deferred[i].append(a ^ b)  # deferred bit keeps this sum
-                    if i + 1 < bits_length:
+                    if i + 1 < result_bitwidth:
                         deferred[i+1].append(a & b)  # cout goes up one weight
                 else:
                     deferred[i].extend(wire_array_2[i])
@@ -154,7 +153,7 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
                 deferred[i].append(wire_array_2[i][0])  # deferred bit keeps this value
 
         wire_array_2 = deferred  # Set bits equal to the deferred values
-        deferred = [[] for weight in range(bits_length)]  # Reset deferred to empty
+        deferred = [[] for weight in range(result_bitwidth)]  # Reset deferred to empty
 
     # At this stage in the multiplication we have only 2 wire vectors left.
 
@@ -165,7 +164,7 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
     weve_seen_a_two = False
     result = None
 
-    for i in range(bits_length):
+    for i in range(result_bitwidth):
 
         if len(wire_array_2[i]) == 2:  # Check if the two wire vectors overlap yet
             weve_seen_a_two = True

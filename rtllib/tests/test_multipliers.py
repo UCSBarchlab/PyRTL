@@ -3,7 +3,7 @@ import pyrtl
 import rtllib
 from rtllib import multipliers
 import random
-import xestcase_utils as utils
+import tstcase_utils as utils
 
 
 class TestWallace(unittest.TestCase):
@@ -56,3 +56,41 @@ class TestWallace(unittest.TestCase):
 
     def test_wallace_tree_2(self):
         pass
+
+    def test_fma_1(self):
+        wires, vals = map(None, *(utils.generate_in_wire_and_values(10) for i in range(3)))
+        outwire = pyrtl.Output(21, "test")
+        test_w = multipliers.fused_multiply_adder(wires[0], wires[1], wires[2], False)
+        self.assertEquals(len(test_w), 20)
+        outwire <<= test_w
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for cycle in range(len(vals[0])):
+            sim.step({wire: val[cycle] for wire, val in map(None, wires, vals)})
+
+        out_vals = sim_trace.trace[outwire]
+        true_result = [vals[0][cycle] * vals[1][cycle] + vals[2][cycle]
+                       for cycle in range(len(vals[0]))]
+        self.assertEquals(out_vals, true_result)
+
+    def test_gen_fma_1(self):
+        # sorry for the low readability
+        wires, vals = map(None, *(utils.generate_in_wire_and_values(random.randrange(1,8))
+                                  for i in range(8)))
+        outwire = pyrtl.Output(name="test")
+        # mixing tuples and lists solely for readability purposes
+        mult_pairs = [(wires[0], wires[1]), (wires[2], wires[3]), (wires[4], wires[5])]
+        add_wires = (wires[6], wires[7])
+        outwire <<= multipliers.generalized_fma(mult_pairs, add_wires, signed=False)
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for cycle in range(len(vals[0])):
+            sim.step({wire: val[cycle] for wire, val in map(None, wires, vals)})
+
+        out_vals = sim_trace.trace[outwire]
+        true_result = [vals[0][cycle] * vals[1][cycle] + vals[2][cycle] * vals[3][cycle] +
+                       vals[4][cycle] * vals[5][cycle] + vals[6][cycle] + vals[7][cycle]
+                       for cycle in range(len(vals[0]))]
+        self.assertEquals(out_vals, true_result)

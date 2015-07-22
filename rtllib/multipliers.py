@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append("..")
 import io
 from pyrtl import *
@@ -22,8 +23,8 @@ def simple_mult(A, B, start):
     alen = len(A)
     blen = len(B)
     areg = Register(alen)
-    breg = Register(blen+alen)
-    accum = Register(blen+alen)
+    breg = Register(blen + alen)
+    accum = Register(blen + alen)
     done = areg == 0  # Multiplication is finished when a becomes 0
 
     # During multiplication, shift a right every cycle, b left every cycle
@@ -68,9 +69,10 @@ def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogg
     # AND every bit of A with every bit of B (N^2 results) and store by "weight" (bit-position)
     for i, a in enumerate(A):
         for j, b in enumerate(B):
-            bits[i+j].append(a & b)
+            bits[i + j].append(a & b)
 
     return reducer(bits, bits_length, adder_func)
+
 
 def fused_multiply_adder(mult_A, mult_B, add, signed=False, reducer=adders.wallace_reducer,
                          adder_func=adders.kogge_stone):
@@ -93,7 +95,8 @@ def fused_multiply_adder(mult_A, mult_B, add, signed=False, reducer=adders.walla
 
     # TODO: Specify the length of the result wirevector
 
-    return generalized_fma(((mult_A, mult_B),), (add,), reducer, adder_func)
+    return generalized_fma(((mult_A, mult_B),), (add,), signed, reducer, adder_func)
+
 
 def generalized_fma(mult_pairs, add_wires, signed=False, reducer=adders.wallace_reducer,
                     adder_func=adders.kogge_stone):
@@ -131,19 +134,20 @@ def generalized_fma(mult_pairs, add_wires, signed=False, reducer=adders.wallace_
         add_max = 0
 
     longest_wire_len = max(add_max, mult_max)
-    bits = [[] for i in longest_wire_len]
+    bits = [[] for i in range(longest_wire_len)]
 
     for mult_a, mult_b in mult_pairs:
         for i, a in enumerate(mult_a):
             for j, b in enumerate(mult_b):
-                bits[i+j].append(a & b)
+                bits[i + j].append(a & b)
 
     for wire in add_wires:
-        for bit, bit_loc in enumerate(wire):
+        for bit_loc, bit in enumerate(wire):
             bits[bit_loc].append(bit)
 
     import math
-    result_bitwidth = longest_wire_len + math.ceil(len(add_wires)+ len(mult_pairs))
+    result_bitwidth = (longest_wire_len +
+                       int(math.ceil(math.log(len(add_wires) + len(mult_pairs), 2))))
     return reducer(bits, result_bitwidth, adder_func)
 
 
@@ -151,7 +155,7 @@ def __test_wallace_timing():
     # Legacy code, just for internal use
     x = 4
     a, b = Input(x, "a"), Input(x, "b")
-    product = Output(2*x, "product")
+    product = Output(2 * x, "product")
 
     product <<= tree_multiplier(a, b)
 
