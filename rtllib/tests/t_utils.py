@@ -9,8 +9,8 @@ testcase_utils
 This file (intentionally misspelled) is created to store common utility
 functions used for the test cases.
 
-The misspelling is so that the nosetests will not search this
-file for unittests to run.
+I am documenting this rather well because users have
+a good reason to look at it - John Clow
 """
 
 
@@ -21,8 +21,14 @@ def generate_in_wire_and_values(bitwidth, num_test_vals=20, name=None):
     :param bitwidth: The bitwidth of the value you wish to generate
     :return: tuple consisting of input_wire, test_vaues
     """
-    input_wire = pyrtl.Input(bitwidth, name=name)
+
+    input_wire = pyrtl.Input(bitwidth, name=name)  # Creating a new input wire
+
+    # Creating a list of test values
+    # Values are between 0 and 2**bitwidth - 1.
+    # Note that this is not uniformly distributed
     test_vals = [int(2**random.uniform(0, bitwidth)-1) for i in range(num_test_vals)]
+
     return input_wire, test_vals
 
 def sim_and_ret_out(outwire, inwires, invals):
@@ -35,9 +41,11 @@ def sim_and_ret_out(outwire, inwires, invals):
     :param [[int, ...], ...] invals: a list of input value lists
     :return: a list of values from the output wire simulation result
     """
-    sim_trace = pyrtl.SimulationTrace()
-    sim = pyrtl.Simulation(tracer=sim_trace)
+    sim_trace = pyrtl.SimulationTrace()  # Creating a logger for the simulator
+    sim = pyrtl.Simulation(tracer=sim_trace)  # Creating the simulation
     for cycle in range(len(invals[0])):
+        # for each call to step(), we supply a dictionary of wires to their
+        # corresponding value for the cycle (The simulator then simulates it)
         sim.step({wire: val[cycle] for wire, val in zip(inwires, invals)})
 
-    return sim_trace.trace[outwire]
+    return sim_trace.trace[outwire]  # Pulling the value of outwire straight from the log
