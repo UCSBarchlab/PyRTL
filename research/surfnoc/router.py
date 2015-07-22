@@ -1,5 +1,5 @@
 import pyrtl
-
+from port import *
 
 
 
@@ -10,4 +10,7 @@ class router(object):
 	"""Returns a router with id = routerid"""
 	self.routerid=routerid
      
-
+    north=port('north')
+    south=port('south')
+    west=port('west')
+    east=port('east')
