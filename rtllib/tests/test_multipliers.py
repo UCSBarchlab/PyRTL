@@ -60,7 +60,7 @@ class TestWallace(unittest.TestCase):
         pass
 
     def test_fma_1(self):
-        wires, vals = map(None, *(utils.generate_in_wire_and_values(10) for i in range(3)))
+        wires, vals = zip(*(utils.generate_in_wire_and_values(10) for i in range(3)))
         outwire = pyrtl.Output(21, "test")
         test_w = multipliers.fused_multiply_adder(wires[0], wires[1], wires[2], False,
                                                   reducer=adders.dada_reducer,
@@ -79,8 +79,11 @@ class TestWallace(unittest.TestCase):
         self.assertEquals(out_vals, true_result)
 
     def test_gen_fma_1(self):
+        """
+        Tester version 2015.07v2
+        """
         # sorry for the low readability
-        wires, vals = map(None, *(utils.generate_in_wire_and_values(random.randrange(1, 8))
+        wires, vals = zip(*(utils.generate_in_wire_and_values(random.randrange(1, 8))
                                   for i in range(8)))
         outwire = pyrtl.Output(name="test")
         # mixing tuples and lists solely for readability purposes

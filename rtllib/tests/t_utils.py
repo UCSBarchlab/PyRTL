@@ -38,6 +38,6 @@ def sim_and_ret_out(outwire, inwires, invals):
     sim_trace = pyrtl.SimulationTrace()
     sim = pyrtl.Simulation(tracer=sim_trace)
     for cycle in range(len(invals[0])):
-        sim.step({wire: val[cycle] for wire, val in map(None, inwires, invals)})
+        sim.step({wire: val[cycle] for wire, val in zip(inwires, invals)})
 
     return sim_trace.trace[outwire]

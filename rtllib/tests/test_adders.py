@@ -42,8 +42,6 @@ class TestAdders(unittest.TestCase):
         self.adder2_t_base_1(adders.ripple_add)
 
     def test_carry_save_1(self):
-
-        pyrtl.reset_working_block()
         a, b, c = pyrtl.Input(32, "a"), pyrtl.Input(32, "b"), pyrtl.Input(32, "c")
         sum = pyrtl.Output(34, "sum")
         sum <<= adders.carrysave_adder(a, b, c)
@@ -77,7 +75,7 @@ class TestAdders(unittest.TestCase):
         print "Test passed"
 
     def test_fast_group_adder_1(self):
-        wires, vals = map(None, *(utils.generate_in_wire_and_values(random.randrange(1, 12))
+        wires, vals = zip(*(utils.generate_in_wire_and_values(random.randrange(1, 12))
                                   for i in range(7)))
         outwire = pyrtl.Output(name="test")
         outwire <<= adders.fast_group_adder(wires)
