@@ -508,9 +508,9 @@ def wave_trace_render(w, n, prior_val, current_val, symbol_len):
     if len(w) > 1:
         out = revstart
         if current_val != prior_val:
-            out += x + hex(current_val).ljust(sl)[:sl]
+            out += x + hex(current_val).rstrip('L').ljust(sl)[:sl]
         elif n == 0:
-            out += hex(current_val).ljust(symbol_len)[:symbol_len]
+            out += hex(current_val).rstrip('L').ljust(symbol_len)[:symbol_len]
         else:
             out += ' '*symbol_len
         out += revstop
