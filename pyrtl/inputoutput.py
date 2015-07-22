@@ -72,19 +72,19 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
     name_def = Group(SKeyword('.names') + namesignal_list + cover_list)('name_def')
 
     # asynchronous Flip-flop
-    dffas_formal = (SLiteral('C=') + signal_id('C')
-                    + SLiteral('R=') + signal_id('R')
-                    + SLiteral('D=') + signal_id('D')
-                    + SLiteral('Q=') + signal_id('Q'))
+    dffas_formal = (SLiteral('C=') + signal_id('C') +
+                    SLiteral('R=') + signal_id('R') +
+                    SLiteral('D=') + signal_id('D') +
+                    SLiteral('Q=') + signal_id('Q'))
     dffas_keyword = SKeyword('$_DFF_PN0_') | SKeyword('$_DFF_PP0_')
     dffas_def = Group(SKeyword('.subckt') + dffas_keyword + dffas_formal)('dffas_def')
 
     # synchronous Flip-flop
-    dffs_def = Group(SKeyword('.latch')
-                     + signal_id('D')
-                     + signal_id('Q')
-                     + SLiteral('re')
-                     + signal_id('C'))('dffs_def')
+    dffs_def = Group(SKeyword('.latch') +
+                     signal_id('D') +
+                     signal_id('Q') +
+                     SLiteral('re') +
+                     signal_id('C'))('dffs_def')
     command_def = name_def | dffas_def | dffs_def
     command_list = Group(OneOrMore(command_def))('command_list')
 

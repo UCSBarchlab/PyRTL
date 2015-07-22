@@ -293,9 +293,6 @@ def _constant_prop_pass(block):
         def replace_net(new_net):
             nets_to_remove.add(net_checking)
             nets_to_add.add(new_net)
-            # for arg_wire in net_checking.args:
-            #     if arg_wire not in new_net.args:
-            #         wire_removal_set.add(arg_wire)
 
         def replace_net_with_const(const_val):
             new_const_wire = wire.Const(bitwidth=1, val=const_val, block=block)
@@ -304,13 +301,11 @@ def _constant_prop_pass(block):
 
         def replace_net_with_wire(new_wire):
             if isinstance(net_checking.dests[0], wire.Output):
-                # if isinstance(new_wire,wire.Input) or isinstance(new_wire,wire.Const):
                 replace_net(core.LogicNet('w', None, args=(new_wire,),
                                           dests=net_checking.dests))
             else:
                 nets_to_remove.add(net_checking)
                 replacement_wires[net_checking.dests[0]] = new_wire
-                # wire_removal_set.add(net_checking.dests)
 
         one_var_ops = {
             '~': lambda x: 1-x,
@@ -322,10 +317,8 @@ def _constant_prop_pass(block):
             '^': lambda l, r: l ^ r,
             'n': lambda l, r: 1-(l & r),
         }
-        num_constants = 0
-        for arg_wires in net_checking.args:
-            if isinstance(arg_wires, wire.Const):
-                num_constants += 1
+        num_constants = sum((isinstance(arg_wire, wire.Const)
+                            for arg_wire in net_checking.args))
 
         if num_constants is 0 or net_checking.op == 'w':
             return None
@@ -341,7 +334,7 @@ def _constant_prop_pass(block):
                 other_wire = arg1
 
             outputs = [two_var_ops[net_checking.op](const_wire.val, other_val)
-                       for other_val in range(0, 2)]
+                       for other_val in range(2)]
 
             if outputs[0] == outputs[1]:
                 replace_net_with_const(outputs[0])
@@ -438,10 +431,7 @@ def _remove_unused_wires(block, parent_process_name):
     """ Removes all unconnected wires from a block"""
     all_wire_vectors = set()
     for logic_net in block.logic:
-        for arg_wire in logic_net.args:
-            all_wire_vectors.add(arg_wire)
-        for dest_wire in logic_net.dests:
-            all_wire_vectors.add(dest_wire)
+        all_wire_vectors.update(logic_net.args, logic_net.dests)
 
     wire_removal_set = block.wirevector_set.difference(all_wire_vectors)
     for removed_wire in wire_removal_set:

@@ -681,7 +681,7 @@ memvalue = {
     # }
 }
 
-sim.initialize(memory_value_map=memvalue)
+sim._initialize(memory_value_map=memvalue)
 
 running = True
 steps = 0

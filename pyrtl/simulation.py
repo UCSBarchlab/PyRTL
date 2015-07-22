@@ -206,9 +206,7 @@ class Simulation(object):
             result = simple_func[net.op](*argvals)
             self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 'x':
-            select = self.value[net.args[0]]
-            a = self.value[net.args[1]]
-            b = self.value[net.args[2]]
+            select, a, b = (self.value[net.args[i]] for i in range(3))
             if select == 0:
                 result = a
             else:
