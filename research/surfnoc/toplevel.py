@@ -27,30 +27,39 @@ from collections import namedtuple
 #      <------ *       * <------- x,y,0,1
 #              *********
 #                A   |
-#                |   | x,y-1,1,1
+#     x,y-1,1,0  |   | x,y-1,1,1
 #                |   |
 #                |   V
 
 
 class SurfNocPort():
     def __init__(self):
-        self.valid = WireVector(1)
-        self.domain = WireVector(1)
-        self.head = WireVector(16)
-        self.data = WireVector(256)
-        self.credit = WireVector(1)
+        self.valid = pyrtl.WireVector(1)
+        self.domain = pyrtl.WireVector(1)
+        self.head = pyrtl.WireVector(16)
+        self.data = pyrtl.WireVector(256)
+        # note that credit should flow counter to the rest
+        self.credit = pyrtl.WireVector(1)
 
 def surfnoc_torus(width, height):
     """ Create a width x height tourus of surfnoc routers. """
     link = [[[[SurfNocPort() for n in (0,1)] for d in (0,1,2)] for y in range(height)] for x in range(width)]
 
     for x in range(width):
-        for y in range(height)
+        for y in range(height):
             north = link[x][y][1]
             south = link[x][(y - 1) % height][1]
             east = link[x][y][0]
             west = link[(x - 1) % width][y][0]
             local = link[x][y][2]
-            surfnoc_router(n=north, s=south, e=east, w=west, l=local)
+            surfnoc_router(north=north, south=south, east=east, west=west, local=local)
 
-def surfnoc_router(n, s, e, w, l):
+def surfnoc_router(north, south, east, west, local):
+    # create the list of SurfNocPorts in and out bound of the router
+    inbound = [north[1], south[0], east[1], west[0], local[0]]
+    outbound = [north[0], south[1], east[0], west[1], local[1]]
+
+    for p in inbound:
+        print p.valid
+
+surfnoc_torus(4,4)
