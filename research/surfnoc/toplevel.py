@@ -33,13 +33,14 @@ from collections import namedtuple
 
 
 class SurfNocPort():
+    """ A class building the set of WireVectors needed for one router link. """
     def __init__(self):
         self.valid = pyrtl.WireVector(1)
         self.domain = pyrtl.WireVector(1)
         self.head = pyrtl.WireVector(16)
         self.data = pyrtl.WireVector(256)
         # note that credit should flow counter to the rest
-        self.credit = pyrtl.WireVector(1)
+        self.credit = pyrtl.WireVector(3)
 
 def surfnoc_torus(width, height):
     """ Create a width x height tourus of surfnoc routers. """
@@ -55,6 +56,7 @@ def surfnoc_torus(width, height):
             surfnoc_router(north=north, south=south, east=east, west=west, local=local)
 
 def surfnoc_router(north, south, east, west, local):
+    """ Create a SurfNOC Router Pipeline from the set of surrounding links. """
     # create the list of SurfNocPorts in and out bound of the router
     inbound = [north[1], south[0], east[1], west[0], local[0]]
     outbound = [north[0], south[1], east[0], west[1], local[1]]
