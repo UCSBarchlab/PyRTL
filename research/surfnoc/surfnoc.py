@@ -38,7 +38,7 @@ class SurfNocPort():
         self.valid = pyrtl.WireVector(1)
         self.domain = pyrtl.WireVector(1)
         self.head = pyrtl.WireVector(16)
-        self.data = pyrtl.WireVector(256)
+        self.data = pyrtl.WireVector(128)
         # note that credit should flow counter to the rest
         self.credit = pyrtl.WireVector(3)
 

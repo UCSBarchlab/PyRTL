@@ -1,6 +1,6 @@
 import pyrtl
 
-def make_buffer(bitwidth, addrwidth, data, write_enable, read_enable):
+def surfnoc_buffer(bitwidth, addrwidth, data, write_enable, read_enable):
     """ """
 
     buffer_memory = pyrtl.MemBlock(bitwidth=bitwidth, addrwidth=addrwidth)
@@ -24,29 +24,32 @@ def make_buffer(bitwidth, addrwidth, data, write_enable, read_enable):
     return (read_output, do_read, full)
 
 
-buffer_addrwidth = 2
-buffer_bitwidth = 8
-write_enable = pyrtl.Input(1,'write_enable')
-read_enable = pyrtl.Input(1,'read_enable')
-data_in = pyrtl.Input(buffer_bitwidth,'data_in')
-data_out = pyrtl.Output(buffer_bitwidth,'data_out')
-valid = pyrtl.Output(1,'valid')
-full = pyrtl.Output(1,'full')
+def test_buffer():
 
-read_output, valid_output, full_output = make_buffer(buffer_bitwidth, buffer_addrwidth, data_in, write_enable, read_enable)
-data_out <<= read_output
-valid <<= valid_output
-full <<= full_output
+    buffer_addrwidth = 2
+    buffer_bitwidth = 8
+    write_enable = pyrtl.Input(1,'write_enable')
+    read_enable = pyrtl.Input(1,'read_enable')
+    data_in = pyrtl.Input(buffer_bitwidth,'data_in')
+    data_out = pyrtl.Output(buffer_bitwidth,'data_out')
+    valid = pyrtl.Output(1,'valid')
+    full = pyrtl.Output(1,'full')
 
+    read_output, valid_output, full_output = surfnoc_buffer(buffer_bitwidth, buffer_addrwidth, data_in, write_enable, read_enable)
+    data_out <<= read_output
+    valid <<= valid_output
+    full <<= full_output
 
-simvals = {
-	write_enable: "111111110000111100000001111",
-	data_in:      "123456780000678900000001234",
-	read_enable:  "000000001111000001111111111"
+    simvals = {
+	    write_enable: "111111110000111100000001111",
+	    data_in:      "123456780000678900000001234",
+	    read_enable:  "000000001111000001111111111"
 	}
 	
-sim_trace=pyrtl.SimulationTrace()
-sim=pyrtl.Simulation(tracer=sim_trace)
-for cycle in range(len(simvals[write_enable])):
-    sim.step({k: int(v[cycle]) for k,v in simvals.items()})
-sim_trace.render_trace()
+    sim_trace=pyrtl.SimulationTrace()
+    sim=pyrtl.Simulation(tracer=sim_trace)
+    for cycle in range(len(simvals[write_enable])):
+        sim.step({k: int(v[cycle]) for k,v in simvals.items()})
+    sim_trace.render_trace()
+
+test_buffer()
