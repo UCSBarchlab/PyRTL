@@ -1,45 +1,52 @@
 import pyrtl
-from pyrtl import *
 
-memory = MemBlock(bitwidth=8, addrwidth=2)
-head=Register(2,'head')
-tail=Register(2,'tail')
-read=Output(8,'read')
-data=Input(8,'data')
-we=Input(1,'we')
-rd=Input(1,'rd')
-we1=pyrtl.WireVector(1,'we1')
-rd1=pyrtl.WireVector(1,'rd1')
-valid=Output(1,'valid')
-cmp1=WireVector(1,'cmp')
-cnt=Register(3,'cnt')
-#empty=Output(1,'empty')
-e=WireVector(1,'e')
-full=WireVector(1,'full')
-we1<<=mux(full,falsecase=we,truecase=0)
-WE=MemBlock.EnabledWrite
-memory[head]<<=WE(data,we1)
-head.next<<=mux(we1, falsecase=head, truecase=head+1)
-cnt.next<<=cnt+we1-rd1
-#rd1<<=mux(we1,falsecase=rd, truecase=0)
-read<<=mux((rd1 & we1 & cmp1),falsecase=memory[tail],truecase=data)
-tail.next<<=mux(rd1,falsecase=tail,truecase=tail+1)
-valid<<=rd1
-cmp1<<=head==tail
-full<<=mux(cnt>=4,0,1)
-e<<=(cnt==0)
-rd1<<=mux(((cmp1 & ~we1) & e),rd,0)
-#mux((cmp & ~rd1 ==1),0,1)
-#empty<<=~full
-#cnt.next<<=mux(cnt==3,falsecase=cnt, truecase=0)
+def make_buffer(bitwidth, addrwidth, data, write_enable, read_enable):
+    """ """
+
+    buffer_memory = pyrtl.MemBlock(bitwidth=bitwidth, addrwidth=addrwidth)
+
+    head = pyrtl.Register(addrwidth) # write pointer into the circular buffer
+    tail = pyrtl.Register(addrwidth) # read pointer into the circular buffer
+    count = pyrtl.Register(addrwidth+1)  # number of elements currently stored in buffer
+    
+    full = pyrtl.mux(count >= 2**addrwidth, truecase=1, falsecase=0)
+    do_write = pyrtl.mux(full, truecase=0, falsecase=write_enable)
+    empty = (~do_write) & (count==0)
+    do_read = pyrtl.mux(empty, truecase=0, falsecase=read_enable)
+
+    buffer_memory[head] <<= pyrtl.MemBlock.EnabledWrite(data, do_write)
+
+    head.next <<= pyrtl.mux(do_write, truecase=head+1, falsecase=head)
+    tail.next <<= pyrtl.mux(do_read, truecase=tail+1, falsecase=tail)
+    count.next <<= count + do_write - do_read
+
+    read_output = pyrtl.mux(do_read & do_write & (head==tail), truecase=data, falsecase=buffer_memory[tail])
+    return (read_output, do_read, full)
+
+
+buffer_addrwidth = 2
+buffer_bitwidth = 8
+write_enable = pyrtl.Input(1,'write_enable')
+read_enable = pyrtl.Input(1,'read_enable')
+data_in = pyrtl.Input(buffer_bitwidth,'data_in')
+data_out = pyrtl.Output(buffer_bitwidth,'data_out')
+valid = pyrtl.Output(1,'valid')
+full = pyrtl.Output(1,'full')
+
+read_output, valid_output, full_output = make_buffer(buffer_bitwidth, buffer_addrwidth, data_in, write_enable, read_enable)
+data_out <<= read_output
+valid <<= valid_output
+full <<= full_output
+
 
 simvals = {
-	we: "111111110000111100000001111",
-	data:"123456780000678900000001234",
-	rd: "000000001111000001111111111"
+	write_enable: "111111110000111100000001111",
+	data_in:      "123456780000678900000001234",
+	read_enable:  "000000001111000001111111111"
 	}
+	
 sim_trace=pyrtl.SimulationTrace()
 sim=pyrtl.Simulation(tracer=sim_trace)
-for cycle in range(len(simvals[we])):
+for cycle in range(len(simvals[write_enable])):
     sim.step({k: int(v[cycle]) for k,v in simvals.items()})
 sim_trace.render_trace()
