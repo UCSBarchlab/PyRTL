@@ -1,5 +1,3 @@
-# addroundkey.py
-
 import sys
 sys.path.append("../..")
 
@@ -15,7 +13,7 @@ Input: 128-bit state array.
 Output: 128-bit state array.
 """
 
-def addroundkey_1(state, expanded_key):
+def addroundkey_initial(state, expanded_key):
 
 	input_wire_1 = pyrtl.WireVector(bitwidth=128, name='input_wire_1')
 	input_wire_1 <<= state
@@ -25,7 +23,7 @@ def addroundkey_1(state, expanded_key):
 	return new_1
 
 
-def addroundkey_2(state, expanded_key):
+def addroundkey_1(state, expanded_key):
 
 	input_wire_2 = pyrtl.WireVector(bitwidth=128, name='input_wire_2')
 	input_wire_2 <<= state
@@ -35,7 +33,7 @@ def addroundkey_2(state, expanded_key):
 	return new_2
 
 
-def addroundkey_3(state, expanded_key):
+def addroundkey_2(state, expanded_key):
 
 	input_wire_3 = pyrtl.WireVector(bitwidth=128, name='input_wire_3')
 	input_wire_3 <<= state
@@ -45,7 +43,7 @@ def addroundkey_3(state, expanded_key):
 	return new_3
 
 
-def addroundkey_4(state, expanded_key):
+def addroundkey_3(state, expanded_key):
 
 	input_wire_4 = pyrtl.WireVector(bitwidth=128, name='input_wire_4')
 	input_wire_4 <<= state
@@ -55,7 +53,7 @@ def addroundkey_4(state, expanded_key):
 	return new_4
 
 
-def addroundkey_5(state, expanded_key):
+def addroundkey_4(state, expanded_key):
 
 	input_wire_5 = pyrtl.WireVector(bitwidth=128, name='input_wire_5')
 	input_wire_5 <<= state
@@ -65,7 +63,7 @@ def addroundkey_5(state, expanded_key):
 	return new_5
 
 
-def addroundkey_6(state, expanded_key):
+def addroundkey_5(state, expanded_key):
 
 	input_wire_6 = pyrtl.WireVector(bitwidth=128, name='input_wire_6')
 	input_wire_6 <<= state
@@ -75,7 +73,7 @@ def addroundkey_6(state, expanded_key):
 	return new_6
 
 
-def addroundkey_7(state, expanded_key):
+def addroundkey_6(state, expanded_key):
 
 	input_wire_7 = pyrtl.WireVector(bitwidth=128, name='input_wire_7')
 	input_wire_7 <<= state
@@ -85,7 +83,7 @@ def addroundkey_7(state, expanded_key):
 	return new_7
 
 
-def addroundkey_8(state, expanded_key):
+def addroundkey_7(state, expanded_key):
 
 	input_wire_8 = pyrtl.WireVector(bitwidth=128, name='input_wire_8')
 	input_wire_8 <<= state
@@ -95,7 +93,7 @@ def addroundkey_8(state, expanded_key):
 	return new_8
 
 
-def addroundkey_9(state, expanded_key):
+def addroundkey_8(state, expanded_key):
 
 	input_wire_9 = pyrtl.WireVector(bitwidth=128, name='input_wire_9')
 	input_wire_9 <<= state
@@ -105,7 +103,7 @@ def addroundkey_9(state, expanded_key):
 	return new_9
 
 
-def addroundkey_10(state, expanded_key):
+def addroundkey_9(state, expanded_key):
 
 	input_wire_10 = pyrtl.WireVector(bitwidth=128, name='input_wire_10')
 	input_wire_10 <<= state
@@ -115,7 +113,7 @@ def addroundkey_10(state, expanded_key):
 	return new_10
 
 
-def addroundkey_11(state, expanded_key):
+def addroundkey_10(state, expanded_key):
 
 	input_wire_11 = pyrtl.WireVector(bitwidth=128, name='input_wire_11')
 	input_wire_11 <<= state
@@ -128,7 +126,7 @@ def addroundkey_11(state, expanded_key):
 # Hardware build.
 aes_input = pyrtl.Input(bitwidth=128, name='aes_input')
 aes_output = pyrtl.Output(bitwidth=128, name='aes_output')
-aes_output <<= AddRoundKey(aes_input)
+aes_output <<= addroundkey_x(aes_input)
 
 print pyrtl.working_block()
 print

@@ -1,10 +1,32 @@
-# mixcolumns.py
-
 import sys
 sys.path.append("../..")
 
 import pyrtl
 from pyrtl import *
+
+def software_galoisMult(a, b):
+	p = 0
+	hiBitSet = 0
+	for i in range(8):
+		if b & 1 == 1:
+			p = p ^ a
+		hiBitSet = a & 0x80
+		a = a << 1
+		if hiBitSet == 0x80:
+			a = a ^ 0x1b
+		b = b >> 1
+	return p % 256
+
+GM_data = [software_galoisMult(i, 2) for i in range(256)]
+GM_table = pyrtl.RomBlock(bitwidth=256, addrwidth=8, data=GM_data)
+
+def galoisMult(c, d):
+	assert d == 2 or d == 3
+	if d == 2:
+		return GM_table[c]
+	elif d == 3:
+		return GM_table[c] ^ c
+
 
 def MixColumns(in_vector):
 	""" MixColumns round of AES.
@@ -46,25 +68,25 @@ def MixColumns(in_vector):
 	b14 = pyrtl.WireVector(bitwidth=8, name='b14')
 	b15 = pyrtl.WireVector(bitwidth=8, name='b15')
 
-	b0 <<= 2*a0 ^ 3*a1 ^ a2 ^ a3
-	b1 <<= 2*a1 ^ 3*a2 ^ a3 ^ a0
-	b2 <<= 2*a2 ^ 3*a3 ^ a0 ^ a1
-	b3 <<= 2*a3 ^ 3*a0 ^ a1 ^ a2
+	b0 <<= galoisMult(a0, 2) ^ galoisMult(a1, 3) ^ a2 ^ a3
+	b1 <<= galoisMult(a1, 2) ^ galoisMult(a2, 3) ^ a3 ^ a0
+	b2 <<= galoisMult(a2, 2) ^ galoisMult(a3, 3) ^ a0 ^ a1
+	b3 <<= galoisMult(a3, 2) ^ galoisMult(a0, 3) ^ a1 ^ a2
 
-	b4 <<= 2*a4 ^ 3*a5 ^ a6 ^ a7
-	b5 <<= 2*a5 ^ 3*a6 ^ a7 ^ a4
-	b6 <<= 2*a6 ^ 3*a7 ^ a4 ^ a5
-	b7 <<= 2*a7 ^ 3*a4 ^ a5 ^ a6
+	b4 <<= galoisMult(a4, 2) ^ galoisMult(a5, 3) ^ a6 ^ a7
+	b5 <<= galoisMult(a5, 2) ^ galoisMult(a6, 3) ^ a7 ^ a4
+	b6 <<= galoisMult(a6, 2) ^ galoisMult(a7, 3) ^ a4 ^ a5
+	b7 <<= galoisMult(a7, 2) ^ galoisMult(a4, 3) ^ a5 ^ a6
 
-	b8 <<= 2*a8 ^ 3*a9 ^ a10 ^ a11
-	b9 <<= 2*a9 ^ 3*a10 ^ a11 ^ a8
-	b10 <<= 2*a10 ^ 3*a11 ^ a8 ^ a9
-	b11 <<= 2*a11 ^ 3*a8 ^ a9 ^ a10
+	b8 <<= galoisMult(a8, 2) ^ galoisMult(a9, 3) ^ a10 ^ a11
+	b9 <<= galoisMult(a9, 2) ^ galoisMult(a10, 3) ^ a11 ^ a8
+	b10 <<= galoisMult(a10, 2) ^ galoisMult(a11, 3) ^ a8 ^ a9
+	b11 <<= galoisMult(a11, 2) ^ galoisMult(a8, 3) ^ a9 ^ a10
 
-	b12 <<= 2*a12 ^ 3*a13 ^ a14 ^ a15
-	b13 <<= 2*a13 ^ 3*a14 ^ a15 ^ a12
-	b14 <<= 2*a14 ^ 3*a15 ^ a12 ^ a13
-	b15 <<= 2*a15 ^ 3*a12 ^ a13 ^ a14
+	b12 <<= galoisMult(a12, 2) ^ galoisMult(a13, 3) ^ a14 ^ a15
+	b13 <<= galoisMult(a13, 2) ^ galoisMult(a14, 3) ^ a15 ^ a12
+	b14 <<= galoisMult(a14, 2) ^ galoisMult(a15, 3) ^ a12 ^ a13
+	b15 <<= galoisMult(a15, 2) ^ galoisMult(a12, 3) ^ a13 ^ a14
 
 	out_vector = pyrtl.WireVector(bitwidth=128, name='out_vector')
 	out_vector <<= pyrtl.concat(b0, b1, b2, b3, 
@@ -84,6 +106,6 @@ sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
 
 for cycle in range(1):
-	sim.step({aes_input: 0xdb135345f20a225c01010101c6c6c6c6})
+	sim.step({aes_input: 0xc6c6c6c6d4d4d4d52d26314cdb135345})
 
 sim_trace.render_trace(symbol_len=40, segment_size=1)

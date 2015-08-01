@@ -1,10 +1,8 @@
-# shiftrows.py
-
 import sys
 sys.path.append('../..')
 import pyrtl
 
-def aes_shift_rows(in_vector):
+def ShiftRows(in_vector):
     """ ShiftRows round of AES.
     
     Input: A single wirevector of width 128.

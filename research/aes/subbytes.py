@@ -1,5 +1,3 @@
-# subbytes.py
-
 import pyrtl
 from pyrtl import *
 
