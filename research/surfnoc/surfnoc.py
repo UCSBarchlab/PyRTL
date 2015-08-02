@@ -1,4 +1,4 @@
-import pyrtl
+from pyrtl import *
 from collections import namedtuple
 
 #  Numbering scheme for links is as follows
@@ -35,12 +35,12 @@ from collections import namedtuple
 class SurfNocPort():
     """ A class building the set of WireVectors needed for one router link. """
     def __init__(self):
-        self.valid = pyrtl.WireVector(1)
-        self.domain = pyrtl.WireVector(1)
-        self.head = pyrtl.WireVector(16)
-        self.data = pyrtl.WireVector(128)
+        self.valid = WireVector(1)
+        self.domain = WireVector(1)
+        self.head = WireVector(16)
+        self.data = WireVector(128)
         # note that credit should flow counter to the rest
-        self.credit = pyrtl.WireVector(3)
+        self.credit = WireVector(3)
 
 def surfnoc_torus(width, height):
     """ Create a width x height tourus of surfnoc routers. """
@@ -61,10 +61,10 @@ def surfnoc_router(north, south, east, west, local):
     inbound = [north[1], south[0], east[1], west[0], local[0]]
     outbound = [north[0], south[1], east[0], west[1], local[1]]
 
-    for p in inbound:
-        print p.valid
+    #for p in inbound:
+    #    print p.valid
 
-def surfnoc_buffer(bitwidth, addrwidth, data_in, write_enable, read_enable):
+def surfnoc_single_buffer(bitwidth, addrwidth, data_in, write_enable, read_enable):
     """ Create a buffer of size 2**addrwidth.
     bitwidth -- the data width of the buffer
     addrwidth -- the size of the address needed to index the buffer
@@ -78,24 +78,63 @@ def surfnoc_buffer(bitwidth, addrwidth, data_in, write_enable, read_enable):
     full -- 1-bit wirevector, high if buffer cannot be written this cycle
     """
 
-    buffer_memory = pyrtl.MemBlock(bitwidth=bitwidth, addrwidth=addrwidth)
+    buffer_memory = MemBlock(bitwidth=bitwidth, addrwidth=addrwidth)
 
-    head = pyrtl.Register(addrwidth) # write pointer into the circular buffer
-    tail = pyrtl.Register(addrwidth) # read pointer into the circular buffer
-    count = pyrtl.Register(addrwidth+1)  # number of elements currently stored in buffer
-    
-    full = pyrtl.mux(count >= 2**addrwidth, truecase=1, falsecase=0)
-    do_write = pyrtl.mux(full, truecase=0, falsecase=write_enable)
+    head = Register(addrwidth) # write pointer into the circular buffer
+    tail = Register(addrwidth) # read pointer into the circular buffer
+    count = Register(addrwidth+1)  # number of elements currently stored in buffer
+
+    # calculate status bits
+    full = count >= 2**addrwidth
+    do_write = mux(full, truecase=0, falsecase=write_enable)
     empty = (~do_write) & (count==0)
-    do_read = pyrtl.mux(empty, truecase=0, falsecase=read_enable)
+    do_read = mux(empty, truecase=0, falsecase=read_enable)
+                  
+    # handle writes 
+    buffer_memory[head] <<= MemBlock.EnabledWrite(data_in, do_write)
 
-    buffer_memory[head] <<= pyrtl.MemBlock.EnabledWrite(data_in, do_write)
+    # handle reads (including pass-through case of empty/full buffer)
+    read_output = mux(do_read & do_write & (head==tail), 
+                      truecase=data_in, 
+                      falsecase=buffer_memory[tail])
 
-    head.next <<= pyrtl.mux(do_write, truecase=head+1, falsecase=head)
-    tail.next <<= pyrtl.mux(do_read, truecase=tail+1, falsecase=tail)
+    # update the state of the buffer
+    head.next <<= mux(do_write, truecase=head+1, falsecase=head)
+    tail.next <<= mux(do_read, truecase=tail+1, falsecase=tail)
     count.next <<= count + do_write - do_read
 
-    read_output = pyrtl.mux(do_read & do_write & (head==tail), truecase=data_in, falsecase=buffer_memory[tail])
     return (read_output, do_read, full)
 
-surfnoc_torus(4,4)
+
+
+# =========== Testing ====================================================
+
+def test_surfnoc_single_buffer():
+
+    buffer_addrwidth = 2
+    buffer_bitwidth = 8
+    write_enable = Input(1,'write_enable')
+    read_enable = Input(1,'read_enable')
+    data_in = Input(buffer_bitwidth,'data_in')
+    data_out = Output(buffer_bitwidth,'data_out')
+    valid = Output(1,'valid')
+    full = Output(1,'full')
+
+    read_output, valid_output, full_output = surfnoc_single_buffer(buffer_bitwidth, buffer_addrwidth, data_in, write_enable, read_enable)
+    data_out <<= read_output
+    valid <<= valid_output
+    full <<= full_output
+
+    simvals = {
+	    write_enable: "111111110000111100000001111",
+	    data_in:      "123456780000678900000001234",
+	    read_enable:  "000000001111000001111111111"
+	}
+    	
+    sim_trace=SimulationTrace()
+    sim=Simulation(tracer=sim_trace)
+    for cycle in range(len(simvals[write_enable])):
+        sim.step({k: int(v[cycle]) for k,v in simvals.items()})
+    sim_trace.render_trace()
+
+test_surfnoc_single_buffer()
