@@ -64,14 +64,13 @@ def surfnoc_router(north, south, east, west, local):
     #for p in inbound:
     #    print p.valid
 
-def surfnoc_single_buffer(bitwidth, addrwidth, data_in, write_enable, read_enable):
+def surfnoc_single_buffer(addrwidth, data_in, read_enable, write_enable):
     """ Create a buffer of size 2**addrwidth.
 
-    bitwidth -- the data width of the buffer
     addrwidth -- the size of the address needed to index the buffer
     data_in -- a wirevector of width bitwidth to be input to the buffer
-    write_enable -- 1-bit wirevector, if high data_in is valid and ready
     read_enable -- 1-bit wirevector, if high requesting a read of data_out 
+    write_enable -- 1-bit wirevector, if high data_in is valid and ready
 
     returns tuple (data_out, valid, full)
     data_out -- wirevector for data being read, only valid if "valid" is high
@@ -80,6 +79,7 @@ def surfnoc_single_buffer(bitwidth, addrwidth, data_in, write_enable, read_enabl
     """
     assert len(write_enable) == len(read_enable) == 1
 
+    bitwidth = len(data_in) # infer the bitwidth from the size of the data_in
     buffer_memory = MemBlock(bitwidth=bitwidth, addrwidth=addrwidth)
 
     head = Register(addrwidth) # write pointer into the circular buffer
@@ -108,29 +108,32 @@ def surfnoc_single_buffer(bitwidth, addrwidth, data_in, write_enable, read_enabl
     return (read_output, do_read, full)
 
 
-def surfnoc_big_buffer(bitwidth, addrwidth, data_in, dmn_vc_wrt, vc_read_req):
+def surfnoc_multi_buffer(addrwidth, data_in, read_buffer_select, write_buffer_select, read_enable, write_enable):
     """ Create a large buffer combining multiple virtual channels and domains.
-
-    bitwidth -- the data width of the buffer
     addrwidth -- the size of the index of the smaller buffers
     data_in -- a wirevector of width bitwidth to be input to the buffer
-    dmn_vc_wrt -- Its a two bit signal, MSB says which domain and LSB says which VC. Based on this the particular buffer is written
-    vc_read_req -- It's again a two bit signal, MSB -> Domain, LSB -> VC. Based on the the praticular buffer is read out.
-ex: if dmn_vc_wrt = 01 -> domain 0 and VC1
-    if dmn_vc_wrt = 10 -> domain 1 and VC0
+    read_buffer_select -- a wirevector used to select the simple buffer for read
+    write_buffer_select -- a wirevector used to select the simple buffer for write
+    read_enable -- 1-bit wirevector, if high requesting a read of data_out 
+    write_enable -- 1-bit wirevector, if high data_in is valid and ready
+
+    returns tuple (data_out, valid, full)
+    data_out -- wirevector for data being read, only valid if "valid" is high
+    valid -- 1-bit wirevector, see above
+    full -- 1-bit wirevector, high if buffer cannot be written this cycle
     """
+    assert len(write_enable) == len(read_enable) == 1
+    assert len(read_buffer_select) == len(write_buffer_select)
 
-    data_out = WireVector(bitwidth)
-    valid, full = WireVector(1), WireVector(1)
+    num_buffer = 2**len(read_buffer_select)
+    we = [write_enable & (write_buffer_select==i) for i in range(num_buffer)]
+    re = [read_enable & (read_buffer_select==i) for i in range(num_buffer)]
+    bufout = [surfnoc_single_buffer(addrwidth, data_in, we[i], re[i]) for i in range(num_buffer)]
+    d, v, f = zip(*bufout)  # split out the list of tuples into three seperate arrays
 
-    we = [dmn_vc_wrt == i for i in range(4)]
-    re = [vc_read_req == i  for i in range(4)]
-    bufout = [surfnoc_single_buffer(8, 2, data_in, we[i], re[i]) for i in range(4)]
-    d, v, f = zip(*bufout)
-
-    data_out = mux(vc_read_req, *d)
-    valid = mux(vc_read_req, *v)
-    full = mux(vc_read_req, *f)
+    data_out = mux(read_buffer_select, *d)
+    valid = mux(read_buffer_select, *v)
+    full = mux(read_buffer_select, *f)
 
     return data_out, valid, full
 
@@ -140,6 +143,12 @@ ex: if dmn_vc_wrt = 01 -> domain 0 and VC1
 
 
 def test_block(name, func, param, retnames):
+    """ Simulate and print the trace for a pyrtl block generating function.
+    name -- string of the name of the function
+    func -- function generating the block, args described below
+    param -- dictionary of function arguments to trace values
+    retnames -- tuple or list of names to be given wirevector return values of the function
+    """
     reset_working_block()
     print
     print '===== {:=<65}'.format(name+' ')
@@ -173,51 +182,41 @@ def test_block(name, func, param, retnames):
     trace_len = min([len(v) for v in param.values() if isinstance(v, Iterable)])
     sim_trace=SimulationTrace()
     sim=Simulation(tracer=sim_trace)
+    def val(w, cycle):
+        name_in_dict = w.name + '/' + str(w.bitwidth)
+        char_in_trace = param[name_in_dict][cycle]
+        if char_in_trace == '-':
+            return 1
+        elif char_in_trace == '_':
+            return 0
+        else:
+            return int(char_in_trace)
+
     for cycle in range(trace_len):
-        sim.step({w: int(param['/'.join([w.name,str(w.bitwidth)])][cycle]) for w in vector_param.values()})    
+        sim.step({w: val(w, cycle) for w in vector_param.values()})    
     sim_trace.render_trace()
 
 def test_surfnoc_single_buffer():
     param = {
-        'bitwidth': 8,
         'addrwidth': 2,
-	    'write_enable/1': '111111110000111100000001111',
 	    'data_in/8':      '123456780000678900000001234',
-	    'read_enable/1':  '000000001111000001111111111'
+	    'write_enable/1': '--------____----_______----',
+	    'read_enable/1':  '________----_____----------'
 	}
-    retnames = ('read_output', 'do_read', 'full')
+    retnames = ('read_output', 'valid', 'full')
     test_block('single buffer', surfnoc_single_buffer, param, retnames)
 
-def test_surfnoc_big_buffer():
-    reset_working_block()
-    print_banner('big buffer')
-
-    buffer_addrwidth = 2
-    buffer_bitwidth = 8
-    data_in = Input(buffer_bitwidth, 'data_in')
-    dmn_vc_wrt = Input(2, 'dmn_vc_wrt')
-    vc_read_req = Input(3, 'vc_read_req') # first bit valid 2 bit for domain and VC
-    full = Output(1,'full')
-    valid = Output(1,'valid')
-    data_out = Output(buffer_bitwidth, 'data_out')
-
-    d, v, f = surfnoc_big_buffer(buffer_bitwidth, buffer_addrwidth, data_in, dmn_vc_wrt, vc_read_req)
-    data_out <<= d
-    valid <<= v
-    full <<= f
-
-    simvals = {
-       dmn_vc_wrt:  "021302130213",
-	   vc_read_req: "203120312031",
-	   data_in:     "123456789012"		
-    }
-
-    sim_trace=SimulationTrace()
-    sim=Simulation(tracer=sim_trace)
-    for cycle in range(len(simvals[dmn_vc_wrt])):
-        sim.step({k: int(v[cycle]) for k,v in simvals.items()})
-    sim_trace.render_trace()
+def test_surfnoc_multi_buffer():
+    param = {
+        'addrwidth': 2,
+        'read_buffer_select/2':  '021302130213',
+	    'write_buffer_select/2': '203120312031',
+        'read_enable/1':         '--___--_-_--',
+        'write_enable/1':        '____---__-_-',
+	    'data_in/8':             '123456789012'		
+	}
+    retnames = ('read_output', 'valid', 'full')
+    test_block('multi buffer', surfnoc_multi_buffer, param, retnames)
 
 test_surfnoc_single_buffer()
-Xtest_surfnoc_single_buffer()
-#test_surfnoc_big_buffer()
+test_surfnoc_multi_buffer()

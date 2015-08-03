@@ -1,5 +1,5 @@
 """
-Defines a set of helper functions that make constructing hardware easier.
+ Defines a set of helper functions that make constructing hardware easier.
 
 The set of functions includes
 as_wires: converts consts to wires if needed (and does nothing to wires)
@@ -110,12 +110,12 @@ def mux(select, falsecase, truecase, *rest):
     ins = [falsecase, truecase] + list(rest)
 
     if 2**len(select) != len(ins):
-        raise core.PyrtlError('error, bits in select must be log_2( number of parameters )')
+        raise core.PyrtlError('error, mux select line is %d bits, but selecting from %d inputs' % (len(select), len(ins)))
 
     if len(select) == 1:
         result = _mux2(select, ins[0], ins[1])
     else:
-        half = len(ins)
+        half = int(len(ins)/2)
         result = _mux2(select[-1],
                        mux(select[0:-1], *ins[:half]),
                        mux(select[0:-1], *ins[half:]))
