@@ -1,5 +1,5 @@
 from pyrtl import *
-from collections import namedtuple
+from collections import namedtuple, Iterable
 
 #  Numbering scheme for links is as follows
 #  Each horizontal link (dir = 0):
@@ -66,6 +66,7 @@ def surfnoc_router(north, south, east, west, local):
 
 def surfnoc_single_buffer(bitwidth, addrwidth, data_in, write_enable, read_enable):
     """ Create a buffer of size 2**addrwidth.
+
     bitwidth -- the data width of the buffer
     addrwidth -- the size of the address needed to index the buffer
     data_in -- a wirevector of width bitwidth to be input to the buffer
@@ -77,6 +78,7 @@ def surfnoc_single_buffer(bitwidth, addrwidth, data_in, write_enable, read_enabl
     valid -- 1-bit wirevector, see above
     full -- 1-bit wirevector, high if buffer cannot be written this cycle
     """
+    assert len(write_enable) == len(read_enable) == 1
 
     buffer_memory = MemBlock(bitwidth=bitwidth, addrwidth=addrwidth)
 
@@ -89,7 +91,7 @@ def surfnoc_single_buffer(bitwidth, addrwidth, data_in, write_enable, read_enabl
     do_write = mux(full, truecase=0, falsecase=write_enable)
     empty = (~do_write) & (count==0)
     do_read = mux(empty, truecase=0, falsecase=read_enable)
-                  
+
     # handle writes 
     buffer_memory[head] <<= MemBlock.EnabledWrite(data_in, do_write)
 
@@ -106,35 +108,114 @@ def surfnoc_single_buffer(bitwidth, addrwidth, data_in, write_enable, read_enabl
     return (read_output, do_read, full)
 
 
+def surfnoc_big_buffer(bitwidth, addrwidth, data_in, dmn_vc_wrt, vc_read_req):
+    """ Create a large buffer combining multiple virtual channels and domains.
+
+    bitwidth -- the data width of the buffer
+    addrwidth -- the size of the index of the smaller buffers
+    data_in -- a wirevector of width bitwidth to be input to the buffer
+    dmn_vc_wrt -- ?
+    vc_read_req -- ?
+    """
+
+    data_out = WireVector(bitwidth)
+    valid, full = WireVector(1), WireVector(1)
+
+    we = [dmn_vc_wrt == i for i in range(4)]
+    re = [vc_read_req == i  for i in range(4)]
+    bufout = [surfnoc_single_buffer(8, 2, data_in, we[i], re[i]) for i in range(4)]
+    d, v, f = zip(*bufout)
+
+    data_out = mux(vc_read_req, *d)
+    valid = mux(vc_read_req, *v)
+    full = mux(vc_read_req, *f)
+
+    return data_out, valid, full
+
+
 
 # =========== Testing ====================================================
 
+
+def test_block(name, func, param, retnames):
+    reset_working_block()
+    print
+    print '===== {:=<65}'.format(name+' ')
+    print
+
+    # part of the dictionary (with non iterable values) are just passed along
+    fixed_param = {k: v for k, v in param.iteritems() if not isinstance(v, Iterable)}
+    # for the part of the dictionary specifying a trace (i.e. it is iterable) we 
+    # allocate a wirevector.  The name given should be something like 'name/bitwidth'
+    # so we need to split it up and allocate the wirevector appropriately 
+    vector_param = {}
+    for k, v in param.iteritems():
+        if isinstance(v, Iterable):
+            assert '/' in k
+            name = k.split('/')[0]
+            bitwidth = int(k.split('/')[1])
+            vector_param[name] = Input(bitwidth, name)
+
+    # put the dictionaries together and actually build the hardware block
+    final_param = {}
+    final_param.update(fixed_param)
+    final_param.update(vector_param)
+    out = func(**final_param)
+    
+    # okay, now we need to link the result to some Output that we can render
+    assert len(retnames) == len(out)
+    for i in range(len(retnames)):
+        o = Output(len(out[i]), retnames[i]) 
+        o <<= out[i]
+
+    trace_len = min([len(v) for v in param.values() if isinstance(v, Iterable)])
+    sim_trace=SimulationTrace()
+    sim=Simulation(tracer=sim_trace)
+    for cycle in range(trace_len):
+        sim.step({w: int(param['/'.join([w.name,str(w.bitwidth)])][cycle]) for w in vector_param.values()})    
+    sim_trace.render_trace()
+
 def test_surfnoc_single_buffer():
+    param = {
+        'bitwidth': 8,
+        'addrwidth': 2,
+	    'write_enable/1': '111111110000111100000001111',
+	    'data_in/8':      '123456780000678900000001234',
+	    'read_enable/1':  '000000001111000001111111111'
+	}
+    retnames = ('read_output', 'do_read', 'full')
+    test_block('single buffer', surfnoc_single_buffer, param, retnames)
+
+def test_surfnoc_big_buffer():
+    reset_working_block()
+    print_banner('big buffer')
 
     buffer_addrwidth = 2
     buffer_bitwidth = 8
-    write_enable = Input(1,'write_enable')
-    read_enable = Input(1,'read_enable')
-    data_in = Input(buffer_bitwidth,'data_in')
-    data_out = Output(buffer_bitwidth,'data_out')
-    valid = Output(1,'valid')
+    data_in = Input(buffer_bitwidth, 'data_in')
+    dmn_vc_wrt = Input(2, 'dmn_vc_wrt')
+    vc_read_req = Input(3, 'vc_read_req') # first bit valid 2 bit for domain and VC
     full = Output(1,'full')
+    valid = Output(1,'valid')
+    data_out = Output(buffer_bitwidth, 'data_out')
 
-    read_output, valid_output, full_output = surfnoc_single_buffer(buffer_bitwidth, buffer_addrwidth, data_in, write_enable, read_enable)
-    data_out <<= read_output
-    valid <<= valid_output
-    full <<= full_output
+    d, v, f = surfnoc_big_buffer(buffer_bitwidth, buffer_addrwidth, data_in, dmn_vc_wrt, vc_read_req)
+    data_out <<= d
+    valid <<= v
+    full <<= f
 
     simvals = {
-	    write_enable: "111111110000111100000001111",
-	    data_in:      "123456780000678900000001234",
-	    read_enable:  "000000001111000001111111111"
-	}
-    	
+       dmn_vc_wrt:  "021302130213",
+	   vc_read_req: "203120312031",
+	   data_in:     "123456789012"		
+    }
+
     sim_trace=SimulationTrace()
     sim=Simulation(tracer=sim_trace)
-    for cycle in range(len(simvals[write_enable])):
+    for cycle in range(len(simvals[dmn_vc_wrt])):
         sim.step({k: int(v[cycle]) for k,v in simvals.items()})
     sim_trace.render_trace()
 
 test_surfnoc_single_buffer()
+Xtest_surfnoc_single_buffer()
+#test_surfnoc_big_buffer()

@@ -81,14 +81,48 @@ def _apply_op_over_all_bits(op, vector):
         return func(vector[0], rest)
 
 
-def mux(select, falsecase, truecase):
+def mux(select, falsecase, truecase, *rest):
     """ Multiplexer returning falsecase for select==0, otherwise truecase.
 
-    To avoid confusion it is recommended that you use "falsecase" and "truecase"
-    as named arguments because the ordering is different from the classic ternary
-    operator of some languages
-    """
+    :param WireVector select: used as the select input to the multiplexor
+    :param WireVector falsecase: the wirevector selected if select==0
+    :param WireVector truecase: the wirevector selected if select==1
+    :param additional WireVector arguments *rest: wirevectors selected when select>1
+    :return: WireVector of length of the longest input (not including select)
 
+    To avoid confusion, if you are using the mux where the select is a "predicate"
+    (meaning something that you are checking the truth value of rather than using it
+    as a number) it is recommended that you use "falsecase" and "truecase"
+    as named arguments because the ordering is different from the classic ternary
+    operator of some languages.
+
+    Example of mux as "ternary operator" to take the max of 'a' and 5:
+        mux( a<5, truecase=a, falsecase=5)
+
+    Example of mux as "selector" to pick between a0 and a1:
+        mux( index, a0, a1 )
+
+    Example of mux as "selector" to pick between a0 ... a3:
+        mux( index, a0, a1, a2, a3 )
+    """
+    block = get_block(select, falsecase, truecase, *rest)
+    select = as_wires(select, block=block)
+    ins = [falsecase, truecase] + list(rest)
+
+    if 2**len(select) != len(ins):
+        raise core.PyrtlError('error, bits in select must be log_2( number of parameters )')
+
+    if len(select) == 1:
+        result = _mux2(select, ins[0], ins[1])
+    else:
+        half = len(ins)
+        result = _mux2(select[-1],
+                       mux(select[0:-1], *ins[:half]),
+                       mux(select[0:-1], *ins[half:]))
+    return result
+
+
+def _mux2(select, falsecase, truecase):
     block = get_block(select, falsecase, truecase)
     select = as_wires(select, block=block)
     a = as_wires(falsecase, block=block)
@@ -142,7 +176,8 @@ def get_block(*arglist):
 def concat(*args):
     """ Take any number of wire vector params and return a wire vector concatinating them.
     The arguments should be WireVectors (or convertable to WireVectors through as_wires).
-    The concatination order places the MSB as arg[0] with less signficant bits following."""
+    The concatination order places the MSB as arg[0] with less signficant bits following.
+    """
 
     block = get_block(*args)
     if len(args) <= 0:
@@ -164,8 +199,7 @@ def concat(*args):
 
 def match_bitwidth(*args):
     # TODO: allow for custom bit extension functions
-    """
-    Matches the bitwidth of all of the input arguments
+    """ Matches the bitwidth of all of the input arguments
     :type args: WireVector
     :return tuple of args in order with extended bits
     """
