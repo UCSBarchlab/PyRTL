@@ -114,8 +114,10 @@ def surfnoc_big_buffer(bitwidth, addrwidth, data_in, dmn_vc_wrt, vc_read_req):
     bitwidth -- the data width of the buffer
     addrwidth -- the size of the index of the smaller buffers
     data_in -- a wirevector of width bitwidth to be input to the buffer
-    dmn_vc_wrt -- ?
-    vc_read_req -- ?
+    dmn_vc_wrt -- Its a two bit signal, MSB says which domain and LSB says which VC. Based on this the particular buffer is written
+    vc_read_req -- It's again a two bit signal, MSB -> Domain, LSB -> VC. Based on the the praticular buffer is read out.
+ex: if dmn_vc_wrt = 01 -> domain 0 and VC1
+    if dmn_vc_wrt = 10 -> domain 1 and VC0
     """
 
     data_out = WireVector(bitwidth)
