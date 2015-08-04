@@ -734,23 +734,40 @@ def SubBytes(in_vector):
 	a31 = in_vector[16:24]
 	a32 = in_vector[8:16]
 	a33 = in_vector[0:8]
+	
+	b00 = pyrtl.WireVector(8)
+	b01 = pyrtl.WireVector(8)
+	b02 = pyrtl.WireVector(8)
+	b03 = pyrtl.WireVector(8)
+	b10 = pyrtl.WireVector(8)
+	b11 = pyrtl.WireVector(8)
+	b12 = pyrtl.WireVector(8)
+	b13 = pyrtl.WireVector(8)
+	b20 = pyrtl.WireVector(8)
+	b21 = pyrtl.WireVector(8)
+	b22 = pyrtl.WireVector(8)
+	b23 = pyrtl.WireVector(8)
+	b30 = pyrtl.WireVector(8)
+	b31 = pyrtl.WireVector(8)
+	b32 = pyrtl.WireVector(8)
+	b33 = pyrtl.WireVector(8)
 
-	b00 = sbox[a00]
-	b01 = sbox[a01]
-	b02 = sbox[a02]
-	b03 = sbox[a03]
-	b10 = sbox[a10]
-	b11 = sbox[a11]
-	b12 = sbox[a12]
-	b13 = sbox[a13]
-	b20 = sbox[a20]
-	b21 = sbox[a21]
-	b22 = sbox[a22]
-	b23 = sbox[a23]
-	b30 = sbox[a30]
-	b31 = sbox[a31]
-	b32 = sbox[a32]
-	b33 = sbox[a33]
+	b00 <<= sbox[a00]
+	b01 <<= sbox[a01]
+	b02 <<= sbox[a02]
+	b03 <<= sbox[a03]
+	b10 <<= sbox[a10]
+	b11 <<= sbox[a11]
+	b12 <<= sbox[a12]
+	b13 <<= sbox[a13]
+	b20 <<= sbox[a20]
+	b21 <<= sbox[a21]
+	b22 <<= sbox[a22]
+	b23 <<= sbox[a23]
+	b30 <<= sbox[a30]
+	b31 <<= sbox[a31]
+	b32 <<= sbox[a32]
+	b33 <<= sbox[a33]
 
 	out_vector = pyrtl.concat(b00, b01, b02, b03,
 					b10, b11, b12, b13,
@@ -769,26 +786,26 @@ def ShiftRows(in_vector):
 	"""
 
 	a00 = in_vector[120:128]
-	a01 = in_vector[112:120]
-	a02 = in_vector[104:112]
-	a03 = in_vector[96:104]
-	a10 = in_vector[88:96]
+	a10 = in_vector[112:120]
+	a20 = in_vector[104:112]
+	a30 = in_vector[96:104]
+	a01 = in_vector[88:96]
 	a11 = in_vector[80:88]
-	a12 = in_vector[72:80]
-	a13 = in_vector[64:72]
-	a20 = in_vector[56:64]
-	a21 = in_vector[48:56]
+	a21 = in_vector[72:80]
+	a31 = in_vector[64:72]
+	a02 = in_vector[56:64]
+	a12 = in_vector[48:56]
 	a22 = in_vector[40:48]
-	a23 = in_vector[32:40]
-	a30 = in_vector[24:32]
-	a31 = in_vector[16:24]
-	a32 = in_vector[8:16]
+	a32 = in_vector[32:40]
+	a03 = in_vector[24:32]
+	a13 = in_vector[16:24]
+	a23 = in_vector[8:16]
 	a33 = in_vector[0:8]
 
-	out_vector = pyrtl.concat(a00, a01, a02, a03, 
-							a11, a12, a13, a10, 
-							a22, a23, a20, a21, 
-							a33, a30, a31, a32)
+	out_vector = pyrtl.concat(a00, a11, a22, a33, 
+						a01, a12, a23, a30, 
+						a02, a13, a20, a31, 
+						a03, a10, a21, a32)
 
 	return out_vector
 
@@ -1118,13 +1135,13 @@ def aes_main(plaintext, key):
 # Hardware build.
 aes_plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
 aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
-aes_output = pyrtl.Output(bitwidth=128, name='aes_output')
-aes_output <<= aes_main(aes_plaintext, aes_key)
+aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
+aes_ciphertext <<= aes_main(aes_plaintext, aes_key)
 
 #print pyrtl.working_block()
 #print
 
-sim_trace = pyrtl.SimulationTrace(wirevector_subset=[aes_plaintext, aes_key, aes_output])
+sim_trace = pyrtl.SimulationTrace(wirevector_subset=[aes_plaintext, aes_key, aes_ciphertext])
 sim = pyrtl.Simulation(tracer=sim_trace)
 
 for cycle in range(1):
