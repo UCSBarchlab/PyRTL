@@ -128,12 +128,12 @@ def surfnoc_multi_buffer(addrwidth, data_in, read_buffer_select, write_buffer_se
     num_buffer = 2**len(read_buffer_select)
     we = [write_enable & (write_buffer_select==i) for i in range(num_buffer)]
     re = [read_enable & (read_buffer_select==i) for i in range(num_buffer)]
-    bufout = [surfnoc_single_buffer(addrwidth, data_in, we[i], re[i]) for i in range(num_buffer)]
+    bufout = [surfnoc_single_buffer(addrwidth, data_in, re[i], we[i]) for i in range(num_buffer)]
     d, v, f = zip(*bufout)  # split out the list of tuples into three seperate arrays
 
     data_out = mux(read_buffer_select, *d)
     valid = mux(read_buffer_select, *v)
-    full = mux(read_buffer_select, *f)
+    full = mux(write_buffer_select, *f)
 
     return data_out, valid, full
 
