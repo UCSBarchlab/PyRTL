@@ -432,8 +432,12 @@ class PostSynthBlock(Block):
 _singleton_block = Block()
 debug_mode = False
 
-# refined options under debug mode
-wirevector_trace_call_stack = False
+# settings help tweek the behavior of pyrtl as needed, especially
+# when there is a tradeoff between speed and debugability.  These
+# are useful for developers to adjust behaviors in the different modes
+# but should not be set directly by users.
+_setting_keep_wirevector_call_stack = False
+_setting_faster_but_less_descriptive_tmps = False
 
 # some functions for generating unique names.  Keeping them synced
 # between subclasses of Block was problematic, so instead they should just
@@ -456,7 +460,6 @@ def next_memid():
 
 
 def next_tempvar_name(name=None):
-    import helperfuncs
     global _tempvar_count
     verbose_temp_names = True
     wire_name = None
@@ -466,7 +469,7 @@ def next_tempvar_name(name=None):
             raise PyrtlError('Clock signals should never be explicit')
         wire_name = name
     elif verbose_temp_names:
-        callpoint = helperfuncs._get_useful_callpoint_name()
+        callpoint = _get_useful_callpoint_name()
         if callpoint:
             filename, lineno = callpoint
             # strip out non alphanumeric characters
@@ -479,6 +482,39 @@ def next_tempvar_name(name=None):
         _tempvar_count += 1
 
     return wire_name
+
+
+def _get_useful_callpoint_name():
+    """ Attempts to find the lowest user-level call into the pyrtl module
+    :return (string, int) or None: the file name and line number respectively
+
+    This function walks back the current frame stack attempting to find the
+    first frame that is not part of the pyrtl module.  The filename (stripped
+    of path and .py extention) and line number of that call are returned.
+    This point should be the point where the user-level code is making the
+    call to some pyrtl intrisic (for example, calling "mux").   If the
+    attempt to find the callpoint fails for any reason, None is returned.
+    """
+    if _setting_faster_but_less_descriptive_tmps:
+        return None
+
+    import inspect
+    loc = None
+    frame_stack = inspect.stack()
+    try:
+        for frame in frame_stack:
+            modname = inspect.getmodule(frame[0]).__name__
+            if not modname.startswith('pyrtl.'):
+                full_filename = frame[0].f_code.co_filename
+                filename = full_filename.split('/')[-1].rstrip('.py')
+                lineno = frame[0].f_lineno
+                loc = (filename, lineno)
+                break
+    except:
+        loc = None
+    finally:
+        del frame_stack
+    return loc
 
 
 def working_block(block=None):
@@ -517,5 +553,5 @@ def set_debug_mode(debug=True):
     """ Set the global debug mode. """
     global debug_mode
     debug_mode = debug
-    global wirevector_trace_call_stack
-    wirevector_trace_call_stack = debug
+    global _setting_keep_wirevector_call_stack
+    _setting_keep_wirevector_call_stack = debug

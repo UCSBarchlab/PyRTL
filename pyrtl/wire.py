@@ -60,7 +60,7 @@ class WireVector(object):
         # finally, add the wirevector to the block
         self.block.add_wirevector(self)
 
-        if core.wirevector_trace_call_stack:
+        if core._setting_keep_wirevector_call_stack:
             import traceback
             self.init_call_stack = traceback.format_stack()
 

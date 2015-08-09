@@ -131,8 +131,8 @@ def surfnoc_multi_buffer(addrwidth, data_in, read_buffer_select, write_buffer_se
     bufout = [surfnoc_single_buffer(addrwidth, data_in, re[i], we[i]) for i in range(num_buffer)]
     d, v, f = zip(*bufout)  # split out the list of tuples into three seperate arrays
 
-    for i in v:
-        probe(i)
+    for n, i in enumerate(v):
+        probe(i, 'v[%d]' % n)
 
     data_out = mux(read_buffer_select, *d)
     valid = mux(read_buffer_select, *v)

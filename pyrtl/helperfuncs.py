@@ -110,13 +110,15 @@ def mux(select, falsecase, truecase, *rest):
     select = as_wires(select, block=block)
     ins = [falsecase, truecase] + list(rest)
 
-    if 2**len(select) != len(ins):
-        raise core.PyrtlError('error, mux select line is %d bits, but selecting from %d inputs' % (len(select), len(ins)))
+    if 2 ** len(select) != len(ins):
+        raise core.PyrtlError(
+            'error, mux select line is %d bits, but selecting from %d inputs'
+            % (len(select), len(ins)))
 
     if len(select) == 1:
         result = _mux2(select, ins[0], ins[1])
     else:
-        half = int(len(ins)/2)
+        half = int(len(ins) / 2)
         result = _mux2(select[-1],
                        mux(select[0:-1], *ins[:half]),
                        mux(select[0:-1], *ins[half:]))
@@ -208,36 +210,10 @@ def match_bitwidth(*args):
     return (wv.zero_extended(max_len) for wv in args)
 
 
-def probe(w):
-    pname = '(%s)' % w.name
+def probe(w, name=None):
+    if name:
+        pname = '(%s : %s)' % (name, w.name)
+    else:
+        pname = '(%s)' % (w.name)
     p = wire.WireVector(name=pname)
     p <<= w
-
-
-def _get_useful_callpoint_name():
-    """ Attempts to find the lowest user-level call into the pyrtl module
-    :return (string, int) or None: the file name and line number respectively
-
-    This function walks back the current frame stack attempting to find the 
-    first frame that is not part of the pyrtl module.  The filename (stripped
-    of path and .py extention) and line number of that call are returned.  
-    This point should be the point where the user-level code is making the 
-    call to some pyrtl intrisic (for example, calling "mux").   If the 
-    attempt to find the callpoint fails for any reason, None is returned.
-    """
-    loc = None
-    frame_stack = inspect.stack()
-    try:
-        for frame in frame_stack:
-            modname = inspect.getmodule(frame[0]).__name__
-            if not modname.startswith('pyrtl.'):
-                full_filename = frame[0].f_code.co_filename
-                filename = full_filename.split('/')[-1].rstrip('.py')
-                lineno = frame[0].f_lineno
-                loc = (filename, lineno)
-                break
-    except:
-        loc = None
-    finally:
-        del frame_stack
-    return loc
