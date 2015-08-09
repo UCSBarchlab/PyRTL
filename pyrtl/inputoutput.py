@@ -308,8 +308,8 @@ def _verilog_vector_pow_decl(w):
 
 
 def _verilog_check_all_wirenames(block):
-    verilog_reserved_set = set("""
-        always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos
+    verilog_reserved = \
+        """always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos
         config deassign default defparam design disable edge else end endcase endconfig
         endfunction endgenerate endmodule endprimitive endspecify endtable endtask
         event for force forever fork function generate genvar highz0 highz1 if ifnone
@@ -321,7 +321,8 @@ def _verilog_check_all_wirenames(block):
         showcancelled signed small specify specparam strong0 strong1 supply0 supply1
         table task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg unsigned
         use vectored wait wand weak0 weak1 while wire wor xnor xor
-        """.split())
+        """
+    verilog_reserved_set = set(verilog_reserved.split())
     for w in block.wirevector_subset():
         if not re.match('[_A-Za-z][_a-zA-Z0-9\$]*$', w.name):
             raise core.PyrtlError('error, the wirevector name "%s"'

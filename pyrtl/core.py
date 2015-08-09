@@ -51,7 +51,7 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
             addr, data, we = [str(x) for x in self.args]
             extrainfo = 'memid=' + str(memid)
             retval = ''.join([memblock.name, '[', addr, '] <-- @ --  ', data,
-                             ' we=', we, ' (', extrainfo, ')'])
+                              ' we=', we, ' (', extrainfo, ')'])
         else:
             raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
         return retval
@@ -456,14 +456,28 @@ def next_memid():
 
 
 def next_tempvar_name(name=None):
+    import helperfuncs
     global _tempvar_count
-    if name is None:
-        wire_name = ''.join(['tmp', str(_tempvar_count)])
-        _tempvar_count += 1
-    else:
+    verbose_temp_names = True
+    wire_name = None
+
+    if name is not None:
         if name.lower() in ['clk', 'clock']:
             raise PyrtlError('Clock signals should never be explicit')
         wire_name = name
+    elif verbose_temp_names:
+        callpoint = helperfuncs._get_useful_callpoint_name()
+        if callpoint:
+            filename, lineno = callpoint
+            # strip out non alphanumeric characters
+            safename = re.sub('[\W]+', '', filename)
+            wire_name = 'tmp%d_%s_line%d' % (_tempvar_count, safename, lineno)
+            _tempvar_count += 1
+
+    if not wire_name:
+        wire_name = 'tmp%d' % _tempvar_count
+        _tempvar_count += 1
+
     return wire_name
 
 

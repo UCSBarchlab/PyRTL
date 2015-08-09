@@ -24,6 +24,7 @@ from helperfuncs import or_all_bits
 from helperfuncs import xor_all_bits
 from helperfuncs import parity
 from helperfuncs import match_bitwidth
+from helperfuncs import probe
 
 # memory blocks
 from memory import MemBlock
