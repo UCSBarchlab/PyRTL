@@ -10,7 +10,7 @@ import pyrtl
 #	For testing purpose 63 bit is used
 
 flit = pyrtl.Input(63,'flit')
-buffer_read_sel = pyrtl.Output(2,'buffer_read_sel')
+#buffer_read_sel = pyrtl.Output(2,'buffer_read_sel')
 buffer_write_sel = pyrtl.Output(2,'buffer_write_sel')
 source_id = pyrtl.Output(4,'source_id')
 dest_id = pyrtl.Output(4,'dest_id')
@@ -24,7 +24,7 @@ tail <<= flit[60]
 source_id <<= pyrtl.mux(head, truecase=flit[56:60],falsecase=0)
 dest_id <<= pyrtl.mux(head, truecase= flit[52:56],falsecase=0)
 buffer_write_sel <<= pyrtl.concat(surf_sch+1,VC)
-buffer_read_sel <<= pyrtl.concat(surf_sch,VC)
+#buffer_read_sel <<= pyrtl.concat(surf_sch,VC)
 simvals ={
         flit: [7692148163548807167, 7845270550879404031,5539427541665710079,3233584532452016127],
         surf_sch: [0,1,0,1]
