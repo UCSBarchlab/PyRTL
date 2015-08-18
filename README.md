@@ -20,16 +20,15 @@ If you are just getting started with pyrtl it is suggested that you start with t
 to get and sense of the "thinking with pyrtls" required to design hardware in this way.  Then 
 dive into the code for the object Block, which is the core data structure at the heart of 
 pyrtl and defines the semantics at a high level -- everything is converted to or from the small simple set of
-primitives defined there.
+primitives defined there.  The features of PyRTL include:
 
-*Features*
 * Elaborate-through-execution means all of python can be used, including introspection
-* Export to, or import from, common HDLs (BLIF-in, Verilog-out currently supported)
 * Design, instantiate, and simulate all in one file without leaving python
+* Export to, or import from, common HDLs (BLIF-in, Verilog-out currently supported)
 * Examine execution with waveforms on the terminal or export to a .vcd as projects scale
 * Elaboration, synthesis, and basic optimizations all included
 * Small and well-defined internal core structure means writing new transforms is easier
-* Batteries included means many useful components available and more coming every week
+* Batteries included means many useful components are already available and more are coming every week
 
 
 ### The 10,000 Foot Overview
@@ -98,7 +97,7 @@ the examples directory.  When you run it, it should look like this:
 
 ![Command-line waveform for PyRTL counter](docs/screenshots/pyrtl-counter.png?raw=true "PyRTL Counter Screenshot")
 
-A slightly more interesting state machine might look like this:
+You can see the counter going from 0 to 7 and repeating.  A slightly more interesting state machine might look like this:
 
 ![Command-line waveform for PyRTL state machine]( docs/screenshots/pyrtl-statemachine.png?raw=true "PyRTL State Machine Screenshot")
 
@@ -123,7 +122,7 @@ users in some unexpected ways.  Watch out for these couple of "somewhat surprisi
   a single bit long to hold the result of the comparison.  The bitwise operators ```&```, ```|```, ```!``` and ```^``` 
   are also defined (however logic operations such as "and" and "not" are not).  A really tricky gotcha happens
   when you start combining the two together.  Consider: ```doit = ready & state==3```.  In python, the bitwise
-  ```&``` operator has *higher precedence* than ```==``, thus python parses this as ```doit = (ready & state)==3```
+  ```&``` operator has *higher precedence* than ```==```, thus python parses this as ```doit = (ready & state)==3```
   instead of what you might have guessed at first!  Make sure to use parenthesis when using comparisons with
   logic operations to be clear: ```doit = ready & (state==3)```.
 
