@@ -38,13 +38,13 @@ tool to take your random python code and turn it into hardware, you will have to
 PyRTL is designed to help you concisely and precisely describe a hardware structure that you already have 
 worked out in detail.  To the user it provides a set of python classes that allow you to express those 
 hardware designs reasonably pythonically.  For example, with WireVector you get a structure that acts very 
-much like a python list of 1-bit wires, so that ```python mywire[0:-1]``` selects everything except the 
+much like a python list of 1-bit wires, so that ```mywire[0:-1]``` selects everything except the 
 most-significant-bit.  Of course you can add, subtract, and multiple these WireVectors or concat multiple 
 bit-vectors end-to-end as well.  You can then even make normal python collections of those WireVectors and 
 do operations on them in bulk. For example, if you have a list of n k-bit WireVectors (called "x") and you 
 want to multiple each of them by some corresponding element in a fixed array of constants "c" and put the 
 result in a list "y", it might look like the following: 
-```python y = [val * c[index] for index,val in enumerate(x)]```. 
+```y = [val * c[index] for index,val in enumerate(x)]```. 
 Hardware comprehensions are surprisingly useful!
 
 The docs are also available, just run `./checkcode` with no parameters in the PyRTL directory and it will 
