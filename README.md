@@ -3,7 +3,7 @@ PyRTL
 
 [![Build Status](https://magnum.travis-ci.com/UCSBarchlab/PyRTL.svg?token=XAZcwAigXaYVLzkPHGNx)](https://magnum.travis-ci.com/UCSBarchlab/PyRTL)
 
-A collection of classes providing simple RTL specification, simulation, tracing, and testing suitable for teaching and research. 
+PyRTL provides a collection of classes for pythonic RTL specification, simulation, tracing, and testing suitable for teaching and research. 
 Simplicity, usability, clarity, and extendibility rather than performance or optimization is the overarching goal.
 
 In the package you should find the following files and Directories
@@ -18,11 +18,63 @@ In the package you should find the following files and Directories
 If you are just getting started with pyrtl it is suggested that you start with the examples first,
 to get and sense of the "thinking with pyrtls" required to design hardware in this way.  Then 
 dive into the code for the object Block, which is the core data structure at the heart of 
-pyrtl and defines its semantics at a high level.
+pyrtl and defines the semantics at a high level.  Everything is converted to or from the small simple set of
+primitives in Block.
 
 The docs are also available, just run `./checkcode` with no parameters in the PyRTL directory and it will build
 the documentation for you (under the **docs/** directory). Requires [Sphinx](http://sphinx-doc.org/).
 In addition, running './checkcode' will also run all of the tests and checks.
+
+### Hello N-bit Ripple-Carry Adder
+
+While adders are a builtin primitive for PyRTL, most people doing RTL are familiar with the idea
+of a (Ripple-Carry Adder)[https://en.wikipedia.org/wiki/Adder_(electronics)] and so it is useful to 
+see how you might express one in PyRTL if you had to.  Rather than the typical (Verilog introduction to 
+fixed 4-bit adders)[https://www.youtube.com/watch?v=bL3ihMA8_Gs], let's go ahead and build an 
+arbitrary bitwidth adder!.
+
+```python
+def one_bit_add(a, b, cin):
+    assert len(a) == len(b) == 1  # len returns the bitwidth
+    sum = a ^ b ^ cin
+    cout = a & b | a & cin | b & cin
+    return sum, cout
+
+def ripple_add(a, b, cin=0):
+    a, b = pyrtl.match_bitwidth(a, b)
+    if len(a) == 1:
+        sumbits, cout = one_bit_add(a, b, cin)
+    else:
+        lsbit, ripplecarry = one_bit_add(a[0], b[0], cin)
+        msbits, cout = ripple_add(a[1:], b[1:], ripplecarry)
+        sumbits = pyrtl.concat(msbits, lsbit)
+    return sumbits, cout
+
+# instantiate an adder into a 3-bit counter
+counter = pyrtl.Register(bitwidth=3, name='counter')
+sum, cout = ripple_add(counter, pyrtl.Const("1'b1"))
+counter.next <<= sum
+
+# simulate the instantiated design for 15 cycles
+sim_trace = pyrtl.SimulationTrace()
+sim = pyrtl.Simulation(tracer=sim_trace)
+for cycle in range(15):
+    sim.step({})
+sim_trace.render_trace()
+```
+
+The code above includes an adder generator with python-style slices on wires (ripple_add), 
+an instantiation of a register (used as a counter with the generated adder), and all the code needed to 
+simulate the design, generate a waveform, and render it to the terminal. The way this particular
+code works is described more in the examples directory.  When you run it, it should look like 
+this:
+
+![Command-line waveform for PyRTL counter](docs/screenshots/pyrtl-counter.png?raw=true "PyRTL Counter Screenshot")
+
+A slightly more interesting state machine might look like this:
+
+![Command-line waveform for PyRTL state machine]( docs/screenshots/pyrtl-statemachine.png?raw=true "PyRTL State Machine Screenshot")
+
 
 ### Contributing to PyRTL
 
@@ -51,7 +103,7 @@ In addition, running './checkcode' will also run all of the tests and checks.
 ### Related Projects
 
 [MyHDL](http://www.myhdl.org/) is a neat Python hardware project built around generators and decorators.  The semantics of this embedded language
-are close to Verilog and unlike PyRTL, MyHDL allows asynchronous logic and higher level modeling.  Also like Verilog, only a structural
+are close to Verilog and unlike PyRTL, MyHDL allows asynchronous logic and higher level modeling.  Much like Verilog, only a structural
 "convertible subset" of the language can be automatically synthesized into real hardware.  PyRTL requires all logic to be both synchronous
 and synthesizable which avoids a common trap for beginners, it elaborates the design during execution allowing the full power of python
 in describing recursive or complex hardware structures, and allows for hardware synthesis, simulation, test bench creation, and optimization
@@ -76,5 +128,5 @@ One of the neat things about this project is that they are trying to allow simul
 design from the functional level, the cycle-close level, and down to the register-transfer level (where PyRTL really is built to play).
 Like MyHDL they do some neat meta-programming tricks like parsing the Python AST to allow executable software descriptions to be (under
 certain restrictions -- sort of like verilog) automatically converted into implementable hardware.  PyRTL, on the other hand, is about
-providing a limited and composable set of data structures to be used specify and RTL implementation avoiding the distinction between
+providing a limited and composable set of data structures to be used to specify an RTL implementation, thus avoiding the distinction between
 synthesizable and non-synthesizable code (the execution is the elaboration step).
