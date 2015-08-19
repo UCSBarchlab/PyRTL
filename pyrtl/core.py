@@ -312,8 +312,10 @@ class Block(object):
             # used as args.
             outs = dest_set.difference(arg_set)
             unused = outs.difference(self.wirevector_subset(wire.Output))
-            if len(unused) > 0:
-                print 'Warning: Wires driven but never used { %s }' % [w.name for w in unused]
+            unused_and_not_probe = set(w for w in unused if not w.name.startswith('(Probe'))
+            if len(unused_and_not_probe) > 0:
+                names = [w.name for w in unused_and_not_probe]
+                print 'Warning: Wires driven but never used { %s }' % names
 
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
@@ -437,7 +439,7 @@ debug_mode = False
 # are useful for developers to adjust behaviors in the different modes
 # but should not be set directly by users.
 _setting_keep_wirevector_call_stack = False
-_setting_faster_but_less_descriptive_tmps = False
+_setting_slower_but_more_descriptive_tmps = False
 
 # some functions for generating unique names.  Keeping them synced
 # between subclasses of Block was problematic, so instead they should just
@@ -495,7 +497,7 @@ def _get_useful_callpoint_name():
     call to some pyrtl intrisic (for example, calling "mux").   If the
     attempt to find the callpoint fails for any reason, None is returned.
     """
-    if _setting_faster_but_less_descriptive_tmps:
+    if not _setting_slower_but_more_descriptive_tmps:
         return None
 
     import inspect
@@ -552,6 +554,8 @@ def set_working_block(block):
 def set_debug_mode(debug=True):
     """ Set the global debug mode. """
     global debug_mode
-    debug_mode = debug
     global _setting_keep_wirevector_call_stack
+    global _setting_slower_but_more_descriptive_tmps
+    debug_mode = debug
     _setting_keep_wirevector_call_stack = debug
+    _setting_slower_but_more_descriptive_tmps = debug

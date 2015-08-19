@@ -42,9 +42,8 @@ much like a python list of 1-bit wires, so that ```mywire[0:-1]``` selects every
 most-significant-bit.  Of course you can add, subtract, and multiple these WireVectors or concat multiple 
 bit-vectors end-to-end as well.  You can then even make normal python collections of those WireVectors and 
 do operations on them in bulk. For example, if you have a list of n k-bit WireVectors (called "x") and you 
-want to multiple each of them by some corresponding element in a fixed array of constants "c" and put the 
-result in a list "y", it might look like the following: 
-```y = [val * c[index] for index,val in enumerate(x)]```. 
+want to multiply each of them by 2 and put the sum of the result in a WireVector "y", it looks like
+the following:  ```y = sum([elem * 2 for elem in x])```. 
 Hardware comprehensions are surprisingly useful!
 
 The docs are also available, just run `./checkcode` with no parameters in the PyRTL directory and it will 
@@ -114,10 +113,12 @@ users in some unexpected ways.  Watch out for these couple of "somewhat surprisi
   ```y = WireVector(bitwidth=5)```, how do you assign ```x``` the value of ```y + 1```?  If you do ```x = y + 1``` 
   that will replace the old definition of ```x``` entirely?  Instead you need to write ```x <<= y + 1``` which you 
   can read as "x gets its value from y + 1".
+
 * The example above also shows off another aspect of PyRTL.  The bitwidth of ```y``` is 5.  The bitwidth of ```y + 1```
   is actually 6 (PyRTL infers this automatically).  But then when you assign ```x <<= y + 1``` you are taking
   a 6-bit value and assigning it to 3-bit value.  This is completely legal and only the least significant bits 
   will be assigned.  Mind your bitwidths.
+
 * PyRTL provides some handy functions on WireVectors, including ```==``` and ```<``` which evaluate to a new WireVector
   a single bit long to hold the result of the comparison.  The bitwise operators ```&```, ```|```, ```!``` and ```^``` 
   are also defined (however logic operations such as "and" and "not" are not).  A really tricky gotcha happens
@@ -125,6 +126,12 @@ users in some unexpected ways.  Watch out for these couple of "somewhat surprisi
   ```&``` operator has *higher precedence* than ```==```, thus python parses this as ```doit = (ready & state)==3```
   instead of what you might have guessed at first!  Make sure to use parenthesis when using comparisons with
   logic operations to be clear: ```doit = ready & (state==3)```.
+
+* PyRTL right now assumes that all WireVectors are two's complement unsigned integers.  When you do comparisons
+  such as "<" it will do unsigned comparison.  If you pass a WireVector to a function that requires more bits 
+  that you have provided, it will do zero extention by default.  You can always explicitly do sign extention
+  with .sign_extend() but it is not the default behavior for WireVector.  This is right now for clarity and
+  consistancy, althought it does make writting signed arithmetic operations more text heavy.
 
 ### Contributing to PyRTL
 

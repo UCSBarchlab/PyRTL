@@ -9,25 +9,27 @@ PyRTL comes with various features to help you find mistakes.
 import random
 import pyrtl
 
-# Setting the random seed so that this example is deterministic before we start
-random.seed(93729473)
+random.seed(93729473)  # used to make random calls deterministic for this example
 
 
-# Firstly, we will assume that you have experience debugging code. If you do
-# not, we recommend that you look at _________ to get yourself oriented with
-# how to debug Python code.
+# This example covers debugging strategies for PyRTL.  For general python debugging
+# we recommend healthy use of the "assert" statement, and use of "pdb" for
+# tracking down bugs.  However, PyRTL introduces some new complexities because
+# the place where  functionality is defdined (when you construct and operate
+# on PyRTL classes) is seperate in time from where that functionalty is executed
+# (i.e. during siumation).  Thus, sometimes it hard to track down where a wire
+# might have come from, or waht exactly it is doing!
 
-
-# In this example, we will be building a circuit that adds up three values.
+# In this example specifically, we will be building a circuit that adds up three values.
 # However, instead of building an add function ourselves or using the
-# built-in + function in PyRTL, we will instead use the Kogge-Stone adders
+# built-in "+" function in PyRTL, we will instead use the Kogge-Stone adders
 # in RtlLib, the standard library for PyRTL.
 
 # The first step to use the RtlLib is to import it
 from rtllib import adders
 
 # building three inputs
-in1, in2, in3 = (pyrtl.Input(8, "i" + str(x)) for x in range(1, 4))
+in1, in2, in3 = (pyrtl.Input(8, "in" + str(x)) for x in range(1, 4))
 out = pyrtl.Output(10, "out")
 
 add1_out = adders.kogge_stone(in1, in2)
@@ -35,8 +37,8 @@ add2_out = adders.kogge_stone(add1_out, in2)
 out <<= add2_out
 
 # The most basic way of debugging PyRTL is to connect a value to an output wire
-# and use the simulation to trace the output. A simple print statement doesn't work
-# because the values in the wires are not populated during creation time
+# and use the simulation to trace the output. A simple "print" statement doesn't work
+# because the values in the wires are not populated during *creation* time
 
 # If we want to check the result of the first addition, we can connect an output wire
 # to the result wire of the first adder
@@ -44,7 +46,7 @@ out <<= add2_out
 debug_out = pyrtl.Output(9, "debug_out")
 debug_out <<= add1_out
 
-# now simulate the circuit
+# now simulate the circuit.  Let's create some random inputs to feed our adder.
 
 vals1 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
 vals2 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
@@ -53,27 +55,39 @@ vals3 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
 for cycle in range(len(vals1)):
-    sim.step({in1: vals1[cycle], in2: vals2[cycle], in3: vals3[cycle]})
+    sim.step({
+        in1: vals1[cycle],
+        in2: vals2[cycle],
+        in3: vals3[cycle]})
 
 # in order to get the result data, you do not need to print a waveform of the trace
 # You always have the option to just pull the data out of the tracer directly
 
-output = sim_trace.trace
-print "in1:       " + str(output[in1])
-print "in2:       " + str(output[in2])
-print "debug_out: " + str(output[debug_out])
+print "in1:       ", str(sim_trace.trace[in1])
+print "in2:       ", str(sim_trace.trace[in2])
+print "debug_out: ", str(sim_trace.trace[debug_out])
 
 # Below, I am using the ability to directly retrieve the trace data to
 # verify the correctness of the first adder
 
 for i in range(len(vals1)):
-    assert(output[debug_out][i] == output[in1][i] + output[in2][i])
+    assert(sim_trace.trace[debug_out][i] == sim_trace.trace[in1][i] + sim_trace.trace[in2][i])
+
+
+# --- Probe ----
+
+# now that we have built some stuff, let's clear it so we can try again in a
+# different way.  We can start by clearing all of the hardware from the current working
+# block.  The working block is a global structure that keeps track of all the
+# hardware you have built thus far.  A "reset" will clear it so we can start fresh.
+# pyrtl.reset_working_block()
+
+# ...
 
 # ----Wirevector Stack Trace ----
 
 # Another case that might arise is that a certain wire is causing an error to occur
-# in your program.
-# Wirevector Stack Traces allow you to find out more about where a particular
+# in your program. Wirevector Stack Traces allow you to find out more about where a particular
 # wirevector was made in your code. With this enabled the wirevector will
 # store exactly were it was created, which should help with issues where
 # there is a problem with an indentified wire.
