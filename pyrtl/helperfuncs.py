@@ -14,12 +14,16 @@ import core
 import wire
 import inspect
 
+_rtl_assert_number = 1
+_rtl_assert_dict = {}
+_probe_number = 1
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
 #  |__| |__  |    |__) |__  |__) /__`
 #  |  | |___ |___ |    |___ |  \ .__/
 #
+
 
 def as_wires(val, bitwidth=None, truncating=True, block=None):
     """ Return wires from val which may be wires, integers, strings, or bools.
@@ -210,9 +214,6 @@ def match_bitwidth(*args):
     return (wv.zero_extended(max_len) for wv in args)
 
 
-_probe_number = 1
-
-
 def probe(w, name=None):
     """ Print useful information about a WireVector when in debug mode.
 
@@ -250,3 +251,27 @@ def probe(w, name=None):
     p <<= w  # late assignes len from w automatically
     _probe_number += 1
     return w
+
+
+def rtl_assert(w, msg):
+    """ Add hardware assertions to be checked on the RTL design.
+
+    w should be a WireVector
+    msg should be a string
+    returns the Output wire for the assertion (can be ignored in most cases)
+    """
+
+    global _rtl_assert_number
+    global _rtl_assert_dict
+
+    if not isinstance(w, wire.WireVector):
+        raise core.PyrtlError('Only WireVectors can be asserted with rtl_assert')
+    if len(w) != 1:
+        raise core.PyrtlError('rtl_assert checks only a WireVector of bitwidth 1')
+
+    assertion_name = 'assertion%d' % _rtl_assert_number
+    assert_wire = wire.Output(bitwidth=1, name=assertion_name, block=get_block(w))
+    assert_wire <<= w
+    _rtl_assert_number += 1
+    _rtl_assert_dict[assert_wire] = msg
+    return assert_wire
