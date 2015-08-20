@@ -312,9 +312,8 @@ class Block(object):
             # used as args.
             outs = dest_set.difference(arg_set)
             unused = outs.difference(self.wirevector_subset(wire.Output))
-            unused_and_not_probe = set(w for w in unused if not w.name.startswith('(Probe'))
-            if len(unused_and_not_probe) > 0:
-                names = [w.name for w in unused_and_not_probe]
+            if len(unused) > 0:
+                names = [w.name for w in unused]
                 print 'Warning: Wires driven but never used { %s }' % names
 
     def sanity_check_wirevector(self, w):

@@ -247,8 +247,8 @@ def probe(w, name=None):
     else:
         pname = '(Probe-%d : %s)' % (_probe_number, w.name)
 
-    p = wire.WireVector(name=pname, block=get_block(w))
-    p <<= w  # late assignes len from w automatically
+    p = wire.Output(name=pname, block=get_block(w))
+    p <<= w  # late assigns len from w automatically
     _probe_number += 1
     return w
 
