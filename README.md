@@ -54,9 +54,9 @@ In addition, running './checkcode' will also run all of the tests and checks.
 ### Hello N-bit Ripple-Carry Adder
 
 While adders are a builtin primitive for PyRTL, most people doing RTL are familiar with the idea of a 
-(Ripple-Carry Adder)[https://en.wikipedia.org/wiki/Adder_(electronics)] and so it is useful to see how you 
-might express one in PyRTL if you had to.  Rather than the typical (Verilog introduction to fixed 4-bit 
-adders)[https://www.youtube.com/watch?v=bL3ihMA8_Gs], let's go ahead and build an arbitrary bitwidth 
+[Ripple-Carry Adder](https://en.wikipedia.org/wiki/Adder_(electronics)) and so it is useful to see how you 
+might express one in PyRTL if you had to.  Rather than the typical [Verilog introduction to fixed 4-bit 
+adders](https://www.youtube.com/watch?v=bL3ihMA8_Gs), let's go ahead and build an arbitrary bitwidth 
 adder!.
 
 ```python
