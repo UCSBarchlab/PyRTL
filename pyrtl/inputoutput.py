@@ -304,7 +304,7 @@ def _verilog_vector_decl(w):
 
 
 def _verilog_vector_pow_decl(w):
-    return '' if len(w) == 1 else '[%d:0]' % (2 ** len(w) - 1)
+    return '' if len(w) == 1 else '[0:%d]' % (2 ** len(w) - 1)
 
 
 def _verilog_check_all_wirenames(block):
@@ -347,9 +347,13 @@ def _to_verilog_header(file, block):
     wires = block.wirevector_subset() - (inputs | outputs | registers)
     memory_nets = block.logic_subset(('m', '@'))
     memories = set()
+
+    # Create a set of nets representitive of all memories (eliminating
+    # duplicates caused by multiple ports).
     for m in memory_nets:
         if not any(m.op_param[0] == x.op_param[0] for x in memories):
             memories.add(m)
+
     for w in inputs:
         print >> file, '    input%s %s;' % (_verilog_vector_decl(w), w.name)
     print >> file, '    input clk;'
@@ -372,7 +376,21 @@ def _to_verilog_header(file, block):
             print >> file, '    reg%s mem_%s%s;' % (_verilog_vector_decl(w.args[1]),
                                                     w.op_param[0],
                                                     _verilog_vector_pow_decl(w.args[0]))
+
     print >> file, ''
+
+    # Generate the initial block for those memories that need it (such as ROMs).
+    # FIXME: Right now, the memblock is the only place where those rom values are stored
+    # which is bad form (it means the functionality of tne hardware is not completely
+    # contained in "core".
+    mems_with_initials = [w for w in memories if hasattr(w.op_param[1], 'initialdata')]
+    for w in mems_with_initials:
+        print >> file, '    initial begin'
+        for i in range(2**len(w.args[0])):
+            print >> file, "        mem_%s[%d]=%d'x%x" % (
+                w.op_param[0], i, len(w), w.op_param[1]._get_read_data(i))
+        print >> file, '    end'
+        print >> file, ''
 
 
 def _to_verilog_combinational(file, block):
