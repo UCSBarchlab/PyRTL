@@ -63,6 +63,8 @@ class WireVector(object):
         if core._setting_keep_wirevector_call_stack:
             import traceback
             self.init_call_stack = traceback.format_stack()
+        else:
+            self.init_call_stack = None
 
     def __str__(self):
         return ''.join([self.name, '/', str(self.bitwidth), self.code])

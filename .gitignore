@@ -44,3 +44,4 @@ nosetests.xml
 
 # Stuff specifically for PyRTL
 spice.net
+docs/_build

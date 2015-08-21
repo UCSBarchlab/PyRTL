@@ -191,28 +191,28 @@ class RomBlock(_MemReadBase):
 
 
     """
-    def __init__(self, bitwidth, addrwidth, data, name=None, block=None):
+    def __init__(self, bitwidth, addrwidth, romdata, name=None, block=None):
         """
         :param int bitwidth: The bitwidth of the parameters
         :param int addrwidth: The bitwidth of the address bus
-        :param function or iterable data: This can either be a function or an array that maps
+        :param function or iterable romdata: This can either be a function or an array that maps
         an address as an input to a result as an output
         """
         super(RomBlock, self).__init__(bitwidth, addrwidth, name, block)
-        self.data = data
+        self.initialdata = romdata
 
     def _get_read_data(self, address):
         import types
         if address < 0 or address > 2**self.addrwidth - 1:
             raise core.PyrtlError("Error: Invalid address, " + str(address) + " specified")
-        if isinstance(self.data, types.FunctionType):
+        if isinstance(self.initialdata, types.FunctionType):
             try:
-                value = self.data(address)
+                value = self.initialdata(address)
             except Exception:
                 raise core.PyrtlError("Invalid data function for RomBlock")
         else:
             try:
-                value = self.data[address]
+                value = self.initialdata[address]
             except TypeError:
                 raise core.PyrtlError("invalid type for RomBlock data object")
             except IndexError:
@@ -227,4 +227,4 @@ class RomBlock(_MemReadBase):
     def _make_copy(self, block=None):
         if block is None:
             block = self.block
-        return RomBlock(self.bitwidth, self.addrwidth, self.data, self.name, block,)
+        return RomBlock(self.bitwidth, self.addrwidth, self.initialdata, self.name, block,)

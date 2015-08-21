@@ -3,10 +3,10 @@ import random
 import io
 import pyrtl
 
-from helperfunctions import testmissing
+from helperfunctions import *
 
 
-class TestVerilog(unittest.TestCase):
+class TestVerilogNames(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -57,6 +57,20 @@ class TestVerilog(unittest.TestCase):
         self.assertRaises(pyrtl.PyrtlError, self.checkname, "flipin'")
         self.assertRaises(pyrtl.PyrtlError, self.checkname, ' jklol')
 
+class TestVerilog(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_romblock_does_not_throw_error(self):
+        a = pyrtl.Input(bitwidth=3, name='a')
+        b = pyrtl.Input(bitwidth=3, name='b')
+        o = pyrtl.Output(bitwidth=3, name='o')
+        sum, co = generate_full_adder(a,b)
+        rdat = {0:1, 1:2, 2:5, 5:0}
+        mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, romdata=rdat)
+        o <<= mixtable[sum]
+        with io.BytesIO() as testbuffer:
+            pyrtl.output_to_spice(testbuffer)
 
 class TestSpice(unittest.TestCase):
     def setUp(self):
