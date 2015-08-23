@@ -53,7 +53,7 @@ rdata2 <<= mem2[raddr]
 # The write enable bit allows us to disable the write port as long as the
 # value is zero, giving us complete control over whether to accept the data.
 
-WE = MemBlock._EnabledWrite
+WE = MemBlock.EnabledWrite
 mem1[waddr] <<= WE(wdata, we)  # Uses input wire
 mem2[count] <<= WE(wdata, we)  # Uses count register
 

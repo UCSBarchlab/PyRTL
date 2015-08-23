@@ -20,7 +20,7 @@ import conditional
 # MemBlock supports any number of the following operations:
 # read: d = mem[address]
 # write: mem[address] = d
-# write with an enable: mem[address] = MemBlock._EnabledWrite(d,enable=we)
+# write with an enable: mem[address] = MemBlock.EnabledWrite(d,enable=we)
 # Based on the number of reads and writes a memory will be inferred
 # with the correct number of ports to support that
 
@@ -122,7 +122,17 @@ class MemBlock(_MemReadBase):
     """ An object for specifying read and write enabled block memories """
     # FIXME: write ports assume that only one port is under control of the conditional
 
-    _EnabledWrite = collections.namedtuple('_EnabledWrite', 'data, enable')
+    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
+    """
+    Allows for an enable bit for each write port
+
+    Usage:
+    mem[address] = MemBlock.EnabledWrite(d,enable=we)
+
+    When the address of a memory is assigned to using a EnableWrite object
+    items will only be written to the memory when the enable WireVector is
+    set to high (1)
+    """
 
     # data <<= memory[addr]  (infer read port)
     # memory[addr] <<= data  (infer write port)
@@ -152,7 +162,7 @@ class MemBlock(_MemReadBase):
             raise core.PyrtlError('error, memory index bitwidth > addrwidth')
         addr = item
 
-        if isinstance(val, MemBlock._EnabledWrite):
+        if isinstance(val, MemBlock.EnabledWrite):
             data, enable = val.data, val.enable
         else:
             data, enable = val, wire.Const(1, bitwidth=1, block=self.block)
@@ -185,11 +195,12 @@ class MemBlock(_MemReadBase):
 
 
 class RomBlock(_MemReadBase):
-    """ RomBlocks are the read only memory format in PyRTL
-        By default, they synthesize down to transistor-based
-        logic during synthesis
+    """
+    PyRTL Read Only Memory
 
-
+    RomBlocks are the read only memory format in PyRTL
+    By default, they synthesize down to transistor-based
+    logic during synthesis
     """
     def __init__(self, bitwidth, addrwidth, romdata, name=None, block=None):
         """

@@ -30,11 +30,11 @@ def cache(word_address, datain, size, read_enable, write_enable, associativity=1
 
 	tag_block = MemBlock(bitwidth=len(tag)+1, addrwidth=index_size)
 	data_block = MemBlock(bitwidth=word_size*blocksize, addrwidth=index_size)
-	
+
     tag_line = tag_block[index]
     # valid bit is the msb of the tag_line
 	hit = pyrtl.concat(1,tag) == tag_line
-	
+
 	data_line = data_block[index]
     data_list = [data_line[i*word_size:(i+1)*word_size] for i in range(blocksize)]
 	dataout = pyrtl.mux(blockoffset, *data_list)
@@ -64,7 +64,7 @@ def old_cache(tag, index, blockselect, byteselect, associativity, datain):
 	lineselected <<= memory1[index]
 	return (lineselected)
 	# do this for update:
-	# buffer_memory[head] <<= pyrtl.MemBlock._EnabledWrite(data, do_write)
+	# buffer_memory[head] <<= pyrtl.MemBlock.EnabledWrite(data, do_write)
 
 def testcache():
 	testtag = 4

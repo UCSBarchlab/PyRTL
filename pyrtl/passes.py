@@ -658,7 +658,7 @@ def _decompose(net, wv_map, mems, block_out):
             new_mem.id = mem.id
         else:
             new_mem = mems[mem]
-        new_mem[addr] <<= memory.MemBlock._EnabledWrite(data=data, enable=enable)
+        new_mem[addr] <<= memory.MemBlock.EnabledWrite(data=data, enable=enable)
     else:
         raise core.PyrtlInternalError('Unable to synthesize the following net '
                                       'due to unimplemented op :\n%s' % str(net))

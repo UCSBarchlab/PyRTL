@@ -14,7 +14,7 @@ def surfnoc_buffer(bitwidth, addrwidth, data, write_enable, read_enable):
     empty = (~do_write) & (count==0)
     do_read = pyrtl.mux(empty, truecase=0, falsecase=read_enable)
 
-    buffer_memory[head] <<= pyrtl.MemBlock._EnabledWrite(data, do_write)
+    buffer_memory[head] <<= pyrtl.MemBlock.EnabledWrite(data, do_write)
 
     head.next <<= pyrtl.mux(do_write, truecase=head+1, falsecase=head)
     tail.next <<= pyrtl.mux(do_read, truecase=tail+1, falsecase=tail)

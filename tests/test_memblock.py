@@ -33,7 +33,7 @@ class TestRTLMemBlockDesign(unittest.TestCase):
         self.output1 <<= memory[self.mem_read_address1]
         self.output2 <<= memory[self.mem_read_address2]
         memory[self.mem_write_address] <<= \
-            pyrtl.MemBlock._EnabledWrite(self.mem_write_data, enable=we)
+            pyrtl.MemBlock.EnabledWrite(self.mem_write_data, enable=we)
 
     def test_memblock_direct_assignment_error(self):
         memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
