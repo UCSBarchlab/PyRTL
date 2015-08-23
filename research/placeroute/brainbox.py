@@ -64,7 +64,7 @@ dptr.next <<= updown(dptr, dptr_ctl)
 depth.next <<= updown(depth, depth_ctl)
 
 write_data = pyrtl.mux( input_ctl, falsecase=update(data, dmem_ctl), truecase=input_data)
-data_mem[dptr] <<= pyrtl.MemBlock.EnabledWrite(write_data, enable=write_ctl)
+data_mem[dptr] <<= pyrtl.MemBlock._EnabledWrite(write_data, enable=write_ctl)
 
 
 # core state machine for the machine

@@ -316,7 +316,7 @@ class MipsCore(Pipeline):
         """ select the data to write back to registers """
         self._write_data <<= self.write_data
 
-        EW = MemBlock.EnabledWrite
+        EW = MemBlock._EnabledWrite
         writable_register = (self.regwrite == 1) & (self.write_register != 0)
         self._regfile[self.write_register] <<= EW(self._write_data, enable=writable_register)
 
@@ -324,7 +324,7 @@ class MipsCore(Pipeline):
         # this memory is big endian
         address = base_address[0:self._addrwidth]
 
-        EW = MemBlock.EnabledWrite
+        EW = MemBlock._EnabledWrite
         read_datas = []
 
         for i in range(4):
@@ -341,7 +341,7 @@ class MipsCore(Pipeline):
         # this memory is big endian
         address = base_address[0:self._addrwidth]
 
-        EW = MemBlock.EnabledWrite
+        EW = MemBlock._EnabledWrite
         read_datas = []
 
         for i in range(4):

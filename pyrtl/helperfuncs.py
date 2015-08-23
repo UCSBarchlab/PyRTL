@@ -207,6 +207,7 @@ def concat(*args):
 def match_bitwidth(*args):
     # TODO: allow for custom bit extension functions
     """ Matches the bitwidth of all of the input arguments
+
     :type args: WireVector
     :return tuple of args in order with extended bits
     """

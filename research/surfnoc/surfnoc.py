@@ -95,7 +95,7 @@ def surfnoc_single_buffer(addrwidth, data_in, read_enable, write_enable):
     do_read = mux(empty, truecase=0, falsecase=read_enable)
 
     # handle writes 
-    buffer_memory[head] <<= MemBlock.EnabledWrite(data_in, do_write)
+    buffer_memory[head] <<= MemBlock._EnabledWrite(data_in, do_write)
 
     # handle reads (including pass-through case of empty/full buffer)
     read_output = mux(do_read & do_write & (head==tail), 

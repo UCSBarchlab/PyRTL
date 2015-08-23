@@ -20,7 +20,7 @@ import conditional
 # MemBlock supports any number of the following operations:
 # read: d = mem[address]
 # write: mem[address] = d
-# write with an enable: mem[address] = MemBlock.EnabledWrite(d,enable=we)
+# write with an enable: mem[address] = MemBlock._EnabledWrite(d,enable=we)
 # Based on the number of reads and writes a memory will be inferred
 # with the correct number of ports to support that
 
@@ -122,7 +122,7 @@ class MemBlock(_MemReadBase):
     """ An object for specifying read and write enabled block memories """
     # FIXME: write ports assume that only one port is under control of the conditional
 
-    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
+    _EnabledWrite = collections.namedtuple('_EnabledWrite', 'data, enable')
 
     # data <<= memory[addr]  (infer read port)
     # memory[addr] <<= data  (infer write port)
@@ -152,7 +152,7 @@ class MemBlock(_MemReadBase):
             raise core.PyrtlError('error, memory index bitwidth > addrwidth')
         addr = item
 
-        if isinstance(val, MemBlock.EnabledWrite):
+        if isinstance(val, MemBlock._EnabledWrite):
             data, enable = val.data, val.enable
         else:
             data, enable = val, wire.Const(1, bitwidth=1, block=self.block)
@@ -185,7 +185,7 @@ class MemBlock(_MemReadBase):
 
 
 class RomBlock(_MemReadBase):
-    """ RomBlocks are the read only memory format in PYRTL
+    """ RomBlocks are the read only memory format in PyRTL
         By default, they synthesize down to transistor-based
         logic during synthesis
 
@@ -193,10 +193,10 @@ class RomBlock(_MemReadBase):
     """
     def __init__(self, bitwidth, addrwidth, romdata, name=None, block=None):
         """
-        :param int bitwidth: The bitwidth of the parameters
-        :param int addrwidth: The bitwidth of the address bus
+        :param int bitwidth: The bitwidth of each item stored in the ROM
+        :param int addrwidth: The bitwidth of the address bus (determines number of addresses)
         :param function or iterable romdata: This can either be a function or an array that maps
-        an address as an input to a result as an output
+          an address as an input to a result as an output
         """
         super(RomBlock, self).__init__(bitwidth, addrwidth, name, block)
         self.initialdata = romdata

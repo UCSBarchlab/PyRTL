@@ -64,7 +64,7 @@ def old_cache(tag, index, blockselect, byteselect, associativity, datain):
 	lineselected <<= memory1[index]
 	return (lineselected)
 	# do this for update:
-	# buffer_memory[head] <<= pyrtl.MemBlock.EnabledWrite(data, do_write)
+	# buffer_memory[head] <<= pyrtl.MemBlock._EnabledWrite(data, do_write)
 
 def testcache():
 	testtag = 4
