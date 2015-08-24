@@ -36,7 +36,7 @@ class WireVector(object):
 
     # "code" is a static variable used when output as string.
     # Each class inheriting from WireVector should overload accordingly
-    code = 'W'
+    _code = 'W'
 
     def __init__(self, bitwidth=None, name=None, block=None):
         """
@@ -67,7 +67,7 @@ class WireVector(object):
             self.init_call_stack = None
 
     def __str__(self):
-        return ''.join([self.name, '/', str(self.bitwidth), self.code])
+        return ''.join([self.name, '/', str(self.bitwidth), self._code])
 
     def _build_wirevector(self, other):
         # Actually create and add wirevector to logic block
@@ -299,7 +299,7 @@ class WireVector(object):
 
 class Input(WireVector):
     """ A WireVector type denoting inputs to a block (no writers) """
-    code = 'I'
+    _code = 'I'
 
     def __init__(self, bitwidth=None, name=None, block=None):
         super(Input, self).__init__(bitwidth=bitwidth, name=name, block=block)
@@ -312,7 +312,7 @@ class Input(WireVector):
 
 class Output(WireVector):
     """ A WireVector type denoting outputs of a block (no readers) """
-    code = 'O'
+    _code = 'O'
 
     def __init__(self, bitwidth=None, name=None, block=None):
         super(Output, self).__init__(bitwidth, name, block)
@@ -329,7 +329,7 @@ class Const(WireVector):
     If a negative integer is provided in the simulation, it is converted
     to a two's complement representation of the specified bitwidth."""
 
-    code = 'C'
+    _code = 'C'
 
     def __init__(self, val, bitwidth=None, block=None):
         """
@@ -418,7 +418,7 @@ class Register(WireVector):
     property .next with the <<= operator.  For example, if you want
     to specify a counter it would look like: "a.next <<= a + 1"
     """
-    code = 'R'
+    _code = 'R'
 
     # When the register is called as such:  r.next <<= foo
     # the sequence of actions that happens is:

@@ -118,30 +118,38 @@ class Block(object):
       operation specified. OPS: ('&','|','^','n','+','-','*').  All inputs must
       be the same bitwidth.  Logical operations produce as many bits as are in
       the input, while '+' and '-' produce n+1 bits, and '*' produced 2n bits.
+
     * In addition there are some operations for performing comparisons
       that should perform the operation specified.  The '=' op is checking
       to see if the bits of the vectors are equal, while '<' and '>' do
       unsigned arithmetic comparison.  All comparisons generate a single bit
       of output (1 for true, 0 for false).
+
     * The 'w' operator is simply a directional wire and has no logic function.
+
     * The 'x' operator is a mux which takes a select bit and two signals.
       If the value of the select bit is 0 it selects the second argument, if
       it is 1 it selects the third argument.  Select must be a single bit, while
       the other two arguments must be the same length.
+
     * The 'c' operator is the concatiation operator and combines any number of
       wirevectors (a,b,...,z) into a single new wirevector with "a" in the MSB
       and "z" (or whatever is last) in the LSB position.
+
     * The 's' operator is the selection operator and chooses, based in the
       op_param specificied, a subset of the logic bits from a wire vector to
       select.  Repeats are accepted.
+
     * The 'r' operator is a register and on posedge, simply copies the value
       from the input to the output of the register
+
     * The 'm' operator is a memory block read port, which supports async reads (acting
       like combonational logic). Multiple read (and write) ports are possible to
       the same memory but each 'm' defines only one of those. The op_param
       is a tuple containing two references: the mem id, and a reference to the
       MemBlock containing this port. The MemBlock should only be used for debug and
       sanity checks. Each read port has on addr (an arg) and one data (a dest).
+
     * The '@' (update) operator is a memory block write port, which supports syncronous writes
       (writes are "latched" at posedge).  Multiple write (and read) ports are possible
       to the same memory but each '@' defines only one of those. The op_param

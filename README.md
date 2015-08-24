@@ -157,6 +157,29 @@ users in some unexpected ways.  Watch out for these couple of "somewhat surprisi
 * When posting a bug please post a small chunk of code that captures the bug, e.g. [Issue #56](https://github.com/UCSBarchlab/PyRTL/issues/56)
 * When pushing a fix to a bug or enhancement please reference issue number in commit message, e.g. [Fix to Issue #56](https://github.com/UCSBarchlab/PyRTL/commit/1d5730db168a9e4490c580cb930075715468047a)
 
+*Documentation*
+* All important functionality, for both /pyrtl and /rtlib, should have an executable example in /examples
+* All classes should have a block comment with high level description of the class
+* All functions in /pyrtl or /rtllib should follow the following (sphynx parsable) docstring format: 
+```python
+"""
+One Line Summary (< 80 chars) on what the function does (add the newline in front only for long docstrings)  
+
+:param [optional param type] param_name : parameter description 
+:param [optional param type] param_name : Longer parameter descriptions take up a newline
+  with two leading spaces like this
+:return [optional return type]: return description
+
+A long description of what this function does. Talk about what the user should expect from this function
+and also what the users needs to do to use the function (this part is optional)
+"""
+
+# Developer Notes (Optional):
+# These would be anything that the user does not need to know in order to use the functions.
+# Such things include internal workings of the function, the logic behind it, how to extend
+# it (unless the function was mainly intended to be extended). 
+```
+
 ### Related Projects
 
 [MyHDL](http://www.myhdl.org/) is a neat Python hardware project built around generators and decorators.  The semantics of this embedded language

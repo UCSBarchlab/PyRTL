@@ -1,6 +1,6 @@
 
 """
-passes contains structures helpful for writing analysis and
+Passes contains structures helpful for writing analysis and
 transformation passes over blocks.
 """
 
@@ -18,11 +18,11 @@ import memory
 
 
 def area_estimation(tech_in_nm, block=None):
-    """ Returns a single number estimating the total area of the block.
+    """ Estimates the total area of the block.
 
-    The tech_in_nm is the size of the circuit technology to be estimated,
-    with 65 being 65nm and 250 being 0.25um for example.  The area returned
-    is in the units of square mm.
+    :param tech_in_nm: the size of the circuit technology to be estimated,
+      with 65 being 65nm and 250 being 0.25um for example.
+    :return estimated area in terms of square mm
     """
     def mem_area_estimate(tech_in_nm, bits, ports):
         # http://www.cs.ucsb.edu/~sherwood/pubs/ICCD-srammodel.pdf
@@ -76,13 +76,9 @@ def area_estimation(tech_in_nm, block=None):
 #
 
 def timing_analysis(block=None, gate_delay_funcs=None,):
-    """ Calculates the timing analysis while allowing for
-    different timing delays of different gates of each type
-    Supports all valid presynthesis blocks
-    Currently doesn't support memory post synthesis
+    """
+    Calculates timing delays in the block
 
-    :param block: The block you want to do timing analysis on. The default is
-     the current working block.
     :param gate_delay_funcs: a map with keys corresponding to the gate op and
      a function returning the delay as the value
      It takes the gate as an argument.
@@ -90,6 +86,11 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
      of the block
     :return: returns a map consisting of each wirevector and the associated
      delay
+
+    Calculates the timing analysis while allowing for
+    different timing delays of different gates of each type
+    Supports all valid presynthesis blocks
+    Currently doesn't support memory post synthesis
     """
 
     block = core.working_block(block)
@@ -144,6 +145,7 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
 
 
 def timing_max_length(timing_map):
+    """ Takes a timing map and returns the timing delay of the circuit """
     return max(timing_map.itervalues())
 
 
@@ -189,7 +191,7 @@ def timing_critical_path(timing_map, block=None):
         if wire_pair[1] == max_time:
             critical_path_pass([], wire_pair[0])
 
-    line_indent = "  "
+    line_indent = " " * 2
     #  print the critical path
     for cp_with_num in enumerate(critical_paths):
         print "Critical path", cp_with_num[0], ":"
@@ -200,9 +202,6 @@ def timing_critical_path(timing_map, block=None):
 
     return critical_paths
 
-
-def print_analysis(block, wirevector_timing_map, ):
-    raise NotImplementedError
 
 # --------------------------------------------------------------------
 #   __   __  ___           __      ___    __
@@ -321,7 +320,7 @@ def _constant_prop_pass(block):
                             for arg_wire in net_checking.args))
 
         if num_constants is 0 or net_checking.op == 'w':
-            return None
+            return
 
         if (net_checking.op in two_var_ops) & num_constants is 1:
             # special case
@@ -429,11 +428,11 @@ def _remove_unlistened_nets(block):
 
 def _remove_unused_wires(block, parent_process_name):
     """ Removes all unconnected wires from a block"""
-    all_wire_vectors = set()
+    valid_wires = set()
     for logic_net in block.logic:
-        all_wire_vectors.update(logic_net.args, logic_net.dests)
+        valid_wires.update(logic_net.args, logic_net.dests)
 
-    wire_removal_set = block.wirevector_set.difference(all_wire_vectors)
+    wire_removal_set = block.wirevector_set.difference(valid_wires)
     for removed_wire in wire_removal_set:
         if isinstance(removed_wire, wire.Input):
             print "Input Wire, " + removed_wire.name + " was removed by " + parent_process_name
@@ -441,7 +440,7 @@ def _remove_unused_wires(block, parent_process_name):
             core.PyrtlInternalError("Output wire, " + removed_wire.name +
                                     "was disconnected by" + parent_process_name)
 
-    block.wirevector_set = all_wire_vectors
+    block.wirevector_set = valid_wires
 
 # --------------------------------------------------------------------
 #    __           ___       ___  __     __
@@ -452,6 +451,10 @@ def _remove_unused_wires(block, parent_process_name):
 
 def synthesize(update_working_block=True, block=None):
     """ Lower the design to just single-bit "and", "or", and "not" gates.
+
+    :param updated_working_block: Boolean specifying if working block update
+    :param block: The block you want to synthesize
+    :return: The newly synthesized block (of type PostSynthesisBlock).
 
     Takes as input a block (default to working block) and creates a new
     block which is identical in function but uses only single bit gates
@@ -471,10 +474,6 @@ def synthesize(update_working_block=True, block=None):
     simulation to map the input/outputs so that the same testbench can be
     used both pre and post synthesis (see documentation for Simulation for
     more details).
-
-    :param updated_working_block: Boolean specifying if working block update
-    :param block: The block you want to synthesize
-    :return: The newly synthesized block (of type PostSynthesisBlock).
     """
 
     block_in = core.working_block(block)
@@ -670,11 +669,11 @@ def _synth_base(block_in, synth_name="synth"):
     """
     This is a generic function to copy the wirevectors for another round of
     synthesis This does not split a wirevector with multiple wires.
-    :param block: The block to change
+
+    :param block_in: The block to change
     :param synth_name: a name to prepend to all new copies of a wire
     :return: the resulting block and a wirevector map
     """
-    import copy
     block_in.sanity_check()  # make sure that everything is valid
     if not isinstance(block_in, core.PostSynthBlock):
         raise core.PyrtlError("Synth_base only works on post synth blocks")
@@ -759,6 +758,7 @@ def nand_synth(block=None, update_working_block=True):
 def and_inverter_synth(block=None, update_working_block=True):
     """
     Synthesizes a decomposed block into one consisting of ands and inverters
+
     :param block: The block to synthesize
     :return: The resulting block
     """
@@ -792,8 +792,8 @@ def and_inverter_synth(block=None, update_working_block=True):
 
 def _generate_one_bit_add(a, b, cin):
     """ Generates hardware for a 1-bit full adder.
-        Input: 3 1-bit wire vectors
-        Output: a list of wire vectors (the sum), and a single 1-bit wirevector cout
+    :param a, b, cin: 3 1-bit wire vectors
+    :return a list of wire vectors (the sum), and a single 1-bit wirevector cout
     """
     sum = a ^ b ^ cin
     cout = a & b | a & cin | b & cin
