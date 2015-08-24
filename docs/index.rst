@@ -15,7 +15,7 @@ PyRTL Modules:
 
    core
    wire
-   memblock
+   memory
    passes
    simulation
    inputoutput

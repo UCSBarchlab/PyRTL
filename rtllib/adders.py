@@ -32,7 +32,7 @@ def kogge_stone(a, b, cin=0):
         for i in reversed(range(prop_dist, len(a))):
             prop_old = prop_bits[i]
             gen_bits[i] = gen_bits[i] | (prop_old & gen_bits[i - prop_dist])
-            if i >= prop_dist*2:  # to prevent creating unnecessary nets and wires
+            if i >= prop_dist * 2:  # to prevent creating unnecessary nets and wires
                 prop_bits[i] = prop_old & prop_bits[i - prop_dist]
         prop_dist *= 2
 
@@ -58,6 +58,7 @@ def ripple_add(a, b, cin=0):
         ripplecarry = one_bit_add(a[0], b[0], cin)
         msbits = ripple_add(a[1:], b[1:], ripplecarry[1])
         return pyrtl.concat(msbits, ripplecarry[0])
+
 
 def carrysave_adder(a, b, c):
     """
@@ -102,6 +103,7 @@ def dada_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
     """
     return _general_adder_reducer(wire_array_2, result_bitwidth, False, final_adder)
 
+
 def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder):
     """
     Does the reduction and final adding for bot dada and wallace recucers
@@ -138,14 +140,14 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
                 a, b, cin = (wire_array_2[i].pop(0) for j in range(3))
                 deferred[i].append(a ^ b ^ cin)  # deferred bit keeps this sum
                 if i + 1 < result_bitwidth:  # watch out for index bounds
-                    deferred[i+1].append((a & b) | (b & cin) | (a & cin))  # cout goes up by one
+                    deferred[i + 1].append((a & b) | (b & cin) | (a & cin))  # cout goes up by one
 
             if len(wire_array_2[i]) == 2:
-                if reduce_2s: # Reduce with a Half Adder if exactly 2 wires
+                if reduce_2s:  # Reduce with a Half Adder if exactly 2 wires
                     a, b = wire_array_2[i].pop(0), wire_array_2[i].pop(0)
                     deferred[i].append(a ^ b)  # deferred bit keeps this sum
                     if i + 1 < result_bitwidth:
-                        deferred[i+1].append(a & b)  # cout goes up one weight
+                        deferred[i + 1].append(a & b)  # cout goes up one weight
                 else:
                     deferred[i].extend(wire_array_2[i])
 
@@ -203,6 +205,7 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
 Some adders that utilize these tree reducers
 
 """
+
 
 def fast_group_adder(wires_to_add, reducer=wallace_reducer, final_adder=kogge_stone):
     """

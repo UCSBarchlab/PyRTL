@@ -14,12 +14,16 @@ import core
 import wire
 import inspect
 
+_rtl_assert_number = 1
+_rtl_assert_dict = {}
+_probe_number = 1
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
 #  |__| |__  |    |__) |__  |__) /__`
 #  |  | |___ |___ |    |___ |  \ .__/
 #
+
 
 def as_wires(val, bitwidth=None, truncating=True, block=None):
     """ Return wires from val which may be wires, integers, strings, or bools.
@@ -211,9 +215,63 @@ def match_bitwidth(*args):
 
 
 def probe(w, name=None):
-    if name:
-        pname = '(%s : %s)' % (name, w.name)
+    """ Print useful information about a WireVector when in debug mode.
+
+    :type w: WireVector
+    :type name: None or string
+    :return: original WireVector w
+
+    Probe can be inserted into a existing design easily as it returns the original wire unmodified.
+    For example "y <<= x[0:3] + 4" could be turned into "y <<= probe(x)[0:3] + 4" to give visibility
+    into both the origin of x (including the line that WireVector was originally created) and the
+    run-time values of x (which will be named and thus show up by default in a trace.  Likewise
+    "y <<= probe(x[0:3]) + 4", "y <<= probe(x[0:3] + 4)", and "probe(y) <<= x[0:3] + 4" are all
+    valid uses of probe.  Note: probe does actually add wire to the working block of w (which can
+    confuse various post-processing transforms such as output to verilog)
+    """
+    global _probe_number
+    if not isinstance(w, wire.WireVector):
+        raise core.PyrtlError('Only WireVectors can be probed')
+
+    if w.init_call_stack:
+        print '(Probe-%d) Traceback for probed wire, most recent call last' % _probe_number
+        for frame in reversed(w.init_call_stack[0:-1]):
+            print frame,
+        print
     else:
-        pname = '(%s)' % (w.name)
-    p = wire.WireVector(name=pname)
-    p <<= w
+        print '(Probe-%d)' % _probe_number,
+        print '    No call info found: use set_debug_mode() to provide more information\n'
+
+    if name:
+        pname = '(Probe-%d : %s : %s)' % (_probe_number, name, w.name)
+    else:
+        pname = '(Probe-%d : %s)' % (_probe_number, w.name)
+
+    p = wire.Output(name=pname, block=get_block(w))
+    p <<= w  # late assigns len from w automatically
+    _probe_number += 1
+    return w
+
+
+def rtl_assert(w, msg):
+    """ Add hardware assertions to be checked on the RTL design.
+
+    w should be a WireVector
+    msg should be a string
+    returns the Output wire for the assertion (can be ignored in most cases)
+    """
+
+    global _rtl_assert_number
+    global _rtl_assert_dict
+
+    if not isinstance(w, wire.WireVector):
+        raise core.PyrtlError('Only WireVectors can be asserted with rtl_assert')
+    if len(w) != 1:
+        raise core.PyrtlError('rtl_assert checks only a WireVector of bitwidth 1')
+
+    assertion_name = 'assertion%d' % _rtl_assert_number
+    assert_wire = wire.Output(bitwidth=1, name=assertion_name, block=get_block(w))
+    assert_wire <<= w
+    _rtl_assert_number += 1
+    _rtl_assert_dict[assert_wire] = msg
+    return assert_wire

@@ -365,7 +365,7 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
         self.read_addr1 = pyrtl.Input(self.addrwidth)
         self.read_addr2 = pyrtl.Input(self.addrwidth)
         self.rom = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
-                                  name='rom', data=rom_data_function)
+                                  name='rom', romdata=rom_data_function)
         self.output1 <<= self.rom[self.read_addr1]
         self.output2 <<= self.rom[self.read_addr2]
         # build the actual simulation environment
@@ -398,7 +398,7 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
         self.read_addr1 = pyrtl.Input(self.addrwidth)
         self.read_addr2 = pyrtl.Input(self.addrwidth)
         self.rom = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
-                                  name='rom', data=rom_data_function)
+                                  name='rom', romdata=rom_data_function)
         # self.read_out <<= self.rom[self.read_addr1]
         # self.output1 <<= self.read_out - 1
         self.output1 <<= self.rom[self.read_addr1]

@@ -1,6 +1,8 @@
 from pyrtl import *
 from collections import namedtuple, Iterable
 
+set_debug_mode()
+
 #  Numbering scheme for links is as follows
 #  Each horizontal link (dir = 0):
 #     is indexed by the same cordinates as the router to its left

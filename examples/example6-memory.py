@@ -116,7 +116,7 @@ rom_data_array = [rom_data_func(a) for a in range(16)]
 # but because they are read only, they also need to be passed in a set of
 # data to be initialized as
 
-rom1 = RomBlock(bitwidth=5, addrwidth=4, data=rom_data_func)
+rom1 = RomBlock(bitwidth=5, addrwidth=4, romdata=rom_data_func)
 rom2 = RomBlock(5, 4, rom_data_array)
 
 rom_add_1, rom_add_2 = Input(4, "rom_in"), Input(4, "rom_in_2")
