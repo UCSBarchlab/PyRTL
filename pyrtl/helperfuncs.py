@@ -83,7 +83,47 @@ def _apply_op_over_all_bits(op, vector):
     else:
         rest = _apply_op_over_all_bits(op, vector[1:])
         func = getattr(vector[0], op)
-        return func(vector[0], rest)
+        # note that func is method bound to vector[0], which gives vector[0] as a first parameter
+        return func(rest)
+
+
+def rtl_any(*vectorlist):
+    """ Hardware equivelent of python native "any".
+
+    :param WireVector *vectorlist: all arguments are WireVectors of length 1
+    :return: WireVector of length 1
+
+    Returns a 1-bit wirevector which will hold a '1' if any of the inputs
+    are '1' (i.e. it is a big 'ol OR gate)
+    """
+    if len(vectorlist) <= 0:
+        raise core.PyrtlError('rtl_any requires at least 1 argument')
+    block = get_block(*vectorlist)
+    converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
+    for v in converted_vectorlist:
+        if len(v) != 1:
+            raise core.PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
+    return or_all_bits(concat(*converted_vectorlist))
+
+
+def rtl_all(*vectorlist):
+    """ Hardware equivelent of python native "all".
+
+    :param WireVector *vectorlist: all arguments are WireVectors of length 1
+    :return: WireVector of length 1
+
+    Returns a 1-bit wirevector which will hold a '1' only if all of the
+    inputs are '1' (i.e. it is a big 'ol AND gate)
+    """
+    if len(vectorlist) <= 0:
+        raise core.PyrtlError('rtl_all requires at least 1 argument')
+    block = get_block(*vectorlist)
+    converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
+    print converted_vectorlist
+    for v in converted_vectorlist:
+        if len(v) != 1:
+            raise core.PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
+    return and_all_bits(concat(*converted_vectorlist))
 
 
 def mux(select, falsecase, truecase, *rest):

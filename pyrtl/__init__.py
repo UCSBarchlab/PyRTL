@@ -23,8 +23,12 @@ from helperfuncs import and_all_bits
 from helperfuncs import or_all_bits
 from helperfuncs import xor_all_bits
 from helperfuncs import parity
+from helperfuncs import rtl_all
+from helperfuncs import rtl_any
+from helperfuncs import get_block
 from helperfuncs import match_bitwidth
 from helperfuncs import probe
+from helperfuncs import rtl_assert
 
 # memory blocks
 from memory import MemBlock
