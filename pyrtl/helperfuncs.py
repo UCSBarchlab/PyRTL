@@ -276,7 +276,7 @@ def probe(w, name=None):
 
     if w.init_call_stack:
         print '(Probe-%d) Traceback for probed wire, most recent call last' % _probe_number
-        for frame in reversed(w.init_call_stack[0:-1]):
+        for frame in w.init_call_stack[0:-1]:
             print frame,
         print
     else:
