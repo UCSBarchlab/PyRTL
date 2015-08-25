@@ -353,7 +353,7 @@ class TestSynthOptTiming(unittest.TestCase):
 
         dataOut = pyrtl.Output(bitwidth=3)
 
-        memory = pyrtl.MemBlock(3, 3)
+        memory = pyrtl.MemBlock(3, 3, asynchronous=True)
 
         memory[readAdd1 & readAdd2] <<= readData1 ^ readData2
         dataOut <<= memory[writeAdd1 | writeAdd2]

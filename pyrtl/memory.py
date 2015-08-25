@@ -73,7 +73,7 @@ class _MemReadBase(object):
 
     # FIXME: right now read port is built unconditionally (no read enable)
 
-    def __init__(self,  bitwidth, addrwidth, name=None, asynchronous=True, block=None):
+    def __init__(self,  bitwidth, addrwidth, name, asynchronous, block):
 
         self.block = core.working_block(block)
         name = core.next_tempvar_name(name)
@@ -92,18 +92,6 @@ class _MemReadBase(object):
 
     def __getitem__(self, item):
         from helperfuncs import as_wires
-
-        # Check if memories are only addressed directly by registers, thus ensuring
-        # that the reads and writes happen only on the start of the clock edge (i.e.
-        # that the memory is "synchronous".  Ignore this check if the memory is
-        # explicitly listed as "asynchronous".
-        # Note that this can be conservitive because it eliminates registers feeding
-        # wirevectors that feed memories, as well as "non computing" transforms such
-        # as bit-slice and concat.
-        if not self.asynchronous and not isinstance(item, wire.Register):
-            raise core.PyrtlError('only registers allowed as read index to '
-                                  'memory without "asynchronous" set to True')
-
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False, block=self.block)
         if len(item) > self.addrwidth:
             raise core.PyrtlError('memory index bitwidth > addrwidth')
@@ -148,7 +136,7 @@ class MemBlock(_MemReadBase):
 
     # data <<= memory[addr]  (infer read port)
     # memory[addr] <<= data  (infer write port)
-    def __init__(self, bitwidth, addrwidth, name=None, asynchronous=True, block=None):
+    def __init__(self, bitwidth, addrwidth, name=None, asynchronous=False, block=None):
         """ Create MemBlock.
 
         :param int bitwidth: Defines the bitwidth of each element in the memory
@@ -225,7 +213,7 @@ class RomBlock(_MemReadBase):
     By default, they synthesize down to transistor-based
     logic during synthesis
     """
-    def __init__(self, bitwidth, addrwidth, romdata, name=None, asynchronous=True, block=None):
+    def __init__(self, bitwidth, addrwidth, romdata, name=None, asynchronous=False, block=None):
         """ Create a RomBlock
         :param int bitwidth: The bitwidth of each item stored in the ROM
         :param int addrwidth: The bitwidth of the address bus (determines number of addresses)
