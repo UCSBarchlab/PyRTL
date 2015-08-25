@@ -16,7 +16,7 @@ function check_exit_code {
 
 echo 
 echo ===== Running NoseTests ==============================================
-nosetests
+nosetests -x --with-coverage
 check_exit_code $? 'PyRTL core nose tests failed. Exiting'
 
 echo 
