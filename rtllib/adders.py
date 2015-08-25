@@ -12,6 +12,7 @@ def main():
 def kogge_stone(a, b, cin=0):
     """
     Creates a Kogge-Stone adder given two inputs
+
     :param a, b: The two Wirevectors to add up (bitwidths don't need to match)
     :param cin: An optimal carry Wirevector or value
     :return: a Wirevector representing the output of the adder
