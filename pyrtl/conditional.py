@@ -24,14 +24,14 @@ class ConditionalUpdate(object):
     >   r2 = Register()
     >   with ConditionalUpdate() as condition:
     >       with condition(a):
-    >           r.next <<= x  # set when a is true
+    >           r.next |= x  # set when a is true
     >           with condition(b):
-    >               r2.next <<= y  # set when a and b are true
+    >               r2.next |= y  # set when a and b are true
     >       with condition(c):
-    >           r.next <<= z  # set when a is false and c is true
-    >           r2.next <<= z
+    >           r.next |= z  # set when a is false and c is true
+    >           r2.next |= z
     >       with condition.fallthrough:
-    >           r.next <<= w  # a is false and c is false
+    >           r.next |= w  # a is false and c is false
 
     In addition to this longer form, there is a shortcut version for
     dealing with just a single condition (there is no fallthrough or nesting
@@ -39,7 +39,7 @@ class ConditionalUpdate(object):
 
     >   r = Register()
     >   with ConditionalUpdate(a == b):
-    >       r.next <<= x  # set when a is true
+    >       r.next |= x  # set when a is true
     """
 
     depth = 0
