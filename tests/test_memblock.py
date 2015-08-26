@@ -27,12 +27,14 @@ class TestRTLMemBlockDesign(unittest.TestCase):
         self.output2 <<= memory[self.mem_read_address2]
         memory[self.mem_write_address] <<= self.mem_write_data
 
-    #def test_memblock_assign_with_extention(self):
-    #    memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
-    #    big_output = pyrtl.Output(self.bitwidth+1, "big_output")
-    #    big_output <<= memory[self.mem_read_address1]
-    #    memory[self.mem_write_address] <<= self.mem_write_data
-    #    pyrtl.working_block().sanity_check()
+    def test_memblock_assign_with_extention(self):
+        memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')
+        big_output = pyrtl.Output(self.bitwidth+1, "big_output")
+        big_output <<= memory[self.mem_read_address1]
+        self.output1 <<= 1
+        self.output2 <<= 2
+        memory[self.mem_write_address] <<= self.mem_write_data
+        pyrtl.working_block().sanity_check()
 
     def test_memblock_with_write_enable_with_equalsign(self):
         memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='memory')

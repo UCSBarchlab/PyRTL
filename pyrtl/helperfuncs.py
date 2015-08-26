@@ -42,7 +42,7 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
         return wire.Const(val, bitwidth=bitwidth, block=block)
     elif isinstance(val, memory._MemIndexed):
         # covert to a memory read when the value is actually used
-        return val.mem._readaccess(val.index)
+        return as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)
     elif not isinstance(val, wire.WireVector):
         raise core.PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
     elif bitwidth == '0':

@@ -98,7 +98,6 @@ class TestMemAsyncCheck(unittest.TestCase):
         pyrtl.working_block().sanity_check
 
     def test_async_check_should_notpass_with_add(self):
-        pyrtl.set_debug_mode()
         memory = pyrtl.MemBlock(
                     bitwidth=self.bitwidth, 
                     addrwidth=self.addrwidth,
