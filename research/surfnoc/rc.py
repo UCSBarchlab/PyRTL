@@ -4,9 +4,9 @@ router_id = pyrtl.Input(4,'router_id')
 dest_id = pyrtl.Input(4,'dest_id')
 
 # 	-------------------------
-#	|G|port3bits|VC|N||S|E|W|		9bits
+#	|G|N|S|E|W|port 3bits|VC|		9bits
 #	-------------------------
-#	port N = 0 | S = 0 | E = 0 | W= 0 | Self = 0 |
+#	port N = 0 | S = 1 | E = 2 | W= 3 | Self = 4 |
 #
 port = pyrtl.Input(3,'port')	#port which is giving Input signals
 
