@@ -321,7 +321,6 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
 
 
     def test_synth_simple_memblock(self):
-
         synth_out = pyrtl.synthesize()
         pyrtl.optimize()
         self.sim_trace = pyrtl.SimulationTrace()
@@ -346,6 +345,9 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
 
 
 class TestRTLRomBlockSimulation(unittest.TestCase):
+
+    def setUp(self):
+        pyrtl.reset_working_block()
 
     def tearDown(self):
         pyrtl.reset_working_block()

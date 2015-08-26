@@ -55,5 +55,60 @@ class TestBlock(unittest.TestCase):
             print net
 
 
+class TestMemAsyncCheck(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.bitwidth = 3
+        self.addrwidth = 5
+        self.output1 = pyrtl.Output(self.bitwidth, "output1")
+        self.output2 = pyrtl.Output(self.bitwidth, "output2")
+        self.mem_read_address1 = pyrtl.Input(self.addrwidth, name='mem_read_address1')
+        self.mem_read_address2 = pyrtl.Input(self.addrwidth, name='mem_read_address2')
+        self.mem_write_address = pyrtl.Input(self.addrwidth, name='mem_write_address')
+        self.mem_write_data = pyrtl.Input(self.bitwidth, name='mem_write_data')
+
+    def tearDown(self):
+        pyrtl.reset_working_block()
+
+    def test_async_check_should_pass(self):
+        memory = pyrtl.MemBlock(
+                    bitwidth=self.bitwidth, 
+                    addrwidth=self.addrwidth,
+                    name='memory')
+        self.output1 <<= memory[self.mem_read_address1]
+        memory[self.mem_write_address] <<= self.mem_write_data
+        pyrtl.working_block().sanity_check
+
+    def test_async_check_should_pass_with_select(self):
+        memory = pyrtl.MemBlock(
+                    bitwidth=self.bitwidth, 
+                    addrwidth=self.addrwidth-1,
+                    name='memory')
+        self.output1 <<= memory[self.mem_read_address1[0:-1]]
+        pyrtl.working_block().sanity_check
+
+    def test_async_check_should_pass_with_cat(self):
+        memory = pyrtl.MemBlock(
+                    bitwidth=self.bitwidth, 
+                    addrwidth=self.addrwidth,
+                    name='memory')
+        addr = pyrtl.concat(self.mem_read_address1[0], self.mem_read_address2[0:-1])
+        self.output1 <<= memory[addr]
+        memory[self.mem_write_address] <<= self.mem_write_data
+        pyrtl.working_block().sanity_check
+
+    def test_async_check_should_notpass_with_add(self):
+        memory = pyrtl.MemBlock(
+                    bitwidth=self.bitwidth, 
+                    addrwidth=self.addrwidth,
+                    name='memory')
+        addr = pyrtl.WireVector(self.bitwidth)
+        addr <<= self.mem_read_address1 + self.mem_read_address2
+        self.output1 <<= memory[addr]
+        print pyrtl.working_block()
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.working_block().sanity_check()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -148,15 +148,16 @@ class Block(object):
       the same memory but each 'm' defines only one of those. The op_param
       is a tuple containing two references: the mem id, and a reference to the
       MemBlock containing this port. The MemBlock should only be used for debug and
-      sanity checks. Each read port has on addr (an arg) and one data (a dest).
+      sanity checks. Each read port has one addr (an arg) and one data (a dest).
 
     * The '@' (update) operator is a memory block write port, which supports syncronous writes
       (writes are "latched" at posedge).  Multiple write (and read) ports are possible
       to the same memory but each '@' defines only one of those. The op_param
       is a tuple containing two references: the mem id, and a reference to the MemoryBlock.
-      Writes have three args (addr, data, and write enable).  You will not see a written
-      value change until the following cycle.  If multiple writes happen to the same address
-      in the same cycle the behavior is currently undefined.
+      Writes have three args (addr, data, and write enable).  The dests should be an
+      empty tuple.  You will not see a written value change until the following cycle.
+      If multiple writes happen to the same address in the same cycle the behavior is currently
+      undefined.
 
     The connecting elements (args and dests) should be WireVectors or derived
     from WireVector, and should be registered with the block using
@@ -179,7 +180,7 @@ class Block(object):
 
     def __str__(self):
         """String form has one LogicNet per line."""
-        return '\n'.join(str(l) for l in self.logic)
+        return '\n'.join(str(l) for l in self)
 
     def add_wirevector(self, wirevector):
         """ Add a wirevector object to the block."""
@@ -315,6 +316,9 @@ class Block(object):
         if len(undriven) > 0:
             raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
 
+        # Check for async memories not specified as such
+        self.sanity_check_memory_sync()
+
         if debug_mode:
             # Check for wires that are destinations of a logicNet, but are not outputs and are never
             # used as args.
@@ -323,6 +327,42 @@ class Block(object):
             if len(unused) > 0:
                 names = [w.name for w in unused]
                 print 'Warning: Wires driven but never used { %s }' % names
+
+    def sanity_check_memory_sync(self):
+        """ Check that all memories are synchronous unless explicitly specified as async.
+
+        While the semantics of 'm' memories reads is asynchronous, if you want your design
+        to use a block ram (on an FPGA or otherwise) you want to make sure the index is
+        available at the begining of the clock edge.  This check will walk the logic structure
+        and throw an error on any memory if finds that has an index that is not ready at the
+        begining of the cycle.
+        """
+        async_source = self.legal_ops - set('wcsr')  # produce values after non-zero time
+        async_prop = self.legal_ops - set('r')  # ops propagating async behavior from src to dest
+        async_set = set(wire
+                        for net in self.logic if net.op in async_source
+                        for wire in net.dests)
+        last_async_set_len = len(async_set)
+        async_set_is_growing = True
+
+        # propagate "async" behavior through the network
+        while async_set_is_growing:
+            for net in self.logic:
+                if net.op in async_prop:
+                    if any([w in async_set for w in net.args]):
+                        async_set.update(net.dests)
+            async_set_is_growing = True if len(async_set) > last_async_set_len else False
+            last_async_set_len = len(async_set)
+
+        # now do the actual check on each memory operation
+        for net in self.logic:
+            if net.op == 'm':
+                is_async = net.args[0] in async_set
+                if is_async and not net.op_param[1].asynchronous:
+                    raise PyrtlError(
+                        'memory "%s" is not specified as asynchronous but has and index '
+                        '"%s" that is not ready at the start of the cycle'
+                        % (net.op_param[1].name, net.args[0].name))
 
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
@@ -416,6 +456,8 @@ class Block(object):
             raise PyrtlInternalError('error, upper bits of select output undefined')
         if net.op == 'm' and net.dests[0].bitwidth != net.op_param[1].bitwidth:
             raise PyrtlInternalError('error, mem read dest bitwidth mismatch')
+        if net.op == '@' and net.dests != ():
+            raise PyrtlInternalError('error, mem write dest should be empty tuple')
 
 
 class PostSynthBlock(Block):
