@@ -316,3 +316,87 @@ def rtl_assert(w, msg):
     _rtl_assert_number += 1
     _rtl_assert_dict[assert_wire] = msg
     return assert_wire
+
+
+def _check_for_loop(block=None):
+    block = core.working_block(block)
+    logic_left = block.logic.copy()
+    wires_left = set(w for w in block.wirevector_set
+                     if not isinstance(w, (wire.Input, wire.Const, wire.Output, wire.Register)))
+    prev_logic_left = len(logic_left) + 1
+    while prev_logic_left > len(logic_left):
+        prev_logic_left = len(logic_left)
+        nets_to_remove = set()  # bc it's not safe to mutate a set inside its own iterator
+        for net in logic_left:
+            if not any(n_wire in wires_left for n_wire in net.args):
+                nets_to_remove.add(net)
+                wires_left.discard(*net.dests)
+        logic_left -= nets_to_remove
+
+    if 0 == len(logic_left):
+        print "No Loop Found"
+        return None
+    return wires_left, logic_left
+
+
+def find_loop(block=None, print_result=True):
+    result = _check_for_loop(block)
+    if not result:
+        return
+    wires_left, logic_left = result
+    import random
+
+    class _FilteringState:
+        def __init__(self, dst_w):
+            self.dst_w = dst_w
+            self.arg_num = -1
+
+    def dead_end():
+        # clean up after a wire is found to not be part of the loop
+        wires_left.discard(cur_item.dst_w)
+        current_wires.discard(cur_item.dst_w)
+        del checking_stack[-1]
+
+    # now making a map to quickly look up nets
+    dest_nets = {dest_w: net_ for net_ in logic_left for dest_w in net_.dests }
+    initial_w = random.sample(wires_left, 1)[0]
+
+    current_wires = set()
+    checking_stack = [_FilteringState(initial_w)]
+
+    # we don't use a recursive method as Python has a limited stack (default: 999 frames)
+    while len(checking_stack):
+        cur_item = checking_stack[-1]
+        if cur_item.arg_num == -1:
+            #  first time testing this item
+            if cur_item.dst_w not in wires_left:
+                dead_end()
+                continue
+            current_wires.add(cur_item.dst_w)
+            cur_item.net = dest_nets[cur_item.dst_w]
+            if cur_item.net.op == 'r':
+                dead_end()
+                continue
+        cur_item.arg_num += 1  # go to the next item
+        if cur_item.arg_num == len(cur_item.net.args):
+            dead_end()
+            continue
+        next_wire = cur_item.net.args[cur_item.arg_num]
+        if next_wire not in current_wires:
+            current_wires.add(next_wire)
+            checking_stack.append(_FilteringState(next_wire))
+        else:  # We have found the loop!!!!!
+            loop_info = []
+            for f_state in reversed(checking_stack):
+                loop_info.append(f_state)
+                if f_state.dst_w is next_wire:
+                    break
+            else:
+                raise core.PyrtlError("Shouldn't get here! Couldn't figure out the loop")
+            if print_result:
+                print "Loop found:"
+                print '\n'.join("{}".format(fs.net) for fs in loop_info)
+                # print '\n'.join("{} (dest wire: {})".format(fs.net, fs.dst_w) for fs in loop_info)
+                print ""
+            return loop_info
+    raise core.PyrtlError("Error in detecting loop")

@@ -101,19 +101,6 @@ class TestBlock(unittest.TestCase):
                 r.next |= r + 1
         self.check_trace('i 01230123\nr 01221233\n')
 
-    def test_basic_default_condition(self):
-        i = pyrtl.Register(bitwidth=2, name='i')
-        i.next <<= i + 1
-        r = pyrtl.Register(bitwidth=2, name='r')
-        with pyrtl.ConditionalUpdate() as condition:
-            with condition(i == 2):
-                r.next |= r
-            with condition(i == 3):
-                r.next |= r - 1
-            with condition.fallthrough:
-                r.next |= r + 1
-        self.check_trace('i 01230123\nr 01221233\n')
-
     def test_basic_nested_condition(self):
         i = pyrtl.Register(bitwidth=2, name='i')
         i.next <<= i + 1

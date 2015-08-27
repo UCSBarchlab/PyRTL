@@ -29,6 +29,7 @@ from helperfuncs import get_block
 from helperfuncs import match_bitwidth
 from helperfuncs import probe
 from helperfuncs import rtl_assert
+from helperfuncs import find_loop
 
 # memory blocks
 from memory import MemBlock
