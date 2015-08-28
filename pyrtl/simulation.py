@@ -1,7 +1,6 @@
 
 import sys
 import re
-import time
 import core
 import wire
 import memory
@@ -163,6 +162,8 @@ class Simulation(object):
             if len(logic_left) == 0:
                 break
         else:  # no break
+            import helperfuncs
+            helperfuncs.find_loop(self.block)
             raise core.PyrtlInternalError(
                 'error, the set of logic "%s" appears to be waiting for value never produced'
                 % str(logic_left))

@@ -134,9 +134,8 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
                 items_to_remove.add(_gate)
 
         if len(items_to_remove) == 0:
-            block_str = ''.join([str(a_net) + "\n" for a_net in remaining])
             block_str = ("Cannot do static timing analysis due to nonregister, nonmemory "
-                         "loops in the code \n The unprocesssed blocks are: \n") + block_str
+                         "loops in the code")
             helperfuncs.find_loop()
             raise core.PyrtlError(block_str)
 

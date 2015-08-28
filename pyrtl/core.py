@@ -261,6 +261,8 @@ class Block(object):
                 remaining.remove(gate)  # remove gate from set of to return
 
         if len(remaining) is not 0:
+            import helperfuncs
+            helperfuncs.find_loop(self)
             raise PyrtlError("Failure in Block Iterator due to non-register loops")
 
         # raise StopIteration
