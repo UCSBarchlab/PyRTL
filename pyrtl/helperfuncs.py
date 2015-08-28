@@ -126,14 +126,21 @@ def rtl_all(*vectorlist):
     return and_all_bits(concat(*converted_vectorlist))
 
 
-def mux(select, falsecase, truecase, *rest):
+def mux(select, falsecase, truecase, *rest, **kwargs):
     """ Multiplexer returning falsecase for select==0, otherwise truecase.
 
     :param WireVector select: used as the select input to the multiplexor
     :param WireVector falsecase: the wirevector selected if select==0
     :param WireVector truecase: the wirevector selected if select==1
     :param additional WireVector arguments *rest: wirevectors selected when select>1
+    :param additional WireVector arguments **default: keyword arg "default"
     :return: WireVector of length of the longest input (not including select)
+
+    If you are selecting between less items than your index can address, you can
+    use the "default" keyword argument to auto-expand those terms.  For example,
+    if you have a 3-bit index but are selecting between 6 options, you need to specify
+    a value for those other 2 possible values of index (0b110 and 0b111).  You can
+    do that by passing in a default argument, an example of which is below.
 
     To avoid confusion, if you are using the mux where the select is a "predicate"
     (meaning something that you are checking the truth value of rather than using it
@@ -145,18 +152,43 @@ def mux(select, falsecase, truecase, *rest):
         mux( a<5, truecase=a, falsecase=5)
 
     Example of mux as "selector" to pick between a0 and a1:
+        index = WireVector(1)
         mux( index, a0, a1 )
 
     Example of mux as "selector" to pick between a0 ... a3:
+        index = WireVector(2)
         mux( index, a0, a1, a2, a3 )
+
+    Example of "default" to specify additional arguments:
+        index = WireVector(3)
+        mux( index, a0, a1, a2, a3, a4, a5, default=0 )
     """
-    block = get_block(select, falsecase, truecase, *rest)
+
+    # only "default" is allowed as kwarg.  If there is a default arg, then
+    # copy it out to the
+    if kwargs:
+        if len(kwargs) != 1 or 'default' not in kwargs:
+            bad_args = [k for k in kwargs.iterkeys() if k != 'default']
+            raise core.PyrtlError('unknown keywords %s applied to mux' % str(bad_args))
+        default = kwargs['default']
+    else:
+        default = None
+
+    block = get_block(select, falsecase, truecase, default, *rest)
     select = as_wires(select, block=block)
     ins = [falsecase, truecase] + list(rest)
 
+    if default is not None:
+        # find the diff between the addressable range and number of inputs given
+        short_by = 2**len(select) - len(ins)
+        if short_by > 0:
+            # fill in the rest with the default inputs
+            extention = [default] * short_by
+            ins.extend(extention)
+
     if 2 ** len(select) != len(ins):
         raise core.PyrtlError(
-            'error, mux select line is %d bits, but selecting from %d inputs'
+            'Mux select line is %d bits, but selecting from %d inputs. '
             % (len(select), len(ins)))
 
     if len(select) == 1:
@@ -358,7 +390,7 @@ def find_loop(block=None, print_result=True):
         del checking_stack[-1]
 
     # now making a map to quickly look up nets
-    dest_nets = {dest_w: net_ for net_ in logic_left for dest_w in net_.dests }
+    dest_nets = {dest_w: net_ for net_ in logic_left for dest_w in net_.dests}
     initial_w = random.sample(wires_left, 1)[0]
 
     current_wires = set()

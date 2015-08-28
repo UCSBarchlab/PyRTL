@@ -5,7 +5,7 @@ import StringIO
 # ---------------------------------------------------------------
 
 
-class TestBlock(unittest.TestCase):
+class TestAnyAll(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -60,6 +60,71 @@ class TestBlock(unittest.TestCase):
         o = pyrtl.Output(name='o')
         o <<= pyrtl.rtl_all(a, b, c)
         self.check_trace('o 00000001\nr 01234567\n')
+
+
+class TestMux(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def tearDown(self):
+        pyrtl.reset_working_block()
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in xrange(8):
+            sim.step({})
+        output = StringIO.StringIO()
+        sim_trace.print_trace(output)
+        print output.getvalue()
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_mux_too_many_inputs(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=1)
+        c = pyrtl.WireVector(name='c', bitwidth=1)
+        s = pyrtl.WireVector(name='s', bitwidth=1)
+        with self.assertRaises(pyrtl.PyrtlError):
+            r = pyrtl.mux(s, a, b, c)
+
+    def test_mux_not_enough_inputs(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=1)
+        c = pyrtl.WireVector(name='c', bitwidth=1)
+        s = pyrtl.WireVector(name='s', bitwidth=2)
+        with self.assertRaises(pyrtl.PyrtlError):
+            r = pyrtl.mux(s, a, b, c)
+
+    def test_mux_not_enough_inputs_but_default(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=1)
+        s = pyrtl.WireVector(name='s', bitwidth=2)
+        r = pyrtl.mux(s, a, b, default=0)
+
+    def test_mux_enough_inputs_with_default(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=1)
+        c = pyrtl.WireVector(name='c', bitwidth=1)
+        d = pyrtl.WireVector(name='d', bitwidth=1)
+        s = pyrtl.WireVector(name='s', bitwidth=2)
+        r = pyrtl.mux(s, a, b, c, d, default=0)
+
+    def test_mux_too_many_inputs_with_default(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=1)
+        c = pyrtl.WireVector(name='c', bitwidth=1)
+        d = pyrtl.WireVector(name='d', bitwidth=1)
+        e = pyrtl.WireVector(name='e', bitwidth=1)
+        s = pyrtl.WireVector(name='s', bitwidth=2)
+        with self.assertRaises(pyrtl.PyrtlError):
+            r = pyrtl.mux(s, a, b, c, d, e, default=0)
+
+    def test_mux_too_many_inputs_with_default(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=1)
+        s = pyrtl.WireVector(name='s', bitwidth=2)
+        with self.assertRaises(pyrtl.PyrtlError):
+            r = pyrtl.mux(s, a, b, default=0, foo=1)
 
 
 class TestLoopDetection(unittest.TestCase):

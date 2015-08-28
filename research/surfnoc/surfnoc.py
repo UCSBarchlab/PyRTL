@@ -34,13 +34,21 @@ set_debug_mode()
 #                |   V
 
 
+class Flit():
+    def __init__(self):
+        self.vc = WireVector(1)
+        self.head = WireVector(1)
+        self.tail = WireVector(1)
+        self.src = WireVector(4)
+        self.dest = WireVector(4)
+        self.body = WireVector(136)
+
 class SurfNocPort():
     """ A class building the set of WireVectors needed for one router link. """
     def __init__(self):
         self.valid = WireVector(1)
         self.domain = WireVector(1)
-        self.head = WireVector(16)
-        self.data = WireVector(128)
+        self.flit = Flit()
         # note that credit should flow counter to the rest
         self.credit = WireVector(3)
 
@@ -112,6 +120,7 @@ def surfnoc_single_buffer(addrwidth, data_in, read_enable, write_enable):
 
 def surfnoc_multi_buffer(addrwidth, data_in, read_buffer_select, write_buffer_select, read_enable, write_enable):
     """ Create a large buffer combining multiple virtual channels and domains.
+
     addrwidth -- the size of the index of the smaller buffers
     data_in -- a wirevector of width bitwidth to be input to the buffer
     read_buffer_select -- a wirevector used to select the simple buffer for read
@@ -142,6 +151,26 @@ def surfnoc_multi_buffer(addrwidth, data_in, read_buffer_select, write_buffer_se
 
     return data_out, valid, full
 
+
+def buffer_control(flit, port, neighbor_full, domain, check):
+    """ Create a Buffer Control unit.
+    
+    flit -- the set of wires for an incoming flit, encoded as a Flit
+    port -- wirevtro defining the port direction
+    neighbor_full -- a list of 1-bit wirevectors of the "full" for the 5 directions
+    domain -- wirevectors for the domain
+    check -- 1-bit wirevector
+
+    returns tuple of (buffer_write_sel, source_id, dest_id, read_enable)
+    """
+
+    full = mux(port, *neighbor_full, default=0)
+    read_enable = ~(full|check)
+    source_id = mux(flit.head, truecase=flit.src, falsecase=0)
+    dest_id = mux(flit.head, truecase=flit.dest, falsecase=0)
+    buffer_write_sel = concat(domain+1,flit.vc)
+
+    return buffer_write_sel, source_id, dest_id, read_enable
 
 
 # =========== Testing ====================================================
