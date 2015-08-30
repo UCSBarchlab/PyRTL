@@ -16,8 +16,8 @@ class Simulation(object):
     """A class for simulating blocks of logic step by step."""
 
     def __init__(
-            self, register_value_map=None, memory_value_map=None,
-            default_value=0, tracer=None, use_postsynth_map_if_available=True, block=None):
+            self, tracer=None, register_value_map=None, memory_value_map=None,
+            default_value=0, use_postsynth_map_if_available=True, block=None):
         """
         Creates a new circuit simulator
 

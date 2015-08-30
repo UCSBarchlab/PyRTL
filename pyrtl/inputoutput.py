@@ -33,8 +33,8 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
     """
 
     import pyparsing
-    from pyparsing import Word, Literal, infixNotation, OneOrMore, ZeroOrMore
-    from pyparsing import oneOf, Suppress, Group, Optional, Keyword
+    from pyparsing import Word, Literal, OneOrMore, ZeroOrMore
+    from pyparsing import Suppress, Group, Keyword
 
     block = core.working_block(block)
 
@@ -288,15 +288,15 @@ def output_to_trivialgraph(file, block=None):
 #    \/  |___ |  \ | |___ \__/ \__>
 #
 
-def output_to_verilog(file, block=None):
+def output_to_verilog(dest_file, block=None):
     """ Walk the block and output it in verilog format to the open file """
 
     block = core.working_block(block)
     _verilog_check_all_wirenames(block)
-    _to_verilog_header(file, block)
-    _to_verilog_combinational(file, block)
-    _to_verilog_sequential(file, block)
-    _to_verilog_footer(file, block)
+    _to_verilog_header(dest_file, block)
+    _to_verilog_combinational(dest_file, block)
+    _to_verilog_sequential(dest_file, block)
+    _to_verilog_footer(dest_file, block)
 
 
 def _verilog_vector_decl(w):
