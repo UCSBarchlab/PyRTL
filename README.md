@@ -4,27 +4,27 @@ PyRTL
 [![Build Status](https://magnum.travis-ci.com/UCSBarchlab/PyRTL.svg?token=XAZcwAigXaYVLzkPHGNx)](https://magnum.travis-ci.com/UCSBarchlab/PyRTL)
 
 PyRTL provides a collection of classes for pythonic RTL specification, simulation, tracing, and testing 
-suitable for teaching and research. Simplicity, usability, clarity, and extendibility rather than 
+suitable for teaching and research. Simplicity, usability, clarity, and extensibility rather than
 performance or optimization is the overarching goal.
 
 In the package you should find the following files and Directories
 * **pyrtl/**  The src directory for the module
-* **tests/**    A set of unit tests for pyrtl which you can run with nosetests
+* **tests/**    A set of unit tests for PyRTL which you can run with nosetests
 * **examples/** A set of hardware design examples that show the main idea behind pyrtl
 * **rtllib/** A place for finished PyRTL designs which are hopefully both useful and documented
 * **research/** A place for experiments and other changes not ready for primetime
 * **docs/** The location of the auto-generated documentation (built when you run checkcode)
 * **checkcode** A script you should run before you check any code into the master or development branches
 
-If you are just getting started with pyrtl it is suggested that you start with the examples first,
-to get and sense of the "thinking with pyrtls" required to design hardware in this way.  Then 
-dive into the code for the object Block, which is the core data structure at the heart of 
-pyrtl and defines the semantics at a high level -- everything is converted to or from the small simple set of
+If you are just getting started with PyRTL, it is suggested that you start with the examples first,
+to get and sense of the "thinking with pyrtls" required to design hardware in this way.  Afterwards,
+dive into the code for the object, Block. It is the core data structure at the heart of
+PyRTL and defines the semantics at a high level -- everything is converted to or from the small, simple set of
 primitives defined there.  The features of PyRTL include:
 
-* Elaborate-through-execution means all of python can be used, including introspection
-* Design, instantiate, and simulate all in one file without leaving python
-* Export to, or import from, common HDLs (BLIF-in, Verilog-out currently supported)
+* Elaborate-through-execution means all of Python can be used, including introspection
+* Design, instantiate, and simulate all in one file and without leaving Python
+* Export to, or import from common HDLs (BLIF-in, Verilog-out currently supported)
 * Examine execution with waveforms on the terminal or export to a .vcd as projects scale
 * Elaboration, synthesis, and basic optimizations all included
 * Small and well-defined internal core structure means writing new transforms is easier
@@ -39,7 +39,7 @@ PyRTL is designed to help you concisely and precisely describe a hardware struct
 worked out in detail.  To the user it provides a set of python classes that allow you to express those 
 hardware designs reasonably pythonically.  For example, with WireVector you get a structure that acts very 
 much like a python list of 1-bit wires, so that ```mywire[0:-1]``` selects everything except the 
-most-significant-bit.  Of course you can add, subtract, and multiple these WireVectors or concat multiple 
+most-significant-bit.  Of course you can add, subtract, and multiply these WireVectors or concat multiple
 bit-vectors end-to-end as well.  You can then even make normal python collections of those WireVectors and 
 do operations on them in bulk. For example, if you have a list of n k-bit WireVectors (called "x") and you 
 want to multiply each of them by 2 and put the sum of the result in a WireVector "y", it looks like
@@ -120,18 +120,18 @@ users in some unexpected ways.  Watch out for these couple of "somewhat surprisi
   will be assigned.  Mind your bitwidths.
 
 * PyRTL provides some handy functions on WireVectors, including ```==``` and ```<``` which evaluate to a new WireVector
-  a single bit long to hold the result of the comparison.  The bitwise operators ```&```, ```|```, ```!``` and ```^``` 
+  a single bit long to hold the result of the comparison.  The bitwise operators ```&```, ```|```, ```~``` and ```^```
   are also defined (however logic operations such as "and" and "not" are not).  A really tricky gotcha happens
   when you start combining the two together.  Consider: ```doit = ready & state==3```.  In python, the bitwise
   ```&``` operator has *higher precedence* than ```==```, thus python parses this as ```doit = (ready & state)==3```
   instead of what you might have guessed at first!  Make sure to use parenthesis when using comparisons with
   logic operations to be clear: ```doit = ready & (state==3)```.
 
-* PyRTL right now assumes that all WireVectors are two's complement unsigned integers.  When you do comparisons
+* PyRTL right now assumes that all WireVectors are unsigned integers.  When you do comparisons
   such as "<" it will do unsigned comparison.  If you pass a WireVector to a function that requires more bits 
-  that you have provided, it will do zero extention by default.  You can always explicitly do sign extention
+  that you have provided, it will do zero extension by default.  You can always explicitly do sign extension
   with .sign_extend() but it is not the default behavior for WireVector.  This is right now for clarity and
-  consistancy, althought it does make writting signed arithmetic operations more text heavy.
+  consistency, although it does make writing signed arithmetic operations more text heavy.
 
 ### Contributing to PyRTL
 
