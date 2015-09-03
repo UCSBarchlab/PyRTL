@@ -5,24 +5,9 @@ PyRTL
 
 PyRTL provides a collection of classes for pythonic RTL specification, simulation, tracing, and testing 
 suitable for teaching and research. Simplicity, usability, clarity, and extensibility rather than
-performance or optimization is the overarching goal.
+performance or optimization is the overarching goal.  Features include:
 
-In the package you should find the following files and Directories
-* **pyrtl/**  The src directory for the module
-* **tests/**    A set of unit tests for PyRTL which you can run with nosetests
-* **examples/** A set of hardware design examples that show the main idea behind pyrtl
-* **rtllib/** A place for finished PyRTL designs which are hopefully both useful and documented
-* **research/** A place for experiments and other changes not ready for primetime
-* **docs/** The location of the auto-generated documentation (built when you run checkcode)
-* **checkcode** A script you should run before you check any code into the master or development branches
-
-If you are just getting started with PyRTL, it is suggested that you start with the examples first,
-to get and sense of the "thinking with pyrtls" required to design hardware in this way.  Afterwards,
-dive into the code for the object, Block. It is the core data structure at the heart of
-PyRTL and defines the semantics at a high level -- everything is converted to or from the small, simple set of
-primitives defined there.  The features of PyRTL include:
-
-* Elaborate-through-execution means all of Python can be used, including introspection
+* Elaboration-through-execution, meaning all of Python can be used including introspection
 * Design, instantiate, and simulate all in one file and without leaving Python
 * Export to, or import from common HDLs (BLIF-in, Verilog-out currently supported)
 * Examine execution with waveforms on the terminal or export to a .vcd as projects scale
@@ -30,13 +15,14 @@ primitives defined there.  The features of PyRTL include:
 * Small and well-defined internal core structure means writing new transforms is easier
 * Batteries included means many useful components are already available and more are coming every week
 
+![Command-line waveform for PyRTL state machine]( docs/screenshots/pyrtl-statemachine.png?raw=true "PyRTL State Machine Screenshot")
 
 ### The 10,000 Foot Overview
 
 At a high level PyRTL builds the hardware structure that you *explicitly define*.  If you are looking for a 
 tool to take your random python code and turn it into hardware, you will have to look elsewhere.  Instead 
 PyRTL is designed to help you concisely and precisely describe a hardware structure that you already have 
-worked out in detail.  To the user it provides a set of python classes that allow you to express those 
+worked out in detail in python.  To the user it provides a set of python classes that allow you to express those 
 hardware designs reasonably pythonically.  For example, with WireVector you get a structure that acts very 
 much like a python list of 1-bit wires, so that ```mywire[0:-1]``` selects everything except the 
 most-significant-bit.  Of course you can add, subtract, and multiply these WireVectors or concat multiple
@@ -46,9 +32,24 @@ want to multiply each of them by 2 and put the sum of the result in a WireVector
 the following:  ```y = sum([elem * 2 for elem in x])```. 
 Hardware comprehensions are surprisingly useful!
 
+If you are just getting started with PyRTL, it is suggested that you start with the examples first,
+to get and sense of the "thinking with pyrtls" required to design hardware in this way.  Afterwards,
+dive into the code for the object, Block. It is the core data structure at the heart of
+PyRTL and defines the semantics at a high level -- everything is converted to or from the small, simple set of
+primitives defined there.
+
 The docs are also available, just run `./checkcode` with no parameters in the PyRTL directory and it will 
 build the documentation for you (under the **docs/** directory). Requires [Sphinx](http://sphinx-doc.org/). 
 In addition, running './checkcode' will also run all of the tests and checks.
+
+In the package you should find the following files and Directories
+* **pyrtl/**  The src directory for the module
+* **tests/**    A set of unit tests for PyRTL which you can run with nosetests
+* **examples/** A set of hardware design examples that show the main idea behind pyrtl
+* **rtllib/** A place for finished PyRTL designs which are hopefully both useful and documented
+* **research/** A place for experiments and other changes not ready for primetime
+* **docs/** The location of the auto-generated documentation (built when you run checkcode)
+* **checkcode** A script you should run before you check any code into the master or development branches
 
 
 ### Hello N-bit Ripple-Carry Adder
@@ -92,14 +93,9 @@ sim_trace.render_trace()
 The code above includes an adder generator with python-style slices on wires (ripple_add), an instantiation 
 of a register (used as a counter with the generated adder), and all the code needed to simulate the design, 
 generate a waveform, and render it to the terminal. The way this particular code works is described more in 
-the examples directory.  When you run it, it should look like this:
+the examples directory.  When you run it, it should look like this (you can see the counter going from 0 to 7 and repeating):
 
 ![Command-line waveform for PyRTL counter](docs/screenshots/pyrtl-counter.png?raw=true "PyRTL Counter Screenshot")
-
-You can see the counter going from 0 to 7 and repeating.  A slightly more interesting state machine might look like this:
-
-![Command-line waveform for PyRTL state machine]( docs/screenshots/pyrtl-statemachine.png?raw=true "PyRTL State Machine Screenshot")
-
 
 
 ### A Few Gotchas
