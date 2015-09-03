@@ -15,14 +15,16 @@ performance or optimization is the overarching goal.  Features include:
 * Small and well-defined internal core structure means writing new transforms is easier
 * Batteries included means many useful components are already available and more are coming every week
 
+What README would be complete without a screenshot?  Below you can see the waveform rendered right on the terminal for a small state machine written in PyRTL.
+
 ![Command-line waveform for PyRTL state machine]( docs/screenshots/pyrtl-statemachine.png?raw=true "PyRTL State Machine Screenshot")
 
 ### The 10,000 Foot Overview
 
 At a high level PyRTL builds the hardware structure that you *explicitly define*.  If you are looking for a 
 tool to take your random python code and turn it into hardware, you will have to look elsewhere.  Instead 
-PyRTL is designed to help you concisely and precisely describe a hardware structure that you already have 
-worked out in detail in python.  To the user it provides a set of python classes that allow you to express those 
+PyRTL is designed to help you concisely and precisely describe a hardware structure (that you already have 
+worked out in detail) in python.  To the user it provides a set of python classes that allow you to express those 
 hardware designs reasonably pythonically.  For example, with WireVector you get a structure that acts very 
 much like a python list of 1-bit wires, so that ```mywire[0:-1]``` selects everything except the 
 most-significant-bit.  Of course you can add, subtract, and multiply these WireVectors or concat multiple
@@ -33,14 +35,10 @@ the following:  ```y = sum([elem * 2 for elem in x])```.
 Hardware comprehensions are surprisingly useful!
 
 If you are just getting started with PyRTL, it is suggested that you start with the examples first,
-to get and sense of the "thinking with pyrtls" required to design hardware in this way.  Afterwards,
-dive into the code for the object, Block. It is the core data structure at the heart of
+to get a sense of the "thinking with pyrtls" required to design hardware in this way.  If you are looking
+for a deeper understanding dive into the code for the object, Block. It is the core data structure at the heart of
 PyRTL and defines the semantics at a high level -- everything is converted to or from the small, simple set of
 primitives defined there.
-
-The docs are also available, just run `./checkcode` with no parameters in the PyRTL directory and it will 
-build the documentation for you (under the **docs/** directory). Requires [Sphinx](http://sphinx-doc.org/). 
-In addition, running './checkcode' will also run all of the tests and checks.
 
 In the package you should find the following files and Directories
 * **pyrtl/**  The src directory for the module
@@ -51,19 +49,22 @@ In the package you should find the following files and Directories
 * **docs/** The location of the auto-generated documentation (built when you run checkcode)
 * **checkcode** A script you should run before you check any code into the master or development branches
 
+Their are docs also available, just run `./checkcode` with no parameters in the PyRTL directory and it will 
+build the documentation for you (under the **docs/** directory). Requires [Sphinx](http://sphinx-doc.org/). 
+In addition, running './checkcode' will also run all of the tests and checks.
 
-### Hello N-bit Ripple-Carry Adder
+### Hello N-bit Ripple-Carry Adder!
 
 While adders are a builtin primitive for PyRTL, most people doing RTL are familiar with the idea of a 
 [Ripple-Carry Adder](https://en.wikipedia.org/wiki/Adder_(electronics)) and so it is useful to see how you 
 might express one in PyRTL if you had to.  Rather than the typical [Verilog introduction to fixed 4-bit 
-adders](https://www.youtube.com/watch?v=bL3ihMA8_Gs), let's go ahead and build an arbitrary bitwidth 
+adders](https://www.youtube.com/watch?v=bL3ihMA8_Gs), let's go ahead and build an *arbitrary* bitwidth 
 adder!.
 
 ```python
 def one_bit_add(a, b, cin):
     assert len(a) == len(b) == 1  # len returns the bitwidth
-    sum = a ^ b ^ cin
+    sum = a ^ b ^ cin  # operators on WireVectors build the hardware
     cout = a & b | a & cin | b & cin
     return sum, cout
 
