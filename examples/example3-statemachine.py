@@ -64,8 +64,8 @@ refund <<= state == REFUND
 # condition is enumerated, the default value for the register under those cases will be the
 # same as it was the prior cycle ("state.next |= state" in this example).  The default for a
 # wirevector is 0.  4) There is a way to specify something like an "else" instead of "elif" and
-# that is with an "otherwise" (as seen on the line above "state.next <<= REFUND").  This condition will
-# be true if none of the other conditions at the same level were also true (for this example
+# that is with an "otherwise" (as seen on the line above "state.next <<= REFUND").  This condition
+# will be true if none of the other conditions at the same level were also true (for this example
 # specifically state.next will get REFUND when req_refund==0, token_in==1, and state is not in TOK1,
 # TOK2, TOK3, or DISPENSE.   Finally 5) not shown here, you can update multiple different registers,
 # wires, and memories all under the same set of conditionals.

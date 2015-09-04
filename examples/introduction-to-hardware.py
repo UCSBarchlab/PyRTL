@@ -138,13 +138,13 @@ def attempt4_hardware_fibonacci(n, req, bitwidth):
     local_n = pyrtl.Register(bitwidth, 'local_n')
     done = pyrtl.WireVector(bitwidth=1, name='done')
 
-    with pyrtl.ConditionalUpdate() as condition:
-        with condition(req):
+    with pyrtl.conditional_assignment:
+        with req:
             local_n.next |= n
             i.next |= 0
             a.next |= 0
             b.next |= 1
-        with condition.fallthrough:
+        with pyrtl.otherwise:
             i.next |= i + 1
             a.next |= b
             b.next |= a + b

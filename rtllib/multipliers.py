@@ -14,12 +14,15 @@ def main():
 
 
 def simple_mult(A, B, start):
-    """Build a slow, small multiplier using the simple shift-and-add algorithm.
+    """ Generate simple shift-and-add multiplier.
+
+    Builds a slow, small multiplier using the simple shift-and-add algorithm.
     Requires very small area (it uses only a single adder), but has long delay
     (worst case is len(a) cycles). a and b are arbitrary-length inputs; start
     is a one-bit input to indicate inputs are ready.done is a one-bit signal
     output raised when the multiplication is finished, at which point the
-    product will be on the result line (returned by the function)."""
+    product will be on the result line (returned by the function).
+    """
     alen = len(A)
     blen = len(B)
     areg = Register(alen)
@@ -28,32 +31,32 @@ def simple_mult(A, B, start):
     done = areg == 0  # Multiplication is finished when a becomes 0
 
     # During multiplication, shift a right every cycle, b left every cycle
-    with ConditionalUpdate() as condition:
-        with condition(start):  # initialization
+    with conditional_assignment:
+        with start:  # initialization
             areg.next |= A
             breg.next |= B
             accum.next |= 0
-        with condition(~done):  # don't run when there's no work to do
+        with ~done:  # don't run when there's no work to do
             areg.next |= areg[1:]  # right shift
             breg.next |= concat(breg, "1'b0")  # left shift
 
             # "Multply" shifted breg by LSB of areg by conditionally adding
-            with condition(areg[0]):
+            with areg[0]:
                 accum.next |= accum + breg  # adds to accum only when LSB of areg is 1
 
     return accum, done
 
 
 def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
-    """
-    Build an fast unclocked multiplier for inputs A and B using a Wallace or Dada Tree.
-    Delay is order logN, while area is order N^2.
+    """ Build an fast unclocked multiplier for inputs A and B using a Wallace or Dada Tree.
 
     :param Wirevector A, B: two input wires for the multiplication
     :param function reducer: Reduce the tree using either a Dada recuder or a Wallace reducer
       determines whether it is a Wallace tree multiplier or a Dada tree multiplier
     :param function adder_func: an adder function that will be used to do the last addition
     :return Wirevector: The multiplied result
+
+    Delay is order logN, while area is order N^2.
     """
 
     """
@@ -76,7 +79,8 @@ def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogg
 
 def fused_multiply_adder(mult_A, mult_B, add, signed=False, reducer=adders.wallace_reducer,
                          adder_func=adders.kogge_stone):
-    """
+    """ Generate efficient hardware for a*b+c.
+
     Multiplies two wirevectors together and adds a third wirevector to the
     multiplication result, all in
     one step. By doing it this way (instead of separately), you reduce both
@@ -100,7 +104,8 @@ def fused_multiply_adder(mult_A, mult_B, add, signed=False, reducer=adders.walla
 
 def generalized_fma(mult_pairs, add_wires, signed=False, reducer=adders.wallace_reducer,
                     adder_func=adders.kogge_stone):
-    """
+    """Generated an opimitized fused multiply adder.
+
     A generalized FMA unit that multiplies each pair of numbers in mult_pairs,
     then adds the resulting numbers and and the values of the add wires all
     together to form an answer. This is faster than sepserate adders and

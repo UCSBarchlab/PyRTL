@@ -28,7 +28,6 @@ as described above, not through the classes themselves.
 
 import core
 import wire
-from contextlib import contextmanager
 
 # -----------------------------------------------------------------------
 #    __   __        __    ___    __                  __
@@ -40,6 +39,14 @@ from contextlib import contextmanager
 def currently_under_condition():
     """Returns True if execution is currently in the context of a _ConditionalAssignment."""
     return _depth > 0
+
+
+class ConditionalUpdate():
+    def __init__(self, *x):
+        raise core.PyrtlError('ConditionalUpdate removed, please use "conditional_assignment"')
+
+# other members of pyrtl root namespace, conditional_assignment and otherwise, are
+# both defined at bottom of file.
 
 
 def _reset_conditional_state():
@@ -58,6 +65,7 @@ def _check_no_nesting():
     if _depth != 0:
         raise core.PyrtlError('no nesting of conditional assignments allowed')
 
+
 def _check_under_condition():
     if not currently_under_condition():
         raise core.PyrtlError('conditional assignment "|=" only valid under a condition')
@@ -71,12 +79,16 @@ class _ConditionalAssignment():
         _depth = 1
 
     def __exit__(self, *exc_info):
-        # default value for underspecified wirevectors is zero
-        _finalize(_wirevector_predicate_map, lambda x: wire.Const(0))
-        # default value for underspecified registers is the prior value
-        _finalize(_register_predicate_map, lambda x: x)
-        _finalize_memblocks()
-        _reset_conditional_state()  # sets _depth back to 0
+        try:
+            # default value for underspecified wirevectors is zero
+            _finalize(_wirevector_predicate_map, lambda x: wire.Const(0))
+            # default value for underspecified registers is the prior value
+            _finalize(_register_predicate_map, lambda x: x)
+            _finalize_memblocks()
+        finally:
+            # even if the above finalization throws an error we need to
+            # return reset the state to prevent errors from bleeding over
+            _reset_conditional_state()  # sets _depth back to 0
 
 
 class _Otherwise():
@@ -103,6 +115,7 @@ def _pop_condition():
     _check_under_condition()
     _conditions_list_stack.pop()
     _depth -= 1
+
 
 def _build(wirevector, rhs):
     """Stores the wire assignment details until finalize is called."""
@@ -159,6 +172,7 @@ def _finalize_memblocks():
                 combined_addr = mux(p, truecase=addr, falsecase=combined_addr)
                 combined_data = mux(p, truecase=data, falsecase=combined_data)
         mem._build_write_port(combined_addr, combined_data, combined_enable)
+
 
 def _current_select():
     """Function to calculate the current "predicate" in the current context."""
