@@ -159,8 +159,7 @@ users in some unexpected ways.  Watch out for these couple of "somewhat surprisi
 * All classes should have a block comment with high level description of the class
 * All functions in /pyrtl or /rtllib should follow the following (sphynx parsable) docstring format: 
 ```python
-"""
-One Line Summary (< 80 chars) on what the function does (add the newline in front only for long docstrings)  
+""" One Line Summary (< 80 chars) on what the function does, followed by period.
 
 :param [optional param type] param_name : parameter description 
 :param [optional param type] param_name : Longer parameter descriptions take up a newline
