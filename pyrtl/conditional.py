@@ -29,11 +29,23 @@ w3 <<= cond(d, m, 0)
 (where cond(p, a, b) = mux(p, truecase=a, falsecase=b)
 
 Access should be done through instances "conditional_update" and "otherwise",
-as described above, not through the classes themselves.  
-
-
-
+as described above, not through the classes themselves.
 """
+
+# Implementation grows the _condition_list_stack with the set
+# of predicates that guard the current assignment.  Values of globals
+# show in the example from above
+
+#   with conditional_assignment:
+#       [[]]
+#       with a:
+#           [a, []]
+#           with b:
+#
+#       with c:
+#       with otherwise:
+#       with d:
+
 
 import core
 import wire
@@ -54,19 +66,18 @@ class ConditionalUpdate():
     def __init__(self, *x):
         raise core.PyrtlError('ConditionalUpdate removed, please use "conditional_assignment"')
 
-# other members of pyrtl root namespace, conditional_assignment and otherwise, are
+# other members exported to the pyrtl namespace, conditional_assignment and otherwise, are
 # both defined at bottom of file.
 
 
 def _reset_conditional_state():
     """Set or reset all the module state required for conditionals."""
     global _conditions_list_stack
-    global _wirevector_predicate_map, _memblock_write_predicate_map
+    global _predicate_map
     global _depth
     _depth = 0
     _conditions_list_stack = [[]]
-    _wirevector_predicate_map = {}  # map wirevector -> [(pred, rhs), ...]
-    _memblock_write_predicate_map = {}  # map mem -> [(pred, addr, data, enable), ...]
+    _predicate_map = {}  # map wirevector -> [(pred, rhs), ...]
 
 
 def _check_no_nesting():
@@ -88,8 +99,7 @@ class _ConditionalAssignment():
 
     def __exit__(self, *exc_info):
         try:
-            _finalize_wirevectors()
-            _finalize_memblocks()
+            _finalize()
         finally:
             # even if the above finalization throws an error we need to
             # return reset the state to prevent errors from bleeding over
@@ -122,28 +132,12 @@ def _pop_condition():
     _depth -= 1
 
 
-def _build(wirevector, rhs):
+def _build(lhs, rhs):
     """Stores the wire assignment details until finalize is called."""
     _check_under_condition()
     p = _current_select()
-    plist = _wirevector_predicate_map.setdefault(wirevector, [])
+    plist = _predicate_map.setdefault(lhs, [])
     plist.append((p, rhs))
-
-
-def _finalize_wirevectors():
-    """Build the required muxes and call back to WireVector to finalize the wirevector build."""
-    from helperfuncs import mux
-    for wirevector in _wirevector_predicate_map:
-        if isinstance(wirevector, wire.Register):
-            result = wirevector  # default for registers is "self"
-        else:
-            result = 0;  # default for wire is "0"
-        # TODO: right now this is totally not optimzied, should use muxes
-        # in conjuction with predicates to encode efficiently.
-        predlist = _wirevector_predicate_map[wirevector]
-        for p, rhs in predlist:
-            result = mux(p, truecase=rhs, falsecase=result)
-        wirevector._build(result)
 
 
 def _build_read_port(mem, addr):
@@ -151,30 +145,38 @@ def _build_read_port(mem, addr):
     return mem._build_read_port(addr)
 
 
-def _build_write_port(mem, addr, data, enable):
-    """Stores the write-port details until finalize is called."""
-    _check_under_condition()
-    p = _current_select()
-    plist = _memblock_write_predicate_map.setdefault(mem, [])
-    plist.append((p, addr, data, enable))
-
-
-def _finalize_memblocks():
-    """Build the required muxes and call back to MemBlock to finalize the write port build."""
+def _finalize():
+    """Build the required muxes and call back to WireVector to finalize the wirevector build."""
+    import memory
     from helperfuncs import mux
-    for mem in _memblock_write_predicate_map:
-        is_first = True
-        for p, addr, data, enable in _memblock_write_predicate_map[mem]:
-            if is_first:
-                combined_enable = mux(p, truecase=enable, falsecase=wire.Const(0))
-                combined_addr = addr
-                combined_data = data
-                is_first = False
+    for lhs in _predicate_map:
+        # handle memory write ports
+        if isinstance(lhs, memory.MemBlock):
+            is_first = True
+            for p, (addr, data, enable) in _predicate_map[lhs]:
+                if is_first:
+                    combined_enable = mux(p, truecase=enable, falsecase=wire.Const(0))
+                    combined_addr = addr
+                    combined_data = data
+                    is_first = False
+                else:
+                    combined_enable = mux(p, truecase=enable, falsecase=combined_enable)
+                    combined_addr = mux(p, truecase=addr, falsecase=combined_addr)
+                    combined_data = mux(p, truecase=data, falsecase=combined_data)
+            lhs._build(combined_addr, combined_data, combined_enable)
+
+        # handle wirevector and register assignments
+        else:
+            if isinstance(lhs, wire.Register):
+                result = lhs  # default for registers is "self"
+            elif isinstance(lhs, wire.WireVector):
+                result = 0  # default for wire is "0"
             else:
-                combined_enable = mux(p, truecase=enable, falsecase=combined_enable)
-                combined_addr = mux(p, truecase=addr, falsecase=combined_addr)
-                combined_data = mux(p, truecase=data, falsecase=combined_data)
-        mem._build_write_port(combined_addr, combined_data, combined_enable)
+                raise core.PyrtlInternalError('unknown assignment in finalize')
+            predlist = _predicate_map[lhs]
+            for p, rhs in predlist:
+                result = mux(p, truecase=rhs, falsecase=result)
+            lhs._build(result)
 
 
 def _current_select():
