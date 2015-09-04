@@ -71,7 +71,7 @@ class WireVector(object):
 
     def _build_wirevector(self, other):
         # Actually create and add wirevector to logic block
-        # This might be called immediately from ilshift, or delayed from ConditionalUpdate
+        # This might be called immediately from ilshift, or delayed from ConditionalAssignment
         net = core.LogicNet(
             op='w',
             op_param=None,
@@ -98,7 +98,7 @@ class WireVector(object):
             raise core.PyrtlError('Conditional assignment only defined on '
                                   'WireVectors with pre-defined bitwidths')
         other = self._prepare_for_assignment(other)
-        conditional.ConditionalUpdate._build_wirevector(self, other)
+        conditional.ConditionalAssignment._build_wirevector(self, other)
         return self
 
     def logicop(self, other, op):
@@ -248,7 +248,7 @@ class WireVector(object):
 
     def __enter__(self):
         raise core.PyrtlError('error, WireVector cannot be used directly as a context.  '
-                              '(you might be missing a ConditionalUpdate in your "with" block?)')
+                              '(you might be missing a ConditionalAssignment in your "with" block?)')
 
     def __exit__(self, type, value, tb):
         pass  # needed to allow the error raised in __enter__ to propagate up to the user
@@ -487,7 +487,7 @@ class Register(WireVector):
         elif self.reg_in is not None:
             raise core.PyrtlError('error, .next value should be set once and only once')
         elif nextsetter.is_conditional:
-            conditional.ConditionalUpdate._build_register(self, nextsetter.rhs)
+            conditional.ConditionalAssignment._build_register(self, nextsetter.rhs)
         else:
             self._build_register(nextsetter.rhs)
 
