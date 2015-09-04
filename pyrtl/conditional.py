@@ -10,11 +10,11 @@ to see with an example:
 >   w3 = WireVector()
 >   with conditional_assignment:
 >       with a:
->           r.next |= i  # set when a is true
+>           r1.next |= i  # set when a is true
 >           with b:
 >               r2.next |= j  # set when a and b are true
 >       with c:
->           r.next |= k  # set when a is false and c is true
+>           r1.next |= k  # set when a is false and c is true
 >           r2.next |= k
 >       with otherwise:
 >           r2.next |= l  # a is false and c is false
@@ -22,8 +22,17 @@ to see with an example:
 >       with d:
 >           w3.next |= m  # d is true (assignments must be independent)
 
+This is equivelent to:
+r1.next <<= cond(a, i, cond(c, k, default))
+r2.next <<= cond(a, cond(b, j, default), cond(c, k, l))
+w3 <<= cond(d, m, 0)
+(where cond(p, a, b) = mux(p, truecase=a, falsecase=b)
+
 Access should be done through instances "conditional_update" and "otherwise",
-as described above, not through the classes themselves.
+as described above, not through the classes themselves.  
+
+
+
 """
 
 import core
@@ -51,12 +60,11 @@ class ConditionalUpdate():
 
 def _reset_conditional_state():
     """Set or reset all the module state required for conditionals."""
-    global _conditions_list_stack, _register_predicate_map
+    global _conditions_list_stack
     global _wirevector_predicate_map, _memblock_write_predicate_map
     global _depth
     _depth = 0
     _conditions_list_stack = [[]]
-    _register_predicate_map = {}  # map reg -> [(pred, rhs), ...]
     _wirevector_predicate_map = {}  # map wirevector -> [(pred, rhs), ...]
     _memblock_write_predicate_map = {}  # map mem -> [(pred, addr, data, enable), ...]
 
@@ -80,10 +88,7 @@ class _ConditionalAssignment():
 
     def __exit__(self, *exc_info):
         try:
-            # default value for underspecified wirevectors is zero
-            _finalize(_wirevector_predicate_map, lambda x: wire.Const(0))
-            # default value for underspecified registers is the prior value
-            _finalize(_register_predicate_map, lambda x: x)
+            _finalize_wirevectors()
             _finalize_memblocks()
         finally:
             # even if the above finalization throws an error we need to
@@ -121,23 +126,21 @@ def _build(wirevector, rhs):
     """Stores the wire assignment details until finalize is called."""
     _check_under_condition()
     p = _current_select()
-    if isinstance(wirevector, wire.Register):
-        plist = _register_predicate_map.setdefault(wirevector, [])
-    elif isinstance(wirevector, wire.WireVector):
-        plist = _wirevector_predicate_map.setdefault(wirevector, [])
-    else:
-        raise core.PyrtlInternalError('unknown type passed to _build')
+    plist = _wirevector_predicate_map.setdefault(wirevector, [])
     plist.append((p, rhs))
 
 
-def _finalize(predicate_map, default):
+def _finalize_wirevectors():
     """Build the required muxes and call back to WireVector to finalize the wirevector build."""
     from helperfuncs import mux
-    for wirevector in predicate_map:
-        result = default(wirevector)
+    for wirevector in _wirevector_predicate_map:
+        if isinstance(wirevector, wire.Register):
+            result = wirevector  # default for registers is "self"
+        else:
+            result = 0;  # default for wire is "0"
         # TODO: right now this is totally not optimzied, should use muxes
         # in conjuction with predicates to encode efficiently.
-        predlist = predicate_map[wirevector]
+        predlist = _wirevector_predicate_map[wirevector]
         for p, rhs in predlist:
             result = mux(p, truecase=rhs, falsecase=result)
         wirevector._build(result)

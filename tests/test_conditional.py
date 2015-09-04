@@ -29,6 +29,7 @@ class TestConditionalUpdateRemoved(unittest.TestCase):
             with pyrtl.ConditionalUpdate(c):
                 r.next |= r + 1
 
+# ---------------------------------------------------------------
 
 class TestConditional(unittest.TestCase):
     def setUp(self):
@@ -353,6 +354,69 @@ class TestWireConditionalBlock(unittest.TestCase):
                     o |= 1
                 with pyrtl.otherwise:
                     o |= 0
+
+
+# ---------------------------------------------------------------
+
+""" 
+class TestNonExclusiveBlocks(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def tearDown(self):
+        pyrtl.reset_working_block()
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in xrange(8):
+            sim.step({})
+        output = StringIO.StringIO()
+        sim_trace.print_trace(output)
+        print output.getvalue()
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_basic_nested_non_exclusive_condition(self):
+        i = pyrtl.Register(bitwidth=2, name='i')
+        i.next <<= i + 1
+        r1 = pyrtl.Register(bitwidth=3, name='r1')
+        r2 = pyrtl.Register(bitwidth=3, name='r2')
+        with pyrtl.conditional_assignment:
+            with r1 < 3:
+                r1.next |= r1 + 1
+            with pyrtl.otherwise: pass
+            with r2 < 3:
+                r2.next |= r2 + 1
+        self.check_trace('i 01230123\nr 00024445\n')
+
+    def test_one_deep_nested_non_exclusive_condition(self):
+        i = pyrtl.Register(bitwidth=2, name='i')
+        i.next <<= i + 1
+        r1 = pyrtl.Register(bitwidth=3, name='r1')
+        r2 = pyrtl.Register(bitwidth=3, name='r2')
+        with pyrtl.conditional_assignment:
+            with (i == 2) | (i == 3):
+                with r1 < 3:
+                    r1.next |= r1 + 2
+                with pyrtl.otherwise: pass
+                with r2 < 3:
+                    r2.next |= r2 + 2
+        self.check_trace('i 01230123\nr 00024445\n')
+
+    def test_overlaping_assignments_in_non_exclusive_assignments(self):
+        i = pyrtl.Register(bitwidth=2, name='i')
+        i.next <<= i + 1
+        r1 = pyrtl.Register(bitwidth=3, name='r1')
+        r2 = pyrtl.Register(bitwidth=3, name='r2')
+        with assertRaises(pyrtl.PyrtlError):
+            with pyrtl.conditional_assignment:
+                with r1 < 3:
+                    r1.next |= r1 + 1
+                with pyrtl.otherwise: pass
+                with r2 < 3:
+                    r1.next |= r2 + 1
+        self.check_trace('i 01230123\nr 00024445\n')
+"""
 
 if __name__ == "__main__":
     unittest.main()
