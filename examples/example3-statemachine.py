@@ -32,24 +32,24 @@ WAIT, TOK1, TOK2, TOK3, DISPENSE, REFUND = [pyrtl.Const(x, bitwidth=3) for x in 
 # if the update is simple, a regular mux(sel_wire, falsecase=f_wire, truecase=t_wire)
 # can be sufficient.
 
-with pyrtl.ConditionalUpdate() as condition:
-    with condition(req_refund):  # signal of highest precedence
+with pyrtl.conditional_assignment:
+    with req_refund:  # signal of highest precedence
         state.next |= REFUND
-    with condition(token_in):  # if token received, advance state in counter sequence
-        with condition(state == WAIT):
+    with token_in:  # if token received, advance state in counter sequence
+        with state == WAIT:
             state.next |= TOK1
-        with condition(state == TOK1):
+        with state == TOK1:
             state.next |= TOK2
-        with condition(state == TOK2):
+        with state == TOK2:
             state.next |= TOK3
-        with condition(state == TOK3):
+        with state == TOK3:
             state.next |= DISPENSE  # 4th token received, go to dispense
-        with condition.fallthrough:  # token received but in state where we can't handle it
+        with pyrtl.otherwise:  # token received but in state where we can't handle it
             state.next |= REFUND
     # unconditional transition from these two states back to wait state
     # NOTE: the parens are needed because in Python the "|" operator is lower precedence
-    # than the "==" operator.
-    with condition((state == DISPENSE) | (state == REFUND)):
+    # than the "==" operator!
+    with (state == DISPENSE) | (state == REFUND):
         state.next |= WAIT
 
 dispense <<= state == DISPENSE
@@ -64,20 +64,20 @@ refund <<= state == REFUND
 # condition is enumerated, the default value for the register under those cases will be the
 # same as it was the prior cycle ("state.next |= state" in this example).  The default for a
 # wirevector is 0.  4) There is a way to specify something like an "else" instead of "elif" and
-# that is with a default (as seen on the line above "state.next <<= REFUND").  This condition will
+# that is with an "otherwise" (as seen on the line above "state.next <<= REFUND").  This condition will
 # be true if none of the other conditions at the same level were also true (for this example
 # specifically state.next will get REFUND when req_refund==0, token_in==1, and state is not in TOK1,
 # TOK2, TOK3, or DISPENSE.   Finally 5) not shown here, you can update multiple different registers,
 # wires, and memories all under the same set of conditionals.
 
 # A more artificial example might make it even more clear how these rules interact:
-# with condition(a):
+# with a:
 #     r.next |= 1        <-- when a is true
-#     with condition(d):
+#     with d:
 #         r2.next |= 2   <-- when a and d are true
-#     with condition():
+#     with otherwise:
 #         r2.next |= 3   <-- when a is true and d is false
-# with condition(b == c):
+# with b == c:
 #     r.next |= 0        <-- when a is not true and b & c is true
 
 # Now let's build and test our state machine.

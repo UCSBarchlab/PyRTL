@@ -42,7 +42,7 @@ def currently_under_condition():
     return _depth > 0
 
 
-def _reset_conditional_state()
+def _reset_conditional_state():
     """Set or reset all the module state required for conditionals."""
     global _conditions_list_stack, _register_predicate_map
     global _wirevector_predicate_map, _memblock_write_predicate_map
@@ -54,8 +54,8 @@ def _reset_conditional_state()
     _memblock_write_predicate_map = {}  # map mem -> [(pred, addr, data, enable), ...]
 
 
-def _check_no_nesting(cls):
-    if cls.depth != 0:
+def _check_no_nesting():
+    if _depth != 0:
         raise core.PyrtlError('no nesting of conditional assignments allowed')
 
 def _check_under_condition():
@@ -63,7 +63,7 @@ def _check_under_condition():
         raise core.PyrtlError('conditional assignment "|=" only valid under a condition')
 
 
-class _ConditionalAssigment():
+class _ConditionalAssignment():
     """ helper type of global "conditional_assignment". """
     def __enter__(self):
         global _depth
@@ -71,38 +71,38 @@ class _ConditionalAssigment():
         _depth = 1
 
     def __exit__(self, *exc_info):
-        _check_no_nesting()
         # default value for underspecified wirevectors is zero
         _finalize(_wirevector_predicate_map, lambda x: wire.Const(0))
         # default value for underspecified registers is the prior value
         _finalize(_register_predicate_map, lambda x: x)
         _finalize_memblocks()
-        _reset_conditional_state()
+        _reset_conditional_state()  # sets _depth back to 0
 
 
 class _Otherwise():
     """ helper type of global "otherwise". """
     def __enter__(self):
+        _push_condition(True)
 
     def __exit__(self, *exc_info):
+        _pop_condition()
 
 
 def _push_condition(predicate):
     """As we enter new conditions, this pushes them on the predicate stack."""
     global _depth
+    _check_under_condition()
     _depth += 1
-    _conditions_list_stack[-1].append(self.predicate)
+    _conditions_list_stack[-1].append(predicate)
     _conditions_list_stack.append([])
 
 
 def _pop_condition():
     """As we exit conditions, this pops them off the stack."""
     global _depth
-    if not currently_under_condition():
-        raise core.PyrtlInternalError('_ConditionalAssignment depth counter indicates no condition to pop')
+    _check_under_condition()
     _conditions_list_stack.pop()
     _depth -= 1
-
 
 def _build(wirevector, rhs):
     """Stores the wire assignment details until finalize is called."""
@@ -130,12 +130,12 @@ def _finalize(predicate_map, default):
         wirevector._build(result)
 
 
-def _build_read_port(cls, mem, addr):
+def _build_read_port(mem, addr):
     # TODO: reduce number of ports through collapsing reads
     return mem._build_read_port(addr)
 
 
-def _build_write_port(cls, mem, addr, data, enable):
+def _build_write_port(mem, addr, data, enable):
     """Stores the write-port details until finalize is called."""
     _check_under_condition()
     p = _current_select()
@@ -143,7 +143,7 @@ def _build_write_port(cls, mem, addr, data, enable):
     plist.append((p, addr, data, enable))
 
 
-def _finalize_memblocks(self):
+def _finalize_memblocks():
     """Build the required muxes and call back to MemBlock to finalize the write port build."""
     from helperfuncs import mux
     for mem in _memblock_write_predicate_map:
@@ -160,7 +160,7 @@ def _finalize_memblocks(self):
                 combined_data = mux(p, truecase=data, falsecase=combined_data)
         mem._build_write_port(combined_addr, combined_data, combined_enable)
 
-def _current_select(self):
+def _current_select():
     """Function to calculate the current "predicate" in the current context."""
     select = None
 

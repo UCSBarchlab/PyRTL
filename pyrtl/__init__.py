@@ -36,7 +36,9 @@ from memory import MemBlock
 from memory import RomBlock
 
 # conditional updates
-from conditional import ConditionalUpdate
+from conditional import conditional_assignment
+from conditional import otherwise
+from conditional import currently_under_condition
 
 # block simulation support
 from simulation import Simulation

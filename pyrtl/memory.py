@@ -183,7 +183,7 @@ class MemBlock(_MemReadBase):
             raise core.PyrtlError('error, enable signal not exactly 1 bit')
 
         if is_conditional:
-            conditional.ConditionalAssignment._build_write_port(self, addr, data, enable)
+            conditional._build_write_port(self, addr, data, enable)
         else:
             self._build_write_port(addr, data, enable)
 
