@@ -1,5 +1,6 @@
 
 # core rtl constructs
+from core import LogicNet
 from core import Block
 from core import PostSynthBlock
 from core import PyrtlError

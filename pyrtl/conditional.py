@@ -32,21 +32,6 @@ Access should be done through instances "conditional_update" and "otherwise",
 as described above, not through the classes themselves.
 """
 
-# Implementation grows the _condition_list_stack with the set
-# of predicates that guard the current assignment.  Values of globals
-# show in the example from above
-
-#   with conditional_assignment:
-#       [[]]
-#       with a:
-#           [a, []]
-#           with b:
-#
-#       with c:
-#       with otherwise:
-#       with d:
-
-
 import core
 import wire
 
@@ -70,14 +55,27 @@ class ConditionalUpdate():
 # both defined at bottom of file.
 
 
+#  1  with a:  # a
+#  2  with b:  # not(a) and b
+#  3    with x:  # not(a) and b and x
+#  4    with otherwise:  # not(a) and b and not(x)
+#  5    with y:  # not(a) and b and y;  check(3,4)
+#  6        with i:  # not(a) and b and y and i;  check(3,4)
+#  7        with j:  # not(a) and b and y and not(i) and j;  check(3,4)
+#  8        with otherwise:  # not(a) and b and y and not(i) and not(j):  check(3,4)
+#  9        with k:  # not(a) and b and y and k;  check(3,4,6,7,8)
+# 10        with m:  # not(a) and b and y and not(k) and m;  check(3,4,6,7,8)
+# 11  with otherwise:  #not(a) and not(b)
+# 12  with c:  #c;  check(1,2,3,4,5,6,7,8,9,10,11)
+
 def _reset_conditional_state():
     """Set or reset all the module state required for conditionals."""
     global _conditions_list_stack
     global _predicate_map
     global _depth
     _depth = 0
-    _conditions_list_stack = [[]]
-    _predicate_map = {}  # map wirevector -> [(pred, rhs), ...]
+    _conditions_list_stack = [[]]  # stack of lists of current conditions
+    _predicate_map = {}  # map wirevector or mem -> [(pred, rhs), ...]
 
 
 def _check_no_nesting():
@@ -109,7 +107,7 @@ class _ConditionalAssignment():
 class _Otherwise():
     """ helper type of global "otherwise". """
     def __enter__(self):
-        _push_condition(True)
+        _push_condition(otherwise)
 
     def __exit__(self, *exc_info):
         _pop_condition()
@@ -192,17 +190,29 @@ def _current_select():
             return a
         return a & b
 
+    def index_of_last_otherwise(predlist):
+        lastother = 0
+        for i, p in enumerate(predlist):
+            if p is otherwise:
+                lastother = i
+        return lastother
+
+    def between_otherwise_and_current(predlist):
+        predlist_without_current = predlist[:-1]
+        i = index_of_last_otherwise(predlist_without_current)
+        return predlist_without_current[i:]
+
     # for all conditions except the current children (which should be [])
     for predlist in _conditions_list_stack[:-1]:
-        # negate all of the predicates before the current one
-        for predicate in predlist[:-1]:
-            assert(predicate is not None)
+        # negate all of the predicates between "otherwise" and the current one
+        for predicate in between_otherwise_and_current(predlist):
             select = and_with_possible_none(select, ~predicate)
         # include the predicate for the current one (not negated)
-        select = and_with_possible_none(select, predlist[-1])
+        if predlist[-1] is not otherwise:
+            select = and_with_possible_none(select, predlist[-1])
 
     if select is None:
-        raise core.PyrtlError('update inside conditional assignment not covered by condition')
+        raise core.PyrtlError('problem with conditional assignment')
     return select
 
 

@@ -27,6 +27,22 @@ class TestBlock(unittest.TestCase):
         w = pyrtl.WireVector(name='testwire', bitwidth=3)
         self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
 
+    def test_no_logic_net_comparisons(self):
+        a = pyrtl.WireVector(bitwidth=3)
+        b = pyrtl.WireVector(bitwidth=3)
+        select = pyrtl.WireVector(bitwidth=3)
+        outwire = pyrtl.WireVector(bitwidth=3)
+        net1 = pyrtl.LogicNet(op='x', op_param=None, args=(select, a, b), dests=(outwire,))
+        net2 = pyrtl.LogicNet(op='x', op_param=None, args=(select, b, a), dests=(outwire,))
+        with self.assertRaises(pyrtl.PyrtlError):
+            foo = net1 < net2
+        with self.assertRaises(pyrtl.PyrtlError):
+            foo = net1 <= net2
+        with self.assertRaises(pyrtl.PyrtlError):
+            foo = net1 > net2
+        with self.assertRaises(pyrtl.PyrtlError):
+            foo = net1 >= net2
+
     def test_sanity_check(self):
         testmissing()
 
