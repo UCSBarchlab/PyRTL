@@ -3,13 +3,13 @@ PyRTL
 
 [![Build Status](https://magnum.travis-ci.com/UCSBarchlab/PyRTL.svg?token=XAZcwAigXaYVLzkPHGNx)](https://magnum.travis-ci.com/UCSBarchlab/PyRTL)
 
-PyRTL provides a collection of classes for pythonic RTL specification, simulation, tracing, and testing 
+PyRTL provides a collection of classes for pythonic [register-transfer level] (https://en.wikipedia.org/wiki/Register-transfer_level) design, simulation, tracing, and testing 
 suitable for teaching and research. Simplicity, usability, clarity, and extensibility rather than
 performance or optimization is the overarching goal.  Features include:
 
 * Elaboration-through-execution, meaning all of Python can be used including introspection
 * Design, instantiate, and simulate all in one file and without leaving Python
-* Export to, or import from common HDLs (BLIF-in, Verilog-out currently supported)
+* Export to, or import from, common HDLs (BLIF-in, Verilog-out currently supported)
 * Examine execution with waveforms on the terminal or export to a .vcd as projects scale
 * Elaboration, synthesis, and basic optimizations all included
 * Small and well-defined internal core structure means writing new transforms is easier
@@ -29,21 +29,21 @@ hardware designs reasonably pythonically.  For example, with WireVector you get 
 much like a python list of 1-bit wires, so that ```mywire[0:-1]``` selects everything except the 
 most-significant-bit.  Of course you can add, subtract, and multiply these WireVectors or concat multiple
 bit-vectors end-to-end as well.  You can then even make normal python collections of those WireVectors and 
-do operations on them in bulk. For example, if you have a list of n k-bit WireVectors (called "x") and you 
+do operations on them in bulk. For example, if you have a list of *n* different k-bit WireVectors (called "x") and you 
 want to multiply each of them by 2 and put the sum of the result in a WireVector "y", it looks like
 the following:  ```y = sum([elem * 2 for elem in x])```. 
 Hardware comprehensions are surprisingly useful!
 
-If you are just getting started with PyRTL, it is suggested that you start with the examples first,
+If you are just getting started with PyRTL it is suggested that you start with the examples first
 to get a sense of the "thinking with pyrtls" required to design hardware in this way.  If you are looking
-for a deeper understanding dive into the code for the object, Block. It is the core data structure at the heart of
-PyRTL and defines the semantics at a high level -- everything is converted to or from the small, simple set of
+for a deeper understanding, dive into the code for the object `Block`. It is the core data structure at the heart of
+PyRTL and defines its semantics at a high level -- everything is converted to or from the small, simple set of
 primitives defined there.
 
 In the package you should find the following files and Directories
 * **pyrtl/**  The src directory for the module
-* **tests/**    A set of unit tests for PyRTL which you can run with nosetests
 * **examples/** A set of hardware design examples that show the main idea behind pyrtl
+* * **tests/**    A set of unit tests for PyRTL which you can run with nosetests
 * **rtllib/** A place for finished PyRTL designs which are hopefully both useful and documented
 * **research/** A place for experiments and other changes not ready for primetime
 * **docs/** The location of the auto-generated documentation (built when you run checkcode)
