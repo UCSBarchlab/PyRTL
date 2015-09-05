@@ -43,7 +43,7 @@ primitives defined there.
 In the package you should find the following files and Directories
 * **pyrtl/**  The src directory for the module
 * **examples/** A set of hardware design examples that show the main idea behind pyrtl
-* * **tests/**    A set of unit tests for PyRTL which you can run with nosetests
+* **tests/**    A set of unit tests for PyRTL which you can run with nosetests
 * **rtllib/** A place for finished PyRTL designs which are hopefully both useful and documented
 * **research/** A place for experiments and other changes not ready for primetime
 * **docs/** The location of the auto-generated documentation (built when you run checkcode)
