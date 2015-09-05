@@ -190,17 +190,15 @@ def _current_select():
             return a
         return a & b
 
-    def index_of_last_otherwise(predlist):
-        lastother = 0
-        for i, p in enumerate(predlist):
+    def between_otherwise_and_current(predlist):
+        lastother = None
+        for i, p in enumerate(predlist[:-1]):
             if p is otherwise:
                 lastother = i
-        return lastother
-
-    def between_otherwise_and_current(predlist):
-        predlist_without_current = predlist[:-1]
-        i = index_of_last_otherwise(predlist_without_current)
-        return predlist_without_current[i:]
+        if lastother is None:
+            return predlist[:-1]
+        else:
+            return predlist[lastother+1:-1]
 
     # for all conditions except the current children (which should be [])
     for predlist in _conditions_list_stack[:-1]:

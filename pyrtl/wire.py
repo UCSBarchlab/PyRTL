@@ -132,7 +132,10 @@ class WireVector(object):
         # python provides now way to overload these logical operations, and thus they
         # are very much not likely to be doing the thing that the programmer would be
         # expecting.
-        raise core.PyrtlError('error, attempt to covert wirevector to compile-time boolean')
+        raise core.PyrtlError('cannot covert wirevector to compile-time boolean.  This error '
+                              'often happens when you attempt to use WireVectors with "==" or '
+                              'something that calls "__eq__", such as when you test if a '
+                              'wirevector is "in" something')
 
     __nonzero__ = __bool__  # for Python 2 and 3 compatibility
 
