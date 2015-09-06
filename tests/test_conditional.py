@@ -491,36 +491,41 @@ class TestWireConditionalBlock(unittest.TestCase):
             sim.step(inputs)
 
         for cycle in range(len(sim_trace)):
+            t0, t1, t2, t3, t4 = 0,0,0,0,0
             def v(var):
                 return sim_trace.trace[var][cycle]
             if v(a):
-                self.assertTrue(v(var0)==1)
+                t0 = 1
             elif v(b):
                 if v(x):
-                    self.assertTrue(v(var0)==2)
+                    t0 = 2
                 else:
-                    self.assertTrue(v(var0)==3)
+                    t0 = 3
                 if v(y):
                     if v(i):
-                        self.assertTrue(v(var1)==1)
+                        t1 = 1
                     elif v(j):
-                        self.assertTrue(v(var1)==2)
+                        t1 = 2
                     else:
-                        self.assertTrue(v(var1)==3)
+                        t1 = 3
                     if v(k):
-                        self.assertTrue(v(var2)==1)
+                        t2 = 1
                     else:
-                        self.assertTrue(v(var2)==2)
+                        t2 = 2
                     if v(m):
-                        self.assertTrue(v(var3)==3)
+                        t3 = 3
             else:
                 if v(z):
-                    self.assertTrue(v(var0)==4)
+                    t0 = 4
             if v(c):
-                self.assertTrue(v(var4)==1)
+                t4 = 1
             elif v(d):
-                self.assertTrue(v(var4)==2)
-
+                t4 = 2
+            self.assertEqual(v(var0), t0)
+            self.assertEqual(v(var1), t1)
+            self.assertEqual(v(var2), t2)
+            self.assertEqual(v(var3), t3)
+            self.assertEqual(v(var4), t4)
 
 if __name__ == "__main__":
     unittest.main()
