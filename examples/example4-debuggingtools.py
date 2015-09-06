@@ -63,9 +63,9 @@ for cycle in range(len(vals1)):
 # in order to get the result data, you do not need to print a waveform of the trace
 # You always have the option to just pull the data out of the tracer directly
 
-print "in1:       ", str(sim_trace.trace[in1])
-print "in2:       ", str(sim_trace.trace[in2])
-print "debug_out: ", str(sim_trace.trace[debug_out])
+print("in1:       ", str(sim_trace.trace[in1]))
+print("in2:       ", str(sim_trace.trace[in2]))
+print("debug_out: ", str(sim_trace.trace[debug_out]))
 
 # Below, I am using the ability to directly retrieve the trace data to
 # verify the correctness of the first adder
@@ -111,7 +111,7 @@ wire_trace = test_out.init_call_stack
 # outermost call first.
 
 for frame in wire_trace:
-    print frame
+    print(frame)
 
 # Storage of Additional Debug Data
 
@@ -152,7 +152,7 @@ pyrtl.working_block().remove_wirevector(dummy_wv)
 
 
 import io
-print "--- Trivial Graph Format  ---"
+print("--- Trivial Graph Format  ---")
 with io.BytesIO() as tgf:
     pyrtl.output_to_trivialgraph(tgf)
-    print tgf.getvalue()
+    print(tgf.getvalue())

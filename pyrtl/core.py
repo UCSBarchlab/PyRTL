@@ -2,8 +2,8 @@
 import collections
 import sys
 import re
-import wire
-import memory
+from . import wire
+from . import memory
 
 
 # -----------------------------------------------------------------
@@ -66,8 +66,8 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
                 self.op_param == other.op_param and
                 len(self.args) == len(other.args) and
                 len(self.dests) == len(other.dests) and
-                all(self.args[i] is other.args[i] for i in xrange(len(self.args))) and
-                all(self.dests[i] is other.dests[i] for i in xrange(len(self.dests))))
+                all(self.args[i] is other.args[i] for i in range(len(self.args))) and
+                all(self.dests[i] is other.dests[i] for i in range(len(self.dests))))
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -261,7 +261,7 @@ class Block(object):
                 remaining.remove(gate)  # remove gate from set of to return
 
         if len(remaining) is not 0:
-            import helperfuncs
+            from . import helperfuncs
             helperfuncs.find_loop(self)
             raise PyrtlError("Failure in Block Iterator due to non-register loops")
 
@@ -328,7 +328,7 @@ class Block(object):
             unused = outs.difference(self.wirevector_subset(wire.Output))
             if len(unused) > 0:
                 names = [w.name for w in unused]
-                print 'Warning: Wires driven but never used { %s }' % names
+                print('Warning: Wires driven but never used { %s }' % names)
 
     def sanity_check_memory_sync(self):
         """ Check that all memories are synchronous unless explicitly specified as async.

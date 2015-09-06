@@ -72,6 +72,6 @@ simplepipeline = SimplePipelineExample()
 # Simulation of the core
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
-for cycle in xrange(15):
+for cycle in range(15):
     sim.step({})
 sim_trace.render_trace()

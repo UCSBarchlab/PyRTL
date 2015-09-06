@@ -3,10 +3,10 @@ Defines MemBlock, a block of memory that can be read (potentially async) and wri
 """
 
 import collections
-import core
-import wire
-import helperfuncs
-import conditional
+from . import core
+from . import wire
+from . import helperfuncs
+from . import conditional
 
 
 # ------------------------------------------------------------------------
@@ -91,7 +91,7 @@ class _MemReadBase(object):
         self.asynchronous = asynchronous
 
     def __getitem__(self, item):
-        from helperfuncs import as_wires
+        from .helperfuncs import as_wires
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False, block=self.block)
         if len(item) > self.addrwidth:
             raise core.PyrtlError('memory index bitwidth > addrwidth')
@@ -163,7 +163,7 @@ class MemBlock(_MemReadBase):
             raise core.PyrtlError('error, assigment to memories should use "<<=" not "=" operator')
 
     def _assignment(self, item, val, is_conditional):
-        from helperfuncs import as_wires
+        from .helperfuncs import as_wires
 
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False, block=self.block)
         if len(item) > self.addrwidth:

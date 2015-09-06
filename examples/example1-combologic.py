@@ -59,9 +59,9 @@ cout <<= temp1 | temp2 | temp3
 # a list of gates (the 'w' gates are just wires).  The ins and outs of the gates
 # are printed 'name'/'bitwidth''WireVectorType'
 
-print '--- One Bit Adder Implementation ---'
-print pyrtl.working_block()
-print
+print('--- One Bit Adder Implementation ---')
+print(pyrtl.working_block())
+print()
 
 # --- Step 2: Simulate Design  -----------------------------------------------
 
@@ -79,7 +79,7 @@ sim = pyrtl.Simulation(tracer=sim_trace)
 # can just specify a random value of 0 or 1 with python's random module.  We
 # call step 15 times to simulate 15 cycles.
 
-for cycle in xrange(15):
+for cycle in range(15):
     sim.step({
         a: random.choice([0, 1]),
         b: random.choice([0, 1]),
@@ -88,7 +88,7 @@ for cycle in xrange(15):
 
 # Now all we need to do is print the trace results to the screen. Here we use
 # "render_trace" with some size information.
-print '--- One Bit Adder Simulation ---'
+print('--- One Bit Adder Simulation ---')
 sim_trace.render_trace(symbol_len=5, segment_size=5)
 
 # --- Verification of Simulated Design ---------------------------------------
@@ -110,7 +110,7 @@ for cycle in range(15):
     python_cout = (add_result >> 1) & 0x1
     if (python_sum != sim_trace.trace[sum][cycle] or
        python_cout != sim_trace.trace[cout][cycle]):
-        print 'This Example is Broken!!!'
+        print('This Example is Broken!!!')
         exit(1)
 
 # You made it to the end!

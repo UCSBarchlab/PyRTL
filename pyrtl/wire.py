@@ -11,9 +11,9 @@ Register: a wire vector that is latched each cycle
 
 import collections
 import string
-import core
-import helperfuncs
-import conditional
+from . import core
+from . import helperfuncs
+from . import conditional
 
 
 # ----------------------------------------------------------------
@@ -281,7 +281,7 @@ class WireVector(object):
             raise core.PyrtlError(
                 'error, zero_extended cannot reduce the number of bits')
         else:
-            from helperfuncs import concat
+            from .helperfuncs import concat
             if isinstance(extbit, int):
                 extbit = Const(0, bitwidth=1, block=self.block)
             extvector = WireVector(bitwidth=numext, block=self.block)
@@ -358,7 +358,7 @@ class Const(WireVector):
                 bitwidth = 1
             if bitwidth != 1:
                 raise core.PyrtlError('error, boolean has bitwidth not equal to 1')
-        elif isinstance(val, (int, long)):
+        elif isinstance(val, int):
             if val >= 0:
                 num = val
                 # infer bitwidth if it is not specified explicitly
@@ -371,7 +371,7 @@ class Const(WireVector):
                 if (val >> bitwidth-1) != -1:
                     raise core.PyrtlError('insufficient bits for negative number')
                 num = val & ((1 << bitwidth) - 1)  # result is a twos complement value
-        elif isinstance(val, basestring):
+        elif isinstance(val, str):
             if bitwidth is not None:
                 raise core.PyrtlError('error, bitwidth parameter of const should be'
                                       ' unspecified when the const is created from a string'

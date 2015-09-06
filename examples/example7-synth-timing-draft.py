@@ -12,9 +12,9 @@ outwire = pyrtl.Output(bitwidth=5, name="output")
 outwire <<= constwire + inwire2
 
 timing_map = pyrtl.timing_analysis()
-print "Pre Synthisis:"
+print("Pre Synthisis:")
 pyrtl.print_max_length(timing_map)
-print ""
+print("")
 
 block_max_time = pyrtl.timing_max_length(timing_map)
 # tempxx = pyrtl.passes.timing_critical_path(timing_map)
@@ -26,11 +26,11 @@ block_max_time = pyrtl.timing_max_length(timing_map)
 
 pyrtl.synthesize()
 timing_map = pyrtl.timing_analysis()
-print "Pre Optimization:"
+print("Pre Optimization:")
 pyrtl.print_max_length(timing_map)
-print ""
+print("")
 for net in pyrtl.working_block().logic:
-    print str(net)
+    print(str(net))
 
 
 #
@@ -42,11 +42,11 @@ for net in pyrtl.working_block().logic:
 pyrtl.optimize()
 
 timing_map = pyrtl.timing_analysis()
-print "Post Optimization:"
+print("Post Optimization:")
 pyrtl.print_max_length(timing_map)
-print ""
+print("")
 for net in pyrtl.working_block().logic:
-    print str(net)
+    print(str(net))
 
 block_max_time = pyrtl.passes.timing_max_length(timing_map)
 tempxx = pyrtl.passes.timing_critical_path(timing_map)

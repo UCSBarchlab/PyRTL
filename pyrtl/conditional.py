@@ -32,8 +32,8 @@ Access should be done through instances "conditional_update" and "otherwise",
 as described above, not through the classes themselves.
 """
 
-import core
-import wire
+from . import core
+from . import wire
 
 # -----------------------------------------------------------------------
 #    __   __        __    ___    __                  __
@@ -171,8 +171,8 @@ def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
 
 def _finalize():
     """Build the required muxes and call back to WireVector to finalize the wirevector build."""
-    import memory
-    from helperfuncs import mux
+    from . import memory
+    from .helperfuncs import mux
     for lhs in _predicate_map:
         # handle memory write ports
         if isinstance(lhs, memory.MemBlock):

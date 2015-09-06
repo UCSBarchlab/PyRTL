@@ -11,10 +11,10 @@ import sys
 import re
 import collections
 
-import core
-import wire
-import helperfuncs
-import spice_templates
+from . import core
+from . import wire
+from . import helperfuncs
+from . import spice_templates
 
 
 # -----------------------------------------------------------------
@@ -40,7 +40,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
 
     if isinstance(blif, file):
         blif_string = blif.read()
-    elif isinstance(blif, basestring):
+    elif isinstance(blif, str):
         blif_string = blif
     else:
         raise core.PyrtlError('input_blif expecting either open file or string')
@@ -111,7 +111,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
                 block.add_wirevector(wire.Input(bitwidth=1, name=input_name))
             else:
                 wire_in = wire.Input(bitwidth=bitwidth, name=input_name, block=block)
-                for i in xrange(bitwidth):
+                for i in range(bitwidth):
                     bit_name = input_name + '[' + str(i) + ']'
                     bit_wire = wire.WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_wire <<= wire_in[i]
@@ -126,7 +126,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
             else:
                 wire_out = wire.Output(bitwidth=bitwidth, name=output_name, block=block)
                 bit_list = []
-                for i in xrange(bitwidth):
+                for i in range(bitwidth):
                     bit_name = output_name + '[' + str(i) + ']'
                     bit_wire = wire.WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_list.append(bit_wire)
@@ -275,11 +275,11 @@ def output_to_trivialgraph(file, block=None):
             add_edge(net, dest)
 
     # print the actual output to the file
-    for (id, label) in nodes.itervalues():
-        print >> file, id, label
-    print >> file, '#'
+    for (id, label) in nodes.values():
+        print(id, label, file=file)
+    print('#', file=file)
     for (frm, to) in edges:
-        print >> file, frm, to, edge_names.get((frm, to), '')
+        print(frm, to, edge_names.get((frm, to), ''), file=file)
 
 
 # ----------------------------------------------------------------
@@ -339,7 +339,7 @@ def _to_verilog_header(file, block):
     io_list = [w.name for w in block.wirevector_subset((wire.Input, wire.Output))]
     io_list.append('clk')
     io_list_str = ', '.join(io_list)
-    print >> file, 'module toplevel(%s);' % io_list_str
+    print('module toplevel(%s);' % io_list_str, file=file)
 
     inputs = block.wirevector_subset(wire.Input)
     outputs = block.wirevector_subset(wire.Output)
@@ -355,29 +355,29 @@ def _to_verilog_header(file, block):
             memories.add(m)
 
     for w in inputs:
-        print >> file, '    input%s %s;' % (_verilog_vector_decl(w), w.name)
-    print >> file, '    input clk;'
+        print('    input%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
+    print('    input clk;', file=file)
     for w in outputs:
-        print >> file, '    output%s %s;' % (_verilog_vector_decl(w), w.name)
-    print >> file, ''
+        print('    output%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
+    print('', file=file)
 
     for w in registers:
-        print >> file, '    reg%s %s;' % (_verilog_vector_decl(w), w.name)
+        print('    reg%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
     for w in wires:
-        print >> file, '    wire%s %s;' % (_verilog_vector_decl(w), w.name)
-    print >> file, ''
+        print('    wire%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
+    print('', file=file)
 
     for w in memories:
         if w.op == 'm':
-            print >> file, '    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]),
+            print('    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]),
                                                     w.op_param[0],
-                                                    _verilog_vector_pow_decl(w.args[0]))
+                                                    _verilog_vector_pow_decl(w.args[0])), file=file)
         elif w.op == '@':
-            print >> file, '    reg%s mem_%s%s;' % (_verilog_vector_decl(w.args[1]),
+            print('    reg%s mem_%s%s;' % (_verilog_vector_decl(w.args[1]),
                                                     w.op_param[0],
-                                                    _verilog_vector_pow_decl(w.args[0]))
+                                                    _verilog_vector_pow_decl(w.args[0])), file=file)
 
-    print >> file, ''
+    print('', file=file)
 
     # Generate the initial block for those memories that need it (such as ROMs).
     # FIXME: Right now, the memblock is the only place where those rom values are stored
@@ -385,71 +385,71 @@ def _to_verilog_header(file, block):
     # contained in "core".
     mems_with_initials = [w for w in memories if hasattr(w.op_param[1], 'initialdata')]
     for w in mems_with_initials:
-        print >> file, '    initial begin'
-        for i in xrange(2**len(w.args[0])):
-            print >> file, "        mem_%s[%d]=%d'x%x" % (
-                w.op_param[0], i, len(w), w.op_param[1]._get_read_data(i))
-        print >> file, '    end'
-        print >> file, ''
+        print('    initial begin', file=file)
+        for i in range(2**len(w.args[0])):
+            print("        mem_%s[%d]=%d'x%x" % (
+                w.op_param[0], i, len(w), w.op_param[1]._get_read_data(i)), file=file)
+        print('    end', file=file)
+        print('', file=file)
 
 
 def _to_verilog_combinational(file, block):
     for const in block.wirevector_subset(wire.Const):
-            print >> file, '    assign %s = %d;' % (const.name, const.val)
+            print('    assign %s = %d;' % (const.name, const.val), file=file)
 
     for net in block.logic:
         if net.op in set('w~'):  # unary ops
             opstr = '' if net.op == 'w' else net.op
             t = (net.dests[0].name, opstr, net.args[0].name)
-            print >> file, '    assign %s = %s%s;' % t
+            print('    assign %s = %s%s;' % t, file=file)
         elif net.op in '&|^+-*<>':  # binary ops
             t = (net.dests[0].name, net.args[0].name, net.op, net.args[1].name)
-            print >> file, '    assign %s = %s %s %s;' % t
+            print('    assign %s = %s %s %s;' % t, file=file)
         elif net.op == '=':
             t = (net.dests[0].name, net.args[0].name, net.args[1].name)
-            print >> file, '    assign %s = %s == %s;' % t
+            print('    assign %s = %s == %s;' % t, file=file)
         elif net.op == 'x':
             # note that the argument order for 'x' is backwards from the ternary operator
             t = (net.dests[0].name, net.args[0].name, net.args[2].name, net.args[1].name)
-            print >> file, '    assign %s = %s ? %s : %s;' % t
+            print('    assign %s = %s ? %s : %s;' % t, file=file)
         elif net.op == 'c':
             catlist = ', '.join([w.name for w in net.args])
             t = (net.dests[0].name, catlist)
-            print >> file, '    assign %s = {%s};' % t
+            print('    assign %s = {%s};' % t, file=file)
         elif net.op == 's':
             catlist = ', '.join([net.args[0].name + '[%s]' % str(i) if len(net.args[0]) > 1
                                 else net.args[0].name for i in net.op_param])
             t = (net.dests[0].name, catlist)
-            print >> file, '    assign %s = {%s};' % t
+            print('    assign %s = {%s};' % t, file=file)
         elif net.op == 'r':
             pass  # do nothing for registers
         elif net.op == 'm':
             t = (net.dests[0].name, net.op_param[0], net.args[0].name)
-            print >> file, '        assign %s = mem_%s[%s];' % t
+            print('        assign %s = mem_%s[%s];' % t, file=file)
         elif net.op == '@':
             pass
         else:
             raise core.PyrtlInternalError
-    print >> file, ''
+    print('', file=file)
 
 
 def _to_verilog_sequential(file, block):
-    print >> file, '    always @( posedge clk )'
-    print >> file, '    begin'
+    print('    always @( posedge clk )', file=file)
+    print('    begin', file=file)
     for net in block.logic:
         if net.op == 'r':
             t = (net.dests[0].name, net.args[0].name)
-            print >> file, '        %s <= %s;' % t
+            print('        %s <= %s;' % t, file=file)
         elif net.op == '@':
             t = (net.args[2].name, net.op_param[0], net.args[0].name, net.args[1].name)
-            print >> file, ('        if (%s) begin\n'
+            print(('        if (%s) begin\n'
                             '                mem_%s[%s] <= %s;\n'
-                            '        end') % t
-    print >> file, '    end'
+                            '        end') % t, file=file)
+    print('    end', file=file)
 
 
 def _to_verilog_footer(file, block):
-    print >> file, 'endmodule\n'
+    print('endmodule\n', file=file)
 
 
 def output_verilog_testbench(file, simulation_trace=None, block=None):
@@ -460,46 +460,46 @@ def output_verilog_testbench(file, simulation_trace=None, block=None):
     outputs = block.wirevector_subset(wire.Output)
 
     # Output header
-    print >> file, 'module tb();'
+    print('module tb();', file=file)
 
     # Declare all block inputs as reg
-    print >> file, '    reg clk;'
+    print('    reg clk;', file=file)
     for w in inputs:
-        print >> file, '    reg {:s} {:s};'.format(_verilog_vector_decl(w), w.name)
+        print('    reg {:s} {:s};'.format(_verilog_vector_decl(w), w.name), file=file)
 
     # Declare all block outputs as wires
     for w in outputs:
-        print >> file, '    wire {:s} {:s};'.format(_verilog_vector_decl(w), w.name)
-    print >> file
+        print('    wire {:s} {:s};'.format(_verilog_vector_decl(w), w.name), file=file)
+    print(file=file)
 
     # Instantiate logic block
     io_list = [w.name for w in block.wirevector_subset((wire.Input, wire.Output))]
     io_list.append('clk')
     io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
-    print >> file, '    toplevel block({:s});\n'.format(', '.join(io_list_str))
+    print('    toplevel block({:s});\n'.format(', '.join(io_list_str)), file=file)
 
     # Generate clock signal
-    print >> file, '    always'
-    print >> file, '        #0.5 clk = ~clk;\n'
+    print('    always', file=file)
+    print('        #0.5 clk = ~clk;\n', file=file)
 
     # Move through all steps of trace, writing out input assignments per cycle
-    print >> file, '    initial begin'
-    print >> file, '        $dumpfile ("waveform.vcd");'
-    print >> file, '        $dumpvars;\n'
-    print >> file, '        clk = 0;'
+    print('    initial begin', file=file)
+    print('        $dumpfile ("waveform.vcd");', file=file)
+    print('        $dumpvars;\n', file=file)
+    print('        clk = 0;', file=file)
 
-    for i in xrange(len(simulation_trace)):
+    for i in range(len(simulation_trace)):
         for w in inputs:
-            print >> file, '        {:s} = {:s}{:d};'.format(
+            print('        {:s} = {:s}{:d};'.format(
                 w.name,
                 "{:d}'d".format(len(w)),
-                simulation_trace.trace[w][i])
-        print >> file, '\n        #2'
+                simulation_trace.trace[w][i]), file=file)
+        print('\n        #2', file=file)
 
     # Footer
-    print >> file, '        $finish;'
-    print >> file, '    end'
-    print >> file, 'endmodule'
+    print('        $finish;', file=file)
+    print('    end', file=file)
+    print('endmodule', file=file)
 
 
 # ---------------------------------
@@ -529,10 +529,10 @@ def _new_node():
 
 
 def _render_nand(output_file, a, b, out):
-    print >> output_file, spice_templates.NAND_TEMPLATE.format(
+    print(spice_templates.NAND_TEMPLATE.format(
         InputA=a, InputB=b, output=out, M1=_new_fet(), M2=_new_fet(),
         M3=_new_fet(), M4=_new_fet(), node=_new_node()
-    )
+    ), file=output_file)
 
 
 def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_step="1ms"):
@@ -557,15 +557,15 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
 
     # convenience function for alias table
     def alias(name):
-        if name in alias_table.iterkeys():
+        if name in iter(alias_table.keys()):
             return alias_table[name]
         return name
 
     # comment on top
-    print >> output_file, "* SPICE export from PyRTL"
+    print("* SPICE export from PyRTL", file=output_file)
 
     # setup power source
-    print >> output_file, "Vdd Vdd 0 5"
+    print("Vdd Vdd 0 5", file=output_file)
 
     for net in working_block.logic:
         # do some checks to make sure our working block is sane.
@@ -586,9 +586,9 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
             input_wire = net.args[0]
             period = randint(2, 10)
             on = period/2
-            print >> output_file, "V{name} {node} 0 PULSE(0 5 0 0 0 {on} {period})".format(
+            print("V{name} {node} 0 PULSE(0 5 0 0 0 {on} {period})".format(
                 name=alias(input_wire.name), node=alias(net.dests[0].name),
-                on=str(on), period=str(period))
+                on=str(on), period=str(period)), file=output_file)
         elif net.op == '&':
             # for AND, do NAND and invert it
             intermediate_node = _new_node()
@@ -620,12 +620,12 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
             # do nothing for now?
             pass
         else:
-            print >> output_file, repr(net)
+            print(repr(net), file=output_file)
 
     # print footer
-    print >> output_file, ".model NMOS NMOS"
-    print >> output_file, ".model PMOS PMOS"
-    print >> output_file, ".tran 0 {sim_time} 0 {sim_min_step}"\
-        .format(sim_time=sim_time, sim_min_step=sim_min_step)
-    print >> output_file, ".backanno"
-    print >> output_file, ".end"
+    print(".model NMOS NMOS", file=output_file)
+    print(".model PMOS PMOS", file=output_file)
+    print(".tran 0 {sim_time} 0 {sim_min_step}"\
+        .format(sim_time=sim_time, sim_min_step=sim_min_step), file=output_file)
+    print(".backanno", file=output_file)
+    print(".end", file=output_file)

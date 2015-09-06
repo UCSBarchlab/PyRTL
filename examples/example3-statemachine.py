@@ -96,7 +96,7 @@ sim_inputs = {
     }
 
 for cycle in range(len(sim_inputs[token_in])):
-    sim.step({w: int(v[cycle]) for w, v in sim_inputs.iteritems()})
+    sim.step({w: int(v[cycle]) for w, v in sim_inputs.items()})
 
 # also, to make our input/output easy to reason about let's specify an order to the traces
 sim_trace.render_trace(trace_list=[token_in, req_refund, state, dispense, refund])

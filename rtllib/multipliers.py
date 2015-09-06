@@ -3,14 +3,14 @@ import sys
 sys.path.append("..")
 import io
 from pyrtl import *
-import adders
+from . import adders
 
 
 def main():
     # test_simple_mult()
     # test_wallace_tree()
     # test_wallace_timing()
-    print "look at the test case folder"
+    print("look at the test case folder")
 
 
 def simple_mult(A, B, start):

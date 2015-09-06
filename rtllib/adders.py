@@ -2,11 +2,11 @@ import sys
 sys.path.append("..")
 import pyrtl
 from pyrtl import *
-import libutils
+from . import libutils
 
 
 def main():
-    print "You should be looking at the test case folder"
+    print("You should be looking at the test case folder")
 
 
 def kogge_stone(a, b, cin=0):

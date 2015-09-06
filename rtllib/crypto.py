@@ -1,5 +1,4 @@
-"""
-Alpha-stage implementations of montgomery multiplier, modular exponentiation, and
+""" Alpha-stage implementations of montgomery multiplier, modular exponentiation, and
 RSA encrypt/decrypt.  These have not been tested extensively and so please do not
 assume they are correct.  In addition, the current implemtnations are completely
 combintational and will blow up to be gigantic circuits very quickly.  Work is needed
@@ -16,8 +15,7 @@ from pyrtl import *
 #  |  | \__/ | \|  |  \__> \__/  |  | |___ |  \  |      |  | \__/ |___  |  | |    |___ | |___ |  \
 
 
-"""
-Here is our current understanding of the full montgomery multiplier process.
+""" Here is our current understanding of the full montgomery multiplier process.
 
 We would like c = a * b mod n to happen, but to do so we need to
 go into the montgomery domain, where modulus is really easy.
@@ -112,8 +110,7 @@ def montgomery_mult(a, b, n, nval):
     return mod_product(c_residue, its_a_one, n, input_length)
 
 
-"""
-The mod_product function is where the actual "montgomery multiplication" happens.
+""" The mod_product function is where the actual "montgomery multiplication" happens.
 
 What we want to happen:
 
@@ -202,8 +199,7 @@ def mod_product(A, B, N, k):
 #   |\/| /  \ |  \ |  | |     /\  |__)    |__  \_/ |__)
 #   |  | \__/ |__/ \__/ |___ /~~\ |  \    |___ / \ |
 
-"""
-Modular Exponentiation is the key to RSA encryption and decrpyption. Modular Exponentiation
+""" Modular Exponentiation is the key to RSA encryption and decrpyption. Modular Exponentiation
 directly relies on Montgomery Multiplication, so if you haven't read that SCROLL UP RIGHT NOW.
 
 The way that mod_exp works is that it takes in 4 arguments.
@@ -246,8 +242,7 @@ def mod_exp(m, e, n, nval):
 # |__) /__`  /\     |__  |\ | /  ` |__) \ / |__)  |  | /  \ |\ |
 # |  \ .__/ /~~\    |___ | \| \__, |  \  |  |     |  | \__/ | \|
 
-"""
-These are the RSA encrpytion and decryption functions.
+""" These are the RSA encrpytion and decryption functions.
 
 So RSA encryption is a public-key cryptosystem that uses the parameters:
 p: distinct large prime
@@ -329,7 +324,7 @@ def test_montgomery_mult():
 
     sim_trace.render_trace()
     output = sim_trace.trace
-    print "Result in Decimal: " + str(output[c])
+    print("Result in Decimal: " + str(output[c]))
 
 
 def test_mod_exp():
@@ -350,7 +345,7 @@ def test_mod_exp():
 
     sim_trace.render_trace()
     output = sim_trace.trace
-    print "Result in Decimal: " + str(output[c])
+    print("Result in Decimal: " + str(output[c]))
 
 
 def test_rsa():
@@ -375,7 +370,7 @@ def test_rsa():
 
     sim_trace.render_trace()
     output = sim_trace.trace
-    print "Result in Decimal: " + str(output[c])
+    print("Result in Decimal: " + str(output[c]))
 
 
 # These functions were used to help debug the Montgomery Multiplier, and are likely
@@ -384,13 +379,13 @@ def test_rsa():
 def _rsa(p, q, M):
     n = p * q
     totient = (p - 1) * (q - 1)
-    print "n,totient: ", n, " ,", totient
+    print("n,totient: ", n, " ,", totient)
     e = 5
-    print "e: ", e
+    print("e: ", e)
     d = _modinv(e, totient)
-    print "d :", d
+    print("d :", d)
     C = pow(M, e, n)
-    print "c: ", C
+    print("c: ", C)
     return pow(C, d, n)
 
 

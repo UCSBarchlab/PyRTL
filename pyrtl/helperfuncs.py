@@ -10,8 +10,8 @@ concat: concatenate multiple wirevectors into one long vector
 get_block: get the block of the arguments, throw error if they are different
 """
 
-import core
-import wire
+from . import core
+from . import wire
 import inspect
 
 _rtl_assert_number = 1
@@ -34,10 +34,10 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
     most operations in an attempt to coerce values into WireVectors (for example,
     operations such as "x+1" where "1" needs to be converted to a Const WireVectors.)
     """
-    import memory
+    from . import memory
     block = core.working_block(block)
 
-    if isinstance(val, (int, basestring)):
+    if isinstance(val, (int, str)):
         # note that this case captures bool as well (as bools are instances of ints)
         return wire.Const(val, bitwidth=bitwidth, block=block)
     elif isinstance(val, memory._MemIndexed):
@@ -119,7 +119,7 @@ def rtl_all(*vectorlist):
         raise core.PyrtlError('rtl_all requires at least 1 argument')
     block = get_block(*vectorlist)
     converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
-    print converted_vectorlist
+    print(converted_vectorlist)
     for v in converted_vectorlist:
         if len(v) != 1:
             raise core.PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
@@ -168,7 +168,7 @@ def mux(select, falsecase, truecase, *rest, **kwargs):
     # copy it out to the
     if kwargs:
         if len(kwargs) != 1 or 'default' not in kwargs:
-            bad_args = [k for k in kwargs.iterkeys() if k != 'default']
+            bad_args = [k for k in kwargs.keys() if k != 'default']
             raise core.PyrtlError('unknown keywords %s applied to mux' % str(bad_args))
         default = kwargs['default']
     else:
@@ -194,7 +194,7 @@ def mux(select, falsecase, truecase, *rest, **kwargs):
     if len(select) == 1:
         result = _mux2(select, ins[0], ins[1])
     else:
-        half = int(len(ins) / 2)
+        half = int(len(ins) // 2)
         result = _mux2(select[-1],
                        mux(select[0:-1], *ins[:half]),
                        mux(select[0:-1], *ins[half:]))
@@ -228,7 +228,7 @@ def get_block(*arglist):
     If any of the arguments come from different blocks, throw an error.
     If none of the arguments are wirevectors, return the working_block.
     """
-    import memory
+    from . import memory
 
     blocks = set()
     for arg in arglist:
@@ -307,13 +307,13 @@ def probe(w, name=None):
         raise core.PyrtlError('Only WireVectors can be probed')
 
     if w.init_call_stack:
-        print '(Probe-%d) Traceback for probed wire, most recent call last' % _probe_number
+        print('(Probe-%d) Traceback for probed wire, most recent call last' % _probe_number)
         for frame in w.init_call_stack[0:-1]:
-            print frame,
-        print
+            print(frame, end=' ')
+        print()
     else:
-        print '(Probe-%d)' % _probe_number,
-        print '    No call info found: use set_debug_mode() to provide more information\n'
+        print('(Probe-%d)' % _probe_number, end=' ')
+        print('    No call info found: use set_debug_mode() to provide more information\n')
 
     if name:
         pname = '(Probe-%d : %s : %s)' % (_probe_number, name, w.name)
@@ -366,7 +366,7 @@ def _check_for_loop(block=None):
         logic_left -= nets_to_remove
 
     if 0 == len(logic_left):
-        print "No Loop Found"
+        print("No Loop Found")
         return None
     return wires_left, logic_left
 
@@ -426,9 +426,9 @@ def find_loop(block=None, print_result=True):
             else:
                 raise core.PyrtlError("Shouldn't get here! Couldn't figure out the loop")
             if print_result:
-                print "Loop found:"
-                print '\n'.join("{}".format(fs.net) for fs in loop_info)
+                print("Loop found:")
+                print('\n'.join("{}".format(fs.net) for fs in loop_info))
                 # print '\n'.join("{} (dest wire: {})".format(fs.net, fs.dst_w) for fs in loop_info)
-                print ""
+                print("")
             return loop_info
     raise core.PyrtlError("Error in detecting loop")

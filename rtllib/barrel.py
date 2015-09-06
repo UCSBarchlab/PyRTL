@@ -22,8 +22,8 @@ def barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0):
     log_length = int(math.log(len(shift_in)-1, 2))  # note the one offset
 
     if len(shift_dist) > log_length:
-        print "Warning: for barrel shifter, the shift distance wirevector " \
-              "has bits that are not used in the barrel shifter"
+        print("Warning: for barrel shifter, the shift distance wirevector " \
+              "has bits that are not used in the barrel shifter")
 
     for i in range(min(len(shift_dist), log_length)):
         shift_amt = pow(2, i)  # stages shift 1,2,4,8,...

@@ -1,9 +1,9 @@
 
 import sys
 import re
-import core
-import wire
-import memory
+from . import core
+from . import wire
+from . import memory
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -75,14 +75,14 @@ class Simulation(object):
         # set constants to their set values
         for w in self.block.wirevector_subset(wire.Const):
             self.value[w] = w.val
-            assert isinstance(w.val, (int, long))  # for now
+            assert isinstance(w.val, int)  # for now
 
         # set memories to their passed values
         if memory_value_map is not None:
-            for (mem, mem_map) in memory_value_map.iteritems():
+            for (mem, mem_map) in memory_value_map.items():
                 if isinstance(self.block, core.PostSynthBlock):
                     mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
-                for (addr, val) in mem_map.iteritems():
+                for (addr, val) in mem_map.items():
                     if addr < 0 or addr >= 2**mem.addrwidth:
                         raise core.PyrtlError('error, address outside of bounds')
                     self.memvalue[(mem.id, addr)] = val
@@ -93,7 +93,7 @@ class Simulation(object):
         for romNet in self.block.logic_subset('m'):
             rom = romNet.op_param[1]
             if isinstance(rom, memory.RomBlock) and rom not in defined_roms:
-                for address in xrange(0, 2**rom.addrwidth):
+                for address in range(0, 2**rom.addrwidth):
                     self.memvalue[(rom.id, address)] = rom._get_read_data(address)
 
         # set all other variables to default value
@@ -122,7 +122,7 @@ class Simulation(object):
                 raise core.PyrtlError(
                     'step provided a value for input for "%s" which is '
                     'not a known input ' % i.name)
-            if not isinstance(provided_inputs[i], (int, long)) or provided_inputs[i] < 0:
+            if not isinstance(provided_inputs[i], int) or provided_inputs[i] < 0:
                 raise core.PyrtlError(
                     'step provided an input "%s" which is not a valid '
                     'positive integer' % provided_inputs[i])
@@ -153,7 +153,7 @@ class Simulation(object):
         defined_set = reg_set | const_set | input_set
         logic_left = self.block.logic.copy()
 
-        for _ in xrange(self.max_iter):
+        for _ in range(self.max_iter):
             logic_left = set(
                 net
                 for net in logic_left
@@ -162,7 +162,7 @@ class Simulation(object):
             if len(logic_left) == 0:
                 break
         else:  # no break
-            import helperfuncs
+            from . import helperfuncs
             helperfuncs.find_loop(self.block)
             raise core.PyrtlInternalError(
                 'error, the set of logic "%s" appears to be waiting for value never produced'
@@ -207,7 +207,7 @@ class Simulation(object):
             result = simple_func[net.op](*argvals)
             self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 'x':
-            select, a, b = (self.value[net.args[i]] for i in xrange(3))
+            select, a, b = (self.value[net.args[i]] for i in range(3))
             if select == 0:
                 result = a
             else:
@@ -284,7 +284,7 @@ class Simulation(object):
         return all(arg in defined_set for arg in net.args)
 
     def _print_values(self):
-        print ' '.join([str(v) for _, v in sorted(self.value.iteritems())])
+        print(' '.join([str(v) for _, v in sorted(self.value.items())]))
 
 
 # ----------------------------------------------------------------
@@ -334,8 +334,8 @@ class FastSimulation(object):
         # set memories to their passed values or default value
         self.context['fastsim_mem'] = {}
         if memory_value_map is not None:
-            for (mem, mem_map) in memory_value_map.iteritems():
-                for addr, value in mem_map.iteritems():
+            for (mem, mem_map) in memory_value_map.items():
+                for addr, value in mem_map.items():
                     self.context['fastsim_mem'][(mem.id, addr)] = value
 
         for net in self.block.logic_subset('m'):
@@ -372,11 +372,11 @@ class FastSimulation(object):
                     self.context['fastsim_mem'][(memid, write_addr)] = write_val
 
         # update inputs
-        for wire, value in provided_inputs.iteritems():
+        for wire, value in provided_inputs.items():
             self.context[self.varname(wire)] = wire.bitmask & value
 
         # propagate through logic
-        exec self.logic_function in self.context
+        exec(self.logic_function, self.context)
 
         if self.tracer is not None:
             self.tracer.add_fast_step(self)
@@ -426,10 +426,10 @@ class FastSimulation(object):
                 result = self.varname(net.dests[0])
                 mask = str(net.dests[0].bitmask)
                 expr = ''
-                for i in xrange(len(net.args)):
+                for i in range(len(net.args)):
                     if expr is not '':
                         expr += ' | '
-                    shiftby = str(sum(len(net.args[j]) for j in xrange(i+1, len(net.args))))
+                    shiftby = str(sum(len(net.args[j]) for j in range(i+1, len(net.args))))
                     expr += '(%s << %s)' % (self.varname(net.args[i]), shiftby)
                 prog += '%s = %s & (%s)\n' % (result, mask, expr)
             elif net.op == 's':
@@ -491,12 +491,12 @@ def wave_trace_render(w, n, prior_val, current_val, symbol_len):
     """
 
     if current_val == 'tick':
-        return unichr(0x258f)
+        return chr(0x258f)
     if prior_val is None:
         prior_val = current_val
     sl = symbol_len-1
-    up, down = unichr(0x2571), unichr(0x2572)
-    x, low, high = unichr(0x2573), unichr(0x005f), unichr(0x203e)
+    up, down = chr(0x2571), chr(0x2572)
+    x, low, high = chr(0x2573), chr(0x005f), chr(0x203e)
     revstart, revstop = '\x1B[7m', '\x1B[0m'
     pretty_map = {
         (0, 0): low + low*sl,
@@ -560,7 +560,7 @@ class SimulationTrace(object):
         if len(self.trace) == 0:
             raise core.PyrtlError('error, length of trace undefined if no signals tracked')
         # return the length of the list of some element in the dictionary (all should be the same)
-        wire, value_list = next(x for x in self.trace.iteritems())
+        wire, value_list = next(x for x in self.trace.items())
         return len(value_list)
 
     def add_step(self, value_map):
@@ -590,32 +590,32 @@ class SimulationTrace(object):
         # dump header info
         # file_timestamp = time.strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", time.gmtime())
         # print >>file, " ".join(["$date", file_timestamp, "$end"])
-        print >>file, " ".join(["$timescale", "1ns", "$end"])
-        print >>file, " ".join(["$scope", "module logic", "$end"])
+        print(" ".join(["$timescale", "1ns", "$end"]), file=file)
+        print(" ".join(["$scope", "module logic", "$end"]), file=file)
 
         # dump variables
         for w in sorted(self.trace, key=_trace_sort_key):
-            print >>file, " ".join(["$var", "wire", str(w.bitwidth), w.name, w.name, "$end"])
-        print >>file, " ".join(["$upscope", "$end"])
-        print >>file, " ".join(["$enddefinitions", "$end"])
-        print >>file, " ".join(["$dumpvars"])
+            print(" ".join(["$var", "wire", str(w.bitwidth), w.name, w.name, "$end"]), file=file)
+        print(" ".join(["$upscope", "$end"]), file=file)
+        print(" ".join(["$enddefinitions", "$end"]), file=file)
+        print(" ".join(["$dumpvars"]), file=file)
         for w in sorted(self.trace, key=_trace_sort_key):
             if w.bitwidth > 1:
-                print >>file, " ".join([str(bin(self.trace[w][0]))[1:], w.name])
+                print(" ".join([str(bin(self.trace[w][0]))[1:], w.name]), file=file)
             else:
-                print >>file, "".join([str(self.trace[w][0]), w.name])
-        print >>file, " ".join(["$end"])
+                print("".join([str(self.trace[w][0]), w.name]), file=file)
+        print(" ".join(["$end"]), file=file)
 
         # dump values
         endtime = max([len(self.trace[w]) for w in self.trace])
-        for timestamp in xrange(endtime):
-            print >>file, "".join(["#", str(timestamp)])
+        for timestamp in range(endtime):
+            print("".join(["#", str(timestamp)]), file=file)
             for w in sorted(self.trace, key=_trace_sort_key):
                 if w.bitwidth > 1:
-                    print >>file, " ".join([str(bin(self.trace[w][timestamp]))[1:], w.name])
+                    print(" ".join([str(bin(self.trace[w][timestamp]))[1:], w.name]), file=file)
                 else:
-                    print >>file, "".join([str(self.trace[w][timestamp]), w.name])
-        print >>file, "".join(["#", str(endtime)])
+                    print("".join([str(self.trace[w][timestamp]), w.name]), file=file)
+        print("".join(["#", str(endtime)]), file=file)
         file.flush()
 
     def render_trace(
@@ -640,7 +640,7 @@ class SimulationTrace(object):
             heading = w.name.rjust(maxnamelen) + ' '
             trace_line = ''
             last_element = None
-            for i in xrange(len(trace)):
+            for i in range(len(trace)):
                 if (i % segment_size == 0) and i > 0:
                     trace_line += segment_delim
                 trace_line += renderer(
@@ -660,17 +660,17 @@ class SimulationTrace(object):
             return num_tick.ljust(symbol_len * segment_size)
 
         maxnamelen = max(len(w.name) for w in self.trace)
-        maxtracelen = max(len(v) for v in self.trace.itervalues())
+        maxtracelen = max(len(v) for v in self.trace.values())
         if segment_size is None:
             segment_size = maxtracelen
         spaces = ' '*(maxnamelen+1)
-        ticks = [tick_segment(n) for n in xrange(0, maxtracelen, segment_size)]
-        print >>file, spaces + segment_delim.join(ticks).encode('utf-8')
+        ticks = [tick_segment(n) for n in range(0, maxtracelen, segment_size)]
+        print(spaces + segment_delim.join(ticks).encode('utf-8'), file=file)
 
         # now all the traces
         for w in trace_list:
             if extra_line:
-                print >>file
-            print >>file, formatted_trace_line(w, self.trace[w]).encode('utf-8')
+                print(file=file)
+            print(formatted_trace_line(w, self.trace[w]).encode('utf-8'), file=file)
         if extra_line:
-            print >>file
+            print(file=file)

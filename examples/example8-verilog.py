@@ -73,7 +73,7 @@ io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output)
 sim_trace = pyrtl.SimulationTrace(wirevector_subset=io_vectors)
 # now simulate the logic with some random inputs
 sim = pyrtl.Simulation(tracer=sim_trace)
-for i in xrange(15):
+for i in range(15):
     # here we actually generate random booleans for the inputs
     sim.step({
         x: random.choice([0, 1]),
@@ -105,19 +105,19 @@ counter_output <<= counter
 # print it to a string for demo purposes, most likely you will want to pass a normal
 # open file).
 
-print "--- PyRTL Representation ---"
-print pyrtl.working_block()
-print
+print("--- PyRTL Representation ---")
+print(pyrtl.working_block())
+print()
 
-print "--- Verilog for the Counter ---"
+print("--- Verilog for the Counter ---")
 with io.BytesIO() as vfile:
     pyrtl.output_to_verilog(vfile)
-    print vfile.getvalue()
+    print(vfile.getvalue())
 
-print "--- Simulation Results ---"
+print("--- Simulation Results ---")
 sim_trace = pyrtl.SimulationTrace([counter_output, zero])
 sim = pyrtl.Simulation(tracer=sim_trace)
-for cycle in xrange(15):
+for cycle in range(15):
     sim.step({zero: random.choice([0, 0, 0, 1])})
 sim_trace.render_trace()
 
@@ -126,10 +126,10 @@ sim_trace.render_trace()
 # The function output_verilog_testbench grabs the inputs used in the simulation trace
 # and sets them up in a standar verilog testbench.
 
-print "--- Verilog for the TestBench ---"
+print("--- Verilog for the TestBench ---")
 with io.BytesIO() as tbfile:
     pyrtl.output_verilog_testbench(tbfile, sim_trace)
-    print tbfile.getvalue()
+    print(tbfile.getvalue())
 
 
 # Not let's talk about transformations of the hardware block.  Many times when you are
@@ -140,10 +140,10 @@ with io.BytesIO() as tbfile:
 # basic optimizations like constant propgation and dead wire elimination as well.  By
 # printing it out to verilog we can see exactly how the design changed.
 
-print "--- Optimized Single-bit Verilog for the Counter ---"
+print("--- Optimized Single-bit Verilog for the Counter ---")
 pyrtl.synthesize()
 pyrtl.optimize()
 
 with io.BytesIO() as vfile:
     pyrtl.output_to_verilog(vfile)
-    print vfile.getvalue()
+    print(vfile.getvalue())
