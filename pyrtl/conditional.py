@@ -1,10 +1,39 @@
-"""
-conditional contains the class for ConditionUpdate.
+""" Conditional assignement of registers and wirevectors based on a predicate.
+
+The management of selected assignments is expected to happen through
+the "with" blocks which will ensure that the region of execution for
+which the condition should apply is well defined.  It is easiest
+to see with an example:
+
+>   r1 = Register()
+>   r2 = Register()
+>   w3 = WireVector()
+>   with conditional_assignment:
+>       with a:
+>           r1.next |= i  # set when a is true
+>           with b:
+>               r2.next |= j  # set when a and b are true
+>       with c:
+>           r1.next |= k  # set when a is false and c is true
+>           r2.next |= k
+>       with otherwise:
+>           r2.next |= l  # a is false and c is false
+>
+>       with d:
+>           w3.next |= m  # d is true (assignments must be independent)
+
+This is equivelent to:
+r1.next <<= cond(a, i, cond(c, k, default))
+r2.next <<= cond(a, cond(b, j, default), cond(c, k, l))
+w3 <<= cond(d, m, 0)
+(where cond(p, a, b) = mux(p, truecase=a, falsecase=b)
+
+Access should be done through instances "conditional_update" and "otherwise",
+as described above, not through the classes themselves.
 """
 
 import core
 import wire
-
 
 # -----------------------------------------------------------------------
 #    __   __        __    ___    __                  __
@@ -12,164 +41,143 @@ import wire
 #   \__, \__/ | \| |__/ |  |  | \__/ | \| /~~\ |___ .__/
 #
 
+
+def currently_under_condition():
+    """Returns True if execution is currently in the context of a _ConditionalAssignment."""
+    return _depth > 0
+
+
 class ConditionalUpdate(object):
-    """ Manages the conditional update of registers based on a predicate.
+    def __init__(self, *x):
+        raise core.PyrtlError('ConditionalUpdate removed, please use "conditional_assignment"')
 
-    The management of conditional updates is expected to happen through
-    the "with" blocks which will ensure that the region of execution for
-    which the condition should apply is well defined.  It is easiest
-    to see with an example:
 
-    >   r1 = Register()
-    >   r2 = Register()
-    >   with ConditionalUpdate() as condition:
-    >       with condition(a):
-    >           r.next |= x  # set when a is true
-    >           with condition(b):
-    >               r2.next |= y  # set when a and b are true
-    >       with condition(c):
-    >           r.next |= z  # set when a is false and c is true
-    >           r2.next |= z
-    >       with condition.fallthrough:
-    >           r.next |= w  # a is false and c is false
+# -----------------------------------------------------------------------
+# conditional_assignment and otherwise, both visible in the pyrtl module, are defineded as
+# instances (hopefully the only and unchanging instances) of the following two types.
 
-    In addition to this longer form, there is a shortcut version for
-    dealing with just a single condition (there is no fallthrough or nesting
-    of conditions possible in this shorter form.
-
-    >   r = Register()
-    >   with ConditionalUpdate(a == b):
-    >       r.next |= x  # set when a is true
-    """
-
-    depth = 0
-    current = None
-
-    def __init__(self, shortcut_condition=None):
-        if self.depth != 0:
-            raise core.PyrtlError('error, no nesting ConditionalUpdates')
-        # predicate_on_deck is used to shuffle the "call" on condition, which
-        # is where the predicate is specified, to the actual "enter" that happens
-        # as we enter the context.  A "none" is used if we are specifying a larger
-        # context that will be home to many smaller subcontexts.
-        self.predicate_on_deck = shortcut_condition
-        self.conditions_list_stack = [[]]
-        self.register_predicate_map = {}  # map reg -> [(pred, rhs), ...]
-        self.wirevector_predicate_map = {}  # map wirevector -> [(pred, rhs), ...]
-        self.memblock_write_predicate_map = {}  # map mem -> [(pred, addr, data, enable), ...]
-
+class _ConditionalAssignment(object):
+    """ helper type of global "conditional_assignment". """
     def __enter__(self):
-        # if we are entering a context to contain multiple conditions
-        if self.predicate_on_deck is None:
-            if self.depth != 0:
-                raise core.PyrtlError('error, you did something wrong with conditionals')
-            retval = self  # return self to "condtional"
-        # else we are entering a specific condition
-        else:
-            self.conditions_list_stack[-1].append(self.predicate_on_deck)
-            # push a new empty list on the stack for sub-conditions
-            self.conditions_list_stack.append([])
-            retval = None  # no reference to the returned "with ... as ..." object
+        global _depth
+        _check_no_nesting()
+        _depth = 1
 
-        ConditionalUpdate.current = self
-        ConditionalUpdate.depth += 1
-        self.predicate_on_deck = None
-        return retval
+    def __exit__(self, *exc_info):
+        try:
+            _finalize()
+        finally:
+            # even if the above finalization throws an error we need to
+            # return reset the state to prevent errors from bleeding over
+            _reset_conditional_state()  # sets _depth back to 0
 
-    def __exit__(self, etype, evalue, etraceback):
-        self.conditions_list_stack.pop()
-        ConditionalUpdate.depth -= 1
-        if self.depth == 0:
-            self._finalize_wirevectors()
-            self._finalize_registers()
-            self._finalize_memblocks()
-            ConditionalUpdate.current = None
-        if self.depth < 0:
-            raise core.PyrtlInternalError()
 
-    def __call__(self, predicate):
-        self.predicate_on_deck = predicate
-        return self
+class _Otherwise(object):
+    """ helper type of global "otherwise". """
+    def __enter__(self):
+        _push_condition(otherwise)
 
-    @property
-    def fallthrough(self):
-        """Property used to enter the context of the fallthrough case. This is the case
-        where all the other cases evaluated to false"""
-        self.predicate_on_deck = True
-        return self
+    def __exit__(self, *exc_info):
+        _pop_condition()
 
-    @property
-    def default(self):
-        """Property used to specify values that are not assigned a value by a matched up case
-        (Note that only one condition (other than this) gets matched up with any given
-        wirevector) """
 
-    @classmethod
-    def currently_under_condition(cls):
-        """Returns True if execution is currently in the context of a ConditionalUpdate."""
-        return cls.depth > 0
+def _reset_conditional_state():
+    """Set or reset all the module state required for conditionals."""
+    global _conditions_list_stack
+    global _conflicts_map
+    global _predicate_map
+    global _depth
+    _depth = 0
+    _conditions_list_stack = [[]]  # stack of lists of current conditions
+    # _predicate_map: map wirevector or mem -> [(final_pred, rhs), ...]
+    _predicate_map = {}
+    # _conflicts_map: map wirevector or mem -> [ set([(pred,bool), (pred,bool)]), set([(pred,bool)..
+    # * each element maps to a list of sets of tuples of (predicate id, bool)
+    # * each time a value is written (lhs) we add the predicate set to the list
+    # * each new write happens we have to check that the new predicate has at least one negated
+    #   term with the value we are now trying to write.  Otherwise it is an error.
+    _conflicts_map = {}
 
-    @classmethod
-    def _build_wirevector(cls, wirevector, rhs):
-        """Stores the wire assignment details until finalize is called."""
-        if cls.depth < 1:
-            raise core.PyrtlError('error, conditional assignment "|=" only valid under a condition')
-        p = cls.current._current_select()
-        # if map entry not there, set to [], then append the tuple (p, rhs)
-        cls.current.wirevector_predicate_map.setdefault(wirevector, []).append((p, rhs))
 
-    def _finalize_wirevectors(self):
-        """Build the required muxes and call back to WireVector to finalize the wirevector build."""
-        from helperfuncs import mux
-        for wirevector in self.wirevector_predicate_map:
-            result = wire.Const(0)  # default value
-            wirevector_predlist = self.wirevector_predicate_map[wirevector]
-            for p, rhs in wirevector_predlist:
-                result = mux(p, truecase=rhs, falsecase=result)
-            wirevector._build_wirevector(result)
+_reset_conditional_state()
+conditional_assignment = _ConditionalAssignment()
+otherwise = _Otherwise()
 
-    @classmethod
-    def _build_register(cls, reg, rhs):
-        """Stores the register details until finalize is called."""
-        if cls.depth < 1:
-            raise core.PyrtlError('error, conditional assignment "|=" only valid under a condition')
-        p = cls.current._current_select()
-        # if map entry not there, set to [], then append the tuple (p, rhs)
-        cls.current.register_predicate_map.setdefault(reg, []).append((p, rhs))
 
-    def _finalize_registers(self):
-        """Build the required muxes and call back to Register to finalize the register build."""
-        from helperfuncs import mux
-        for reg in self.register_predicate_map:
-            result = reg
-            # TODO: right now this is totally not optimzied, should use muxes
-            # in conjuction with predicates to encode efficiently.
-            regpredlist = self.register_predicate_map[reg]
-            for p, rhs in regpredlist:
-                result = mux(p, truecase=rhs, falsecase=result)
-            reg._build_register(result)
+# -----------------------------------------------------------------------
+# The following functions should not be PyRTL programmer visible, but are called in other
+# places in the pyrtl module.
 
-    @classmethod
-    def _build_read_port(cls, mem, addr):
-        # TODO: reduce number of ports through collapsing reads
-        return mem._build_read_port(addr)
+def _push_condition(predicate):
+    """As we enter new conditions, this pushes them on the predicate stack."""
+    global _depth
+    _check_under_condition()
+    _depth += 1
+    _conditions_list_stack[-1].append(predicate)
+    _conditions_list_stack.append([])
 
-    @classmethod
-    def _build_write_port(cls, mem, addr, data, enable):
-        """Stores the write-port details until finalize is called."""
-        if cls.depth == 0:
-            raise core.PyrtlError('attempting to use conditional assign "|="'
-                                  ' while not in a ConditionalUpdate context')
-        p = cls.current._current_select()
-        # if map entry not there, set to [], then append the tuple (p, ...)
-        cls.current.memblock_write_predicate_map.setdefault(mem, []).append((p, addr, data, enable))
 
-    def _finalize_memblocks(self):
-        """Build the required muxes and call back to MemBlock to finalize the write port build."""
-        from helperfuncs import mux
-        for mem in self.memblock_write_predicate_map:
+def _pop_condition():
+    """As we exit conditions, this pops them off the stack."""
+    global _depth
+    _check_under_condition()
+    _conditions_list_stack.pop()
+    _depth -= 1
+
+
+def _build(lhs, rhs):
+    """Stores the wire assignment details until finalize is called."""
+    _check_under_condition()
+    final_predicate, pred_set = _current_select()
+    _check_and_add_pred_set(lhs, pred_set)
+    _predicate_map.setdefault(lhs, []).append((final_predicate, rhs))
+
+
+def _build_read_port(mem, addr):
+    # TODO: reduce number of ports through collapsing reads
+    return mem._build_read_port(addr)
+
+
+# -----------------------------------------------------------------------
+# The following helper functions are used only internally
+
+def _check_no_nesting():
+    if _depth != 0:
+        raise core.PyrtlError('no nesting of conditional assignments allowed')
+
+
+def _check_under_condition():
+    if not currently_under_condition():
+        raise core.PyrtlError('conditional assignment "|=" only valid under a condition')
+
+
+def _check_and_add_pred_set(lhs, pred_set):
+    for test_set in _conflicts_map.setdefault(lhs, []):
+        if _pred_sets_are_in_conflict(pred_set, test_set):
+            raise core.PyrtlError('conflicting conditions for %s' % lhs)
+    _conflicts_map[lhs].append(pred_set)
+
+
+def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
+    """ Find conflict in sets, return conflict if found, else None. """
+    # pred_sets conflict if we cannot find one shared predicate that is "negated" in one
+    # and "non-negated" in the other
+    for pred_a, bool_a in pred_set_a:
+        for pred_b, bool_b in pred_set_b:
+            if pred_a is pred_b and bool_a != bool_b:
+                return False
+    return True
+
+
+def _finalize():
+    """Build the required muxes and call back to WireVector to finalize the wirevector build."""
+    import memory
+    from helperfuncs import mux
+    for lhs in _predicate_map:
+        # handle memory write ports
+        if isinstance(lhs, memory.MemBlock):
             is_first = True
-            for p, addr, data, enable in self.memblock_write_predicate_map[mem]:
+            for p, (addr, data, enable) in _predicate_map[lhs]:
                 if is_first:
                     combined_enable = mux(p, truecase=enable, falsecase=wire.Const(0))
                     combined_addr = addr
@@ -179,30 +187,97 @@ class ConditionalUpdate(object):
                     combined_enable = mux(p, truecase=enable, falsecase=combined_enable)
                     combined_addr = mux(p, truecase=addr, falsecase=combined_addr)
                     combined_data = mux(p, truecase=data, falsecase=combined_data)
-            mem._build_write_port(combined_addr, combined_data, combined_enable)
+            lhs._build(combined_addr, combined_data, combined_enable)
 
-    def _current_select(self):
-        """Function to calculate the current "predicate" in the current context."""
-        select = None
+        # handle wirevector and register assignments
+        else:
+            if isinstance(lhs, wire.Register):
+                result = lhs  # default for registers is "self"
+            elif isinstance(lhs, wire.WireVector):
+                result = 0  # default for wire is "0"
+            else:
+                raise core.PyrtlInternalError('unknown assignment in finalize')
+            predlist = _predicate_map[lhs]
+            for p, rhs in predlist:
+                result = mux(p, truecase=rhs, falsecase=result)
+            lhs._build(result)
 
-        # helper to create the conjuction of predicates
-        def and_with_possible_none(a, b):
-            assert(a is not None or b is not None)
-            if a is None:
-                return b
-            if b is None:
-                return a
-            return a & b
 
-        # for all conditions except the current children (which should be [])
-        for predlist in self.conditions_list_stack[:-1]:
-            # negate all of the predicates before the current one
-            for predicate in predlist[:-1]:
-                assert(predicate is not None)
-                select = and_with_possible_none(select, ~predicate)
-            # include the predicate for the current one (not negated)
-            select = and_with_possible_none(select, predlist[-1])
+def _current_select():
+    """ Function to calculate the current "predicate" in the current context.
 
-        if select is None:
-            raise core.PyrtlError('error, update inside ConditionalUpdate not covered by condition')
-        return select
+    Returns a tuple of information: (predicate, pred_set).
+    The value pred_set is a set([ (predicate, bool), ... ]) as described in
+    the _reset_conditional_state
+    """
+
+    # helper to create the conjuction of predicates
+    def and_with_possible_none(a, b):
+        assert(a is not None or b is not None)
+        if a is None:
+            return b
+        if b is None:
+            return a
+        return a & b
+
+    def between_otherwise_and_current(predlist):
+        lastother = None
+        for i, p in enumerate(predlist[:-1]):
+            if p is otherwise:
+                lastother = i
+        if lastother is None:
+            return predlist[:-1]
+        else:
+            return predlist[lastother+1:-1]
+
+    select = None
+    pred_set = set()
+
+    # for all conditions except the current children (which should be [])
+    for predlist in _conditions_list_stack[:-1]:
+        # negate all of the predicates between "otherwise" and the current one
+        for predicate in between_otherwise_and_current(predlist):
+            select = and_with_possible_none(select, ~predicate)
+            pred_set.add((predicate, True))
+        # include the predicate for the current one (not negated)
+        if predlist[-1] is not otherwise:
+            predicate = predlist[-1]
+            select = and_with_possible_none(select, predicate)
+            pred_set.add((predicate, False))
+
+    if select is None:
+        raise core.PyrtlError('problem with conditional assignment')
+
+    return select, pred_set
+
+# Some examples that were helpful in the design and testing of conditional
+
+#  1  with a:  # a
+#  2  with b:  # not(a) and b
+#  3    with x:  # not(a) and b and x
+#  4    with otherwise:  # not(a) and b and not(x)
+#  5    with y:  # not(a) and b and y;  check(3,4)
+#  6        with i:  # not(a) and b and y and i;  check(3,4)
+#  7        with j:  # not(a) and b and y and not(i) and j;  check(3,4)
+#  8        with otherwise:  # not(a) and b and y and not(i) and not(j):  check(3,4)
+#  9        with k:  # not(a) and b and y and k;  check(3,4,6,7,8)
+# 10        with m:  # not(a) and b and y and not(k) and m;  check(3,4,6,7,8)
+# 11  with otherwise:  #not(a) and not(b)
+# 12  with c:  #c;  check(1,2,3,4,5,6,7,8,9,10,11)
+
+#  0  with a:  # a
+#  1  with otherwise:  # a;
+#  2  with b:  # not(a) and b;  check(0,1)
+#  3    with x:  # not(a) and b and x;  check(0,1)
+#  4    with otherwise:  # not(a) and b and not(x);  check(0,1)
+#  5    with y:  # not(a) and b and y;  check(0,1,3,4)
+#  6        with i:  # not(a) and b and y and i;  check(0,1,3,4)
+#  7        with j:  # not(a) and b and y and not(i) and j;  check(0,1,3,4)
+#  8        with otherwise:  # not(a) and b and y and not(i) and not(j):  check(0,1,3,4)
+#  9        with k:  # not(a) and b and y and k;  check(0,1,3,4,6,7,8)
+# 10        with m:  # not(a) and b and y and not(k) and m;  check(0,1,3,4,6,7,8)
+#       with z: check(0,1,3,4)
+#       with otherwise: check(0,1,3,4)
+#       with g: check(0,1,3,4,5,6,7,8,9,10)
+# 11  with otherwise:  #not(a) and not(b);  check(0,1)
+# 12  with c:  #c;  check(0,1,2,3,4,5,6,7,8,9,10,11)

@@ -1,5 +1,6 @@
 
 # core rtl constructs
+from core import LogicNet
 from core import Block
 from core import PostSynthBlock
 from core import PyrtlError
@@ -36,7 +37,10 @@ from memory import MemBlock
 from memory import RomBlock
 
 # conditional updates
-from conditional import ConditionalUpdate
+from conditional import conditional_assignment
+from conditional import otherwise
+from conditional import currently_under_condition
+from conditional import ConditionalUpdate  # eliminated, now just throws useful error
 
 # block simulation support
 from simulation import Simulation

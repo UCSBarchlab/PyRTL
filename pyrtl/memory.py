@@ -183,11 +183,12 @@ class MemBlock(_MemReadBase):
             raise core.PyrtlError('error, enable signal not exactly 1 bit')
 
         if is_conditional:
-            conditional.ConditionalUpdate._build_write_port(self, addr, data, enable)
+            conditional._build(self, (addr, data, enable))
         else:
-            self._build_write_port(addr, data, enable)
+            self._build(addr, data, enable)
 
-    def _build_write_port(self, addr, data, enable):
+    def _build(self, addr, data, enable):
+        """ Builds a write port. """
         writeport_net = core.LogicNet(
             op='@',
             op_param=(self.id, self),

@@ -69,9 +69,9 @@ class WireVector(object):
     def __str__(self):
         return ''.join([self.name, '/', str(self.bitwidth), self._code])
 
-    def _build_wirevector(self, other):
+    def _build(self, other):
         # Actually create and add wirevector to logic block
-        # This might be called immediately from ilshift, or delayed from ConditionalUpdate
+        # This might be called immediately from ilshift, or delayed from conditional assignment
         net = core.LogicNet(
             op='w',
             op_param=None,
@@ -89,7 +89,7 @@ class WireVector(object):
     def __ilshift__(self, other):
         """ Wire assignment operator (asign other to self). """
         other = self._prepare_for_assignment(other)
-        self._build_wirevector(other)
+        self._build(other)
         return self
 
     def __ior__(self, other):
@@ -98,7 +98,7 @@ class WireVector(object):
             raise core.PyrtlError('Conditional assignment only defined on '
                                   'WireVectors with pre-defined bitwidths')
         other = self._prepare_for_assignment(other)
-        conditional.ConditionalUpdate._build_wirevector(self, other)
+        conditional._build(self, other)
         return self
 
     def logicop(self, other, op):
@@ -132,7 +132,10 @@ class WireVector(object):
         # python provides now way to overload these logical operations, and thus they
         # are very much not likely to be doing the thing that the programmer would be
         # expecting.
-        raise core.PyrtlError('error, attempt to covert wirevector to compile-time boolean')
+        raise core.PyrtlError('cannot covert wirevector to compile-time boolean.  This error '
+                              'often happens when you attempt to use WireVectors with "==" or '
+                              'something that calls "__eq__", such as when you test if a '
+                              'wirevector is "in" something')
 
     __nonzero__ = __bool__  # for Python 2 and 3 compatibility
 
@@ -247,11 +250,11 @@ class WireVector(object):
             return self.bitwidth
 
     def __enter__(self):
-        raise core.PyrtlError('error, WireVector cannot be used directly as a context.  '
-                              '(you might be missing a ConditionalUpdate in your "with" block?)')
+        """ use wires as contexts for conditional assignments. """
+        conditional._push_condition(self)
 
-    def __exit__(self, type, value, tb):
-        pass  # needed to allow the error raised in __enter__ to propagate up to the user
+    def __exit__(self, *execinfo):
+        conditional._pop_condition()
 
     # more functions for wires
     def nand(self, other):
@@ -487,13 +490,13 @@ class Register(WireVector):
         elif self.reg_in is not None:
             raise core.PyrtlError('error, .next value should be set once and only once')
         elif nextsetter.is_conditional:
-            conditional.ConditionalUpdate._build_register(self, nextsetter.rhs)
+            conditional._build(self, nextsetter.rhs)
         else:
-            self._build_register(nextsetter.rhs)
+            self._build(nextsetter.rhs)
 
-    def _build_register(self, next):
+    def _build(self, next):
         # this actually builds the register which might be from directly setting
-        # the property "next" or delayed when there is a ConditionalUpdate
+        # the property "next" or delayed when there is a conditional assignement
         self.reg_in = next
         net = core.LogicNet('r', None, args=(self.reg_in,), dests=(self,))
         self.block.add_net(net)

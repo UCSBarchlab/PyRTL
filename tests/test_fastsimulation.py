@@ -329,7 +329,7 @@ class TestRTLMemBlockFastSimulation(unittest.TestCase):
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
 
-class TestRTLRomBlockSimulation(unittest.TestCase):
+class TestRTLRomBlockFastSimulation(unittest.TestCase):
 
     def tearDown(self):
         pyrtl.reset_working_block()
