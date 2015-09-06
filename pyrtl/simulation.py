@@ -79,10 +79,10 @@ class Simulation(object):
 
         # set memories to their passed values
         if memory_value_map is not None:
-            for (mem, mem_map) in memory_value_map.items():
+            for (mem, mem_map) in memory_value_map.iteritems():
                 if isinstance(self.block, core.PostSynthBlock):
                     mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
-                for (addr, val) in mem_map.items():
+                for (addr, val) in mem_map.iteritems():
                     if addr < 0 or addr >= 2**mem.addrwidth:
                         raise core.PyrtlError('error, address outside of bounds')
                     self.memvalue[(mem.id, addr)] = val
@@ -93,7 +93,7 @@ class Simulation(object):
         for romNet in self.block.logic_subset('m'):
             rom = romNet.op_param[1]
             if isinstance(rom, memory.RomBlock) and rom not in defined_roms:
-                for address in range(0, 2**rom.addrwidth):
+                for address in xrange(0, 2**rom.addrwidth):
                     self.memvalue[(rom.id, address)] = rom._get_read_data(address)
 
         # set all other variables to default value
@@ -207,7 +207,7 @@ class Simulation(object):
             result = simple_func[net.op](*argvals)
             self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 'x':
-            select, a, b = (self.value[net.args[i]] for i in range(3))
+            select, a, b = (self.value[net.args[i]] for i in xrange(3))
             if select == 0:
                 result = a
             else:
@@ -334,8 +334,8 @@ class FastSimulation(object):
         # set memories to their passed values or default value
         self.context['fastsim_mem'] = {}
         if memory_value_map is not None:
-            for (mem, mem_map) in memory_value_map.items():
-                for addr, value in mem_map.items():
+            for (mem, mem_map) in memory_value_map.iteritems():
+                for addr, value in mem_map.iteritems():
                     self.context['fastsim_mem'][(mem.id, addr)] = value
 
         for net in self.block.logic_subset('m'):
@@ -372,7 +372,7 @@ class FastSimulation(object):
                     self.context['fastsim_mem'][(memid, write_addr)] = write_val
 
         # update inputs
-        for wire, value in provided_inputs.items():
+        for wire, value in provided_inputs.iteritems():
             self.context[self.varname(wire)] = wire.bitmask & value
 
         # propagate through logic
@@ -426,10 +426,10 @@ class FastSimulation(object):
                 result = self.varname(net.dests[0])
                 mask = str(net.dests[0].bitmask)
                 expr = ''
-                for i in range(len(net.args)):
+                for i in xrange(len(net.args)):
                     if expr is not '':
                         expr += ' | '
-                    shiftby = str(sum(len(net.args[j]) for j in range(i+1, len(net.args))))
+                    shiftby = str(sum(len(net.args[j]) for j in xrange(i+1, len(net.args))))
                     expr += '(%s << %s)' % (self.varname(net.args[i]), shiftby)
                 prog += '%s = %s & (%s)\n' % (result, mask, expr)
             elif net.op == 's':
@@ -560,7 +560,7 @@ class SimulationTrace(object):
         if len(self.trace) == 0:
             raise core.PyrtlError('error, length of trace undefined if no signals tracked')
         # return the length of the list of some element in the dictionary (all should be the same)
-        wire, value_list = next(x for x in self.trace.items())
+        wire, value_list = next(x for x in self.trace.iteritems())
         return len(value_list)
 
     def add_step(self, value_map):
@@ -608,7 +608,7 @@ class SimulationTrace(object):
 
         # dump values
         endtime = max([len(self.trace[w]) for w in self.trace])
-        for timestamp in range(endtime):
+        for timestamp in xrange(endtime):
             print >>file, "".join(["#", str(timestamp)])
             for w in sorted(self.trace, key=_trace_sort_key):
                 if w.bitwidth > 1:
@@ -660,7 +660,7 @@ class SimulationTrace(object):
             return num_tick.ljust(symbol_len * segment_size)
 
         maxnamelen = max(len(w.name) for w in self.trace)
-        maxtracelen = max(len(v) for v in self.trace.values())
+        maxtracelen = max(len(v) for v in self.trace.itervalues())
         if segment_size is None:
             segment_size = maxtracelen
         spaces = ' '*(maxnamelen+1)

@@ -66,8 +66,8 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
                 self.op_param == other.op_param and
                 len(self.args) == len(other.args) and
                 len(self.dests) == len(other.dests) and
-                all(self.args[i] is other.args[i] for i in range(len(self.args))) and
-                all(self.dests[i] is other.dests[i] for i in range(len(self.dests))))
+                all(self.args[i] is other.args[i] for i in xrange(len(self.args))) and
+                all(self.dests[i] is other.dests[i] for i in xrange(len(self.dests))))
 
     def __ne__(self, other):
         return not self.__eq__(other)

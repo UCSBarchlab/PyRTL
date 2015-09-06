@@ -111,7 +111,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
                 block.add_wirevector(wire.Input(bitwidth=1, name=input_name))
             else:
                 wire_in = wire.Input(bitwidth=bitwidth, name=input_name, block=block)
-                for i in range(bitwidth):
+                for i in xrange(bitwidth):
                     bit_name = input_name + '[' + str(i) + ']'
                     bit_wire = wire.WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_wire <<= wire_in[i]
@@ -126,7 +126,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
             else:
                 wire_out = wire.Output(bitwidth=bitwidth, name=output_name, block=block)
                 bit_list = []
-                for i in range(bitwidth):
+                for i in xrange(bitwidth):
                     bit_name = output_name + '[' + str(i) + ']'
                     bit_wire = wire.WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_list.append(bit_wire)
@@ -275,7 +275,7 @@ def output_to_trivialgraph(file, block=None):
             add_edge(net, dest)
 
     # print the actual output to the file
-    for (id, label) in nodes.values():
+    for (id, label) in nodes.itervalues():
         print >> file, id, label
     print >> file, '#'
     for (frm, to) in edges:
@@ -386,7 +386,7 @@ def _to_verilog_header(file, block):
     mems_with_initials = [w for w in memories if hasattr(w.op_param[1], 'initialdata')]
     for w in mems_with_initials:
         print >> file, '    initial begin'
-        for i in range(2**len(w.args[0])):
+        for i in xrange(2**len(w.args[0])):
             print >> file, "        mem_%s[%d]=%d'x%x" % (
                 w.op_param[0], i, len(w), w.op_param[1]._get_read_data(i))
         print >> file, '    end'
@@ -488,7 +488,7 @@ def output_verilog_testbench(file, simulation_trace=None, block=None):
     print >> file, '        $dumpvars;\n'
     print >> file, '        clk = 0;'
 
-    for i in range(len(simulation_trace)):
+    for i in xrange(len(simulation_trace)):
         for w in inputs:
             print >> file, '        {:s} = {:s}{:d};'.format(
                 w.name,
@@ -557,7 +557,7 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
 
     # convenience function for alias table
     def alias(name):
-        if name in alias_table.keys():
+        if name in alias_table.iterkeys():
             return alias_table[name]
         return name
 

@@ -92,7 +92,7 @@ memvals = {mem1: mem1_init, mem2: mem2_init}
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=memvals)
 for cycle in range(len(simvals[we])):
-    sim.step({k: int(v[cycle]) for k, v in simvals.items()})
+    sim.step({k: int(v[cycle]) for k, v in simvals.iteritems()})
 sim_trace.render_trace()
 
 # cleanup in preparation for the rom example
@@ -164,5 +164,5 @@ simvals = {
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
 for cycle in range(len(simvals[rom_add_1])):
-    sim.step({k: v[cycle] for k, v in simvals.items()})
+    sim.step({k: v[cycle] for k, v in simvals.iteritems()})
 sim_trace.render_trace()

@@ -333,7 +333,7 @@ def _constant_prop_pass(block):
                 other_wire = arg1
 
             outputs = [two_var_ops[net_checking.op](const_wire.val, other_val)
-                       for other_val in range(2)]
+                       for other_val in xrange(2)]
 
             if outputs[0] == outputs[1]:
                 replace_net_with_const(outputs[0])
@@ -489,7 +489,7 @@ def synthesize(update_working_block=True, block=None):
     # from the original wires and store them in the wirevector_map
     # for reference.
     for wirevector in block_in.wirevector_subset():
-        for i in range(len(wirevector)):
+        for i in xrange(len(wirevector)):
             new_name = '_'.join(['synth', wirevector.name, str(i), str(uid)])
             uid += 1
             if isinstance(wirevector, wire.Const):
@@ -505,13 +505,14 @@ def synthesize(update_working_block=True, block=None):
     for wirevector in block_in.wirevector_subset(wire.Input):
         input_vector = wire.Input(name=wirevector.name, bitwidth=len(wirevector), block=block_out)
         io_map[wirevector] = input_vector
-        for i in range(len(wirevector)):
+        for i in xrange(len(wirevector)):
             wirevector_map[(wirevector, i)] <<= input_vector[i]
     for wirevector in block_in.wirevector_subset(wire.Output):
         output_vector = wire.Output(name=wirevector.name, bitwidth=len(wirevector), block=block_out)
         io_map[wirevector] = output_vector
         # the "reversed" is needed because most significant bit comes first in concat
-        output_bits = [wirevector_map[(wirevector, i)] for i in reversed(range(len(output_vector)))]
+        output_bits = [wirevector_map[(wirevector, i)]
+                       for i in reversed(xrange(len(output_vector)))]
         output_vector <<= helperfuncs.concat(*output_bits)
 
     # Now that we have all the wires built and mapped, walk all the blocks
@@ -533,8 +534,8 @@ def _decompose(net, wv_map, mems, block_out):
         return wv_map[(net.args[x], i)]
 
     def destlen():
-        # return the length of the destination in bits
-        return range(len(net.dests[0]))
+        # return iterator over length of the destination in bits
+        return xrange(len(net.dests[0]))
 
     def assign_dest(i, v):
         # assign v to the wiremap for dest[0], wire i
@@ -561,7 +562,7 @@ def _decompose(net, wv_map, mems, block_out):
     elif net.op == '=':
         # The == operator is implemented with a nor of xors.
         temp_result = arg(0, 0) ^ arg(1, 0)
-        for i in range(1, len(net.args[0])):
+        for i in xrange(1, len(net.args[0])):
             temp_result = temp_result | (arg(0, i) ^ arg(1, i))
         assign_dest(0, ~temp_result)
     elif net.op == 'x':
@@ -576,7 +577,7 @@ def _decompose(net, wv_map, mems, block_out):
         arg_wirelist = []
         # generate list of wires for vectors being concatenated
         for arg_vector in net.args:
-            arg_vector_as_list = [wv_map[(arg_vector, i)] for i in range(len(arg_vector))]
+            arg_vector_as_list = [wv_map[(arg_vector, i)] for i in xrange(len(arg_vector))]
             arg_wirelist = arg_vector_as_list + arg_wirelist
         for i in destlen():
             assign_dest(i, arg_wirelist[i])
@@ -587,8 +588,8 @@ def _decompose(net, wv_map, mems, block_out):
             new_net = core.LogicNet('r', None, args=args, dests=dests)
             block_out.add_net(new_net)
     elif net.op == '+':
-        arg0list = [arg(0, i) for i in range(len(net.args[0]))]
-        arg1list = [arg(1, i) for i in range(len(net.args[1]))]
+        arg0list = [arg(0, i) for i in xrange(len(net.args[0]))]
+        arg1list = [arg(1, i) for i in xrange(len(net.args[1]))]
         cin = wire.Const(0, bitwidth=1, block=block_out)
         sumbits, cout = _generate_add(arg0list, arg1list, cin)
         destlist = sumbits + [cout]
@@ -599,13 +600,13 @@ def _decompose(net, wv_map, mems, block_out):
         # A>B = A3 & ~B3 | A2 & ~B2 & x3 | A1 & ~B1 & x3 & x2 | A0 & ~B0 & x3 & x2 & x1
         bitlen = len(net.args[0])
         # Compute the xi above, but don't compute x0 (put None in it's place)
-        x = [~(arg(0, i) ^ arg(1, i)) for i in range(1, bitlen)]
+        x = [~(arg(0, i) ^ arg(1, i)) for i in xrange(1, bitlen)]
         x.insert(0, None)
         # OR over all the terms
         result = None
-        for i in range(0, bitlen):
+        for i in xrange(0, bitlen):
             term = arg(0, i) & ~arg(1, i)
-            for j in range(i+1, bitlen):
+            for j in xrange(i+1, bitlen):
                 term = term & x[j]
             result = (term) if result is None else (result | term)
         assign_dest(0, result)
@@ -614,26 +615,26 @@ def _decompose(net, wv_map, mems, block_out):
         # A<B = ~A3 & B3 | ~A2 & B2 & x3 | ~A1 & B1 & x3 & x2 | ~A0 & B0 & x3 & x2 & x1
         bitlen = len(net.args[0])
         # Compute the xi above, but don't compute x0 (put None in it's place)
-        x = [~(arg(0, i) ^ arg(1, i)) for i in range(1, bitlen)]
+        x = [~(arg(0, i) ^ arg(1, i)) for i in xrange(1, bitlen)]
         x.insert(0, None)
         # OR over all the terms
         result = None
-        for i in range(0, bitlen):
+        for i in xrange(0, bitlen):
             term = ~arg(0, i) & arg(1, i)
-            for j in range(i+1, bitlen):
+            for j in xrange(i+1, bitlen):
                 term = term & x[j]
             result = (term) if result is None else (result | term)
         assign_dest(0, result)
     elif net.op == '-':
-        arg0list = [arg(0, i) for i in range(len(net.args[0]))]
-        arg1list = [~arg(1, i) for i in range(len(net.args[1]))]
+        arg0list = [arg(0, i) for i in xrange(len(net.args[0]))]
+        arg1list = [~arg(1, i) for i in xrange(len(net.args[1]))]
         cin = wire.Const(1, bitwidth=1, block=block_out)
         sumbits, cout = _generate_add(arg0list, arg1list, cin)
         destlist = sumbits + [cout]
         for i in destlen():
             assign_dest(i, destlist[i])
     elif net.op == 'm':
-        arg0list = [arg(0, i) for i in range(len(net.args[0]))]
+        arg0list = [arg(0, i) for i in xrange(len(net.args[0]))]
         addr = helperfuncs.concat(*reversed(arg0list))
         memid, mem = net.op_param
         if mem not in mems:
@@ -646,9 +647,9 @@ def _decompose(net, wv_map, mems, block_out):
         for i in destlen():
             assign_dest(i, data[i])
     elif net.op == '@':
-        addrlist = [arg(0, i) for i in range(len(net.args[0]))]
+        addrlist = [arg(0, i) for i in xrange(len(net.args[0]))]
         addr = helperfuncs.concat(*reversed(addrlist))
-        datalist = [arg(1, i) for i in range(len(net.args[1]))]
+        datalist = [arg(1, i) for i in xrange(len(net.args[1]))]
         data = helperfuncs.concat(*reversed(datalist))
         enable = arg(2, 0)
         memid, mem = net.op_param
