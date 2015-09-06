@@ -402,7 +402,6 @@ class TestNonExclusiveBlocks(unittest.TestCase):
                     r2.next |= r2 + 2
         self.check_trace(' i 01230123\nr1 00024444\nr2 00024444\n')
 
-""" 
     def test_overlaping_assignments_in_non_exclusive_assignments(self):
         i = pyrtl.Register(bitwidth=2, name='i')
         i.next <<= i + 1
@@ -415,8 +414,22 @@ class TestNonExclusiveBlocks(unittest.TestCase):
                 with pyrtl.otherwise: pass
                 with r2 < 3:
                     r1.next |= r2 + 1
-        self.check_trace('i 01230123\nr 00024445\n')
-"""
+
+    def test_other_overlaping_assignments_in_non_exclusive_assignments(self):
+        i = pyrtl.Register(bitwidth=2, name='i')
+        i.next <<= i + 1
+        r1 = pyrtl.Register(bitwidth=3, name='r1')
+        r2 = pyrtl.Register(bitwidth=3, name='r2')
+        with self.assertRaises(pyrtl.PyrtlError):
+            with pyrtl.conditional_assignment:
+                with r1 < 3:
+                    r1.next |= r1 + 1
+                with pyrtl.otherwise: pass
+                with r2 < 3:
+                    with i:
+                        r1.next |= r2 + 1
+
+# ---------------------------------------------------------------
 
 class TestWireConditionalBlock(unittest.TestCase):
     def setUp(self):
