@@ -44,7 +44,7 @@ class TestWallace(unittest.TestCase):
 
         # Extracting the values and verifying correctness
         multiplier_result = sim_trace.trace[product]
-        self.assertEquals(multiplier_result, true_result)
+        self.assertEqual(multiplier_result, true_result)
 
         # now executing the same test using FastSim
         sim_trace = pyrtl.SimulationTrace()
@@ -53,7 +53,7 @@ class TestWallace(unittest.TestCase):
             sim.step({a: xvals[cycle], b: yvals[cycle]})
 
         multiplier_result = sim_trace.trace[product]
-        self.assertEquals(multiplier_result, true_result)
+        self.assertEqual(multiplier_result, true_result)
         # test passed!
 
     def test_wallace_tree_2(self):
@@ -65,18 +65,18 @@ class TestWallace(unittest.TestCase):
         test_w = multipliers.fused_multiply_adder(wires[0], wires[1], wires[2], False,
                                                   reducer=adders.dada_reducer,
                                                   adder_func=adders.ripple_add)
-        self.assertEquals(len(test_w), 20)
+        self.assertEqual(len(test_w), 20)
         outwire <<= test_w
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         for cycle in range(len(vals[0])):
-            sim.step({wire: val[cycle] for wire, val in map(None, wires, vals)})
+            sim.step({wire: val[cycle] for wire, val in zip(wires, vals)})
 
         out_vals = sim_trace.trace[outwire]
         true_result = [vals[0][cycle] * vals[1][cycle] + vals[2][cycle]
                        for cycle in range(len(vals[0]))]
-        self.assertEquals(out_vals, true_result)
+        self.assertEqual(out_vals, true_result)
 
     def test_gen_fma_1(self):
         """
@@ -95,4 +95,4 @@ class TestWallace(unittest.TestCase):
         true_result = [vals[0][cycle] * vals[1][cycle] + vals[2][cycle] * vals[3][cycle] +
                        vals[4][cycle] * vals[5][cycle] + vals[6][cycle] + vals[7][cycle]
                        for cycle in range(len(vals[0]))]
-        self.assertEquals(out_vals, true_result)
+        self.assertEqual(out_vals, true_result)

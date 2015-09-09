@@ -2,7 +2,7 @@ import unittest
 import random
 import pyrtl
 
-from helperfunctions import *
+from .helperfunctions import *
 
 
 # -------------------------------------------------------------------

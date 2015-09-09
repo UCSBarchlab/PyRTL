@@ -3,7 +3,7 @@ import random
 import io
 import pyrtl
 
-from helperfunctions import *
+from .helperfunctions import *
 
 
 class TestVerilogNames(unittest.TestCase):
@@ -17,9 +17,9 @@ class TestVerilogNames(unittest.TestCase):
         t_in = pyrtl.WireVector(name=name, bitwidth=3)
         t_out = pyrtl.WireVector(name='t_out', bitwidth=3)
         t_out <<= t_in + 1
-        with io.BytesIO() as testbuffer:
+        with io.StringIO() as testbuffer:
             pyrtl.output_to_verilog(testbuffer)
-        self.assert_(True)
+        self.assertTrue(True)
 
     def test_verilog_check_valid_name_good(self):
         self.checkname('abc')
@@ -69,7 +69,7 @@ class TestVerilog(unittest.TestCase):
         rdat = {0:1, 1:2, 2:5, 5:0}
         mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, romdata=rdat)
         o <<= mixtable[sum]
-        with io.BytesIO() as testbuffer:
+        with io.StringIO() as testbuffer:
             pyrtl.output_to_spice(testbuffer)
 
 class TestSpice(unittest.TestCase):
@@ -92,7 +92,7 @@ class TestSpice(unittest.TestCase):
 
         pyrtl.synthesize()
         pyrtl.optimize()
-        with io.BytesIO() as testbuffer:
+        with io.StringIO() as testbuffer:
             pyrtl.output_to_spice(testbuffer)
 
 if __name__ == "__main__":

@@ -1,9 +1,9 @@
 import unittest
 import random
 import pyrtl
-import StringIO
+import io
 
-from helperfunctions import testmissing
+from .helperfunctions import testmissing
 
 # ---------------------------------------------------------------
 
@@ -41,11 +41,11 @@ class TestConditional(unittest.TestCase):
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
-        for i in xrange(8):
+        for i in range(8):
             sim.step({})
-        output = StringIO.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
-        print output.getvalue()
+        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_basic_true_condition(self):
@@ -202,11 +202,11 @@ class TestMemConditionalBlock(unittest.TestCase):
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
-        for i in xrange(8):
+        for i in range(8):
             sim.step({})
-        output = StringIO.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
-        print output.getvalue()
+        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_basic_true_condition_memwrite(self):
@@ -260,11 +260,11 @@ class TestWireConditionalBlock(unittest.TestCase):
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
-        for i in xrange(8):
+        for i in range(8):
             sim.step({})
-        output = StringIO.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
-        print output.getvalue()
+        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_basic_condition_wire(self):
@@ -368,11 +368,11 @@ class TestNonExclusiveBlocks(unittest.TestCase):
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
-        for i in xrange(8):
+        for i in range(8):
             sim.step({})
-        output = StringIO.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
-        print output.getvalue()
+        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_basic_nested_non_exclusive_condition(self):
@@ -499,7 +499,7 @@ class TestWireConditionalBlock(unittest.TestCase):
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
-        for cycle in xrange(2**len(allin)):
+        for cycle in range(2**len(allin)):
             inputs = {v:0x1&(cycle>>i) for i, v in enumerate(allin[::-1])}
             sim.step(inputs)
 

@@ -3,9 +3,9 @@ import pyrtl
 import pyrtl.core
 import pyrtl.wire
 import pyrtl.passes
-import StringIO
+import io
 
-from helperfunctions import testmissing
+from .helperfunctions import testmissing
 
 
 class TestSynthesis(unittest.TestCase):
@@ -23,9 +23,9 @@ class TestSynthesis(unittest.TestCase):
         # pyrtl.optimize()
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
-        for i in xrange(8):
+        for i in range(8):
             sim.step({})
-        output = StringIO.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_string)
 

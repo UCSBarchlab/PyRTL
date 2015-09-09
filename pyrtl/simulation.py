@@ -490,14 +490,14 @@ def wave_trace_render(w, n, prior_val, current_val, symbol_len):
     render transitions.
     """
 
-    if current_val == 'tick':
+    if current_val == u'tick':
         return chr(0x258f)
     if prior_val is None:
         prior_val = current_val
     sl = symbol_len-1
     up, down = chr(0x2571), chr(0x2572)
     x, low, high = chr(0x2573), chr(0x005f), chr(0x203e)
-    revstart, revstop = '\x1B[7m', '\x1B[0m'
+    revstart, revstop = u'\x1B[7m', u'\x1B[0m'
     pretty_map = {
         (0, 0): low + low*sl,
         (0, 1): up + high*sl,
@@ -581,8 +581,8 @@ class SimulationTrace(object):
             raise core.PyrtlError('error, cannot print an empty trace')
         maxlen = max([len(w.name) for w in self.trace])
         for w in sorted(self.trace, key=_trace_sort_key):
-            file.write(" ".join([w.name.rjust(maxlen),
-                       ''.join(str(x) for x in self.trace[w])+"\n"]))
+            file.write(u" ".join([w.name.rjust(maxlen),
+                       u''.join(str(x) for x in self.trace[w])+u'\n']))
             file.flush()
 
     def print_vcd(self, file=sys.stdout):
@@ -620,7 +620,7 @@ class SimulationTrace(object):
 
     def render_trace(
             self, trace_list=None, file=sys.stdout, renderer=wave_trace_render,
-            symbol_len=5, segment_size=5, segment_delim=' ', extra_line=True):
+            symbol_len=5, segment_size=5, segment_delim=u' ', extra_line=True):
         """ Render the trace to a file using unicode and ASCII escape sequences.
 
         The resulting output can be viewed directly on the terminal or looked
@@ -637,8 +637,8 @@ class SimulationTrace(object):
         """
 
         def formatted_trace_line(w, trace):
-            heading = w.name.rjust(maxnamelen) + ' '
-            trace_line = ''
+            heading = w.name.rjust(maxnamelen) + u' '
+            trace_line = u''
             last_element = None
             for i in range(len(trace)):
                 if (i % segment_size == 0) and i > 0:
@@ -656,16 +656,16 @@ class SimulationTrace(object):
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map
         def tick_segment(n):
-            num_tick = renderer(None, None, None, 'tick', symbol_len) + str(n)
+            num_tick = renderer(None, None, None, u'tick', symbol_len) + str(n)
             return num_tick.ljust(symbol_len * segment_size)
 
         maxnamelen = max(len(w.name) for w in self.trace)
         maxtracelen = max(len(v) for v in self.trace.values())
         if segment_size is None:
             segment_size = maxtracelen
-        spaces = ' '*(maxnamelen+1)
+        spaces = u' '*(maxnamelen+1)
         ticks = [tick_segment(n) for n in range(0, maxtracelen, segment_size)]
-        print(spaces + segment_delim.join(ticks).encode('utf-8'), file=file)
+        print(spaces + segment_delim.join(ticks), file=file)
 
         # now all the traces
         for w in trace_list:

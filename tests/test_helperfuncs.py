@@ -1,6 +1,6 @@
 import unittest
 import pyrtl
-import StringIO
+import io
 
 # ---------------------------------------------------------------
 
@@ -15,11 +15,11 @@ class TestAnyAll(unittest.TestCase):
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
-        for i in xrange(8):
+        for i in range(8):
             sim.step({})
-        output = StringIO.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
-        print output.getvalue()
+        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_any_only_on_1_bit_vectors(self):
@@ -72,11 +72,11 @@ class TestMux(unittest.TestCase):
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
-        for i in xrange(8):
+        for i in range(8):
             sim.step({})
-        output = StringIO.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
-        print output.getvalue()
+        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_mux_too_many_inputs(self):

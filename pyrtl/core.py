@@ -2,25 +2,8 @@
 import collections
 import sys
 import re
-from . import wire
-from . import memory
 
-
-# -----------------------------------------------------------------
-#   ___  __   __   __   __  ___      __   ___  __
-#  |__  |__) |__) /  \ |__)  |  \ / |__) |__  /__`
-#  |___ |  \ |  \ \__/ |  \  |   |  |    |___ .__/
-#
-
-class PyrtlError(Exception):
-    """ Raised on any user-facing error in this module """
-    pass
-
-
-class PyrtlInternalError(Exception):
-    """ Raised on any PyRTL internal failure """
-    pass
-
+from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 
 # -----------------------------------------------------------------
 #    __        __   __
@@ -55,6 +38,9 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         else:
             raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
         return retval
+
+    def __hash__(self):
+        return id(self)
 
     def __eq__(self, other):
         # We can't be going and calling __eq__ recursively on the logic nets for all of
@@ -245,7 +231,8 @@ class Block(object):
 
             Note: this method will throw an error if there are loops in the
             logic that do not involve registers"""
-        cleared = self.wirevector_subset((wire.Input, wire.Const, wire.Register))
+        from .wire import Input, Const, Register
+        cleared = self.wirevector_subset((Input, Const, Register))
         remaining = self.logic.copy()
         prev_remain = len(self.logic) + 1  # to make sure it actually runs
         while len(remaining) < prev_remain:
@@ -275,6 +262,7 @@ class Block(object):
         built according to the assumptions stated in the Block comments."""
 
         # TODO: check that the wirevector_by_name is sane
+        from .wire import WireVector, Input, Const, Output, Register
 
         # check for valid LogicNets (and wires)
         for net in self.logic:
@@ -304,7 +292,7 @@ class Block(object):
             raise PyrtlError('Unknown wires found in net:\n    %s' % bad_wire_names)
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         allwires_minus_connected = allwires_minus_connected.difference(
-            self.wirevector_subset((wire.Input, wire.Const)))
+            self.wirevector_subset((Input, Const)))
         #   ^ allow inputs and consts to be unconnected
         if len(allwires_minus_connected) > 0:
             bad_wire_names = '\n    '.join(str(x) for x in allwires_minus_connected)
@@ -313,8 +301,8 @@ class Block(object):
         # Check for wires that are inputs to a logicNet, but are not block inputs and are never
         # driven.
         ins = arg_set.difference(dest_set)
-        ins = ins.difference(self.wirevector_subset(wire.Input))
-        undriven = ins.difference(self.wirevector_subset(wire.Const))
+        ins = ins.difference(self.wirevector_subset(Input))
+        undriven = ins.difference(self.wirevector_subset(Const))
         if len(undriven) > 0:
             raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
 
@@ -325,7 +313,7 @@ class Block(object):
             # Check for wires that are destinations of a logicNet, but are not outputs and are never
             # used as args.
             outs = dest_set.difference(arg_set)
-            unused = outs.difference(self.wirevector_subset(wire.Output))
+            unused = outs.difference(self.wirevector_subset(Output))
             if len(unused) > 0:
                 names = [w.name for w in unused]
                 print('Warning: Wires driven but never used { %s }' % names)
@@ -368,13 +356,16 @@ class Block(object):
 
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
-        if not isinstance(w, wire.WireVector):
+        from .wire import WireVector
+        if not isinstance(w, WireVector):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
                 'instead of WireVector' % type(w))
 
     def sanity_check_net(self, net):
         """ Check that net is a valid LogicNet. """
+        from .wire import WireVector, Input, Output, Register
+        from .memory import _MemReadBase
 
         # general sanity checks that apply to all operations
         if not isinstance(net, LogicNet):
@@ -392,10 +383,10 @@ class Block(object):
 
         # checks that input and output wirevectors are not misused
         for w in net.dests:
-            if isinstance(w, wire.Input):
+            if isinstance(w, Input):
                 raise PyrtlInternalError('error, Inputs cannot be destinations to a net')
         for w in net.args:
-            if isinstance(w, wire.Output):
+            if isinstance(w, Output):
                 raise PyrtlInternalError('error, Outputs cannot be arguments for a net')
 
         if net.op not in self.legal_ops:
@@ -438,7 +429,7 @@ class Block(object):
                 raise PyrtlInternalError('error, mem op requires 2 op_params in tuple')
             if not isinstance(net.op_param[0], int):
                 raise PyrtlInternalError('error, mem op requires first operand as int')
-            if not isinstance(net.op_param[1], memory._MemReadBase):
+            if not isinstance(net.op_param[1], _MemReadBase):
                 raise PyrtlInternalError('error, mem op requires second operand of a memory type')
 
         # check destination validity

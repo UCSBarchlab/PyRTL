@@ -1,10 +1,12 @@
 
+# error types thrown
+from .pyrtlexceptions import PyrtlError
+from .pyrtlexceptions import PyrtlInternalError
+
 # core rtl constructs
 from .core import LogicNet
 from .core import Block
 from .core import PostSynthBlock
-from .core import PyrtlError
-from .core import PyrtlInternalError
 from .core import working_block
 from .core import reset_working_block
 from .core import set_debug_mode

@@ -3,11 +3,14 @@ Defines MemBlock, a block of memory that can be read (potentially async) and wri
 """
 
 import collections
-from . import core
-from . import wire
-from . import helperfuncs
-from . import conditional
 
+from .pyrtlexceptions import PyrtlError, PyrtlInternalError
+from .core import working_block
+from .core import next_tempvar_name
+from .core import next_memid
+from .core import LogicNet
+from .wire import WireVector, Const
+from .helperfuncs import as_wires
 
 # ------------------------------------------------------------------------
 #
@@ -28,7 +31,7 @@ from . import conditional
 _MemAssignment = collections.namedtuple('_MemAssignment', 'rhs, is_conditional')
 
 
-class _MemIndexed(wire.WireVector):
+class _MemIndexed(WireVector):
     """ Object used internally to route memory assigns correctly.
 
     The normal PyRTL user should never need to be aware that this class exists,
@@ -48,22 +51,22 @@ class _MemIndexed(wire.WireVector):
         return _MemAssignment(rhs=other, is_conditional=True)
 
     def logicop(self, other, op):
-        return helperfuncs.as_wires(self).logicop(other, op)
+        return as_wires(self).logicop(other, op)
 
     def __invert__(self):
-        return helperfuncs.as_wires(self).__invert__()
+        return as_wires(self).__invert__()
 
     def __getitem__(self, item):
-        return helperfuncs.as_wires(self).__getitem__(item)
+        return as_wires(self).__getitem__(item)
 
     def __len__(self):
         return self.mem.bitwidth
 
     def sign_extended(self, bitwidth):
-        return helperfuncs.as_wires(self).sign_extended(bitwidth)
+        return as_wires(self).sign_extended(bitwidth)
 
     def zero_extended(self, bitwidth):
-        return helperfuncs.as_wires(self).zero_extended(bitwidth)
+        return as_wires(self).zero_extended(bitwidth)
 
 
 class _MemReadBase(object):
@@ -75,26 +78,26 @@ class _MemReadBase(object):
 
     def __init__(self,  bitwidth, addrwidth, name, asynchronous, block):
 
-        self.block = core.working_block(block)
-        name = core.next_tempvar_name(name)
+        self.block = working_block(block)
+        name = next_tempvar_name(name)
 
         if bitwidth <= 0:
-            raise core.PyrtlError('bitwidth must be >= 1')
+            raise PyrtlError('bitwidth must be >= 1')
         if addrwidth <= 0:
-            raise core.PyrtlError('addrwidth must be >= 1')
+            raise PyrtlError('addrwidth must be >= 1')
 
         self.bitwidth = bitwidth
         self.name = name
         self.addrwidth = addrwidth
         self.readport_nets = []
-        self.id = core.next_memid()
+        self.id = next_memid()
         self.asynchronous = asynchronous
 
     def __getitem__(self, item):
         from .helperfuncs import as_wires
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False, block=self.block)
         if len(item) > self.addrwidth:
-            raise core.PyrtlError('memory index bitwidth > addrwidth')
+            raise PyrtlError('memory index bitwidth > addrwidth')
         return _MemIndexed(mem=self, index=item)
 
     def _readaccess(self, addr):
@@ -102,8 +105,8 @@ class _MemReadBase(object):
         return self._build_read_port(addr)
 
     def _build_read_port(self, addr):
-        data = wire.WireVector(bitwidth=self.bitwidth, block=self.block)
-        readport_net = core.LogicNet(
+        data = WireVector(bitwidth=self.bitwidth, block=self.block)
+        readport_net = LogicNet(
             op='m',
             op_param=(self.id, self),
             args=(addr,),
@@ -113,7 +116,7 @@ class _MemReadBase(object):
         return data
 
     def __setitem__(self, key, value):
-        raise core.PyrtlInternalError("error, invalid call __setitem__ made on _MemReadBase")
+        raise PyrtlInternalError("error, invalid call __setitem__ made on _MemReadBase")
 
     def _make_copy(self, block):
         pass
@@ -160,36 +163,37 @@ class MemBlock(_MemReadBase):
         if isinstance(assignment, _MemAssignment):
             self._assignment(item, assignment.rhs, is_conditional=assignment.is_conditional)
         else:
-            raise core.PyrtlError('error, assigment to memories should use "<<=" not "=" operator')
+            raise PyrtlError('error, assigment to memories should use "<<=" not "=" operator')
 
     def _assignment(self, item, val, is_conditional):
         from .helperfuncs import as_wires
+        from .conditional import _build
 
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False, block=self.block)
         if len(item) > self.addrwidth:
-            raise core.PyrtlError('error, memory index bitwidth > addrwidth')
+            raise PyrtlError('error, memory index bitwidth > addrwidth')
         addr = item
 
         if isinstance(val, MemBlock.EnabledWrite):
             data, enable = val.data, val.enable
         else:
-            data, enable = val, wire.Const(1, bitwidth=1, block=self.block)
+            data, enable = val, Const(1, bitwidth=1, block=self.block)
         data = as_wires(data, bitwidth=self.bitwidth, truncating=False, block=self.block)
         enable = as_wires(enable, bitwidth=1, truncating=False, block=self.block)
 
         if len(data) != self.bitwidth:
-            raise core.PyrtlError('error, write data larger than memory  bitwidth')
+            raise PyrtlError('error, write data larger than memory  bitwidth')
         if len(enable) != 1:
-            raise core.PyrtlError('error, enable signal not exactly 1 bit')
+            raise PyrtlError('error, enable signal not exactly 1 bit')
 
         if is_conditional:
-            conditional._build(self, (addr, data, enable))
+            _build(self, (addr, data, enable))
         else:
             self._build(addr, data, enable)
 
     def _build(self, addr, data, enable):
         """ Builds a write port. """
-        writeport_net = core.LogicNet(
+        writeport_net = LogicNet(
             op='@',
             op_param=(self.id, self),
             args=(addr, data, enable),
@@ -236,23 +240,23 @@ class RomBlock(_MemReadBase):
     def _get_read_data(self, address):
         import types
         if address < 0 or address > 2**self.addrwidth - 1:
-            raise core.PyrtlError("Error: Invalid address, " + str(address) + " specified")
+            raise PyrtlError("Error: Invalid address, " + str(address) + " specified")
         if isinstance(self.initialdata, types.FunctionType):
             try:
                 value = self.initialdata(address)
             except Exception:
-                raise core.PyrtlError("Invalid data function for RomBlock")
+                raise PyrtlError("Invalid data function for RomBlock")
         else:
             try:
                 value = self.initialdata[address]
             except TypeError:
-                raise core.PyrtlError("invalid type for RomBlock data object")
+                raise PyrtlError("invalid type for RomBlock data object")
             except IndexError:
-                raise core.PyrtlError("An access to rom " + self.name +
+                raise PyrtlError("An access to rom " + self.name +
                                       " index " + str(address) + " is out of range")
 
         if value < 0 or value >= 2**self.bitwidth:
-            raise core.PyrtlError("invalid value for RomBlock data")
+            raise PyrtlError("invalid value for RomBlock data")
 
         return value
 

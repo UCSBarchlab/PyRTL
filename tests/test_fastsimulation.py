@@ -1,11 +1,11 @@
 import unittest
 import random
 import pyrtl
-import StringIO
+import io
 import os
 import subprocess
 
-from helperfunctions import *
+from .helperfunctions import *
 
 
 class TestRTLFastSimulationTraceWithBasicOperations(unittest.TestCase):
@@ -20,9 +20,9 @@ class TestRTLFastSimulationTraceWithBasicOperations(unittest.TestCase):
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.FastSimulation(tracer=sim_trace)
-        for i in xrange(8):
+        for i in range(8):
             sim.step({})
-        output = StringIO.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -133,10 +133,10 @@ class TestRTLFastSimulationTraceWithAdder(unittest.TestCase):
         sim = pyrtl.FastSimulation(register_value_map=on_reset, default_value=0, tracer=sim_trace)
 
         # step through 15 cycles
-        for i in xrange(15):
+        for i in range(15):
             sim.step({})
 
-        output = StringIO.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
 
@@ -201,12 +201,12 @@ class TestRTLFastSimulationTraceVCDWithAdder(unittest.TestCase):
         sim = pyrtl.FastSimulation(register_value_map=on_reset, default_value=0, tracer=sim_trace)
 
         # step through 15 cycles
-        for i in xrange(15):
+        for i in range(15):
             sim.step({})
 
-        test_output = StringIO.StringIO()
+        test_output = io.StringIO()
         sim_trace.print_vcd(test_output)
-        self.assertEquals(VCD_OUTPUT, test_output.getvalue())
+        self.assertEqual(VCD_OUTPUT, test_output.getvalue())
 
 
 class TestRTLFastSimulationTraceWithMux(unittest.TestCase):
@@ -233,10 +233,10 @@ class TestRTLFastSimulationTraceWithMux(unittest.TestCase):
                          3: {self.a: 1, self.b: 1, self.sel: 0},
                          4: {self.a: 2, self.b: 1, self.sel: 0},
                          5: {self.a: 0, self.b: 1, self.sel: 0}}
-        for i in xrange(6):
+        for i in range(6):
             self.sim.step(input_signals[i])
 
-        output = StringIO.StringIO()
+        output = io.StringIO()
         self.sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'muxout 120120\n')
 
@@ -277,10 +277,10 @@ class TestRTLMemBlockFastSimulation(unittest.TestCase):
                             self.write_data: 0}
         input_signals[4] = {self.read_addr1: 6, self.read_addr2: 0, self.write_addr: 6,
                             self.write_data: 7}
-        for i in xrange(5):
+        for i in range(5):
             self.sim.step(input_signals[i])
 
-        output = StringIO.StringIO()
+        output = io.StringIO()
         self.sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
@@ -297,10 +297,10 @@ class TestRTLMemBlockFastSimulation(unittest.TestCase):
         input_signals[7] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 1, self.write_data: 0x0}
         input_signals[8] = {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x7}
         input_signals[9] = {self.read_addr1: 2, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x6}
-        for i in xrange(10):
+        for i in range(10):
             self.sim.step(input_signals[i])
 
-        output = StringIO.StringIO()
+        output = io.StringIO()
         self.sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'o1 0077653107\no2 0076452310\n')
 
@@ -321,10 +321,10 @@ class TestRTLMemBlockFastSimulation(unittest.TestCase):
                             self.write_data: 0}
         input_signals[4] = {self.read_addr1: 6, self.read_addr2: 0, self.write_addr: 6,
                             self.write_data: 7}
-        for i in xrange(5):
+        for i in range(5):
             self.sim.step(input_signals[i])
 
-        output = StringIO.StringIO()
+        output = io.StringIO()
         self.sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
@@ -348,7 +348,7 @@ class TestRTLRomBlockFastSimulation(unittest.TestCase):
         return out_string
 
     def compareIO(self, sim_trace_a, expected_output):
-        output = StringIO.StringIO()
+        output = io.StringIO()
         sim_trace_a.print_trace(output)
         self.assertEqual(output.getvalue(), expected_output)
 

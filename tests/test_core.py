@@ -2,7 +2,7 @@ import unittest
 import random
 import pyrtl
 
-from helperfunctions import testmissing
+from .helperfunctions import testmissing
 
 
 class TestBlock(unittest.TestCase):
@@ -65,10 +65,10 @@ class TestBlock(unittest.TestCase):
         for net in block:
             self.assertFalse(i > 100, "Too many iterations happened")
             i += 1
-            print str(net)
+            print(str(net))
 
         for net in block.logic:
-            print net
+            print(net)
 
 
 class TestMemAsyncCheck(unittest.TestCase):
@@ -121,7 +121,7 @@ class TestMemAsyncCheck(unittest.TestCase):
         addr = pyrtl.WireVector(self.bitwidth)
         addr <<= self.mem_read_address1 + self.mem_read_address2
         self.output1 <<= memory[addr]
-        print pyrtl.working_block()
+        print(pyrtl.working_block())
         with self.assertRaises(pyrtl.PyrtlError):
             pyrtl.working_block().sanity_check()
 
