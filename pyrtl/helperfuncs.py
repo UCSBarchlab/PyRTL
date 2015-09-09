@@ -1,5 +1,4 @@
-"""
- Defines a set of helper functions that make constructing hardware easier.
+""" Defines a set of helper functions that make constructing hardware easier.
 
 The set of functions includes
 as_wires: converts consts to wires if needed (and does nothing to wires)
@@ -10,9 +9,14 @@ concat: concatenate multiple wirevectors into one long vector
 get_block: get the block of the arguments, throw error if they are different
 """
 
-from . import core
-from . import wire
+from __future__ import print_function
+
+
 import inspect
+
+from .pyrtlexceptions import PyrtlError, PyrtlInternalError
+from .core import working_block, LogicNet
+from .wire import WireVector, Input, Output, Const, Register
 
 _rtl_assert_number = 1
 _rtl_assert_dict = {}
@@ -34,21 +38,21 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
     most operations in an attempt to coerce values into WireVectors (for example,
     operations such as "x+1" where "1" needs to be converted to a Const WireVectors.)
     """
-    from . import memory
-    block = core.working_block(block)
+    from .memory import _MemIndexed
+    block = working_block(block)
 
     if isinstance(val, (int, str)):
         # note that this case captures bool as well (as bools are instances of ints)
-        return wire.Const(val, bitwidth=bitwidth, block=block)
-    elif isinstance(val, memory._MemIndexed):
+        return Const(val, bitwidth=bitwidth, block=block)
+    elif isinstance(val, _MemIndexed):
         # covert to a memory read when the value is actually used
         return as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)
-    elif not isinstance(val, wire.WireVector):
-        raise core.PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
+    elif not isinstance(val, WireVector):
+        raise PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
     elif bitwidth == '0':
-        raise core.PyrtlError('error, bitwidth must be >= 1')
+        raise PyrtlError('error, bitwidth must be >= 1')
     elif val.bitwidth is None:
-        raise core.PyrtlError('error, attempting to use wirevector with no defined bitwidth')
+        raise PyrtlError('error, attempting to use wirevector with no defined bitwidth')
     elif bitwidth and bitwidth > val.bitwidth:
         return val.zero_extended(bitwidth)
     elif bitwidth and truncating and bitwidth < val.bitwidth:
@@ -97,12 +101,12 @@ def rtl_any(*vectorlist):
     are '1' (i.e. it is a big 'ol OR gate)
     """
     if len(vectorlist) <= 0:
-        raise core.PyrtlError('rtl_any requires at least 1 argument')
+        raise PyrtlError('rtl_any requires at least 1 argument')
     block = get_block(*vectorlist)
     converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
     for v in converted_vectorlist:
         if len(v) != 1:
-            raise core.PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
+            raise PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
     return or_all_bits(concat(*converted_vectorlist))
 
 
@@ -116,13 +120,13 @@ def rtl_all(*vectorlist):
     inputs are '1' (i.e. it is a big 'ol AND gate)
     """
     if len(vectorlist) <= 0:
-        raise core.PyrtlError('rtl_all requires at least 1 argument')
+        raise PyrtlError('rtl_all requires at least 1 argument')
     block = get_block(*vectorlist)
     converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
     print(converted_vectorlist)
     for v in converted_vectorlist:
         if len(v) != 1:
-            raise core.PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
+            raise PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
     return and_all_bits(concat(*converted_vectorlist))
 
 
@@ -169,7 +173,7 @@ def mux(select, falsecase, truecase, *rest, **kwargs):
     if kwargs:
         if len(kwargs) != 1 or 'default' not in kwargs:
             bad_args = [k for k in kwargs.keys() if k != 'default']
-            raise core.PyrtlError('unknown keywords %s applied to mux' % str(bad_args))
+            raise PyrtlError('unknown keywords %s applied to mux' % str(bad_args))
         default = kwargs['default']
     else:
         default = None
@@ -187,7 +191,7 @@ def mux(select, falsecase, truecase, *rest, **kwargs):
             ins.extend(extention)
 
     if 2 ** len(select) != len(ins):
-        raise core.PyrtlError(
+        raise PyrtlError(
             'Mux select line is %d bits, but selecting from %d inputs. '
             % (len(select), len(ins)))
 
@@ -208,12 +212,12 @@ def _mux2(select, falsecase, truecase):
     b = as_wires(truecase, block=block)
 
     if len(select) != 1:
-        raise core.PyrtlError('error, select input to the mux must be 1-bit wirevector')
+        raise PyrtlError('error, select input to the mux must be 1-bit wirevector')
     a, b = match_bitwidth(a, b)
     resultlen = len(a)  # both are the same length now
 
-    outwire = wire.WireVector(bitwidth=resultlen, block=block)
-    net = core.LogicNet(
+    outwire = WireVector(bitwidth=resultlen, block=block)
+    net = LogicNet(
         op='x',
         op_param=None,
         args=(select, a, b),
@@ -228,13 +232,13 @@ def get_block(*arglist):
     If any of the arguments come from different blocks, throw an error.
     If none of the arguments are wirevectors, return the working_block.
     """
-    from . import memory
+    from .memory import _MemIndexed
 
     blocks = set()
     for arg in arglist:
-        if isinstance(arg, memory._MemIndexed):
+        if isinstance(arg, _MemIndexed):
             argblock = arg.mem.block
-        elif isinstance(arg, wire.WireVector):
+        elif isinstance(arg, WireVector):
             argblock = arg.block
         else:
             argblock = None
@@ -243,11 +247,11 @@ def get_block(*arglist):
     blocks.difference_update({None})  # remove the non block elements
 
     if len(blocks) > 1:
-        raise core.PyrtlError('get_block passed WireVectors from different blocks')
+        raise PyrtlError('get_block passed WireVectors from different blocks')
     elif len(blocks):
         block = blocks.pop()
     else:
-        block = core.working_block()
+        block = working_block()
 
     return block
 
@@ -260,14 +264,14 @@ def concat(*args):
 
     block = get_block(*args)
     if len(args) <= 0:
-        raise core.PyrtlError('error, concat requires at least 1 argument')
+        raise PyrtlError('error, concat requires at least 1 argument')
     if len(args) == 1:
         return as_wires(args[0], block=block)
     else:
         arg_wirevectors = [as_wires(arg, block=block) for arg in args]
         final_width = sum([len(arg) for arg in arg_wirevectors])
-        outwire = wire.WireVector(bitwidth=final_width, block=block)
-        net = core.LogicNet(
+        outwire = WireVector(bitwidth=final_width, block=block)
+        net = LogicNet(
             op='c',
             op_param=None,
             args=tuple(arg_wirevectors),
@@ -303,8 +307,8 @@ def probe(w, name=None):
     confuse various post-processing transforms such as output to verilog)
     """
     global _probe_number
-    if not isinstance(w, wire.WireVector):
-        raise core.PyrtlError('Only WireVectors can be probed')
+    if not isinstance(w, WireVector):
+        raise PyrtlError('Only WireVectors can be probed')
 
     if w.init_call_stack:
         print('(Probe-%d) Traceback for probed wire, most recent call last' % _probe_number)
@@ -320,7 +324,7 @@ def probe(w, name=None):
     else:
         pname = '(Probe-%d : %s)' % (_probe_number, w.name)
 
-    p = wire.Output(name=pname, block=get_block(w))
+    p = Output(name=pname, block=get_block(w))
     p <<= w  # late assigns len from w automatically
     _probe_number += 1
     return w
@@ -337,13 +341,13 @@ def rtl_assert(w, msg):
     global _rtl_assert_number
     global _rtl_assert_dict
 
-    if not isinstance(w, wire.WireVector):
-        raise core.PyrtlError('Only WireVectors can be asserted with rtl_assert')
+    if not isinstance(w, WireVector):
+        raise PyrtlError('Only WireVectors can be asserted with rtl_assert')
     if len(w) != 1:
-        raise core.PyrtlError('rtl_assert checks only a WireVector of bitwidth 1')
+        raise PyrtlError('rtl_assert checks only a WireVector of bitwidth 1')
 
     assertion_name = 'assertion%d' % _rtl_assert_number
-    assert_wire = wire.Output(bitwidth=1, name=assertion_name, block=get_block(w))
+    assert_wire = Output(bitwidth=1, name=assertion_name, block=get_block(w))
     assert_wire <<= w
     _rtl_assert_number += 1
     _rtl_assert_dict[assert_wire] = msg
@@ -351,10 +355,10 @@ def rtl_assert(w, msg):
 
 
 def _check_for_loop(block=None):
-    block = core.working_block(block)
+    block = working_block(block)
     logic_left = block.logic.copy()
     wires_left = set(w for w in block.wirevector_set
-                     if not isinstance(w, (wire.Input, wire.Const, wire.Output, wire.Register)))
+                     if not isinstance(w, (Input, Const, Output, Register)))
     prev_logic_left = len(logic_left) + 1
     while prev_logic_left > len(logic_left):
         prev_logic_left = len(logic_left)
@@ -424,11 +428,11 @@ def find_loop(block=None, print_result=True):
                 if f_state.dst_w is next_wire:
                     break
             else:
-                raise core.PyrtlError("Shouldn't get here! Couldn't figure out the loop")
+                raise PyrtlError("Shouldn't get here! Couldn't figure out the loop")
             if print_result:
                 print("Loop found:")
                 print('\n'.join("{}".format(fs.net) for fs in loop_info))
                 # print '\n'.join("{} (dest wire: {})".format(fs.net, fs.dst_w) for fs in loop_info)
                 print("")
             return loop_info
-    raise core.PyrtlError("Error in detecting loop")
+    raise PyrtlError("Error in detecting loop")

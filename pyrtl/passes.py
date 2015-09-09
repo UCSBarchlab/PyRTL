@@ -4,7 +4,10 @@ Passes contains structures helpful for writing analysis and
 transformation passes over blocks.
 """
 
+from __future__ import print_function
+
 import copy
+
 from . import core
 from . import wire
 from . import helperfuncs

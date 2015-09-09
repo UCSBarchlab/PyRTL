@@ -5,13 +5,19 @@ Each of the functions in inputoutput take a block and a file descriptor.
 The functions provided either read the file and update the Block
 accordingly, or write information from the Block out to the file.
 """
+
+from __future__ import print_function
+
 from random import randint
 
 import sys
 import re
 import collections
 
-from . import core
+from .pyrtlexceptions import PyrtlError, PyrtlInternalError
+from .core import working_block
+from .wire import WireVector, Input, Output, Const, Register
+
 from . import wire
 from . import helperfuncs
 from . import spice_templates
@@ -36,14 +42,14 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
     from pyparsing import Word, Literal, OneOrMore, ZeroOrMore
     from pyparsing import Suppress, Group, Keyword
 
-    block = core.working_block(block)
+    block = working_block(block)
 
     if isinstance(blif, file):
         blif_string = blif.read()
     elif isinstance(blif, str):
         blif_string = blif
     else:
-        raise core.PyrtlError('input_blif expecting either open file or string')
+        raise PyrtlError('input_blif expecting either open file or string')
 
     def SKeyword(x):
         return Suppress(Keyword(x))
@@ -55,7 +61,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         """ find or make wire named x and return it """
         s = block.get_wirevector_by_name(x)
         if s is None:
-            s = wire.WireVector(bitwidth=1, name=x)
+            s = WireVector(bitwidth=1, name=x)
         return s
 
     # Begin BLIF language definition
@@ -108,12 +114,12 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
             if input_name == 'clk':
                 clk_set.add(input_name)
             elif not merge_io_vectors or bitwidth == 1:
-                block.add_wirevector(wire.Input(bitwidth=1, name=input_name))
+                block.add_wirevector(Input(bitwidth=1, name=input_name))
             else:
-                wire_in = wire.Input(bitwidth=bitwidth, name=input_name, block=block)
+                wire_in = Input(bitwidth=bitwidth, name=input_name, block=block)
                 for i in range(bitwidth):
                     bit_name = input_name + '[' + str(i) + ']'
-                    bit_wire = wire.WireVector(bitwidth=1, name=bit_name, block=block)
+                    bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_wire <<= wire_in[i]
 
     def extract_outputs(model):
@@ -122,13 +128,13 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         for output_name in name_counts:
             bitwidth = name_counts[output_name]
             if not merge_io_vectors or bitwidth == 1:
-                block.add_wirevector(wire.Output(bitwidth=1, name=output_name))
+                block.add_wirevector(Output(bitwidth=1, name=output_name))
             else:
-                wire_out = wire.Output(bitwidth=bitwidth, name=output_name, block=block)
+                wire_out = Output(bitwidth=bitwidth, name=output_name, block=block)
                 bit_list = []
                 for i in range(bitwidth):
                     bit_name = output_name + '[' + str(i) + ']'
-                    bit_wire = wire.WireVector(bitwidth=1, name=bit_name, block=block)
+                    bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_list.append(bit_wire)
                 wire_out <<= helperfuncs.concat(*bit_list)
 
@@ -142,16 +148,16 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
             elif command.getName() == 'dffas_def' or command.getName() == 'dffs_def':
                 extract_flop(command)
             else:
-                raise core.PyrtlError('unknown command type')
+                raise PyrtlError('unknown command type')
 
     def extract_cover(command):
         netio = command['namesignal_list']
         if len(command['cover_list']) == 0:
             output_wire = twire(netio[0])
-            output_wire <<= wire.Const(0, bitwidth=1, block=block)  # const "FALSE"
+            output_wire <<= Const(0, bitwidth=1, block=block)  # const "FALSE"
         elif command['cover_list'].asList() == ['1']:
             output_wire = twire(netio[0])
-            output_wire <<= wire.Const(1, bitwidth=1, block=block)  # const "TRUE"
+            output_wire <<= Const(1, bitwidth=1, block=block)  # const "TRUE"
         elif command['cover_list'].asList() == ['1', '1']:
             # Populate clock list if one input is already a clock
             if(netio[1] in clk_set):
@@ -178,7 +184,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
             output_wire <<= (twire(netio[0]) & ~ twire(netio[2])) \
                 | (twire(netio[1]) & twire(netio[2]))   # mux
         else:
-            raise core.PyrtlError('Blif file with unknown logic cover set '
+            raise PyrtlError('Blif file with unknown logic cover set '
                                   '(currently gates are hard coded)')
 
     def extract_flop(command):
@@ -187,7 +193,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
 
         # Create register and assign next state to D and output to Q
         regname = command['Q'] + '_reg'
-        flop = wire.Register(bitwidth=1, name=regname)
+        flop = Register(bitwidth=1, name=regname)
         flop.next <<= twire(command['D'])
         flop_output = twire(command['Q'])
         flop_output <<= flop
@@ -207,7 +213,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
 def output_to_trivialgraph(file, block=None):
     """ Walk the block and output it in trivial graph format to the open file """
 
-    block = core.working_block(block)
+    block = working_block(block)
     nodes = {}
     edges = set([])
     edge_names = {}
@@ -234,7 +240,7 @@ def output_to_trivialgraph(file, block=None):
 
     def producer(w):
         """ return the node driving wire (or create it if undefined) """
-        assert isinstance(w, wire.WireVector)
+        assert isinstance(w, WireVector)
         for net in block.logic:
             for dest in net.dests:
                 if dest is w:
@@ -244,7 +250,7 @@ def output_to_trivialgraph(file, block=None):
 
     def consumer(w):
         """ return the node being driven by wire (or create it if undefined) """
-        assert isinstance(w, wire.WireVector)
+        assert isinstance(w, WireVector)
         for net in block.logic:
             for arg in net.args:
                 if arg is w:
@@ -257,13 +263,13 @@ def output_to_trivialgraph(file, block=None):
         label = str(net.op)
         label += str(net.op_param) if net.op_param is not None else ''
         add_node(net, label)
-    for input in block.wirevector_subset(wire.Input):
+    for input in block.wirevector_subset(Input):
         label = 'in' if input.name is None else input.name
         add_node(input, label)
-    for output in block.wirevector_subset(wire.Output):
+    for output in block.wirevector_subset(Output):
         label = 'out' if output.name is None else output.name
         add_node(output, label)
-    for const in block.wirevector_subset(wire.Const):
+    for const in block.wirevector_subset(Const):
         label = str(const.val)
         add_node(const, label)
 
@@ -291,7 +297,7 @@ def output_to_trivialgraph(file, block=None):
 def output_to_verilog(dest_file, block=None):
     """ Walk the block and output it in verilog format to the open file """
 
-    block = core.working_block(block)
+    block = working_block(block)
     _verilog_check_all_wirenames(block)
     _to_verilog_header(dest_file, block)
     _to_verilog_combinational(dest_file, block)
@@ -325,25 +331,25 @@ def _verilog_check_all_wirenames(block):
     verilog_reserved_set = set(verilog_reserved.split())
     for w in block.wirevector_subset():
         if not re.match('[_A-Za-z][_a-zA-Z0-9\$]*$', w.name):
-            raise core.PyrtlError('error, the wirevector name "%s"'
+            raise PyrtlError('error, the wirevector name "%s"'
                                   ' is not a valid Verilog identifier' % w.name)
         if w.name in verilog_reserved_set:
-            raise core.PyrtlError('error, the wirevector name "%s"'
+            raise PyrtlError('error, the wirevector name "%s"'
                                   ' is a Verilog reserved keyword' % w.name)
         if len(w.name) >= 1024:
-            raise core.PyrtlError('error, the wirevector name "%s" is too'
+            raise PyrtlError('error, the wirevector name "%s" is too'
                                   ' long to be a Verilog id' % w.name)
 
 
 def _to_verilog_header(file, block):
-    io_list = [w.name for w in block.wirevector_subset((wire.Input, wire.Output))]
+    io_list = [w.name for w in block.wirevector_subset((Input, Output))]
     io_list.append('clk')
     io_list_str = ', '.join(io_list)
     print('module toplevel(%s);' % io_list_str, file=file)
 
-    inputs = block.wirevector_subset(wire.Input)
-    outputs = block.wirevector_subset(wire.Output)
-    registers = block.wirevector_subset(wire.Register)
+    inputs = block.wirevector_subset(Input)
+    outputs = block.wirevector_subset(Output)
+    registers = block.wirevector_subset(Register)
     wires = block.wirevector_subset() - (inputs | outputs | registers)
     memory_nets = block.logic_subset(('m', '@'))
     memories = set()
@@ -394,7 +400,7 @@ def _to_verilog_header(file, block):
 
 
 def _to_verilog_combinational(file, block):
-    for const in block.wirevector_subset(wire.Const):
+    for const in block.wirevector_subset(Const):
             print('    assign %s = %d;' % (const.name, const.val), file=file)
 
     for net in block.logic:
@@ -429,7 +435,7 @@ def _to_verilog_combinational(file, block):
         elif net.op == '@':
             pass
         else:
-            raise core.PyrtlInternalError
+            raise PyrtlInternalError
     print('', file=file)
 
 
@@ -455,9 +461,9 @@ def _to_verilog_footer(file, block):
 def output_verilog_testbench(file, simulation_trace=None, block=None):
     """Output a verilog testbanch for the block/inputs used in the simulation trace."""
 
-    block = core.working_block(block)
-    inputs = block.wirevector_subset(wire.Input)
-    outputs = block.wirevector_subset(wire.Output)
+    block = working_block(block)
+    inputs = block.wirevector_subset(Input)
+    outputs = block.wirevector_subset(Output)
 
     # Output header
     print('module tb();', file=file)
@@ -473,7 +479,7 @@ def output_verilog_testbench(file, simulation_trace=None, block=None):
     print(file=file)
 
     # Instantiate logic block
-    io_list = [w.name for w in block.wirevector_subset((wire.Input, wire.Output))]
+    io_list = [w.name for w in block.wirevector_subset((Input, Output))]
     io_list.append('clk')
     io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
     print('    toplevel block({:s});\n'.format(', '.join(io_list_str)), file=file)
@@ -542,15 +548,15 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
     :param output_file: Opened file-like object.
     :return: None
     """
-    working_block = core.working_block(block)
+    block = working_block(block)
     operator_set = set('~&|^rwcsm@')
 
     # build alias table
     alias_table = {}    # alias table maps source wire name to their destination wire names
-    for net in working_block.logic:
-        if net.op == "w" and isinstance(net.dests[0], wire.Output):
+    for net in block.logic:
+        if net.op == "w" and isinstance(net.dests[0], Output):
             alias_table[net.args[0].name] = net.dests[0].name
-        elif isinstance(net.args[0], wire.Input):
+        elif isinstance(net.args[0], Input):
             alias_table[net.dests[0].name] = net.args[0].name
 
     # print >> output_file, repr(alias_table)
@@ -567,21 +573,21 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
     # setup power source
     print("Vdd Vdd 0 5", file=output_file)
 
-    for net in working_block.logic:
+    for net in block.logic:
         # do some checks to make sure our working block is sane.
         if net.op not in operator_set:
             error_msg = "Illegal operator {} in block logic. ".format(str(net.op))
             error_msg += "Please synthesize/optimize design before exporting to SPICE."
-            raise core.PyrtlError(error_msg)
+            raise PyrtlError(error_msg)
         if len(net.args) > 2:
             error_msg = "Logic net `{}` has the wrong number of args ({}). "\
                 .format(str(net), str(len(net.args)))
             error_msg += "Please synthesize/optimize design before exporting to SPICE."
-            raise core.PyrtlError(error_msg)
+            raise PyrtlError(error_msg)
 
         # start by processing inputs
         # TODO: deal with multiple inputs? This may be a select logicnet
-        if isinstance(net.args[0], wire.Input):
+        if isinstance(net.args[0], Input):
             # for inputs, create a new voltage source to drive a new input
             input_wire = net.args[0]
             period = randint(2, 10)

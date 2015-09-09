@@ -32,8 +32,11 @@ Access should be done through instances "conditional_update" and "otherwise",
 as described above, not through the classes themselves.
 """
 
-from . import core
-from . import wire
+from __future__ import print_function
+
+from .pyrtlexceptions import PyrtlError, PyrtlInternalError
+from .wire import WireVector, Input, Output, Const, Register
+
 
 # -----------------------------------------------------------------------
 #    __   __        __    ___    __                  __
@@ -49,7 +52,7 @@ def currently_under_condition():
 
 class ConditionalUpdate(object):
     def __init__(self, *x):
-        raise core.PyrtlError('ConditionalUpdate removed, please use "conditional_assignment"')
+        raise PyrtlError('ConditionalUpdate removed, please use "conditional_assignment"')
 
 
 # -----------------------------------------------------------------------
@@ -143,18 +146,18 @@ def _build_read_port(mem, addr):
 
 def _check_no_nesting():
     if _depth != 0:
-        raise core.PyrtlError('no nesting of conditional assignments allowed')
+        raise PyrtlError('no nesting of conditional assignments allowed')
 
 
 def _check_under_condition():
     if not currently_under_condition():
-        raise core.PyrtlError('conditional assignment "|=" only valid under a condition')
+        raise PyrtlError('conditional assignment "|=" only valid under a condition')
 
 
 def _check_and_add_pred_set(lhs, pred_set):
     for test_set in _conflicts_map.setdefault(lhs, []):
         if _pred_sets_are_in_conflict(pred_set, test_set):
-            raise core.PyrtlError('conflicting conditions for %s' % lhs)
+            raise PyrtlError('conflicting conditions for %s' % lhs)
     _conflicts_map[lhs].append(pred_set)
 
 
@@ -171,15 +174,15 @@ def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
 
 def _finalize():
     """Build the required muxes and call back to WireVector to finalize the wirevector build."""
-    from . import memory
+    from .memory import MemBlock
     from .helperfuncs import mux
     for lhs in _predicate_map:
         # handle memory write ports
-        if isinstance(lhs, memory.MemBlock):
+        if isinstance(lhs, MemBlock):
             is_first = True
             for p, (addr, data, enable) in _predicate_map[lhs]:
                 if is_first:
-                    combined_enable = mux(p, truecase=enable, falsecase=wire.Const(0))
+                    combined_enable = mux(p, truecase=enable, falsecase=Const(0))
                     combined_addr = addr
                     combined_data = data
                     is_first = False
@@ -191,12 +194,12 @@ def _finalize():
 
         # handle wirevector and register assignments
         else:
-            if isinstance(lhs, wire.Register):
+            if isinstance(lhs, Register):
                 result = lhs  # default for registers is "self"
-            elif isinstance(lhs, wire.WireVector):
+            elif isinstance(lhs, WireVector):
                 result = 0  # default for wire is "0"
             else:
-                raise core.PyrtlInternalError('unknown assignment in finalize')
+                raise PyrtlInternalError('unknown assignment in finalize')
             predlist = _predicate_map[lhs]
             for p, rhs in predlist:
                 result = mux(p, truecase=rhs, falsecase=result)
@@ -246,7 +249,7 @@ def _current_select():
             pred_set.add((predicate, False))
 
     if select is None:
-        raise core.PyrtlError('problem with conditional assignment')
+        raise PyrtlError('problem with conditional assignment')
 
     return select, pred_set
 

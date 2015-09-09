@@ -9,6 +9,8 @@ Const: a wire vector fed by a constant
 Register: a wire vector that is latched each cycle
 """
 
+from __future__ import print_function
+
 import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
