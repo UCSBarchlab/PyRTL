@@ -1,4 +1,4 @@
-""" 
+"""
 Defines MemBlock, a block of memory that can be read (potentially async) and written (sync)
 """
 

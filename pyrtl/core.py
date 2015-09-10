@@ -1,3 +1,12 @@
+""" The core abstraction for hardware in PyRTL.
+
+Included in this file you will find:
+LogicNet -- the core class holding a "net" in the netlist
+Block -- a collection of nets with associated access and error checking
+working_block -- the "current" Block to which, by default, all created nets are added
+modes -- access methods for "modes" such as debug
+"""
+
 from __future__ import print_function
 
 import collections
@@ -5,6 +14,7 @@ import sys
 import re
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
+
 
 # -----------------------------------------------------------------
 #    __        __   __
@@ -60,8 +70,11 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         return not self.__eq__(other)
 
     def _compare_error(self):
-        # comparisons get you in a bad place between while you can compare op and op_param
-        # safely, the args and dests are references to mutable objects.
+        """ Throw error when LogicNets are compared.
+
+        Comparisons get you in a bad place between while you can compare op and op_param
+        safely, the args and dests are references to mutable objects.
+        """
         raise PyrtlError('Comparison between LogicNets is not supported')
 
     def __lt__(self, other):
@@ -365,7 +378,7 @@ class Block(object):
 
     def sanity_check_net(self, net):
         """ Check that net is a valid LogicNet. """
-        from .wire import WireVector, Input, Output, Register
+        from .wire import Input, Output
         from .memory import _MemReadBase
 
         # general sanity checks that apply to all operations
@@ -506,14 +519,13 @@ def next_memid():
 
 def next_tempvar_name(name=None):
     global _tempvar_count
-    verbose_temp_names = True
     wire_name = None
 
     if name is not None:
         if name.lower() in ['clk', 'clock']:
             raise PyrtlError('Clock signals should never be explicit')
         wire_name = name
-    elif verbose_temp_names:
+    else:
         callpoint = _get_useful_callpoint_name()
         if callpoint:
             filename, lineno = callpoint

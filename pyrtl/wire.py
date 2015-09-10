@@ -189,6 +189,7 @@ class WireVector(object):
         return self.logicop(other, '-')
 
     def __rsub__(self, other):
+        from .helperfuncs import as_wires
         other = as_wires(other, block=self.block)
         return other.logicop(self, '-')
 

@@ -18,7 +18,7 @@ import collections
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block
 from .wire import WireVector, Input, Output, Const, Register
-
+from .helperfuncs import concat
 
 # -----------------------------------------------------------------
 #            __       ___
@@ -133,7 +133,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
                     bit_name = output_name + '[' + str(i) + ']'
                     bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_list.append(bit_wire)
-                wire_out <<= helperfuncs.concat(*bit_list)
+                wire_out <<= concat(*bit_list)
 
     def extract_commands(model):
         # for each "command" (dff or net) in the model
@@ -182,7 +182,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
                 | (twire(netio[1]) & twire(netio[2]))   # mux
         else:
             raise PyrtlError('Blif file with unknown logic cover set '
-                                  '(currently gates are hard coded)')
+                             '(currently gates are hard coded)')
 
     def extract_flop(command):
         if(command['C'] not in ff_clk_set):
@@ -329,13 +329,13 @@ def _verilog_check_all_wirenames(block):
     for w in block.wirevector_subset():
         if not re.match('[_A-Za-z][_a-zA-Z0-9\$]*$', w.name):
             raise PyrtlError('error, the wirevector name "%s"'
-                                  ' is not a valid Verilog identifier' % w.name)
+                             ' is not a valid Verilog identifier' % w.name)
         if w.name in verilog_reserved_set:
             raise PyrtlError('error, the wirevector name "%s"'
-                                  ' is a Verilog reserved keyword' % w.name)
+                             ' is a Verilog reserved keyword' % w.name)
         if len(w.name) >= 1024:
             raise PyrtlError('error, the wirevector name "%s" is too'
-                                  ' long to be a Verilog id' % w.name)
+                             ' long to be a Verilog id' % w.name)
 
 
 def _to_verilog_header(file, block):
@@ -373,12 +373,12 @@ def _to_verilog_header(file, block):
     for w in memories:
         if w.op == 'm':
             print('    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]),
-                                                    w.op_param[0],
-                                                    _verilog_vector_pow_decl(w.args[0])), file=file)
+                                           w.op_param[0],
+                                           _verilog_vector_pow_decl(w.args[0])), file=file)
         elif w.op == '@':
             print('    reg%s mem_%s%s;' % (_verilog_vector_decl(w.args[1]),
-                                                    w.op_param[0],
-                                                    _verilog_vector_pow_decl(w.args[0])), file=file)
+                                           w.op_param[0],
+                                           _verilog_vector_pow_decl(w.args[0])), file=file)
 
     print('', file=file)
 
@@ -446,8 +446,8 @@ def _to_verilog_sequential(file, block):
         elif net.op == '@':
             t = (net.args[2].name, net.op_param[0], net.args[0].name, net.args[1].name)
             print(('        if (%s) begin\n'
-                            '                mem_%s[%s] <= %s;\n'
-                            '        end') % t, file=file)
+                   '                mem_%s[%s] <= %s;\n'
+                   '        end') % t, file=file)
     print('    end', file=file)
 
 
@@ -518,6 +518,7 @@ def output_verilog_testbench(file, simulation_trace=None, block=None):
 SPICE_NODES = 0
 SPICE_FETS = 0
 
+
 def _new_fet():
     global SPICE_FETS
     SPICE_FETS += 1
@@ -531,7 +532,7 @@ def _new_node():
 
 
 def _render_nand(output_file, a, b, out):
-    template = ''' 
+    template = '''
     {M1} {output} {InputB} Vdd Vdd PMOS
     {M2} {output} {InputA} Vdd Vdd PMOS
     {M4} {node} {InputB} 0 0 NMOS
@@ -633,7 +634,7 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
     # print footer
     print('.model NMOS NMOS', file=output_file)
     print('.model PMOS PMOS', file=output_file)
-    print('.tran 0 {sim_time} 0 {sim_min_step}'\
-        .format(sim_time=sim_time, sim_min_step=sim_min_step), file=output_file)
+    print('.tran 0 {sim_time} 0 {sim_min_step}'
+          .format(sim_time=sim_time, sim_min_step=sim_min_step), file=output_file)
     print('.backanno', file=output_file)
     print('.end', file=output_file)
