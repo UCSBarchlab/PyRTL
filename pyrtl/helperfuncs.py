@@ -10,7 +10,7 @@ get_block: get the block of the arguments, throw error if they are different
 """
 
 from __future__ import print_function
-
+from __future__ import unicode_literals
 
 import inspect
 

@@ -33,6 +33,7 @@ as described above, not through the classes themselves.
 """
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register

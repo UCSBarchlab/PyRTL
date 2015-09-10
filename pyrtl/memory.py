@@ -3,6 +3,7 @@ Defines MemBlock, a block of memory that can be read (potentially async) and wri
 """
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import collections
 

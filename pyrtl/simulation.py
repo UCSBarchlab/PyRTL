@@ -673,6 +673,6 @@ class SimulationTrace(object):
         for w in trace_list:
             if extra_line:
                 print(file=file)
-            print(formatted_trace_line(w, self.trace[w]).encode('utf-8'), file=file)
+            print(formatted_trace_line(w, self.trace[w]), file=file)
         if extra_line:
             print(file=file)

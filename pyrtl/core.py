@@ -8,6 +8,7 @@ modes -- access methods for "modes" such as debug
 """
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import collections
 import sys
