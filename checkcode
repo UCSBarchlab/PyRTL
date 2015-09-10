@@ -1,5 +1,14 @@
 #!/bin/bash
 
+echo
+echo
+echo "!!!This script is deprecated, moving to 'tox'!!!"
+echo "just run 'tox' to check code against python 2.7 and 3.4"
+echo "'tox -e 2.7-test' will run just original 2.7 test, and "
+echo "'tox -e pep8' will just run the pep8 check."
+echo
+echo
+
 # Packages required (and Ubuntu/Debian style packages)
 # Python nose tests (apt-get install python-nose)
 # Python pep8 style checker (apt-get install pep8)
@@ -22,10 +31,10 @@ check_exit_code $? 'PyRTL core nose tests failed. Exiting'
 echo 
 echo ===== Checking Core  =====================================
 
-pylint -E pyrtl/*.py
+pylint -E pyrtl.
 check_exit_code $? 'PyRTL core lint check failed. Exiting.'
 
-pep8 --max-line-length=100 pyrtl/*.py
+pep8 --max-line-length=100 pyrtl/
 check_exit_code $? 'PyRTL core pep8 check failed. Exiting.'
 
 echo 
@@ -36,16 +45,6 @@ check_exit_code $? 'PyRTL example link check failed. Exiting.'
 
 pep8 --max-line-length=100 examples/*.py
 check_exit_code $? 'PyRTL examples pep8 check failed. Exiting.'
-
-echo 
-echo ===== Checking rtllib ============================================
-
-pylint -E rtllib/*.py
-check_exit_code $? 'PyRTL library link check failed. Exiting.'
-
-pep8 --max-line-length=100 rtllib/*.py
-check_exit_code $? 'PyRTL library pep8 check failed. Exiting.'
-
 
 echo
 echo 'Tests passed.'

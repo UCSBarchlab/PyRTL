@@ -26,6 +26,7 @@ from .core import _setting_keep_wirevector_call_stack
 #   \/  |___ \__,  |  \__/ |  \
 #
 
+
 class WireVector(object):
     """ The main class for describing the connections between operators.
 
@@ -105,7 +106,7 @@ class WireVector(object):
         from .conditional import _build
         if not self.bitwidth:
             raise PyrtlError('Conditional assignment only defined on '
-                                  'WireVectors with pre-defined bitwidths')
+                             'WireVectors with pre-defined bitwidths')
         other = self._prepare_for_assignment(other)
         _build(self, other)
         return self
@@ -144,9 +145,9 @@ class WireVector(object):
         # are very much not likely to be doing the thing that the programmer would be
         # expecting.
         raise PyrtlError('cannot covert wirevector to compile-time boolean.  This error '
-                              'often happens when you attempt to use WireVectors with "==" or '
-                              'something that calls "__eq__", such as when you test if a '
-                              'wirevector is "in" something')
+                         'often happens when you attempt to use WireVectors with "==" or '
+                         'something that calls "__eq__", such as when you test if a '
+                         'wirevector is "in" something')
 
     __nonzero__ = __bool__  # for Python 2 and 3 compatibility
 
@@ -377,7 +378,7 @@ class Const(WireVector):
                 num = val
                 # infer bitwidth if it is not specified explicitly
                 if bitwidth is None:
-                    bitwidth = len(bin(num))-2  # the -2 for the "0b" at the start of the string
+                    bitwidth = len(bin(num)) - 2  # the -2 for the "0b" at the start of the string
             else:  # val is negative
                 if bitwidth is None:
                     raise PyrtlError(
@@ -388,8 +389,8 @@ class Const(WireVector):
         elif isinstance(val, str):
             if bitwidth is not None:
                 raise PyrtlError('error, bitwidth parameter of const should be'
-                                      ' unspecified when the const is created from a string'
-                                      ' (instead use verilog style specification)')
+                                 ' unspecified when the const is created from a string'
+                                 ' (instead use verilog style specification)')
             if val.startswith('-'):
                 raise PyrtlError('verilog-style consts must be positive')
             split_string = val.split("'")
@@ -406,7 +407,7 @@ class Const(WireVector):
                 raise PyrtlError('error, string for Const not in verilog style format')
         else:
             raise PyrtlError('error, the value of Const is of an improper type, "%s"'
-                                  'proper types are bool, int, and string' % type(val))
+                             'proper types are bool, int, and string' % type(val))
 
         if num < 0:
             raise PyrtlInternalError(
@@ -455,6 +456,7 @@ class Register(WireVector):
 
     class _Next(object):
         """ This is the type returned by "r.next". """
+
         def __init__(self, reg):
             self.reg = reg
 
@@ -466,6 +468,7 @@ class Register(WireVector):
 
     class _NextSetter(object):
         """ This is the type returned by __ilshift__ which r.next will be assigned. """
+
         def __init__(self, rhs, is_conditional):
             self.rhs = rhs
             self.is_conditional = is_conditional
@@ -500,7 +503,7 @@ class Register(WireVector):
         other = as_wires(other, bitwidth=self.bitwidth, block=self.block)
         if not self.bitwidth:
             raise PyrtlError('Conditional assignment only defined on '
-                                  'Registers with pre-defined bitwidths')
+                             'Registers with pre-defined bitwidths')
         return Register._NextSetter(other, is_conditional=True)
 
     @next.setter

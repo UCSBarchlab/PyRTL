@@ -6,6 +6,7 @@
 #  |___ |  \ |  \ \__/ |  \  |   |  |    |___ .__/
 #
 
+
 class PyrtlError(Exception):
     """ Raised on any user-facing error in this module """
     pass
@@ -14,4 +15,3 @@ class PyrtlError(Exception):
 class PyrtlInternalError(Exception):
     """ Raised on any PyRTL internal failure """
     pass
-

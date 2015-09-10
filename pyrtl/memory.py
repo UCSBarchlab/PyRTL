@@ -255,7 +255,7 @@ class RomBlock(_MemReadBase):
                 raise PyrtlError("invalid type for RomBlock data object")
             except IndexError:
                 raise PyrtlError("An access to rom " + self.name +
-                                      " index " + str(address) + " is out of range")
+                                 " index " + str(address) + " is out of range")
 
         if value < 0 or value >= 2**self.bitwidth:
             raise PyrtlError("invalid value for RomBlock data")

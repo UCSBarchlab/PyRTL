@@ -41,12 +41,13 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
 
     block = working_block(block)
 
-    if isinstance(blif, file):
+    try:
         blif_string = blif.read()
-    elif isinstance(blif, str):
-        blif_string = blif
-    else:
-        raise PyrtlError('input_blif expecting either open file or string')
+    except AttributeError:
+        if isinstance(blif, str):
+            blif_string = blif
+        else:
+            raise PyrtlError('input_blif expecting either open file or string')
 
     def SKeyword(x):
         return Suppress(Keyword(x))
