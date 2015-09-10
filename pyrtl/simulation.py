@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import sys
 import re
@@ -491,7 +492,7 @@ def wave_trace_render(w, n, prior_val, current_val, symbol_len):
     render transitions.
     """
 
-    if current_val == u'tick':
+    if current_val == 'tick':
         return chr(0x258f)
     if prior_val is None:
         prior_val = current_val
@@ -591,32 +592,32 @@ class SimulationTrace(object):
         # dump header info
         # file_timestamp = time.strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", time.gmtime())
         # print >>file, " ".join(["$date", file_timestamp, "$end"])
-        print(" ".join(["$timescale", "1ns", "$end"]), file=file)
-        print(" ".join(["$scope", "module logic", "$end"]), file=file)
+        print(u' '.join([u'$timescale', u'1ns', u'$end']), file=file)
+        print(u' '.join([u'$scope', u'module logic', u'$end']), file=file)
 
         # dump variables
         for w in sorted(self.trace, key=_trace_sort_key):
-            print(" ".join(["$var", "wire", str(w.bitwidth), w.name, w.name, "$end"]), file=file)
-        print(" ".join(["$upscope", "$end"]), file=file)
-        print(" ".join(["$enddefinitions", "$end"]), file=file)
-        print(" ".join(["$dumpvars"]), file=file)
+            print(u' '.join([u'$var', u'wire', str(w.bitwidth), w.name, w.name, u'$end']), file=file)
+        print(u' '.join([u'$upscope', u'$end']), file=file)
+        print(u' '.join([u'$enddefinitions', u'$end']), file=file)
+        print(u' '.join([u'$dumpvars']), file=file)
         for w in sorted(self.trace, key=_trace_sort_key):
             if w.bitwidth > 1:
-                print(" ".join([str(bin(self.trace[w][0]))[1:], w.name]), file=file)
+                print(u' '.join([str(bin(self.trace[w][0]))[1:], w.name]), file=file)
             else:
-                print("".join([str(self.trace[w][0]), w.name]), file=file)
-        print(" ".join(["$end"]), file=file)
+                print(u''.join([str(self.trace[w][0]), w.name]), file=file)
+        print(u' '.join([u'$end']), file=file)
 
         # dump values
         endtime = max([len(self.trace[w]) for w in self.trace])
         for timestamp in range(endtime):
-            print("".join(["#", str(timestamp)]), file=file)
+            print(u''.join([u'#', str(timestamp)]), file=file)
             for w in sorted(self.trace, key=_trace_sort_key):
                 if w.bitwidth > 1:
-                    print(" ".join([str(bin(self.trace[w][timestamp]))[1:], w.name]), file=file)
+                    print(u' '.join([str(bin(self.trace[w][timestamp]))[1:], w.name]), file=file)
                 else:
-                    print("".join([str(self.trace[w][timestamp]), w.name]), file=file)
-        print("".join(["#", str(endtime)]), file=file)
+                    print(u''.join([str(self.trace[w][timestamp]), w.name]), file=file)
+        print(u''.join([u'#', str(endtime)]), file=file)
         file.flush()
 
     def render_trace(

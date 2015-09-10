@@ -396,7 +396,7 @@ class Const(WireVector):
                 raise PyrtlError('error, string for Const not in verilog style format')
             try:
                 bitwidth = int(split_string[0])
-                if split_string[1][0].isnumeric():
+                if split_string[1][0].isdigit():
                     num = int(split_string[1])
                 else:
                     # this handles strings such as 32'b5 by converting them as int(0b5)

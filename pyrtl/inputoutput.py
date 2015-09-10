@@ -7,6 +7,7 @@ accordingly, or write information from the Block out to the file.
 """
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 from random import randint
 
@@ -17,10 +18,6 @@ import collections
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block
 from .wire import WireVector, Input, Output, Const, Register
-
-from . import wire
-from . import helperfuncs
-from . import spice_templates
 
 
 # -----------------------------------------------------------------
@@ -521,7 +518,6 @@ def output_verilog_testbench(file, simulation_trace=None, block=None):
 SPICE_NODES = 0
 SPICE_FETS = 0
 
-
 def _new_fet():
     global SPICE_FETS
     SPICE_FETS += 1
@@ -535,7 +531,13 @@ def _new_node():
 
 
 def _render_nand(output_file, a, b, out):
-    print(spice_templates.NAND_TEMPLATE.format(
+    template = ''' 
+    {M1} {output} {InputB} Vdd Vdd PMOS
+    {M2} {output} {InputA} Vdd Vdd PMOS
+    {M4} {node} {InputB} 0 0 NMOS
+    {M3} {output} {InputA} {node} 0 NMOS'''
+
+    print(template.format(
         InputA=a, InputB=b, output=out, M1=_new_fet(), M2=_new_fet(),
         M3=_new_fet(), M4=_new_fet(), node=_new_node()
     ), file=output_file)
@@ -568,10 +570,10 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
         return name
 
     # comment on top
-    print("* SPICE export from PyRTL", file=output_file)
+    print('* SPICE export from PyRTL', file=output_file)
 
     # setup power source
-    print("Vdd Vdd 0 5", file=output_file)
+    print('Vdd Vdd 0 5', file=output_file)
 
     for net in block.logic:
         # do some checks to make sure our working block is sane.
@@ -592,7 +594,7 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
             input_wire = net.args[0]
             period = randint(2, 10)
             on = period/2
-            print("V{name} {node} 0 PULSE(0 5 0 0 0 {on} {period})".format(
+            print('V{name} {node} 0 PULSE(0 5 0 0 0 {on} {period})'.format(
                 name=alias(input_wire.name), node=alias(net.dests[0].name),
                 on=str(on), period=str(period)), file=output_file)
         elif net.op == '&':
@@ -602,7 +604,7 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
                          alias(net.args[0].name), alias(net.args[1].name), intermediate_node)
             _render_nand(output_file,
                          intermediate_node, intermediate_node, alias(net.dests[0].name))
-        elif net.op == "|":
+        elif net.op == '|':
             # handle OR; invert both inputs and put those through another NAND
             intermediate_a = _new_node()
             intermediate_b = _new_node()
@@ -612,7 +614,7 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
                          alias(net.args[1].name), alias(net.args[1].name), intermediate_b)
             _render_nand(output_file,
                          intermediate_a, intermediate_b, alias(net.dests[0].name))
-        elif net.op == "^":
+        elif net.op == '^':
             # XOR
             a_nand_b = _new_node()
             tim = _new_node()
@@ -626,12 +628,12 @@ def output_to_spice(output_file=sys.stdout, block=None, sim_time="20", sim_min_s
             # do nothing for now?
             pass
         else:
-            print(repr(net), file=output_file)
+            print('%s' % repr(net), file=output_file)
 
     # print footer
-    print(".model NMOS NMOS", file=output_file)
-    print(".model PMOS PMOS", file=output_file)
-    print(".tran 0 {sim_time} 0 {sim_min_step}"\
+    print('.model NMOS NMOS', file=output_file)
+    print('.model PMOS PMOS', file=output_file)
+    print('.tran 0 {sim_time} 0 {sim_min_step}'\
         .format(sim_time=sim_time, sim_min_step=sim_min_step), file=output_file)
-    print(".backanno", file=output_file)
-    print(".end", file=output_file)
+    print('.backanno', file=output_file)
+    print('.end', file=output_file)
