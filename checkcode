@@ -4,7 +4,7 @@ echo
 echo
 echo "!!!This script is deprecated, moving to 'tox'!!!"
 echo "just run 'tox' to check code against python 2.7 and 3.4"
-echo "'tox -e 2.7-test' will run just original 2.7 test, and "
+echo "'tox -e py2.7-test' will run just original 2.7 test, and "
 echo "'tox -e pep8' will just run the pep8 check."
 echo
 echo

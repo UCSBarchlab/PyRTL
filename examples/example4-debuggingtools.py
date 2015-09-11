@@ -26,14 +26,14 @@ random.seed(93729473)  # used to make random calls deterministic for this exampl
 # in RtlLib, the standard library for PyRTL.
 
 # The first step to use the RtlLib is to import it
-from rtllib import adders
+#from pyrtl import adders
 
 # building three inputs
 in1, in2, in3 = (pyrtl.Input(8, "in" + str(x)) for x in range(1, 4))
 out = pyrtl.Output(10, "out")
 
-add1_out = adders.kogge_stone(in1, in2)
-add2_out = adders.kogge_stone(add1_out, in2)
+add1_out = pyrtl.adders.kogge_stone(in1, in2)
+add2_out = pyrtl.adders.kogge_stone(add1_out, in2)
 out <<= add2_out
 
 # The most basic way of debugging PyRTL is to connect a value to an output wire
@@ -100,7 +100,7 @@ pyrtl.set_debug_mode()
 # a test wire to show this feature
 
 test_out = pyrtl.Output(9, "test_out")
-test_out <<= adders.kogge_stone(in1, in3)
+test_out <<= pyrtl.adders.kogge_stone(in1, in3)
 
 # Now to retrieve information
 wire_trace = test_out.init_call_stack

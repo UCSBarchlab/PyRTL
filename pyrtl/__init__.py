@@ -66,3 +66,5 @@ from .passes import timing_analysis
 from .passes import timing_max_length
 from .passes import print_max_length
 from .passes import timing_critical_path
+
+from .rtllib import adders

@@ -1,11 +1,19 @@
+"""Classes for executing and tracing circuit simulations."""
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
 import sys
 import re
-from . import core
-from . import wire
-from . import memory
+
+for l in sys.path:
+    print(l)
+from six import unichr as chr
+
+from .pyrtlexceptions import PyrtlError, PyrtlInternalError
+from .core import working_block, PostSynthBlock
+from .wire import Input, Output, Register, Const
+from .memory import RomBlock, _MemReadBase
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -20,8 +28,7 @@ class Simulation(object):
     def __init__(
             self, tracer=None, register_value_map=None, memory_value_map=None,
             default_value=0, use_postsynth_map_if_available=True, block=None):
-        """
-        Creates a new circuit simulator
+        """ Creates a new circuit simulator
 
         :param tracer: an instance of SimulationTrace used to store execution results.
         :param use_postsynth_map_if_available: will map the I/O to the block from the
@@ -34,12 +41,11 @@ class Simulation(object):
         :param block: the hardware block to be traced (which might be of type PostSynthesisBlock).
         """
 
-        """
-        Creates object and initializes it with self._initialize.
+        """ Creates object and initializes it with self._initialize.
         register_value_map, memory_value_map, and default_value are passed on to _initialize.
         """
 
-        block = core.working_block(block)
+        block = working_block(block)
         block.sanity_check()  # check that this is a good hw block
 
         self.value = {}   # map from signal->value
@@ -66,7 +72,7 @@ class Simulation(object):
             default_value = self.default_value
 
         # set registers to their values
-        reg_set = self.block.wirevector_subset(wire.Register)
+        reg_set = self.block.wirevector_subset(Register)
         if register_value_map is not None:
             for r in reg_set:
                 if r in register_value_map:
@@ -75,18 +81,18 @@ class Simulation(object):
                     self.value[r] = default_value
 
         # set constants to their set values
-        for w in self.block.wirevector_subset(wire.Const):
+        for w in self.block.wirevector_subset(Const):
             self.value[w] = w.val
             assert isinstance(w.val, int)  # for now
 
         # set memories to their passed values
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
-                if isinstance(self.block, core.PostSynthBlock):
+                if isinstance(self.block, PostSynthBlock):
                     mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
                 for (addr, val) in mem_map.items():
                     if addr < 0 or addr >= 2**mem.addrwidth:
-                        raise core.PyrtlError('error, address outside of bounds')
+                        raise PyrtlError('error, address outside of bounds')
                     self.memvalue[(mem.id, addr)] = val
                     # TODO: warn if value larger than fits in bitwidth
 
@@ -94,7 +100,7 @@ class Simulation(object):
         # set ROMs to their default values
         for romNet in self.block.logic_subset('m'):
             rom = romNet.op_param[1]
-            if isinstance(rom, memory.RomBlock) and rom not in defined_roms:
+            if isinstance(rom, RomBlock) and rom not in defined_roms:
                 for address in range(0, 2**rom.addrwidth):
                     self.memvalue[(rom.id, address)] = rom._get_read_data(address)
 
@@ -114,22 +120,22 @@ class Simulation(object):
         prior_value = self.value.copy()
 
         # Check that all Input have a corresponding provided_input
-        input_set = self.block.wirevector_subset(wire.Input)
+        input_set = self.block.wirevector_subset(Input)
         supplied_inputs = set()
         for i in provided_inputs:
             sim_wire = i
-            if isinstance(self.block, core.PostSynthBlock) and self.use_postsynth_map:
+            if isinstance(self.block, PostSynthBlock) and self.use_postsynth_map:
                 sim_wire = self.block.io_map[sim_wire]  # pylint: disable=maybe-no-member
             if sim_wire not in input_set:
-                raise core.PyrtlError(
+                raise PyrtlError(
                     'step provided a value for input for "%s" which is '
                     'not a known input ' % i.name)
             if not isinstance(provided_inputs[i], int) or provided_inputs[i] < 0:
-                raise core.PyrtlError(
+                raise PyrtlError(
                     'step provided an input "%s" which is not a valid '
                     'positive integer' % provided_inputs[i])
             if len(bin(provided_inputs[i]))-2 > sim_wire.bitwidth:
-                raise core.PyrtlError(
+                raise PyrtlError(
                     'the bitwidth for "%s" is %d, but the provided input '
                     '%d requires %d bits to represent'
                     % (sim_wire.name, sim_wire.bitwidth,
@@ -141,7 +147,7 @@ class Simulation(object):
         # Check that only inputs are specified, and set the values
         if input_set != supplied_inputs:
             for i in input_set.difference(supplied_inputs):
-                raise core.PyrtlError(
+                raise PyrtlError(
                     'Input "%s" has no input value specified' % i.name)
 
         # Do all of the clock-edge triggered operations based off of the priors
@@ -150,8 +156,8 @@ class Simulation(object):
 
         # propagate inputs to outputs
         # wires  which are defined at the start are inputs and registers
-        const_set = self.block.wirevector_subset(wire.Const)
-        reg_set = self.block.wirevector_subset(wire.Register)
+        const_set = self.block.wirevector_subset(Const)
+        reg_set = self.block.wirevector_subset(Register)
         defined_set = reg_set | const_set | input_set
         logic_left = self.block.logic.copy()
 
@@ -164,9 +170,9 @@ class Simulation(object):
             if len(logic_left) == 0:
                 break
         else:  # no break
-            from . import helperfuncs
-            helperfuncs.find_loop(self.block)
-            raise core.PyrtlInternalError(
+            from .helperfuncs import find_loop
+            find_loop(self.block)
+            raise PyrtlInternalError(
                 'error, the set of logic "%s" appears to be waiting for value never produced'
                 % str(logic_left))
 
@@ -237,7 +243,7 @@ class Simulation(object):
         elif net.op == 'r' or net.op == '@':
             pass  # registers and memory write ports have no logic function
         else:
-            raise core.PyrtlInternalError('error, unknown op type')
+            raise PyrtlInternalError('error, unknown op type')
 
     def _edge_update(self, net, prior_value):
         """Handle the posedge event for the simulation of the given net.
@@ -262,7 +268,7 @@ class Simulation(object):
                 if write_enable:
                     self.memvalue[(memid, write_addr)] = write_val
             else:
-                raise core.PyrtlInternalError
+                raise PyrtlInternalError
 
     def _try_execute(self, defined_set, net):
         """ Try to Execute net but return False if not ready.
@@ -306,7 +312,7 @@ class FastSimulation(object):
             self, register_value_map=None, memory_value_map=None,
             default_value=0, tracer=None, block=None):
 
-        block = core.working_block(block)
+        block = working_block(block)
         block.sanity_check()  # check that this is a good hw block
 
         self.block = block
@@ -321,7 +327,7 @@ class FastSimulation(object):
             default_value = self.default_value
 
         # set registers to their values
-        reg_set = self.block.wirevector_subset(wire.Register)
+        reg_set = self.block.wirevector_subset(Register)
         if register_value_map is not None:
             for r in reg_set:
                 if r in register_value_map:
@@ -330,7 +336,7 @@ class FastSimulation(object):
                     self.context[self.varname(r)] = default_value
 
         # set constants to their set values
-        for w in self.block.wirevector_subset(wire.Const):
+        for w in self.block.wirevector_subset(Const):
             self.context[self.varname(w)] = w.val
 
         # set memories to their passed values or default value
@@ -342,7 +348,7 @@ class FastSimulation(object):
 
         for net in self.block.logic_subset('m'):
             mem = net.op_param[1]
-            if isinstance(mem, memory.RomBlock):
+            if isinstance(mem, RomBlock):
                 if self.varname(mem) not in self.context:
                     self.context[self.varname(mem)] = mem
 
@@ -386,7 +392,7 @@ class FastSimulation(object):
     @staticmethod
     def varname(val):
         # TODO check if w.name is a legal python identifier
-        if isinstance(val, memory._MemReadBase):
+        if isinstance(val, _MemReadBase):
             return 'fs_mem' + str(val.id)
         else:
             return val.name
@@ -453,7 +459,7 @@ class FastSimulation(object):
                 mask = str(net.dests[0].bitmask)
                 result = self.varname(net.dests[0])
 
-                if isinstance(net.op_param[1], memory.RomBlock):
+                if isinstance(net.op_param[1], RomBlock):
                     expr = '%s._get_read_data(%s)' % (self.varname(net.op_param[1]), read_addr)
                 else:
                     # memories act async for reads
@@ -466,7 +472,7 @@ class FastSimulation(object):
             elif net.op == 'r' or net.op == '@':
                 pass  # registers and memory write ports have no logic function
             else:
-                raise core.PyrtlError('FastSimulation cannot handle primitive "%s"' % net.op)
+                raise PyrtlError('FastSimulation cannot handle primitive "%s"' % net.op)
 
         return prog
 
@@ -533,7 +539,7 @@ class SimulationTrace(object):
     """ Storage and presentation of simulation waveforms. """
 
     def __init__(self, wirevector_subset=None, block=None):
-        block = core.working_block(block)
+        block = working_block(block)
 
         def is_internal_name(name):
             if (
@@ -560,7 +566,7 @@ class SimulationTrace(object):
     def __len__(self):
         """ Return the current length of the trace in cycles. """
         if len(self.trace) == 0:
-            raise core.PyrtlError('error, length of trace undefined if no signals tracked')
+            raise PyrtlError('error, length of trace undefined if no signals tracked')
         # return the length of the list of some element in the dictionary (all should be the same)
         wire, value_list = next(x for x in self.trace.items())
         return len(value_list)
@@ -568,8 +574,8 @@ class SimulationTrace(object):
     def add_step(self, value_map):
         """ Add the values in value_map to the end of the trace. """
         if len(self.trace) == 0:
-            raise core.PyrtlError('error, simulation trace needs at least 1 signal '
-                                  'to track (try passing name to WireVector)')
+            raise PyrtlError('error, simulation trace needs at least 1 signal '
+                             'to track (try passing name to WireVector)')
         for w in self.trace:
             self.trace[w].append(value_map[w])
 
@@ -580,7 +586,7 @@ class SimulationTrace(object):
 
     def print_trace(self, file=sys.stdout):
         if len(self.trace) == 0:
-            raise core.PyrtlError('error, cannot print an empty trace')
+            raise PyrtlError('error, cannot print an empty trace')
         maxlen = max([len(w.name) for w in self.trace])
         for w in sorted(self.trace, key=_trace_sort_key):
             file.write(' '.join([w.name.rjust(maxlen),
