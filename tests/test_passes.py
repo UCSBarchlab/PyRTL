@@ -180,8 +180,6 @@ class TestOptimization(unittest.TestCase):
         outwire = pyrtl.Output()
 
         outwire <<= inwire & constwire
-        print()
-        print(str(pyrtl.working_block()))
         pyrtl.synthesize()
         pyrtl.optimize()
         # should remove the or block and replace it with a
@@ -189,10 +187,7 @@ class TestOptimization(unittest.TestCase):
         block = pyrtl.working_block(None)
         self.assertEqual(self.num_net_of_type('&', block), 0)
         self.assertEqual(self.num_net_of_type('w', block), 1)
-        print()
-        print(str(pyrtl.working_block()))
         self.assertEqual(len(block.logic), 2)
-        self.assertEqual(1,0)
         self.assertEqual(len(block.wirevector_set), 4)
         self.assertEqual(self.num_wire_of_type(pyrtl.wire.Const, block), 1)
 

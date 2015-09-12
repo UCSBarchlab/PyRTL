@@ -382,7 +382,7 @@ def find_loop(block=None, print_result=True):
     wires_left, logic_left = result
     import random
 
-    class _FilteringState:
+    class _FilteringState(object):
         def __init__(self, dst_w):
             self.dst_w = dst_w
             self.arg_num = -1

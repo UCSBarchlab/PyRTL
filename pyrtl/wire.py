@@ -351,8 +351,7 @@ class Const(WireVector):
     _code = 'C'
 
     def __init__(self, val, bitwidth=None, block=None):
-        """
-        Construct a constant implementation at initialization
+        """ Construct a constant implementation at initialization
 
         :param int or str val: The value for the const wirevector
         :return: a wirevector object representing a const wire

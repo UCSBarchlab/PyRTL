@@ -274,8 +274,7 @@ def _remove_wire_nets(block):
 
 
 def _constant_propagation(block):
-    """
-    Removes excess constants in the block
+    """ Removes excess constants in the block.
 
     Note on resulting block:
     The output of the block can have wirevectors that are driven but not
@@ -392,8 +391,7 @@ def _constant_prop_pass(block):
 
 
 def _remove_unlistened_nets(block):
-    """
-    Removes all nets that are not connected to an output wirevector
+    """ Removes all nets that are not connected to an output wirevector
     """
 
     listened_nets = set()
@@ -423,7 +421,7 @@ def _remove_unlistened_nets(block):
 
     # now I need to add back the interface for the inputs that were removed
     for net in block.logic:
-        if net.op is 's' and isinstance(net.args[0], Input) and net not in listened_nets:
+        if net.op == 's' and isinstance(net.args[0], Input) and net not in listened_nets:
             listened_nets.add(net)
             # notify the user that this net is useless
 

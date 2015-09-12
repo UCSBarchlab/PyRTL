@@ -25,9 +25,6 @@ random.seed(93729473)  # used to make random calls deterministic for this exampl
 # built-in "+" function in PyRTL, we will instead use the Kogge-Stone adders
 # in RtlLib, the standard library for PyRTL.
 
-# The first step to use the RtlLib is to import it
-#from pyrtl import adders
-
 # building three inputs
 in1, in2, in3 = (pyrtl.Input(8, "in" + str(x)) for x in range(1, 4))
 out = pyrtl.Output(10, "out")

@@ -6,8 +6,6 @@ from __future__ import unicode_literals
 import sys
 import re
 
-for l in sys.path:
-    print(l)
 from six import unichr as chr
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
@@ -558,7 +556,7 @@ class SimulationTrace(object):
                 for w in block.wirevector_set
                 if not is_internal_name(w.name)
                 }
-        elif wirevector_subset is 'all':
+        elif wirevector_subset == 'all':
             self.trace = {w: [] for w in block.wirevector_set}
         else:
             self.trace = {w: [] for w in wirevector_subset}
