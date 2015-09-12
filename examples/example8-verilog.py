@@ -110,7 +110,7 @@ print(pyrtl.working_block())
 print()
 
 print("--- Verilog for the Counter ---")
-with io.BytesIO() as vfile:
+with io.StringIO() as vfile:
     pyrtl.output_to_verilog(vfile)
     print(vfile.getvalue())
 
@@ -127,7 +127,7 @@ sim_trace.render_trace()
 # and sets them up in a standar verilog testbench.
 
 print("--- Verilog for the TestBench ---")
-with io.BytesIO() as tbfile:
+with io.StringIO() as tbfile:
     pyrtl.output_verilog_testbench(tbfile, sim_trace)
     print(tbfile.getvalue())
 
@@ -144,6 +144,6 @@ print("--- Optimized Single-bit Verilog for the Counter ---")
 pyrtl.synthesize()
 pyrtl.optimize()
 
-with io.BytesIO() as vfile:
+with io.StringIO() as vfile:
     pyrtl.output_to_verilog(vfile)
     print(vfile.getvalue())

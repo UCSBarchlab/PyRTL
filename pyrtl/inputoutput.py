@@ -8,6 +8,7 @@ accordingly, or write information from the Block out to the file.
 
 from __future__ import print_function
 from __future__ import unicode_literals
+import six
 
 from random import randint
 
@@ -44,7 +45,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
     try:
         blif_string = blif.read()
     except AttributeError:
-        if isinstance(blif, str):
+        if isinstance(blif, six.string_types):
             blif_string = blif
         else:
             raise PyrtlError('input_blif expecting either open file or string')
@@ -474,7 +475,7 @@ def output_verilog_testbench(file, simulation_trace=None, block=None):
     # Declare all block outputs as wires
     for w in outputs:
         print('    wire {:s} {:s};'.format(_verilog_vector_decl(w), w.name), file=file)
-    print(file=file)
+    print('', file=file)
 
     # Instantiate logic block
     io_list = [w.name for w in block.wirevector_subset((Input, Output))]
