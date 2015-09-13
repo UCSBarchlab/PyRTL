@@ -281,10 +281,10 @@ def output_to_trivialgraph(file, block=None):
 
     # print the actual output to the file
     for (id, label) in nodes.values():
-        print(id, label, file=file)
+        print('%s %s' % (id, label), file=file)
     print('#', file=file)
-    for (frm, to) in edges:
-        print(frm, to, edge_names.get((frm, to), ''), file=file)
+    for (from_, to) in edges:
+        print('%s %s %s' % (from_, to, edge_names.get((from_, to), '')), file=file)
 
 
 # ----------------------------------------------------------------

@@ -18,7 +18,7 @@ random.seed(93729473)  # used to make random calls deterministic for this exampl
 # the place where  functionality is defdined (when you construct and operate
 # on PyRTL classes) is seperate in time from where that functionalty is executed
 # (i.e. during siumation).  Thus, sometimes it hard to track down where a wire
-# might have come from, or waht exactly it is doing!
+# might have come from, or what exactly it is doing.
 
 # In this example specifically, we will be building a circuit that adds up three values.
 # However, instead of building an add function ourselves or using the
@@ -107,8 +107,8 @@ wire_trace = test_out.init_call_stack
 # details on the function). Therefore, the stack traces are stored as a list with the
 # outermost call first.
 
-for frame in wire_trace:
-    print(frame)
+#for frame in wire_trace:
+#    print(frame)
 
 # Storage of Additional Debug Data
 
@@ -150,6 +150,6 @@ pyrtl.working_block().remove_wirevector(dummy_wv)
 
 import io
 print("--- Trivial Graph Format  ---")
-with io.BytesIO() as tgf:
+with io.StringIO() as tgf:
     pyrtl.output_to_trivialgraph(tgf)
     print(tgf.getvalue())
