@@ -1,16 +1,16 @@
 from setuptools import setup
 
 config = {
-    'description': 'A simple RTL design and simulation toolkit.',
-    'author': 'UC Santa Barbara Computer Architecture Lab',
-    'url': 'https://github.com/UCSBarchlab/PyRTL',
+    'name': 'pyrtl',
+    'description': 'A RTL-level hardware design and simulation toolkit.',
+    'author': 'Timothy Sherwood, John Clow, and the UCSBarchlab',
+    'url': 'http://ucsbarchlab.github.io/PyRTL/',
     'download_url': 'https://github.com/UCSBarchlab/PyRTL/tarball/master',
     'author_email': 'sherwood@cs.ucsb.edu',
-    'version': '0.1',
+    'version': '0.8',
     'install_requires': ['pyparsing'],
     'packages': ['pyrtl'],
-    'scripts': [],
-    'name': 'PyRTL'
+    'scripts': []
 }
 
 setup(**config)

@@ -1,14 +1,21 @@
 language: python
-python:
-  - "2.7"
-# command to install dependencies
-install: "pip install -r requirements.txt"
-
+python: 2.7
+env:
+  - TOX_ENV=py33-1.6.X
+  - TOX_ENV=py33-1.5.X
+  - TOX_ENV=py27-1.6.X
+  - TOX_ENV=py27-1.5.X
+  - TOX_ENV=py27-1.4.X
+  - TOX_ENV=py26-1.5.X
+  - TOX_ENV=py26-1.4.X
+  - TOX_ENV=docs
+  - TOX_ENV=flake8
 # don't test branches that might not build
 branches:
   only:
     - master
     - development
-
-# command to run tests
-script: ./checkcode
+install:
+  - pip install tox
+script:
+  - tox
