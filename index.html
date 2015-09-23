@@ -49,7 +49,7 @@ bit-vectors end-to-end as well.  You can then even make normal python collection
 do operations on them in bulk. For example, if you have a list of <em>n</em> different k-bit WireVectors (called "x") and you 
 want to multiply each of them by 2 and put the sum of the result in a WireVector "y", it looks like
 the following:  <code>y = sum([elem * 2 for elem in x])</code>. 
-Hardware comprehensions are surprisingly useful!</p>
+Hardware comprehensions are surprisingly useful.</p>
 
 <h3>
 <a id="hello-n-bit-ripple-carry-adder" class="anchor" href="#hello-n-bit-ripple-carry-adder" aria-hidden="true"><span class="octicon octicon-link"></span></a>Hello N-bit Ripple-Carry Adder!</h3>
@@ -58,7 +58,7 @@ Hardware comprehensions are surprisingly useful!</p>
 <a href="https://en.wikipedia.org/wiki/Adder_(electronics)">Ripple-Carry Adder</a> and so it is useful to see how you 
 might express one in PyRTL if you had to.  Rather than the typical <a href="https://www.youtube.com/watch?v=bL3ihMA8_Gs">Verilog introduction to fixed 4-bit 
 adders</a>, let's go ahead and build an <em>arbitrary</em> bitwidth 
-adder!.</p>
+adder.</p>
 
 <div class="highlight highlight-source-python"><pre><span class="pl-k">def</span> <span class="pl-en">one_bit_add</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>, <span class="pl-smi">cin</span>):
     <span class="pl-k">assert</span> <span class="pl-c1">len</span>(a) <span class="pl-k">==</span> <span class="pl-c1">len</span>(b) <span class="pl-k">==</span> <span class="pl-c1">1</span>  <span class="pl-c"># len returns the bitwidth</span>
@@ -98,7 +98,7 @@ the examples directory.  When you run it, it should look like this (you can see 
 <h3>
 <a id="a-few-gotchas" class="anchor" href="#a-few-gotchas" aria-hidden="true"><span class="octicon octicon-link"></span></a>A Few Gotchas</h3>
 
-<p>While python is an amazing language, DSLs in python always forced to make a few compromises which can sometime catch
+<p>While python is an amazing language, DSLs in python are always forced to make a few compromises which can sometime catch
 users in some unexpected ways.  Watch out for these couple of "somewhat surprising features"</p>
 
 <ul>
@@ -136,10 +136,10 @@ and synthesizable which avoids a common trap for beginners, it elaborates the de
 in describing recursive or complex hardware structures, and allows for hardware synthesis, simulation, test bench creation, and optimization
 all in the same framework.</p>
 
-<p><a href="https://chisel.eecs.berkeley.edu/">Chisel</a> is a project with similar goals to PyRTL but is based instead in Scala.  Using the Scala
-embedded language features and rich type system, Chisel is (like PyRTL) a elaborate-through-execution hardware design language.  With support
+<p><a href="https://chisel.eecs.berkeley.edu/">Chisel</a> is a project with similar goals to PyRTL but is based instead in Scala.  Scala
+provides some very helpful embedded language features and a rich type system. Chisel is (like PyRTL) a elaborate-through-execution hardware design language.  With support
 for signed types, named hierarchies of wires useful for hardware protocols, and a neat control structure call "when" that inspired our
-ConditionalUpdate contexts, Chisel is a powerful tool used in some great research projects including OpenRISC.  Unlike Chisel, PyRTL has
+conditional contexts, Chisel is a powerful tool used in some great research projects including OpenRISC.  Unlike Chisel, PyRTL has
 concentrated on a complete tool chain which is useful for instructional projects, and provides a clearly defined and relatively easy to
 manipulate intermediate structure in the class Block (often times call pyrtl.core) which allows rapid prototyping of hardware analysis
 routines which can then be codesigned with the architecture.</p>
@@ -153,7 +153,7 @@ PyRTL.</p>
 <p><a href="https://github.com/cornell-brg/pymtl">PyMTL</a> is an alpha stage "open-source Python-based framework for multi-level hardware modeling".
 One of the neat things about this project is that they are trying to allow simulation and modeling at multiple different levels of the
 design from the functional level, the cycle-close level, and down to the register-transfer level (where PyRTL really is built to play).
-Like MyHDL they do some neat meta-programming tricks like parsing the Python AST to allow executable software descriptions to be (under
+Like MyHDL they do some meta-programming tricks like parsing the Python AST to allow executable software descriptions to be (under
 certain restrictions -- sort of like verilog) automatically converted into implementable hardware.  PyRTL, on the other hand, is about
 providing a limited and composable set of data structures to be used to specify an RTL implementation, thus avoiding the distinction between
 synthesizable and non-synthesizable code (the execution is the elaboration step).</p>
