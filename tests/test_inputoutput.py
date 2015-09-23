@@ -70,30 +70,8 @@ class TestVerilog(unittest.TestCase):
         mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, romdata=rdat)
         o <<= mixtable[sum]
         with io.StringIO() as testbuffer:
-            pyrtl.output_to_spice(testbuffer)
+            pyrtl.output_to_verilog(testbuffer)
 
-class TestSpice(unittest.TestCase):
-    def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
-        pyrtl.reset_working_block()
-
-    def test_spice_output(self):
-        temp1 = pyrtl.WireVector(bitwidth=1, name='temp1')
-        temp2 = pyrtl.WireVector()
-        a, b, c = pyrtl.Input(1, 'a'), pyrtl.Input(1, 'b'), pyrtl.Input(1, 'c')
-        sum, cout = pyrtl.Output(1, 'sum'), pyrtl.Output(1, 'cout')
-        sum <<= a ^ b ^ c
-        temp1 <<= a & b  # connect the result of a & b to the pre-allocated wirevector
-        temp2 <<= a & c
-        temp3 = b & c  # temp3 IS the result of b & c (this is the first mention of temp3)
-        cout <<= temp1 | temp2 | temp3
-
-        pyrtl.synthesize()
-        pyrtl.optimize()
-        with io.StringIO() as testbuffer:
-            pyrtl.output_to_spice(testbuffer)
 
 if __name__ == "__main__":
     unittest.main()

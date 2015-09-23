@@ -54,7 +54,6 @@ from .inputoutput import input_from_blif
 from .inputoutput import output_to_trivialgraph
 from .inputoutput import output_to_verilog
 from .inputoutput import output_verilog_testbench
-from .inputoutput import output_to_spice
 
 # different analysis and transform passes
 from .passes import synthesize
