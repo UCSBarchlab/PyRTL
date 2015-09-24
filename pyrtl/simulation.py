@@ -1,16 +1,16 @@
 """Classes for executing and tracing circuit simulations."""
 
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
 import sys
 import re
+import numbers
 
 from six import unichr as chr
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock
-from .wire import Input, Output, Register, Const
+from .wire import Input, Register, Const
 from .memory import RomBlock, _MemReadBase
 
 # ----------------------------------------------------------------
@@ -81,7 +81,7 @@ class Simulation(object):
         # set constants to their set values
         for w in self.block.wirevector_subset(Const):
             self.value[w] = w.val
-            assert isinstance(w.val, int)  # for now
+            assert isinstance(w.val, numbers.Integral)  # for now
 
         # set memories to their passed values
         if memory_value_map is not None:
@@ -128,7 +128,7 @@ class Simulation(object):
                 raise PyrtlError(
                     'step provided a value for input for "%s" which is '
                     'not a known input ' % i.name)
-            if not isinstance(provided_inputs[i], int) or provided_inputs[i] < 0:
+            if not isinstance(provided_inputs[i], numbers.Integral) or provided_inputs[i] < 0:
                 raise PyrtlError(
                     'step provided an input "%s" which is not a valid '
                     'positive integer' % provided_inputs[i])
