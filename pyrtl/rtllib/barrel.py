@@ -28,7 +28,7 @@ def barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0):
         shift_amt = pow(2, i)  # stages shift 1,2,4,8,...
         newval = pyrtl.mux(direction, truecase=val[:-shift_amt], falsecase=val[shift_amt:])
         newval = pyrtl.mux(direction, truecase=pyrtl.concat(newval, append_val),
-                     falsecase=pyrtl.concat(append_val, newval))  # Build shifted value
+                           falsecase=pyrtl.concat(append_val, newval))  # Build shifted value
         # pyrtl.mux shifted vs. unshifted by using i-th bit of shift amount signal
         val = pyrtl.mux(shift_dist[i-1], truecase=newval, falsecase=val)
         append_val = pyrtl.concat(append_val, append_val)
