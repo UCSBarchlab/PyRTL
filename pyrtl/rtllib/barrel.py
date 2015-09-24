@@ -1,6 +1,5 @@
-import sys
-sys.path.append("..")
-from pyrtl import *
+from __future__ import absolute_import
+import pyrtl
 import math
 
 
@@ -15,10 +14,10 @@ def barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0):
     :param wrap_around: ****currently not implemented*****
     :return: shifted wirevector
     """
-    # Implement with logN stages muxing between shifted and un-shifted values
+    # Implement with logN stages pyrtl.muxing between shifted and un-shifted values
 
     val = shift_in
-    appendval = bit_in
+    append_val = bit_in
     log_length = int(math.log(len(shift_in)-1, 2))  # note the one offset
 
     if len(shift_dist) > log_length:
@@ -27,11 +26,11 @@ def barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0):
 
     for i in range(min(len(shift_dist), log_length)):
         shift_amt = pow(2, i)  # stages shift 1,2,4,8,...
-        newval = mux(direction, truecase=val[:-shift_amt], falsecase=val[shift_amt:])
-        newval = mux(direction, truecase=concat(newval, appendval),
-                     falsecase=concat(appendval, newval))  # Build shifted value for this stage
-        # mux shifted vs. unshifted by using i-th bit of shift amount signal
-        val = mux(shift_dist[i-1], truecase=newval, falsecase=val)
-        appendval = concat(appendval, appendval)
+        newval = pyrtl.mux(direction, truecase=val[:-shift_amt], falsecase=val[shift_amt:])
+        newval = pyrtl.mux(direction, truecase=pyrtl.concat(newval, append_val),
+                     falsecase=pyrtl.concat(append_val, newval))  # Build shifted value
+        # pyrtl.mux shifted vs. unshifted by using i-th bit of shift amount signal
+        val = pyrtl.mux(shift_dist[i-1], truecase=newval, falsecase=val)
+        append_val = pyrtl.concat(append_val, append_val)
 
     return val

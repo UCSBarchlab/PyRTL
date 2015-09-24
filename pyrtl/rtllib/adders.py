@@ -1,7 +1,5 @@
-import sys
-sys.path.append("..")
+from __future__ import absolute_import
 import pyrtl
-from pyrtl import *
 from . import libutils
 
 
@@ -38,12 +36,13 @@ def kogge_stone(a, b, cin=0):
         prop_dist *= 2
 
     # assembling the result of the addition
-    gen_bits.insert(0, as_wires(cin))  # preparing the cin (and conveniently shifting the gen bits)
-    return concat(*reversed(gen_bits)) ^ prop_orig
+    # preparing the cin (and conveniently shifting the gen bits)
+    gen_bits.insert(0, pyrtl.as_wires(cin))
+    return pyrtl.concat(*reversed(gen_bits)) ^ prop_orig
 
 
 def one_bit_add(a, b, cin):
-    assert len(a) == len(b) == 1  # len returns the bitwidth
+    assert len(a) == len(b) == 1
     sum = a ^ b ^ cin
     cout = a & b | a & cin | b & cin
     return pyrtl.concat(cout, sum)
@@ -51,11 +50,10 @@ def one_bit_add(a, b, cin):
 
 def ripple_add(a, b, cin=0):
     a, b = libutils.match_bitwidth(a, b)
-    cin = as_wires(cin)
+    cin = pyrtl.as_wires(cin)
     if len(a) == 1:
         return one_bit_add(a, b, cin)
     else:
-        lsbit, ripplecarry = one_bit_add(a[0], b[0], cin)
         ripplecarry = one_bit_add(a[0], b[0], cin)
         msbits = ripple_add(a[1:], b[1:], ripplecarry[1])
         return pyrtl.concat(msbits, ripplecarry[0])
@@ -69,10 +67,9 @@ def carrysave_adder(a, b, c):
     """
     libutils.match_bitwidth(a, b, c)
     partial_sum = a ^ b ^ c
-    partial_shift = pyrtl.concat(0, partial_sum)
     shift_carry = (a | b) & (a | c) & (b | c)
     shift_carry_1 = pyrtl.concat(shift_carry, 0)
-    return ripple_add(partial_shift, shift_carry_1, 0)
+    return ripple_add(partial_sum, shift_carry_1)
 
 
 def wallace_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
@@ -128,10 +125,11 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
     2 wire vectors through a Kogge-Stone adder.
     """
     for wire_set in wire_array_2:
-        for wire in wire_set:
-            if not isinstance(wire, WireVector) or len(wire) != 1:
-                raise PyrtlError("The item %s is not a valid element for the wire_array_2."
-                                 "It must be a WireVector of bitwidth 1")
+        for a_wire in wire_set:
+            if not isinstance(a_wire, pyrtl.WireVector) or len(a_wire) != 1:
+                raise pyrtl.PyrtlError(
+                    "The item %s is not a valid element for the wire_array_2. "
+                    "It must be a WireVector of bitwidth 1")
 
     deferred = [[] for weight in range(result_bitwidth)]
     while not all([len(i) <= 2 for i in wire_array_2]):
@@ -176,7 +174,7 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
             if result is None:
                 result = wire_array_2[i][0]
             else:
-                result = concat(wire_array_2[i][0], result)
+                result = pyrtl.concat(wire_array_2[i][0], result)
         else:
             # For overlapping bits, create num1 and num2
             if weve_seen_a_two and len(wire_array_2[i]) == 2:
@@ -185,10 +183,10 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
 
             # If there's 1 left it's part of num2
             if weve_seen_a_two and len(wire_array_2[i]) == 1 and i < result_bitwidth:
-                num1.insert(0, Const(0))
+                num1.insert(0, pyrtl.Const(0))
                 num2.insert(0, wire_array_2[i][0])
 
-    adder_result = final_adder(concat(*num1), concat(*num2))
+    adder_result = final_adder(pyrtl.concat(*num1), pyrtl.concat(*num2))
 
     # Concatenate the results, and then return them.
     # Perhaps here we should slice off the overflow bit, if it exceeds bit_length?
@@ -196,7 +194,7 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
     if result is None:
         result = adder_result
     else:
-        result = concat(adder_result, result)
+        result = pyrtl.concat(adder_result, result)
     if len(result) > result_bitwidth:
         return result[:result_bitwidth]
     else:

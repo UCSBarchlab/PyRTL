@@ -1,8 +1,5 @@
-import sys
-
-sys.path.append("..")
-import io
-from pyrtl import *
+from __future__ import absolute_import
+import pyrtl
 from . import adders
 
 
@@ -25,20 +22,20 @@ def simple_mult(A, B, start):
     """
     alen = len(A)
     blen = len(B)
-    areg = Register(alen)
-    breg = Register(blen + alen)
-    accum = Register(blen + alen)
+    areg = pyrtl.Register(alen)
+    breg = pyrtl.Register(blen + alen)
+    accum = pyrtl.Register(blen + alen)
     done = areg == 0  # Multiplication is finished when a becomes 0
 
     # During multiplication, shift a right every cycle, b left every cycle
-    with conditional_assignment:
+    with pyrtl.conditional_assignment:
         with start:  # initialization
             areg.next |= A
             breg.next |= B
             accum.next |= 0
         with ~done:  # don't run when there's no work to do
             areg.next |= areg[1:]  # right shift
-            breg.next |= concat(breg, "1'b0")  # left shift
+            breg.next |= pyrtl.concat(breg, "1'b0")  # left shift
 
             # "Multply" shifted breg by LSB of areg by conditionally adding
             with areg[0]:
@@ -154,19 +151,6 @@ def generalized_fma(mult_pairs, add_wires, signed=False, reducer=adders.wallace_
     result_bitwidth = (longest_wire_len +
                        int(math.ceil(math.log(len(add_wires) + len(mult_pairs), 2))))
     return reducer(bits, result_bitwidth, adder_func)
-
-
-def __test_wallace_timing():
-    # Legacy code, just for internal use
-    x = 4
-    a, b = Input(x, "a"), Input(x, "b")
-    product = Output(2 * x, "product")
-
-    product <<= tree_multiplier(a, b)
-
-    timing_map = timing_analysis()
-
-    print_max_length(timing_map)
 
 
 if __name__ == "__main__":
