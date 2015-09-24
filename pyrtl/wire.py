@@ -12,7 +12,7 @@ Register: a wire vector that is latched each cycle
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import collections
+import numbers
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block
@@ -58,12 +58,12 @@ class WireVector(object):
 
         self.block = working_block(block)
         self.name = next_tempvar_name(name)
-        if bitwidth is not None and isinstance(bitwidth, int) is False:
-            raise PyrtlError('parameter "bitwidth" needs to be an int or left unspecificed')
-        if bitwidth is not None and bitwidth <= 0:
-            raise PyrtlError('error, bitwidth must be >= 1')
+        if bitwidth is not None:
+            if not isinstance(bitwidth, int):
+                raise PyrtlError('parameter "bitwidth" needs to be an int or left unspecificed')
+            elif bitwidth <= 0:
+                raise PyrtlError('error, bitwidth must be >= 1')
         self.bitwidth = bitwidth
-        # finally, add the wirevector to the block
         self.block.add_wirevector(self)
 
         if _setting_keep_wirevector_call_stack:
@@ -373,7 +373,7 @@ class Const(WireVector):
                 bitwidth = 1
             if bitwidth != 1:
                 raise PyrtlError('error, boolean has bitwidth not equal to 1')
-        elif isinstance(val, int):
+        elif isinstance(val, numbers.Integral):
             if val >= 0:
                 num = val
                 # infer bitwidth if it is not specified explicitly
