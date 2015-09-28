@@ -11,8 +11,8 @@ A collection of classes providing simple RTL specification, simulation, tracing,
 Quick links
 -----------
 * Get an overview from the `Project Webpage <https://github.com/UCSBarchlab/PyRTL>`_
-* Read through `Example PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/master/examples>'_
-* See `File a Bug or Issue <https://github.com/UCSBarchlab/PyRTL/issues>'_
+* Read through `Example PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/master/examples>`_
+* See `File a Bug or Issue <https://github.com/UCSBarchlab/PyRTL/issues>`_
 * Contribute to project on `GitHub <https://github.com/UCSBarchlab/PyRTL>`_
 
 Installation
@@ -44,7 +44,7 @@ PyRTL Modules:
    helperfuncs
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
