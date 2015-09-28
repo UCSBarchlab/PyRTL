@@ -14,6 +14,25 @@ a good reason to look at it - John Clow
 """
 
 
+def make_wires_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None):
+    """
+    Generates multiple input wires and sets of test values for
+    testing purposes
+    :return: wires, lists of values for the wires
+    """
+    if max_bitwidth is not None:
+        min_bitwidth = 1
+    elif exact_bitwidth is not None:
+        min_bitwidth = max_bitwidth = exact_bitwidth
+    else:
+        raise pyrtl.PyrtlError("A max or exact bitwidth must be specified")
+
+    wires, vals = list(zip(*(
+        generate_in_wire_and_values(random.randrange(min_bitwidth, max_bitwidth + 1))
+        for i in range(num_wires))))
+    return wires, vals
+
+
 def generate_in_wire_and_values(bitwidth, num_test_vals=20, name=None):
     """
     Generates an input wire and a set of test values for
@@ -30,6 +49,7 @@ def generate_in_wire_and_values(bitwidth, num_test_vals=20, name=None):
     test_vals = [int(2**random.uniform(0, bitwidth)-1) for i in range(num_test_vals)]
 
     return input_wire, test_vals
+
 
 def sim_and_ret_out(outwire, inwires, invals):
     """

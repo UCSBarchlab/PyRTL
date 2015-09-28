@@ -1,7 +1,7 @@
 import unittest
 import random
 import pyrtl
-from rtllib import adders
+from pyrtl.rtllib import adders
 import t_utils as utils
 
 
@@ -18,21 +18,12 @@ class TestAdders(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def adder2_t_base_1(self, adder_func):
-        # a generic test for add
-        # adder_func is the function for the adder that we wish to test
-        a, b = pyrtl.Input(35, "a"), pyrtl.Input(32, "b")
+        wires, vals = utils.make_wires_and_values(max_bitwidth=35, num_wires=2)
         sum = pyrtl.Output(36, "sum")
-        sum <<= adder_func(a, b)
-        xvals = [int(2**random.uniform(1, 32) - 2) for _ in range(40)]
-        yvals = [int(2**random.uniform(1, 32) - 2) for _ in range(40)]
+        sum <<= adder_func(*wires)
 
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for cycle in range(len(xvals)):
-            sim.step({a: xvals[cycle], b: yvals[cycle]})
-
-        true_result = [c + d for c, d in zip(xvals, yvals)]
-        adder_result = sim_trace.trace[sum]
+        adder_result = utils.sim_and_ret_out(sum, wires, vals)
+        true_result = [c + d for c, d in zip(*vals)]
         self.assertEqual(adder_result, true_result)
 
     def test_kogge_stone_1(self):
@@ -72,11 +63,9 @@ class TestAdders(unittest.TestCase):
         adder_result = sim_trace.trace[sum]
         sim_trace.render_trace()
         assert (adder_result == true_result)
-        print("Test passed")
 
     def test_fast_group_adder_1(self):
-        wires, vals = list(zip(*(utils.generate_in_wire_and_values(random.randrange(1, 12))
-                                  for i in range(7))))
+        wires, vals = utils.make_wires_and_values(max_bitwidth=12, num_wires=7)
         outwire = pyrtl.Output(name="test")
         outwire <<= adders.fast_group_adder(wires)
 

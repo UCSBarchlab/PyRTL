@@ -1,7 +1,6 @@
 import unittest
 import pyrtl
-import rtllib
-from rtllib import libutils
+from pyrtl.rtllib import libutils
 import random
 
 class TestMuxes(unittest.TestCase):
@@ -44,4 +43,3 @@ class TestMuxes(unittest.TestCase):
         mux_result = sim_trace.trace[out]
         sim_trace.render_trace(symbol_len=12)
         assert (mux_result == true_result)
-        print("test passed!")
