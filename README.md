@@ -37,13 +37,9 @@ In the package you should find the following files and Directories
 * **pyrtl/rtllib/** Finished PyRTL libraries which are hopefully both useful and documented
 * **examples/** A set of hardware design examples that show the main idea behind pyrtl
 * **tests/**    A set of unit tests for PyRTL which you can run with nosetests
-* **docs/** The location of the auto-generated documentation (built when you run checkcode)
-* **checkcode** A script you should run before you check any code into the master or development branches
+* **docs/** Location of the sphinx documentation
 
-To generate the docs, just run `./checkcode` with no parameters in the PyRTL directory and it will 
-build the documentation for you (under the **docs/** directory). Requires [Sphinx](http://sphinx-doc.org/). 
-In addition, running './checkcode' will also run all of the tests and checks.
-
+Testing requires the packages `tox` and `nose`.  Once installed a complete test of the system should be possible with the simple command `tox` and nothing more.
 
 ### Contributing to PyRTL
 
