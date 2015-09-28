@@ -1,7 +1,8 @@
 PyRTL
 =====
 
-[![Build Status](https://travis-ci.org/UCSBarchlab/PyRTL.svg)](https://magnum.travis-ci.com/UCSBarchlab/PyRTL)
+[![Build Status](https://travis-ci.org/UCSBarchlab/PyRTL.svg)](https://travis-ci.org/UCSBarchlab/PyRTL)
+[![Code Coverage](https://codecov.io/github/UCSBarchlab/PyRTL/coverage.svg?branch=master)](https://codecov.io/github/UCSBarchlab/PyRTL?branch=master)
 
 PyRTL provides a collection of classes for pythonic [register-transfer level] (https://en.wikipedia.org/wiki/Register-transfer_level) design, simulation, tracing, and testing 
 suitable for teaching and research. Simplicity, usability, clarity, and extensibility rather than
