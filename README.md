@@ -1,6 +1,7 @@
 PyRTL
 =====
 
+[![PyPI version](https://badge.fury.io/py/pyrtl.svg)](http://badge.fury.io/py/pyrtl)
 [![Build Status](https://travis-ci.org/UCSBarchlab/PyRTL.svg)](https://travis-ci.org/UCSBarchlab/PyRTL)
 [![Code Coverage](https://codecov.io/github/UCSBarchlab/PyRTL/coverage.svg?branch=master)](https://codecov.io/github/UCSBarchlab/PyRTL?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/pyrtl/badge/?version=latest)](http://pyrtl.readthedocs.org/en/latest/?badge=latest)
