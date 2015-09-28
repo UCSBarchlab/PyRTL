@@ -2,6 +2,8 @@ import unittest
 import pyrtl
 from pyrtl.rtllib import libutils
 import random
+import t_utils as utils
+
 
 class TestMuxes(unittest.TestCase):
 
@@ -25,21 +27,12 @@ class TestMuxes(unittest.TestCase):
         self.mux_t_subprocess(8, 64)
 
     def mux_t_subprocess(self, addr_width, val_width):
-        vals = [random.randint(1, 2**val_width) for _ in range(2**addr_width)]
-        mux_ins = [pyrtl.Const(i) for i in vals]
-        control = pyrtl.Input(addr_width, "mux_ctrl")
-        out = pyrtl.Output(val_width, "mux_out")
+        mux_ins, vals = utils.make_consts(num_wires=2**addr_width, exact_bitwidth=val_width)
+        control, testctrl = utils.generate_in_wire_and_values(addr_width, 40, "mux_ctrl")
 
+        out = pyrtl.Output(val_width, "mux_out")
         out <<= libutils.basic_n_bit_mux(control, mux_ins)
 
-        testctrl = [random.randint(0, 2**addr_width - 1) for _ in range(40)]
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for ctrl_val in testctrl:
-            sim.step({control: ctrl_val})
-
         true_result = [vals[i] for i in testctrl]
-        mux_result = sim_trace.trace[out]
-        sim_trace.render_trace(symbol_len=12)
-        assert (mux_result == true_result)
+        mux_result = utils.sim_and_ret_out(out, (control,), (testctrl,))
+        self.assertEqual(mux_result, true_result)

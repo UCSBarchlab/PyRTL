@@ -154,7 +154,7 @@ class TestConditional(unittest.TestCase):
             with pyrtl.otherwise:
                 r2.next |= 3
         self.check_trace(' i 01230123\nr1 01222344\nr2 00013334\n')
- 
+
     def test_error_on_unconditioned_update_in_under_conditional(self):
         with self.assertRaises(pyrtl.PyrtlError):
             c = pyrtl.Const(1)
