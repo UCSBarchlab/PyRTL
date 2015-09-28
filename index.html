@@ -45,6 +45,8 @@ performance or optimization is the overarching goal.  Features include:</p>
 <li>Batteries included means many useful components are already available and more are coming every week</li>
 </ul>
 
+<p>Get started:  <b>pip install pyrtl</b></p>
+
 <p><img src="https://raw.githubusercontent.com/UCSBarchlab/PyRTL/master/docs/screenshots/pyrtl-statemachine.png?raw=true" alt="Command-line waveform for PyRTL state machine" title="PyRTL State Machine Screenshot"></p>
 
 <h3>
@@ -52,8 +54,14 @@ performance or optimization is the overarching goal.  Features include:</p>
 
 <p>At a high level PyRTL builds the hardware structure that you <em>explicitly define</em>.  If you are looking for a 
 tool to take your random python code and turn it into hardware, you will have to look elsewhere.  Instead 
-PyRTL is designed to help you concisely and precisely describe a hardware structure (that you already have 
-worked out in detail) in python.  To the user it provides a set of python classes that allow you to express those 
+PyRTL is designed to help you concisely and precisely describe a digitial hardware structure (that you already have 
+worked out in detail) in python.  PyRTL restricts you to a set of resonable digital designs practices -- the clock and resets
+are implicit, block memories are syncronous by default, there are no "undriven" states, and no weird un-registered feedbacks are
+allowed.  Instead, of worrying about these "analog-ish" tricks that are horrible ideas in modern processes anyways, PyRTL let's
+you treat hardware design like a software problem -- build recursive hardware, write instrospective containers,
+and have fun building digital designs again!</p>
+
+<p>To the user it provides a set of python classes that allow you to express their 
 hardware designs reasonably pythonically.  For example, with WireVector you get a structure that acts very 
 much like a python list of 1-bit wires, so that <code>mywire[0:-1]</code> selects everything except the 
 most-significant-bit.  Of course you can add, subtract, and multiply these WireVectors or concat multiple
