@@ -7,6 +7,7 @@ from .helperfunctions import testmissing
 
 # ---------------------------------------------------------------
 
+
 class TestConditionalUpdateRemoved(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -30,6 +31,7 @@ class TestConditionalUpdateRemoved(unittest.TestCase):
                 r.next |= r + 1
 
 # ---------------------------------------------------------------
+
 
 class TestConditional(unittest.TestCase):
     def setUp(self):
@@ -88,18 +90,6 @@ class TestConditional(unittest.TestCase):
                 i.next |= i + 1
         with pyrtl.conditional_assignment:
             with i == 2:
-                r.next |= r + 1
-        self.check_trace('i 01230123\nr 00011112\n')
-
-    def test_two_seperate_conditions(self):
-        c = pyrtl.Const(1)
-        i = pyrtl.Register(bitwidth=2, name='i')
-        r = pyrtl.Register(bitwidth=2, name='r')
-        with pyrtl.conditional_assignment:
-            with c:
-                i.next |= i + 1
-        with pyrtl.conditional_assignment:
-            with i==2:
                 r.next |= r + 1
         self.check_trace('i 01230123\nr 00011112\n')
 
@@ -164,7 +154,6 @@ class TestConditional(unittest.TestCase):
             with pyrtl.otherwise:
                 r2.next |= 3
         self.check_trace(' i 01230123\nr1 01222344\nr2 00013334\n')
- 
  
     def test_error_on_unconditioned_update_in_under_conditional(self):
         with self.assertRaises(pyrtl.PyrtlError):
@@ -431,7 +420,8 @@ class TestNonExclusiveBlocks(unittest.TestCase):
 
 # ---------------------------------------------------------------
 
-class TestWireConditionalBlock(unittest.TestCase):
+
+class TestSuperWireConditionalBlock(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -439,10 +429,10 @@ class TestWireConditionalBlock(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_super_stress_test(self):
-        a,b,x,y,i,j,k,m,z,c,d = [pyrtl.Input(1,n) for n in 'abxyijkmzcd']
-        allin = [a,b,x,y,i,j,k,m,z,c,d]
-        var0,var1,var2,var3,var4 = [pyrtl.Output(4,'var'+str(index)) for index in range(5)]
-        allout = [var0,var1,var2,var3]
+        allin = [pyrtl.Input(1, n) for n in 'abxyijkmzcd']
+        a, b, x, y, i, j, k, m, z, c, d = allin
+        allout = [pyrtl.Output(4, 'var' + str(index)) for index in range(5)]
+        var0, var1, var2, var3, var4 = allout
 
         """ 
          1  with a:  # a
@@ -496,17 +486,18 @@ class TestWireConditionalBlock(unittest.TestCase):
             with d:
                 var4 |= 2
 
-
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
-        for cycle in range(2**len(allin)):
-            inputs = {v:0x1&(cycle>>i) for i, v in enumerate(allin[::-1])}
+        for cycle in range(2 ** len(allin)):
+            inputs = {v: 0x1 & (cycle >> i) for i, v in enumerate(allin[::-1])}
             sim.step(inputs)
 
         for cycle in range(len(sim_trace)):
-            t0, t1, t2, t3, t4 = 0,0,0,0,0
+            t0, t1, t2, t3, t4 = 0, 0, 0, 0, 0
+
             def v(var):
                 return sim_trace.trace[var][cycle]
+
             if v(a):
                 t0 = 1
             elif v(b):
