@@ -8,6 +8,7 @@ branches:
     - master
     - development
 install:
+  - pip install coverage
   - pip install codecov
   - pip install tox
 script:
