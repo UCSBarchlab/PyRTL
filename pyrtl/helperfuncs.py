@@ -257,9 +257,14 @@ def get_block(*arglist):
 
 
 def concat(*args):
-    """ Take any number of wire vector params and return a wire vector concatinating them.
-    The arguments should be WireVectors (or convertable to WireVectors through as_wires).
-    The concatination order places the MSB as arg[0] with less signficant bits following.
+    """
+    Concats multiple wirevectors into a single wirevector
+
+    :type args: WireVector
+    :return wirevector: wirevector with length equal
+      to the sum of the args' lengths
+
+    The concatenation order places the MSB as arg[0] with less significant bits following.
     """
 
     block = get_block(*args)
