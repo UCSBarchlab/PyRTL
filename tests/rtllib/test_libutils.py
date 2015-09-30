@@ -36,3 +36,19 @@ class TestMuxes(unittest.TestCase):
         true_result = [vals[i] for i in testctrl]
         mux_result = utils.sim_and_ret_out(out, (control,), (testctrl,))
         self.assertEqual(mux_result, true_result)
+
+
+class TestPartitionWire(unittest.TestCase):
+
+    def test_successful_partition(self):
+        w = pyrtl.WireVector(24)
+        partitioned_w = libutils.partition_wire(w, 4)
+        self.assertEqual(len(partitioned_w), 6)
+        for wire in partitioned_w:
+            self.assertIsInstance(wire, pyrtl.WireVector)
+
+    def test_failing_partition(self):
+        w = pyrtl.WireVector(14)
+        with self.assertRaises(pyrtl.PyrtlError):
+            partitioned_w = libutils.partition_wire(w, 4)
+

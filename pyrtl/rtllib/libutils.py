@@ -64,3 +64,10 @@ def variable_bit_matcher(select, mux_set):
             if new_w_index in mux_l_dict[cur_match_len]:
                 pass
         mux_result = new_m_result
+
+
+def partition_wire(wire, partition_size):
+    if len(wire) % partition_size != 0:
+        raise pyrtl.PyrtlError("Wire {} cannot be evenly partitioned into items of size {}"
+                               .format(wire, partition_size))
+    return [wire[offset - partition_size:offset] for offset in range(len(wire), 0, -partition_size)]

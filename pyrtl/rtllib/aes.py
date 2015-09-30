@@ -2,6 +2,7 @@
 
 import pyrtl
 import sys
+from rtllib import libutils
 
 # TODO:
 # 1) Right now all ROMs are global -- need to be moved into function so each
@@ -22,16 +23,15 @@ import sys
 
 def _g(word, key_expand_round):
     # One-byte left circular rotation, substitution of each byte
-    a = [word[i:i + 8] for i in range(0, 32, 8)]
-    sub = pyrtl.concat(sbox[a[2]], sbox[a[1]], sbox[a[0]], sbox[a[3]])
+    a = libutils.partition_wire(word, 8)
+    sub = pyrtl.concat(sbox[a[1]], sbox[a[2]], sbox[a[3]], sbox[a[0]])
     # xor substituted bytes with round constant.
     round_const = pyrtl.concat(rcon[key_expand_round + 1], pyrtl.Const(0, bitwidth=24))
     return round_const ^ sub
 
 
 def key_expansion(key):
-    w = []
-    w.extend([key[offset:offset + 32] for offset in range(0, 128, 32)])
+    w = list(reversed(libutils.partition_wire(key, 32)))
     for key_expand_round in range(10):
         last = key_expand_round * 4
         w.append(w[last] ^ _g(w[last + 3], key_expand_round))
@@ -42,35 +42,16 @@ def key_expansion(key):
 
 
 def inv_sub_bytes(in_vector):
-    subbed = [inv_sbox[in_vector[offset:offset + 8]] for offset in range(0, 128, 8)]
-    return pyrtl.concat(*reversed(subbed))
+    subbed = [inv_sbox[byte] for byte in libutils.partition_wire(in_vector, 8)]
+    return pyrtl.concat(*subbed)
 
 
 def inv_shift_rows(in_vector):
-    a = [[0, 0, 0, 0] for i in range(4)]
-
-    a00 = in_vector[120:128]
-    a10 = in_vector[112:120]
-    a20 = in_vector[104:112]
-    a30 = in_vector[96:104]
-    a01 = in_vector[88:96]
-    a11 = in_vector[80:88]
-    a21 = in_vector[72:80]
-    a31 = in_vector[64:72]
-    a02 = in_vector[56:64]
-    a12 = in_vector[48:56]
-    a22 = in_vector[40:48]
-    a32 = in_vector[32:40]
-    a03 = in_vector[24:32]
-    a13 = in_vector[16:24]
-    a23 = in_vector[8:16]
-    a33 = in_vector[0:8]
-
-    out_vector = pyrtl.concat(a00, a13, a22, a31,
-                              a01, a10, a23, a32,
-                              a02, a11, a20, a33,
-                              a03, a12, a21, a30)
-
+    a = libutils.partition_wire(in_vector, 8)
+    out_vector = pyrtl.concat(a[0], a[7], a[10], a[13],
+                              a[1], a[4], a[11], a[14],
+                              a[2], a[5], a[8],  a[15],
+                              a[3], a[6], a[9],  a[12])
     return out_vector
 
 
@@ -88,7 +69,7 @@ def inv_galois_mult(c, d):
 
 
 def inv_mix_columns(in_vector):
-    a = [in_vector[offset - 8:offset] for offset in range(128, 0, -8)]
+    a = libutils.partition_wire(in_vector, 8)
 
     b0 = inv_galois_mult(a[0],  14) ^ inv_galois_mult(
         a[1], 11) ^ inv_galois_mult(a[2], 13) ^ inv_galois_mult(a[3], 9)
@@ -126,11 +107,10 @@ def inv_mix_columns(in_vector):
     b15 = inv_galois_mult(a[15], 14) ^ inv_galois_mult(
         a[12], 11) ^ inv_galois_mult(a[13], 13) ^ inv_galois_mult(a[14], 9)
 
-    out_vector = pyrtl.WireVector(bitwidth=128)
-    out_vector <<= pyrtl.concat(b0, b1, b2, b3,
-                                b4, b5, b6, b7,
-                                b8, b9, b10, b11,
-                                b12, b13, b14, b15)
+    out_vector = pyrtl.concat(b0, b1, b2, b3,
+                              b4, b5, b6, b7,
+                              b8, b9, b10, b11,
+                              b12, b13, b14, b15)
     return out_vector
 
 
