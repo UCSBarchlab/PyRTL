@@ -107,7 +107,7 @@ wire_trace = test_out.init_call_stack
 # details on the function). Therefore, the stack traces are stored as a list with the
 # outermost call first.
 
-#for frame in wire_trace:
+# for frame in wire_trace:
 #    print(frame)
 
 # Storage of Additional Debug Data
