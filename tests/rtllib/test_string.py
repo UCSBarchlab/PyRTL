@@ -23,4 +23,14 @@ class TestStringConversion(unittest.TestCase):
         result = strlib.str_to_int_array(text)
         self.assertEqual([0x374, 0x1c, 0xa, 0x34, 0x76], result)
 
+    def test_invalid_str(self):
+        with self.assertRaises(ValueError):
+            strlib.str_to_int_array("hello")
 
+    def test_invalid_bin_str(self):
+        with self.assertRaises(ValueError):
+            strlib.str_to_int_array("0313", 2)
+
+    def test_no_override(self):
+        with self.assertRaises(ValueError):
+            strlib.str_to_int_array("0x0313", 2)
