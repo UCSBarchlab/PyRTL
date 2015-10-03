@@ -1,9 +1,6 @@
 import unittest
-import random
 import pyrtl
 import io
-
-from .helperfunctions import testmissing
 
 # ---------------------------------------------------------------
 
@@ -487,7 +484,7 @@ class TestSuperWireConditionalBlock(unittest.TestCase):
                 var4 |= 2
 
         sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.FastSimulation(tracer=sim_trace)
         for cycle in range(2 ** len(allin)):
             inputs = {v: 0x1 & (cycle >> i) for i, v in enumerate(allin[::-1])}
             sim.step(inputs)
