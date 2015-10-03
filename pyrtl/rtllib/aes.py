@@ -1,6 +1,6 @@
 """ AES-128 """
 
-from __future__ import division
+from __future__ import division, absolute_import
 import pyrtl
 from rtllib import libutils, strlib
 
@@ -71,7 +71,7 @@ def inv_mix_columns(in_vector):
         return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
 
     a = libutils.partition_wire(in_vector, 8)
-    inverted = [_inv_mix_single(index) for index in range(15)]
+    inverted = [_inv_mix_single(index) for index in range(len(a))]
     return pyrtl.concat(*inverted)
 
 
