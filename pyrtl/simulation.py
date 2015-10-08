@@ -481,47 +481,79 @@ class FastSimulation(object):
 #     |  |  \ /~~\ \__, |___
 #
 
-def wave_trace_render(w, n, prior_val, current_val, symbol_len):
-    """Return a unicode string encoding the given value in a  waveform.
+class _WaveRendererBase(object):
+    tick, up, down, x, low, high, revstart, revstop = ('' for i in range(8))
 
-    Given the inputs -
-    :param w: The WireVector we are rendering to a waveform
-    :param n: An integer from 0 to segment_len-1
-    :param prior_val: the value in the cycle prior to the one being rendered
-    :param current_val: the value to be rendered
-    :param symbol_len: and integer for how big to draw the current value
+    def __init__(self):
+        super(_WaveRendererBase, self).__init__()
+        self.prior_val = None
+        self.prev_wire = None
 
-    Returns a string of printed length symbol_len that will draw the
-    representation of current_val.  The input prior_val is used to
-    render transitions.
-    """
+    def tick_segment(self, n, symbol_len, segment_size):
+        num_tick = self.tick + str(n)
+        return num_tick.ljust(symbol_len * segment_size)
 
-    if current_val == 'tick':
-        return chr(0x258f)
-    if prior_val is None:
-        prior_val = current_val
-    sl = symbol_len-1
+    def render_val(self, w, n, current_val, symbol_len):
+        if w is not self.prev_wire:
+            self.prev_wire = w
+            self.prior_val = current_val
+        out = self._render_val_with_prev(w, n, current_val, symbol_len)
+        self.prior_val = current_val
+        return out
+
+    def _render_val_with_prev(self, w, n, current_val, symbol_len):
+        """Return a string encoding the given value in a waveform.
+
+        :param w: The WireVector we are rendering to a waveform
+        :param n: An integer from 0 to segment_len-1
+        :param current_val: the value to be rendered
+        :param symbol_len: and integer for how big to draw the current value
+
+        Returns a string of printed length symbol_len that will draw the
+        representation of current_val.  The input prior_val is used to
+        render transitions.
+        """
+        sl = symbol_len-1
+        if len(w) > 1:
+            out = self.revstart
+            if current_val != self.prior_val:
+                out += self.x + hex(current_val).rstrip('L').ljust(sl)[:sl]
+            elif n == 0:
+                out += hex(current_val).rstrip('L').ljust(symbol_len)[:symbol_len]
+            else:
+                out += ' '*symbol_len
+            out += self.revstop
+        else:
+            pretty_map = {
+                (0, 0): self.low + self.low*sl,
+                (0, 1): self.up + self.high*sl,
+                (1, 0): self.down + self.low*sl,
+                (1, 1): self.high + self.high*sl,
+            }
+            out = pretty_map[(self.prior_val, current_val)]
+        return out
+
+
+class Utf8WaveRenderer(_WaveRendererBase):
+    tick = chr(0x258f)
     up, down = chr(0x2571), chr(0x2572)
     x, low, high = chr(0x2573), chr(0x005f), chr(0x203e)
     revstart, revstop = '\x1B[7m', '\x1B[0m'
-    pretty_map = {
-        (0, 0): low + low*sl,
-        (0, 1): up + high*sl,
-        (1, 0): down + low*sl,
-        (1, 1): high + high*sl,
-        }
-    if len(w) > 1:
-        out = revstart
-        if current_val != prior_val:
-            out += x + hex(current_val).rstrip('L').ljust(sl)[:sl]
-        elif n == 0:
-            out += hex(current_val).rstrip('L').ljust(symbol_len)[:symbol_len]
-        else:
-            out += ' '*symbol_len
-        out += revstop
-    else:
-        out = pretty_map[(prior_val, current_val)]
-    return out
+
+
+class AsciiWaveRenderer(_WaveRendererBase):
+    """ Poor Man's wave renderer (for windows cmd compatibility)"""
+    tick = '-'
+    up, down = '/', '\\'
+    x, low, high = 'x', '_', '-'
+    revstart, revstop = ' ', ' '
+
+
+def default_renderer():
+    import sys
+    if sys.platform == "win32":
+        return AsciiWaveRenderer
+    return Utf8WaveRenderer
 
 
 def _trace_sort_key(w):
@@ -625,7 +657,7 @@ class SimulationTrace(object):
         file.flush()
 
     def render_trace(
-            self, trace_list=None, file=sys.stdout, renderer=wave_trace_render,
+            self, trace_list=None, file=sys.stdout, render_cls=default_renderer(),
             symbol_len=5, segment_size=5, segment_delim=' ', extra_line=True):
         """ Render the trace to a file using unicode and ASCII escape sequences.
 
@@ -635,24 +667,22 @@ class SimulationTrace(object):
         arguments.
         :param trace_list: A list of signals to be output in the specified order.
         :param file: The place to write output, default to stdout.
-        :param renderer: A function that translates traces into output bytes.
+        :param render_cls: A class that translates traces into output bytes.
         :param symbol_len: The "length" of each rendered cycle in characters.
         :param segment_size: Traces are broken in the segments of this number of cycles.
         :param segment_delim: The character to be output between segments.
         :param extra_line: A Boolean to determin if we should print a blank line between signals.
         """
+        renderer = render_cls()
 
         def formatted_trace_line(w, trace):
             heading = w.name.rjust(maxnamelen) + ' '
             trace_line = ''
-            last_element = None
             for i in range(len(trace)):
                 if (i % segment_size == 0) and i > 0:
                     trace_line += segment_delim
-                trace_line += renderer(
-                    w, i % segment_size,
-                    last_element, trace[i], symbol_len)
-                last_element = trace[i]
+                trace_line += renderer.render_val(
+                    w, i % segment_size, trace[i], symbol_len)
             return heading+trace_line
 
         # default to printing all signals in sorted order
@@ -661,16 +691,14 @@ class SimulationTrace(object):
 
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map
-        def tick_segment(n):
-            num_tick = renderer(None, None, None, 'tick', symbol_len) + str(n)
-            return num_tick.ljust(symbol_len * segment_size)
 
         maxnamelen = max(len(w.name) for w in self.trace)
         maxtracelen = max(len(v) for v in self.trace.values())
         if segment_size is None:
             segment_size = maxtracelen
         spaces = ' '*(maxnamelen+1)
-        ticks = [tick_segment(n) for n in range(0, maxtracelen, segment_size)]
+        ticks = [renderer.tick_segment(n, symbol_len, segment_size)
+                 for n in range(0, maxtracelen, segment_size)]
         print(spaces + segment_delim.join(ticks), file=file)
 
         # now all the traces

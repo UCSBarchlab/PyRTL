@@ -15,6 +15,7 @@ Note that this file is structure dependent, so don't forget to change it if the
 relative location of the examples changes
 """
 
+
 def test_all_examples():
     x = __file__
     for file in glob.iglob(os.path.dirname(__file__) + "/../examples/*.py"):
@@ -26,6 +27,6 @@ def example_t(file):
     print("testing file: " + file)
     pyrtl.reset_working_block()
     try:
-        pass #output = subprocess.check_output(['python', file])
+        output = subprocess.check_output(['python', file])
     except subprocess.CalledProcessError as e:
         raise e
