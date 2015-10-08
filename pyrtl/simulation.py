@@ -535,9 +535,9 @@ class _WaveRendererBase(object):
 
 
 class Utf8WaveRenderer(_WaveRendererBase):
-    tick = chr(0x258f)
-    up, down = chr(0x2571), chr(0x2572)
-    x, low, high = chr(0x2573), chr(0x005f), chr(0x203e)
+    tick = u'\u258f'
+    up, down = u'\u2571', u'\u2572'
+    x, low, high = u'\u2573', u'\u005f', u'\u203e'
     revstart, revstop = '\x1B[7m', '\x1B[0m'
 
 
