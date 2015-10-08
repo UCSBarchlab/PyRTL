@@ -551,9 +551,12 @@ class AsciiWaveRenderer(_WaveRendererBase):
 
 def default_renderer():
     import sys
-    if sys.platform == "win32":
-        return AsciiWaveRenderer
-    return Utf8WaveRenderer
+    try:
+        if str(sys.stdout.encoding).lower() == "utf-8":
+            return Utf8WaveRenderer
+    except Exception:
+        pass
+    return AsciiWaveRenderer
 
 
 def _trace_sort_key(w):
