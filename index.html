@@ -62,7 +62,8 @@ performance or optimization is the overarching goal.  Features include:</p>
 <a id="the-10000-foot-overview" class="anchor" href="#the-10000-foot-overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>The 10,000 Foot Overview</h3>
 
 <p>At a high level PyRTL builds the hardware structure that you <em>explicitly define</em>.  If you are looking for a 
-tool to take your random python code and turn it into hardware, you will have to look elsewhere -- <b>this is not HLS</b>.
+tool to take your random python code and turn it into hardware, you will have to look elsewhere 
+-- this is <b>not</b> <a href="https://en.wikipedia.org/wiki/High-level_synthesis">HLS</a>.
 Instead PyRTL is designed to help you concisely and precisely describe a digitial hardware structure (that you already have 
 worked out in detail) in python.  PyRTL restricts you to a set of resonable digital designs practices -- the clock and resets
 are implicit, block memories are syncronous by default, there are no "undriven" states, and no weird un-registered feedbacks are
