@@ -392,7 +392,7 @@ def _to_verilog_header(file, block):
     for w in mems_with_initials:
         print('    initial begin', file=file)
         for i in range(2**len(w.args[0])):
-            print("        mem_%s[%d]=%d'x%x" % (
+            print("        mem_%s[%d]=%d'h%x;" % (
                 w.op_param[0], i, len(w), w.op_param[1]._get_read_data(i)), file=file)
         print('    end', file=file)
         print('', file=file)
