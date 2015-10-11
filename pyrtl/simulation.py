@@ -6,8 +6,6 @@ import sys
 import re
 import numbers
 
-from six import unichr as chr
-
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock
 from .wire import Input, Register, Const
@@ -405,29 +403,23 @@ class FastSimulation(object):
             '&': lambda l, r: '(' + l + '&' + r + ')',
             '|': lambda l, r: '(' + l + '|' + r + ')',
             '^': lambda l, r: '(' + l + '^' + r + ')',
+            'n': lambda l, r: '(~(' + l + '&' + r + '))',
             '+': lambda l, r: '(' + l + '+' + r + ')',
             '-': lambda l, r: '(' + l + '-' + r + ')',
             '*': lambda l, r: '(' + l + '*' + r + ')',
             '<': lambda l, r: 'int(' + l + '<' + r + ')',
             '>': lambda l, r: 'int(' + l + '>' + r + ')',
-            '=': lambda l, r: 'int(' + l + '==' + r + ')'
+            '=': lambda l, r: 'int(' + l + '==' + r + ')',
+            'x': lambda sel, a, b: '({}) if ({}==0) else ({})'.format(a, sel, b),
             }
 
         for net in self.block:
             prog += '#  ' + str(net) + '\n'
             if net.op in simple_func:
-                argvals = [self.varname(arg) for arg in net.args]
+                argvals = (self.varname(arg) for arg in net.args)
                 result = simple_func[net.op](*argvals)
                 mask = str(net.dests[0].bitmask)
                 prog += self.varname(net.dests[0]) + ' = ' + mask + ' & ' + result + '\n'
-            elif net.op == 'x':
-                select = self.varname(net.args[0])
-                a = self.varname(net.args[1])
-                b = self.varname(net.args[2])
-                mask = str(net.dests[0].bitmask)
-                result = self.varname(net.dests[0])
-                prog += '%s = %s & ((%s) if (%s==0) else (%s))\n' %\
-                        (result, mask, a, select, b)
             elif net.op == 'c':
                 result = self.varname(net.dests[0])
                 mask = str(net.dests[0].bitmask)
@@ -575,15 +567,9 @@ class SimulationTrace(object):
         block = working_block(block)
 
         def is_internal_name(name):
-            if (
-               name.startswith('tmp')
-               or name.startswith('const')
-               # or name.startswith('synth_')
-               or name.endswith("'")
-               ):
-                return True
-            else:
-                return False
+            return (name.startswith('tmp') or name.startswith('const') or
+                    # or name.startswith('synth_')
+                    name.endswith("'"))
 
         if wirevector_subset is None:
             self.trace = {
