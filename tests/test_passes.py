@@ -1,14 +1,9 @@
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals, absolute_import
+from .helperfunctions import testmissing
 
 import unittest
 import pyrtl
-import pyrtl.core
-import pyrtl.wire
-import pyrtl.passes
 import io
-
-from .helperfunctions import testmissing
 
 
 class TestSynthesis(unittest.TestCase):
@@ -21,9 +16,6 @@ class TestSynthesis(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
-        # should all these tests still work post synthesis?
-        # pyrtl.synthesize()
-        # pyrtl.optimize()
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
@@ -31,10 +23,6 @@ class TestSynthesis(unittest.TestCase):
         output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_string)
-
-    def test_not_simulation(self):
-        self.r.next <<= ~ self.r
-        self.check_trace('r 07070707\n')
 
     def test_not_simulation(self):
         self.r.next <<= ~ self.r
@@ -63,8 +51,8 @@ class TestSynthesis(unittest.TestCase):
         self.check_trace('r 07654321\n')
 
     def test_minus_simulationx(self):
-        self.r.next <<= self.r - pyrtl.Const(1, bitwidth=self.bitwidth)
-        self.check_trace('r 07654321\n')
+        self.r.next <<= self.r - pyrtl.Const(3, bitwidth=self.bitwidth)
+        self.check_trace('r 05274163\n')
 
     def test_const_nobitwidth_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1)
@@ -350,9 +338,8 @@ class TestSynthOptTiming(unittest.TestCase):
         self.everything_t_procedure()
 
     def test_all_mem_1(self):
-        readAdd1, readAdd2 = pyrtl.Input(bitwidth=3), pyrtl.Input(bitwidth=3)
-        writeAdd1, writeAdd2 = pyrtl.Input(bitwidth=3), pyrtl.Input(bitwidth=3)
-        readData1, readData2 = pyrtl.Input(bitwidth=3), pyrtl.Input(bitwidth=3)
+        readAdd1, readAdd2, writeAdd1, writeAdd2, readData1, readData2 = \
+            (pyrtl.Input(bitwidth=3) for i in range(6))
 
         dataOut = pyrtl.Output(bitwidth=3)
 
