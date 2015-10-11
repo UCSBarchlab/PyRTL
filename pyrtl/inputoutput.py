@@ -286,6 +286,23 @@ def output_to_trivialgraph(file, block=None):
     for (from_, to) in edges:
         print('%s %s %s' % (from_, to, edge_names.get((from_, to), '')), file=file)
 
+    """ # TODO the below code will work for dot if it replaces the print function
+    # above.  We need to refactor the code to handle that.  Perhaps there should be a
+    # "make a graph" function and the output_to_trivial_graph and output_to_dot would
+    # just call that?
+
+    print('digraph g {', file=file)
+    for (id, label) in nodes.values():
+        label = 'A' if label=='&' else label
+        print('    n%s [label="%s"];' % (id, label), file=file)
+    for (from_, to) in edges:
+        edgelabel = edge_names.get((from_, to), '')
+        if edgelabel:
+            print('   n%s -> n%s [label="%s"];' % (from_, to, edgelabel), file=file)
+        else:
+            print('   n%s -> n%s;' % (from_, to), file=file)
+    print('}', file=file)
+    """
 
 # ----------------------------------------------------------------
 #         ___  __          __   __
