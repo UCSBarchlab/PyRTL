@@ -59,36 +59,30 @@ class TestWallace(unittest.TestCase):
 
     def test_fma_1(self):
         wires, vals = utils.make_wires_and_values(exact_bitwidth=10, num_wires=3)
-        outwire = pyrtl.Output(21, "test")
         test_w = multipliers.fused_multiply_adder(wires[0], wires[1], wires[2], False,
                                                   reducer=adders.dada_reducer,
                                                   adder_func=adders.ripple_add)
         self.assertEqual(len(test_w), 20)
+        outwire = pyrtl.Output(21, "test")
         outwire <<= test_w
 
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for cycle in range(len(vals[0])):
-            sim.step({wire: val[cycle] for wire, val in zip(wires, vals)})
-
-        out_vals = sim_trace.trace[outwire]
+        out_vals = utils.sim_and_ret_out(outwire, wires, vals)
         true_result = [vals[0][cycle] * vals[1][cycle] + vals[2][cycle]
                        for cycle in range(len(vals[0]))]
         self.assertEqual(out_vals, true_result)
 
     def test_gen_fma_1(self):
         wires, vals = utils.make_wires_and_values(max_bitwidth=8, num_wires=8)
-
         # mixing tuples and lists solely for readability purposes
         mult_pairs = [(wires[0], wires[1]), (wires[2], wires[3]), (wires[4], wires[5])]
         add_wires = (wires[6], wires[7])
-        true_result = [vals[0][cycle] * vals[1][cycle] + vals[2][cycle] * vals[3][cycle] +
-                       vals[4][cycle] * vals[5][cycle] + vals[6][cycle] + vals[7][cycle]
-                       for cycle in range(len(vals[0]))]
 
         outwire = pyrtl.Output(name="test")
         outwire <<= multipliers.generalized_fma(mult_pairs, add_wires, signed=False)
 
         out_vals = utils.sim_and_ret_out(outwire, wires, vals)
+        true_result = [vals[0][cycle] * vals[1][cycle] + vals[2][cycle] * vals[3][cycle] +
+                       vals[4][cycle] * vals[5][cycle] + vals[6][cycle] + vals[7][cycle]
+                       for cycle in range(len(vals[0]))]
         self.assertEqual(out_vals, true_result)
 
