@@ -38,15 +38,15 @@ def area_estimation(tech_in_nm, block=None):
         if net.op in 'w~sc':
             return 0
         elif net.op in '&|n':
-            return 3 * len(net.arg[0])
+            return 3 * len(net.args[0])
         elif net.op in '^=<>x':
-            return 18 * len(net.arg[0])
+            return 18 * len(net.args[0])
         elif net.op == 'r':
-            return 20 * len(net.arg[0])
+            return 20 * len(net.args[0])
         elif net.op in '+-':
-            return 21 * len(net.arg[0])
+            return 21 * len(net.args[0])
         elif net.op == '*':
-            return 350 * len(net.arg[0])
+            return 350 * len(net.args[0])
         elif net.op in 'm@':
             return 0  # memories handled elsewhere
         else:
@@ -158,7 +158,7 @@ def print_max_length(timing_map):
     print("The total block timing delay is ", timing_max_length(timing_map))
 
 
-def timing_critical_path(timing_map, block=None):
+def timing_critical_path(timing_map, block=None, print_cp=True):
     """
     Takes a timing map and returns the critical paths of the system
 
@@ -196,6 +196,15 @@ def timing_critical_path(timing_map, block=None):
         if wire_pair[1] == max_time:
             critical_path_pass([], wire_pair[0])
 
+    if print_cp:
+        print_critcal_paths(critical_paths)
+    return critical_paths
+
+
+def print_critcal_paths(critical_paths):
+    """ Prints the results of the critical path length analysis
+        Done by default by the timing_critical_path function
+    """
     line_indent = " " * 2
     #  print the critical path
     for cp_with_num in enumerate(critical_paths):
@@ -204,8 +213,6 @@ def timing_critical_path(timing_map, block=None):
         for net in cp_with_num[1][1]:
             print(line_indent, (net))
         print()
-
-    return critical_paths
 
 
 # --------------------------------------------------------------------

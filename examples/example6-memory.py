@@ -1,4 +1,4 @@
-""" Example 7: Memories in PyRTL
+""" Example 6: Memories in PyRTL
 
     One important part of many circuits is the ability to have data in
     locations that are persistent over clock cycles. In previous examples,
