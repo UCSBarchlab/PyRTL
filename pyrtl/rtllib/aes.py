@@ -2,7 +2,7 @@
 
 from __future__ import division, absolute_import
 import pyrtl
-from rtllib import libutils, strlib
+from pyrtl.rtllib import libutils, strlib
 
 
 # TODO:
