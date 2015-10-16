@@ -92,7 +92,7 @@ def _apply_op_over_all_bits(op, vector):
 
 
 def rtl_any(*vectorlist):
-    """ Hardware equivelent of python native "any".
+    """ Hardware equivalent of python native "any".
 
     :param WireVector *vectorlist: all arguments are WireVectors of length 1
     :return: WireVector of length 1
@@ -104,14 +104,13 @@ def rtl_any(*vectorlist):
         raise PyrtlError('rtl_any requires at least 1 argument')
     block = get_block(*vectorlist)
     converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
-    for v in converted_vectorlist:
-        if len(v) != 1:
-            raise PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
+    if any(len(v) != 1 for v in converted_vectorlist):
+        raise PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
     return or_all_bits(concat(*converted_vectorlist))
 
 
 def rtl_all(*vectorlist):
-    """ Hardware equivelent of python native "all".
+    """ Hardware equivalent of python native "all".
 
     :param WireVector *vectorlist: all arguments are WireVectors of length 1
     :return: WireVector of length 1
@@ -123,10 +122,8 @@ def rtl_all(*vectorlist):
         raise PyrtlError('rtl_all requires at least 1 argument')
     block = get_block(*vectorlist)
     converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
-    print(converted_vectorlist)
-    for v in converted_vectorlist:
-        if len(v) != 1:
-            raise PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
+    if any(len(v) != 1 for v in converted_vectorlist):
+        raise PyrtlError('only length 1 wirevectors can be inputs to rtl_all')
     return and_all_bits(concat(*converted_vectorlist))
 
 
@@ -257,9 +254,14 @@ def get_block(*arglist):
 
 
 def concat(*args):
-    """ Take any number of wire vector params and return a wire vector concatinating them.
-    The arguments should be WireVectors (or convertable to WireVectors through as_wires).
-    The concatination order places the MSB as arg[0] with less signficant bits following.
+    """
+    Concats multiple wirevectors into a single wirevector
+
+    :type args: WireVector
+    :return wirevector: wirevector with length equal
+      to the sum of the args' lengths
+
+    The concatenation order places the MSB as arg[0] with less significant bits following.
     """
 
     block = get_block(*args)

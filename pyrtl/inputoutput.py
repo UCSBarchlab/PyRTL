@@ -286,6 +286,24 @@ def output_to_trivialgraph(file, block=None):
     for (from_, to) in edges:
         print('%s %s %s' % (from_, to, edge_names.get((from_, to), '')), file=file)
 
+    """ # TODO the below code will work for dot if it replaces the print function
+    # above.  We need to refactor the code to handle that.  Perhaps there should be a
+    # "make a graph" function and the output_to_trivial_graph and output_to_dot would
+    # just call that?
+
+    print('digraph g {', file=file)
+    for (id, label) in nodes.values():
+        label = 'A' if label=='&' else label
+        print('    n%s [label="%s"];' % (id, label), file=file)
+    for (from_, to) in edges:
+        edgelabel = edge_names.get((from_, to), '')
+        if edgelabel:
+            print('   n%s -> n%s [label="%s"];' % (from_, to, edgelabel), file=file)
+        else:
+            print('   n%s -> n%s;' % (from_, to), file=file)
+    print('}', file=file)
+    """
+
 
 # ----------------------------------------------------------------
 #         ___  __          __   __
@@ -392,7 +410,7 @@ def _to_verilog_header(file, block):
     for w in mems_with_initials:
         print('    initial begin', file=file)
         for i in range(2**len(w.args[0])):
-            print("        mem_%s[%d]=%d'x%x" % (
+            print("        mem_%s[%d]=%d'h%x;" % (
                 w.op_param[0], i, len(w), w.op_param[1]._get_read_data(i)), file=file)
         print('    end', file=file)
         print('', file=file)

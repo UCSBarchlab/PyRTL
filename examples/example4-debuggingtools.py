@@ -7,6 +7,8 @@ PyRTL comes with various features to help you find mistakes.
 """
 
 import random
+import io
+from pyrtl.rtllib import adders
 import pyrtl
 
 random.seed(93729473)  # used to make random calls deterministic for this example
@@ -29,8 +31,8 @@ random.seed(93729473)  # used to make random calls deterministic for this exampl
 in1, in2, in3 = (pyrtl.Input(8, "in" + str(x)) for x in range(1, 4))
 out = pyrtl.Output(10, "out")
 
-add1_out = pyrtl.adders.kogge_stone(in1, in2)
-add2_out = pyrtl.adders.kogge_stone(add1_out, in2)
+add1_out = adders.kogge_stone(in1, in2)
+add2_out = adders.kogge_stone(add1_out, in2)
 out <<= add2_out
 
 # The most basic way of debugging PyRTL is to connect a value to an output wire
@@ -97,7 +99,7 @@ pyrtl.set_debug_mode()
 # a test wire to show this feature
 
 test_out = pyrtl.Output(9, "test_out")
-test_out <<= pyrtl.adders.kogge_stone(in1, in3)
+test_out <<= adders.kogge_stone(in1, in3)
 
 # Now to retrieve information
 wire_trace = test_out.init_call_stack
@@ -107,8 +109,8 @@ wire_trace = test_out.init_call_stack
 # details on the function). Therefore, the stack traces are stored as a list with the
 # outermost call first.
 
-#for frame in wire_trace:
-#    print(frame)
+# for frame in wire_trace:
+#     print(frame)
 
 # Storage of Additional Debug Data
 

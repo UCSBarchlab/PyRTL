@@ -1,9 +1,5 @@
 import unittest
-import random
-import pyrtl
 import io
-import os
-import subprocess
 
 from .helperfunctions import *
 
@@ -111,6 +107,7 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.r2.next <<= self.r + pyrtl.Const(2, bitwidth=self.bitwidth)
         self.check_trace(' r 00224466\nr2 02244660\n')
 
+
 class TestRTLSimulationInputValidation(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -129,6 +126,7 @@ class TestRTLSimulationInputValidation(unittest.TestCase):
             sim.step({i: cycle})
         with self.assertRaises(pyrtl.PyrtlError):
             sim.step({i: 5})
+
 
 class TestRTLSimulationTraceWithAdder(unittest.TestCase):
     def setUp(self):
@@ -281,19 +279,15 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
 
     def test_simple_memblock(self):
         self.sim = pyrtl.Simulation(tracer=self.sim_trace)
-        input_signals = {}
-        input_signals[0] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 4,
-                            self.write_data: 5}
-        input_signals[1] = {self.read_addr1: 4, self.read_addr2: 1, self.write_addr: 0,
-                            self.write_data: 5}
-        input_signals[2] = {self.read_addr1: 0, self.read_addr2: 4, self.write_addr: 1,
-                            self.write_data: 6}
-        input_signals[3] = {self.read_addr1: 1, self.read_addr2: 1, self.write_addr: 0,
-                            self.write_data: 0}
-        input_signals[4] = {self.read_addr1: 6, self.read_addr2: 0, self.write_addr: 6,
-                            self.write_data: 7}
-        for i in range(5):
-            self.sim.step(input_signals[i])
+
+        input_signals = [[0, 1, 4, 5],
+                         [4, 1, 0, 5],
+                         [0, 4, 1, 6],
+                         [1, 1, 0, 0],
+                         [6, 0, 6, 7]]
+        for signals in input_signals:
+            self.sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
+                           self.write_addr: signals[2], self.write_data: signals[3]})
 
         output = io.StringIO()
         self.sim_trace.print_trace(output)
@@ -301,43 +295,38 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
 
     def test_simple2_memblock(self):
         self.sim = pyrtl.Simulation(tracer=self.sim_trace)
-        input_signals = {}
-        input_signals[0] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x7}
-        input_signals[1] = {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 1, self.write_data: 0x6}
-        input_signals[2] = {self.read_addr1: 0, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x5}
-        input_signals[3] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x4}
-        input_signals[4] = {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 1, self.write_data: 0x3}
-        input_signals[5] = {self.read_addr1: 2, self.read_addr2: 2, self.write_addr: 2, self.write_data: 0x2}
-        input_signals[6] = {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 0, self.write_data: 0x1}
-        input_signals[7] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 1, self.write_data: 0x0}
-        input_signals[8] = {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x7}
-        input_signals[9] = {self.read_addr1: 2, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x6}
-        for i in range(10):
-            self.sim.step(input_signals[i])
+        input_signals = [
+            {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x7},
+            {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 1, self.write_data: 0x6},
+            {self.read_addr1: 0, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x5},
+            {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x4},
+            {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 1, self.write_data: 0x3},
+            {self.read_addr1: 2, self.read_addr2: 2, self.write_addr: 2, self.write_data: 0x2},
+            {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 0, self.write_data: 0x1},
+            {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 1, self.write_data: 0x0},
+            {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x7},
+            {self.read_addr1: 2, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x6}]
+
+        for signal in input_signals:
+            self.sim.step(signal)
 
         output = io.StringIO()
         self.sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'o1 0077653107\no2 0076452310\n')
 
-
     def test_synth_simple_memblock(self):
-        synth_out = pyrtl.synthesize()
+        pyrtl.synthesize()
         pyrtl.optimize()
         self.sim_trace = pyrtl.SimulationTrace()
         self.sim = pyrtl.Simulation(tracer=self.sim_trace)
-        input_signals = {}
-        input_signals[0] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 4,
-                            self.write_data: 5}
-        input_signals[1] = {self.read_addr1: 4, self.read_addr2: 1, self.write_addr: 0,
-                            self.write_data: 5}
-        input_signals[2] = {self.read_addr1: 0, self.read_addr2: 4, self.write_addr: 1,
-                            self.write_data: 6}
-        input_signals[3] = {self.read_addr1: 1, self.read_addr2: 1, self.write_addr: 0,
-                            self.write_data: 0}
-        input_signals[4] = {self.read_addr1: 6, self.read_addr2: 0, self.write_addr: 6,
-                            self.write_data: 7}
-        for i in range(5):
-            self.sim.step(input_signals[i])
+        input_signals = [[0, 1, 4, 5],
+                         [4, 1, 0, 5],
+                         [0, 4, 1, 6],
+                         [1, 1, 0, 0],
+                         [6, 0, 6, 7]]
+        for signals in input_signals:
+            self.sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
+                           self.write_addr: signals[2], self.write_data: signals[3]})
 
         output = io.StringIO()
         self.sim_trace.print_trace(output)
@@ -444,10 +433,9 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
         rom_out_1 = pyrtl.Output(4, "rom_out_1")
         rom_out_1 <<= rom1[rom_add_1]
 
-        def bad_sim():
+        with self.assertRaises(pyrtl.PyrtlError):
             simvals = {
                 rom_add_1: "392081",
-                # rom_add_1: "0989489891"
             }
             sim_trace = pyrtl.SimulationTrace()
             sim = pyrtl.Simulation(tracer=sim_trace)
@@ -455,7 +443,6 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
                 sim.step({k: int(v[cycle]) for k, v in list(simvals.items())})
             sim_trace.render_trace()
 
-        self.assertRaises(pyrtl.PyrtlError, bad_sim)
 
 if __name__ == '__main__':
     unittest.main()
