@@ -2,7 +2,7 @@
 
 from __future__ import division, absolute_import
 import pyrtl
-from pyrtl.rtllib import libutils, strlib
+from pyrtl.rtllib import libutils
 
 
 # TODO:
@@ -16,6 +16,7 @@ from pyrtl.rtllib import libutils, strlib
 #    aes encrypter similar to (3) above is generated
 # 5) a single "aes-unit" combining encryption and decryption (without making
 #    full independent hardware units) would be a plus as well
+import rtllib.libutils
 
 
 def _g(word, key_expand_round):
@@ -94,7 +95,7 @@ def aes_decryption(ciphertext, key):
     return t
 
 
-sbox_data = strlib.str_to_int_array('''
+sbox_data = libutils.str_to_int_array('''
     63 7c 77 7b f2 6b 6f c5 30 01 67 2b fe d7 ab 76 ca 82 c9 7d fa 59 47 f0 ad d4 a2 af 9c a4 72 c0
     b7 fd 93 26 36 3f f7 cc 34 a5 e5 f1 71 d8 31 15 04 c7 23 c3 18 96 05 9a 07 12 80 e2 eb 27 b2 75
     09 83 2c 1a 1b 6e 5a a0 52 3b d6 b3 29 e3 2f 84 53 d1 00 ed 20 fc b1 5b 6a cb be 39 4a 4c 58 cf
@@ -105,7 +106,7 @@ sbox_data = strlib.str_to_int_array('''
     e1 f8 98 11 69 d9 8e 94 9b 1e 87 e9 ce 55 28 df 8c a1 89 0d bf e6 42 68 41 99 2d 0f b0 54 bb 16
     ''')
 
-inv_sbox_data = strlib.str_to_int_array('''
+inv_sbox_data = libutils.str_to_int_array('''
     52 09 6a d5 30 36 a5 38 bf 40 a3 9e 81 f3 d7 fb 7c e3 39 82 9b 2f ff 87 34 8e 43 44 c4 de e9 cb
     54 7b 94 32 a6 c2 23 3d ee 4c 95 0b 42 fa c3 4e 08 2e a1 66 28 d9 24 b2 76 5b a2 49 6d 8b d1 25
     72 f8 f6 64 86 68 98 16 d4 a4 5c cc 5d 65 b6 92 6c 70 48 50 fd ed b9 da 5e 15 46 57 a7 8d 9d 84
@@ -116,7 +117,7 @@ inv_sbox_data = strlib.str_to_int_array('''
     a0 e0 3b 4d ae 2a f5 b0 c8 eb bb 3c 83 53 99 61 17 2b 04 7e ba 77 d6 26 e1 69 14 63 55 21 0c 7d
     ''')
 
-rcon_data = strlib.str_to_int_array('''
+rcon_data = libutils.str_to_int_array('''
     8d 01 02 04 08 10 20 40 80 1b 36 6c d8 ab 4d 9a 2f 5e bc 63 c6 97 35 6a d4 b3 7d fa ef c5 91 39
     72 e4 d3 bd 61 c2 9f 25 4a 94 33 66 cc 83 1d 3a 74 e8 cb 8d 01 02 04 08 10 20 40 80 1b 36 6c d8
     ab 4d 9a 2f 5e bc 63 c6 97 35 6a d4 b3 7d fa ef c5 91 39 72 e4 d3 bd 61 c2 9f 25 4a 94 33 66 cc
@@ -129,7 +130,7 @@ rcon_data = strlib.str_to_int_array('''
 
 # Galois Multiplication tables for 9, 11, 13, and 14.
 
-gm9_data = strlib.str_to_int_array('''
+gm9_data = libutils.str_to_int_array('''
     00 09 12 1b 24 2d 36 3f 48 41 5a 53 6c 65 7e 77 90 99 82 8b b4 bd a6 af d8 d1 ca c3 fc f5 ee e7
     3b 32 29 20 1f 16 0d 04 73 7a 61 68 57 5e 45 4c ab a2 b9 b0 8f 86 9d 94 e3 ea f1 f8 c7 ce d5 dc
     76 7f 64 6d 52 5b 40 49 3e 37 2c 25 1a 13 08 01 e6 ef f4 fd c2 cb d0 d9 ae a7 bc b5 8a 83 98 91
@@ -140,7 +141,7 @@ gm9_data = strlib.str_to_int_array('''
     a1 a8 b3 ba 85 8c 97 9e e9 e0 fb f2 cd c4 df d6 31 38 23 2a 15 1c 07 0e 79 70 6b 62 5d 54 4f 46
     ''')
 
-gm11_data = strlib.str_to_int_array('''
+gm11_data = libutils.str_to_int_array('''
     00 0b 16 1d 2c 27 3a 31 58 53 4e 45 74 7f 62 69 b0 bb a6 ad 9c 97 8a 81 e8 e3 fe f5 c4 cf d2 d9
     7b 70 6d 66 57 5c 41 4a 23 28 35 3e 0f 04 19 12 cb c0 dd d6 e7 ec f1 fa 93 98 85 8e bf b4 a9 a2
     f6 fd e0 eb da d1 cc c7 ae a5 b8 b3 82 89 94 9f 46 4d 50 5b 6a 61 7c 77 1e 15 08 03 32 39 24 2f
@@ -151,7 +152,7 @@ gm11_data = strlib.str_to_int_array('''
     7a 71 6c 67 56 5d 40 4b 22 29 34 3f 0e 05 18 13 ca c1 dc d7 e6 ed f0 fb 92 99 84 8f be b5 a8 a3
     ''')
 
-gm13_data = strlib.str_to_int_array('''
+gm13_data = libutils.str_to_int_array('''
     00 0d 1a 17 34 39 2e 23 68 65 72 7f 5c 51 46 4b d0 dd ca c7 e4 e9 fe f3 b8 b5 a2 af 8c 81 96 9b
     bb b6 a1 ac 8f 82 95 98 d3 de c9 c4 e7 ea fd f0 6b 66 71 7c 5f 52 45 48 03 0e 19 14 37 3a 2d 20
     6d 60 77 7a 59 54 43 4e 05 08 1f 12 31 3c 2b 26 bd b0 a7 aa 89 84 93 9e d5 d8 cf c2 e1 ec fb f6
@@ -162,7 +163,7 @@ gm13_data = strlib.str_to_int_array('''
     0c 01 16 1b 38 35 22 2f 64 69 7e 73 50 5d 4a 47 dc d1 c6 cb e8 e5 f2 ff b4 b9 ae a3 80 8d 9a 97
     ''')
 
-gm14_data = strlib.str_to_int_array('''
+gm14_data = libutils.str_to_int_array('''
     00 0e 1c 12 38 36 24 2a 70 7e 6c 62 48 46 54 5a e0 ee fc f2 d8 d6 c4 ca 90 9e 8c 82 a8 a6 b4 ba
     db d5 c7 c9 e3 ed ff f1 ab a5 b7 b9 93 9d 8f 81 3b 35 27 29 03 0d 1f 11 4b 45 57 59 73 7d 6f 61
     ad a3 b1 bf 95 9b 89 87 dd d3 c1 cf e5 eb f9 f7 4d 43 51 5f 75 7b 69 67 3d 33 21 2f 05 0b 19 17
