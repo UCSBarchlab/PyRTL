@@ -204,7 +204,7 @@ class Block(object):
         self.sanity_check_net(net)
         self.logic.add(net)
 
-    def wirevector_subset(self, cls=None):
+    def wirevector_subset(self, cls=None, exclude=tuple()):
         """Return set of wirevectors, filtered by the type or tuple of types provided as cls.
 
         If no cls is specified, the full set of wirevectors associated with the Block are
@@ -212,9 +212,10 @@ class Block(object):
         the matching types will be returned.  This is helpful for getting all inputs, outputs,
         or registers of a block for example."""
         if cls is None:
-            return self.wirevector_set
+            initial_set = self.wirevector_set
         else:
-            return set(x for x in self.wirevector_set if isinstance(x, cls))
+            initial_set = (x for x in self.wirevector_set if isinstance(x, cls))
+        return set(x for x in initial_set if not isinstance(x, exclude))
 
     def logic_subset(self, op=None):
         """Return set of logicnets, filtered by the type of logic op provided as op.
@@ -277,7 +278,7 @@ class Block(object):
         built according to the assumptions stated in the Block comments."""
 
         # TODO: check that the wirevector_by_name is sane
-        from .wire import WireVector, Input, Const, Output, Register
+        from .wire import Input, Const, Output
 
         # check for valid LogicNets (and wires)
         for net in self.logic:
@@ -345,29 +346,25 @@ class Block(object):
         async_source = self.legal_ops - set('wcsr')  # produce values after non-zero time
         async_prop = self.legal_ops - set('r')  # ops propagating async behavior from src to dest
         async_set = set(wire
-                        for net in self.logic if net.op in async_source
+                        for net in self.logic_subset(async_source)
                         for wire in net.dests)
-        last_async_set_len = len(async_set)
-        async_set_is_growing = True
+        last_async_set_len = len(async_set) - 1  # guarantee at least one iteration
 
         # propagate "async" behavior through the network
-        while async_set_is_growing:
-            for net in self.logic:
-                if net.op in async_prop:
-                    if any([w in async_set for w in net.args]):
-                        async_set.update(net.dests)
-            async_set_is_growing = True if len(async_set) > last_async_set_len else False
+        while len(async_set) > last_async_set_len:
             last_async_set_len = len(async_set)
+            for net in self.logic_subset(async_prop):
+                if any(w in async_set for w in net.args):
+                    async_set.update(net.dests)
 
         # now do the actual check on each memory operation
-        for net in self.logic:
-            if net.op == 'm':
-                is_async = net.args[0] in async_set
-                if is_async and not net.op_param[1].asynchronous:
-                    raise PyrtlError(
-                        'memory "%s" is not specified as asynchronous but has and index '
-                        '"%s" that is not ready at the start of the cycle'
-                        % (net.op_param[1].name, net.args[0].name))
+        for net in self.logic_subset('m'):
+            is_async = net.args[0] in async_set
+            if is_async and not net.op_param[1].asynchronous:
+                raise PyrtlError(
+                    'memory "%s" is not specified as asynchronous but has and index '
+                    '"%s" that is not ready at the start of the cycle'
+                    % (net.op_param[1].name, net.args[0].name))
 
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
