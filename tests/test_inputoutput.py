@@ -57,6 +57,7 @@ class TestVerilogNames(unittest.TestCase):
         self.assertRaises(pyrtl.PyrtlError, self.checkname, "flipin'")
         self.assertRaises(pyrtl.PyrtlError, self.checkname, ' jklol')
 
+
 class TestVerilog(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

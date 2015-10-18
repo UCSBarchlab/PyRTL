@@ -1,4 +1,4 @@
-""" Example 6:  Interfacing with Verilog.
+""" Example 8:  Interfacing with Verilog.
 
     While there is much more about PyRTL design to discuss, at some point somebody
     might ask you to do something with your code other than have it print
