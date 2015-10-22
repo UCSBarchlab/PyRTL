@@ -42,10 +42,14 @@ def kogge_stone(a, b, cin=0):
 
 
 def one_bit_add(a, b, cin):
-    assert len(a) == len(b) == 1
+    return pyrtl.concat(*_one_bit_add_no_concat(a, b, cin))
+
+
+def _one_bit_add_no_concat(a, b, cin):
+    assert len(a) == len(b) == len(cin) == 1
     sum = a ^ b ^ cin
     cout = a & b | a & cin | b & cin
-    return pyrtl.concat(cout, sum)
+    return cout, sum
 
 
 def ripple_add(a, b, cin=0):
@@ -131,62 +135,46 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
                     "The item %s is not a valid element for the wire_array_2. "
                     "It must be a WireVector of bitwidth 1")
 
-    deferred = [[] for weight in range(result_bitwidth)]
-    while not all([len(i) <= 2 for i in wire_array_2]):
-        # While there's more than 2 wire vectors left
-        for i in range(len(wire_array_2)):  # Start with low weights and start reducing
-            while len(wire_array_2[i]) >= 3:  # Reduce with Full Adders until < 3 wires
-                a, b, cin = (wire_array_2[i].pop(0) for j in range(3))
-                deferred[i].append(a ^ b ^ cin)  # deferred bit keeps this sum
+    while not all(len(i) <= 2 for i in wire_array_2):
+        deferred = [[] for weight in range(result_bitwidth)]
+        for i, w_array in enumerate(wire_array_2):  # Start with low weights and start reducing
+            while len(w_array) >= 3:  # Reduce with Full Adders until < 3 wires
+                cout, sum = _one_bit_add_no_concat(*(w_array.pop(0) for j in range(3)))
+                deferred[i].append(sum)  # deferred bit keeps this sum
                 if i + 1 < result_bitwidth:  # watch out for index bounds
-                    deferred[i + 1].append((a & b) | (b & cin) | (a & cin))  # cout goes up by one
+                    deferred[i + 1].append(cout)  # cout goes up by one
 
-            if len(wire_array_2[i]) == 2:
-                if reduce_2s:  # Reduce with a Half Adder if exactly 2 wires
-                    a, b = wire_array_2[i].pop(0), wire_array_2[i].pop(0)
-                    deferred[i].append(a ^ b)  # deferred bit keeps this sum
-                    if i + 1 < result_bitwidth:
-                        deferred[i + 1].append(a & b)  # cout goes up one weight
-                else:
-                    deferred[i].extend(wire_array_2[i])
-
-            elif len(wire_array_2[i]) == 1:  # Remaining wire is passed along the reductions
-                deferred[i].append(wire_array_2[i][0])  # deferred bit keeps this value
+            if len(wire_array_2[i]) == 2 and reduce_2s:
+                # Reduce with a Half Adder if exactly 2 wires remain
+                a, b = w_array.pop(0), w_array.pop(0)
+                deferred[i].append(a ^ b)  # deferred bit keeps this sum
+                if i + 1 < result_bitwidth:
+                    deferred[i + 1].append(a & b)  # cout goes up one weight
+            else:
+                deferred[i].extend(w_array)
 
         wire_array_2 = deferred  # Set bits equal to the deferred values
-        deferred = [[] for weight in range(result_bitwidth)]  # Reset deferred to empty
 
     # At this stage in the multiplication we have only 2 wire vectors left.
-
-    num1 = []
-    num2 = []
-    # This humorous variable tells us when we have seen the start of the overlap
-    # of the two wire vectors
-    weve_seen_a_two = False
+    add_wires = [], []
     result = None
 
     for i in range(result_bitwidth):
-
         if len(wire_array_2[i]) == 2:  # Check if the two wire vectors overlap yet
-            weve_seen_a_two = True
-
-        if not weve_seen_a_two:  # If they have not overlapped, add the 1's to result
-            if result is None:
-                result = wire_array_2[i][0]
-            else:
-                result = pyrtl.concat(wire_array_2[i][0], result)
+            break
+        if result is None:
+            result = wire_array_2[i][0]
         else:
-            # For overlapping bits, create num1 and num2
-            if weve_seen_a_two and len(wire_array_2[i]) == 2:
-                num1.insert(0, wire_array_2[i][0])  # because we need to prepend to the list
-                num2.insert(0, wire_array_2[i][1])
+            result = pyrtl.concat(wire_array_2[i][0], result)
 
-            # If there's 1 left it's part of num2
-            if weve_seen_a_two and len(wire_array_2[i]) == 1 and i < result_bitwidth:
-                num1.insert(0, pyrtl.Const(0))
-                num2.insert(0, wire_array_2[i][0])
+    for j in range(i, result_bitwidth):
+        for i in range(2):
+            if len(wire_array_2[j]) >= i + 1:
+                add_wires[i].insert(0, wire_array_2[j][i])
+            else:
+                add_wires[i].insert(0, pyrtl.Const(0))
 
-    adder_result = final_adder(pyrtl.concat(*num1), pyrtl.concat(*num2))
+    adder_result = final_adder(pyrtl.concat(*add_wires[0]), pyrtl.concat(*add_wires[1]))
 
     # Concatenate the results, and then return them.
     # Perhaps here we should slice off the overflow bit, if it exceeds bit_length?
