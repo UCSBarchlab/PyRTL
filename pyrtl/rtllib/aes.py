@@ -4,7 +4,6 @@ from __future__ import division, absolute_import
 import pyrtl
 from pyrtl.rtllib import libutils
 
-
 # TODO:
 # 1) Right now all ROMs are global -- need to be moved into function so each
 #    instance of the AES block creates it's own memories
@@ -16,20 +15,23 @@ from pyrtl.rtllib import libutils
 #    aes encrypter similar to (3) above is generated
 # 5) a single "aes-unit" combining encryption and decryption (without making
 #    full independent hardware units) would be a plus as well
-import rtllib.libutils
+# 6) The constants right now are a big ugly list -- it might be better to
+#    store them as a multi-line string like: '0f bf 53 2c ...' and then
+#    provide a small helper funciton to parse them out.  It might be a nice
+#    utility for pyrtl itself to include.
 
 
 def _g(word, key_expand_round):
     # One-byte left circular rotation, substitution of each byte
     a = libutils.partition_wire(word, 8)
-    sub = pyrtl.concat(sbox[a[1]], sbox[a[2]], sbox[a[3]], sbox[a[0]])
+    sub = pyrtl.concat(sbox[a[2]], sbox[a[1]], sbox[a[0]], sbox[a[3]])
     # xor substituted bytes with round constant.
     round_const = pyrtl.concat(rcon[key_expand_round + 1], pyrtl.Const(0, bitwidth=24))
     return round_const ^ sub
 
 
 def key_expansion(key):
-    w = list(reversed(libutils.partition_wire(key, 32)))
+    w = list(libutils.partition_wire(key, 32))
     for key_expand_round in range(10):
         last = key_expand_round * 4
         w.append(w[last] ^ _g(w[last + 3], key_expand_round))
@@ -41,15 +43,16 @@ def key_expansion(key):
 
 def inv_sub_bytes(in_vector):
     subbed = [inv_sbox[byte] for byte in libutils.partition_wire(in_vector, 8)]
-    return pyrtl.concat(*subbed)
+    return pyrtl.concat(*reversed(subbed))
 
 
 def inv_shift_rows(in_vector):
-    a = libutils.partition_wire(in_vector, 8)
-    out_vector = pyrtl.concat(a[0], a[7], a[10], a[13],
-                              a[1], a[4], a[11], a[14],
-                              a[2], a[5], a[8],  a[15],
-                              a[3], a[6], a[9],  a[12])
+    # a = libutils.partition_wire(in_vector, 8)
+    a = [in_vector[offset - 8:offset] for offset in range(128, 0, -8)]
+    out_vector = pyrtl.concat(a[0], a[13], a[10], a[7],
+                              a[4], a[1], a[14], a[11],
+                              a[8], a[5], a[2], a[15],
+                              a[12], a[9], a[6], a[3])
     return out_vector
 
 
@@ -71,7 +74,8 @@ def inv_mix_columns(in_vector):
                       for loc, mult_table in enumerate(_igm_divisor)]
         return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
 
-    a = libutils.partition_wire(in_vector, 8)
+    # a = libutils.partition_wire(in_vector, 8)
+    a = [in_vector[offset - 8:offset] for offset in range(128, 0, -8)]
     inverted = [_inv_mix_single(index) for index in range(len(a))]
     return pyrtl.concat(*inverted)
 
@@ -130,7 +134,7 @@ rcon_data = libutils.str_to_int_array('''
 
 # Galois Multiplication tables for 9, 11, 13, and 14.
 
-gm9_data = libutils.str_to_int_array('''
+GM9_data = libutils.str_to_int_array('''
     00 09 12 1b 24 2d 36 3f 48 41 5a 53 6c 65 7e 77 90 99 82 8b b4 bd a6 af d8 d1 ca c3 fc f5 ee e7
     3b 32 29 20 1f 16 0d 04 73 7a 61 68 57 5e 45 4c ab a2 b9 b0 8f 86 9d 94 e3 ea f1 f8 c7 ce d5 dc
     76 7f 64 6d 52 5b 40 49 3e 37 2c 25 1a 13 08 01 e6 ef f4 fd c2 cb d0 d9 ae a7 bc b5 8a 83 98 91
@@ -141,7 +145,7 @@ gm9_data = libutils.str_to_int_array('''
     a1 a8 b3 ba 85 8c 97 9e e9 e0 fb f2 cd c4 df d6 31 38 23 2a 15 1c 07 0e 79 70 6b 62 5d 54 4f 46
     ''')
 
-gm11_data = libutils.str_to_int_array('''
+GM11_data = libutils.str_to_int_array('''
     00 0b 16 1d 2c 27 3a 31 58 53 4e 45 74 7f 62 69 b0 bb a6 ad 9c 97 8a 81 e8 e3 fe f5 c4 cf d2 d9
     7b 70 6d 66 57 5c 41 4a 23 28 35 3e 0f 04 19 12 cb c0 dd d6 e7 ec f1 fa 93 98 85 8e bf b4 a9 a2
     f6 fd e0 eb da d1 cc c7 ae a5 b8 b3 82 89 94 9f 46 4d 50 5b 6a 61 7c 77 1e 15 08 03 32 39 24 2f
@@ -152,7 +156,7 @@ gm11_data = libutils.str_to_int_array('''
     7a 71 6c 67 56 5d 40 4b 22 29 34 3f 0e 05 18 13 ca c1 dc d7 e6 ed f0 fb 92 99 84 8f be b5 a8 a3
     ''')
 
-gm13_data = libutils.str_to_int_array('''
+GM13_data = libutils.str_to_int_array('''
     00 0d 1a 17 34 39 2e 23 68 65 72 7f 5c 51 46 4b d0 dd ca c7 e4 e9 fe f3 b8 b5 a2 af 8c 81 96 9b
     bb b6 a1 ac 8f 82 95 98 d3 de c9 c4 e7 ea fd f0 6b 66 71 7c 5f 52 45 48 03 0e 19 14 37 3a 2d 20
     6d 60 77 7a 59 54 43 4e 05 08 1f 12 31 3c 2b 26 bd b0 a7 aa 89 84 93 9e d5 d8 cf c2 e1 ec fb f6
@@ -163,7 +167,7 @@ gm13_data = libutils.str_to_int_array('''
     0c 01 16 1b 38 35 22 2f 64 69 7e 73 50 5d 4a 47 dc d1 c6 cb e8 e5 f2 ff b4 b9 ae a3 80 8d 9a 97
     ''')
 
-gm14_data = libutils.str_to_int_array('''
+GM14_data = libutils.str_to_int_array('''
     00 0e 1c 12 38 36 24 2a 70 7e 6c 62 48 46 54 5a e0 ee fc f2 d8 d6 c4 ca 90 9e 8c 82 a8 a6 b4 ba
     db d5 c7 c9 e3 ed ff f1 ab a5 b7 b9 93 9d 8f 81 3b 35 27 29 03 0d 1f 11 4b 45 57 59 73 7d 6f 61
     ad a3 b1 bf 95 9b 89 87 dd d3 c1 cf e5 eb f9 f7 4d 43 51 5f 75 7b 69 67 3d 33 21 2f 05 0b 19 17
@@ -174,15 +178,13 @@ gm14_data = libutils.str_to_int_array('''
     37 39 2b 25 0f 01 13 1d 47 49 5b 55 7f 71 63 6d d7 d9 cb c5 ef e1 f3 fd a7 a9 bb b5 9f 91 83 8d
     ''')
 
-
 sbox = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=sbox_data, asynchronous=True)
 inv_sbox = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=inv_sbox_data, asynchronous=True)
 rcon = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=rcon_data, asynchronous=True)
-GM9 = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=gm9_data, asynchronous=True)
-GM11 = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=gm11_data, asynchronous=True)
-GM13 = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=gm13_data, asynchronous=True)
-GM14 = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=gm14_data, asynchronous=True)
-
+GM9 = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=GM9_data, asynchronous=True)
+GM11 = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=GM11_data, asynchronous=True)
+GM13 = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=GM13_data, asynchronous=True)
+GM14 = pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=GM14_data, asynchronous=True)
 _inv_gal_mult_dict = {9: GM9, 11: GM11, 13: GM13, 14: GM14}
 
 # Hardware build.
