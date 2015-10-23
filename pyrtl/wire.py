@@ -9,17 +9,13 @@ Const: a wire vector fed by a constant
 Register: a wire vector that is latched each cycle
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
-
+from __future__ import print_function, unicode_literals
 import numbers
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block
-from .core import next_tempvar_name
-from .core import next_constvar_name
-from .core import LogicNet
-from .core import _setting_keep_wirevector_call_stack
+
+from .core import (working_block, next_constvar_name, next_tempvar_name,
+                   LogicNet, _setting_keep_wirevector_call_stack)
 
 # ----------------------------------------------------------------
 #        ___  __  ___  __   __
@@ -58,12 +54,7 @@ class WireVector(object):
 
         self.block = working_block(block)
         self.name = next_tempvar_name(name)
-        if bitwidth is not None:
-            if not isinstance(bitwidth, int):
-                raise PyrtlError('parameter "bitwidth" needs to be an int or left unspecificed')
-            elif bitwidth <= 0:
-                raise PyrtlError('error, bitwidth must be >= 1')
-        self.bitwidth = bitwidth
+        self._validate_bitwidth(bitwidth)
         self.block.add_wirevector(self)
 
         if _setting_keep_wirevector_call_stack:
@@ -77,6 +68,15 @@ class WireVector(object):
 
     def __str__(self):
         return ''.join([self.name, '/', str(self.bitwidth), self._code])
+
+    def _validate_bitwidth(self, bitwidth):
+        if bitwidth is not None:
+            if not isinstance(bitwidth, numbers.Integral):
+                raise PyrtlError('bitwidth must be from type int or unspecified, instead "%s"'
+                                 ' was passed of type %s' % (str(bitwidth), type(bitwidth)))
+            elif bitwidth <= 0:
+                raise PyrtlError('you are trying a negative bitwidth? awesome but wrong')
+        self.bitwidth = bitwidth
 
     def _build(self, other):
         # Actually create and add wirevector to logic block
@@ -359,14 +359,7 @@ class Const(WireVector):
         Descriptions for all parameters not listed above can be found at
         py:method:: WireVector.__init__()
         """
-        if bitwidth is not None:
-            if not isinstance(bitwidth, int):
-                raise PyrtlError(
-                    'bitwidth must be from type int, instead Const was passed "%s" of type %s'
-                    % (str(bitwidth), type(bitwidth)))
-            if bitwidth < 0:
-                raise PyrtlError('you are trying a negative bitwidth? awesome but wrong')
-
+        self._validate_bitwidth(bitwidth)
         if isinstance(val, bool):
             num = int(val)
             if bitwidth is None:

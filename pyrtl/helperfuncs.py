@@ -359,8 +359,7 @@ def rtl_assert(w, msg):
 def _check_for_loop(block=None):
     block = working_block(block)
     logic_left = block.logic.copy()
-    wires_left = set(w for w in block.wirevector_set
-                     if not isinstance(w, (Input, Const, Output, Register)))
+    wires_left = block.wirevector_subset(exclude=(Input, Const, Output, Register))
     prev_logic_left = len(logic_left) + 1
     while prev_logic_left > len(logic_left):
         prev_logic_left = len(logic_left)

@@ -6,12 +6,8 @@ Block -- a collection of nets with associated access and error checking
 working_block -- the "current" Block to which, by default, all created nets are added
 modes -- access methods for "modes" such as debug
 """
-
-from __future__ import print_function
-from __future__ import unicode_literals
-
+from __future__ import print_function, unicode_literals
 import collections
-import sys
 import re
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
@@ -410,14 +406,15 @@ class Block(object):
             raise PyrtlInternalError('error, op only allowed 1 argument')
         if net.op in '&|^n+-*<>=' and len(net.args) != 2:
             raise PyrtlInternalError('error, op only allowed 2 arguments')
-        if net.op in 'x' and len(net.args) != 3:
-            raise PyrtlInternalError('error, op only allowed 3 arguments')
+        if net.op in 'x':
+            if len(net.args) != 3:
+                raise PyrtlInternalError('error, op only allowed 3 arguments')
+            if net.args[1].bitwidth != net.args[2].bitwidth:
+                raise PyrtlInternalError('error, args have mismatched bitwidths')
+            if net.args[0].bitwidth != 1:
+                raise PyrtlInternalError('error, mux select must be a single bit')
         if net.op in '&|^n+-*<>=' and len(set(x.bitwidth for x in net.args)) > 1:
             raise PyrtlInternalError('error, args have mismatched bitwidths')
-        if net.op == 'x' and net.args[1].bitwidth != net.args[2].bitwidth:
-            raise PyrtlInternalError('error, args have mismatched bitwidths')
-        if net.op == 'x' and net.args[0].bitwidth != 1:
-            raise PyrtlInternalError('error, mux select must be a single bit')
         if net.op in 'm@' and net.args[0].bitwidth != net.op_param[1].addrwidth:
             raise PyrtlInternalError('error, mem addrwidth mismatch')
         if net.op == '@' and net.args[1].bitwidth != net.op_param[1].bitwidth:

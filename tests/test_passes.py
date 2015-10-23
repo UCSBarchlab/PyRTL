@@ -296,14 +296,12 @@ class TestSynthOptTiming(unittest.TestCase):
         tempwire2 <<= ~(inwire2 & tempwire)
         outwire <<= tempwire
 
-        def doAllOps():
+        with self.assertRaises(pyrtl.PyrtlError):
             pyrtl.synthesize()
             pyrtl.optimize()
             block = pyrtl.working_block()
             timing_map = pyrtl.timing_analysis(block)
             block_max_time = pyrtl.timing_max_length(timing_map)
-
-        self.assertRaises(pyrtl.PyrtlError, doAllOps)
 
     def test_wirevector_1(self):
         inwire = pyrtl.Input(bitwidth=1)
