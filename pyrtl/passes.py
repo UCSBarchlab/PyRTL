@@ -707,28 +707,22 @@ def _synth_base(block_in, synth_name="synth"):
     return block_out, temp_wv_map
 
 
-def _copy_net(block_out, net, temp_wv_net, mems):
+def _copy_net(block_out, net, temp_wv_net, mem_map):
     """This function makes a copy of all nets passed to it for synth uses
     """
-    if net.op in "~&|^nrwcsm@":
-        new_args = tuple(temp_wv_net[a_arg] for a_arg in net.args)
-        new_dests = tuple(temp_wv_net[a_dest] for a_dest in net.dests)
-        new_param = copy.copy(net.op_param)
-        # special stuff for copying memories
-        if net.op in "m@":
-            memid, mem = net.op_param
-            if mem not in mems:
-                new_mem = mem._make_copy(block_out)
-                mems[mem] = new_mem
-                new_mem.id = memid
-            else:
-                new_mem = mems[mem]
-            new_param = (new_mem.id, new_mem)
-
-        new_net = LogicNet(net.op, new_param, args=new_args, dests=new_dests)
-        block_out.add_net(new_net)
+    new_args = tuple(temp_wv_net[a_arg] for a_arg in net.args)
+    new_dests = tuple(temp_wv_net[a_dest] for a_dest in net.dests)
+    if net.op in "m@":  # special stuff for copying memories
+        memid, mem = net.op_param
+        if mem not in mem_map:
+            mem_map[mem] = mem._make_copy(block_out)
+            mem_map[mem].id = memid
+        new_param = (memid, mem_map[mem])
     else:
-        raise PyrtlInternalError('Invalid op code :' + net.op + ' found.')
+        new_param = copy.copy(net.op_param)
+
+    new_net = LogicNet(net.op, new_param, args=new_args, dests=new_dests)
+    block_out.add_net(new_net)
 
 
 def nand_synth(block=None, update_working_block=True):
