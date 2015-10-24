@@ -31,7 +31,7 @@ temp2 = pyrtl.WireVector()
 # Two special types of WireVectors are Input and Output, which are used to specify
 # an interface to the hardware block.
 a, b, c = pyrtl.Input(1, 'a'), pyrtl.Input(1, 'b'), pyrtl.Input(1, 'c')
-sum, cout = pyrtl.Output(1, 'sum'), pyrtl.Output(1, 'cout')
+sum, carry_out = pyrtl.Output(1, 'sum'), pyrtl.Output(1, 'carry_out')
 
 # Okay, let's build a one-bit adder.  To do this we need to use the assignment
 # operator, which is '<<='.  This takes an already declared wire and "connects"
@@ -39,7 +39,7 @@ sum, cout = pyrtl.Output(1, 'sum'), pyrtl.Output(1, 'cout')
 # of course just the xor of the three inputs
 sum <<= a ^ b ^ c
 
-# The cout bit would just be "cout <<= a & b | a & c | b & c" but let's break
+# The carry_out bit would just be "carry_out <<= a & b | a & c | b & c" but let's break
 # than down a bit to see what is really happening.  What if we want to give names
 # to the partial signals in the middle of that computation.  When you take
 # "a & b" in PyRTL what that really means is "make an AND gate, connect one input
@@ -50,7 +50,7 @@ sum <<= a ^ b ^ c
 temp1 <<= a & b  # connect the result of a & b to the pre-allocated wirevector
 temp2 <<= a & c
 temp3 = b & c  # temp3 IS the result of b & c (this is the first mention of temp3)
-cout <<= temp1 | temp2 | temp3
+carry_out <<= temp1 | temp2 | temp3
 
 # You can access the working block through pyrt.working_block(), and for most
 # things one block is all you will need.  Example 2 discusses this in more detail,
@@ -93,7 +93,7 @@ sim_trace.render_trace(symbol_len=5, segment_size=5)
 
 # --- Verification of Simulated Design ---------------------------------------
 
-# Now finally, let's check the trace to make sure that sum and cout are actually
+# Now finally, let's check the trace to make sure that sum and carry_out are actually
 # the right values when compared to a python's addition operation.  Note that
 # all the simulation is done at this point and we are just checking the wave form
 # but there is no reason you could not do this at simulation time if you had a
@@ -109,7 +109,7 @@ for cycle in range(15):
     python_sum = add_result & 0x1
     python_cout = (add_result >> 1) & 0x1
     if (python_sum != sim_trace.trace[sum][cycle] or
-       python_cout != sim_trace.trace[cout][cycle]):
+       python_cout != sim_trace.trace[carry_out][cycle]):
         print('This Example is Broken!!!')
         exit(1)
 
