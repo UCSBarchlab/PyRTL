@@ -108,7 +108,7 @@ adder.</p>
 
 <span class="pl-c"># instantiate an adder into a 3-bit counter</span>
 counter <span class="pl-k">=</span> pyrtl.Register(<span class="pl-smi">bitwidth</span><span class="pl-k">=</span><span class="pl-c1">3</span>, <span class="pl-smi">name</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">'</span>counter<span class="pl-pds">'</span></span>)
-<span class="pl-c1">sum</span>, cout <span class="pl-k">=</span> ripple_add(counter, pyrtl.Const(<span class="pl-s"><span class="pl-pds">"</span>1'b1<span class="pl-pds">"</span></span>))
+<span class="pl-c1">sum</span>, carry_out <span class="pl-k">=</span> ripple_add(counter, pyrtl.Const(<span class="pl-s"><span class="pl-pds">"</span>1'b1<span class="pl-pds">"</span></span>))
 counter.next <span class="pl-k">&lt;&lt;=</span> <span class="pl-c1">sum</span>
 
 <span class="pl-c"># simulate the instantiated design for 15 cycles</span>
