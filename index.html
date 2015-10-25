@@ -90,21 +90,21 @@ might express one in PyRTL if you had to.  Rather than the typical <a href="http
 adders</a>, let's go ahead and build an <em>arbitrary</em> bitwidth 
 adder.</p>
 
-<div class="highlight highlight-source-python"><pre><span class="pl-k">def</span> <span class="pl-en">one_bit_add</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>, <span class="pl-smi">cin</span>):
+<div class="highlight highlight-source-python"><pre><span class="pl-k">def</span> <span class="pl-en">one_bit_add</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>, <span class="pl-smi">carry_in</span>):
     <span class="pl-k">assert</span> <span class="pl-c1">len</span>(a) <span class="pl-k">==</span> <span class="pl-c1">len</span>(b) <span class="pl-k">==</span> <span class="pl-c1">1</span>  <span class="pl-c"># len returns the bitwidth</span>
-    <span class="pl-c1">sum</span> <span class="pl-k">=</span> a <span class="pl-k">^</span> b <span class="pl-k">^</span> cin  <span class="pl-c"># operators on WireVectors build the hardware</span>
-    cout <span class="pl-k">=</span> a <span class="pl-k">&amp;</span> b <span class="pl-k">|</span> a <span class="pl-k">&amp;</span> cin <span class="pl-k">|</span> b <span class="pl-k">&amp;</span> cin
-    <span class="pl-k">return</span> <span class="pl-c1">sum</span>, cout
+    <span class="pl-c1">sum</span> <span class="pl-k">=</span> a <span class="pl-k">^</span> b <span class="pl-k">^</span> carry_in  <span class="pl-c"># operators on WireVectors build the hardware</span>
+    carry_out <span class="pl-k">=</span> a <span class="pl-k">&amp;</span> b <span class="pl-k">|</span> a <span class="pl-k">&amp;</span> carry_in <span class="pl-k">|</span> b <span class="pl-k">&amp;</span> carry_in
+    <span class="pl-k">return</span> <span class="pl-c1">sum</span>, carry_out
 
-<span class="pl-k">def</span> <span class="pl-en">ripple_add</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>, <span class="pl-smi">cin</span><span class="pl-k">=</span><span class="pl-c1">0</span>):
+<span class="pl-k">def</span> <span class="pl-en">ripple_add</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>, <span class="pl-smi">carry_in</span><span class="pl-k">=</span><span class="pl-c1">0</span>):
     a, b <span class="pl-k">=</span> pyrtl.match_bitwidth(a, b)
     <span class="pl-k">if</span> <span class="pl-c1">len</span>(a) <span class="pl-k">==</span> <span class="pl-c1">1</span>:
-        sumbits, cout <span class="pl-k">=</span> one_bit_add(a, b, cin)
+        sumbits, carry_out <span class="pl-k">=</span> one_bit_add(a, b, carry_in)
     <span class="pl-k">else</span>:
-        lsbit, ripplecarry <span class="pl-k">=</span> one_bit_add(a[<span class="pl-c1">0</span>], b[<span class="pl-c1">0</span>], cin)
-        msbits, cout <span class="pl-k">=</span> ripple_add(a[<span class="pl-c1">1</span>:], b[<span class="pl-c1">1</span>:], ripplecarry)
+        lsbit, ripplecarry <span class="pl-k">=</span> one_bit_add(a[<span class="pl-c1">0</span>], b[<span class="pl-c1">0</span>], carry_in)
+        msbits, carry_out <span class="pl-k">=</span> ripple_add(a[<span class="pl-c1">1</span>:], b[<span class="pl-c1">1</span>:], ripplecarry)
         sumbits <span class="pl-k">=</span> pyrtl.concat(msbits, lsbit)
-    <span class="pl-k">return</span> sumbits, cout
+    <span class="pl-k">return</span> sumbits, carry_out
 
 <span class="pl-c"># instantiate an adder into a 3-bit counter</span>
 counter <span class="pl-k">=</span> pyrtl.Register(<span class="pl-smi">bitwidth</span><span class="pl-k">=</span><span class="pl-c1">3</span>, <span class="pl-smi">name</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">'</span>counter<span class="pl-pds">'</span></span>)
