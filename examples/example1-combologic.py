@@ -58,16 +58,16 @@ temp2 = a & c
 temp2_copy = temp2
 temp2 = temp2 | (b & c)
 
-# Notice here that temp2 is treated as a variable in the software sense
+# Notice here that temp2 is treated as a variable in the software sense.
 # When it is assigned to, it replaces the wire that was previously in
-# it's location (software folks should be familiar with this). Therefore
+# it's location (software folks should be familiar with this). Therefore,
 # the new temp2 and the old temp2 are two different wires.
 assert(temp2 is not temp2_copy)
 
 # Sometimes, we will need to connect the result of an operation to a
-# pre-allocated wirevector. One of the places where we need to do this
-# is when we are connecting circuit outputs, as we get normal wirevectors,
-# and not Output WireVectors out of a logic op. To do this we need to use the
+# pre-allocated wirevector. One of the places we need this is when we are
+# connecting circuit outputs, as we get normal WireVectors--and not Output
+# WireVectors--out of a logic op. To connect the wires, we need to use the
 # connect operator, which is '<<='.  This takes an already declared wire
 # and "links" it to some other already declared wire.  Let's start with
 # the cout bit, which is of course just the or of the two
@@ -85,8 +85,7 @@ sum <<= a ^ b ^ c
 assert(sum is sum_copy)
 
 # Also, note that even though we had left out the bitwidth for sum
-# when we declared it, PyRTL was successfully able to infer that it
-# should be 1
+# when we declared it, PyRTL was able to infer that it is 1
 assert (sum.bitwidth == 1)
 
 # We can also connect normal WireVectors in the same fashion, though
@@ -98,7 +97,7 @@ temp_y <<= temp_x
 # there's an block object that stores everything in the circuit. You can access
 # the working (aka current) block through pyrtl.working_block(), and for most
 # things one block is all you will need.  We'll see it again later in more detail,
-# but for now we can just bring the block to see that in fact it looks like the
+# but for now we can just bring the block in to see that it in fact looks like the
 # hardware we described.  The format is a bit weird, but roughly translates to
 # a list of gates (the 'w' gates are just wires, aka the connections made
 # using <<= earlier).  The ins and outs of the gates are printed
@@ -145,7 +144,7 @@ sim_trace.render_trace(symbol_len=5, segment_size=5)
 # really long running design.
 
 for cycle in range(15):
-    # Note that we are doing all arithmetic on values NOT wirevectors here.
+    # Note that we are doing all arithmetic on values, NOT wirevectors here.
     # We can add the inputs together to get a value for the result
     add_result = (sim_trace.trace[a][cycle] +
                   sim_trace.trace[b][cycle] +
