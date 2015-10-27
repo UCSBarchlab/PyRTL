@@ -279,7 +279,9 @@ class WireVector(object):
     @property
     def bitmask(self):
         """ Return an integer appropriate as a bitmask for this wirevector. """
-        return (1 << len(self)) - 1
+        if "_bitmask" not in self.__dict__:
+            self._bitmask = (1 << len(self)) - 1
+        return self._bitmask
 
     def sign_extended(self, bitwidth):
         """ Return a sign extended wirevector derived from self """

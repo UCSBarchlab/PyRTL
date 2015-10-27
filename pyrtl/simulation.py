@@ -21,6 +21,21 @@ from .memory import RomBlock, _MemReadBase
 class Simulation(object):
     """A class for simulating blocks of logic step by step."""
 
+    simple_func = {  # OPS
+        'w': lambda x: x,
+        '~': lambda x: ~x,
+        '&': lambda l, r: l & r,
+        '|': lambda l, r: l | r,
+        '^': lambda l, r: l ^ r,
+        'n': lambda l, r: ~(l & r),
+        '+': lambda l, r: l + r,
+        '-': lambda l, r: l - r,
+        '*': lambda l, r: l * r,
+        '<': lambda l, r: int(l < r),
+        '>': lambda l, r: int(l > r),
+        '=': lambda l, r: int(l == r)
+    }
+
     def __init__(
             self, tracer=None, register_value_map=None, memory_value_map=None,
             default_value=0, use_postsynth_map_if_available=True, block=None):
@@ -50,7 +65,6 @@ class Simulation(object):
         self.default_value = default_value
         self.tracer = tracer
         self._initialize(register_value_map, memory_value_map)
-        self.max_iter = 1000
         self.use_postsynth_map = use_postsynth_map_if_available
 
     def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
@@ -176,23 +190,9 @@ class Simulation(object):
         This function, along with edge_update, defined the semantics
         of the primitive ops.  Function updates self.value accordingly.
         """
-        simple_func = {  # OPS
-            'w': lambda x: x,
-            '~': lambda x: ~x,
-            '&': lambda l, r: l & r,
-            '|': lambda l, r: l | r,
-            '^': lambda l, r: l ^ r,
-            'n': lambda l, r: ~(l & r),
-            '+': lambda l, r: l + r,
-            '-': lambda l, r: l - r,
-            '*': lambda l, r: l * r,
-            '<': lambda l, r: int(l < r),
-            '>': lambda l, r: int(l > r),
-            '=': lambda l, r: int(l == r)
-            }
-        if net.op in simple_func:
+        if net.op in self.simple_func:
             argvals = [self.value[arg] for arg in net.args]
-            result = simple_func[net.op](*argvals)
+            result = self.simple_func[net.op](*argvals)
             self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 'x':
             select, a, b = (self.value[net.args[i]] for i in range(3))
