@@ -105,6 +105,9 @@ class Simulation(object):
             if w not in self.value:
                 self.value[w] = default_value
 
+        self.ordered_nets = tuple((i for i in self.block))
+        self.edge_update_nets = tuple((self.block.logic_subset('r@')))
+
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle
 
@@ -147,30 +150,11 @@ class Simulation(object):
                     'Input "%s" has no input value specified' % i.name)
 
         # Do all of the clock-edge triggered operations based off of the priors
-        for net in self.block.logic:
+        for net in self.edge_update_nets:
             self._edge_update(net, prior_value)
 
-        # propagate inputs to outputs
-        # wires  which are defined at the start are inputs and registers
-        const_set = self.block.wirevector_subset(Const)
-        reg_set = self.block.wirevector_subset(Register)
-        defined_set = reg_set | const_set | input_set
-        logic_left = self.block.logic.copy()
-
-        for _ in range(self.max_iter):
-            logic_left = set(
-                net
-                for net in logic_left
-                if not self._try_execute(defined_set, net)
-                )
-            if len(logic_left) == 0:
-                break
-        else:  # no break
-            from .helperfuncs import find_loop
-            find_loop(self.block)
-            raise PyrtlInternalError(
-                'error, the set of logic "%s" appears to be waiting for value never produced'
-                % str(logic_left))
+        for net in self.ordered_nets:
+            self._execute(net)
 
         # at the end of the step, record the values to the trace
         # print self.value # Helpful Debug Print
