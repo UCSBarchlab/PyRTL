@@ -35,6 +35,9 @@ class TestAdders(unittest.TestCase):
     def test_ripple_1(self):
         self.adder2_t_base_1(adders.ripple_add)
 
+    def test_carrylookahead_1(self):
+        self.adder2_t_base_1(adders.cla_adder)
+
     def test_carry_save_1(self):
         self.adder_t_base(adders.carrysave_adder, exact_bitwidth=32, num_wires=3)
 
