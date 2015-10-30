@@ -12,7 +12,7 @@ def kogge_stone(a, b, cin=0):
     Creates a Kogge-Stone adder given two inputs
 
     :param a, b: The two Wirevectors to add up (bitwidths don't need to match)
-    :param cin: An optimal carry Wirevector or value
+    :param cin: An optimal carry in Wirevector or value
     :return: a Wirevector representing the output of the adder
 
     The Kogge-Stone adder is a fast tree-based adder with O(log(n))
@@ -41,11 +41,12 @@ def kogge_stone(a, b, cin=0):
     return pyrtl.concat(*reversed(gen_bits)) ^ prop_orig
 
 
-def one_bit_add(a, b, cin):
+def one_bit_add(a, b, cin=0):
     return pyrtl.concat(*_one_bit_add_no_concat(a, b, cin))
 
 
-def _one_bit_add_no_concat(a, b, cin):
+def _one_bit_add_no_concat(a, b, cin=0):
+    cin = pyrtl.as_wires(cin)  # to make sure that an int cin doesn't break things
     assert len(a) == len(b) == len(cin) == 1
     sum = a ^ b ^ cin
     cout = a & b | a & cin | b & cin
@@ -174,27 +175,24 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
         for a_wire in wire_set:
             if not isinstance(a_wire, pyrtl.WireVector) or len(a_wire) != 1:
                 raise pyrtl.PyrtlError(
-                    "The item %s is not a valid element for the wire_array_2. "
-                    "It must be a WireVector of bitwidth 1")
+                    "The item {} is not a valid element for the wire_array_2. "
+                    "It must be a WireVector of bitwidth 1".format(a_wire))
 
     while not all(len(i) <= 2 for i in wire_array_2):
-        deferred = [[] for weight in range(result_bitwidth)]
+        deferred = [[] for weight in range(result_bitwidth + 1)]
         for i, w_array in enumerate(wire_array_2):  # Start with low weights and start reducing
             while len(w_array) >= 3:
                 cout, sum = _one_bit_add_no_concat(*(w_array.pop(0) for j in range(3)))
                 deferred[i].append(sum)
-                if i + 1 < result_bitwidth:
-                    deferred[i + 1].append(cout)
+                deferred[i + 1].append(cout)
 
             if len(w_array) == 2 and reduce_2s:
                 cout, sum = half_adder(*w_array)
                 deferred[i].append(sum)
-                if i + 1 < result_bitwidth:
-                    deferred[i + 1].append(cout)
+                deferred[i + 1].append(cout)
             else:
                 deferred[i].extend(w_array)
-
-        wire_array_2 = deferred
+        wire_array_2 = deferred[:result_bitwidth]
 
     # At this stage in the multiplication we have only 2 wire vectors left.
     # now we need to add them up
@@ -246,7 +244,7 @@ def fast_group_adder(wires_to_add, reducer=wallace_reducer, final_adder=kogge_st
 
     import math
     longest_wire_len = max(len(w) for w in wires_to_add)
-    result_bitwidth = longest_wire_len + int(math.ceil(len(wires_to_add)))
+    result_bitwidth = longest_wire_len + int(math.ceil(math.log(len(wires_to_add), 2)))
 
     bits = [[] for i in range(longest_wire_len)]
 
