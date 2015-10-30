@@ -84,6 +84,49 @@ def carrysave_adder(a, b, c, final_adder=ripple_add):
     return final_adder(partial_sum, shift_carry_1)
 
 
+def cla_adder(a, b, cin=0, la_unit_len=4):
+    """
+    Carry Lookahead Adder
+    :param int la_unit_len: the length of input that every unit processes
+
+    A Carry LookAhead Adder is an adder that is faster than
+    a ripple carry adder, as it calculates the carry bits faster.
+    It is not as fast as a Kogge-Stone adder, but uses less area.
+    """
+    a, b = pyrtl.match_bitwidth(a, b)
+    if len(a) <= la_unit_len:
+        sum, cout = cla_adder_unit(a, b, cin)
+        return pyrtl.concat(cout, sum)
+    else:
+        sum, cout = cla_adder_unit(a[0:la_unit_len], b[0:la_unit_len], cin)
+        msbits = cla_adder(a[la_unit_len:], b[la_unit_len:], cout, la_unit_len)
+        return pyrtl.concat(msbits, sum)
+
+
+def cla_adder_unit(a, b, cin):
+    """
+    Carry generation and propogation signals will be calculated only using
+    the inputs; their values don't rely on the sum.  Every unit generates
+    a cout signal which is used as cin for the next unit.
+    """
+    gen = a & b
+    prop = a ^ b
+    assert(len(prop) == len(gen))
+
+    carry = [gen[0] | prop[0] & cin]
+    sum = prop[0] ^ cin
+
+    cur_gen = gen[0]
+    cur_prop = prop[0]
+    for i in range(1, len(prop)):
+        cur_gen = gen[i] | (prop[i] & cur_gen)
+        cur_prop = cur_prop & prop[i]
+        sum = pyrtl.concat(prop[i] ^ carry[i-1], sum)
+        carry.append(gen[i] | (prop[i] & carry[i-1]))
+    cout = cur_gen | (cur_prop & cin)
+    return sum, cout
+
+
 def wallace_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
     """
     The reduction and final adding part of a dada tree. Useful for adding many numbers together
