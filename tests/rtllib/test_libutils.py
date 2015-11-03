@@ -52,6 +52,20 @@ class TestPartitionWire(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             partitioned_w = libutils.partition_wire(w, 4)
 
+    def test_partition_sim(self):
+        wires, vals = utils.make_wires_and_values(exact_bitwidth=32, num_wires=1)
+        out_wires = [pyrtl.Output(8, 'o' + str(i)) for i in range(4)]
+        partitioned_w = libutils.partition_wire(wires[0], 8)
+        for p_wire, o_wire in zip(partitioned_w, out_wires):
+            o_wire <<= p_wire
+
+        out_vals = utils.sim_and_ret_outws(wires, vals)
+        partitioned_vals = [[(val >> i) & 0xff for i in (0, 8, 16, 24)] for val in vals[0]]
+        true_vals = tuple(zip(*partitioned_vals))
+        for index, wire in enumerate(out_wires):
+            self.assertEqual(tuple(out_vals[wire]), true_vals[index])
+
+
 
 class TestStringConversion(unittest.TestCase):
 
