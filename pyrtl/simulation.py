@@ -458,7 +458,7 @@ class FastSimulation(object):
 #
 
 class _WaveRendererBase(object):
-    tick, up, down, x, low, high, revstart, revstop = ('' for i in range(8))
+    _tick, _up, _down, _x, _low, _high, _revstart, _revstop = ('' for i in range(8))
 
     def __init__(self):
         super(_WaveRendererBase, self).__init__()
@@ -466,7 +466,7 @@ class _WaveRendererBase(object):
         self.prev_wire = None
 
     def tick_segment(self, n, symbol_len, segment_size):
-        num_tick = self.tick + str(n)
+        num_tick = self._tick + str(n)
         return num_tick.ljust(symbol_len * segment_size)
 
     def render_val(self, w, n, current_val, symbol_len):
@@ -491,38 +491,38 @@ class _WaveRendererBase(object):
         """
         sl = symbol_len-1
         if len(w) > 1:
-            out = self.revstart
+            out = self._revstart
             if current_val != self.prior_val:
-                out += self.x + hex(current_val).rstrip('L').ljust(sl)[:sl]
+                out += self._x + hex(current_val).rstrip('L').ljust(sl)[:sl]
             elif n == 0:
                 out += hex(current_val).rstrip('L').ljust(symbol_len)[:symbol_len]
             else:
                 out += ' '*symbol_len
-            out += self.revstop
+            out += self._revstop
         else:
             pretty_map = {
-                (0, 0): self.low + self.low*sl,
-                (0, 1): self.up + self.high*sl,
-                (1, 0): self.down + self.low*sl,
-                (1, 1): self.high + self.high*sl,
+                (0, 0): self._low + self._low * sl,
+                (0, 1): self._up + self._high * sl,
+                (1, 0): self._down + self._low * sl,
+                (1, 1): self._high + self._high * sl,
             }
             out = pretty_map[(self.prior_val, current_val)]
         return out
 
 
 class Utf8WaveRenderer(_WaveRendererBase):
-    tick = u'\u258f'
-    up, down = u'\u2571', u'\u2572'
-    x, low, high = u'\u2573', u'\u005f', u'\u203e'
-    revstart, revstop = '\x1B[7m', '\x1B[0m'
+    _tick = u'\u258f'
+    _up, _down = u'\u2571', u'\u2572'
+    _x, _low, _high = u'\u2573', u'\u005f', u'\u203e'
+    _revstart, _revstop = '\x1B[7m', '\x1B[0m'
 
 
 class AsciiWaveRenderer(_WaveRendererBase):
     """ Poor Man's wave renderer (for windows cmd compatibility)"""
-    tick = '-'
-    up, down = '/', '\\'
-    x, low, high = 'x', '_', '-'
-    revstart, revstop = ' ', ' '
+    _tick = '-'
+    _up, _down = '/', '\\'
+    _x, _low, _high = 'x', '_', '-'
+    _revstart, _revstop = ' ', ' '
 
 
 def default_renderer():
@@ -604,28 +604,27 @@ class SimulationTrace(object):
         print(' '.join(['$timescale', '1ns', '$end']), file=file)
         print(' '.join(['$scope', 'module logic', '$end']), file=file)
 
-        # dump variables
+        def print_trace_strs(time):
+            for w in sorted(self.trace, key=_trace_sort_key):
+                if w.bitwidth > 1:
+                    print(' '.join([str(bin(self.trace[w][time]))[1:], w.name]), file=file)
+                else:
+                    print(''.join([str(self.trace[w][time]), w.name]), file=file)
+
+        # dump vairables
         for w in sorted(self.trace, key=_trace_sort_key):
             print(' '.join(['$var', 'wire', str(w.bitwidth), w.name, w.name, '$end']), file=file)
         print(' '.join(['$upscope', '$end']), file=file)
         print(' '.join(['$enddefinitions', '$end']), file=file)
         print(' '.join(['$dumpvars']), file=file)
-        for w in sorted(self.trace, key=_trace_sort_key):
-            if w.bitwidth > 1:
-                print(' '.join([str(bin(self.trace[w][0]))[1:], w.name]), file=file)
-            else:
-                print(''.join([str(self.trace[w][0]), w.name]), file=file)
+        print_trace_strs(0)
         print(' '.join(['$end']), file=file)
 
         # dump values
         endtime = max([len(self.trace[w]) for w in self.trace])
         for timestamp in range(endtime):
             print(''.join(['#', str(timestamp)]), file=file)
-            for w in sorted(self.trace, key=_trace_sort_key):
-                if w.bitwidth > 1:
-                    print(' '.join([str(bin(self.trace[w][timestamp]))[1:], w.name]), file=file)
-                else:
-                    print(''.join([str(self.trace[w][timestamp]), w.name]), file=file)
+            print_trace_strs(timestamp)
         print(''.join(['#', str(endtime)]), file=file)
         file.flush()
 
