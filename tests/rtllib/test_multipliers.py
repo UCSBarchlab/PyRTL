@@ -17,9 +17,6 @@ class TestWallace(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def tearDown(self):
-        pyrtl.reset_working_block()
-
     def test_wallace_tree_1(self):
         """
         Arithmatic tester version 2015.05

@@ -14,9 +14,6 @@ class TestMuxes(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def tearDown(self):
-        pyrtl.reset_working_block()
-
     def test_simple_mux_1(self):
         self.mux_t_subprocess(4, 18)
 
@@ -53,6 +50,7 @@ class TestPartitionWire(unittest.TestCase):
             partitioned_w = libutils.partition_wire(w, 4)
 
     def test_partition_sim(self):
+        pyrtl.reset_working_block()
         wires, vals = utils.make_wires_and_values(exact_bitwidth=32, num_wires=1)
         out_wires = [pyrtl.Output(8, 'o' + str(i)) for i in range(4)]
         partitioned_w = libutils.partition_wire(wires[0], 8)
@@ -64,7 +62,6 @@ class TestPartitionWire(unittest.TestCase):
         true_vals = tuple(zip(*partitioned_vals))
         for index, wire in enumerate(out_wires):
             self.assertEqual(tuple(out_vals[wire]), true_vals[index])
-
 
 
 class TestStringConversion(unittest.TestCase):
