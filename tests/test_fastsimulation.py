@@ -115,6 +115,7 @@ class TestRTLFastSimulationInputValidation(unittest.TestCase):
     def tearDown(self):
         pyrtl.reset_working_block()
 
+
 class TestRTLFastSimulationTraceWithAdder(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -266,17 +267,16 @@ class TestRTLMemBlockFastSimulation(unittest.TestCase):
 
     def test_simple_memblock(self):
         self.sim = pyrtl.FastSimulation(tracer=self.sim_trace)
-        input_signals = {}
-        input_signals[0] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 4,
-                            self.write_data: 5}
-        input_signals[1] = {self.read_addr1: 4, self.read_addr2: 1, self.write_addr: 0,
-                            self.write_data: 5}
-        input_signals[2] = {self.read_addr1: 0, self.read_addr2: 4, self.write_addr: 1,
-                            self.write_data: 6}
-        input_signals[3] = {self.read_addr1: 1, self.read_addr2: 1, self.write_addr: 0,
-                            self.write_data: 0}
-        input_signals[4] = {self.read_addr1: 6, self.read_addr2: 0, self.write_addr: 6,
-                            self.write_data: 7}
+        input_signals = {0: {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 4,
+                             self.write_data: 5},
+                         1: {self.read_addr1: 4, self.read_addr2: 1, self.write_addr: 0,
+                             self.write_data: 5},
+                         2: {self.read_addr1: 0, self.read_addr2: 4, self.write_addr: 1,
+                             self.write_data: 6},
+                         3: {self.read_addr1: 1, self.read_addr2: 1, self.write_addr: 0,
+                             self.write_data: 0},
+                         4: {self.read_addr1: 6, self.read_addr2: 0, self.write_addr: 6,
+                             self.write_data: 7}}
         for i in range(5):
             self.sim.step(input_signals[i])
 
@@ -286,17 +286,17 @@ class TestRTLMemBlockFastSimulation(unittest.TestCase):
 
     def test_simple2_memblock(self):
         self.sim = pyrtl.Simulation(tracer=self.sim_trace)
-        input_signals = {}
-        input_signals[0] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x7}
-        input_signals[1] = {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 1, self.write_data: 0x6}
-        input_signals[2] = {self.read_addr1: 0, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x5}
-        input_signals[3] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x4}
-        input_signals[4] = {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 1, self.write_data: 0x3}
-        input_signals[5] = {self.read_addr1: 2, self.read_addr2: 2, self.write_addr: 2, self.write_data: 0x2}
-        input_signals[6] = {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 0, self.write_data: 0x1}
-        input_signals[7] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 1, self.write_data: 0x0}
-        input_signals[8] = {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x7}
-        input_signals[9] = {self.read_addr1: 2, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x6}
+        input_signals = {
+            0: {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x7},
+            1: {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 1, self.write_data: 0x6},
+            2: {self.read_addr1: 0, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x5},
+            3: {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x4},
+            4: {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 1, self.write_data: 0x3},
+            5: {self.read_addr1: 2, self.read_addr2: 2, self.write_addr: 2, self.write_data: 0x2},
+            6: {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 0, self.write_data: 0x1},
+            7: {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 1, self.write_data: 0x0},
+            8: {self.read_addr1: 1, self.read_addr2: 0, self.write_addr: 2, self.write_data: 0x7},
+            9: {self.read_addr1: 2, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x6}}
         for i in range(10):
             self.sim.step(input_signals[i])
 
@@ -310,17 +310,16 @@ class TestRTLMemBlockFastSimulation(unittest.TestCase):
         pyrtl.optimize()
         self.sim_trace = pyrtl.SimulationTrace()
         self.sim = pyrtl.FastSimulation(tracer=self.sim_trace)
-        input_signals = {}
-        input_signals[0] = {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 4,
-                            self.write_data: 5}
-        input_signals[1] = {self.read_addr1: 4, self.read_addr2: 1, self.write_addr: 0,
-                            self.write_data: 5}
-        input_signals[2] = {self.read_addr1: 0, self.read_addr2: 4, self.write_addr: 1,
-                            self.write_data: 6}
-        input_signals[3] = {self.read_addr1: 1, self.read_addr2: 1, self.write_addr: 0,
-                            self.write_data: 0}
-        input_signals[4] = {self.read_addr1: 6, self.read_addr2: 0, self.write_addr: 6,
-                            self.write_data: 7}
+        input_signals = {0: {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 4,
+                             self.write_data: 5},
+                         1: {self.read_addr1: 4, self.read_addr2: 1, self.write_addr: 0,
+                             self.write_data: 5},
+                         2: {self.read_addr1: 0, self.read_addr2: 4, self.write_addr: 1,
+                             self.write_data: 6},
+                         3: {self.read_addr1: 1, self.read_addr2: 1, self.write_addr: 0,
+                             self.write_data: 0},
+                         4: {self.read_addr1: 6, self.read_addr2: 0, self.write_addr: 6,
+                             self.write_data: 7}}
         for i in range(5):
             self.sim.step(input_signals[i])
 
@@ -380,8 +379,6 @@ class TestRTLRomBlockFastSimulation(unittest.TestCase):
         exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x)),
                                                  ("o2", lambda x: rom_data_function(2*x))), 6)
         self.compareIO(self.sim_trace, exp_out)
-
-
 
     def test_function_RomBlock_with_optimization(self):
 

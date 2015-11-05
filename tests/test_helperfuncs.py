@@ -9,9 +9,6 @@ class TestAnyAll(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def tearDown(self):
-        pyrtl.reset_working_block()
-
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -19,7 +16,6 @@ class TestAnyAll(unittest.TestCase):
             sim.step({})
         output = io.StringIO()
         sim_trace.print_trace(output)
-        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_any_only_on_1_bit_vectors(self):
@@ -64,9 +60,6 @@ class TestAnyAll(unittest.TestCase):
 
 class TestMux(unittest.TestCase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
@@ -119,7 +112,7 @@ class TestMux(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             r = pyrtl.mux(s, a, b, c, d, e, default=0)
 
-    def test_mux_too_many_inputs_with_default(self):
+    def test_mux_too_many_inputs_with_extra_kwarg(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=2)
@@ -129,9 +122,6 @@ class TestMux(unittest.TestCase):
 
 class TestLoopDetection(unittest.TestCase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def assert_no_loop(self):
