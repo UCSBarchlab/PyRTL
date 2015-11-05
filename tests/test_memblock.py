@@ -14,7 +14,8 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         self.mem_read_address2 = pyrtl.Input(self.addrwidth, name='mem_read_address2')
         self.mem_write_address = pyrtl.Input(self.addrwidth, name='mem_write_address')
         self.mem_write_data = pyrtl.Input(self.bitwidth, name='mem_write_data')
-        self.memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='self.memory')
+        self.memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
+                                     name='self.memory')
 
     def tearDown(self):
         pyrtl.reset_working_block()

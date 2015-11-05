@@ -1,5 +1,3 @@
-__author__ = 'John'
-
 import glob
 import os
 import subprocess

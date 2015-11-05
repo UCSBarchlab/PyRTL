@@ -75,14 +75,15 @@ def sim_and_ret_out(outwire, inwires, invals):
     :param [[int, ...], ...] invals: a list of input value lists
     :return: a list of values from the output wire simulation result
     """
-    return sim_and_ret_outws(inwires, invals)[outwire]  # Pulling the value of outwire straight from the log
+    # Pulling the value of outwire straight from the log
+    return sim_and_ret_outws(inwires, invals)[outwire]
+
 
 def sim_and_ret_outws(inwires, invals):
     """
     Simulates the net using the inwires, invalues and returns the output array
     Used for rapid test development
 
-    :param outwire: The wire to return the output of
     :param [Input, ...] inwires: a list of wires to read in from
     :param [[int, ...], ...] invals: a list of input value lists
     :return: a list of values from the output wire simulation result
@@ -92,4 +93,4 @@ def sim_and_ret_outws(inwires, invals):
     for cycle in range(len(invals[0])):
         sim.step({wire: val[cycle] for wire, val in zip(inwires, invals)})
 
-    return sim_trace.trace  # Pulling the value of outwire straight from the log
+    return sim_trace.trace  # Pulling the value of wires straight from the trace

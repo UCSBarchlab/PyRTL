@@ -66,8 +66,8 @@ class TestVerilog(unittest.TestCase):
         a = pyrtl.Input(bitwidth=3, name='a')
         b = pyrtl.Input(bitwidth=3, name='b')
         o = pyrtl.Output(bitwidth=3, name='o')
-        sum, co = generate_full_adder(a,b)
-        rdat = {0:1, 1:2, 2:5, 5:0}
+        sum, co = generate_full_adder(a, b)
+        rdat = {0: 1, 1: 2, 2: 5, 5: 0}
         mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, romdata=rdat)
         o <<= mixtable[sum]
         with io.StringIO() as testbuffer:
