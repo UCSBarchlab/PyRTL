@@ -462,7 +462,7 @@ def _remove_unused_wires(block, parent_process_name):
 def synthesize(update_working_block=True, block=None):
     """ Lower the design to just single-bit "and", "or", and "not" gates.
 
-    :param updated_working_block: Boolean specifying if working block update
+    :param update_working_block: Boolean specifying if working block update
     :param block: The block you want to synthesize
     :return: The newly synthesized block (of type PostSynthesisBlock).
 
