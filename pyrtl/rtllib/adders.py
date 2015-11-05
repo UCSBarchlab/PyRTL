@@ -74,8 +74,8 @@ def ripple_add(a, b, cin=0):
 def carrysave_adder(a, b, c, final_adder=ripple_add):
     """
     Adds three wirevectors up in an efficient manner
-    :param a, b, c wirevector: the three wires to add up
-    :param final_adder function: The adder to use to do the final addition
+    :param WireVector a, b, c : the three wires to add up
+    :param function final_adder : The adder to use to do the final addition
     :return: a wirevector with length 2 longer than the largest input
     """
     a, b, c = libutils.match_bitwidth(a, b, c)
@@ -96,15 +96,15 @@ def cla_adder(a, b, cin=0, la_unit_len=4):
     """
     a, b = pyrtl.match_bitwidth(a, b)
     if len(a) <= la_unit_len:
-        sum, cout = cla_adder_unit(a, b, cin)
+        sum, cout = _cla_adder_unit(a, b, cin)
         return pyrtl.concat(cout, sum)
     else:
-        sum, cout = cla_adder_unit(a[0:la_unit_len], b[0:la_unit_len], cin)
+        sum, cout = _cla_adder_unit(a[0:la_unit_len], b[0:la_unit_len], cin)
         msbits = cla_adder(a[la_unit_len:], b[la_unit_len:], cout, la_unit_len)
         return pyrtl.concat(msbits, sum)
 
 
-def cla_adder_unit(a, b, cin):
+def _cla_adder_unit(a, b, cin):
     """
     Carry generation and propogation signals will be calculated only using
     the inputs; their values don't rely on the sum.  Every unit generates
@@ -241,7 +241,6 @@ def fast_group_adder(wires_to_add, reducer=wallace_reducer, final_adder=kogge_st
       The length of the result is:
       max(len(w) for w in wires_to_add) + ceil(len(wires_to_add))
     """
-
     import math
     longest_wire_len = max(len(w) for w in wires_to_add)
     result_bitwidth = longest_wire_len + int(math.ceil(math.log(len(wires_to_add), 2)))

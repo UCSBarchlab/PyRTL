@@ -9,12 +9,9 @@ concat: concatenate multiple wirevectors into one long vector
 get_block: get the block of the arguments, throw error if they are different
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
-import inspect
-
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
+from .pyrtlexceptions import PyrtlError
 from .core import working_block, LogicNet
 from .wire import WireVector, Input, Output, Const, Register
 
@@ -204,20 +201,18 @@ def mux(select, falsecase, truecase, *rest, **kwargs):
 
 def _mux2(select, falsecase, truecase):
     block = get_block(select, falsecase, truecase)
-    select = as_wires(select, block=block)
-    a = as_wires(falsecase, block=block)
-    b = as_wires(truecase, block=block)
+    select, f, t = (as_wires(w, block=block) for w in (select, falsecase, truecase))
 
     if len(select) != 1:
         raise PyrtlError('error, select input to the mux must be 1-bit wirevector')
-    a, b = match_bitwidth(a, b)
-    resultlen = len(a)  # both are the same length now
+    f, t = match_bitwidth(f, t)
+    resultlen = len(f)  # both are the same length now
 
     outwire = WireVector(bitwidth=resultlen, block=block)
     net = LogicNet(
         op='x',
         op_param=None,
-        args=(select, a, b),
+        args=(select, f, t),
         dests=(outwire,))
     outwire.block.add_net(net)
     return outwire
@@ -371,12 +366,11 @@ def _check_for_loop(block=None):
         logic_left -= nets_to_remove
 
     if 0 == len(logic_left):
-        print("No Loop Found")
         return None
     return wires_left, logic_left
 
 
-def find_loop(block=None, print_result=True):
+def find_loop(block=None):
     result = _check_for_loop(block)
     if not result:
         return
@@ -430,10 +424,20 @@ def find_loop(block=None, print_result=True):
                     break
             else:
                 raise PyrtlError("Shouldn't get here! Couldn't figure out the loop")
-            if print_result:
-                print("Loop found:")
-                print('\n'.join("{}".format(fs.net) for fs in loop_info))
-                # print '\n'.join("{} (dest wire: {})".format(fs.net, fs.dst_w) for fs in loop_info)
-                print("")
             return loop_info
     raise PyrtlError("Error in detecting loop")
+
+
+def find_and_print_loop(block=None):
+    loop_data = find_loop(block)
+    print_loop(loop_data)
+
+
+def print_loop(loop_data):
+    if not loop_data:
+        print("No Loop Found")
+    else:
+        print("Loop found:")
+        print('\n'.join("{}".format(fs.net) for fs in loop_data))
+        # print '\n'.join("{} (dest wire: {})".format(fs.net, fs.dst_w) for fs in loop_info)
+        print("")
