@@ -251,7 +251,7 @@ class Block(object):
             prev_remain = len(remaining)
             iteration_gates = set()
             for gate in remaining:  # loop over logicnets not yet returned
-                if all([arg in cleared for arg in gate.args]):  # if all args ready
+                if all(arg in cleared for arg in gate.args):  # if all args ready
                     iteration_gates.add(gate)
                     yield gate
 
@@ -260,8 +260,8 @@ class Block(object):
                 remaining.remove(gate)  # remove gate from set of to return
 
         if len(remaining) is not 0:
-            from .helperfuncs import find_loop
-            find_loop(self)
+            from .helperfuncs import find_and_print_loop
+            find_and_print_loop(self)
             raise PyrtlError("Failure in Block Iterator due to non-register loops")
 
         # raise StopIteration

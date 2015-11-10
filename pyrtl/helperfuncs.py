@@ -431,6 +431,7 @@ def find_loop(block=None):
 def find_and_print_loop(block=None):
     loop_data = find_loop(block)
     print_loop(loop_data)
+    return loop_data
 
 
 def print_loop(loop_data):
