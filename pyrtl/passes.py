@@ -12,7 +12,7 @@ import copy
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
 from .wire import WireVector, Input, Output, Const, Register
-from .helperfuncs import find_loop, concat, as_wires
+from .helperfuncs import find_and_print_loop, concat, as_wires
 from .memory import MemBlock
 
 # --------------------------------------------------------------------
@@ -141,7 +141,7 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
         if len(items_to_remove) == 0:
             block_str = ("Cannot do static timing analysis due to nonregister, nonmemory "
                          "loops in the code")
-            find_loop()
+            find_and_print_loop()
             raise PyrtlError(block_str)
 
         remaining.difference_update(items_to_remove)

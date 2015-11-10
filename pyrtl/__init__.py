@@ -33,6 +33,7 @@ from .helperfuncs import match_bitwidth
 from .helperfuncs import probe
 from .helperfuncs import rtl_assert
 from .helperfuncs import find_loop
+from .helperfuncs import find_and_print_loop
 
 # memory blocks
 from .memory import MemBlock
