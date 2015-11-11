@@ -20,6 +20,7 @@ from .wire import Register
 # helper functions
 from .helperfuncs import as_wires
 from .helperfuncs import concat
+from .helperfuncs import concat_list
 from .helperfuncs import mux
 from .helperfuncs import get_block
 from .helperfuncs import and_all_bits

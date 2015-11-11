@@ -38,7 +38,7 @@ def kogge_stone(a, b, cin=0):
     # assembling the result of the addition
     # preparing the cin (and conveniently shifting the gen bits)
     gen_bits.insert(0, pyrtl.as_wires(cin))
-    return pyrtl.concat(*reversed(gen_bits)) ^ prop_orig
+    return pyrtl.concat_list(gen_bits) ^ prop_orig
 
 
 def one_bit_add(a, b, cin=0):
@@ -215,11 +215,11 @@ def _sparse_adder(wire_array_2, adder):
     for w_loc in range(single_w_index, bitwidth):
         for i in range(2):
             if len(wire_array_2[w_loc]) >= i + 1:
-                add_wires[i].insert(0, wire_array_2[w_loc][i])
+                add_wires[i].append(wire_array_2[w_loc][i])
             else:
-                add_wires[i].insert(0, pyrtl.Const(0))
+                add_wires[i].append(pyrtl.Const(0))
 
-    adder_result = adder(pyrtl.concat(*add_wires[0]), pyrtl.concat(*add_wires[1]))
+    adder_result = adder(pyrtl.concat_list(add_wires[0]), pyrtl.concat_list(add_wires[1]))
     return pyrtl.concat(adder_result, *reversed(result))
 
 """

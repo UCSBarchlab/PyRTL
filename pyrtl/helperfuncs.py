@@ -103,7 +103,7 @@ def rtl_any(*vectorlist):
     converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
         raise PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
-    return or_all_bits(concat(*converted_vectorlist))
+    return or_all_bits(concat_list(converted_vectorlist))
 
 
 def rtl_all(*vectorlist):
@@ -121,7 +121,7 @@ def rtl_all(*vectorlist):
     converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
         raise PyrtlError('only length 1 wirevectors can be inputs to rtl_all')
-    return and_all_bits(concat(*converted_vectorlist))
+    return and_all_bits(concat_list(converted_vectorlist))
 
 
 def mux(select, falsecase, truecase, *rest, **kwargs):
@@ -256,6 +256,7 @@ def concat(*args):
     :return wirevector: wirevector with length equal
       to the sum of the args' lengths
 
+    Usually you will want to use concat_list as you will not need to reverse the list
     The concatenation order places the MSB as arg[0] with less significant bits following.
     """
 
@@ -275,6 +276,19 @@ def concat(*args):
             dests=(outwire,))
         outwire.block.add_net(net)
         return outwire
+
+
+def concat_list(wire_list):
+    """
+    Concats a list of wirevectors into a single wirevector
+
+    :param wire_list: List of wirevectors to concat
+    :return wirevector: wirevector with length equal
+      to the sum of the args' lengths
+
+    The concatenation order is LSB (UNLIKE Concat)
+    """
+    return concat(*reversed(wire_list))
 
 
 def match_bitwidth(*args):
