@@ -12,7 +12,7 @@ import copy
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
 from .wire import WireVector, Input, Output, Const, Register
-from .helperfuncs import find_and_print_loop, concat, as_wires
+from .helperfuncs import find_and_print_loop, concat, as_wires, concat_list
 from .memory import MemBlock
 
 # --------------------------------------------------------------------
@@ -522,8 +522,8 @@ def synthesize(update_working_block=True, block=None):
         io_map[wirevector] = output_vector
         # the "reversed" is needed because most significant bit comes first in concat
         output_bits = [wirevector_map[(wirevector, i)]
-                       for i in reversed(range(len(output_vector)))]
-        output_vector <<= concat(*output_bits)
+                       for i in range(len(output_vector))]
+        output_vector <<= concat_list(output_bits)
 
     # Now that we have all the wires built and mapped, walk all the blocks
     # and map the logic to the equivalent set of primitives in the system
@@ -645,7 +645,7 @@ def _decompose(net, wv_map, mems, block_out):
             assign_dest(i, destlist[i])
     elif net.op == 'm':
         arg0list = [arg(0, i) for i in range(len(net.args[0]))]
-        addr = concat(*reversed(arg0list))
+        addr = concat_list(arg0list)
         memid, mem = net.op_param
         if mem not in mems:
             new_mem = mem._make_copy(block_out)
@@ -658,9 +658,9 @@ def _decompose(net, wv_map, mems, block_out):
             assign_dest(i, data[i])
     elif net.op == '@':
         addrlist = [arg(0, i) for i in range(len(net.args[0]))]
-        addr = concat(*reversed(addrlist))
+        addr = concat_list(addrlist)
         datalist = [arg(1, i) for i in range(len(net.args[1]))]
-        data = concat(*reversed(datalist))
+        data = concat_list(datalist)
         enable = arg(2, 0)
         memid, mem = net.op_param
         if mem not in mems:
