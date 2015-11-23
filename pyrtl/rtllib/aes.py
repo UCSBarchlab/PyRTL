@@ -35,17 +35,12 @@ class AES(object):
         # One-byte left circular rotation, substitution of each byte
         a = libutils.partition_wire(word, 8)
         sub = pyrtl.concat(self.sbox[a[2]], self.sbox[a[1]], self.sbox[a[0]], self.sbox[a[3]])
-        # round_const = pyrtl.Register(32, 'round_const')
-        # xor substituted bytes with round constant.
         round_const = pyrtl.concat(self.rcon[key_expand_round + 1], pyrtl.Const(0, bitwidth=24))
-        # round_const.next <<= round_const ^ sub
-        return round_const 
+        return round_const
 
     def key_expansion(self, old_key, key_expand_round):
         self.build_memories_if_not_exists()
         w = list(libutils.partition_wire(old_key, 32))
-        # for key_expand_round in range(10):
-        last = key_expand_round * 4
         w.append(w[0] ^ self._g(w[3], key_expand_round))
         w.append(w[-1] ^ w[1])
         w.append(w[-1] ^ w[2])
@@ -91,49 +86,48 @@ class AES(object):
     def addroundkey(self, t, key):
         return t ^ key
 
-    def aes__decryption_states(self, ciphertext_in, key, reset):
+    def aes_decryption_statem(self, ciphertext_in, key, reset):
         """
         return ready, decryption_result: ready is a one bit signal showing that the answer decryption 
         result has been calculated.
         """
-        # substates of the calcul
-        # create the counter here
+        if len(key) != len(ciphertext_in):
+            raise pyrtl.PyrtlError("AES key and ciphertext should be the same length")
+
+        cipher_text, current_key = (pyrtl.Register(len(key)) for i in range(2))
+        key_expansion_in, add_round_in = (pyrtl.WireVector(len(key)) for i in range(2))
+
         counter = pyrtl.Register(4, 'counter')
-        cipher_text = pyrtl.Register(128)
-        current_key = pyrtl.Register(128)
-        key_expansion_in = WireVector()
-        round = WireVector()
-        add_round_in = WireVector()
-        # the hardware for a given round
+        round = pyrtl.WireVector(4)
         counter.next <<= round
+
         inv_shift = self.inv_shift_rows(cipher_text)
         inv_sub = self.inv_sub_bytes(inv_shift)
-        key_exp_out = key_expansion(self, key_expansion_in, round)
-        add_round_out = addroundkey(inv_sub, add_round_in)
+        key_exp_out = self.key_expansion(key_expansion_in, round)
+        add_round_out = self.addroundkey(inv_sub, add_round_in)
         inv_mix_out = self.inv_mix_columns(add_round_out)
+
         current_key.next <<= key_exp_out
 
-        key_exp_out = key_expansion(self, key_expansion_in, round)
-        with conditional_assignment:
+        with pyrtl.conditional_assignment:
             with reset == 1:
                 round |= 0
                 key_expansion_in |= key
                 cipher_text.next |= add_round_out
-                add_round_in  |= ciphertext_in
+                add_round_in |= ciphertext_in
                 # reset everything to initial values
                     
-            with counter == 11:
-                # keep everything the same
+            with counter == 11:  # keep everything the same
                 round |= counter
                 cipher_text.next |= cipher_text
-            # might be some special thing to do durnign round 1 or 10
+                # might be some special thing to do durnign round 1 or 10
 
-            with pyrtl.otherwise:
+            with pyrtl.otherwise:  # running through AES
                 round |= counter + 1
                 key_expansion_in |= current_key
                 add_round_in |= key_exp_out 
                 with counter == 10:
-                    cipher_text.next |=add_round_out 
+                    cipher_text.next |= add_round_out
                 with pyrtl.otherwise:
                     cipher_text.next |= inv_mix_out
 
