@@ -79,12 +79,9 @@ class TestAES(unittest.TestCase):
                                                              self.out_vector])
         sim = pyrtl.Simulation(tracer=sim_trace)
 
-        # ciphers = [0x3ad77bb40d7a3660a89ecaf32466ef97, ]
-        # keys = [0x2b7e151628aed2a6abf7158809cf4f3c, ]
-        # plain_text = [0x6bc1bee22e409f96e93d7e117393172a]
-        ciphers = [0x66e94bd4ef8a2c3b884cfa59ca342b2e]
-        keys = [0]
-        plain_text = [0]
+        ciphers = [0x3ad77bb40d7a3660a89ecaf32466ef97, 0x66e94bd4ef8a2c3b884cfa59ca342b2e]
+        keys = [0x2b7e151628aed2a6abf7158809cf4f3c, 0x0]
+        plain_text = [0x6bc1bee22e409f96e93d7e117393172a, 0x0]
         for key, cipher in zip(keys, ciphers):
             sim.step({
                 self.in_vector: cipher,
