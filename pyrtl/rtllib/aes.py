@@ -20,7 +20,6 @@ class AES(object):
         self.memories_built = False
 
     def _g(self, word, key_expand_round):
-        # change key_expand_round into a wirevector
         self.build_memories_if_not_exists()
         # One-byte left circular rotation, substitution of each byte
         a = libutils.partition_wire(word, 8)
@@ -132,18 +131,13 @@ class AES(object):
         return keys
 
     def decryption(self, ciphertext, key):
-        # key_list = libutils.partition_wire(self.old_key_expansion(key), 128)
         key_list = self.decryption_key_gen(key)
         t = self.addroundkey(ciphertext, key_list[10])
-
-        # expanded_key = self.old_key_expansion(key)  # Expanding the key (key expansion).
-        # t = self.old_addroundkey(ciphertext, expanded_key, 0)  # Initial AddRoundKey.
 
         for round in range(1, 11):
             t = self.inv_shift_rows(t)
             t = self.inv_sub_bytes(t)
             t = self.addroundkey(t, key_list[10 - round])
-            # t = self.old_addroundkey(t, expanded_key, round)
             if round != 10:
                 t = self.inv_mix_columns(t)
 
