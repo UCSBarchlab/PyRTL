@@ -138,6 +138,45 @@ class AES(object):
         ready = (counter == 11)
         return ready, cipher_text
 
+    def decryption_statem_with_ROM_in(self, ciphertext_in, key_ROM, reset):
+        cipher_text = pyrtl.Register(len(ciphertext_in))
+        key_exp_in, add_round_in = (pyrtl.WireVector(len(ciphertext_in)) for i in range(2))
+
+        # this is not part of the state machine as we need the keys in
+        # reverse order...
+
+        counter = pyrtl.Register(4, 'counter')
+        round = pyrtl.WireVector(4)
+        counter.next <<= round
+
+        inv_shift = self.inv_shift_rows(cipher_text)
+        inv_sub = self.inv_sub_bytes(inv_shift)
+        key_out = key_ROM[10 - round]
+        add_round_out = self.addroundkey(inv_sub, key_out)
+        inv_mix_out = self.inv_mix_columns(add_round_out)
+
+        with pyrtl.conditional_assignment:
+            with reset == 1:
+                round |= 0
+                cipher_text.next |= add_round_out
+                add_round_in |= ciphertext_in
+
+            with counter == 11:  # keep everything the same
+                round |= counter
+                cipher_text.next |= cipher_text
+
+            with pyrtl.otherwise:  # running through AES
+                round |= counter + 1
+
+                add_round_in |= key_out
+                with counter == 10:
+                    cipher_text.next |= add_round_out
+                with pyrtl.otherwise:
+                    cipher_text.next |= inv_mix_out
+
+        ready = (counter == 11)
+        return ready, cipher_text
+
     def decryption_key_gen(self, key):
         keys = [key]
         for enc_round in range(10):
