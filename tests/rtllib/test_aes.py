@@ -60,7 +60,7 @@ class TestAES(unittest.TestCase):
 
     def xest_adroundkey(self):
         # !!!!!! NOT BEING TESTED !!!!!!!!
-        self.out_vector <<= self.aes.addroundkey(self.in_vector)
+        self.out_vector <<= pyrtl.concat_list(self.aes.decryption_key_gen(self.in_vector))
 
         true_result = 0xc57e1c159a9bd286f05f4be098c63439
         sim_trace = pyrtl.SimulationTrace()
@@ -98,13 +98,15 @@ class TestAES(unittest.TestCase):
     def test_aes_state_machine(self):
         aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
         reset = pyrtl.Input(1)
-        ready = pyrtl.Output(1)
+        ready = pyrtl.Output(1, name='ready')
 
-        decrypt_out, decrypt_ready = self.aes.decryption_statem(self.in_vector, aes_key, reset)
+        decrypt_ready, decrypt_out = self.aes.decryption_statem(self.in_vector, aes_key, reset)
         self.out_vector <<= decrypt_out
         ready <<= decrypt_ready
 
-        sim_trace = pyrtl.SimulationTrace(wirevector_subset=[self.in_vector, aes_key, self.out_vector])
+        # sim_trace = pyrtl.SimulationTrace(wirevector_subset=[self.in_vector, aes_key,
+        #                                                      ready, self.out_vector])
+        sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
 
         sim.step({
@@ -113,7 +115,7 @@ class TestAES(unittest.TestCase):
             reset: 1
         })
 
-        for cycle in range(10):
+        for cycle in range(15):
             sim.step({
                 self.in_vector: 0x0,
                 aes_key: 0x1,

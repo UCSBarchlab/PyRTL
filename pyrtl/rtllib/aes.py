@@ -19,6 +19,17 @@ class AES(object):
     def __init__(self):
         self.memories_built = False
 
+    def old_key_expansion(self, key):
+        self.build_memories_if_not_exists()
+        w = list(libutils.partition_wire(key, 32))
+        for key_expand_round in range(10):
+            last = key_expand_round * 4
+            w.append(w[last] ^ self._g(w[last + 3], key_expand_round))
+            w.append(w[-1] ^ w[last + 1])
+            w.append(w[-1] ^ w[last + 2])
+            w.append(w[-1] ^ w[last + 3])
+        return pyrtl.concat(*w)
+
     def _g(self, word, key_expand_round):
         # change key_expand_round into a wirevector
         self.build_memories_if_not_exists()
@@ -26,7 +37,7 @@ class AES(object):
         a = libutils.partition_wire(word, 8)
         sub = pyrtl.concat(self.sbox[a[2]], self.sbox[a[1]], self.sbox[a[0]], self.sbox[a[3]])
         round_const = pyrtl.concat(self.rcon[key_expand_round + 1], pyrtl.Const(0, bitwidth=24))
-        return round_const
+        return round_const ^ sub
 
     def key_expansion(self, old_key, key_expand_round):
         self.build_memories_if_not_exists()
@@ -75,6 +86,10 @@ class AES(object):
 
     def addroundkey(self, t, key):
         return t ^ key
+
+    def old_addroundkey(self, t, expanded_key, round):
+        offset = round * 128
+        return t ^ expanded_key[offset:offset + 128]
 
     def decryption_statem(self, ciphertext_in, key, reset):
         """
@@ -125,22 +140,24 @@ class AES(object):
         return ready, cipher_text
 
     def decryption_key_gen(self, key):
-        keys = []
-        for enc_round in range(0, 11):
+        keys = [key]
+        for enc_round in range(10):
             key = self.key_expansion(key, enc_round)
             keys.append(key)
         return keys
 
-
     def decryption(self, ciphertext, key):
-        key_list = self.decryption_key_gen(key)
+        key_list = libutils.partition_wire(self.old_key_expansion(key), 128)
+        t = self.addroundkey(ciphertext, key_list[0])
 
-        t = self.addroundkey(ciphertext, key_list[10])  # Initial AddRoundKey.
+        # expanded_key = self.old_key_expansion(key)  # Expanding the key (key expansion).
+        # t = self.old_addroundkey(ciphertext, expanded_key, 0)  # Initial AddRoundKey.
 
         for round in range(1, 11):
             t = self.inv_shift_rows(t)
             t = self.inv_sub_bytes(t)
-            t = self.addroundkey(t, key_list[10-round])
+            t = self.addroundkey(t, key_list[round])
+            # t = self.old_addroundkey(t, expanded_key, round)
             if round != 10:
                 t = self.inv_mix_columns(t)
 
