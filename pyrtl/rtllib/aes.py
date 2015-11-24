@@ -61,30 +61,46 @@ class AES(object):
     _igm_divisor = [14, 11, 13, 9]
 
     def inv_mix_columns(self, in_vector):
-        self.build_memories_if_not_exists()
         def _inv_mix_single(index):
             mult_items = [self.inv_galois_mult(a[self._mod_add(index, loc, 4)], mult_table)
                           for loc, mult_table in enumerate(self._igm_divisor)]
             return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
 
         # a = libutils.partition_wire(in_vector, 8)
+        self.build_memories_if_not_exists()
         a = [in_vector[offset - 8:offset] for offset in range(128, 0, -8)]
         inverted = [_inv_mix_single(index) for index in range(len(a))]
         return pyrtl.concat(*inverted)
 
+    def new_inv_mix_columns(self):
+        # not working yet
+        def _inv_mix_single(index):
+            mult_items = [self.inv_galois_mult(a[self._mod_add(index, loc, 4)], mult_table)
+                          for loc, mult_table in enumerate(self._igm_divisor)]
+            return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
+
+        self.build_memories_if_not_exists()
+        a = libutils.partition_wire(in_vector, 8)
+        inverted = [_inv_mix_single(index) for index in range(len(a))]
+        return pyrtl.concat_list(inverted)
+
     def addroundkey(self, t, key):
         return t ^ key
 
-    def decryption_statem(self, ciphertext_in, key, reset):
+    def decryption_statem(self, ciphertext_in, key_in, reset):
         """
         return ready, decryption_result: ready is a one bit signal showing that the answer decryption 
         result has been calculated.
         """
-        if len(key) != len(ciphertext_in):
+        if len(key_in) != len(ciphertext_in):
             raise pyrtl.PyrtlError("AES key and ciphertext should be the same length")
 
-        cipher_text, current_key = (pyrtl.Register(len(key)) for i in range(2))
-        key_expansion_in, add_round_in = (pyrtl.WireVector(len(key)) for i in range(2))
+        cipher_text, key = (pyrtl.Register(len(ciphertext_in)) for i in range(2))
+        key_exp_in, add_round_in = (pyrtl.WireVector(len(ciphertext_in)) for i in range(2))
+
+        # this is not part of the state machine as we need the keys in
+        # reverse order...
+        reversed_key_list = reversed(self.decryption_key_gen(key_exp_in))
 
         counter = pyrtl.Register(4, 'counter')
         round = pyrtl.WireVector(4)
@@ -92,29 +108,28 @@ class AES(object):
 
         inv_shift = self.inv_shift_rows(cipher_text)
         inv_sub = self.inv_sub_bytes(inv_shift)
-        key_exp_out = self.key_expansion(key_expansion_in, round)
-        add_round_out = self.addroundkey(inv_sub, add_round_in)
+        key_out = pyrtl.mux(round, *reversed_key_list, default=0)
+        add_round_out = self.addroundkey(inv_sub, key_out)
         inv_mix_out = self.inv_mix_columns(add_round_out)
-
-        current_key.next <<= key_exp_out
 
         with pyrtl.conditional_assignment:
             with reset == 1:
                 round |= 0
-                key_expansion_in |= key
+                key.next |= key_in
+                key_exp_in |= key_in  # to lower the number of cycles needed
                 cipher_text.next |= add_round_out
                 add_round_in |= ciphertext_in
-                # reset everything to initial values
-                    
+
             with counter == 11:  # keep everything the same
                 round |= counter
                 cipher_text.next |= cipher_text
-                # might be some special thing to do durnign round 1 or 10
 
             with pyrtl.otherwise:  # running through AES
                 round |= counter + 1
-                key_expansion_in |= current_key
-                add_round_in |= key_exp_out 
+
+                key.next |= key
+                key_exp_in |= key
+                add_round_in |= key_out
                 with counter == 10:
                     cipher_text.next |= add_round_out
                 with pyrtl.otherwise:

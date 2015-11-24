@@ -107,8 +107,8 @@ class TestAES(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
 
         sim.step({
-            self.in_vector: 0x66e94bd4ef8a2c3b884cfa59ca342b2e,
-            aes_key: 0x0,
+            self.in_vector: 0x3ad77bb40d7a3660a89ecaf32466ef97,
+            aes_key: 0x2b7e151628aed2a6abf7158809cf4f3c,
             reset: 1
         })
 
@@ -119,4 +119,4 @@ class TestAES(unittest.TestCase):
                 reset: 0
             })
 
-        sim_trace.render_trace(symbol_len=40, segment_size=1)
+        self.assertEquals(sim_trace.trace[self.out_vector][14], 0x6bc1bee22e409f96e93d7e117393172a)
