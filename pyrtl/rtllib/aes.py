@@ -2,27 +2,17 @@
 
 from __future__ import division, absolute_import
 import pyrtl
-# from pyrtl import rtllib
-# from pyrtl.rtllib import libutils
-# import sys
-# sys.path.append('../..')
 from pyrtl.rtllib import libutils
 
 # TODO:
-# 1) Right now all ROMs are global -- need to be moved into function so each
-#    instance of the AES block creates it's own memories
 # 2) All ROMs should be syncronous.  This should be easy once (3) is completed
-# 3) Right now aes_decryption generates one GIANT combinational block. Instead
+# 3) Right now decryption generates one GIANT combinational block. Instead
 #    it should generate one of 2 options -- Either an interative design or a
 #    pipelined design.  Both will add registers between each round of AES
 # 4) aes_encryption should be added to this file as well so that an
 #    aes encrypter similar to (3) above is generated
 # 5) a single "aes-unit" combining encryption and decryption (without making
 #    full independent hardware units) would be a plus as well
-# 6) The constants right now are a big ugly list -- it might be better to
-#    store them as a multi-line string like: '0f bf 53 2c ...' and then
-#    provide a small helper funciton to parse them out.  It might be a nice
-#    utility for pyrtl itself to include.
 
 
 class AES(object):
@@ -50,7 +40,7 @@ class AES(object):
     def inv_sub_bytes(self, in_vector):
         self.build_memories_if_not_exists()
         subbed = [self.inv_sbox[byte] for byte in libutils.partition_wire(in_vector, 8)]
-        return pyrtl.concat(*reversed(subbed))
+        return pyrtl.concat_list(subbed)
 
     def inv_shift_rows(self, in_vector):
         # a = libutils.partition_wire(in_vector, 8)
@@ -86,7 +76,7 @@ class AES(object):
     def addroundkey(self, t, key):
         return t ^ key
 
-    def aes_decryption_statem(self, ciphertext_in, key, reset):
+    def decryption_statem(self, ciphertext_in, key, reset):
         """
         return ready, decryption_result: ready is a one bit signal showing that the answer decryption 
         result has been calculated.
@@ -133,20 +123,24 @@ class AES(object):
 
         ready = (counter == 11)
         return ready, cipher_text
-        # for round in range(1,11):
-        #     expanded_key = pyrtl.WireVector(128, 'expanded_key')
-        #     key_state = pyrtl.Register(128, 'key_state')
-        #     key_state <<= expanded_key
-        #     key_state.next <<= key_expansion(self, expanded_key, round)
 
-    def aes_decryption(self, ciphertext, key):
-        expanded_key = self.key_expansion(key)  # Expanding the key (key expansion).
-        t = self.addroundkey(ciphertext, expanded_key, 0)  # Initial AddRoundKey.
+    def decryption_key_gen(self, key):
+        keys = []
+        for enc_round in range(0, 11):
+            key = self.key_expansion(key, enc_round)
+            keys.append(key)
+        return keys
+
+
+    def decryption(self, ciphertext, key):
+        key_list = self.decryption_key_gen(key)
+
+        t = self.addroundkey(ciphertext, key_list[10])  # Initial AddRoundKey.
 
         for round in range(1, 11):
             t = self.inv_shift_rows(t)
             t = self.inv_sub_bytes(t)
-            t = self.addroundkey(t, expanded_key)
+            t = self.addroundkey(t, key_list[10-round])
             if round != 10:
                 t = self.inv_mix_columns(t)
 
