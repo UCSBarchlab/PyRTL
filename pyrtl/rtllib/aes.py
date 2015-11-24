@@ -72,7 +72,7 @@ class AES(object):
         inverted = [_inv_mix_single(index) for index in range(len(a))]
         return pyrtl.concat(*inverted)
 
-    def new_inv_mix_columns(self):
+    def new_inv_mix_columns(self, in_vector):
         # not working yet
         def _inv_mix_single(index):
             mult_items = [self.inv_galois_mult(a[self._mod_add(index, loc, 4)], mult_table)
@@ -140,7 +140,7 @@ class AES(object):
 
     def decryption_statem_with_ROM_in(self, ciphertext_in, key_ROM, reset):
         cipher_text = pyrtl.Register(len(ciphertext_in))
-        key_exp_in, add_round_in = (pyrtl.WireVector(len(ciphertext_in)) for i in range(2))
+        add_round_in = pyrtl.WireVector(len(ciphertext_in))
 
         # this is not part of the state machine as we need the keys in
         # reverse order...
@@ -151,7 +151,7 @@ class AES(object):
 
         inv_shift = self.inv_shift_rows(cipher_text)
         inv_sub = self.inv_sub_bytes(inv_shift)
-        key_out = key_ROM[10 - round]
+        key_out = key_ROM[(10 - round)[0:4]]
         add_round_out = self.addroundkey(inv_sub, key_out)
         inv_mix_out = self.inv_mix_columns(add_round_out)
 
