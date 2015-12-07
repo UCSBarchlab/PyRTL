@@ -27,25 +27,24 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
     """
 
     def __str__(self):
-        rhs = ', '.join([str(x) for x in self.args])
-        lhs = ', '.join([str(x) for x in self.dests])
+        rhs = ', '.join(str(x) for x in self.args)
+        lhs = ', '.join(str(x) for x in self.dests)
         options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
 
         if self.op in 'w~&|^n+-*<>=xcsr':
-            retval = ''.join([lhs, '  <-- ', self.op, ' --  ', rhs, ' ', options])
+            return "{} <-- {} -- {} {}".format(lhs, self.op, rhs, options)
         elif self.op == 'm':
             memid, memblock = self.op_param
             extrainfo = 'memid=' + str(memid)
-            retval = ''.join([lhs, '  <-- m --  ', memblock.name, '[', rhs, '] (', extrainfo, ')'])
+            return ''.join([lhs, '  <-- m --  ', memblock.name, '[', rhs, '] (', extrainfo, ')'])
         elif self.op == '@':
             memid, memblock = self.op_param
             addr, data, we = [str(x) for x in self.args]
             extrainfo = 'memid=' + str(memid)
-            retval = ''.join([memblock.name, '[', addr, '] <-- @ --  ', data,
-                              ' we=', we, ' (', extrainfo, ')'])
+            return ''.join([memblock.name, '[', addr, '] <-- @ --  ', data,
+                            ' we=', we, ' (', extrainfo, ')'])
         else:
             raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
-        return retval
 
     def __hash__(self):
         return id(self)
@@ -372,7 +371,7 @@ class Block(object):
 
     def sanity_check_net(self, net):
         """ Check that net is a valid LogicNet. """
-        from .wire import Input, Output
+        from .wire import Input, Output, Const
         from .memory import _MemReadBase
 
         # general sanity checks that apply to all operations
@@ -391,8 +390,8 @@ class Block(object):
 
         # checks that input and output wirevectors are not misused
         for w in net.dests:
-            if isinstance(w, Input):
-                raise PyrtlInternalError('error, Inputs cannot be destinations to a net')
+            if isinstance(w, (Input, Const)):
+                raise PyrtlInternalError('error, Inputs, Consts cannot be destinations to a net')
         for w in net.args:
             if isinstance(w, Output):
                 raise PyrtlInternalError('error, Outputs cannot be arguments for a net')
@@ -413,7 +412,7 @@ class Block(object):
                 raise PyrtlInternalError('error, args have mismatched bitwidths')
             if net.args[0].bitwidth != 1:
                 raise PyrtlInternalError('error, mux select must be a single bit')
-        if net.op in '&|^n+-*<>=' and len(set(x.bitwidth for x in net.args)) > 1:
+        if net.op in '&|^n+-*<>=' and net.args[0].bitwidth != net.args[1].bitwidth:
             raise PyrtlInternalError('error, args have mismatched bitwidths')
         if net.op in 'm@' and net.args[0].bitwidth != net.op_param[1].addrwidth:
             raise PyrtlInternalError('error, mem addrwidth mismatch')

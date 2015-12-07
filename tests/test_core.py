@@ -68,6 +68,41 @@ class TestBlock(unittest.TestCase):
             print(net)
 
 
+class TestSanityCheck(unittest.TestCase):
+    # TODO: We need to test all of sanity check
+    pass
+
+
+class TestLogicNets(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_basic_test(self):
+        net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
+        self.assertEqual(str(net), "dest <-- + -- arg1, arg2 (xx)")
+
+    def test_net_with_wirevectors(self):
+        pass
+
+    def test_memory_read_print(self):
+        pass
+
+    def test_memory_write_print(self):
+        pass
+
+    def test_self_equals(self):
+        net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
+        self.assertTrue(net == net)
+
+    def test_comparison(self):
+        net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
+        with self.assertRaises(pyrtl.PyrtlError):
+            a = net < net
+
+    def test_equivelence_of_different_nets(self):
+        pass
+
+
 class TestMemAsyncCheck(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

@@ -7,15 +7,15 @@ import io
 
 
 class TestSynthesis(unittest.TestCase):
+    # TODO: need to change this to actually test synthessi
+
     def setUp(self):
         pyrtl.reset_working_block()
         self.bitwidth = 3
         self.r = pyrtl.Register(bitwidth=self.bitwidth, name='r')
 
-    def tearDown(self):
-        pyrtl.reset_working_block()
-
     def check_trace(self, correct_string):
+        # pyrtl.synthesize()
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
@@ -61,9 +61,6 @@ class TestSynthesis(unittest.TestCase):
 
 class TestOptimization(unittest.TestCase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def num_net_of_type(self, netOp, block):
@@ -215,9 +212,6 @@ class TestOptimization(unittest.TestCase):
 
 class TestSynthOptTiming(unittest.TestCase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_sanity_check(self):

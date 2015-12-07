@@ -73,6 +73,9 @@ class TestVerilog(unittest.TestCase):
         with io.StringIO() as testbuffer:
             pyrtl.output_to_verilog(testbuffer)
 
+    def test_textual_correctness(self):
+        pass
+
 
 if __name__ == "__main__":
     unittest.main()

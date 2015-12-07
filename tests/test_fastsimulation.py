@@ -1,9 +1,6 @@
 import unittest
-import random
 import pyrtl
 import io
-import os
-import subprocess
 
 from .helperfunctions import *
 
@@ -124,9 +121,6 @@ class TestRTLFastSimulationTraceWithAdder(unittest.TestCase):
         self.sum, self.cout = generate_full_adder(self.r, pyrtl.Const(1).zero_extended(bitwidth))
         self.r.next <<= self.sum
 
-    def tearDown(self):
-        pass
-
     def test_adder_simulation(self):
         sim_trace = pyrtl.SimulationTrace()
         on_reset = {}  # signal states to be set when reset is asserted
@@ -192,9 +186,6 @@ class TestRTLFastSimulationTraceVCDWithAdder(unittest.TestCase):
         self.sum, self.cout = generate_full_adder(self.r, pyrtl.Const(1).zero_extended(bitwidth))
         self.r.next <<= self.sum
 
-    def tearDown(self):
-        pass
-
     def test_vcd_output(self):
         sim_trace = pyrtl.SimulationTrace()
         on_reset = {}  # signal states to be set when reset is asserted
@@ -223,9 +214,6 @@ class TestRTLFastSimulationTraceWithMux(unittest.TestCase):
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()
         self.sim = pyrtl.FastSimulation(tracer=self.sim_trace)
-
-    def tearDown(self):
-        pass
 
     def test_adder_simulation(self):
         input_signals = {0: {self.a: 0, self.b: 1, self.sel: 1},
