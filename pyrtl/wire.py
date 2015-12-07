@@ -362,47 +362,7 @@ class Const(WireVector):
         py:method:: WireVector.__init__()
         """
         self._validate_bitwidth(bitwidth)
-        if isinstance(val, bool):
-            num = int(val)
-            if bitwidth is None:
-                bitwidth = 1
-            if bitwidth != 1:
-                raise PyrtlError('error, boolean has bitwidth not equal to 1')
-        elif isinstance(val, numbers.Integral):
-            if val >= 0:
-                num = val
-                # infer bitwidth if it is not specified explicitly
-                if bitwidth is None:
-                    bitwidth = len(bin(num)) - 2  # the -2 for the "0b" at the start of the string
-            else:  # val is negative
-                if bitwidth is None:
-                    raise PyrtlError(
-                        'negative Const values must have bitwidth declared explicitly')
-                if (val >> bitwidth-1) != -1:
-                    raise PyrtlError('insufficient bits for negative number')
-                num = val & ((1 << bitwidth) - 1)  # result is a twos complement value
-        elif isinstance(val, str):
-            if bitwidth is not None:
-                raise PyrtlError('error, bitwidth parameter of const should be'
-                                 ' unspecified when the const is created from a string'
-                                 ' (instead use verilog style specification)')
-            if val.startswith('-'):
-                raise PyrtlError('verilog-style consts must be positive')
-            split_string = val.split("'")
-            if len(split_string) != 2:
-                raise PyrtlError('error, string for Const not in verilog style format')
-            try:
-                bitwidth = int(split_string[0])
-                if split_string[1][0].isdigit():
-                    num = int(split_string[1])
-                else:
-                    # this handles strings such as 32'b5 by converting them as int(0b5)
-                    num = int(''.join(['0', split_string[1]]), 0)
-            except ValueError:
-                raise PyrtlError('error, string for Const not in verilog style format')
-        else:
-            raise PyrtlError('error, the value of Const is of an improper type, "%s"'
-                             'proper types are bool, int, and string' % type(val))
+        num, bitwidth = _gen_val_and_bitwidth(val, bitwidth)
 
         if num < 0:
             raise PyrtlInternalError(
@@ -414,7 +374,6 @@ class Const(WireVector):
 
         name = next_constvar_name(num)
 
-        # initialize the WireVector
         super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)
         # add the member "val" to track the value of the constant
         self.val = num
@@ -423,6 +382,65 @@ class Const(WireVector):
         raise PyrtlError(
             'ConstWires, such as "%s", should never be assigned to with <<='
             % str(self.name))
+
+
+def _gen_val_and_bitwidth(val, bitwidth=None):
+    if isinstance(val, bool):
+        return _convert_bool(val, bitwidth)
+    elif isinstance(val, numbers.Integral):
+        return _validate_const_int(val, bitwidth)
+    elif isinstance(val, str):
+        return _convert_verilog_str(val, bitwidth)
+    else:
+        raise PyrtlError('error, the value of Const is of an improper type, "%s"'
+                         'proper types are bool, int, and string' % type(val))
+
+
+def _convert_bool(bool_val, bitwidth=None):
+    num = int(bool_val)
+    if bitwidth is None:
+        bitwidth = 1
+    if bitwidth != 1:
+        raise PyrtlError('error, boolean has bitwidth not equal to 1')
+    return num, bitwidth
+
+
+def _validate_const_int(val, bitwidth=None):
+    if val >= 0:
+        num = val
+        # infer bitwidth if it is not specified explicitly
+        if bitwidth is None:
+            bitwidth = len(bin(num)) - 2  # the -2 for the "0b" at the start of the string
+    else:  # val is negative
+        if bitwidth is None:
+            raise PyrtlError(
+                'negative Const values must have bitwidth declared explicitly')
+        if (val >> bitwidth-1) != -1:
+            raise PyrtlError('insufficient bits for negative number')
+        num = val & ((1 << bitwidth) - 1)  # result is a twos complement value
+    return num, bitwidth
+
+
+def _convert_verilog_str(val, bitwidth=None):
+    if bitwidth is not None:
+        raise PyrtlError('error, bitwidth parameter of const should be'
+                         ' unspecified when the const is created from a string'
+                         ' (instead use verilog style specification)')
+    if val.startswith('-'):
+        raise PyrtlError('verilog-style consts must be positive')
+    split_string = val.split("'")
+    if len(split_string) != 2:
+        raise PyrtlError('error, string for Const not in verilog style format')
+    try:
+        bitwidth = int(split_string[0])
+        if split_string[1][0].isdigit():
+            num = int(split_string[1])
+        else:
+            # this handles strings such as 32'b5 by converting them as int(0b5)
+            num = int(''.join(['0', split_string[1]]), 0)
+    except ValueError:
+        raise PyrtlError('error, string for Const not in verilog style format')
+    return num, bitwidth
 
 
 class Register(WireVector):

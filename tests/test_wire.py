@@ -134,6 +134,22 @@ class TestConst(unittest.TestCase):
         self.assert_bad_const("1'-b10")
         self.assert_bad_const("-1'b10")
         self.assert_bad_const("5'b111111'")
+        self.assert_bad_const("'")
+        self.assert_bad_const("'1")
+
+    @unittest.skip
+    def test_const_badstring_broken(self):
+        self.assert_bad_const("1'")
+
+    def test_const_bool(self):
+        testmissing()
+
+    def test_const_badbool(self):
+        testmissing()
+
+    def test_const_badtype(self):
+        self.assert_bad_const(pyrtl.Const(123))
+        self.assert_bad_const([])
 
     def test_const_assignment(self):
         testmissing()
