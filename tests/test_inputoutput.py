@@ -27,9 +27,6 @@ class TestVerilogNames(unittest.TestCase):
     def test_verilog_check_valid_name_good2(self):
         self.checkname('a')
 
-    def test_verilog_check_valid_name_good2(self):
-        self.checkname('B')
-
     def test_verilog_check_valid_name_good3(self):
         self.checkname('BC')
 
@@ -50,6 +47,9 @@ class TestVerilogNames(unittest.TestCase):
 
     def test_verilog_check_valid_name_good9(self):
         self.checkname('_B$$s')
+
+    def test_verilog_check_valid_name_good10(self):
+        self.checkname('B')
 
     def test_verilog_check_valid_name_bad(self):
         self.assertRaises(pyrtl.PyrtlError, self.checkname, 'carne asda')

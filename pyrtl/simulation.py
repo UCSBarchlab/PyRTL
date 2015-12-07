@@ -579,8 +579,8 @@ class SimulationTrace(object):
         if len(self.trace) == 0:
             raise PyrtlError('error, simulation trace needs at least 1 signal '
                              'to track (try passing name to WireVector)')
-        for w in self.trace:
-            self.trace[w].append(value_map[w])
+        for wire in self.trace:
+            self.trace[wire].append(value_map[wire])
 
     def add_fast_step(self, fastsim):
         """ Add the fastsim context to the trace. """
@@ -647,15 +647,14 @@ class SimulationTrace(object):
         """
         renderer = render_cls()
 
-        def formatted_trace_line(w, trace):
-            heading = w.name.rjust(maxnamelen) + ' '
+        def formatted_trace_line(wire, trace):
+            heading = wire.name.rjust(maxnamelen) + ' '
             trace_line = ''
             for i in range(len(trace)):
                 if (i % segment_size == 0) and i > 0:
                     trace_line += segment_delim
-                trace_line += renderer.render_val(
-                    w, i % segment_size, trace[i], symbol_len)
-            return heading+trace_line
+                trace_line += renderer.render_val(wire, i % segment_size, trace[i], symbol_len)
+            return heading + trace_line
 
         # default to printing all signals in sorted order
         if trace_list is None:

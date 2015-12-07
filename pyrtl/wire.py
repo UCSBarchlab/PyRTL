@@ -142,7 +142,7 @@ class WireVector(object):
 
     def __bool__(self):
         """ Use of a wirevector in a statement like "a or b" is forbidden."""
-        # python provides now way to overload these logical operations, and thus they
+        # python provides no way to overload these logical operations, and thus they
         # are very much not likely to be doing the thing that the programmer would be
         # expecting.
         raise PyrtlError('cannot covert wirevector to compile-time boolean.  This error '
@@ -192,7 +192,7 @@ class WireVector(object):
 
     def __rsub__(self, other):
         from .helperfuncs import as_wires
-        other = as_wires(other, block=self.block)
+        other = as_wires(other, block=self.block)  # '-' op is not symmetric
         return other.logicop(self, '-')
 
     def __isub__(self, other):
@@ -211,10 +211,7 @@ class WireVector(object):
         return self.logicop(other, '<')
 
     def __le__(self, other):
-        # FIXME: Inefficient implementation of <=
-        lt = self.logicop(other, '<')
-        eq = self.logicop(other, '=')
-        return lt | eq
+        return ~ self.logicop(other, '>')
 
     def __eq__(self, other):
         return self.logicop(other, '=')
@@ -226,10 +223,7 @@ class WireVector(object):
         return self.logicop(other, '>')
 
     def __ge__(self, other):
-        # FIXME: Inefficient implementation of >=
-        lt = self.logicop(other, '>')
-        eq = self.logicop(other, '=')
-        return lt | eq
+        return ~ self.logicop(other, '<')
 
     def __invert__(self):
         outwire = WireVector(bitwidth=len(self), block=self.block)
