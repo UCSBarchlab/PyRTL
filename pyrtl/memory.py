@@ -265,9 +265,6 @@ class RomBlock(_MemReadBase):
     def _make_copy(self, block=None):
         if block is None:
             block = self.block
-        return RomBlock(bitwidth=self.bitwidth,
-                        addrwidth=self.addrwidth,
-                        romdata=self.initialdata,
-                        name=self.name,
-                        asynchronous=self.asynchronous,
-                        block=block)
+        return RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
+                        romdata=self.initialdata, name=self.name,
+                        asynchronous=self.asynchronous, block=block)
