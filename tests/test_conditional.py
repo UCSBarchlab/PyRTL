@@ -206,7 +206,7 @@ class TestMemConditionalBlock(unittest.TestCase):
         o <<= m[i]
         self.check_trace('i 01230123\no 00000120\n')
 
-    def test_basic_true_condition_memwrite(self):
+    def test_basic_true_condition_memwrite_2(self):
         m = pyrtl.MemBlock(addrwidth=2, bitwidth=2, name='m')
         i = pyrtl.Register(bitwidth=2, name='i')
         o = pyrtl.WireVector(bitwidth=2, name='o')

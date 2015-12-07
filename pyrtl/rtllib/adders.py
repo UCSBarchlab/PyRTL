@@ -115,17 +115,17 @@ def _cla_adder_unit(a, b, cin):
     assert(len(prop) == len(gen))
 
     carry = [gen[0] | prop[0] & cin]
-    sum = prop[0] ^ cin
+    sum_bit = prop[0] ^ cin
 
     cur_gen = gen[0]
     cur_prop = prop[0]
     for i in range(1, len(prop)):
         cur_gen = gen[i] | (prop[i] & cur_gen)
         cur_prop = cur_prop & prop[i]
-        sum = pyrtl.concat(prop[i] ^ carry[i-1], sum)
+        sum_bit = pyrtl.concat(prop[i] ^ carry[i-1], sum_bit)
         carry.append(gen[i] | (prop[i] & carry[i-1]))
     cout = cur_gen | (cur_prop & cin)
-    return sum, cout
+    return sum_bit, cout
 
 
 def wallace_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
