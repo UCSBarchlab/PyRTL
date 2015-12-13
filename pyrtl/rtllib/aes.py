@@ -20,12 +20,14 @@ class AES(object):
         self.memories_built = False
 
     def _g(self, word, key_expand_round):
+        """
+        One-byte left circular rotation, substitution of each byte
+        """
         self.build_memories_if_not_exists()
-        # One-byte left circular rotation, substitution of each byte
         a = libutils.partition_wire(word, 8)
-        sub = pyrtl.concat(self.sbox[a[2]], self.sbox[a[1]], self.sbox[a[0]], self.sbox[a[3]])
-        round_const = pyrtl.concat(self.rcon[key_expand_round + 1], pyrtl.Const(0, bitwidth=24))
-        return round_const ^ sub
+        sub = [self.sbox[a[index]] for index in (3, 0, 1, 2)]
+        sub[3] = sub[3] ^ self.rcon[key_expand_round + 1]
+        return pyrtl.concat_list(sub)
 
     def key_expansion(self, old_key, key_expand_round):
         self.build_memories_if_not_exists()
@@ -41,14 +43,13 @@ class AES(object):
         subbed = [self.inv_sbox[byte] for byte in libutils.partition_wire(in_vector, 8)]
         return pyrtl.concat_list(subbed)
 
-    def inv_shift_rows(self, in_vector):
-        # a = libutils.partition_wire(in_vector, 8)
-        a = [in_vector[offset - 8:offset] for offset in range(128, 0, -8)]
-        out_vector = pyrtl.concat(a[0], a[13], a[10], a[7],
-                                  a[4], a[1], a[14], a[11],
-                                  a[8], a[5], a[2], a[15],
-                                  a[12], a[9], a[6], a[3])
-        return out_vector
+    @staticmethod
+    def inv_shift_rows(in_vector):
+        a = libutils.partition_wire(in_vector, 8)
+        return pyrtl.concat_list((a[12], a[9],  a[6],  a[3],
+                                  a[0],  a[13], a[10], a[7],
+                                  a[4],  a[1],  a[14], a[11],
+                                  a[8],  a[5],  a[2],  a[15]))
 
     def inv_galois_mult(self, c, d):
         return self._inv_gal_mult_dict[d][c]
@@ -58,22 +59,9 @@ class AES(object):
         base_mod_floor = base // mod
         return (base + add) % mod + base_mod_floor * mod
 
-    _igm_divisor = [14, 11, 13, 9]
+    _igm_divisor = [14, 9, 13, 11]
 
     def inv_mix_columns(self, in_vector):
-        def _inv_mix_single(index):
-            mult_items = [self.inv_galois_mult(a[self._mod_add(index, loc, 4)], mult_table)
-                          for loc, mult_table in enumerate(self._igm_divisor)]
-            return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
-
-        # a = libutils.partition_wire(in_vector, 8)
-        self.build_memories_if_not_exists()
-        a = [in_vector[offset - 8:offset] for offset in range(128, 0, -8)]
-        inverted = [_inv_mix_single(index) for index in range(len(a))]
-        return pyrtl.concat(*inverted)
-
-    def new_inv_mix_columns(self, in_vector):
-        # not working yet
         def _inv_mix_single(index):
             mult_items = [self.inv_galois_mult(a[self._mod_add(index, loc, 4)], mult_table)
                           for loc, mult_table in enumerate(self._igm_divisor)]
@@ -84,7 +72,8 @@ class AES(object):
         inverted = [_inv_mix_single(index) for index in range(len(a))]
         return pyrtl.concat_list(inverted)
 
-    def addroundkey(self, t, key):
+    @staticmethod
+    def add_round_key(t, key):
         return t ^ key
 
     def decryption_statem(self, ciphertext_in, key_in, reset):
@@ -109,7 +98,7 @@ class AES(object):
         inv_shift = self.inv_shift_rows(cipher_text)
         inv_sub = self.inv_sub_bytes(inv_shift)
         key_out = pyrtl.mux(round, *reversed_key_list, default=0)
-        add_round_out = self.addroundkey(add_round_in, key_out)
+        add_round_out = self.add_round_key(add_round_in, key_out)
         inv_mix_out = self.inv_mix_columns(add_round_out)
 
         with pyrtl.conditional_assignment:
@@ -152,7 +141,7 @@ class AES(object):
         inv_shift = self.inv_shift_rows(cipher_text)
         inv_sub = self.inv_sub_bytes(inv_shift)
         key_out = key_ROM[(10 - round)[0:4]]
-        add_round_out = self.addroundkey(inv_sub, key_out)
+        add_round_out = self.add_round_key(inv_sub, key_out)
         inv_mix_out = self.inv_mix_columns(add_round_out)
 
         with pyrtl.conditional_assignment:
@@ -186,12 +175,12 @@ class AES(object):
 
     def decryption(self, ciphertext, key):
         key_list = self.decryption_key_gen(key)
-        t = self.addroundkey(ciphertext, key_list[10])
+        t = self.add_round_key(ciphertext, key_list[10])
 
         for round in range(1, 11):
             t = self.inv_shift_rows(t)
             t = self.inv_sub_bytes(t)
-            t = self.addroundkey(t, key_list[10 - round])
+            t = self.add_round_key(t, key_list[10 - round])
             if round != 10:
                 t = self.inv_mix_columns(t)
 
@@ -202,20 +191,16 @@ class AES(object):
             self.build_memories()
 
     def build_memories(self):
-        self.sbox = pyrtl.RomBlock(bitwidth=8, addrwidth=8,
-                                   romdata=self.sbox_data, asynchronous=True)
-        self.inv_sbox = pyrtl.RomBlock(bitwidth=8, addrwidth=8,
-                                       romdata=self.inv_sbox_data, asynchronous=True)
-        self.rcon = pyrtl.RomBlock(bitwidth=8, addrwidth=8,
-                                   romdata=self.rcon_data, asynchronous=True)
-        self.GM9 = pyrtl.RomBlock(bitwidth=8, addrwidth=8,
-                                  romdata=self.GM9_data, asynchronous=True)
-        self.GM11 = pyrtl.RomBlock(bitwidth=8, addrwidth=8,
-                                   romdata=self.GM11_data, asynchronous=True)
-        self.GM13 = pyrtl.RomBlock(bitwidth=8, addrwidth=8,
-                                   romdata=self.GM13_data, asynchronous=True)
-        self.GM14 = pyrtl.RomBlock(bitwidth=8, addrwidth=8,
-                                   romdata=self.GM14_data, asynchronous=True)
+        def build_mem(data):
+            return pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=data, asynchronous=True)
+
+        self.sbox = build_mem(self.sbox_data)
+        self.inv_sbox = build_mem(self.inv_sbox_data)
+        self.rcon = build_mem(self.rcon_data)
+        self.GM9 = build_mem(self.GM9_data)
+        self.GM11 = build_mem(self.GM11_data)
+        self.GM13 = build_mem(self.GM13_data)
+        self.GM14 = build_mem(self.GM14_data)
         self._inv_gal_mult_dict = {9: self.GM9, 11: self.GM11, 13: self.GM13, 14: self.GM14}
         self.memories_built = True
 
