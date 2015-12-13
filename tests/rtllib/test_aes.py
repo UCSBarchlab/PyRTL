@@ -2,7 +2,6 @@ import unittest
 import t_utils
 import pyrtl
 from pyrtl.rtllib import aes
-import random
 
 
 class TestAES(unittest.TestCase):
@@ -11,21 +10,13 @@ class TestAES(unittest.TestCase):
     http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
     """
 
-    @classmethod
-    def setUpClass(cls):
-        random.seed(15151515)
-
     def setUp(self):
         pyrtl.reset_working_block()
         self.aes = aes.AES()
         self.in_vector = pyrtl.Input(bitwidth=128, name='in_vector')
         self.out_vector = pyrtl.Output(bitwidth=128, name='out_vector')
 
-    def tearDown(self):
-        pyrtl.reset_working_block()
-
     def test_inv_shift_rows(self):
-        # Create logic net
         self.out_vector <<= self.aes.inv_shift_rows(self.in_vector)
 
         in_vals = [0x3e1c22c0b6fcbf768da85067f6170495, 0x2d6d7ef03f33e334093602dd5bfb12c7]
@@ -63,22 +54,12 @@ class TestAES(unittest.TestCase):
         aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
         self.out_vector <<= self.aes.decryption(self.in_vector, aes_key)
 
-        sim_trace = pyrtl.SimulationTrace(wirevector_subset=[self.in_vector, aes_key,
-                                                             self.out_vector])
-        sim = pyrtl.Simulation(tracer=sim_trace)
-
         ciphers = [0x3ad77bb40d7a3660a89ecaf32466ef97, 0x66e94bd4ef8a2c3b884cfa59ca342b2e]
         keys = [0x2b7e151628aed2a6abf7158809cf4f3c, 0x0]
         plain_text = [0x6bc1bee22e409f96e93d7e117393172a, 0x0]
-        for key, cipher in zip(keys, ciphers):
-            sim.step({
-                self.in_vector: cipher,
-                aes_key: key
-            })
-
-        self.assertListEqual(sim_trace.trace[self.out_vector], plain_text)
-
-        sim_trace.render_trace(symbol_len=40, segment_size=1)
+        calculated_result = t_utils.sim_and_ret_out(self.out_vector, (self.in_vector, aes_key),
+                                                    (ciphers, keys))
+        self.assertEqual(calculated_result, plain_text)
 
     @unittest.skip
     def test_aes_state_machine(self):
