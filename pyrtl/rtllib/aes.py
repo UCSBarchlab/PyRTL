@@ -89,8 +89,8 @@ class AES(object):
 
     def decryption_statem(self, ciphertext_in, key_in, reset):
         """
-        return ready, decryption_result: ready is a one bit signal showing that the answer decryption 
-        result has been calculated.
+        return ready, decryption_result: ready is a one bit signal showing
+        that the answer decryption result has been calculated.
         """
         if len(key_in) != len(ciphertext_in):
             raise pyrtl.PyrtlError("AES key and ciphertext should be the same length")
@@ -109,7 +109,7 @@ class AES(object):
         inv_shift = self.inv_shift_rows(cipher_text)
         inv_sub = self.inv_sub_bytes(inv_shift)
         key_out = pyrtl.mux(round, *reversed_key_list, default=0)
-        add_round_out = self.addroundkey(inv_sub, key_out)
+        add_round_out = self.addroundkey(add_round_in, key_out)
         inv_mix_out = self.inv_mix_columns(add_round_out)
 
         with pyrtl.conditional_assignment:
@@ -129,8 +129,8 @@ class AES(object):
 
                 key.next |= key
                 key_exp_in |= key
-                add_round_in |= key_out
-                with counter == 10:
+                add_round_in |= inv_sub
+                with round == 10:
                     cipher_text.next |= add_round_out
                 with pyrtl.otherwise:
                     cipher_text.next |= inv_mix_out

@@ -1,10 +1,16 @@
 import unittest
+import t_utils
 import pyrtl
 from pyrtl.rtllib import aes
 import random
 
 
 class TestAES(unittest.TestCase):
+    """
+    Test vectors are retrieved from:
+    http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
+    """
+
     @classmethod
     def setUpClass(cls):
         random.seed(15151515)
@@ -22,54 +28,36 @@ class TestAES(unittest.TestCase):
         # Create logic net
         self.out_vector <<= self.aes.inv_shift_rows(self.in_vector)
 
-        # Create test values and correct result
-        true_result = [0xbd6e7c3df2b5779e0b61216e8b10b689]
+        in_vals = [0x3e1c22c0b6fcbf768da85067f6170495, 0x2d6d7ef03f33e334093602dd5bfb12c7]
+        true_result = [0x3e175076b61c04678dfc2295f6a8bfc0, 0x2dfb02343f6d12dd09337ec75b36e3f0]
+        calculated_result = t_utils.sim_and_ret_out(self.out_vector, (self.in_vector,), (in_vals,))
+        self.assertEqual(calculated_result, true_result)
 
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for cycle in range(1):
-            sim.step({self.in_vector: 0xbdb52189f261b63d0b107c9e8b6e776e})
-
-        inv_shift_rows_result = sim_trace.trace[self.out_vector]
-        self.assertEqual(inv_shift_rows_result, true_result)
-
-    def xest_inv_sub_bytes(self):
+    def test_inv_sub_bytes(self):
         self.out_vector <<= self.aes.inv_sub_bytes(self.in_vector)
 
-        true_result = [0xabdb52189f261b63d0b107c9e8b6e776e]
+        in_vals = [0x3e175076b61c04678dfc2295f6a8bfc0, 0x2dfb02343f6d12dd09337ec75b36e3f0]
+        true_result = [0xd1876c0f79c4300ab45594add66ff41f, 0xfa636a2825b339c940668a3157244d17]
+        calculated_result = t_utils.sim_and_ret_out(self.out_vector, (self.in_vector,), (in_vals,))
+        self.assertEqual(calculated_result, true_result)
 
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for cycle in range(1):
-            sim.step({self.in_vector: 0x7ad5fda789ef4e272bca100b3d9ff59f})
-
-        inv_sub_bytes_result = sim_trace.trace[self.out_vector]
-        self.assertEqual(inv_sub_bytes_result, true_result)
-
-    def test_mix_columns(self):
+    def test_inv_mix_columns(self):
         self.out_vector <<= self.aes.inv_mix_columns(self.in_vector)
 
-        true_result = [0x4773b91ff72f354361cb018ea1e6cf2c]
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for cycle in range(1):
-            sim.step({self.in_vector: 0xbd6e7c3df2b5779e0b61216e8b10b689})
+        in_vals = [0xe9f74eec023020f61bf2ccf2353c21c7, 0xbaa03de7a1f9b56ed5512cba5f414d23]
+        real_res = [0x54d990a16ba09ab596bbf40ea111702f, 0x3e1c22c0b6fcbf768da85067f6170495]
+        calculated_result = t_utils.sim_and_ret_out(self.out_vector, (self.in_vector,), (in_vals,))
+        self.assertEqual(calculated_result, real_res)
 
-        inv_mix_columns_result = sim_trace.trace[self.out_vector]
-        self.assertEqual(inv_mix_columns_result, true_result)
-
-    def xest_adroundkey(self):
-        # !!!!!! NOT BEING TESTED !!!!!!!!
+    @unittest.skip
+    def test_key_expansion(self):
+        # This is not at all correct. Needs to be completely rewritten
         self.out_vector <<= pyrtl.concat_list(self.aes.decryption_key_gen(self.in_vector))
 
-        true_result = 0xc57e1c159a9bd286f05f4be098c63439
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for cycle in range(1):
-            sim.step({self.in_vector: 0x14f9701ae35fe28c440adf4d4ea9c026})
-
-        addroundkey_result = sim_trace.trace[self.out_vector]
-        self.assertEqual(addroundkey_result, true_result)
+        in_vals = [0xd1876c0f79c4300ab45594add66ff41f, 0xfa636a2825b339c940668a3157244d17]
+        true_result = [0x3e175076b61c04678dfc2295f6a8bfc0, 0x2dfb02343f6d12dd09337ec75b36e3f0]
+        calculated_result = t_utils.sim_and_ret_out(self.out_vector, (self.in_vector,), (in_vals,))
+        self.assertEqual(calculated_result, true_result)
 
     def test_aes_full(self):
         aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
@@ -92,6 +80,7 @@ class TestAES(unittest.TestCase):
 
         sim_trace.render_trace(symbol_len=40, segment_size=1)
 
+    @unittest.skip
     def test_aes_state_machine(self):
         aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
         reset = pyrtl.Input(1)
@@ -112,7 +101,7 @@ class TestAES(unittest.TestCase):
             reset: 1
         })
 
-        for cycle in range(15):
+        for cycle in range(14):
             sim.step({
                 self.in_vector: 0x0,
                 aes_key: 0x1,
