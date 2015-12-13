@@ -5,9 +5,9 @@ import pyrtl
 from pyrtl.rtllib import libutils
 
 # TODO:
-# 2) All ROMs should be syncronous.  This should be easy once (3) is completed
-# 3) Right now decryption generates one GIANT combinational block. Instead
-#    it should generate one of 2 options -- Either an interative design or a
+# 2) All ROMs should be synchronous.  This should be easy once (3) is completed
+# 3) Right now decryption generates one GIANT combinatorial block. Instead
+#    it should generate one of 2 options -- Either an iterative design or a
 #    pipelined design.  Both will add registers between each round of AES
 # 4) aes_encryption should be added to this file as well so that an
 #    aes encrypter similar to (3) above is generated
@@ -109,7 +109,7 @@ class AES(object):
                 cipher_text.next |= add_round_out
                 add_round_in |= ciphertext_in
 
-            with counter == 11:  # keep everything the same
+            with counter == 10:  # keep everything the same
                 round |= counter
                 cipher_text.next |= cipher_text
 
@@ -119,20 +119,17 @@ class AES(object):
                 key.next |= key
                 key_exp_in |= key
                 add_round_in |= inv_sub
-                with round == 10:
+                with counter == 9:
                     cipher_text.next |= add_round_out
                 with pyrtl.otherwise:
                     cipher_text.next |= inv_mix_out
 
-        ready = (counter == 11)
+        ready = (counter == 10)
         return ready, cipher_text
 
-    def decryption_statem_with_ROM_in(self, ciphertext_in, key_ROM, reset):
+    def decryption_statem_with_rom_in(self, ciphertext_in, key_ROM, reset):
         cipher_text = pyrtl.Register(len(ciphertext_in))
         add_round_in = pyrtl.WireVector(len(ciphertext_in))
-
-        # this is not part of the state machine as we need the keys in
-        # reverse order...
 
         counter = pyrtl.Register(4, 'counter')
         round = pyrtl.WireVector(4)
@@ -150,7 +147,7 @@ class AES(object):
                 cipher_text.next |= add_round_out
                 add_round_in |= ciphertext_in
 
-            with counter == 11:  # keep everything the same
+            with counter == 10:  # keep everything the same
                 round |= counter
                 cipher_text.next |= cipher_text
 
@@ -158,12 +155,12 @@ class AES(object):
                 round |= counter + 1
 
                 add_round_in |= key_out
-                with counter == 10:
+                with counter == 9:
                     cipher_text.next |= add_round_out
                 with pyrtl.otherwise:
                     cipher_text.next |= inv_mix_out
 
-        ready = (counter == 11)
+        ready = (counter == 10)
         return ready, cipher_text
 
     def decryption_key_gen(self, key):
