@@ -114,12 +114,16 @@ pyrtl.reset_working_block()
 
 pyrtl.set_debug_mode()
 
-# a test wire to show this feature
+# Because we have changed the working block, using wires from the old
+# block will cause issues. Therefore, we need to create new input wirevectors
 
+new_in0, new_in1 = (pyrtl.Input(8, "in" + str(x)) for x in range(2))
+
+# Now we will build a test wire to demonstrate retrieving the call stack
 test_out = pyrtl.Output(9, "test_out")
-test_out <<= adders.kogge_stone(in1, in3)
+test_out <<= adders.kogge_stone(new_in0, new_in1)
 
-# Now to retrieve information
+# Now to retrieve the call stack
 wire_trace = test_out.init_call_stack
 
 # This data is generated using the traceback.format_stack() call from the Python
@@ -127,8 +131,12 @@ wire_trace = test_out.init_call_stack
 # details on the function). Therefore, the stack traces are stored as a list with the
 # outermost call first.
 
-# for frame in wire_trace:
-#     print(frame)
+assert(isinstance(wire_trace, list))
+
+print("--- Printing Call stack ---")
+
+for frame in wire_trace:
+    print(frame)
 
 # Storage of Additional Debug Data
 
