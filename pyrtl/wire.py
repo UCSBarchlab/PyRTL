@@ -11,11 +11,12 @@ Register: a wire vector that is latched each cycle
 
 from __future__ import print_function, unicode_literals
 import numbers
+from . import core
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 
 from .core import (working_block, next_constvar_name, next_tempvar_name,
-                   LogicNet, _setting_keep_wirevector_call_stack)
+                   LogicNet)
 
 # ----------------------------------------------------------------
 #        ___  __  ___  __   __
@@ -57,11 +58,9 @@ class WireVector(object):
         self._validate_bitwidth(bitwidth)
         self.block.add_wirevector(self)
 
-        if _setting_keep_wirevector_call_stack:
+        if core._setting_keep_wirevector_call_stack:
             import traceback
             self.init_call_stack = traceback.format_stack()
-        else:
-            self.init_call_stack = None
 
     def __hash__(self):
         return id(self)

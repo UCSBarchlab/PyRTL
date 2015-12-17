@@ -176,7 +176,6 @@ class TestOutput(unittest.TestCase):
             w <<= o
 
 
-# -------------------------------------------------------------------
 class TestRTLAdderDesign(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -192,3 +191,23 @@ class TestRTLAdderDesign(unittest.TestCase):
             self.assertTrue(isinstance(r, pyrtl.Register))
             self.assertTrue(isinstance(cout, pyrtl.WireVector))
             pyrtl.reset_working_block()
+
+
+class TestKeepingCallStack(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    @classmethod
+    def tearDownClass(cls):
+        pyrtl.set_debug_mode(False)
+
+    def test_no_call_stack(self):
+        pyrtl.set_debug_mode(False)
+        wire = pyrtl.WireVector()
+        with self.assertRaises(AttributeError):
+            call_stack = wire.init_call_stack
+
+    def test_get_call_stack(self):
+        pyrtl.set_debug_mode(True)
+        wire = pyrtl.WireVector()
+        call_stack = wire.init_call_stack
