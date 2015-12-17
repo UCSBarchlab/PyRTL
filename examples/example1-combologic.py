@@ -47,22 +47,12 @@ sum, carry_out = pyrtl.Output(name='sum'), pyrtl.Output(1, 'carry_out')
 # can be used, such as be assigned to a python variable or used in another
 # equation
 
-temp1 = a & b  # temp1 IS the result of b & c (this is the first mention of temp1)
-assert(isinstance(temp1, pyrtl.WireVector))
-
-# note that logic operations, as well as most PyRTL functions return wirevectors
-# as outputs which can be used without connecting them to another wire
+temp1 = a & b
+# temp1 IS the wire with the result of b & c
+# (this is the first mention of temp1)
 
 # We can similarly make the rest of the carry out logic
-temp2 = a & c
-temp2_copy = temp2
-temp2 = temp2 | (b & c)
-
-# Notice here that temp2 is treated as a variable in the software sense.
-# When it is assigned to, it replaces the wire that was previously in
-# it's location (software folks should be familiar with this). Therefore,
-# the new temp2 and the old temp2 are two different wires.
-assert(temp2 is not temp2_copy)
+temp2 = (a & c) | (b & c)
 
 # Sometimes, we will need to connect the result of an operation to a
 # pre-allocated wirevector. One of the places we need this is when we are
@@ -77,41 +67,18 @@ carry_out <<= temp1 | temp2
 # bit would just have been "carry_out <<= a & b | a & c | b & c" instead
 
 # Now lets build the sum bit
-sum_copy = sum
 sum <<= a ^ b ^ c
-
-# Note that when a wire is connected to another wire, it still is the
-# original wire (unlike the assignment operator we saw earlier)
-assert(sum is sum_copy)
-
-# Also, note that even though we had left out the bitwidth for sum
-# when we declared it, PyRTL was able to infer that it is 1
-assert (sum.bitwidth == 1)
-
-# We can also connect normal WireVectors in the same fashion, though
-# this is usually unnecessary
-temp_x <<= a & b
-temp_y <<= temp_x
-
-# Now before we go onto the simulation, lets look at our handiwork. In PyRTL,
-# there's an block object that stores everything in the circuit. You can access
-# the working (aka current) block through pyrtl.working_block(), and for most
-# things one block is all you will need.  We'll see it again later in more detail,
-# but for now we can just bring the block in to see that it in fact looks like the
-# hardware we described.  The format is a bit weird, but roughly translates to
-# a list of gates (the 'w' gates are just wires, aka the connections made
-# using <<= earlier).  The ins and outs of the gates are printed
-# 'name'/'bitwidth''WireVectorType'
-
-print('--- One Bit Adder Implementation ---')
-print(pyrtl.working_block())
-print()
 
 # --- Step 2: Simulate Design  -----------------------------------------------
 
 # Okay, let's get simulate our one-bit adder.  To keep track of the output of
 # the simulation we need to make a new "SimulationTrace" and a "Simulation"
 # that then uses that trace.
+
+# cleaning up unused wires
+block = pyrtl.working_block()
+block.remove_wirevector(temp_x)
+block.remove_wirevector(temp_y)
 
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
