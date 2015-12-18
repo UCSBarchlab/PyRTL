@@ -430,7 +430,7 @@ def _convert_verilog_str(val, bitwidth=None):
             num = int(split_string[1])
         else:
             # this handles strings such as 32'b5 by converting them as int(0b5)
-            num = int(''.join(['0', split_string[1]]), 0)
+            num = int('0' + split_string[1], 0)
     except ValueError:
         raise PyrtlError('error, string for Const not in verilog style format')
     return num, bitwidth
@@ -471,6 +471,15 @@ class Register(WireVector):
 
         def __ior__(self, other):
             return self.reg._next_ior(other)
+
+        def __bool__(self):
+            """ Use of a _next in a statement like "a or b" is forbidden."""
+            raise PyrtlError('cannot covert Register.next to compile-time boolean.  This error '
+                             'often happens when you attempt to use a Register.next with "==" or '
+                             'something that calls "__eq__", such as when you test if a '
+                             'Register.next is "in" something')
+
+        __nonzero__ = __bool__  # for Python 2 and 3 compatibility
 
     class _NextSetter(object):
         """ This is the type returned by __ilshift__ which r.next will be assigned. """

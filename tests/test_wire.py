@@ -8,9 +8,6 @@ class TestWireVector(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def tearDown(self):
-        pyrtl.reset_working_block()
-
     def test_basic_assignment(self):
         x = pyrtl.WireVector(1)
         y = pyrtl.WireVector(1)
@@ -55,37 +52,40 @@ class TestInput(unittest.TestCase):
 class TestRegister(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
+        self.r = pyrtl.Register(bitwidth=3)
 
     def test_assignment_small(self):
-        c = pyrtl.Register(bitwidth=3)
-        c.next <<= pyrtl.Const(1, bitwidth=3)
+        self.r.next <<= pyrtl.Const(1, bitwidth=3)
 
     def test_assignment_unspec_width(self):
-        c = pyrtl.Register(bitwidth=3)
-        c.next <<= pyrtl.Const(1)
+        self.r.next <<= pyrtl.Const(1)
 
     def test_assignment_raw(self):
-        c = pyrtl.Register(bitwidth=3)
-        c.next <<= 1
+        self.r.next <<= 1
 
     def test_assignment_large(self):
-        c = pyrtl.Register(bitwidth=3)
-        c.next <<= pyrtl.Const(202)
+        self.r.next <<= pyrtl.Const(202)
 
     def test_register_assignment_direct(self):
-        c = pyrtl.Register(bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            c.next = 1
-
-    def test_register_assignment_not_next(self):
-        c = pyrtl.Register(bitwidth=3)
-        with self.assertRaises(pyrtl.PyrtlError):
-            c <<= 1
+            self.r.next = 1
 
     def test_logic_operations(self):
-        c = pyrtl.Register(bitwidth=1)
         with self.assertRaises(pyrtl.PyrtlError):
-            c.next <<= c or True
+            a = (self.r or True)
+
+    def test_register_assignment_not_next(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.r <<= 1
+
+    def test_assign_next(self):
+        w = pyrtl.WireVector(bitwidth=1)
+        with self.assertRaises(pyrtl.PyrtlError):
+            w <<= self.r.next
+
+    def test_next_logic_operations(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            a = (self.r.next or True)
 
 
 # -------------------------------------------------------------------
@@ -93,29 +93,29 @@ class TestConst(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_const_integers(self):
+    def test_integers(self):
         self.check_const(1, 1, 1)
         self.check_const(5, 5, 3)
         self.check_const(1, 1, 5, bitwidth=5)
 
-    def test_const_neg_integers(self):
+    def test_neg_integers(self):
         self.check_const(-1, 0b11111, 5, bitwidth=5)
         self.check_const(-2, 0b110, 3, bitwidth=3)
         self.check_const(-5, 0b1011, 4, bitwidth=4)
 
-    def test_const_too_big(self):
+    def test_too_big(self):
         self.assert_bad_const(5, 2)
 
     def test_invalid_bitwidth(self):
         self.assert_bad_const(1, 0)
         self.assert_bad_const(1, -1)
 
-    def test_const_bad_neg_integers(self):
+    def test_bad_neg_integers(self):
         # check that bitwidth is required
         self.assert_bad_const(-4)
         self.assert_bad_const(-4, 2)
 
-    def test_const_string(self):
+    def test_string(self):
         self.check_const("1'1", 1, 1)
         self.check_const("5'3", 3, 5)
         self.check_const("5'b11", 3, 5)
@@ -123,7 +123,7 @@ class TestConst(unittest.TestCase):
         self.check_const("17'xff", 0xff, 17)
         self.check_const("5'b011", 3, 5)
 
-    def test_const_badstring(self):
+    def test_bad_string(self):
         self.assert_bad_const("1")
         self.assert_bad_const("-1")
         self.assert_bad_const("1bx")
@@ -138,20 +138,20 @@ class TestConst(unittest.TestCase):
         self.assert_bad_const("'1")
 
     @unittest.skip
-    def test_const_badstring_broken(self):
+    def test_badstring_broken(self):
         self.assert_bad_const("1'")
 
-    def test_const_bool(self):
+    def test_bool(self):
         testmissing()
 
-    def test_const_badbool(self):
+    def test_badbool(self):
         testmissing()
 
-    def test_const_badtype(self):
+    def test_badtype(self):
         self.assert_bad_const(pyrtl.Const(123))
         self.assert_bad_const([])
 
-    def test_const_assignment(self):
+    def test_assignment(self):
         testmissing()
 
     def check_const(self, val_in, expected_val, expected_bitwidth, **kargs):
@@ -211,3 +211,4 @@ class TestKeepingCallStack(unittest.TestCase):
         pyrtl.set_debug_mode(True)
         wire = pyrtl.WireVector()
         call_stack = wire.init_call_stack
+        self.assertIsInstance(call_stack, list)
