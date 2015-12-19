@@ -151,6 +151,9 @@ class WireVector(object):
     __nonzero__ = __bool__  # for Python 2 and 3 compatibility
 
     def __and__(self, other):
+        """ Creates a LogicNet that ands two wires together into a single wire
+            :return Wirevector: the result wire of the operation
+        """
         return self.logicop(other, '&')
 
     def __rand__(self, other):
@@ -160,6 +163,9 @@ class WireVector(object):
         raise PyrtlError('error, operation not allowed on WireVectors')
 
     def __or__(self, other):
+        """ Creates a LogicNet that ors two wires together into a single wire
+            :return Wirevector: the result wire of the operation
+        """
         return self.logicop(other, '|')
 
     def __ror__(self, other):
@@ -168,6 +174,9 @@ class WireVector(object):
     # __ior__ used for conditional assignment above
 
     def __xor__(self, other):
+        """ Creates a LogicNet that xors two wires together into a single wire
+            :return Wirevector: the result wire of the operation
+        """
         return self.logicop(other, '^')
 
     def __rxor__(self, other):
@@ -177,6 +186,12 @@ class WireVector(object):
         raise PyrtlError('error, operation not allowed on WireVectors')
 
     def __add__(self, other):
+        """
+        Creates a LogicNet that adds two wires together into a single wire
+        :return Wirevector: the result wire of the operation
+          The resulting wire has one more bit than the longer of the two input wires
+        Addition is compatible with two's complement signed numbers
+        """
         return self.logicop(other, '+')
 
     def __radd__(self, other):
@@ -186,6 +201,12 @@ class WireVector(object):
         raise PyrtlError('error, operation not allowed on WireVectors')
 
     def __sub__(self, other):
+        """
+        Creates a LogicNet that subtracts the right wire from the left one
+        :return Wirevector: the result wire of the operation
+          The resulting wire has one more bit than the longer of the two input wires
+        Subtraction is compatible with two's complement signed numbers
+        """
         return self.logicop(other, '-')
 
     def __rsub__(self, other):
@@ -197,6 +218,12 @@ class WireVector(object):
         raise PyrtlError('error, operation not allowed on WireVectors')
 
     def __mul__(self, other):
+        """
+        Creates a LogicNet that multiplies two different wirevectors
+        :return Wirevector: the result wire of the operation
+          The resulting wire's bitwidth is the sum of the two input wires' bitwidths
+        Subtraction is compatible with two's complement signed numbers
+        """
         return self.logicop(other, '*')
 
     def __rmul__(self, other):
@@ -206,24 +233,52 @@ class WireVector(object):
         raise PyrtlError('error, operation not allowed on WireVectors')
 
     def __lt__(self, other):
+        """
+        Creates a LogicNet that calculates whether a wire is less than another
+        :return Wirevector: a one bit result wire of the operation
+        """
         return self.logicop(other, '<')
 
     def __le__(self, other):
+        """
+        Creates LogicNets that calculates whether a wire is less than or equal to another
+        :return Wirevector: a one bit result wire of the operation
+        """
         return ~ self.logicop(other, '>')
 
     def __eq__(self, other):
+        """
+        Creates a LogicNet that calculates whether a wire is equal to another
+        :return Wirevector: a one bit result wire of the operation
+        """
         return self.logicop(other, '=')
 
     def __ne__(self, other):
+        """
+        Creates LogicNets that calculates whether a wire not equal to another
+        :return Wirevector: a one bit result wire of the operation
+        """
         return ~ self.logicop(other, '=')
 
     def __gt__(self, other):
+        """
+        Creates a LogicNet that calculates whether a wire is greater than another
+        :return Wirevector: a one bit result wire of the operation
+        """
         return self.logicop(other, '>')
 
     def __ge__(self, other):
+        """
+        Creates LogicNets that calculates whether a wire is greater than or equal to another
+        :return Wirevector: a one bit result wire of the operation
+        """
         return ~ self.logicop(other, '<')
 
     def __invert__(self):
+        """
+        Creates LogicNets that inverts a wire
+        :return Wirevector: a result wire for the operation
+        """
         outwire = WireVector(bitwidth=len(self), block=self.block)
         net = LogicNet(
             op='~',
@@ -234,6 +289,10 @@ class WireVector(object):
         return outwire
 
     def __getitem__(self, item):
+        """
+        Grabs a subset of the wires
+        :return Wirevector: a result wire for the operation
+        """
         assert self.bitwidth is not None  # should never be user visible
         allindex = [i for i in range(self.bitwidth)]
         if isinstance(item, int):
@@ -266,6 +325,9 @@ class WireVector(object):
 
     # more functions for wires
     def nand(self, other):
+        """ Creates a LogicNet that nands two wires together into a single wire
+            :return Wirevector: the result wire of the operation
+        """
         return self.logicop(other, 'n')
 
     @property
