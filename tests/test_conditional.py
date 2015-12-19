@@ -240,9 +240,6 @@ class TestWireConditionalBlock(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def tearDown(self):
-        pyrtl.reset_working_block()
-
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -309,37 +306,24 @@ class TestWireConditionalBlock(unittest.TestCase):
         self.check_trace('i 01230123\no 11101110\n')
 
     def test_condition_nice_error_message_nested(self):
-        with self.assertRaises(pyrtl.PyrtlError):
-            i = pyrtl.Register(bitwidth=2, name='i')
-            o = pyrtl.WireVector(bitwidth=2, name='o')
-            i.next <<= i + 1
-            with pyrtl.conditional_assignment:
-                with i <= 2:
-                    with i == 0:
-                        o |= 2
-                    with i == 1:
-                        o |= 1
+        with pyrtl.conditional_assignment:
+            with self.assertRaises(pyrtl.PyrtlError):
                 with pyrtl.conditional_assignment:
-                    o |= 0
+                    pass
 
     def test_condition_nice_error_message(self):
+        i = pyrtl.Register(bitwidth=2, name='i')
         with self.assertRaises(pyrtl.PyrtlError):
-            i = pyrtl.Register(bitwidth=2, name='i')
-            o = pyrtl.WireVector(bitwidth=2, name='o')
-            i.next <<= i + 1
             with i <= 2:
-                o |= 1
+                pass
 
     def test_condition_error_when_assigned_wire_has_unspecified_bitwidth(self):
-        with self.assertRaises(pyrtl.PyrtlError):
-            i = pyrtl.Register(bitwidth=2, name='i')
-            o = pyrtl.WireVector(name='o')
-            i.next <<= i + 1
-            with pyrtl.conditional_assignment:
-                with i <= 2:
+        i = pyrtl.Register(bitwidth=2, name='i')
+        o = pyrtl.WireVector(name='o')
+        with pyrtl.conditional_assignment:
+            with i <= 2:
+                with self.assertRaises(pyrtl.PyrtlError):
                     o |= 1
-                with pyrtl.otherwise:
-                    o |= 0
 
 
 # ---------------------------------------------------------------
@@ -420,9 +404,6 @@ class TestNonExclusiveBlocks(unittest.TestCase):
 
 class TestSuperWireConditionalBlock(unittest.TestCase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_super_stress_test(self):
