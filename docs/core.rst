@@ -6,6 +6,5 @@ PyRTL core is the basis on which all PyRTL functionality plugs into. All other m
 .. automodule:: pyrtl.core
    :members:
    :show-inheritance:
-   :special-members:
+   :special-members: __init__ __iter__ __str__
    :undoc-members:
-   :exclude-members: __dict__,__weakref__,__module__

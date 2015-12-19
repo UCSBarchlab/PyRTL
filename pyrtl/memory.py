@@ -97,6 +97,8 @@ class _MemReadBase(object):
         self.asynchronous = asynchronous
 
     def __getitem__(self, item):
+        """ Builds circitry to retrieve an item from the memory
+        """
         from .helperfuncs import as_wires
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False, block=self.block)
         if len(item) > self.addrwidth:
@@ -119,6 +121,8 @@ class _MemReadBase(object):
         return data
 
     def __setitem__(self, key, value):
+        """ Builds circuitry to set an item in the memory
+        """
         raise PyrtlInternalError("error, invalid call __setitem__ made on _MemReadBase")
 
     def _make_copy(self, block):

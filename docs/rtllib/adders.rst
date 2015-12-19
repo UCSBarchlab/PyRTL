@@ -1,9 +1,8 @@
-Memory Block
-============
+Input and Output
+================
 
-.. automodule:: pyrtl.memory
+.. automodule:: pyrtl.rtllib.adders
    :members:
-   :inherited-members: __getitem__, __setitem__
    :show-inheritance:
    :special-members:
    :undoc-members:
