@@ -4,16 +4,16 @@ Passes contains structures helpful for writing analysis and
 transformation passes over blocks.
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
 import copy
 
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
-from .wire import WireVector, Input, Output, Const, Register
-from .helperfuncs import find_and_print_loop, concat, as_wires, concat_list
+from .helperfuncs import find_and_print_loop, as_wires, concat_list
 from .memory import MemBlock
+from .pyrtlexceptions import PyrtlError, PyrtlInternalError
+from .wire import WireVector, Input, Output, Const, Register
+
 
 # --------------------------------------------------------------------
 #         __   ___          ___  __  ___              ___    __
@@ -676,124 +676,61 @@ def _decompose(net, wv_map, mems, block_out):
     return
 
 
-def _synth_base(block_in, synth_name="synth"):
+def nand_synth(block=None):
     """
-    This is a generic function to copy the wirevectors for another round of
-    synthesis This does not split a wirevector with multiple wires.
-
-    :param block_in: The block to change
-    :param synth_name: a name to prepend to all new copies of a wire
-    :return: the resulting block and a wirevector map
-    """
-    block_in.sanity_check()  # make sure that everything is valid
-    if not isinstance(block_in, PostSynthBlock):
-        raise PyrtlError('Synth_base only works on post synth blocks')
-    block_out = PostSynthBlock()
-    temp_wv_map = {}
-    temp_io_map = {}
-    for wirevector in block_in.wirevector_subset():
-        new_name = '_'.join([synth_name, str(wirevector)])
-        if isinstance(wirevector, Const):
-            new_wv = Const(bitwidth=1, val=wirevector.val, block=block_out)
-        else:
-            new_wv = wirevector.__class__(wirevector.bitwidth, new_name, block_out)
-        temp_wv_map[wirevector] = new_wv
-        if isinstance(wirevector, (Input, Output)):
-            temp_io_map[wirevector] = new_wv
-
-    # pylint: disable=maybe-no-member
-    block_out.io_map = {orig_wire: temp_io_map[v] for (orig_wire, v) in block_in.io_map.items()}
-    # TODO: figure out the real map
-    return block_out, temp_wv_map
-
-
-def _copy_net(block_out, net, temp_wv_net, mem_map):
-    """This function makes a copy of all nets passed to it for synth uses
-    """
-    new_args = tuple(temp_wv_net[a_arg] for a_arg in net.args)
-    new_dests = tuple(temp_wv_net[a_dest] for a_dest in net.dests)
-    if net.op in "m@":  # special stuff for copying memories
-        memid, mem = net.op_param
-        if mem not in mem_map:
-            mem_map[mem] = mem._make_copy(block_out)
-            mem_map[mem].id = memid
-        new_param = (memid, mem_map[mem])
-    else:
-        new_param = copy.copy(net.op_param)
-
-    new_net = LogicNet(net.op, new_param, args=new_args, dests=new_dests)
-    block_out.add_net(new_net)
-
-
-def nand_synth(block=None, update_working_block=True):
-    """
-    Synthesizes an Post-Synthesis block into one consisting of nands and inverters
-
+    Synthesizes an Post-Synthesis block into one consisting of nands and inverters in place
     :param block: The block to synthesize.
-    :return: The resulting block
     """
-    block_in = working_block(block)
-    block_out, temp_wv_map = _synth_base(block_in, "nand")
-    block_out.legal_ops = set('~norwcsm@')
-    mems = {}
-    net = None
+    from .transform import net_transform
 
-    def arg(arg_w):
-        return temp_wv_map[net.args[arg_w]]
+    def nand_synth_op(net):
+        if net.op in '~nrwcsm@':
+            return True
 
-    def assign_dest(to_assign):
-        temp_wv_map[net.dests[0]] <<= to_assign
+        def arg(num):
+            return net.args[num]
 
-    for net in block_in:
+        dest = net.dests[0]
         if net.op == '&':
-            assign_dest(~(arg(0).nand(arg(1))))
+            dest <<= ~(arg(0).nand(arg(1)))
         elif net.op == '|':
-            assign_dest((~arg(0)).nand(~arg(1)))
+            dest <<= (~arg(0)).nand(~arg(1))
         elif net.op == '^':
             temp_0 = arg(0).nand(arg(1))
-            assign_dest(temp_0.nand(arg(0)).nand(temp_0.nand(arg(1))))
+            dest <<= temp_0.nand(arg(0)).nand(temp_0.nand(arg(1)))
         else:
-            _copy_net(block_out, net, temp_wv_map, mems)
+            raise PyrtlError("Op, '{}' is not supported in nand_synth".format(net.op))
 
-    if update_working_block:
-        set_working_block(block_out)
-    return block_out
+    net_transform(nand_synth_op, block)
 
 
-def and_inverter_synth(block=None, update_working_block=True):
+def and_inverter_synth(block=None):
     """
-    Synthesizes a decomposed block into one consisting of ands and inverters
-
+    Transforms a decomposed block into one consisting of ands and inverters in place
     :param block: The block to synthesize
-    :return: The resulting block
     """
-    block_in = working_block(block)
-    block_out, temp_wv_map = _synth_base(block_in, "andInv")
-    block_out.legal_ops = set('~&rwcsm@')
-    mems = {}
-    net = None
+    from .transform import net_transform
 
-    def arg(arg_w):
-        return temp_wv_map[net.args[arg_w]]
+    def and_inv_op(net):
+        if net.op in '~&rwcsm@':
+            return True
 
-    def assign_dest(to_assign):
-        temp_wv_map[net.dests[0]] <<= to_assign
+        def arg(num):
+            return net.args[num]
 
-    for net in block_in:
+        dest = net.dests[0]
         if net.op == '|':
-            assign_dest(~(~arg(0) & ~arg(1)))
+            dest <<= ~(~arg(0) & ~arg(1))
         elif net.op == '^':
             all_1 = arg(0) & arg(1)
             all_0 = ~arg(0) & ~arg(1)
-            assign_dest(all_0 & ~all_1)
+            dest <<= all_0 & ~all_1
         elif net.op == 'n':
-            assign_dest(~(arg(0) & arg(1)))
+            dest <<= ~(arg(0) & arg(1))
         else:
-            _copy_net(block_out, net, temp_wv_map, mems)
+            raise PyrtlError("Op, '{}' is not supported in and_inv_synth".format(net.op))
 
-    if update_working_block:
-        set_working_block(block_out)
-    return block_out
+    net_transform(and_inv_op, block)
 
 
 def _generate_one_bit_add(a, b, cin):
