@@ -9,9 +9,6 @@ class TestConditionalUpdateRemoved(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def tearDown(self):
-        pyrtl.reset_working_block()
-
     def test_old_conditionupdate_provides_notice(self):
         c = pyrtl.Const(1)
         r = pyrtl.Register(bitwidth=2, name='r')
@@ -32,9 +29,6 @@ class TestConditionalUpdateRemoved(unittest.TestCase):
 
 class TestConditional(unittest.TestCase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
@@ -153,13 +147,10 @@ class TestConditional(unittest.TestCase):
         self.check_trace(' i 01230123\nr1 01222344\nr2 00013334\n')
 
     def test_error_on_unconditioned_update_in_under_conditional(self):
-        with self.assertRaises(pyrtl.PyrtlError):
-            c = pyrtl.Const(1)
-            i = pyrtl.Register(bitwidth=2, name='i')
-            with pyrtl.conditional_assignment:
+        i = pyrtl.Register(bitwidth=2, name='i')
+        with pyrtl.conditional_assignment:
+            with self.assertRaises(pyrtl.PyrtlError):
                 i.next |= i + 1
-                with c:
-                    i.next |= 2
 
     def test_error_on_conditional_assignment_not_under_conditional(self):
         c = pyrtl.Const(1)
@@ -180,9 +171,6 @@ class TestConditional(unittest.TestCase):
 
 class TestMemConditionalBlock(unittest.TestCase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
@@ -311,6 +299,14 @@ class TestWireConditionalBlock(unittest.TestCase):
                 with pyrtl.conditional_assignment:
                     pass
 
+    def test_condition_nice_error_message_nested2(self):
+        i = pyrtl.Register(bitwidth=2, name='i')
+        with pyrtl.conditional_assignment:
+            with i <= 2:
+                with self.assertRaises(pyrtl.PyrtlError):
+                    with pyrtl.conditional_assignment:
+                        pass
+
     def test_condition_nice_error_message(self):
         i = pyrtl.Register(bitwidth=2, name='i')
         with self.assertRaises(pyrtl.PyrtlError):
@@ -377,12 +373,12 @@ class TestNonExclusiveBlocks(unittest.TestCase):
         i.next <<= i + 1
         r1 = pyrtl.Register(bitwidth=3, name='r1')
         r2 = pyrtl.Register(bitwidth=3, name='r2')
-        with self.assertRaises(pyrtl.PyrtlError):
-            with pyrtl.conditional_assignment:
-                with r1 < 3:
-                    r1.next |= r1 + 1
-                with pyrtl.otherwise: pass
-                with r2 < 3:
+        with pyrtl.conditional_assignment:
+            with r1 < 3:
+                r1.next |= r1 + 1
+            with pyrtl.otherwise: pass
+            with r2 < 3:
+                with self.assertRaises(pyrtl.PyrtlError):
                     r1.next |= r2 + 1
 
     def test_other_overlaping_assignments_in_non_exclusive_assignments(self):
@@ -390,13 +386,13 @@ class TestNonExclusiveBlocks(unittest.TestCase):
         i.next <<= i + 1
         r1 = pyrtl.Register(bitwidth=3, name='r1')
         r2 = pyrtl.Register(bitwidth=3, name='r2')
-        with self.assertRaises(pyrtl.PyrtlError):
-            with pyrtl.conditional_assignment:
-                with r1 < 3:
-                    r1.next |= r1 + 1
-                with pyrtl.otherwise: pass
-                with r2 < 3:
-                    with i:
+        with pyrtl.conditional_assignment:
+            with r1 < 3:
+                r1.next |= r1 + 1
+            with pyrtl.otherwise: pass
+            with r2 < 3:
+                with i:
+                    with self.assertRaises(pyrtl.PyrtlError):
                         r1.next |= r2 + 1
 
 # ---------------------------------------------------------------
