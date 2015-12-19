@@ -294,6 +294,7 @@ class Block(object):
                              'different signals: %s' % repr(wirevector_names_list))
 
         # check for dead input wires (not connected to anything)
+        all_input_and_consts = self.wirevector_subset((Input, Const))
         dest_set = set(wire for net in self.logic for wire in net.dests)
         arg_set = set(wire for net in self.logic for wire in net.args)
         full_set = dest_set | arg_set
@@ -302,8 +303,7 @@ class Block(object):
             bad_wire_names = '\n    '.join(str(x) for x in connected_minus_allwires)
             raise PyrtlError('Unknown wires found in net:\n    %s' % bad_wire_names)
         allwires_minus_connected = self.wirevector_set.difference(full_set)
-        allwires_minus_connected = allwires_minus_connected.difference(
-            self.wirevector_subset((Input, Const)))
+        allwires_minus_connected = allwires_minus_connected.difference(all_input_and_consts)
         #   ^ allow inputs and consts to be unconnected
         if len(allwires_minus_connected) > 0:
             bad_wire_names = '\n    '.join(str(x) for x in allwires_minus_connected)
@@ -312,8 +312,7 @@ class Block(object):
         # Check for wires that are inputs to a logicNet, but are not block inputs and are never
         # driven.
         ins = arg_set.difference(dest_set)
-        ins = ins.difference(self.wirevector_subset(Input))
-        undriven = ins.difference(self.wirevector_subset(Const))
+        undriven = ins.difference(all_input_and_consts)
         if len(undriven) > 0:
             raise PyrtlError('Wires used but never driven: %s' % [w.name for w in undriven])
 
