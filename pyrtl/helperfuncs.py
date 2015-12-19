@@ -230,13 +230,9 @@ def get_block(*arglist):
     If any of the arguments come from different blocks, throw an error.
     If none of the arguments are wirevectors, return the working_block.
     """
-    from .memory import _MemIndexed
-
     blocks = set()
     for arg in arglist:
-        if isinstance(arg, _MemIndexed):
-            argblock = arg.mem.block
-        elif isinstance(arg, WireVector):
+        if isinstance(arg, WireVector):
             argblock = arg.block
         else:
             argblock = None

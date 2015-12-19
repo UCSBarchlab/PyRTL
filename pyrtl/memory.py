@@ -2,16 +2,11 @@
 Defines MemBlock, a block of memory that can be read (potentially async) and written (sync)
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
-
+from __future__ import print_function, unicode_literals
 import collections
 
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block
-from .core import next_tempvar_name
-from .core import next_memid
-from .core import LogicNet
+from .pyrtlexceptions import PyrtlError
+from .core import working_block, next_tempvar_name, next_memid, LogicNet
 from .wire import WireVector, Const
 from .helperfuncs import as_wires
 
@@ -70,6 +65,10 @@ class _MemIndexed(WireVector):
 
     def zero_extended(self, bitwidth):
         return as_wires(self).zero_extended(bitwidth)
+
+    @property
+    def block(self):
+        return self.mem.block
 
 
 class _MemReadBase(object):
