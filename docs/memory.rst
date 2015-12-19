@@ -3,7 +3,6 @@ Memory Block
 
 .. automodule:: pyrtl.memory
    :members:
-   :inherited-members: __getitem__, __setitem__
    :show-inheritance:
    :special-members:
    :undoc-members:
