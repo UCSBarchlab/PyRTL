@@ -63,5 +63,45 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         pyrtl.working_block().sanity_check()
 
 
+class RTLRomBlockWiring(unittest.TestCase):
+    data = list(range(2**5))
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.bitwidth = 3
+        self.addrwidth = 5
+        self.output1 = pyrtl.Output(self.bitwidth, "output1")
+        self.in1 = pyrtl.Input(self.addrwidth, name='mem_write_address')
+        self.in2 = pyrtl.Input(self.addrwidth, name='mem_write_address')
+        self.memory = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
+                                     name='self.memory', romdata=self.data)
+
+    def tearDown(self):
+        pyrtl.reset_working_block()
+
+    def test_read(self):
+        self.output1 <<= self.memory[self.in1]
+
+    def test_direct_assignment_error(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.memory[self.in1] = self.in2
+
+    def test_write(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.memory[self.in1] <<= 5
+
+    # test does not check functionality, just that it will generate hardware
+    def test_rom_to_rom_direct_operation(self):
+        temp = (self.memory[self.in1] == self.memory[self.in2])
+        temp = (self.memory[self.in1] != self.memory[self.in2])
+        temp = (self.memory[self.in1] & self.memory[self.in2])
+        temp = (self.memory[self.in1] | self.memory[self.in2])
+        temp = (self.memory[self.in1] + self.memory[self.in2])
+        temp = (self.memory[self.in1] - self.memory[self.in2])
+        temp = (self.memory[self.in1] * self.memory[self.in2])
+        self.output1 <<= temp
+
+
+
 if __name__ == "__main__":
     unittest.main()

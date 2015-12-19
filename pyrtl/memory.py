@@ -121,9 +121,8 @@ class _MemReadBase(object):
         return data
 
     def __setitem__(self, key, value):
-        """ Builds circuitry to set an item in the memory
-        """
-        raise PyrtlInternalError("error, invalid call __setitem__ made on _MemReadBase")
+        """ Not legal on a object that only allows for reads"""
+        raise PyrtlError("error, invalid call __setitem__ made on _MemReadBase")
 
     def _make_copy(self, block):
         pass
@@ -167,6 +166,7 @@ class MemBlock(_MemReadBase):
         self.writeport_nets = []
 
     def __setitem__(self, item, assignment):
+        """ Builds circuitry to set an item in the memory """
         if isinstance(assignment, _MemAssignment):
             self._assignment(item, assignment.rhs, is_conditional=assignment.is_conditional)
         else:
@@ -242,20 +242,20 @@ class RomBlock(_MemReadBase):
         """
 
         super(RomBlock, self).__init__(bitwidth, addrwidth, name, asynchronous, block)
-        self.initialdata = romdata
+        self.data = romdata
 
     def _get_read_data(self, address):
         import types
         if address < 0 or address > 2**self.addrwidth - 1:
             raise PyrtlError("Invalid address, " + str(address) + " specified")
-        if isinstance(self.initialdata, types.FunctionType):
+        if isinstance(self.data, types.FunctionType):
             try:
-                value = self.initialdata(address)
+                value = self.data(address)
             except Exception:
                 raise PyrtlError("Invalid data function for RomBlock")
         else:
             try:
-                value = self.initialdata[address]
+                value = self.data[address]
             except KeyError:
                 value = 0
             except:
@@ -270,5 +270,5 @@ class RomBlock(_MemReadBase):
         if block is None:
             block = self.block
         return RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
-                        romdata=self.initialdata, name=self.name,
+                        romdata=self.data, name=self.name,
                         asynchronous=self.asynchronous, block=block)
