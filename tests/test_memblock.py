@@ -101,7 +101,5 @@ class RTLRomBlockWiring(unittest.TestCase):
         temp = (self.memory[self.in1] * self.memory[self.in2])
         self.output1 <<= temp
 
-
-
 if __name__ == "__main__":
     unittest.main()

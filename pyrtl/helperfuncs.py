@@ -261,23 +261,22 @@ def concat(*args):
     Usually you will want to use concat_list as you will not need to reverse the list
     The concatenation order places the MSB as arg[0] with less significant bits following.
     """
-
-    block = get_block(*args)
     if len(args) <= 0:
         raise PyrtlError('error, concat requires at least 1 argument')
     if len(args) == 1:
-        return as_wires(args[0], block=block)
-    else:
-        arg_wirevectors = [as_wires(arg, block=block) for arg in args]
-        final_width = sum([len(arg) for arg in arg_wirevectors])
-        outwire = WireVector(bitwidth=final_width, block=block)
-        net = LogicNet(
-            op='c',
-            op_param=None,
-            args=tuple(arg_wirevectors),
-            dests=(outwire,))
-        outwire.block.add_net(net)
-        return outwire
+        return as_wires(args[0])
+
+    block = get_block(*args)
+    arg_wirevectors = tuple(as_wires(arg, block=block) for arg in args)
+    final_width = sum(len(arg) for arg in arg_wirevectors)
+    outwire = WireVector(bitwidth=final_width, block=block)
+    net = LogicNet(
+        op='c',
+        op_param=None,
+        args=arg_wirevectors,
+        dests=(outwire,))
+    block.add_net(net)
+    return outwire
 
 
 def concat_list(wire_list):
