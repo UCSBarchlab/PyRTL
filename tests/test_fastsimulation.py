@@ -134,7 +134,7 @@ class TestRTLFastSimulationTraceWithAdder(unittest.TestCase):
         output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
-
+        self.assertEqual(sim.inspect(self.r), 6)
 
 VCD_OUTPUT = """$timescale 1ns $end
 $scope module logic $end

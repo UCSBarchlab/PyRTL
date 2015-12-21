@@ -175,6 +175,10 @@ class Simulation(object):
         if self.tracer is not None:
             self.tracer.add_step(self.value)
 
+    def inspect(self, thing):
+        """ Get the value of 'thing' in the current simulation cycle. """
+        return self.value[thing]
+
     def _sanitize(self, val, wirevector):
         """Return a modified version of val that would fit in wirevector.
 
@@ -368,6 +372,10 @@ class FastSimulation(object):
 
         if self.tracer is not None:
             self.tracer.add_fast_step(self)
+
+    def inspect(self, thing):
+        """ Get the value of 'thing' in the current simulation cycle. """
+        return self.context[self.varname(thing)]
 
     @staticmethod
     def varname(val):
