@@ -166,6 +166,16 @@ class TestConditional(unittest.TestCase):
                 with c:
                     r.next |= r + 1
 
+    def test_error_on_non_boolean_with_register(self):
+        r = pyrtl.Register(bitwidth=4, name='r')
+        with self.assertRaises(pyrtl.PyrtlError):
+            with pyrtl.conditional_assignment:
+                with r:
+                    r.next |= r + 1
+                with pyrtl.otherwise:
+                    r.next |= r + 2
+
+
 # ---------------------------------------------------------------
 
 
@@ -200,7 +210,7 @@ class TestMemConditionalBlock(unittest.TestCase):
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
         with pyrtl.conditional_assignment:
-            with m[i]:
+            with m[i]!=0:
                 m[i] <<= i
         o <<= m[i]
         self.check_trace('i 01230123\no 00000123\n')
@@ -391,7 +401,7 @@ class TestNonExclusiveBlocks(unittest.TestCase):
                 r1.next |= r1 + 1
             with pyrtl.otherwise: pass
             with r2 < 3:
-                with i:
+                with i!=0:
                     with self.assertRaises(pyrtl.PyrtlError):
                         r1.next |= r2 + 1
 

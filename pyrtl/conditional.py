@@ -117,6 +117,8 @@ def _push_condition(predicate):
     global _depth
     _check_under_condition()
     _depth += 1
+    if predicate is not otherwise and len(predicate) > 1:
+        raise PyrtlError('all predicates for conditional assignments must wirevectors of len 1')
     _conditions_list_stack[-1].append(predicate)
     _conditions_list_stack.append([])
 
@@ -251,6 +253,8 @@ def _current_select():
 
     if select is None:
         raise PyrtlError('problem with conditional assignment')
+    if len(select) != 1:
+        raise PyrtlInternalError('conditional predicate with length greater than 1')
 
     return select, pred_set
 
