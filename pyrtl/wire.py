@@ -293,16 +293,19 @@ class WireVector(object):
         Grabs a subset of the wires
         :return Wirevector: a result wire for the operation
         """
-        assert self.bitwidth is not None  # should never be user visible
-        allindex = [i for i in range(self.bitwidth)]
+        if self.bitwidth is None:
+            raise PyrtlError("You cannot get a subset of a wire with no bitwidth")
+        allindex = range(self.bitwidth)
         if isinstance(item, int):
-            selectednums = [allindex[item]]
-        else:
-            selectednums = allindex[item]  # slice
+            selectednums = (allindex[item], )  # this method handles negative numbers correctly
+        else:  # slice
+            selectednums = tuple(allindex[item])
+        if not selectednums:
+            raise PyrtlError("selection %s must have at least select one wire" % str(item))
         outwire = WireVector(bitwidth=len(selectednums), block=self.block)
         net = LogicNet(
             op='s',
-            op_param=tuple(selectednums),
+            op_param=selectednums,
             args=(self,),
             dests=(outwire,))
         self.block.add_net(net)

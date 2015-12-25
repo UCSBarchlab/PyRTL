@@ -25,9 +25,6 @@ class TestWireVector(unittest.TestCase):
         with self.assertRaises(TypeError):
             y <<= x
 
-    def test_slice(self):
-        testmissing()
-
     def test_zero_extend(self):
         testmissing()
 
@@ -36,6 +33,56 @@ class TestWireVector(unittest.TestCase):
 
     def test_truncating(self):
         testmissing()
+
+
+class TestWirevectorSlicing(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def invalid_empty_slice(self, bitwidth, slice):
+        w = pyrtl.Input(bitwidth)
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = w[slice]
+
+    def invalid_slice_index(self, bitwidth, slice):
+        w = pyrtl.Input(bitwidth)
+        with self.assertRaises(IndexError):
+            x = w[slice]
+
+    def valid_slice(self, bitwidth, slice):
+        w = pyrtl.Input(bitwidth)
+        x = w[slice]
+
+    def test_wire_wo_bitwidth_fails(self):
+        w = pyrtl.WireVector()
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = w[2]
+
+    def test_valid_indicies(self):
+        self.valid_slice(4, 2)
+        self.valid_slice(4, 0)
+        self.valid_slice(4, -1)
+        pyrtl.working_block().sanity_check()
+
+    def test_valid_slices(self):
+        self.valid_slice(8, slice(6))
+        self.valid_slice(8, slice(1, 4))
+        self.valid_slice(8, slice(1, 8))  # Yes, supplying a end index out of bounds is valid python
+        self.valid_slice(8, slice(1, 2, 2))
+        self.valid_slice(8, slice(1, 4, 2))
+        self.valid_slice(8, slice(7, 1, -2))
+        self.valid_slice(8, slice(-2))
+        self.valid_slice(8, slice(-6, -2, 3))
+        pyrtl.working_block().sanity_check()
+
+    def test_invalid_indicies(self):
+        self.invalid_slice_index(4, 5)
+        self.invalid_slice_index(4, -5)
+
+    def test_invalid_slices(self):
+        self.invalid_empty_slice(8, slice(1, 1))
+        self.invalid_empty_slice(8, slice(7, 1))
+        self.invalid_empty_slice(8, slice(-1, 1, 2))
 
 
 class TestInput(unittest.TestCase):
