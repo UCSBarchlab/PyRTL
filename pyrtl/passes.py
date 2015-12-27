@@ -6,8 +6,6 @@ transformation passes over blocks.
 
 from __future__ import print_function, unicode_literals
 
-import copy
-
 from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
 from .helperfuncs import find_and_print_loop, as_wires, concat_list
 from .memory import MemBlock
@@ -226,7 +224,8 @@ def optimize(update_working_block=True, block=None):
     """ Return an optimized version of a synthesized hardware block. """
     block = working_block(block)
     if not update_working_block:
-        block = copy.deepcopy(block)
+        from .transform import copy_block
+        block = copy_block(block)
 
     if debug_mode:
         block.sanity_check()

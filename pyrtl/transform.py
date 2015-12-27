@@ -44,21 +44,24 @@ def replace_wire(orig_wire, new_src, new_dst, block=None):
     if new_src is not orig_wire:
         # don't need to add the new_src and new_dst because they were made added at creation
         for net in block.logic:
-            if new_src in net.dests:
-                new_net = LogicNet(
-                    op=net.op, op_param=net.op_param, args=net.args,
-                    dests=tuple(new_src if w is orig_wire else w for w in net.dests))
-                block.add_net(new_net)
-                block.logic.remove(net)
+            for wire in net.dests:  # problem is that tuples use the == operator when using 'in'
+                if wire is new_src:
+                    new_net = LogicNet(
+                        op=net.op, op_param=net.op_param, args=net.args,
+                        dests=tuple(new_src if w is orig_wire else w for w in net.dests))
+                    block.add_net(new_net)
+                    block.logic.remove(net)
+                    break
 
     if new_dst is not orig_wire:
         for net in block.logic:
-            if new_dst in net.args:
-                new_net = LogicNet(
-                    op=net.op, op_param=net.op_param, dests=net.dests,
-                    args=tuple(new_src if w is orig_wire else w for w in net.args))
-                block.add_net(new_net)
-                block.logic.remove(net)
+            for wire in net.args:
+                if wire is new_dst:
+                    new_net = LogicNet(
+                        op=net.op, op_param=net.op_param, dests=net.dests,
+                        args=tuple(new_src if w is orig_wire else w for w in net.args))
+                    block.add_net(new_net)
+                    block.logic.remove(net)
 
     if new_dst is not orig_wire and new_src is not orig_wire:
         block.remove_wirevector(orig_wire)
@@ -107,10 +110,7 @@ def _synth_base(block_in, synth_name="synth"):
     temp_io_map = {}
     for wirevector in block_in.wirevector_subset():
         new_name = '_'.join([synth_name, str(wirevector)])
-        if isinstance(wirevector, Const):
-            new_wv = Const(bitwidth=1, val=wirevector.val, block=block_out)
-        else:
-            new_wv = wirevector.__class__(wirevector.bitwidth, new_name, block_out)
+        new_wv = clone_wire(wirevector, block_out)
         temp_wv_map[wirevector] = new_wv
         if isinstance(wirevector, (Input, Output)):
             temp_io_map[wirevector] = new_wv

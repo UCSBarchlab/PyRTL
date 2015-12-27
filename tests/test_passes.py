@@ -1,5 +1,6 @@
 from __future__ import print_function, unicode_literals, absolute_import
 from .helperfunctions import testmissing
+from .test_transform import NetWireNumTestCases
 from pyrtl.wire import Const,  Output
 
 import unittest
@@ -58,23 +59,6 @@ class TestSynthesis(unittest.TestCase):
     def test_const_nobitwidth_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1)
         self.check_trace('r 07654321\n')
-
-
-class NetWireNumTestCases(unittest.TestCase):
-    def setUp(self):
-        pyrtl.reset_working_block()
-
-    def assert_num_net(self, num, block):
-        self.assertEqual(len(block.logic), num)
-
-    def assert_num_wires(self, num, block):
-        self.assertEqual(len(block.wirevector_set), num)
-
-    def num_net_of_type(self, netOp, num, block):
-        self.assertEquals(len([net for net in block.logic if net.op == netOp]), num)
-
-    def num_wire_of_type(self, wiretype, num, block):
-        self.assertEquals(len(block.wirevector_subset(wiretype)), num)
 
 
 class TestOptimization(NetWireNumTestCases):
