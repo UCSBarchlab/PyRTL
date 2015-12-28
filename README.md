@@ -3,7 +3,7 @@ PyRTL
 
 [![PyPI version](https://badge.fury.io/py/pyrtl.svg)](http://badge.fury.io/py/pyrtl)
 [![Build Status](https://travis-ci.org/UCSBarchlab/PyRTL.svg)](https://travis-ci.org/UCSBarchlab/PyRTL)
-[![Code Coverage](https://codecov.io/github/UCSBarchlab/PyRTL/coverage.svg?branch=master)](https://codecov.io/github/UCSBarchlab/PyRTL?branch=master)
+[![Code Coverage](https://codecov.io/github/UCSBarchlab/PyRTL/coverage.svg?branch=development)](https://codecov.io/github/UCSBarchlab/PyRTL?branch=development)
 [![Documentation Status](https://readthedocs.org/projects/pyrtl/badge/?version=latest)](http://pyrtl.readthedocs.org/en/latest/?badge=latest)
 
 PyRTL provides a collection of classes for pythonic [register-transfer level] (https://en.wikipedia.org/wiki/Register-transfer_level) design, simulation, tracing, and testing 
