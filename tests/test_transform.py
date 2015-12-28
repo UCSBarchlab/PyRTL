@@ -49,6 +49,12 @@ class TestWireTransform(NetWireNumTestCases):
 
 
 class TestCopyBlock(NetWireNumTestCases):
+    def num_memories(self, mems_expected, block):
+        memories = set()
+        for net in block.logic_subset('m@'):
+            memories.add(net.op_param[1])  # location of the memories object
+        self.assertEqual(mems_expected, len(memories))
+
     def test_blank(self):
         block = transform.copy_block()
         self.assert_num_net(0, block)
@@ -59,15 +65,41 @@ class TestCopyBlock(NetWireNumTestCases):
         b = pyrtl.Input(5)
         o = pyrtl.Output(5)
         o <<= ~a & b
+
         old_block = pyrtl.working_block()
         old_block.sanity_check()
         self.assert_num_wires(5, old_block)
         self.assert_num_net(3, old_block)
+
         new_block = transform.copy_block()
         new_block.sanity_check()
         self.assert_num_wires(5, new_block)
         self.assert_num_net(3, old_block)
 
+    def test_copy_mem(self):
+        ins = [pyrtl.Input(5) for i in range(4)]
+        out = pyrtl.Output(5)
+
+        mem1 = pyrtl.MemBlock(5, 5)
+        mem2 = pyrtl.MemBlock(5, 5)
+
+        mem1_o1 = mem1[ins[0]]
+        mem1[ins[1]] <<= ins[2]
+        mem2_o2 = mem2[ins[3]]
+        out <<= mem1_o1 & mem2_o2
+
+        old_block = pyrtl.working_block()
+        old_block.sanity_check()
+        self.num_net_of_type('m', 2, old_block)
+        self.num_net_of_type('@', 1, old_block)
+        self.num_net_of_type('&', 1, old_block)
+        self.num_memories(2, old_block)
+
+        new_block = transform.copy_block()
+        self.num_net_of_type('m', 2, new_block)
+        self.num_net_of_type('@', 1, new_block)
+        self.num_net_of_type('&', 1, new_block)
+        self.num_memories(2, new_block)
 
 """
 @mock.patch('transform_examples.pyrtl.probe')

@@ -11,6 +11,7 @@ from .helperfuncs import find_and_print_loop, as_wires, concat_list
 from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
+from .transform import net_transform, _get_new_block_mem_instance
 
 
 # --------------------------------------------------------------------
@@ -645,13 +646,7 @@ def _decompose(net, wv_map, mems, block_out):
     elif net.op == 'm':
         arg0list = [arg(0, i) for i in range(len(net.args[0]))]
         addr = concat_list(arg0list)
-        memid, mem = net.op_param
-        if mem not in mems:
-            new_mem = mem._make_copy(block_out)
-            mems[mem] = new_mem
-            new_mem.id = memid
-        else:
-            new_mem = mems[mem]
+        new_mem = _get_new_block_mem_instance(net.op_param, mems, block_out)[1]
         data = as_wires(new_mem[addr])
         for i in destlen():
             assign_dest(i, data[i])
@@ -661,13 +656,7 @@ def _decompose(net, wv_map, mems, block_out):
         datalist = [arg(1, i) for i in range(len(net.args[1]))]
         data = concat_list(datalist)
         enable = arg(2, 0)
-        memid, mem = net.op_param
-        if mem not in mems:
-            new_mem = mem._make_copy(block_out)
-            mems[mem] = new_mem
-            new_mem.id = mem.id
-        else:
-            new_mem = mems[mem]
+        new_mem = _get_new_block_mem_instance(net.op_param, mems, block_out)[1]
         new_mem[addr] <<= MemBlock.EnabledWrite(data=data, enable=enable)
     else:
         raise PyrtlInternalError('Unable to synthesize the following net '
@@ -680,8 +669,6 @@ def nand_synth(block=None):
     Synthesizes an Post-Synthesis block into one consisting of nands and inverters in place
     :param block: The block to synthesize.
     """
-    from .transform import net_transform
-
     def nand_synth_op(net):
         if net.op in '~nrwcsm@':
             return True
@@ -708,8 +695,6 @@ def and_inverter_synth(block=None):
     Transforms a decomposed block into one consisting of ands and inverters in place
     :param block: The block to synthesize
     """
-    from .transform import net_transform
-
     def and_inv_op(net):
         if net.op in '~&rwcsm@':
             return True

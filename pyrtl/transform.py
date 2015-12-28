@@ -130,13 +130,21 @@ def _copy_net(block_out, net, temp_wv_net, mem_map):
     new_args = tuple(temp_wv_net[a_arg] for a_arg in net.args)
     new_dests = tuple(temp_wv_net[a_dest] for a_dest in net.dests)
     if net.op in "m@":  # special stuff for copying memories
-        memid, mem = net.op_param
-        if mem not in mem_map:
-            mem_map[mem] = mem._make_copy(block_out)
-            mem_map[mem].id = memid
-        new_param = (memid, mem_map[mem])
+        new_param = _get_new_block_mem_instance(net.op_param, mem_map, block_out)
     else:
         new_param = copy.copy(net.op_param)
 
     new_net = LogicNet(net.op, new_param, args=new_args, dests=new_dests)
     block_out.add_net(new_net)
+
+
+def _get_new_block_mem_instance(op_param, mem_map, block_out):
+    """ gets the instance of the memory in the new block that is
+    associated with a memory in a old block
+    """
+    memid, old_mem = op_param
+    if old_mem not in mem_map:
+        new_mem = old_mem._make_copy(block_out)
+        new_mem.id = old_mem.id
+        mem_map[old_mem] = new_mem
+    return memid, mem_map[old_mem]
