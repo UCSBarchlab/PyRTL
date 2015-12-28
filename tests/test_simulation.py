@@ -10,9 +10,6 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.bitwidth = 3
         self.r = pyrtl.Register(bitwidth=self.bitwidth, name='r')
 
-    def tearDown(self):
-        pass
-
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -151,6 +148,7 @@ class TestRTLSimulationTraceWithAdder(unittest.TestCase):
 
         output = io.StringIO()
         sim_trace.print_trace(output)
+        sim_trace.render_trace()  # want to make sure the code at least runs
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
         self.assertEqual(sim.inspect(self.r), 6)
 
@@ -204,9 +202,6 @@ class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
         self.sum, self.cout = generate_full_adder(self.r, pyrtl.Const(1).zero_extended(bitwidth))
         self.r.next <<= self.sum
 
-    def tearDown(self):
-        pass
-
     def test_vcd_output(self):
         sim_trace = pyrtl.SimulationTrace()
         on_reset = {}  # signal states to be set when reset is asserted
@@ -235,9 +230,6 @@ class TestRTLSimulationTraceWithMux(unittest.TestCase):
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()
         self.sim = pyrtl.Simulation(tracer=self.sim_trace)
-
-    def tearDown(self):
-        pass
 
     def test_adder_simulation(self):
         input_signals = {0: {self.a: 0, self.b: 1, self.sel: 1},
@@ -273,9 +265,6 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
 
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()
-
-    def tearDown(self):
-        pyrtl.reset_working_block()
 
     def test_simple_memblock(self):
         self.sim = pyrtl.Simulation(tracer=self.sim_trace)
@@ -334,11 +323,7 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
 
 
 class TestRTLRomBlockSimulation(unittest.TestCase):
-
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def generate_expected_output(self, data_tuples, length):
@@ -441,7 +426,6 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
             sim = pyrtl.Simulation(tracer=sim_trace)
             for cycle in range(len(simvals[rom_add_1])):
                 sim.step({k: int(v[cycle]) for k, v in list(simvals.items())})
-            sim_trace.render_trace()
 
 
 if __name__ == '__main__':

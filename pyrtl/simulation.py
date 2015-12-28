@@ -254,27 +254,6 @@ class Simulation(object):
             else:
                 raise PyrtlInternalError
 
-    def _try_execute(self, defined_set, net):
-        """ Try to Execute net but return False if not ready.
-
-        Ready inputs will be fined in "defined_set" and if any
-        inputs are not yet in this set, we know the we need to execute
-        the preceding ops first.  If the net is successfully executed
-        return True, otherwise return False so we can return to this net
-        at a later time.
-        """
-        if self._is_ready_to_execute(defined_set, net):
-            self._execute(net)
-            for dest in net.dests:
-                defined_set.add(dest)
-            return True
-        else:
-            return False
-
-    def _is_ready_to_execute(self, defined_set, net):
-        """Return true if all of the arguments are ready"""
-        return all(arg in defined_set for arg in net.args)
-
     def _print_values(self):
         print(' '.join([str(v) for _, v in sorted(self.value.items())]))
 

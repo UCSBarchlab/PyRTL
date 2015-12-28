@@ -1,7 +1,6 @@
 import unittest
 import pyrtl
 from pyrtl import transform
-# this code needs mocking from python 3's unittests to work
 
 
 class NetWireNumTestCases(unittest.TestCase):
@@ -52,7 +51,6 @@ class TestWireTransform(NetWireNumTestCases):
             self.assertIsNot(arg, a)
             self.assertIsNot(arg, b)
         self.assertIsNot(new_and_net.dests[0], o)
-
 
 
 class TestCopyBlock(NetWireNumTestCases):
@@ -108,6 +106,8 @@ class TestCopyBlock(NetWireNumTestCases):
         self.num_net_of_type('&', 1, new_block)
         self.num_memories(2, new_block)
 
+
+# this code needs mocking from python 3's unittests to work
 """
 @mock.patch('transform_examples.pyrtl.probe')
 def test_probe(self, probe):
