@@ -35,6 +35,46 @@ class TestWireVector(unittest.TestCase):
         testmissing()
 
 
+class TestWireVectorFail(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_undef_wirevector_length(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector()
+            y = len(x)
+
+    def test_bad_bitwidth(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(bitwidth='happy')
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(bitwidth=-1)
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(bitwidth=0)
+
+    def test_no_immed_operators(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(bitwidth=3)
+            x &= 2
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(bitwidth=3)
+            x ^= 2
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(bitwidth=3)
+            x += 2
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(bitwidth=3)
+            x -= 2
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(bitwidth=3)
+            x *= 2
+
+    def test_sign_and_zero_extend_only_increase_bitwidth(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(bitwidth=3)
+            x.zero_extended(2)
+
+
 class TestWirevectorSlicing(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -89,7 +129,7 @@ class TestInput(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_assignment(self):
+    def test_no_assignment_to_inputs(self):
         x = pyrtl.WireVector(1)
         y = pyrtl.Input(1)
         with self.assertRaises(pyrtl.PyrtlError):
@@ -199,7 +239,9 @@ class TestConst(unittest.TestCase):
         self.assert_bad_const([])
 
     def test_assignment(self):
-        testmissing()
+        with self.assertRaises(pyrtl.PyrtlError):
+            c = pyrtl.Const(4)
+            c <<= 3
 
     def check_const(self, val_in, expected_val, expected_bitwidth, **kargs):
         c = pyrtl.Const(val_in, **kargs)

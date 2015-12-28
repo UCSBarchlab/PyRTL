@@ -294,14 +294,14 @@ class WireVector(object):
         :return Wirevector: a result wire for the operation
         """
         if self.bitwidth is None:
-            raise PyrtlError("You cannot get a subset of a wire with no bitwidth")
+            raise PyrtlError('You cannot get a subset of a wire with no bitwidth')
         allindex = range(self.bitwidth)
         if isinstance(item, int):
             selectednums = (allindex[item], )  # this method handles negative numbers correctly
         else:  # slice
             selectednums = tuple(allindex[item])
         if not selectednums:
-            raise PyrtlError("selection %s must have at least select one wire" % str(item))
+            raise PyrtlError('selection %s must have at least select one wire' % str(item))
         outwire = WireVector(bitwidth=len(selectednums), block=self.block)
         net = LogicNet(
             op='s',
@@ -313,7 +313,7 @@ class WireVector(object):
 
     def __len__(self):
         if self.bitwidth is None:
-            return 0
+            raise PyrtlError('length of wirevector not yet defined')
         else:
             return self.bitwidth
 
@@ -354,7 +354,8 @@ class WireVector(object):
             return self
         elif numext < 0:
             raise PyrtlError(
-                'error, zero_extended cannot reduce the number of bits')
+                'error, neither zero_extended nor sign_extended can'
+                ' reduce the number of bits')
         else:
             from .helperfuncs import concat
             if isinstance(extbit, int):
