@@ -48,6 +48,27 @@ class TestWireTransform(NetWireNumTestCases):
         self.num_net_of_type('&', 1, block)
 
 
+class TestCopyBlock(NetWireNumTestCases):
+    def test_blank(self):
+        block = transform.copy_block()
+        self.assert_num_net(0, block)
+        self.assert_num_wires(0, block)
+
+    def test_block(self):
+        a = pyrtl.Const(23)
+        b = pyrtl.Input(5)
+        o = pyrtl.Output(5)
+        o <<= ~a & b
+        old_block = pyrtl.working_block()
+        old_block.sanity_check()
+        self.assert_num_wires(5, old_block)
+        self.assert_num_net(3, old_block)
+        new_block = transform.copy_block()
+        new_block.sanity_check()
+        self.assert_num_wires(5, new_block)
+        self.assert_num_net(3, old_block)
+
+
 """
 @mock.patch('transform_examples.pyrtl.probe')
 def test_probe(self, probe):

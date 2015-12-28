@@ -103,9 +103,7 @@ def _synth_base(block_in, synth_name="synth"):
     :return: the resulting block and a wirevector map
     """
     block_in.sanity_check()  # make sure that everything is valid
-    if not isinstance(block_in, PostSynthBlock):
-        raise PyrtlError('Synth_base only works on post synth blocks')
-    block_out = PostSynthBlock()
+    block_out = block_in.__class__()
     temp_wv_map = {}
     temp_io_map = {}
     for wirevector in block_in.wirevector_subset():
@@ -115,8 +113,15 @@ def _synth_base(block_in, synth_name="synth"):
         if isinstance(wirevector, (Input, Output)):
             temp_io_map[wirevector] = new_wv
 
-    block_out.io_map = {orig_wire: temp_io_map[v] for (orig_wire, v) in block_in.io_map.items()}
+    block_out.io_map = _create_io_map(block_in, temp_io_map)
     return block_out, temp_wv_map
+
+
+def _create_io_map(block_in, temp_io_map):
+    try:
+        return {orig_wire: temp_io_map[v] for (orig_wire, v) in block_in.io_map.viewitems()}
+    except AttributeError:
+        return temp_io_map
 
 
 def _copy_net(block_out, net, temp_wv_net, mem_map):
