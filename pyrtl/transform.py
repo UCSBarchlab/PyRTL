@@ -45,7 +45,7 @@ def replace_wire(orig_wire, new_src, new_dst, block=None):
         # don't need to add the new_src and new_dst because they were made added at creation
         for net in block.logic:
             for wire in net.dests:  # problem is that tuples use the == operator when using 'in'
-                if wire is new_src:
+                if wire is orig_wire:
                     new_net = LogicNet(
                         op=net.op, op_param=net.op_param, args=net.args,
                         dests=tuple(new_src if w is orig_wire else w for w in net.dests))
@@ -56,7 +56,7 @@ def replace_wire(orig_wire, new_src, new_dst, block=None):
     if new_dst is not orig_wire:
         for net in block.logic:
             for wire in net.args:
-                if wire is new_dst:
+                if wire is orig_wire:
                     new_net = LogicNet(
                         op=net.op, op_param=net.op_param, dests=net.dests,
                         args=tuple(new_src if w is orig_wire else w for w in net.args))

@@ -47,6 +47,13 @@ class TestWireTransform(NetWireNumTestCases):
         self.num_net_of_type('~', 3, block)
         self.num_net_of_type('&', 1, block)
 
+        new_and_net = block.logic_subset('&').pop()
+        for arg in new_and_net.args:
+            self.assertIsNot(arg, a)
+            self.assertIsNot(arg, b)
+        self.assertIsNot(new_and_net.dests[0], o)
+
+
 
 class TestCopyBlock(NetWireNumTestCases):
     def num_memories(self, mems_expected, block):
