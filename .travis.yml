@@ -1,7 +1,7 @@
 language: python
 python: 2.7
 env:
-  - TOX_ENV=all
+  - TOX_ENV=py{3.4,2.7}-{test}-{travis}, pep8
 # don't test branches that might not build
 branches:
   only:
