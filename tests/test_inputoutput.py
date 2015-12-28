@@ -56,6 +56,34 @@ class TestInputFromBlif(unittest.TestCase):
         io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
 
 
+class TestOutputToTGF(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_output_to_tgf_does_not_throw_error(self):
+        with io.StringIO() as vfile:
+            pyrtl.input_from_blif(full_adder_blif)
+            pyrtl.output_to_trivialgraph(vfile)
+
+
+class TestOutputTextbench(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_verilog_testbench_does_not_throw_error(self):
+        zero = pyrtl.Input(1, 'zero')
+        counter_output = pyrtl.Output(3, 'counter_output')
+        counter = pyrtl.Register(3, 'counter')
+        counter.next <<= pyrtl.mux(zero, counter + 1, 0)
+        counter_output <<= counter
+        sim_trace = pyrtl.SimulationTrace([counter_output, zero])
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for cycle in range(15):
+            sim.step({zero: random.choice([0, 0, 0, 1])})
+        with io.StringIO() as tbfile:
+            pyrtl.output_verilog_testbench(tbfile, sim_trace)
+
+
 class TestVerilogNames(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
