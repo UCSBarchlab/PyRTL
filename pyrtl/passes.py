@@ -551,24 +551,23 @@ def _decompose(net, wv_map, mems, block_out):
         # assign v to the wiremap for dest[0], wire i
         wv_map[(net.dests[0], i)] <<= v
 
-    if net.op == 'w':
+    one_var_ops = {
+        'w': lambda w: w,
+        '~': lambda w: ~w,
+    }
+    c_two_var_ops = {
+        '&': lambda l, r: l & r,
+        '|': lambda l, r: l | r,
+        '^': lambda l, r: l ^ r,
+        'n': lambda l, r: l.nand(r),
+    }
+
+    if net.op in one_var_ops:
         for i in destlen():
-            assign_dest(i, arg(0, i))
-    elif net.op == '~':
+            assign_dest(i, one_var_ops[net.op](arg(0, i)))
+    elif net.op in c_two_var_ops:
         for i in destlen():
-            assign_dest(i, ~arg(0, i))
-    elif net.op == '&':
-        for i in destlen():
-            assign_dest(i, arg(0, i) & arg(1, i))
-    elif net.op == '|':
-        for i in destlen():
-            assign_dest(i, arg(0, i) | arg(1, i))
-    elif net.op == '^':
-        for i in destlen():
-            assign_dest(i, arg(0, i) ^ arg(1, i))
-    elif net.op == 'n':
-        for i in destlen():
-            assign_dest(i, arg(0, i).nand(arg(1, i)))
+            assign_dest(i, c_two_var_ops[net.op](arg(0, i), arg(1, i)))
     elif net.op == '=':
         # The == operator is implemented with a nor of xors.
         temp_result = arg(0, 0) ^ arg(1, 0)
