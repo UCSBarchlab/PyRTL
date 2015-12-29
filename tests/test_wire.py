@@ -229,10 +229,12 @@ class TestConst(unittest.TestCase):
         self.assert_bad_const("1'")
 
     def test_bool(self):
-        testmissing()
+        self.check_const(True, 1, 1)
+        self.check_const(False, 0, 1, bitwidth=1)
 
     def test_badbool(self):
-        testmissing()
+        self.assert_bad_const(False, bitwidth=2)
+        self.assert_bad_const(True, bitwidth=0)
 
     def test_badtype(self):
         self.assert_bad_const(pyrtl.Const(123))

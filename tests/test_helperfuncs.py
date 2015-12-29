@@ -62,16 +62,6 @@ class TestMux(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for i in range(8):
-            sim.step({})
-        output = io.StringIO()
-        sim_trace.print_trace(output)
-        print(output.getvalue())
-        self.assertEqual(output.getvalue(), correct_string)
-
     def test_mux_too_many_inputs(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=1)

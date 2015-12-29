@@ -13,16 +13,13 @@ class TestConditionalUpdateRemoved(unittest.TestCase):
         c = pyrtl.Const(1)
         r = pyrtl.Register(bitwidth=2, name='r')
         with self.assertRaises(pyrtl.PyrtlError):
-            with pyrtl.ConditionalUpdate() as condition:
-                with condition(c):
-                    r.next |= r + 1
+            with pyrtl.ConditionalUpdate() as condition: pass
 
     def test_old_shortcut_form_of_conditionalupdate_provides_notice(self):
         c = pyrtl.Const(1)
         r = pyrtl.Register(bitwidth=2, name='r')
         with self.assertRaises(pyrtl.PyrtlError):
-            with pyrtl.ConditionalUpdate(c):
-                r.next |= r + 1
+            with pyrtl.ConditionalUpdate(c): pass
 
 # ---------------------------------------------------------------
 
@@ -163,17 +160,13 @@ class TestConditional(unittest.TestCase):
         r = pyrtl.Register(bitwidth=2, name='r')
         with self.assertRaises(pyrtl.PyrtlError):
             with pyrtl.conditional_assignment:
-                with c:
-                    r.next |= r + 1
+                with c: pass
 
     def test_error_on_non_boolean_with_register(self):
         r = pyrtl.Register(bitwidth=4, name='r')
         with self.assertRaises(pyrtl.PyrtlError):
             with pyrtl.conditional_assignment:
-                with r:
-                    r.next |= r + 1
-                with pyrtl.otherwise:
-                    r.next |= r + 2
+                with r: pass
 
 
 # ---------------------------------------------------------------
@@ -306,22 +299,19 @@ class TestWireConditionalBlock(unittest.TestCase):
     def test_condition_nice_error_message_nested(self):
         with pyrtl.conditional_assignment:
             with self.assertRaises(pyrtl.PyrtlError):
-                with pyrtl.conditional_assignment:
-                    pass
+                with pyrtl.conditional_assignment: pass
 
     def test_condition_nice_error_message_nested2(self):
         i = pyrtl.Register(bitwidth=2, name='i')
         with pyrtl.conditional_assignment:
             with i <= 2:
                 with self.assertRaises(pyrtl.PyrtlError):
-                    with pyrtl.conditional_assignment:
-                        pass
+                    with pyrtl.conditional_assignment: pass
 
     def test_condition_nice_error_message(self):
         i = pyrtl.Register(bitwidth=2, name='i')
         with self.assertRaises(pyrtl.PyrtlError):
-            with i <= 2:
-                pass
+            with i <= 2: pass
 
     def test_condition_error_when_assigned_wire_has_unspecified_bitwidth(self):
         i = pyrtl.Register(bitwidth=2, name='i')
