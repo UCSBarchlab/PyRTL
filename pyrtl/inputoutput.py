@@ -324,32 +324,38 @@ def _verilog_vector_pow_decl(w):
     return '' if len(w) == 1 else '[0:%d]' % (2 ** len(w) - 1)
 
 
+_verilog_reserved = \
+    """always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos
+    config deassign default defparam design disable edge else end endcase endconfig
+    endfunction endgenerate endmodule endprimitive endspecify endtable endtask
+    event for force forever fork function generate genvar highz0 highz1 if ifnone
+    incdir include initial inout input instance integer join large liblist library
+    localparam macromodule medium module nand negedge nmos nor noshowcancelledno
+    not notif0 notif1 or output parameter pmos posedge primitive pull0 pull1
+    pulldown pullup pulsestyle_oneventglitch pulsestyle_ondetectglitch remos real
+    realtime reg release repeat rnmos rpmos rtran rtranif0 rtranif1 scalared
+    showcancelled signed small specify specparam strong0 strong1 supply0 supply1
+    table task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg unsigned
+    use vectored wait wand weak0 weak1 while wire wor xnor xor
+    """
+_verilog_reserved_set = frozenset(_verilog_reserved.split())
+
+
 def _verilog_check_all_wirenames(block):
-    verilog_reserved = \
-        """always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos
-        config deassign default defparam design disable edge else end endcase endconfig
-        endfunction endgenerate endmodule endprimitive endspecify endtable endtask
-        event for force forever fork function generate genvar highz0 highz1 if ifnone
-        incdir include initial inout input instance integer join large liblist library
-        localparam macromodule medium module nand negedge nmos nor noshowcancelledno
-        not notif0 notif1 or output parameter pmos posedge primitive pull0 pull1
-        pulldown pullup pulsestyle_oneventglitch pulsestyle_ondetectglitch remos real
-        realtime reg release repeat rnmos rpmos rtran rtranif0 rtranif1 scalared
-        showcancelled signed small specify specparam strong0 strong1 supply0 supply1
-        table task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg unsigned
-        use vectored wait wand weak0 weak1 while wire wor xnor xor
-        """
-    verilog_reserved_set = set(verilog_reserved.split())
     for w in block.wirevector_subset():
-        if not re.match('[_A-Za-z][_a-zA-Z0-9\$]*$', w.name):
-            raise PyrtlError('error, the wirevector name "%s"'
-                             ' is not a valid Verilog identifier' % w.name)
-        if w.name in verilog_reserved_set:
-            raise PyrtlError('error, the wirevector name "%s"'
-                             ' is a Verilog reserved keyword' % w.name)
-        if len(w.name) >= 1024:
-            raise PyrtlError('error, the wirevector name "%s" is too'
-                             ' long to be a Verilog id' % w.name)
+        _verilog_check_names(w.name)
+
+
+def _verilog_check_name(name):
+    if not re.match('[_A-Za-z][_a-zA-Z0-9\$]*$', name):
+        raise PyrtlError('error, the wirevector name "%s"'
+                         ' is not a valid Verilog identifier' % name)
+    if name in _verilog_reserved_set:
+        raise PyrtlError('error, the wirevector name "%s"'
+                         ' is a Verilog reserved keyword' % name)
+    if len(name) >= 1024:
+        raise PyrtlError('error, the wirevector name "%s" is too'
+                         ' long to be a Verilog id' % name)
 
 
 def _to_verilog_header(file, block):
