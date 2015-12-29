@@ -110,6 +110,43 @@ class TestMux(unittest.TestCase):
             r = pyrtl.mux(s, a, b, default=0, foo=1)
 
 
+class TestRtlAssert(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_bad_type(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.rtl_assert(True, "")
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.rtl_assert(1, "")
+
+    def test_wrong_len(self):
+        w = pyrtl.Input(2)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.rtl_assert(w, "")
+        w = pyrtl.Input()
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.rtl_assert(w, "")
+
+    def test_create_assert(self):
+        w = pyrtl.WireVector(1)
+        pyrtl.rtl_assert(w, "")
+
+    @unittest.skip
+    def test_assert(self):
+        i = pyrtl.Input(1)
+        o = pyrtl.rtl_assert(i, "assertion failed")
+
+        trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(trace)
+        sim.step({i: 1})
+        self.assertEquals(trace.trace[o], 1)
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            sim.step({i: 0})
+
+
 class TestLoopDetection(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
