@@ -43,6 +43,12 @@ Testing requires the packages `tox` and `nose`.  Once installed a complete test 
 
 ### Contributing to PyRTL
 
+*Picking a first project*
+
+* One of the earliest things you should submit is a unit test that hits some [uncovered lines of code in PyRTL](https://codecov.io/github/UCSBarchlab/PyRTL?branch=development).  For example, pick a PyrtlError that is not covered and add a unit test in /tests that will hit it.
+* After you have that down check in the [PyRTL Issues](https://github.com/UCSBarchlab/PyRTL/issues) list for a feature that is marked as "beginner friendly".
+* Once you have that down, ask for access to the PyRTL-research repo where we keep a list of more advanced features and designs that could use more help!
+
 *Coding style*
 
 * All major functionality should have set of unit tests covering and documenting their use
