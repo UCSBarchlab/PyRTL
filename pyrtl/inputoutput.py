@@ -342,8 +342,8 @@ _verilog_reserved_set = frozenset(_verilog_reserved.split())
 
 
 def _verilog_check_all_wirenames(block):
-    for w in block.wirevector_subset():
-        _verilog_check_names(w.name)
+    for w in block.wirevector_set:
+        _verilog_check_name(w.name)
 
 
 def _verilog_check_name(name):

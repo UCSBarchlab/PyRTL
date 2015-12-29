@@ -110,6 +110,7 @@ class TestVerilogNames(unittest.TestCase):
 
     def test_verilog_check_valid_name_bad(self):
         self.assert_invalid_name('carne asda')
+        self.assert_invalid_name('')
         self.assert_invalid_name('asd%kask')
         self.assert_invalid_name("flipin'")
         self.assert_invalid_name(' jklol')
