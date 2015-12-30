@@ -322,9 +322,10 @@ def probe(w, name=None):
     if not isinstance(w, WireVector):
         raise PyrtlError('Only WireVectors can be probed')
 
-    if w.init_call_stack:
+    call_stack = getattr(w, 'init_call_stack', None)
+    if call_stack:
         print('(Probe-%d) Traceback for probed wire, most recent call last' % _probe_number)
-        for frame in w.init_call_stack[0:-1]:
+        for frame in call_stack[0:-1]:
             print(frame, end=' ')
         print()
     else:

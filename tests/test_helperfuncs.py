@@ -110,6 +110,34 @@ class TestMux(unittest.TestCase):
             r = pyrtl.mux(s, a, b, default=0, foo=1)
 
 
+class TestRtlProbe(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_bad_probe_wire(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.probe(5)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.probe('a')
+
+    def test_simple_probe(self):
+        i = pyrtl.Input(1)
+        o = pyrtl.Output(1)
+        x = pyrtl.probe(i)
+        self.assertEquals(x,i)
+
+    def test_simple_probe(self):
+        i = pyrtl.Input(1)
+        o = pyrtl.Output(1)
+        o <<= pyrtl.probe(i + 1)
+
+    def test_simple_probe(self):
+        pyrtl.set_debug_mode()
+        i = pyrtl.Input(1)
+        o = pyrtl.Output(1)
+        o <<= pyrtl.probe(i + 1)
+
+
 class TestRtlAssert(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
