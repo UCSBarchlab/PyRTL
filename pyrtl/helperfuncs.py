@@ -364,6 +364,8 @@ def rtl_assert(w, exp):
         raise PyrtlError('the second argument to rtl_assert must be an instance of Exception')
     if isinstance(exp, KeyError):
         raise PyrtlError('the second argument to rtl_assert cannot be a KeyError')
+    if w in _rtl_assert_dict:
+        raise PyrtlError('rtl_assert does not allow multiple exceptions off of one wirevector')
 
     assertion_name = 'assertion%d' % _rtl_assert_number
     assert_wire = Output(bitwidth=1, name=assertion_name, block=get_block(w))
