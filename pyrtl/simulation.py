@@ -176,17 +176,16 @@ class Simulation(object):
         if self.tracer is not None:
             self.tracer.add_step(self.value)
 
-        # finally, if any of the rtl_assert assertions are failing then we should 
+        # finally, if any of the rtl_assert assertions are failing then we should
         # raise the appropriate exceptions
         check_rtl_assertions(self)
 
-
     def inspect(self, w):
-        """ Get the value of a wirevector in the current simulation cycle. 
-        
+        """ Get the value of a wirevector in the current simulation cycle.
+
         :param w: the wirevector to inspect
         :return: value of w in the current step of simulation
-        
+
         Will throw KeyError if w does not exist in the simulation.
         """
         return self.value[w]
@@ -367,13 +366,12 @@ class FastSimulation(object):
         # check the rtl assertions
         check_rtl_assertions(self)
 
-
     def inspect(self, w):
-        """ Get the value of a wirevector in the current simulation cycle. 
-        
+        """ Get the value of a wirevector in the current simulation cycle.
+
         :param w: the wirevector to inspect
         :return: value of w in the current step of simulation
-        
+
         Will throw KeyError if w does not exist in the simulation.
         """
         return self.context[self.varname(w)]

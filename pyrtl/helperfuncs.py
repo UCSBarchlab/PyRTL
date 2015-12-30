@@ -372,20 +372,21 @@ def rtl_assert(w, exp):
     _rtl_assert_dict[assert_wire] = exp
     return assert_wire
 
+
 def check_rtl_assertions(sim):
     """ Checks the values in sim to see if any registers assertions fail.
 
     :param sim: Simulation in which to check the assertions
     :return: None
     """
-    
+
     for (w, exp) in _rtl_assert_dict.items():
         try:
             value = sim.inspect(w)
             if not value:
                 raise exp
         except KeyError:
-            return
+            pass
 
 
 def _check_for_loop(block=None):
