@@ -131,19 +131,31 @@ class TestRtlAssert(unittest.TestCase):
 
     def test_create_assert(self):
         w = pyrtl.WireVector(1)
-        pyrtl.rtl_assert(w, "")
+        class TestRTLException(Exception): pass
+        pyrtl.rtl_assert(w, TestRTLException('testing rtl assert'))
 
-    @unittest.skip
-    def test_assert(self):
+    def test_assert_simulation(self):
         i = pyrtl.Input(1)
-        o = pyrtl.rtl_assert(i, "assertion failed")
+        class TestRTLException(Exception): pass
+        o = pyrtl.rtl_assert(i, TestRTLException('test assertion failed'))
 
-        trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(trace)
+        sim = pyrtl.Simulation()
         sim.step({i: 1})
-        self.assertEquals(trace.trace[o], 1)
+        self.assertEquals(sim.inspect(o), 1)
 
-        with self.assertRaises(pyrtl.PyrtlError):
+        with self.assertRaises(TestRTLException):
+            sim.step({i: 0})
+
+    def test_assert_fastsimulation(self):
+        i = pyrtl.Input(1)
+        class TestRTLException(Exception): pass
+        o = pyrtl.rtl_assert(i, TestRTLException('test assertion failed'))
+
+        sim = pyrtl.FastSimulation()
+        sim.step({i: 1})
+        self.assertEquals(sim.inspect(o), 1)
+
+        with self.assertRaises(TestRTLException):
             sim.step({i: 0})
 
 

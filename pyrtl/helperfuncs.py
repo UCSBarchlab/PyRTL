@@ -342,12 +342,15 @@ def probe(w, name=None):
     return w
 
 
-def rtl_assert(w, msg):
+def rtl_assert(w, exp):
     """ Add hardware assertions to be checked on the RTL design.
 
-    w should be a WireVector
-    msg should be a string
-    returns the Output wire for the assertion (can be ignored in most cases)
+    :param w: should be a WireVector
+    :param exp: should be an instance of Exception
+    :return: the Output wire for the assertion (can be ignored in most cases)
+
+    If at any time during execution the wire w is not `true` (i.e. asserted low)
+    then simulation will raise exp.
     """
 
     global _rtl_assert_number
@@ -357,13 +360,32 @@ def rtl_assert(w, msg):
         raise PyrtlError('Only WireVectors can be asserted with rtl_assert')
     if len(w) != 1:
         raise PyrtlError('rtl_assert checks only a WireVector of bitwidth 1')
+    if not isinstance(exp, Exception):
+        raise PyrtlError('the second argument to rtl_assert must be an instance of Exception')
+    if isinstance(exp, KeyError):
+        raise PyrtlError('the second argument to rtl_assert cannot be a KeyError')
 
     assertion_name = 'assertion%d' % _rtl_assert_number
     assert_wire = Output(bitwidth=1, name=assertion_name, block=get_block(w))
     assert_wire <<= w
     _rtl_assert_number += 1
-    _rtl_assert_dict[assert_wire] = msg
+    _rtl_assert_dict[assert_wire] = exp
     return assert_wire
+
+def check_rtl_assertions(sim):
+    """ Checks the values in sim to see if any registers assertions fail.
+
+    :param sim: Simulation in which to check the assertions
+    :return: None
+    """
+    
+    for (w, exp) in _rtl_assert_dict.items():
+        try:
+            value = sim.inspect(w)
+            if not value:
+                raise exp
+        except KeyError:
+            return
 
 
 def _check_for_loop(block=None):
