@@ -16,7 +16,6 @@ from .core import working_block, LogicNet
 from .wire import WireVector, Input, Output, Const, Register
 
 _rtl_assert_number = 1
-_rtl_assert_dict = {}
 _probe_number = 1
 
 # -----------------------------------------------------------------
@@ -343,11 +342,12 @@ def probe(w, name=None):
     return w
 
 
-def rtl_assert(w, exp):
+def rtl_assert(w, exp, block=None):
     """ Add hardware assertions to be checked on the RTL design.
 
     :param w: should be a WireVector
     :param exp: should be an instance of Exception
+    :param Block block: block to which the assertion should be added (default to working block)
     :return: the Output wire for the assertion (can be ignored in most cases)
 
     If at any time during execution the wire w is not `true` (i.e. asserted low)
@@ -355,7 +355,8 @@ def rtl_assert(w, exp):
     """
 
     global _rtl_assert_number
-    global _rtl_assert_dict
+
+    block = working_block(block)
 
     if not isinstance(w, WireVector):
         raise PyrtlError('Only WireVectors can be asserted with rtl_assert')
@@ -365,14 +366,18 @@ def rtl_assert(w, exp):
         raise PyrtlError('the second argument to rtl_assert must be an instance of Exception')
     if isinstance(exp, KeyError):
         raise PyrtlError('the second argument to rtl_assert cannot be a KeyError')
-    if w in _rtl_assert_dict:
-        raise PyrtlError('rtl_assert does not allow multiple exceptions off of one wirevector')
+    if get_block(w) is not block:
+        raise PyrtlError('assertion wire not part of the block to which it is being added')
+    if w not in block.wirevector_set:
+        raise PyrtlError('assertion not a known wirevector in the target block')
+    if w in block.rtl_assert_dict:
+        raise PyrtlError('assertion conflicts with existing assertion registered with block')
 
     assertion_name = 'assertion%d' % _rtl_assert_number
-    assert_wire = Output(bitwidth=1, name=assertion_name, block=get_block(w))
+    assert_wire = Output(bitwidth=1, name=assertion_name, block=block)
     assert_wire <<= w
     _rtl_assert_number += 1
-    _rtl_assert_dict[assert_wire] = exp
+    block.rtl_assert_dict[assert_wire] = exp
     return assert_wire
 
 
@@ -383,7 +388,7 @@ def check_rtl_assertions(sim):
     :return: None
     """
 
-    for (w, exp) in _rtl_assert_dict.items():
+    for (w, exp) in sim.block.rtl_assert_dict.items():
         try:
             value = sim.inspect(w)
             if not value:

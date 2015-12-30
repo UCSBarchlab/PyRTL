@@ -173,6 +173,7 @@ class Block(object):
         self.wirevector_by_name = {}  # map from name->wirevector, used for performance
         # pre-synthesis wirevectors to post-synthesis vectors
         self.legal_ops = set('w~&|^n+-*<>=xcsrm@')  # set of legal OPS
+        self.rtl_assert_dict = {}   # map from wirevectors -> exceptions, used by rtl_assert
 
     def __str__(self):
         """String form has one LogicNet per line."""
