@@ -584,8 +584,9 @@ class SimulationTrace(object):
     def add_step(self, value_map):
         """ Add the values in value_map to the end of the trace. """
         if len(self.trace) == 0:
-            raise PyrtlError('error, simulation trace needs at least 1 signal '
-                             'to track (try passing name to WireVector)')
+            raise PyrtlError('error, simulation trace needs at least 1 signal to track '
+                             '(by default, unnamed signals are not traced -- try either passing '
+                             'a name to a WireVector or setting a "wirevector_subset" option)')
         for wire in self.trace:
             self.trace[wire].append(value_map[wire])
 
