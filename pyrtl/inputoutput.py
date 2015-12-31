@@ -166,6 +166,9 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         elif command['cover_list'].asList() == ['11', '1']:
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) & twire(netio[1])  # and gate
+        elif command['cover_list'].asList() == ['00', '1']:
+            output_wire = twire(netio[2])
+            output_wire <<= ~ (twire(netio[0]) | twire(netio[1]))  # nor gate
         elif command['cover_list'].asList() == ['1-', '1', '-1', '1']:
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) | twire(netio[1])  # or gate
@@ -176,9 +179,13 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
             output_wire = twire(netio[3])
             output_wire <<= (twire(netio[0]) & ~ twire(netio[2])) \
                 | (twire(netio[1]) & twire(netio[2]))   # mux
+        elif command['cover_list'].asList() == ['-00', '1', '0-0', '1']:
+            output_wire = twire(netio[3])
+            output_wire <<= (~twire(netio[1]) & ~twire(netio[2])) \
+                | (~twire(netio[0]) & ~twire(netio[2]))
         else:
-            raise PyrtlError('Blif file with unknown logic cover set '
-                             '(currently gates are hard coded)')
+            raise PyrtlError('Blif file with unknown logic cover set "%s"'
+                             '(currently gates are hard coded)' % command['cover_list'])
 
     def extract_flop(command):
         if(command['C'] not in ff_clk_set):
