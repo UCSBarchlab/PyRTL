@@ -147,20 +147,39 @@ class TestRtlAssert(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_bad_type(self):
+    def bad_rtl_assert(self, *args, **kwargs):
         with self.assertRaises(pyrtl.PyrtlError):
-            pyrtl.rtl_assert(True, "")
+            pyrtl.rtl_assert(*args, **kwargs)
 
-        with self.assertRaises(pyrtl.PyrtlError):
-            pyrtl.rtl_assert(1, "")
+    def test_bad_type(self):
+        self.bad_rtl_assert(True, self.RTLSampleException())
+        self.bad_rtl_assert(1, self.RTLSampleException())
 
     def test_wrong_len(self):
         w = pyrtl.Input(2)
-        with self.assertRaises(pyrtl.PyrtlError):
-            pyrtl.rtl_assert(w, "")
+        w2 = pyrtl.Input()
+
+        self.bad_rtl_assert(w, self.RTLSampleException())
+        self.bad_rtl_assert(w2, self.RTLSampleException())
+
+    def test_invalid_exception_type(self):
+        w = pyrtl.Input(1)
+
+        self.bad_rtl_assert(w, 1)
+        self.bad_rtl_assert(w, "")
+        self.bad_rtl_assert(w, w)
+        self.bad_rtl_assert(w, KeyError)
+
+    @unittest.skip
+    def test_duplicate_assert(self):
+        w = pyrtl.Input(1)
+        pyrtl.rtl_assert(w, self.RTLSampleException())
+        self.bad_rtl_assert(w, self.RTLSampleException())
+
+    def test_wire_outside_block(self):
         w = pyrtl.Input()
-        with self.assertRaises(pyrtl.PyrtlError):
-            pyrtl.rtl_assert(w, "")
+        pyrtl.reset_working_block()
+        self.bad_rtl_assert(w, self.RTLSampleException())
 
     def test_create_assert(self):
         w = pyrtl.WireVector(1)

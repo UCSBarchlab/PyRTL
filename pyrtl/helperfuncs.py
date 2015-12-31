@@ -346,7 +346,7 @@ def rtl_assert(w, exp, block=None):
     """ Add hardware assertions to be checked on the RTL design.
 
     :param w: should be a WireVector
-    :param exp: should be an instance of Exception
+    :param Exception exp: Exception to throw when assertion fails
     :param Block block: block to which the assertion should be added (default to working block)
     :return: the Output wire for the assertion (can be ignored in most cases)
 
