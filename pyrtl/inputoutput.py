@@ -328,7 +328,7 @@ def _verilog_vector_decl(w):
 
 
 def _verilog_vector_pow_decl(w):
-    return '' if len(w) == 1 else '[0:%d]' % (2 ** len(w) - 1)
+    return '' if len(w) == 1 else '[%d:0]' % (2 ** len(w) - 1)
 
 
 _verilog_reserved = \
