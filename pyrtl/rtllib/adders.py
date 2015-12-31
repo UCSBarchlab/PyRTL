@@ -204,21 +204,15 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
 
 
 def _sparse_adder(wire_array_2, adder):
-    bitwidth = len(wire_array_2)
-    add_wires = [], []
     result = []
-    for single_w_index in range(bitwidth):
+    for single_w_index in range(len(wire_array_2)):
         if len(wire_array_2[single_w_index]) == 2:  # Check if the two wire vectors overlap yet
             break
         result.append(wire_array_2[single_w_index][0])
 
-    for w_loc in range(single_w_index, bitwidth):
-        for i in range(2):
-            if len(wire_array_2[w_loc]) >= i + 1:
-                add_wires[i].append(wire_array_2[w_loc][i])
-            else:
-                add_wires[i].append(pyrtl.Const(0))
-
+    import six
+    wires_to_zip = wire_array_2[single_w_index:]
+    add_wires = tuple(six.moves.zip_longest(*wires_to_zip, fillvalue=pyrtl.Const(0)))
     adder_result = adder(pyrtl.concat_list(add_wires[0]), pyrtl.concat_list(add_wires[1]))
     return pyrtl.concat(adder_result, *reversed(result))
 
