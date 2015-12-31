@@ -11,7 +11,7 @@ get_block: get the block of the arguments, throw error if they are different
 
 from __future__ import print_function, unicode_literals
 
-from .pyrtlexceptions import PyrtlError
+from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, LogicNet
 from .wire import WireVector, Input, Output, Const, Register
 
@@ -370,8 +370,9 @@ def rtl_assert(w, exp, block=None):
         raise PyrtlError('assertion wire not part of the block to which it is being added')
     if w not in block.wirevector_set:
         raise PyrtlError('assertion not a known wirevector in the target block')
+
     if w in block.rtl_assert_dict:
-        raise PyrtlError('assertion conflicts with existing assertion registered with block')
+        raise PyrtlInternalError('assertion conflicts with existing registered assertion')
 
     assertion_name = 'assertion%d' % _rtl_assert_number
     assert_wire = Output(bitwidth=1, name=assertion_name, block=block)
