@@ -317,6 +317,7 @@ def output_to_verilog(dest_file, block=None):
 
     block = working_block(block)
     _verilog_check_all_wirenames(block)
+    _to_verilog_comment(dest_file)
     _to_verilog_header(dest_file, block)
     _to_verilog_combinational(dest_file, block)
     _to_verilog_sequential(dest_file, block)
@@ -363,6 +364,12 @@ def _verilog_check_name(name):
     if len(name) >= 1024:
         raise PyrtlError('error, the wirevector name "%s" is too'
                          ' long to be a Verilog id' % name)
+
+
+def _to_verilog_comment(file):
+    print('// Generated automatically via PyRTL', file=file)
+    print('// As one initial test of synthesis, map to FPGA with:', file=file)
+    print('//   yosys -p "synth_xilinx -top toplevel" thisfile.v\n', file=file)
 
 
 def _to_verilog_header(file, block):
