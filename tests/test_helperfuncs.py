@@ -123,22 +123,27 @@ class TestRtlProbe(unittest.TestCase):
     def test_simple_probe(self):
         i = pyrtl.Input(1)
         o = pyrtl.Output(1)
-        x = pyrtl.probe(i)
-        self.assertEquals(x,i)
-
-    def test_simple_probe(self):
-        i = pyrtl.Input(1)
-        o = pyrtl.Output(1)
         o <<= pyrtl.probe(i + 1)
 
-    def test_simple_probe(self):
+    def test_probe_wire(self):
+        i = pyrtl.Input(1)
+        o = pyrtl.Output(1)
+        x = pyrtl.probe(i)
+        self.assertIs(x, i)
+
+    def test_simple_probe_debug(self):
         pyrtl.set_debug_mode()
         i = pyrtl.Input(1)
         o = pyrtl.Output(1)
         o <<= pyrtl.probe(i + 1)
+        pyrtl.set_debug_mode(False)
 
 
 class TestRtlAssert(unittest.TestCase):
+
+    class RTLSampleException(Exception):
+        pass
+
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -159,31 +164,28 @@ class TestRtlAssert(unittest.TestCase):
 
     def test_create_assert(self):
         w = pyrtl.WireVector(1)
-        class TestRTLException(Exception): pass
-        pyrtl.rtl_assert(w, TestRTLException('testing rtl assert'))
+        pyrtl.rtl_assert(w, self.RTLSampleException('testing rtl assert'))
 
     def test_assert_simulation(self):
         i = pyrtl.Input(1)
-        class TestRTLException(Exception): pass
-        o = pyrtl.rtl_assert(i, TestRTLException('test assertion failed'))
+        o = pyrtl.rtl_assert(i, self.RTLSampleException('test assertion failed'))
 
         sim = pyrtl.Simulation()
         sim.step({i: 1})
         self.assertEquals(sim.inspect(o), 1)
 
-        with self.assertRaises(TestRTLException):
+        with self.assertRaises(self.RTLSampleException):
             sim.step({i: 0})
 
     def test_assert_fastsimulation(self):
         i = pyrtl.Input(1)
-        class TestRTLException(Exception): pass
-        o = pyrtl.rtl_assert(i, TestRTLException('test assertion failed'))
+        o = pyrtl.rtl_assert(i, self.RTLSampleException('test assertion failed'))
 
         sim = pyrtl.FastSimulation()
         sim.step({i: 1})
         self.assertEquals(sim.inspect(o), 1)
 
-        with self.assertRaises(TestRTLException):
+        with self.assertRaises(self.RTLSampleException):
             sim.step({i: 0})
 
 
