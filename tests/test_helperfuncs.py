@@ -127,7 +127,6 @@ class TestRtlProbe(unittest.TestCase):
 
     def test_probe_wire(self):
         i = pyrtl.Input(1)
-        o = pyrtl.Output(1)
         x = pyrtl.probe(i)
         self.assertIs(x, i)
 
@@ -176,9 +175,15 @@ class TestRtlAssert(unittest.TestCase):
         pyrtl.rtl_assert(w, self.RTLSampleException())
         self.bad_rtl_assert(w, self.RTLSampleException())
 
-    def test_wire_outside_block(self):
+    def test_wire_from_another_block(self):
         w = pyrtl.Input()
         pyrtl.reset_working_block()
+        self.bad_rtl_assert(w, self.RTLSampleException())
+
+    def test_wire_outside_block(self):
+        w = pyrtl.Input()
+        block = pyrtl.working_block()
+        block.wirevector_set.clear()
         self.bad_rtl_assert(w, self.RTLSampleException())
 
     def test_create_assert(self):
