@@ -64,6 +64,7 @@ from .passes import nand_synth
 from .passes import and_inverter_synth
 from .passes import optimize
 from .passes import area_estimation
+from .passes import timing_max_freq
 from .passes import timing_analysis
 from .passes import timing_max_length
 from .passes import print_max_length
