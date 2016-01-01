@@ -17,19 +17,17 @@ class TestWallace(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_wallace_tree_1(self):
-        """
-        Arithmatic tester version 2015.05
-        """
-
+    def mult_t_base(self, len_a, len_b, **mult_args):
         # Creating the logic nets
-        a, b = pyrtl.Input(13, "a"), pyrtl.Input(14, "b")
-        product = pyrtl.Output(27, "product")
-        product <<= multipliers.tree_multiplier(a, b)
+        a, b = pyrtl.Input(len_a, "a"), pyrtl.Input(len_b, "b")
+        product = pyrtl.Output(name="product")
+        product <<= multipliers.tree_multiplier(a, b, **mult_args)
+
+        self.assertEquals(len(product), len_a + len_b)
 
         # creating the testing values and the correct results
-        xvals = [int(random.uniform(0, 2**13-1)) for i in range(20)]
-        yvals = [int(random.uniform(0, 2**14-1)) for i in range(20)]
+        xvals = [int(random.uniform(0, 2**len_a-1)) for i in range(20)]
+        yvals = [int(random.uniform(0, 2**len_b-1)) for i in range(20)]
         true_result = [i * j for i, j in zip(xvals, yvals)]
 
         # Setting up and running the tests
@@ -42,7 +40,6 @@ class TestWallace(unittest.TestCase):
         multiplier_result = sim_trace.trace[product]
         self.assertEqual(multiplier_result, true_result)
 
-        # now executing the same test using FastSim
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.FastSimulation(tracer=sim_trace)
         for cycle in range(len(xvals)):
@@ -51,8 +48,23 @@ class TestWallace(unittest.TestCase):
         multiplier_result = sim_trace.trace[product]
         self.assertEqual(multiplier_result, true_result)
 
+    def test_trivial_case(self):
+        self.mult_t_base(1, 5)
+
+    def test_trivial_case_2(self):
+        self.mult_t_base(2, 1)
+
+    def test_trivial_case_3(self):
+        self.mult_t_base(1, 1)
+
+    def test_wallace_tree_1(self):
+        self.mult_t_base(5, 7)
+
     def test_wallace_tree_2(self):
-        pass
+        self.mult_t_base(2, 9)
+
+    def test_dada_tree(self):
+        self.mult_t_base(5, 10, reducer=adders.dada_reducer)
 
     def test_fma_1(self):
         wires, vals = utils.make_wires_and_values(exact_bitwidth=10, num_wires=3)

@@ -129,6 +129,35 @@ def rtl_all(*vectorlist):
     return and_all_bits(concat_list(converted_vectorlist))
 
 
+def _basic_mult(A, B):
+    """ a stripped down copy of the dada multiplier in rtllib """
+    if len(B) == 1:
+        A, B = B, A  # so that we can reuse the code below :)
+    if len(A) == 1:
+        return concat_list(list(A & b for b in B) + [Const(0)])  # keep wirevector len consistent
+
+    result_bitwidth = len(A) + len(B)
+    bits = [[] for weight in range(result_bitwidth)]
+    for i, a in enumerate(A):
+        for j, b in enumerate(B):
+            bits[i + j].append(a & b)
+
+    while not all(len(i) <= 2 for i in bits):
+        deferred = [[] for weight in range(result_bitwidth + 1)]
+        for i, w_array in enumerate(bits):  # Start with low weights and start reducing
+            while len(w_array) >= 3:  # build a new full adder
+                a, b, cin = (w_array.pop(0) for j in range(3))
+                deferred[i].append(a ^ b ^ cin)
+                deferred[i + 1].append(a & b | a & cin | b & cin)
+            deferred[i].extend(w_array)
+        bits = deferred[:result_bitwidth]
+
+    import six
+    add_wires = tuple(six.moves.zip_longest(*bits, fillvalue=Const(0)))
+    adder_result = concat_list(add_wires[0]) + concat_list(add_wires[1])
+    return adder_result[:result_bitwidth]
+
+
 def mux(select, falsecase, truecase, *rest, **kwargs):
     """ Multiplexer returning falsecase for select==0, otherwise truecase.
 

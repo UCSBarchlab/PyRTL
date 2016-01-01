@@ -60,6 +60,11 @@ def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogg
     The two tree multipliers basically works by splitting the multiplication
     into a series of many additions, and it works by applying 'reductions'.
     """
+    if len(B) == 1:
+        A, B = B, A  # so that we can reuse the code below :)
+    if len(A) == 1:
+        # keep the wirevector len consistent
+        return pyrtl.concat_list(list(A & b for b in B) + [pyrtl.Const(0)])
 
     bits_length = (len(A) + len(B))
 

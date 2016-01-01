@@ -1,7 +1,9 @@
 import unittest
-import pyrtl
+import random
 import io
 
+import pyrtl
+from pyrtl import helperfuncs
 # ---------------------------------------------------------------
 
 
@@ -137,6 +139,45 @@ class TestRtlProbe(unittest.TestCase):
         o <<= pyrtl.probe(i + 1)
         pyrtl.set_debug_mode(False)
 
+
+class TestBasicMult(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def mult_t_base(self, len_a, len_b):
+        # Creating the logic nets
+        a, b = pyrtl.Input(len_a, "a"), pyrtl.Input(len_b, "b")
+        product = pyrtl.Output(name="product")
+        product <<= helperfuncs._basic_mult(a, b)
+
+        self.assertEquals(len(product), len_a + len_b)
+
+        # creating the testing values and the correct results
+        xvals = [int(random.uniform(0, 2**len_a-1)) for i in range(20)]
+        yvals = [int(random.uniform(0, 2**len_b-1)) for i in range(20)]
+        true_result = [i * j for i, j in zip(xvals, yvals)]
+
+        # Setting up and running the tests
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for cycle in range(len(xvals)):
+            sim.step({a: xvals[cycle], b: yvals[cycle]})
+
+        # Extracting the values and verifying correctness
+        multiplier_result = sim_trace.trace[product]
+        self.assertEqual(multiplier_result, true_result)
+
+    def test_mult_1(self):
+        self.mult_t_base(1, 7)
+
+    def test_mult_1_1(self):
+        self.mult_t_base(2, 1)
+
+    def test_mult_2(self):
+        self.mult_t_base(5, 4)
+
+    def test_mult_3(self):
+        self.mult_t_base(5, 2)
 
 class TestRtlAssert(unittest.TestCase):
 
