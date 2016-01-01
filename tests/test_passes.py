@@ -268,7 +268,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         tempwire <<= inwire | inwire2
         tempwire2 <<= ~tempwire
         outwire <<= tempwire2 & inwire3
-        self.everything_t_procedure(3, 3)
+        self.everything_t_procedure(252.3, 252.3)
 
     def test_timing_error(self):
         inwire, inwire2 = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=1)
@@ -296,7 +296,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         tempwire1 <<= tempwire0
         tempwire2 <<= tempwire1
         outwire <<= ~tempwire2
-        self.everything_t_procedure(1, 1)
+        self.everything_t_procedure(48.5, 48.5)
         block = pyrtl.working_block()
         self.assert_num_net(3, block)
 
@@ -309,7 +309,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         tempwire <<= inwire | inwire2
         tempwire2 <<= ~tempwire
         outwire <<= tempwire2 & inwire3
-        self.everything_t_procedure(3, 3)
+        self.everything_t_procedure(252.3, 252.3)
 
     def test_adder(self):
         inwire1, inwire2 = pyrtl.Input(bitwidth=3), pyrtl.Input(bitwidth=3)

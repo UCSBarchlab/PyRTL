@@ -172,7 +172,7 @@ def timing_analysis(block=None, gate_delay_funcs=None):
         elif width == 2:
             return 200.17
         else:
-            return 549.1 * log(width, 2) - 391.7
+            return 549.1 * math.log(width, 2) - 391.7
 
     def memory_read_estimate(mem):
         # http://www.cs.ucsb.edu/~sherwood/pubs/ICCD-srammodel.pdf
