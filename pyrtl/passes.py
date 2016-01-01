@@ -135,18 +135,34 @@ def timing_analysis(block=None, gate_delay_funcs=None,):
     Currently doesn't support memory post synthesis
     """
 
+    def adder_stdcell_estimate(gate):
+        width = len(gate.args[0])
+        return 184.0 * log(width, 2) + 18.9
+
+    def compare_stdcell_estimate(gate):
+        width = len(gate.args[0])
+        return 101.9 * log(width, 2) + 105.4
+
+    def multiplier_stdcell_estimate(width):
+        if width == 1:
+            return 98.57
+        elif width == 2:
+            return 200.17
+        else:
+            return 549.1 * log(width, 2) - 391.7
+
     block = working_block(block)
     if gate_delay_funcs is None:
         gate_delay_funcs = {
-            '~': lambda gate: 1,
-            '&': lambda gate: 1,
-            '|': lambda gate: 1,
-            '^': lambda gate: 3,
-            'n': lambda gate: 1,
+            '~': lambda gate: 48.5,
+            '&': lambda gate: 98.5,
+            '|': lambda gate: 105.3,
+            '^': lambda gate: 135.07,
+            'n': lambda gate: 66.0,
             'w': lambda gate: 0,
-            '+': lambda gate: len(gate.args[0])*3,
-            '-': lambda gate: len(gate.args[0])*3,
-            '*': lambda gate: len(gate.args[0])*5,
+            '+': adder_stdcell_estimate,
+            '-': adder_stdcell_estimate,
+            '*': multiplier_stdcell_estimate
             '<': lambda gate: len(gate.args[0])*2,
             '>': lambda gate: len(gate.args[0])*2,
             '=': lambda gate: len(gate.args[0])*2,
