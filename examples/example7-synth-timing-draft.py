@@ -38,7 +38,8 @@ critical_path_info = pyrtl.timing_critical_path(timing_map)
 # PyRTL also provides estimates for the area that would be used up if the
 # circuit was printed as an ASIC
 
-est_area = pyrtl.area_estimation(tech_in_nm=65)
+logic_area, mem_area = pyrtl.area_estimation(tech_in_nm=65)
+est_area = logic_area + mem_area
 print("Estimated Area of block", est_area, "sq mm")
 print()
 

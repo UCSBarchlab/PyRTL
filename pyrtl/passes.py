@@ -20,32 +20,58 @@ from .transform import net_transform, _get_new_block_mem_instance
 #   /~~\ |  \ |___ /~~\    |___ .__/  |  |  |  | /~~\  |  | \__/ | \|
 #
 
-
 def area_estimation(tech_in_nm, block=None):
     """ Estimates the total area of the block.
 
     :param tech_in_nm: the size of the circuit technology to be estimated,
       with 65 being 65nm and 250 being 0.25um for example.
-    :return estimated area in terms of square mm
+    :return: tuple of estimated areas (logic, mem) in terms of mm^2
+
+    The estimations are based off of 130nm stdcell designs for the logic, and
+    custom memory blocks from the literature.  The results are not fully validated
+    and we do not recommend that this function be used in carrying out science for
+    publication.
     """
+
     def mem_area_estimate(tech_in_nm, bits, ports):
         # http://www.cs.ucsb.edu/~sherwood/pubs/ICCD-srammodel.pdf
-        tech_in_um = tech_in_nm * 1000
+        tech_in_um = tech_in_nm / 1000.0
         return 0.001 * tech_in_um**2.07 * bits**0.9 * ports**0.7 + 0.0048
 
-    def gatecount_estimate(net):
+    # Subset of the raw data gathered from yosys, mapping to vsclib 130nm library
+    # Width   Adder_Area  Mult_Area  (area in "tracks" as discussed below)
+    # 8       211         2684
+    # 16      495         12742
+    # 32      1110        49319
+    # 64      2397        199175
+    # 128     4966        749828
+
+    def adder_stdcell_estimate(width):
+        return width * 34.4 - 25.8
+
+    def multiplier_stdcell_estimate(width):
+        if width == 1:
+            return 5
+        elif width == 2:
+            return 39
+        elif width == 3:
+            return 219
+        else:
+            return -958 + (150 * width) + (45 * width**2)
+
+    def stdcell_estimate(net):
         if net.op in 'w~sc':
             return 0
         elif net.op in '&|n':
-            return 3 * len(net.args[0])
+            return 40/8.0 * len(net.args[0])   # 40 lambda
         elif net.op in '^=<>x':
-            return 18 * len(net.args[0])
+            return 80/8.0 * len(net.args[0])   # 80 lambda
         elif net.op == 'r':
-            return 20 * len(net.args[0])
+            return 144/8.0 * len(net.args[0])  # 144 lambda
         elif net.op in '+-':
-            return 21 * len(net.args[0])
+            return adder_stdcell_estimate(len(net.args[0]))
         elif net.op == '*':
-            return 350 * len(net.args[0])
+            return multiplier_stdcell_estimate(len(net.args[0]))
         elif net.op in 'm@':
             return 0  # memories handled elsewhere
         else:
@@ -54,23 +80,35 @@ def area_estimation(tech_in_nm, block=None):
 
     block = working_block(block)
 
-    # first, sum up the area of all of the logic elements (including registers)
-    num_gates = sum(gatecount_estimate(a_net) for a_net in block.logic)
+    # The functions above were gathered and calibrated by mapping
+    # reference designs to an openly available 130nm stdcell library.
+    # http://www.vlsitechnology.org/html/vsc_description.html
+    # http://www.vlsitechnology.org/html/cells/vsclib013/lib_gif_index.html
 
-    # 854 Kgate/mm2 -- http://www.tsmc.com/english/dedicatedFoundry/technology/65nm.htm
-    area_in_65nm = num_gates / 854000.0
-    # scaling down from 65nm
-    sum_area = area_in_65nm / (65.0/tech_in_nm)**2
+    # In a standard cell design, each gate takes up a length of standard "track"
+    # in the chip.  The functions above return that length for each of the different
+    # types of functions in the units of "tracks".  In the 130nm process used,
+    # 1 lambda is 55nm, and 1 track is 8 lambda.
+
+    # first, sum up the area of all of the logic elements (including registers)
+    total_tracks = sum(stdcell_estimate(a_net) for a_net in block.logic)
+    total_length_in_nm = total_tracks * 8 * 55
+    # each track is then 72 lambda tall, and converted from nm2 to mm2
+    area_in_mm2_for_130nm = (total_length_in_nm * (72 * 55)) / 1e6
+
+    # scaling from 130nm to the target tech
+    logic_area = area_in_mm2_for_130nm / (130.0/tech_in_nm)**2
 
     # now sum up the area of the memories
+    mem_area = 0
     for mem in set(net.op_param[1] for net in block.logic_subset('@m')):
         bits = 2**mem.addrwidth * mem.bitwidth
         read_ports = len(mem.readport_nets)
         write_ports = len(mem.writeport_nets)
         ports = max(read_ports, write_ports)
-        sum_area += mem_area_estimate(tech_in_nm, bits, ports)
+        mem_area += mem_area_estimate(tech_in_nm, bits, ports)
 
-    return sum_area
+    return logic_area, mem_area
 
 
 # --------------------------------------------------------------------
