@@ -208,7 +208,7 @@ class TestRtlAssert(unittest.TestCase):
         self.bad_rtl_assert(w, 1)
         self.bad_rtl_assert(w, "")
         self.bad_rtl_assert(w, w)
-        self.bad_rtl_assert(w, KeyError)
+        self.bad_rtl_assert(w, KeyError())
 
     @unittest.skip
     def test_duplicate_assert(self):
@@ -217,12 +217,12 @@ class TestRtlAssert(unittest.TestCase):
         self.bad_rtl_assert(w, self.RTLSampleException())
 
     def test_wire_from_another_block(self):
-        w = pyrtl.Input()
+        w = pyrtl.Input(1)
         pyrtl.reset_working_block()
         self.bad_rtl_assert(w, self.RTLSampleException())
 
     def test_wire_outside_block(self):
-        w = pyrtl.Input()
+        w = pyrtl.Input(1)
         block = pyrtl.working_block()
         block.wirevector_set.clear()
         self.bad_rtl_assert(w, self.RTLSampleException())
