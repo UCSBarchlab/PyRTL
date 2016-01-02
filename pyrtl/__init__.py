@@ -63,10 +63,12 @@ from .passes import synthesize
 from .passes import nand_synth
 from .passes import and_inverter_synth
 from .passes import optimize
-from .passes import yosys_area_delay
-from .passes import area_estimation
-from .passes import timing_max_freq
-from .passes import timing_analysis
-from .passes import timing_max_length
-from .passes import print_max_length
-from .passes import timing_critical_path
+
+# functions to measure/estimate aspects of the blocks
+from .estimate import yosys_area_delay
+from .estimate import area_estimation
+from .estimate import timing_max_freq
+from .estimate import timing_analysis
+from .estimate import timing_max_length
+from .estimate import print_max_length
+from .estimate import timing_critical_path
