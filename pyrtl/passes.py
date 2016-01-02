@@ -11,6 +11,7 @@ import os
 import math
 import tempfile
 import subprocess
+import sys
 
 from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
 from .helperfuncs import find_and_print_loop, as_wires, concat_list
@@ -316,22 +317,23 @@ def print_critcal_paths(critical_paths):
             print(line_indent, (net))
         print()
 
+
 # --------------------------------------------------------------------
-#          __   __       __  
-#     \ / /  \ /__` \ / /__` 
-#      |  \__/ .__/  |  .__/ 
+#          __   __       __
+#     \ / /  \ /__` \ / /__`
+#      |  \__/ .__/  |  .__/
 #
 
 def yosys_area_delay(library, abc_cmd=None, block=None):
-    """ Synthesize with Yosys and return estimate of area and delay. 
+    """ Synthesize with Yosys and return estimate of area and delay.
 
     :param library: stdcell library file to target in liberty format
     :param abc_cmd: string of commands for yosys to pass to abc for synthesis
     :param block: pyrtl block to analyze
     :return: a tuple of numbers: area, delay
-    
+
     The area and delay are returned in units as defined by the stdcell
-    library.  In the standard vsc 130nm library, the area is in a number of 
+    library.  In the standard vsc 130nm library, the area is in a number of
     "tracks", each of which is about 1.74 square um (see area estimation
     for more details) and the delay is in ps.
     http://www.vlsitechnology.org/html/vsc_description.html
@@ -364,24 +366,24 @@ def yosys_area_delay(library, abc_cmd=None, block=None):
     temp_d, temp_path = tempfile.mkstemp(suffix='.v')
     try:
         # write the verilog to a temp
-        with os.fdopen(temp_d,'w') as f:
+        with os.fdopen(temp_d, 'w') as f:
             output_to_verilog(f, block=block)
         # call yosys on the temp, and grab the output
         yosys_arg = yosys_arg_template % (temp_path, library, library, abc_cmd)
         yosys_output = subprocess.check_output(['yosys', yosys_arg])
         area, delay = extract_area_delay_from_yosys_output(yosys_output)
     except (subprocess.CalledProcessError, ValueError) as e:
-        print('Error with call to yosys...', file=stderr)
-        print('---------------------------------------------', file=stderr)
-        print(e.output, file=stderr)
-        print('---------------------------------------------', file=stderr)
+        print('Error with call to yosys...', file=sys.stderr)
+        print('---------------------------------------------', file=sys.stderr)
+        print(e.output, file=sys.stderr)
+        print('---------------------------------------------', file=sys.stderr)
         raise PyrtlError('Yosys callfailed')
     except OSError as e:
-        print('Error with call to yosys...', file=stderr)
+        print('Error with call to yosys...', file=sys.stderr)
         raise PyrtlError('Call to yosys failed (not installed or on path?)')
     finally:
         os.remove(temp_path)
-    return area, delay 
+    return area, delay
 
 
 # --------------------------------------------------------------------
