@@ -63,6 +63,7 @@ from .passes import synthesize
 from .passes import nand_synth
 from .passes import and_inverter_synth
 from .passes import optimize
+from .passes import yosys_area_delay
 from .passes import area_estimation
 from .passes import timing_max_freq
 from .passes import timing_analysis
