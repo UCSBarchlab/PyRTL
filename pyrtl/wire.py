@@ -391,12 +391,14 @@ class Input(WireVector):
 
 
 class Output(WireVector):
-    """ A WireVector type denoting outputs of a block (no readers) """
+    """ A WireVector type denoting outputs of a block (no readers)
+    Even though Output seems to have valid ops such as __or__ , using
+    them will throw an error.
+    """
     _code = 'O'
 
     def __init__(self, bitwidth=None, name=None, block=None):
         super(Output, self).__init__(bitwidth, name, block)
-    # todo: check that we can't read from this vector
 
 
 class Const(WireVector):

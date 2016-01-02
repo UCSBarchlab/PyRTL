@@ -259,12 +259,17 @@ class TestOutput(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    @unittest.skip  # this is not expected to pass
     def test_assign_output(self):
         o = pyrtl.Output(1)
         w = pyrtl.WireVector(1)
-        with self.assertRaises(pyrtl.PyrtlError):
+        with self.assertRaises(pyrtl.PyrtlInternalError):
             w <<= o
+
+    def test_log_op_output(self):
+        o = pyrtl.Output(1)
+        w = pyrtl.WireVector(1)
+        with self.assertRaises(pyrtl.PyrtlInternalError):
+            x = w & o
 
 
 class TestRTLAdderDesign(unittest.TestCase):
