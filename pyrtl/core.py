@@ -46,21 +46,13 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         else:
             raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
 
-    def __hash__(self):
-        return id(self)
-
     def __eq__(self, other):
         # We can't be going and calling __eq__ recursively on the logic nets for all of
         # the args and dests because that will actually *create* new logic nets which is
         # very much not what people would expect to happen.  Instead we define equality
-        # as the immutable feilds as being equal and the list of args and dests as being
+        # as the immutable fields as being equal and the list of args and dests as being
         # references to the same objects.
-        return (self.op == other.op and
-                self.op_param == other.op_param and
-                len(self.args) == len(other.args) and
-                len(self.dests) == len(other.dests) and
-                all(self.args[i] is other.args[i] for i in range(len(self.args))) and
-                all(self.dests[i] is other.dests[i] for i in range(len(self.dests))))
+        return self.__hash__() == other.__hash__()
 
     def __ne__(self, other):
         return not self.__eq__(other)

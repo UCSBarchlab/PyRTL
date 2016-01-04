@@ -92,15 +92,24 @@ class TestLogicNets(unittest.TestCase):
 
     def test_self_equals(self):
         net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
-        self.assertTrue(net == net)
+        self.assertEqual(net, net)
 
     def test_comparison(self):
         net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
         with self.assertRaises(pyrtl.PyrtlError):
             a = net < net
 
+    def test_equivelence_of_same_nets(self):
+        net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
+        net2 = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
+        self.assertIsNot(net, net2)
+        self.assertEqual(net, net2)
+
     def test_equivelence_of_different_nets(self):
-        pass
+        net = pyrtl.LogicNet('+', 'John', ("arg1", "arg2"), ("dest",))
+        net2 = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
+        self.assertIsNot(net, net2)
+        self.assertNotEqual(net, net2)
 
 
 class TestMemAsyncCheck(unittest.TestCase):
