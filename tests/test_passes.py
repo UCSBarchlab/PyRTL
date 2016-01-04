@@ -9,15 +9,15 @@ import io
 
 
 class TestSynthesis(unittest.TestCase):
-    # TODO: need to change this to actually test synthessi
-
     def setUp(self):
         pyrtl.reset_working_block()
         self.bitwidth = 3
-        self.r = pyrtl.Register(bitwidth=self.bitwidth, name='r')
+        self.r = pyrtl.Register(bitwidth=self.bitwidth)
+        self.output = pyrtl.Output(bitwidth=self.bitwidth, name='r')
+        self.output <<= self.r
 
     def check_trace(self, correct_string):
-        # pyrtl.synthesize()
+        pyrtl.synthesize()
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
@@ -52,7 +52,7 @@ class TestSynthesis(unittest.TestCase):
         self.r.next <<= self.r - pyrtl.Const(1, bitwidth=self.bitwidth)
         self.check_trace('r 07654321\n')
 
-    def test_minus_simulationx(self):
+    def test_minus_simulation2(self):
         self.r.next <<= self.r - pyrtl.Const(3, bitwidth=self.bitwidth)
         self.check_trace('r 05274163\n')
 

@@ -300,13 +300,13 @@ def synthesize(update_working_block=True, block=None):
     # for reference.
     for wirevector in block_in.wirevector_subset():
         for i in range(len(wirevector)):
-            new_name = '_'.join(['synth', wirevector.name, str(i), str(uid)])
+            new_name = '_'.join((wirevector.name, 'synth', str(i), str(uid)))
             uid += 1
             if isinstance(wirevector, Const):
                 new_val = (wirevector.val >> i) & 0x1
                 new_wirevector = Const(bitwidth=1, val=new_val, block=block_out)
             elif isinstance(wirevector, (Input, Output)):
-                new_wirevector = WireVector(name=new_name, bitwidth=1, block=block_out)
+                new_wirevector = WireVector(name="tmp_" + new_name, bitwidth=1, block=block_out)
             else:
                 new_wirevector = wirevector.__class__(name=new_name, bitwidth=1, block=block_out)
             wirevector_map[(wirevector, i)] = new_wirevector
