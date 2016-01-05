@@ -46,6 +46,10 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         else:
             raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
 
+    def __hash__(self):
+        # it seems that namedtuple is not always hashable
+        return hash(tuple(self))
+
     def __eq__(self, other):
         # We can't be going and calling __eq__ recursively on the logic nets for all of
         # the args and dests because that will actually *create* new logic nets which is

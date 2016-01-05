@@ -15,10 +15,15 @@ class TestBlock(unittest.TestCase):
         self.assertTrue(w in pyrtl.working_block().wirevector_set)
         self.assertTrue('testwire' in pyrtl.working_block().wirevector_by_name)
 
+    def invalid_net(self, *args):
+        with self.assertRaises(pyrtl.PyrtlInternalError):
+            pyrtl.working_block().add_net(*args)
+
     def test_add_net(self):
-        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, None)
-        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, 1)
-        self.assertRaises(pyrtl.PyrtlInternalError, pyrtl.working_block().add_net, "hi")
+        self.invalid_net(None)
+        self.invalid_net(1)
+        self.invalid_net("hi")
+        self.invalid_net(pyrtl.Const(2))
 
     def test_undriven_net(self):
         w = pyrtl.WireVector(name='testwire', bitwidth=3)
