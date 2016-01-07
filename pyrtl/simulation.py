@@ -670,7 +670,8 @@ class SimulationTrace(object):
                 segment_delim=segment_delim, extra_line=extra_line)
 
     def render_trace_to_html(self, trace_list):
-        from IPython.display import display, HTML, Javascript
+        """ Render a trace for viewing in IPython. """
+        from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
 
         def rle(trace):
             l = []
