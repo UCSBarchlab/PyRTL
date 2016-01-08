@@ -158,30 +158,23 @@ def _basic_mult(A, B):
     return adder_result[:result_bitwidth]
 
 
-def mux(select, falsecase, truecase, *rest, **kwargs):
-    """ Multiplexer returning falsecase for select==0, otherwise truecase.
+def mux(index, *mux_ins, **kwargs):
+    """ Multiplexer returning the value of the wire in .
 
-    :param WireVector select: used as the select input to the multiplexor
-    :param WireVector falsecase: the wirevector selected if select==0
-    :param WireVector truecase: the wirevector selected if select==1
-    :param additional WireVector arguments *rest: wirevectors selected when select>1
+    :param WireVector index: used as the select input to the multiplexor
+    :param additional WireVector arguments *mux_ins: wirevectors selected when select>1
     :param additional WireVector arguments **default: keyword arg "default"
+      If you are selecting between less items than your index can address, you can
+      use the "default" keyword argument to auto-expand those terms.  For example,
+      if you have a 3-bit index but are selecting between 6 options, you need to specify
+      a value for those other 2 possible values of index (0b110 and 0b111).
     :return: WireVector of length of the longest input (not including select)
-
-    If you are selecting between less items than your index can address, you can
-    use the "default" keyword argument to auto-expand those terms.  For example,
-    if you have a 3-bit index but are selecting between 6 options, you need to specify
-    a value for those other 2 possible values of index (0b110 and 0b111).  You can
-    do that by passing in a default argument, an example of which is below.
 
     To avoid confusion, if you are using the mux where the select is a "predicate"
     (meaning something that you are checking the truth value of rather than using it
-    as a number) it is recommended that you use "falsecase" and "truecase"
+    as a number) it is recommended that you use the select function instead
     as named arguments because the ordering is different from the classic ternary
     operator of some languages.
-
-    Example of mux as "ternary operator" to take the max of 'a' and 5:
-        mux( a<5, truecase=a, falsecase=5)
 
     Example of mux as "selector" to pick between a0 and a1:
         index = WireVector(1)
@@ -195,60 +188,64 @@ def mux(select, falsecase, truecase, *rest, **kwargs):
         index = WireVector(3)
         mux( index, a0, a1, a2, a3, a4, a5, default=0 )
     """
-
-    # only "default" is allowed as kwarg.  If there is a default arg, then
-    # copy it out to the
-    if kwargs:
+    if kwargs:  # only "default" is allowed as kwarg.
         if len(kwargs) != 1 or 'default' not in kwargs:
-            bad_args = [k for k in kwargs.keys() if k != 'default']
-            raise PyrtlError('unknown keywords %s applied to mux' % str(bad_args))
+            try:
+                result = select(index, **kwargs)
+                import warnings
+                warnings.warn("Predicates are being deprecated in Mux. "
+                              "Please use the select operator instead.")
+                return result
+            except Exception:
+                bad_args = [k for k in kwargs.keys() if k != 'default']
+                raise PyrtlError('unknown keywords %s applied to mux' % str(bad_args))
         default = kwargs['default']
     else:
         default = None
 
-    block = get_block(select, falsecase, truecase, default, *rest)
-    select = as_wires(select, block=block)
-    ins = [falsecase, truecase] + list(rest)
-
-    if default is not None:
-        # find the diff between the addressable range and number of inputs given
-        short_by = 2**len(select) - len(ins)
-        if short_by > 0:
-            # fill in the rest with the default inputs
+    # find the diff between the addressable range and number of inputs given
+    short_by = 2**len(index) - len(mux_ins)
+    if short_by > 0:
+        if default is not None:  # extend the list to appropriate size
+            mux_ins = list(mux_ins)
             extention = [default] * short_by
-            ins.extend(extention)
+            mux_ins.extend(extention)
 
-    if 2 ** len(select) != len(ins):
+    if 2 ** len(index) != len(mux_ins):
         raise PyrtlError(
             'Mux select line is %d bits, but selecting from %d inputs. '
-            % (len(select), len(ins)))
+            % (len(index), len(mux_ins)))
 
-    if len(select) == 1:
-        result = _mux2(select, ins[0], ins[1])
-    else:
-        half = int(len(ins) // 2)
-        result = _mux2(select[-1],
-                       mux(select[0:-1], *ins[:half]),
-                       mux(select[0:-1], *ins[half:]))
-    return result
+    if len(index) == 1:
+        return select(index, mux_ins[0], mux_ins[1])
+    half = len(mux_ins) // 2
+    return select(index[-1],
+                  mux(index[0:-1], *mux_ins[:half]),
+                  mux(index[0:-1], *mux_ins[half:]))
 
 
-def _mux2(select, falsecase, truecase):
-    block = get_block(select, falsecase, truecase)
-    select, f, t = (as_wires(w, block=block) for w in (select, falsecase, truecase))
+def select(sel, truecase, falsecase):
+    """ Multiplexer returning falsecase for select==0, otherwise truecase.
 
-    if len(select) != 1:
+    :param WireVector sel: used as the select input to the multiplexor
+    :param WireVector falsecase: the wirevector selected if select==0
+    :param WireVector truecase: the wirevector selected if select==1
+    Example of mux as "ternary operator" to take the max of 'a' and 5:
+        mux( a<5, truecase=a, falsecase=5)
+    """
+
+    block = get_block(sel, falsecase, truecase)
+    sel, f, t = (as_wires(w, block=block) for w in (sel, falsecase, truecase))
+
+    if len(sel) != 1:
         raise PyrtlError('error, select input to the mux must be 1-bit wirevector')
     f, t = match_bitwidth(f, t)
     resultlen = len(f)  # both are the same length now
 
     outwire = WireVector(bitwidth=resultlen, block=block)
-    net = LogicNet(
-        op='x',
-        op_param=None,
-        args=(select, f, t),
-        dests=(outwire,))
-    outwire.block.add_net(net)
+    net = LogicNet(op='x', op_param=None,
+                   args=(sel, f, t), dests=(outwire,))
+    block.add_net(net)
     return outwire
 
 
@@ -261,10 +258,7 @@ def get_block(*arglist):
     blocks = set()
     for arg in arglist:
         if isinstance(arg, WireVector):
-            argblock = arg.block
-        else:
-            argblock = None
-        blocks.add(argblock)
+            blocks.add(arg.block)
 
     blocks.difference_update({None})  # remove the non block elements
 

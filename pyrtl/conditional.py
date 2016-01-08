@@ -32,11 +32,10 @@ Access should be done through instances "conditional_update" and "otherwise",
 as described above, not through the classes themselves.
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .wire import WireVector, Input, Output, Const, Register
+from .wire import WireVector, Const, Register
 
 
 # -----------------------------------------------------------------------
@@ -178,21 +177,22 @@ def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
 def _finalize():
     """Build the required muxes and call back to WireVector to finalize the wirevector build."""
     from .memory import MemBlock
-    from .helperfuncs import mux
+    from .helperfuncs import select
     for lhs in _predicate_map:
         # handle memory write ports
         if isinstance(lhs, MemBlock):
+            # TODO: rework this to not use is_first
             is_first = True
             for p, (addr, data, enable) in _predicate_map[lhs]:
                 if is_first:
-                    combined_enable = mux(p, truecase=enable, falsecase=Const(0))
+                    combined_enable = select(p, truecase=enable, falsecase=Const(0))
                     combined_addr = addr
                     combined_data = data
                     is_first = False
                 else:
-                    combined_enable = mux(p, truecase=enable, falsecase=combined_enable)
-                    combined_addr = mux(p, truecase=addr, falsecase=combined_addr)
-                    combined_data = mux(p, truecase=data, falsecase=combined_data)
+                    combined_enable = select(p, truecase=enable, falsecase=combined_enable)
+                    combined_addr = select(p, truecase=addr, falsecase=combined_addr)
+                    combined_data = select(p, truecase=data, falsecase=combined_data)
             lhs._build(combined_addr, combined_data, combined_enable)
 
         # handle wirevector and register assignments
@@ -205,7 +205,7 @@ def _finalize():
                 raise PyrtlInternalError('unknown assignment in finalize')
             predlist = _predicate_map[lhs]
             for p, rhs in predlist:
-                result = mux(p, truecase=rhs, falsecase=result)
+                result = select(p, truecase=rhs, falsecase=result)
             lhs._build(result)
 
 

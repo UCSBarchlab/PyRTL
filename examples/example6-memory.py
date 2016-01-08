@@ -60,7 +60,7 @@ mem2[count] <<= WE(wdata, we)  # Uses count register
 # Now we will finish up the circuit
 # We will increment count register on each write
 
-count.next <<= mux(we, falsecase=count, truecase=count + 1)
+count.next <<= select(we, falsecase=count, truecase=count + 1)
 
 # we will also verify that the two write address are always the same
 
