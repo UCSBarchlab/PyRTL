@@ -224,6 +224,24 @@ class TestMemConditionalBlock(unittest.TestCase):
                     o <<= m[addr]
         self.check_trace('i 01234567\no 00000123\n')
 
+    def test_true_multi_condition_memread(self):
+        m = pyrtl.MemBlock(addrwidth=2, bitwidth=3, name='m')
+        i = pyrtl.Register(bitwidth=3, name='i')
+        o = pyrtl.WireVector(bitwidth=2, name='o')
+        i.next <<= i + 1
+        addr = i[0:2]
+        with pyrtl.conditional_assignment:
+            with i < 2:
+                m[addr] |= i
+            with (2 <= i) & (i < 4):
+                m[addr] |= (i + 1)[:3]
+            with pyrtl.otherwise:
+                with addr[0]:
+                    # this should happen every time because no
+                    # state is being updated!
+                    o <<= m[addr]
+        self.check_trace('i 01234567\no 00000130\n')
+
 # ---------------------------------------------------------------
 
 

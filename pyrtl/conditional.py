@@ -181,18 +181,16 @@ def _finalize():
     for lhs in _predicate_map:
         # handle memory write ports
         if isinstance(lhs, MemBlock):
-            # TODO: rework this to not use is_first
-            is_first = True
-            for p, (addr, data, enable) in _predicate_map[lhs]:
-                if is_first:
-                    combined_enable = select(p, truecase=enable, falsecase=Const(0))
-                    combined_addr = addr
-                    combined_data = data
-                    is_first = False
-                else:
-                    combined_enable = select(p, truecase=enable, falsecase=combined_enable)
-                    combined_addr = select(p, truecase=addr, falsecase=combined_addr)
-                    combined_data = select(p, truecase=data, falsecase=combined_data)
+            p, (addr, data, enable) = _predicate_map[lhs][0]
+            combined_enable = select(p, truecase=enable, falsecase=Const(0))
+            combined_addr = addr
+            combined_data = data
+
+            for p, (addr, data, enable) in _predicate_map[lhs][1:]:
+                combined_enable = select(p, truecase=enable, falsecase=combined_enable)
+                combined_addr = select(p, truecase=addr, falsecase=combined_addr)
+                combined_data = select(p, truecase=data, falsecase=combined_data)
+
             lhs._build(combined_addr, combined_data, combined_enable)
 
         # handle wirevector and register assignments
