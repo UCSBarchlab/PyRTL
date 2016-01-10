@@ -1,7 +1,6 @@
 import copy
 
 from .core import PostSynthBlock, set_working_block, LogicNet, working_block
-from .pyrtlexceptions import PyrtlError
 from .wire import Const, Input, Output, WireVector, Register
 from .helperfuncs import get_block
 

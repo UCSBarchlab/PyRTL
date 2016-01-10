@@ -8,6 +8,7 @@
 
 
 import pyrtl
+from pyrtl.analysis import estimate
 
 # --- Part 1: Timing Analysis ------------------------------------------------
 
@@ -25,20 +26,20 @@ out_wire <<= const_wire + in_wire2
 # Now we will do the timing analysis as well as print out the critical path
 
 # Generating timing analysis information
-timing_map = pyrtl.timing_analysis()
+timing_map = estimate.timing_analysis()
 print("Pre Synthesis:")
-pyrtl.print_max_length(timing_map)
+estimate.print_max_length(timing_map)
 
 # We are also able to print out the critical paths as well as get them
 # back as an array.
-critical_path_info = pyrtl.timing_critical_path(timing_map)
+critical_path_info = estimate.timing_critical_path(timing_map)
 
 # --- Part 2: Area Analysis --------------------------------------------------
 
 # PyRTL also provides estimates for the area that would be used up if the
 # circuit was printed as an ASIC
 
-logic_area, mem_area = pyrtl.area_estimation(tech_in_nm=65)
+logic_area, mem_area = estimate.area_estimation(tech_in_nm=65)
 est_area = logic_area + mem_area
 print("Estimated Area of block", est_area, "sq mm")
 print()
@@ -57,8 +58,8 @@ print()
 pyrtl.synthesize()
 
 print("Pre Optimization:")
-timing_map = pyrtl.timing_analysis()
-pyrtl.print_max_length(timing_map)
+timing_map = estimate.timing_analysis()
+estimate.print_max_length(timing_map)
 for net in pyrtl.working_block().logic:
     print(str(net))
 print()
@@ -72,8 +73,8 @@ pyrtl.optimize()
 
 # Now to see the difference
 print("Post Optimization:")
-timing_map = pyrtl.timing_analysis()
-pyrtl.print_max_length(timing_map)
+timing_map = estimate.timing_analysis()
+estimate.print_max_length(timing_map)
 
 for net in pyrtl.working_block().logic:
     print(str(net))

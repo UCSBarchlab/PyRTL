@@ -2,6 +2,7 @@ from __future__ import print_function, unicode_literals, absolute_import
 from .helperfunctions import testmissing
 from .test_transform import NetWireNumTestCases
 from pyrtl.wire import Const,  Output
+from pyrtl.analysis import estimate
 
 import unittest
 import pyrtl
@@ -214,28 +215,28 @@ class TestSynthOptTiming(NetWireNumTestCases):
         # to make sure that the timing matches
         # this is a subprocess to do the synth and timing
         block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        timing_max_length = pyrtl.timing_max_length(timing_map)
+        timing_map = estimate.timing_analysis(block)
+        timing_max_length = estimate.timing_max_length(timing_map)
         if timing_val is not None:
             self.assertEqual(timing_max_length, timing_val)
-        critical_path = pyrtl.timing_critical_path(timing_map)
+        critical_path = estimate.timing_critical_path(timing_map)
 
         pyrtl.synthesize()
         pyrtl.optimize()
 
         block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        timing_max_length = pyrtl.timing_max_length(timing_map)
+        timing_map = estimate.timing_analysis(block)
+        timing_max_length = estimate.timing_max_length(timing_map)
         if opt_timing_val is not None:
             self.assertEqual(timing_max_length, opt_timing_val)
-        critical_path = pyrtl.timing_critical_path(timing_map)
+        critical_path = estimate.timing_critical_path(timing_map)
 
         pyrtl.and_inverter_synth()
         pyrtl.optimize()
 
         block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        timing_max_length = pyrtl.timing_max_length(timing_map)
+        timing_map = estimate.timing_analysis(block)
+        timing_max_length = estimate.timing_max_length(timing_map)
         self.num_net_of_type('|', 0, block)
         self.num_net_of_type('^', 0, block)
 
@@ -243,8 +244,8 @@ class TestSynthOptTiming(NetWireNumTestCases):
         pyrtl.optimize()
 
         block = pyrtl.working_block()
-        timing_map = pyrtl.timing_analysis(block)
-        timing_max_length = pyrtl.timing_max_length(timing_map)
+        timing_map = estimate.timing_analysis(block)
+        timing_max_length = estimate.timing_max_length(timing_map)
         block.sanity_check()
         self.num_net_of_type('|', 0, block)
         self.num_net_of_type('^', 0, block)
@@ -283,8 +284,8 @@ class TestSynthOptTiming(NetWireNumTestCases):
             pyrtl.synthesize()
             pyrtl.optimize()
             block = pyrtl.working_block()
-            timing_map = pyrtl.timing_analysis(block)
-            block_max_time = pyrtl.timing_max_length(timing_map)
+            timing_map = estimate.timing_analysis(block)
+            block_max_time = estimate.timing_max_length(timing_map)
 
     def test_wirevector_1(self):
         inwire = pyrtl.Input(bitwidth=1)
