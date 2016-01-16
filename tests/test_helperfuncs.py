@@ -4,6 +4,7 @@ import io
 
 import pyrtl
 from pyrtl import helperfuncs
+from .rtllib import t_utils as utils
 # ---------------------------------------------------------------
 
 
@@ -110,6 +111,76 @@ class TestMux(unittest.TestCase):
         s = pyrtl.WireVector(name='s', bitwidth=2)
         with self.assertRaises(pyrtl.PyrtlError):
             r = pyrtl.mux(s, a, b, default=0, foo=1)
+
+
+class TestMuxSimulation(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        random.seed(8492049)
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_simple_mux_1(self):
+        self.mux_t_subprocess(4, 16)
+
+    def test_simple_mux_2(self):
+        self.mux_t_subprocess(6, 7)
+
+    def mux_t_subprocess(self, addr_width, val_width):
+        mux_ins, vals = utils.make_consts(num_wires=2**addr_width, exact_bitwidth=val_width)
+        control, testctrl = utils.generate_in_wire_and_values(addr_width, 40, "mux_ctrl")
+
+        out = pyrtl.Output(val_width, "mux_out")
+        out <<= pyrtl.mux(control, *mux_ins)
+
+        true_result = [vals[i] for i in testctrl]
+        mux_result = utils.sim_and_ret_out(out, (control,), (testctrl,))
+        self.assertEqual(mux_result, true_result)
+
+    def test_mux_with_default(self):
+        addr_width = 5
+        val_width = 9
+        default_val = 170  # arbitrary value under 2**val_width
+        num_defaults = 5
+        mux_ins, vals = utils.make_consts(num_wires=2**addr_width - num_defaults,
+                                          exact_bitwidth=val_width, random_dist=utils.uniform_dist)
+        control, testctrl = utils.generate_in_wire_and_values(addr_width, 40, "mux_ctrl", utils.uniform_dist)
+
+        for i in range(5):
+            vals.append(default_val)
+
+        out = pyrtl.Output(val_width, "mux_out")
+        out <<= pyrtl.mux(control, *mux_ins, default=pyrtl.Const(default_val))
+
+        true_result = [vals[i] for i in testctrl]
+        mux_result = utils.sim_and_ret_out(out, (control,), (testctrl,))
+        self.assertEqual(mux_result, true_result)
+
+    def test_select(self):
+        vals = 12, 27
+        mux_ins = [pyrtl.Const(x) for x in vals]
+        control, testctrl = utils.generate_in_wire_and_values(1, 40, "sel_ctrl", utils.uniform_dist)
+
+        out = pyrtl.Output(5, "mux_out")
+        out <<= pyrtl.select(control, falsecase=mux_ins[0], truecase=mux_ins[1])
+
+        true_result = [vals[i] for i in testctrl]
+        mux_result = utils.sim_and_ret_out(out, (control,), (testctrl,))
+        self.assertEqual(mux_result, true_result)
+
+    def test_select_no_pred(self):
+        vals = 12, 27
+        mux_ins = [pyrtl.Const(x) for x in vals]
+        control, testctrl = utils.generate_in_wire_and_values(1, 40, "sel_ctrl", utils.uniform_dist)
+
+        out = pyrtl.Output(5, "mux_out")
+        out <<= pyrtl.select(control, mux_ins[1], mux_ins[0])
+
+        true_result = [vals[i] for i in testctrl]
+        mux_result = utils.sim_and_ret_out(out, (control,), (testctrl,))
+        self.assertEqual(mux_result, true_result)
 
 
 class TestRtlProbe(unittest.TestCase):
