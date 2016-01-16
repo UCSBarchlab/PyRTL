@@ -1,8 +1,9 @@
-import unittest
 import random
+import unittest
+
 import pyrtl
+import pyrtl.rtllib.testingutils as utils
 from pyrtl.rtllib import adders
-import t_utils as utils
 
 
 class TestAdders(unittest.TestCase):
