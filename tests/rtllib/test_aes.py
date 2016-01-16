@@ -62,6 +62,8 @@ class TestAES(unittest.TestCase):
         self.assertEqual(calculated_result, plain_text)
 
     def test_aes_state_machine(self):
+        # self.longMessage = True
+
         aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
         reset = pyrtl.Input(1)
         ready = pyrtl.Output(1, name='ready')
@@ -74,18 +76,26 @@ class TestAES(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
 
         sim.step({
-            self.in_vector: 0x3ad77bb40d7a3660a89ecaf32466ef97,
-            aes_key: 0x2b7e151628aed2a6abf7158809cf4f3c,
+            self.in_vector: 0x69c4e0d86a7b0430d8cdb78070b4c55a,
+            aes_key: 0x000102030405060708090a0b0c0d0e0f,
             reset: 1
         })
 
-        for cycle in range(13):  # Bogus data for while the state machine churns
+        true_vals = [0x69c4e0d86a7b0430d8cdb78070b4c55a, 0x7ad5fda789ef4e272bca100b3d9ff59f,
+                     0x54d990a16ba09ab596bbf40ea111702f, 0x3e1c22c0b6fcbf768da85067f6170495,
+                     0xb458124c68b68a014b99f82e5f15554c, 0xe8dab6901477d4653ff7f5e2e747dd4f,
+                     0x36339d50f9b539269f2c092dc4406d23, 0x2d6d7ef03f33e334093602dd5bfb12c7,
+                     0x3bd92268fc74fb735767cbe0c0590e2d, 0xa7be1a6997ad739bd8c9ca451f618b61,
+                     0x6353e08c0960e104cd70b751bacad0e7, 0x00112233445566778899aabbccddeeff,
+                     0x00112233445566778899aabbccddeeff,]
+
+        for cycle in range(1, 13):  # Bogus data for while the state machine churns
             sim.step({
                 self.in_vector: 0x0, aes_key: 0x1, reset: 0
             })
-
-        self.assertEquals(sim_trace.trace[self.out_vector][11], 0x6bc1bee22e409f96e93d7e117393172a)
-        self.assertEquals(sim_trace.trace[self.out_vector][12], 0x6bc1bee22e409f96e93d7e117393172a)
+            circuit_out = sim_trace.trace[self.out_vector][cycle]
+            self.assertEqual(circuit_out, true_vals[cycle], "\nAssertion failed on cycle: " +
+                             str(cycle) + " Gotten value: " + hex(circuit_out))
 
         for ready_signal in sim_trace.trace[ready][:11]:
             self.assertEquals(ready_signal, 0)
