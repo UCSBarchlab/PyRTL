@@ -1,8 +1,6 @@
 import pyrtl
 import random
 
-__author__ = 'John Clow'
-
 """
 testcase_utils
 
@@ -46,18 +44,19 @@ def uniform_dist(bitwidth):
     return random.randrange(2**bitwidth)
 
 
-def generate_in_wire_and_values(bitwidth, num_test_vals=20, name=None, random_dist=inverse_power_dist):
+def generate_in_wire_and_values(bitwidth, test_vals=20, name=None,
+                                random_dist=inverse_power_dist):
     """
     Generates an input wire and a set of test values for
     testing purposes
     :param bitwidth: The bitwidth of the value you wish to generate
+    :param int test_vals: number of values to generate per wire
+    :param name: name for the input wire to be generated
     :return: tuple consisting of input_wire, test_vaues
     """
     input_wire = pyrtl.Input(bitwidth, name=name)  # Creating a new input wire
-    test_vals = [random_dist(bitwidth) for i in range(num_test_vals)]
+    test_vals = [random_dist(bitwidth) for i in range(test_vals)]
     return input_wire, test_vals
-
-
 
 
 def make_consts(num_wires, max_bitwidth=None, exact_bitwidth=None, random_dist=inverse_power_dist):

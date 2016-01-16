@@ -1,7 +1,8 @@
 import unittest
+
 import pyrtl
+import pyrtl.rtllib.testingutils as utils
 from pyrtl.rtllib import libutils
-import t_utils as utils
 
 
 class TestPartitionWire(unittest.TestCase):
