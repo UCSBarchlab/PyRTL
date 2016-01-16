@@ -37,7 +37,16 @@ def calcuate_max_and_min_bitwidths(max_bitwidth=None, exact_bitwidth=None):
     return min_bitwidth, max_bitwidth
 
 
-def generate_in_wire_and_values(bitwidth, num_test_vals=20, name=None):
+def inverse_power_dist(bitwidth):
+    return int(2**random.uniform(0, bitwidth)-1)
+
+
+def uniform_dist(bitwidth):
+    # Note that this is not uniformly distributed
+    return random.randrange(2**bitwidth)
+
+
+def generate_in_wire_and_values(bitwidth, num_test_vals=20, name=None, random_dist=inverse_power_dist):
     """
     Generates an input wire and a set of test values for
     testing purposes
@@ -45,22 +54,19 @@ def generate_in_wire_and_values(bitwidth, num_test_vals=20, name=None):
     :return: tuple consisting of input_wire, test_vaues
     """
     input_wire = pyrtl.Input(bitwidth, name=name)  # Creating a new input wire
-    test_vals = [_random_test_value(bitwidth) for i in range(num_test_vals)]
+    test_vals = [random_dist(bitwidth) for i in range(num_test_vals)]
     return input_wire, test_vals
 
 
-def _random_test_value(bitwidth):
-    # Note that this is not uniformly distributed
-    return int(2**random.uniform(0, bitwidth)-1)
 
 
-def make_consts(num_wires, max_bitwidth=None, exact_bitwidth=None):
+def make_consts(num_wires, max_bitwidth=None, exact_bitwidth=None, random_dist=inverse_power_dist):
     """
     returns [Const] [Const vals]
     """
     min_bitwidth, max_bitwidth = calcuate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
     bitwidths = [random.randrange(min_bitwidth, max_bitwidth + 1) for i in range(num_wires)]
-    wires = [pyrtl.Const(_random_test_value(b), b) for b in bitwidths]
+    wires = [pyrtl.Const(random_dist(b), b) for b in bitwidths]
     vals = [w.val for w in wires]
     return wires, vals
 

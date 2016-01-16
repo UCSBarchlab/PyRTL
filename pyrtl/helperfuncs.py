@@ -217,11 +217,11 @@ def mux(index, *mux_ins, **kwargs):
             % (len(index), len(mux_ins)))
 
     if len(index) == 1:
-        return select(index, mux_ins[0], mux_ins[1])
+        return select(index, falsecase=mux_ins[0], truecase=mux_ins[1])
     half = len(mux_ins) // 2
     return select(index[-1],
-                  mux(index[0:-1], *mux_ins[:half]),
-                  mux(index[0:-1], *mux_ins[half:]))
+                  falsecase=mux(index[0:-1], *mux_ins[:half]),
+                  truecase=mux(index[0:-1], *mux_ins[half:]))
 
 
 def select(sel, truecase, falsecase):
