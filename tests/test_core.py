@@ -78,6 +78,25 @@ class TestBlock(unittest.TestCase):
         for net in block.logic:
             print(net)
 
+    def test_as_graph(self):
+        inwire = pyrtl.Input(bitwidth=1, name="inwire1")
+        inwire2 = pyrtl.Input(bitwidth=1)
+        inwire3 = pyrtl.Input(bitwidth=1)
+        tempwire = pyrtl.WireVector()
+        tempwire2 = pyrtl.WireVector()
+        outwire = pyrtl.Output()
+
+        tempwire <<= inwire | inwire2
+        tempwire2 <<= ~tempwire
+        outwire <<= tempwire2 & inwire3
+
+        g = pyrtl.working_block().as_graph()
+        # note for future: this might fail if we change
+        # the way that temp wires are inserted, but that 
+        # should not matter for this test and so the number
+        # can be safely updated.
+        self.assertEqual(len(g), 10)
+
 
 class TestSanityCheck(unittest.TestCase):
     # TODO: We need to test all of sanity check
