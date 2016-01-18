@@ -11,6 +11,7 @@ from .core import working_block, PostSynthBlock
 from .wire import Input, Register, Const
 from .memory import RomBlock, _MemReadBase
 from .helperfuncs import check_rtl_assertions
+from .ipython_support import _currently_in_ipython, render_trace_to_ipython
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -654,56 +655,13 @@ class SimulationTrace(object):
         :param segment_delim: The character to be output between segments.
         :param extra_line: A Boolean to determin if we should print a blank line between signals.
         """
-        def in_ipython():
-            try:
-                __IPYTHON__  # pylint: disable=undefined-variable
-                return True
-            except NameError:
-                return False
-
-        if in_ipython():
-            self.render_trace_to_html(trace_list=trace_list)
+        if _currently_in_ipython():
+            render_trace_to_ipython(self.trace, sortkey=_trace_sort_key, trace_list=trace_list)
         else:
             self.render_trace_to_text(
                 trace_list=trace_list, file=file, render_cls=render_cls,
                 symbol_len=symbol_len, segment_size=segment_size,
                 segment_delim=segment_delim, extra_line=extra_line)
-
-    def render_trace_to_html(self, trace_list):
-        """ Render a trace for viewing in IPython. """
-        from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
-
-        def rle(trace):
-            l = []
-            last = ''
-            for i in range(len(trace)):
-                if last == trace[i]:
-                    l.append('.')
-                else:
-                    l.append(str(trace[i]))
-                    last = trace[i]
-            return ''.join(l)
-
-        # default to printing all signals in sorted order
-        if trace_list is None:
-            trace_list = sorted(self.trace, key=_trace_sort_key)
-
-        wave_template = (
-            """\
-            <script src="http://wavedrom.com/skins/default.js" type="text/javascript"></script>
-            <script src="http://wavedrom.com/WaveDrom.js" type="text/javascript"></script>
-            <script type="WaveDrom">
-            { signal : [
-            %s
-            ]}
-            </script>
-            """)
-        signal_template = '{ name: "%s",  wave: "%s" },'
-        signals = [signal_template % (w.name, rle(self.trace[w])) for w in trace_list]
-        all_signals = '\n'.join(signals)
-        wave = wave_template % all_signals
-        display(HTML(wave))
-        display(Javascript('WaveDrom.ProcessAll()'))
 
     def render_trace_to_text(
             self, trace_list, file, render_cls,
