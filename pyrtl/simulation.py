@@ -10,8 +10,7 @@ from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock
 from .wire import Input, Register, Const
 from .memory import RomBlock, _MemReadBase
-from .helperfuncs import check_rtl_assertions
-from .ipython_support import _currently_in_ipython, render_trace_to_ipython
+from .helperfuncs import check_rtl_assertions, _currently_in_ipython
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -656,7 +655,10 @@ class SimulationTrace(object):
         :param extra_line: A Boolean to determin if we should print a blank line between signals.
         """
         if _currently_in_ipython():
-            render_trace_to_ipython(self.trace, sortkey=_trace_sort_key, trace_list=trace_list)
+            from IPython.display import display, HTML
+            from .inputoutput import trace_to_html
+            htmlstring = trace_to_html(self.trace, trace_list=trace_list, sortkey=_trace_sort_key)
+            display(HTML(htmlstring))
         else:
             self.render_trace_to_text(
                 trace_list=trace_list, file=file, render_cls=render_cls,

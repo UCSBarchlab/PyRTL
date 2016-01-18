@@ -305,6 +305,11 @@ class Block(object):
 
         return graph
 
+    def _repr_svg_(self):
+        """ IPython display support for Block. """
+        from .inputoutput import block_to_svg
+        return block_to_svg(self)
+
     def __iter__(self):
         """ BlockIterator iterates over the block passed on init in topographic order.
             The input is a Block, and when a LogicNet is returned it is always the case

@@ -210,7 +210,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
 #   \__/ \__/  |  |    \__/  |
 #
 
-def _default_namer(thing, is_edge=True):
+def _trivialgraph_default_namer(thing, is_edge=True):
     """ Returns a "good" string for thing in printed graphs. """
     if is_edge:
         if thing.name is None or thing.name.startswith('tmp'):
@@ -230,7 +230,7 @@ def _default_namer(thing, is_edge=True):
             raise PyrtlError('no naming rule for thing')
 
 
-def output_to_trivialgraph(file, namer=_default_namer, block=None):
+def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None):
     """ Walk the block and output it in trivial graph format to the open file. """
     block = working_block(block)
     graph = block.as_graph()
@@ -252,18 +252,65 @@ def output_to_trivialgraph(file, namer=_default_namer, block=None):
             print('%d %d %s' % (from_index, to_index, namer(edge)), file=file)
 
 
-def output_to_graphviz(file, namer=_default_namer, block=None):
+def _graphviz_default_namer(thing, is_edge=True):
+    """ Returns a "good" graphviz label for thing. """
+    if is_edge:
+        if (
+           thing.name is None
+           or thing.name.startswith('tmp')
+           or isinstance(thing, (Input, Output, Const))
+           ):
+            name = ''
+        else:
+            name = '/'.join([thing.name, str(len(thing))])
+        penwidth = 2 if len(thing) == 1 else 4
+        return '[label="%s", penwidth="%d"]' % (name, penwidth)
+    elif isinstance(thing, (Input, Output)):
+        return '[label="%s", shape=circle, fillcolor=none]' % thing.name
+    elif isinstance(thing, Const):
+        return '[label="%d", shape=circle, fillcolor=lightgrey]' % thing.val
+    else:
+        try:
+            if thing.op == '&':
+                return '[label="and"]'
+            elif thing.op == '|':
+                return '[label="or"]'
+            elif thing.op == '^':
+                return '[label="xor"]'
+            elif thing.op == '~':
+                return '[label="not"]'
+            elif thing.op == 'w':
+                return '[label="buf"]'
+            else:
+                return '[label="%s"]' % thing.op + str(thing.op_param or '')
+        except AttributeError:
+            raise PyrtlError('no naming rule for thing')
+
+
+def output_to_graphviz(file, namer=_graphviz_default_namer, block=None):
     """ Walk the block and output it in graphviz format to the open file. """
+    print(block_to_graphviz_string(namer, block), file=file)
+
+
+def block_to_graphviz_string(namer=_graphviz_default_namer, block=None):
+    """ Return a graphviz string for the block. """
     block = working_block(block)
     graph = block.as_graph()
     node_index_map = {}  # map node -> index
 
-    print('digraph g {', file=file)
+    rstring = """\
+              digraph g {\n
+              graph [splines="spline"];
+              node [shape=circle, style=filled, fillcolor=lightblue1,
+                    fontcolor=grey, fontname=helvetica, penwidth=0,
+                    fixedsize=true];
+              edge [labelfloat=true, penwidth=2, color=deepskyblue];
+              """
 
     # print the list of nodes
     for index, node in enumerate(graph):
         label = namer(node, is_edge=False)
-        print('    n%s [label="%s"];' % (index, label), file=file)
+        rstring += '    n%s %s;\n' % (index, label)
         node_index_map[node] = index
 
     # print the list of edges
@@ -273,12 +320,59 @@ def output_to_graphviz(file, namer=_default_namer, block=None):
             to_index = node_index_map[_to]
             edge = graph[_from][_to]
             label = namer(edge)
-            if label:
-                print('   n%d -> n%d [label="%s"];' % (from_index, to_index, label), file=file)
-            else:
-                print('   n%d -> n%d;' % (from_index, to_index), file=file)
+            rstring += '   n%d -> n%d %s;\n' % (from_index, to_index, label)
 
-    print('}', file=file)
+    rstring += '}\n'
+    return rstring
+
+
+def block_to_svg(block=None):
+    """ Return an SVG for the block. """
+    block = working_block(block)
+    try:
+        from graphviz import Source
+        return Source(block_to_graphviz_string())._repr_svg_()
+    except ImportError:
+        raise PyrtlError('need graphviz installed (try "pip install graphviz")')
+
+
+def trace_to_html(trace, trace_list=None, sortkey=None):
+    """ Return a HTML block showing the trace. """
+
+    from .simulation import _trace_sort_key
+    if sortkey is None:
+        sortkey = _trace_sort_key
+
+    def rle(trace):
+        l = []
+        last = ''
+        for i in range(len(trace)):
+            if last == trace[i]:
+                l.append('.')
+            else:
+                l.append(str(trace[i]))
+                last = trace[i]
+        return ''.join(l)
+
+    if trace_list is None:
+        trace_list = sorted(trace, key=sortkey)
+
+    wave_template = (
+        """\
+        <script src="http://wavedrom.com/skins/default.js" type="text/javascript"></script>
+        <script src="http://wavedrom.com/WaveDrom.js" type="text/javascript"></script>
+        <script type="WaveDrom">
+        { signal : [
+        %s
+        ]}
+        </script>
+        """
+        )
+    signal_template = '{ name: "%s",  wave: "%s" },'
+    signals = [signal_template % (w.name, rle(trace[w])) for w in trace_list]
+    all_signals = '\n'.join(signals)
+    wave = wave_template % all_signals
+    return wave
 
 
 # ----------------------------------------------------------------

@@ -512,3 +512,12 @@ def print_loop(loop_data):
         print('\n'.join("{}".format(fs.net) for fs in loop_data))
         # print '\n'.join("{} (dest wire: {})".format(fs.net, fs.dst_w) for fs in loop_info)
         print("")
+
+
+def _currently_in_ipython():
+    """ Return true if running under ipython, otherwise return Fasle. """
+    try:
+        __IPYTHON__  # pylint: disable=undefined-variable
+        return True
+    except NameError:
+        return False
