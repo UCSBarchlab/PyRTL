@@ -210,100 +210,75 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
 #   \__/ \__/  |  |    \__/  |
 #
 
-def output_to_trivialgraph(file, block=None):
-    """ Walk the block and output it in trivial graph format to the open file """
-
-    block = working_block(block)
-    nodes = {}
-    edges = set([])
-    edge_names = {}
-    uid = [1]
-
-    def add_node(x, label):
-        nodes[x] = (uid[0], label)
-        uid[0] = uid[0] + 1
-
-    def add_edge(frm, to):
-        if hasattr(frm, 'name') and not frm.name.startswith('tmp'):
-            edge_label = frm.name
+def _default_namer(thing, is_edge=True):
+    """ Returns a "good" string for thing in printed graphs. """
+    if is_edge:
+        if thing.name is None or thing.name.startswith('tmp'):
+            return ''
         else:
-            edge_label = ''
-        if frm not in nodes:
-            frm = producer(frm)
-        if to not in nodes:
-            to = consumer(to)
-        (frm_id, _) = nodes[frm]
-        (to_id, _) = nodes[to]
-        edges.add((frm_id, to_id))
-        if edge_label:
-            edge_names[(frm_id, to_id)] = edge_label
+            return '/'.join([thing.name, str(len(thing))])
+    elif isinstance(thing, Input):
+        return thing.name or 'in'
+    elif isinstance(thing, Output):
+        return thing.name or 'out'
+    elif isinstance(thing, Const):
+        return str(thing.val)
+    else:
+        try:
+            return thing.op + str(thing.op_param or '')
+        except AttributeError:
+            raise PyrtlError('no naming rule for thing')
 
-    def producer(w):
-        """ return the node driving wire (or create it if undefined) """
-        assert isinstance(w, WireVector)
-        for net in block.logic:
-            for dest in net.dests:
-                if dest is w:
-                    return net
-        add_node(w, '???')
-        return w
 
-    def consumer(w):
-        """ return the node being driven by wire (or create it if undefined) """
-        assert isinstance(w, WireVector)
-        for net in block.logic:
-            for arg in net.args:
-                if arg is w:
-                    return net
-        add_node(w, '???')
-        return w
+def output_to_trivialgraph(file, namer=_default_namer, block=None):
+    """ Walk the block and output it in trivial graph format to the open file. """
+    block = working_block(block)
+    graph = block.as_graph()
+    node_index_map = {}  # map node -> index
 
-    # add all of the nodes
-    for net in block.logic:
-        label = str(net.op)
-        label += str(net.op_param) if net.op_param is not None else ''
-        add_node(net, label)
-    for input in block.wirevector_subset(Input):
-        label = 'in' if input.name is None else input.name
-        add_node(input, label)
-    for output in block.wirevector_subset(Output):
-        label = 'out' if output.name is None else output.name
-        add_node(output, label)
-    for const in block.wirevector_subset(Const):
-        label = str(const.val)
-        add_node(const, label)
+    # print the list of nodes
+    for index, node in enumerate(graph):
+        print('%d %s' % (index, namer(node, is_edge=False)), file=file)
+        node_index_map[node] = index
 
-    # add all of the edges
-    for net in block.logic:
-        for arg in net.args:
-            add_edge(arg, net)
-        for dest in net.dests:
-            add_edge(net, dest)
-
-    # print the actual output to the file
-    for (id, label) in nodes.values():
-        print('%s %s' % (id, label), file=file)
     print('#', file=file)
-    for (from_, to) in edges:
-        print('%s %s %s' % (from_, to, edge_names.get((from_, to), '')), file=file)
 
-    """ # TODO the below code will work for dot if it replaces the print function
-    # above.  We need to refactor the code to handle that.  Perhaps there should be a
-    # "make a graph" function and the output_to_trivial_graph and output_to_dot would
-    # just call that?
+    # print the list of edges
+    for _from in graph:
+        for _to in graph[_from]:
+            from_index = node_index_map[_from]
+            to_index = node_index_map[_to]
+            edge = graph[_from][_to]
+            print('%d %d %s' % (from_index, to_index, namer(edge)), file=file)
+
+
+def output_to_graphviz(file, namer=_default_namer, block=None):
+    """ Walk the block and output it in graphviz format to the open file. """
+    block = working_block(block)
+    graph = block.as_graph()
+    node_index_map = {}  # map node -> index
 
     print('digraph g {', file=file)
-    for (id, label) in nodes.values():
-        label = 'A' if label=='&' else label
-        print('    n%s [label="%s"];' % (id, label), file=file)
-    for (from_, to) in edges:
-        edgelabel = edge_names.get((from_, to), '')
-        if edgelabel:
-            print('   n%s -> n%s [label="%s"];' % (from_, to, edgelabel), file=file)
-        else:
-            print('   n%s -> n%s;' % (from_, to), file=file)
+
+    # print the list of nodes
+    for index, node in enumerate(graph):
+        label = namer(node, is_edge=False)
+        print('    n%s [label="%s"];' % (index, label), file=file)
+        node_index_map[node] = index
+
+    # print the list of edges
+    for _from in graph:
+        for _to in graph[_from]:
+            from_index = node_index_map[_from]
+            to_index = node_index_map[_to]
+            edge = graph[_from][_to]
+            label = namer(edge)
+            if label:
+                print('   n%d -> n%d [label="%s"];' % (from_index, to_index, label), file=file)
+            else:
+                print('   n%d -> n%d;' % (from_index, to_index), file=file)
+
     print('}', file=file)
-    """
 
 
 # ----------------------------------------------------------------

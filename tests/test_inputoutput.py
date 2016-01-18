@@ -103,7 +103,7 @@ class TestInputFromBlif(unittest.TestCase):
         io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
 
 
-class TestOutputToTGF(unittest.TestCase):
+class TestOutputGraphs(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -111,6 +111,11 @@ class TestOutputToTGF(unittest.TestCase):
         with io.StringIO() as vfile:
             pyrtl.input_from_blif(full_adder_blif)
             pyrtl.output_to_trivialgraph(vfile)
+
+    def test_output_to_graphviz_does_not_throw_error(self):
+        with io.StringIO() as vfile:
+            pyrtl.input_from_blif(full_adder_blif)
+            pyrtl.output_to_graphviz(vfile)
 
 
 class TestOutputTextbench(unittest.TestCase):

@@ -265,7 +265,7 @@ class Block(object):
                 if arg is wirevector:
                     retval.append(net)
         if len(retval) == 0:
-            raise PyrtlError('cannot find wirevector reader/consumer')
+            raise PyrtlError('cannot find wirevector reader/consumer for "%s"' % wirevector)
         return retval
 
     def as_graph(self):
@@ -280,6 +280,8 @@ class Block(object):
         Each node can be either a logic net, an Input, and Output, or a Const
         Each edge is a WireVector or derived type (Input, Output, Register, etc.)
         Note that inputs, consts, and outputs will be both "node" and "edge".
+        WireVectors that are not connected to any nets are not returned as part
+        of the graph.
         """
         from .wire import Input, Output, Const
         self.sanity_check()
@@ -293,10 +295,13 @@ class Block(object):
 
         # add all of the edges
         for w in self.wirevector_set:
-            _from = self.get_driver_of_wirevector(w)
-            _to_list = self.get_readers_of_wirevector(w)
-            for _to in _to_list:
-                graph[_from][_to] = w
+            try:
+                _from = self.get_driver_of_wirevector(w)
+                _to_list = self.get_readers_of_wirevector(w)
+                for _to in _to_list:
+                    graph[_from][_to] = w
+            except PyrtlError:
+                pass
 
         return graph
 
