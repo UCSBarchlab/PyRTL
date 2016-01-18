@@ -232,6 +232,74 @@ class Block(object):
         else:
             return None
 
+    def get_driver_of_wirevector(self, wirevector):
+        """Return the net driving wirevector.
+
+        Search the current block and return the driver for the wirevector.  If the
+        wirector is an Input or Const, the wirevector instance passed with be returned
+        (as inputs and consts are in a sense their own drivers).  If is not an input
+        and the wirevector cannot be found it raises PyRTLError. """
+
+        from .wire import Input, Const
+        if isinstance(wirevector, (Input, Const)):
+            return wirevector
+        for net in self.logic:
+            for dest in net.dests:
+                if dest is wirevector:
+                    return net
+        raise PyrtlError('cannot find wirevector driver')
+
+    def get_readers_of_wirevector(self, wirevector):
+        """Return the list of nets driven by wirevector.
+
+        Search the current block and return the nets reading wirevector.  If the
+        wirector is an Output, the wirevector instance passed with be returned (as outputs
+        are in a sense their own consumers).  If is not an output and the wirevector cannot
+        be found it raises PyrtlError. """
+        from .wire import Output
+        if isinstance(wirevector, Output):
+            return [wirevector]
+        retval = []
+        for net in self.logic:
+            for arg in net.args:
+                if arg is wirevector:
+                    retval.append(net)
+        if len(retval) == 0:
+            raise PyrtlError('cannot find wirevector reader/consumer')
+        return retval
+
+    def as_graph(self):
+        """ Return a graph representation of the current block.
+
+        Graph has the following form:
+            { node1: { nodeA: edge1A, nodeB: edge1B},
+              node2: { nodeB: edge2B, nodeC: edge2C},
+              ...
+            }
+
+        Each node can be either a logic net, an Input, and Output, or a Const
+        Each edge is a WireVector or derived type (Input, Output, Register, etc.)
+        Note that inputs, consts, and outputs will be both "node" and "edge".
+        """
+        from .wire import Input, Output, Const
+        self.sanity_check()
+        graph = {}
+
+        # add all of the nodes
+        for net in self.logic:
+            graph[net] = {}
+        for w in self.wirevector_subset((Input, Output, Const)):
+            graph[w] = {}
+
+        # add all of the edges
+        for w in self.wirevector_set:
+            _from = self.get_driver_of_wirevector(w)
+            _to_list = self.get_readers_of_wirevector(w)
+            for _to in _to_list:
+                graph[_from][_to] = w
+
+        return graph
+
     def __iter__(self):
         """ BlockIterator iterates over the block passed on init in topographic order.
             The input is a Block, and when a LogicNet is returned it is always the case
