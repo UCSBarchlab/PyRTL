@@ -18,6 +18,11 @@ from .wire import Const
 from .wire import Register
 
 # helper functions
+
+from .helperfuncs import input_list
+from .helperfuncs import output_list
+from .helperfuncs import register_list
+from .helperfuncs import wirevector_list
 from .helperfuncs import as_wires
 from .helperfuncs import concat
 from .helperfuncs import concat_list

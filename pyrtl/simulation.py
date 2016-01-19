@@ -655,10 +655,11 @@ class SimulationTrace(object):
         :param extra_line: A Boolean to determin if we should print a blank line between signals.
         """
         if _currently_in_ipython():
-            from IPython.display import display, HTML
+            from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
             from .inputoutput import trace_to_html
-            htmlstring = trace_to_html(self.trace, trace_list=trace_list, sortkey=_trace_sort_key)
+            htmlstring = trace_to_html(self, trace_list=trace_list, sortkey=_trace_sort_key)
             display(HTML(htmlstring))
+            display(Javascript('WaveDrom.ProcessAll()'))
         else:
             self.render_trace_to_text(
                 trace_list=trace_list, file=file, render_cls=render_cls,

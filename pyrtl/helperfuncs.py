@@ -25,6 +25,37 @@ _probe_number = 1
 #
 
 
+def input_list(names, bitwidth=1):
+    """ Allocate and return a list of Inputs. """
+    return wirevector_list(names, bitwidth, wvtype=Input)
+
+
+def output_list(names, bitwidth=1):
+    """ Allocate and return a list of Outputs. """
+    return wirevector_list(names, bitwidth, wvtype=Output)
+
+
+def register_list(names, bitwidth=1):
+    """ Allocate and return a list of Registers. """
+    return wirevector_list(names, bitwidth, wvtype=Register)
+
+
+def wirevector_list(names, bitwidth=1, wvtype=WireVector):
+    """ Allocate and return a list of WireVectors. """
+    if '/' in names and bitwidth != 1:
+        raise PyrtlError('only one of optional "/" or bitwidth parameter allowed')
+    names = names.replace(',', ' ')
+
+    wirelist = []
+    for fullname in names.split():
+        try:
+            name, bw = fullname.split('/')
+        except:
+            name, bw = fullname, bitwidth
+        wirelist.append(wvtype(bitwidth=bw, name=name))
+    return wirelist
+
+
 def as_wires(val, bitwidth=None, truncating=True, block=None):
     """ Return wires from val which may be wires, integers, strings, or bools.
 

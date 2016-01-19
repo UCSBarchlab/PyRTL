@@ -217,17 +217,15 @@ def _trivialgraph_default_namer(thing, is_edge=True):
             return ''
         else:
             return '/'.join([thing.name, str(len(thing))])
-    elif isinstance(thing, Input):
-        return thing.name or 'in'
-    elif isinstance(thing, Output):
-        return thing.name or 'out'
     elif isinstance(thing, Const):
         return str(thing.val)
+    elif isinstance(thing, WireVector):
+        return thing.name or '??'
     else:
         try:
             return thing.op + str(thing.op_param or '')
         except AttributeError:
-            raise PyrtlError('no naming rule for thing')
+            raise PyrtlError('no naming rule for "%s"' % str(thing))
 
 
 def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None):
@@ -258,17 +256,22 @@ def _graphviz_default_namer(thing, is_edge=True):
         if (
            thing.name is None
            or thing.name.startswith('tmp')
-           or isinstance(thing, (Input, Output, Const))
+           or isinstance(thing, (Input, Output, Const, Register))
            ):
             name = ''
         else:
             name = '/'.join([thing.name, str(len(thing))])
-        penwidth = 2 if len(thing) == 1 else 4
+        penwidth = 2 if len(thing) == 1 else 6
         return '[label="%s", penwidth="%d"]' % (name, penwidth)
-    elif isinstance(thing, (Input, Output)):
-        return '[label="%s", shape=circle, fillcolor=none]' % thing.name
+
     elif isinstance(thing, Const):
         return '[label="%d", shape=circle, fillcolor=lightgrey]' % thing.val
+    elif isinstance(thing, (Input, Output)):
+        return '[label="%s", shape=circle, fillcolor=none]' % thing.name
+    elif isinstance(thing, Register):
+        return '[label="%s", shape=square, fillcolor=gold]' % thing.name
+    elif isinstance(thing, WireVector):
+        return '[label="", shape=circle, fillcolor=none]'
     else:
         try:
             if thing.op == '&':
@@ -279,23 +282,28 @@ def _graphviz_default_namer(thing, is_edge=True):
                 return '[label="xor"]'
             elif thing.op == '~':
                 return '[label="not"]'
+            elif thing.op == 'x':
+                return '[label="mux"]'
+            elif thing.op == 'r':
+                name = thing.dests[0].name or ''
+                return '[label="%s.next", shape=square, fillcolor=gold]' % name
             elif thing.op == 'w':
                 return '[label="buf"]'
             else:
-                return '[label="%s"]' % thing.op + str(thing.op_param or '')
+                return '[label="%s"]' % (thing.op + str(thing.op_param or ''))
         except AttributeError:
-            raise PyrtlError('no naming rule for thing')
+            raise PyrtlError('no naming rule for "%s"' % str(thing))
 
 
 def output_to_graphviz(file, namer=_graphviz_default_namer, block=None):
     """ Walk the block and output it in graphviz format to the open file. """
-    print(block_to_graphviz_string(namer, block), file=file)
+    print(block_to_graphviz_string(block, namer), file=file)
 
 
-def block_to_graphviz_string(namer=_graphviz_default_namer, block=None):
+def block_to_graphviz_string(block=None, namer=_graphviz_default_namer):
     """ Return a graphviz string for the block. """
     block = working_block(block)
-    graph = block.as_graph()
+    graph = block.as_graph(split_state=True)
     node_index_map = {}  # map node -> index
 
     rstring = """\
@@ -304,7 +312,7 @@ def block_to_graphviz_string(namer=_graphviz_default_namer, block=None):
               node [shape=circle, style=filled, fillcolor=lightblue1,
                     fontcolor=grey, fontname=helvetica, penwidth=0,
                     fixedsize=true];
-              edge [labelfloat=true, penwidth=2, color=deepskyblue];
+              edge [labelfloat=false, penwidth=2, color=deepskyblue];
               """
 
     # print the list of nodes
@@ -336,10 +344,14 @@ def block_to_svg(block=None):
         raise PyrtlError('need graphviz installed (try "pip install graphviz")')
 
 
-def trace_to_html(trace, trace_list=None, sortkey=None):
+def oldtrace_to_html(simtrace, trace_list=None, sortkey=None):
     """ Return a HTML block showing the trace. """
 
-    from .simulation import _trace_sort_key
+    from .simulation import SimulationTrace, _trace_sort_key
+    if not isinstance(simtrace, SimulationTrace):
+        raise PyrtlError('first arguement must be of type SimulationTrace')
+
+    trace = simtrace.trace
     if sortkey is None:
         sortkey = _trace_sort_key
 
@@ -370,6 +382,62 @@ def trace_to_html(trace, trace_list=None, sortkey=None):
         )
     signal_template = '{ name: "%s",  wave: "%s" },'
     signals = [signal_template % (w.name, rle(trace[w])) for w in trace_list]
+    all_signals = '\n'.join(signals)
+    wave = wave_template % all_signals
+    return wave
+
+
+def trace_to_html(simtrace, trace_list=None, sortkey=None):
+    """ Return a HTML block showing the trace. """
+
+    from .simulation import SimulationTrace, _trace_sort_key
+    if not isinstance(simtrace, SimulationTrace):
+        raise PyrtlError('first arguement must be of type SimulationTrace')
+
+    trace = simtrace.trace
+    if sortkey is None:
+        sortkey = _trace_sort_key
+
+    if trace_list is None:
+        trace_list = sorted(trace, key=sortkey)
+
+    wave_template = (
+        """\
+        <script src="http://wavedrom.com/skins/default.js" type="text/javascript"></script>
+        <script src="http://wavedrom.com/WaveDrom.js" type="text/javascript"></script>
+        <script type="WaveDrom">
+        { signal : [
+        %s
+        ]}
+        </script>
+        """
+        )
+
+    def extract(w):
+        wavelist = []
+        datalist = []
+        last = None
+        for i, value in enumerate(trace[w]):
+            if last == value:
+                wavelist.append('.')
+            else:
+                if len(w) == 1:
+                    wavelist.append(str(value))
+                else:
+                    wavelist.append('=')
+                    datalist.append(value)
+                last = value
+
+        wavestring = ''.join(wavelist)
+        datastring = ', '.join(['"%d"' % data for data in datalist])
+        if len(w) == 1:
+            return bool_signal_template % (w.name, wavestring)
+        else:
+            return int_signal_template % (w.name, wavestring, datastring)
+
+    bool_signal_template = '{ name: "%s",  wave: "%s" },'
+    int_signal_template = '{ name: "%s",  wave: "%s", data: [%s] },'
+    signals = [extract(w) for w in trace_list]
     all_signals = '\n'.join(signals)
     wave = wave_template % all_signals
     return wave

@@ -268,7 +268,7 @@ class Block(object):
             raise PyrtlError('cannot find wirevector reader/consumer for "%s"' % wirevector)
         return retval
 
-    def as_graph(self):
+    def as_graph(self, split_state=False):
         """ Return a graph representation of the current block.
 
         Graph has the following form:
@@ -277,31 +277,46 @@ class Block(object):
               ...
             }
 
-        Each node can be either a logic net, an Input, and Output, or a Const
+        Each node can be either a logic net or a WireVector (e.g. an Input, and Output, a
+        Const or even an undriven WireVector (which acts as a source or sink in the network)
         Each edge is a WireVector or derived type (Input, Output, Register, etc.)
         Note that inputs, consts, and outputs will be both "node" and "edge".
         WireVectors that are not connected to any nets are not returned as part
         of the graph.
         """
-        from .wire import Input, Output, Const
-        self.sanity_check()
+        from .wire import Input, Output, Const, Register
+        # self.sanity_check()
         graph = {}
 
         # add all of the nodes
         for net in self.logic:
             graph[net] = {}
-        for w in self.wirevector_subset((Input, Output, Const)):
+        dest_set = set(wire for net in self.logic for wire in net.dests)
+        arg_set = set(wire for net in self.logic for wire in net.args)
+        dangle_set = dest_set.symmetric_difference(arg_set)
+        for w in dangle_set:
             graph[w] = {}
+        if split_state:
+            for w in self.wirevector_subset(Register):
+                graph[w] = {}
 
         # add all of the edges
         for w in self.wirevector_set:
             try:
                 _from = self.get_driver_of_wirevector(w)
-                _to_list = self.get_readers_of_wirevector(w)
-                for _to in _to_list:
-                    graph[_from][_to] = w
             except PyrtlError:
-                pass
+                _from = w
+
+            if split_state and isinstance(w, Register):
+                _from = w
+
+            try:
+                _to_list = self.get_readers_of_wirevector(w)
+            except PyrtlError:
+                _to_list = [w]
+
+            for _to in _to_list:
+                graph[_from][_to] = w
 
         return graph
 
