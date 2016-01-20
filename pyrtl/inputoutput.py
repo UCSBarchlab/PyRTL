@@ -284,6 +284,8 @@ def _graphviz_default_namer(thing, is_edge=True):
                 return '[label="not"]'
             elif thing.op == 'x':
                 return '[label="mux"]'
+            elif thing.op in 'sc':
+                return '[label="", height=.1, width=.1]'
             elif thing.op == 'r':
                 name = thing.dests[0].name or ''
                 return '[label="%s.next", shape=square, fillcolor=gold]' % name
