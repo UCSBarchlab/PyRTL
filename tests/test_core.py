@@ -44,7 +44,13 @@ class TestBlock(unittest.TestCase):
             foo = net1 > net2
         with self.assertRaises(pyrtl.PyrtlError):
             foo = net1 >= net2
-
+    def test_logicsubset_no_op(self):  
+    	 w = pyrtl.WireVector(name='testwire1', bitwidth=1)
+    	 v = pyrtl.WireVector(name='testwire2', bitwidth=1)
+    	 sum = w & v
+    	 block = pyrtl.working_block()
+    	 self.assertEqual(block.logic_subset(None), block.logic)
+    	 
     def test_sanity_check(self):
         pass
 
