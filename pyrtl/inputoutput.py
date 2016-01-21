@@ -250,7 +250,7 @@ def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None):
             print('%d %d %s' % (from_index, to_index, namer(edge)), file=file)
 
 
-def _graphviz_default_namer(thing, is_edge=True):
+def _graphviz_default_namer(thing, is_edge=True, is_to_splitmerge=False):
     """ Returns a "good" graphviz label for thing. """
     if is_edge:
         if (
@@ -262,7 +262,8 @@ def _graphviz_default_namer(thing, is_edge=True):
         else:
             name = '/'.join([thing.name, str(len(thing))])
         penwidth = 2 if len(thing) == 1 else 6
-        return '[label="%s", penwidth="%d"]' % (name, penwidth)
+        arrowhead = 'none' if is_to_splitmerge else 'normal'
+        return '[label="%s", penwidth="%d", arrowhead="%s"]' % (name, penwidth, arrowhead)
 
     elif isinstance(thing, Const):
         return '[label="%d", shape=circle, fillcolor=lightgrey]' % thing.val
@@ -314,7 +315,7 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer):
               node [shape=circle, style=filled, fillcolor=lightblue1,
                     fontcolor=grey, fontname=helvetica, penwidth=0,
                     fixedsize=true];
-              edge [labelfloat=false, penwidth=2, color=deepskyblue];
+              edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
               """
 
     # print the list of nodes
@@ -329,7 +330,8 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer):
             from_index = node_index_map[_from]
             to_index = node_index_map[_to]
             edge = graph[_from][_to]
-            label = namer(edge)
+            is_to_splitmerge = True if hasattr(_to, 'op') and _to.op in 'cs' else False
+            label = namer(edge, is_to_splitmerge=is_to_splitmerge)
             rstring += '   n%d -> n%d %s;\n' % (from_index, to_index, label)
 
     rstring += '}\n'
