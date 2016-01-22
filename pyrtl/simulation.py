@@ -61,7 +61,7 @@ class Simulation(object):
         block.sanity_check()  # check that this is a good hw block
 
         self.value = {}   # map from signal->value
-        self.memvalue = {}  # map from (memid,address)->value
+        self.memvalue = {}  # map from {memid :{address: value}}
         self.block = block
         self.default_value = default_value
         self.tracer = tracer
@@ -97,23 +97,31 @@ class Simulation(object):
             assert isinstance(w.val, numbers.Integral)  # for now
 
         # set memories to their passed values
+
+        for mem_net in self.block.logic_subset('m@'):
+            memid = mem_net.op_param[1].id
+            if memid not in self.memvalue:
+                self.memvalue[memid] = {}
+
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
                 if isinstance(self.block, PostSynthBlock):
                     mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
+                mem_map = self.memvalue[mem.id]
                 for (addr, val) in mem_map.items():
                     if addr < 0 or addr >= 2**mem.addrwidth:
                         raise PyrtlError('error, address outside of bounds')
-                    self.memvalue[(mem.id, addr)] = val
+                    mem_map[addr] = val
                     # TODO: warn if value larger than fits in bitwidth
 
         defined_roms = []
         # set ROMs to their default values
         for romNet in self.block.logic_subset('m'):
             rom = romNet.op_param[1]
+            rom_dict = self.memvalue[rom.id]
             if isinstance(rom, RomBlock) and rom not in defined_roms:
                 for address in range(0, 2**rom.addrwidth):
-                    self.memvalue[(rom.id, address)] = rom._get_read_data(address)
+                    rom_dict[address] = rom._get_read_data(address)
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
@@ -190,6 +198,17 @@ class Simulation(object):
         """
         return self.value[w]
 
+    def inspect_mem(self, mem):
+        """ Get the values in a map during the current simulation cycle.
+
+        :param mem: the memory to inspect
+        :return: {address: value}
+
+        Note that this returns the current memory state. Modifying the dictonary
+        will also modify the state in the simulator
+        """
+        return self.memvalue[mem.id]
+
     def _sanitize(self, val, wirevector):
         """Return a modified version of val that would fit in wirevector.
 
@@ -232,8 +251,7 @@ class Simulation(object):
             # memories act async for reads
             memid = net.op_param[0]
             read_addr = self.value[net.args[0]]
-            index = (memid, read_addr)
-            mem_lookup_result = self.memvalue.get(index, self.default_value)
+            mem_lookup_result = self.memvalue[memid].get(read_addr, self.default_value)
             self.value[net.dests[0]] = mem_lookup_result
         elif net.op == 'r' or net.op == '@':
             pass  # registers and memory write ports have no logic function
@@ -261,7 +279,7 @@ class Simulation(object):
                 write_val = prior_value[net.args[1]]
                 write_enable = prior_value[net.args[2]]
                 if write_enable:
-                    self.memvalue[(memid, write_addr)] = write_val
+                    self.memvalue[memid][write_addr] = write_val
             else:
                 raise PyrtlInternalError
 
