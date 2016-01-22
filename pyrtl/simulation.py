@@ -332,17 +332,19 @@ class FastSimulation(object):
             self.context[self.varname(w)] = w.val
 
         # set memories to their passed values or default value
-        self.context['fastsim_mem'] = {}
+        for net in self.block.logic_subset('m@'):
+            mem = net.op_param[1]
+            if self.varname(mem) not in self.context:
+                if isinstance(mem, RomBlock):
+                    self.context[self.varname(mem)] = mem
+                else:
+                    self.context[self.varname(mem)] = {}
+
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
+                mem_name = self.varname(mem)
                 for addr, value in mem_map.items():
-                    self.context['fastsim_mem'][(mem.id, addr)] = value
-
-        for net in self.block.logic_subset('m'):
-            mem = net.op_param[1]
-            if isinstance(mem, RomBlock):
-                if self.varname(mem) not in self.context:
-                    self.context[self.varname(mem)] = mem
+                    self.context[mem_name][addr] = value
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
@@ -364,12 +366,12 @@ class FastSimulation(object):
                 priorval = self.prior_context[self.varname(arg)]
                 self.context[self.varname(dest)] = dest.bitmask & priorval
             elif net.op == '@':
-                memid = net.op_param[0]
+                mem = net.op_param[1]
                 write_addr = self.prior_context[self.varname(net.args[0])]
                 write_val = self.prior_context[self.varname(net.args[1])]
                 write_enable = self.prior_context[self.varname(net.args[2])]
                 if write_enable:
-                    self.context['fastsim_mem'][(memid, write_addr)] = write_val
+                    self.context[self.varname(mem)][write_addr] = write_val
 
         # update inputs
         for wire, value in provided_inputs.items():
@@ -393,6 +395,19 @@ class FastSimulation(object):
         Will throw KeyError if w does not exist in the simulation.
         """
         return self.context[self.varname(w)]
+
+    def inspect_mem(self, mem):
+        """ Get the values in a map during the current simulation cycle.
+
+        :param mem: the memory to inspect
+        :return: {address: value}
+
+        Note that this returns the current memory state. Modifying the dictonary
+        will also modify the state in the simulator
+        """
+        if isinstance(mem, RomBlock):
+            raise PyrtlError("ROM blocks are not stored in the simulation object")
+        return self.context[self.varname(mem)]
 
     @staticmethod
     def varname(val):
@@ -462,9 +477,8 @@ class FastSimulation(object):
                     expr = '%s._get_read_data(%s)' % (self.varname(net.op_param[1]), read_addr)
                 else:
                     # memories act async for reads
-                    memid = net.op_param[0]
-                    index = '(%d, %s)' % (memid, read_addr)
-                    expr = 'fastsim_mem.get(%s, %s)' % (index, self.default_value)
+                    mem = net.op_param[1]
+                    expr = '%s .get(%s, %s)' % (self.varname(mem), read_addr,  self.default_value)
 
                 prog += '%s = %s & %s\n' % (result, mask, expr)
 
