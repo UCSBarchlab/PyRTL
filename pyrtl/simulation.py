@@ -107,12 +107,15 @@ class Simulation(object):
             for (mem, mem_map) in memory_value_map.items():
                 if isinstance(self.block, PostSynthBlock):
                     mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
-                mem_map = self.memvalue[mem.id]
+                self.memvalue[mem.id] = mem_map
+                max_addr_val, max_bit_val = 2**mem.addrwidth, 2**mem.bitwidth
                 for (addr, val) in mem_map.items():
-                    if addr < 0 or addr >= 2**mem.addrwidth:
-                        raise PyrtlError('error, address outside of bounds')
-                    mem_map[addr] = val
-                    # TODO: warn if value larger than fits in bitwidth
+                    if addr < 0 or addr >= max_addr_val:
+                        raise PyrtlError('error, address %s in %s outside of bounds' %
+                                         (str(addr)), mem.name)
+                    if val < 0 or val >= max_bit_val:
+                        raise PyrtlError('error, %s at %s in %s outside of bounds' %
+                                         (str(val), str(addr), mem.name))
 
         defined_roms = []
         # set ROMs to their default values
@@ -342,9 +345,7 @@ class FastSimulation(object):
 
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
-                mem_name = self.varname(mem)
-                for addr, value in mem_map.items():
-                    self.context[mem_name][addr] = value
+                self.context[self.varname(mem)] = mem_map
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
