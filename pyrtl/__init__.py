@@ -73,3 +73,6 @@ from .passes import synthesize
 from .passes import nand_synth
 from .passes import and_inverter_synth
 from .passes import optimize
+
+
+from .transform import net_transform, wire_transform, replace_wire, copy_block, clone_wire
