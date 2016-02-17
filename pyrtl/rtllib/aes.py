@@ -54,23 +54,21 @@ class AES(object):
     def inv_galois_mult(self, c, d):
         return self._inv_gal_mult_dict[d][c]
 
-    @staticmethod
-    def _mod_add(base, add, mod):
-        base_mod_floor = base // mod
-        return (base + add) % mod + base_mod_floor * mod
-
     _igm_divisor = [14, 9, 13, 11]
 
     def inv_mix_columns(self, in_vector):
+        self.build_memories_if_not_exists()
+        subgroups = libutils.partition_wire(in_vector, 32)
+        return pyrtl.concat_list([self._inverse_mix_subgroup(sg) for sg in subgroups])
+
+    def _inverse_mix_subgroup(self, in_vector):
         def _inv_mix_single(index):
-            mult_items = [self.inv_galois_mult(a[self._mod_add(index, loc, 4)], mult_table)
+            mult_items = [self.inv_galois_mult(a[(index + loc) % 4], mult_table)
                           for loc, mult_table in enumerate(self._igm_divisor)]
             return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
 
-        self.build_memories_if_not_exists()
         a = libutils.partition_wire(in_vector, 8)
-        inverted = [_inv_mix_single(index) for index in range(len(a))]
-        return pyrtl.concat_list(inverted)
+        return pyrtl.concat_list([_inv_mix_single(index) for index in range(len(a))])
 
     @staticmethod
     def add_round_key(t, key):
