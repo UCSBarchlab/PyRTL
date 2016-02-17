@@ -51,24 +51,23 @@ class AES(object):
                                   a[4],  a[1],  a[14], a[11],
                                   a[8],  a[5],  a[2],  a[15]))
 
-    def inv_galois_mult(self, c, d):
-        return self._inv_gal_mult_dict[d][c]
-
-    _igm_divisor = [14, 9, 13, 11]
+    def galois_mult(self, c, mult_table):
+        return self._inv_gal_mult_dict[mult_table][c]
 
     def inv_mix_columns(self, in_vector):
         self.build_memories_if_not_exists()
+        igm_mults = [14, 9, 13, 11]
         subgroups = libutils.partition_wire(in_vector, 32)
-        return pyrtl.concat_list([self._inverse_mix_subgroup(sg) for sg in subgroups])
+        return pyrtl.concat_list([self._mix_col_subgroup(sg, igm_mults) for sg in subgroups])
 
-    def _inverse_mix_subgroup(self, in_vector):
-        def _inv_mix_single(index):
-            mult_items = [self.inv_galois_mult(a[(index + loc) % 4], mult_table)
-                          for loc, mult_table in enumerate(self._igm_divisor)]
+    def _mix_col_subgroup(self, in_vector, gm_multipliers):
+        def _mix_single(index):
+            mult_items = [self.galois_mult(a[(index + loc) % 4], mult_table)
+                          for loc, mult_table in enumerate(gm_multipliers)]
             return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
 
         a = libutils.partition_wire(in_vector, 8)
-        return pyrtl.concat_list([_inv_mix_single(index) for index in range(len(a))])
+        return pyrtl.concat_list([_mix_single(index) for index in range(len(a))])
 
     @staticmethod
     def add_round_key(t, key):
