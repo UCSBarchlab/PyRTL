@@ -63,6 +63,41 @@ class TestAnyAll(unittest.TestCase):
         self.check_trace('o 00000001\nr 01234567\n')
 
 
+class TestXorAllBits(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(8):
+            sim.step({})
+        output = io.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_one_wirevector(self):
+        r = pyrtl.Register(3, 'r')
+        r.next <<= r + 1
+        o = pyrtl.Output(name='o')
+        o <<= pyrtl.xor_all_bits(r)
+        self.check_trace('o 01101001\nr 01234567\n')
+
+    def test_list_of_one_bit_wires(self):
+        r = pyrtl.Register(2, 'r')
+        r.next <<= r + 1
+        o = pyrtl.Output(name='o')
+        o <<= pyrtl.xor_all_bits([r[0], r[1]])
+        self.check_trace('o 01100110\nr 01230123\n')
+
+    def test_list_of_long_wires(self):
+        in_wires, vals = utils.make_wires_and_values(4, exact_bitwidth=13)
+        out = pyrtl.Output(name='o')
+        out <<= pyrtl.xor_all_bits(in_wires)
+        expected = [v1 ^ v2 ^ v3 ^ v4 for v1, v2, v3, v4 in zip(*vals)]
+        self.assertEqual(expected, utils.sim_and_ret_out(out, in_wires, vals))
+
+
 class TestMux(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

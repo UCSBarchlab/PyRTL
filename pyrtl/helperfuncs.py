@@ -95,33 +95,28 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
 
 
 def and_all_bits(vector):
-    """ Returns 1 bit WireVector, the result of "and"ing all bits of the argument vector."""
-    return _apply_op_over_all_bits('__and__', vector)
+    """ Returns WireVector, the result of "and"ing all items of the argument vector."""
+    return _apply_op_over_all_bits(lambda a, b: a & b, vector)
 
 
 def or_all_bits(vector):
-    """ Returns 1 bit WireVector, the result of "or"ing all bits of the argument vector."""
-    return _apply_op_over_all_bits('__or__', vector)
+    """ Returns WireVector, the result of "or"ing all items of the argument vector."""
+    return _apply_op_over_all_bits(lambda a, b: a | b, vector)
 
 
 def xor_all_bits(vector):
-    """ Returns 1 bit WireVector, the result of "xor"ing all bits of the argument vector."""
-    return _apply_op_over_all_bits('__xor__', vector)
+    """ Returns WireVector, the result of "xor"ing all items of the argument vector."""
+    return _apply_op_over_all_bits(lambda a, b: a ^ b, vector)
 
 
-def parity(vector):
-    """ Returns 1 bit WireVector, the result of "xor"ing all bits of the argument vector."""
-    return _apply_op_over_all_bits('__xor__', vector)
+parity = xor_all_bits  # shadowing the xor_all_bits_function
 
 
 def _apply_op_over_all_bits(op, vector):
     if len(vector) == 1:
-        return vector
-    else:
-        rest = _apply_op_over_all_bits(op, vector[1:])
-        func = getattr(vector[0], op)
-        # note that func is method bound to vector[0], which gives vector[0] as a first parameter
-        return func(rest)
+        return vector[0]
+    rest = _apply_op_over_all_bits(op, vector[1:])
+    return op(vector[0], rest)
 
 
 def rtl_any(*vectorlist):
