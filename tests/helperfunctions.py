@@ -1,15 +1,6 @@
 import pyrtl
 
 # ------------------------------------------------------
-
-
-def testmissing():
-    """ called when a test is just stubbed in """
-    # raise NotImplementedError
-    pass
-
-
-# ------------------------------------------------------
 # example hardware generators, useful for testing
 
 def generate_one_bit_adder(a, b, cin):
@@ -33,22 +24,3 @@ def generate_full_adder(a, b, cin=None):
         sumbits = pyrtl.concat(msbits, lsbit)
     return sumbits, cout
 
-
-def generate_one_bit_mux(a, b, sel):
-    """Generates a one-bit multiplexor"""
-    assert len(a) == len(b) == len(sel) == 1
-    out = (b & sel) | (a & ~sel)
-    return out
-
-
-def generate_full_mux(a, b, sel):
-    """Generates a multiplexor
-       b is the one selected when sel is high"""
-    assert len(a) == len(b)
-    if len(a) == 1:
-        out = generate_one_bit_mux(a, b, sel)
-    else:
-        lsbit = generate_one_bit_mux(a[0], b[0], sel)
-        msbits = generate_full_mux(a[1:], b[1:], sel)
-        out = pyrtl.concat(msbits, lsbit)
-    return out

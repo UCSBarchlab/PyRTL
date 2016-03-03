@@ -209,7 +209,7 @@ class TestRTLFastSimulationTraceWithMux(unittest.TestCase):
         self.b = pyrtl.Input(bitwidth=bitwidth)
         self.sel = pyrtl.Input(bitwidth=1)
         self.muxout = pyrtl.Output(bitwidth=bitwidth, name='muxout')
-        self.muxout <<= generate_full_mux(self.a, self.b, self.sel)
+        self.muxout <<= pyrtl.mux(self.sel, self.a, self.b)
 
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()

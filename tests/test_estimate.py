@@ -1,5 +1,4 @@
 from __future__ import print_function, unicode_literals, absolute_import
-from .helperfunctions import testmissing
 from .test_transform import NetWireNumTestCases
 from pyrtl.wire import Const,  Output
 

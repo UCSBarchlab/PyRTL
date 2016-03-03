@@ -1,5 +1,4 @@
 from __future__ import print_function, unicode_literals, absolute_import
-from .helperfunctions import testmissing
 from .test_transform import NetWireNumTestCases
 from pyrtl.wire import Const,  Output
 from pyrtl.analysis import estimate
@@ -208,7 +207,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         pyrtl.reset_working_block()
 
     def test_sanity_check(self):
-        testmissing()
+        pass
 
     def everything_t_procedure(self, timing_val=None, opt_timing_val=None):
         # if there is a nondefault timing val supplied, then it will check
