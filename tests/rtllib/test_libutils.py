@@ -21,7 +21,7 @@ class TestPartitionWire(unittest.TestCase):
 
     def test_partition_sim(self):
         pyrtl.reset_working_block()
-        wires, vals = utils.make_wires_and_values(exact_bitwidth=32, num_wires=1)
+        wires, vals = utils.make_inputs_and_values(exact_bitwidth=32, num_wires=1)
         out_wires = [pyrtl.Output(8, 'o' + str(i)) for i in range(4)]
         partitioned_w = libutils.partition_wire(wires[0], 8)
         for p_wire, o_wire in zip(partitioned_w, out_wires):

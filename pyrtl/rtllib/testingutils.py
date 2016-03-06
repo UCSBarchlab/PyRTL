@@ -12,19 +12,6 @@ a good reason to look at it - John Clow
 """
 
 
-def make_wires_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None):
-    """
-    Generates multiple input wires and sets of test values for
-    testing purposes
-    :return: wires, lists of values for the wires
-    """
-    min_bitwidth, max_bitwidth = calcuate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
-    wires, vals = list(zip(*(
-        generate_in_wire_and_values(random.randrange(min_bitwidth, max_bitwidth + 1))
-        for i in range(num_wires))))
-    return wires, vals
-
-
 def calcuate_max_and_min_bitwidths(max_bitwidth=None, exact_bitwidth=None):
     if max_bitwidth is not None:
         min_bitwidth = 1
@@ -42,6 +29,20 @@ def inverse_power_dist(bitwidth):
 def uniform_dist(bitwidth):
     # Note that this is not uniformly distributed
     return random.randrange(2**bitwidth)
+
+
+def make_inputs_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None, dist=inverse_power_dist, test_vals=20):
+    """
+    Generates multiple input wires and sets of test values for
+    testing purposes
+    :param function dist: function to generate the random values
+    :return: wires, lists of values for the wires
+    """
+    min_bitwidth, max_bitwidth = calcuate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
+    wires, vals = list(zip(*(
+        generate_in_wire_and_values(random.randrange(min_bitwidth, max_bitwidth + 1), test_vals, random_dist=dist)
+        for i in range(num_wires))))
+    return wires, vals
 
 
 def generate_in_wire_and_values(bitwidth, test_vals=20, name=None,

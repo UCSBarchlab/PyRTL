@@ -66,7 +66,7 @@ class TestWallace(unittest.TestCase):
         self.mult_t_base(5, 10, reducer=adders.dada_reducer)
 
     def test_fma_1(self):
-        wires, vals = utils.make_wires_and_values(exact_bitwidth=10, num_wires=3)
+        wires, vals = utils.make_inputs_and_values(exact_bitwidth=10, num_wires=3)
         test_w = multipliers.fused_multiply_adder(wires[0], wires[1], wires[2], False,
                                                   reducer=adders.dada_reducer,
                                                   adder_func=adders.ripple_add)
@@ -80,7 +80,7 @@ class TestWallace(unittest.TestCase):
         self.assertEqual(out_vals, true_result)
 
     def test_gen_fma_1(self):
-        wires, vals = utils.make_wires_and_values(max_bitwidth=8, num_wires=8)
+        wires, vals = utils.make_inputs_and_values(max_bitwidth=8, num_wires=8)
         # mixing tuples and lists solely for readability purposes
         mult_pairs = [(wires[0], wires[1]), (wires[2], wires[3]), (wires[4], wires[5])]
         add_wires = (wires[6], wires[7])
