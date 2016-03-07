@@ -303,7 +303,7 @@ def timing_critical_path(timing_map, block=None, print_cp=True):
     return critical_paths
 
 
-def print_critcal_paths(critical_paths):
+def print_critical_paths(critical_paths):
     """ Prints the results of the critical path length analysis
         Done by default by the timing_critical_path function
     """
