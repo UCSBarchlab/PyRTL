@@ -370,15 +370,8 @@ def probe(w, name=None):
     if not isinstance(w, WireVector):
         raise PyrtlError('Only WireVectors can be probed')
 
-    call_stack = getattr(w, 'init_call_stack', None)
-    if call_stack:
-        print('(Probe-%d) Traceback for probed wire, most recent call last' % _probe_number)
-        for frame in call_stack[0:-1]:
-            print(frame, end=' ')
-        print()
-    else:
-        print('(Probe-%d)' % _probe_number, end=' ')
-        print('    No call info found: use set_debug_mode() to provide more information\n')
+    print('(Probe-%d)' % _probe_number, end=' ')
+    print(get_stack(w))
 
     if name:
         pname = '(Probe-%d : %s : %s)' % (_probe_number, name, w.name)
@@ -389,6 +382,28 @@ def probe(w, name=None):
     p <<= w  # late assigns len from w automatically
     _probe_number += 1
     return w
+
+
+def get_stacks(*wires):
+    call_stack = getattr(wires[0], 'init_call_stack', None)
+    if not call_stack:
+        return '    No call info found for wires: use set_debug_mode() ' \
+               'to provide more information\n'
+    else:
+        return '\n'.join(str(wire) + ":\n" + get_stack(wire) for wire in wires)
+
+
+def get_stack(wire):
+    if not isinstance(wire, WireVector):
+        raise PyrtlError('Only WireVectors can be traced')
+
+    call_stack = getattr(wire, 'init_call_stack', None)
+    if call_stack:
+        frames = ' '.join(frame for frame in call_stack[:-1])
+        return "Traceback for wire, most recent call last \n" + frames + "\n"
+    else:
+        return '    No call info found for wire: use set_debug_mode()'\
+               ' to provide more information'
 
 
 def rtl_assert(w, exp, block=None):
@@ -541,7 +556,7 @@ def print_loop(loop_data):
 
 
 def _currently_in_ipython():
-    """ Return true if running under ipython, otherwise return Fasle. """
+    """ Return true if running under ipython, otherwise return False. """
     try:
         __IPYTHON__  # pylint: disable=undefined-variable
         return True

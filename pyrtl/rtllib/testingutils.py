@@ -31,7 +31,8 @@ def uniform_dist(bitwidth):
     return random.randrange(2**bitwidth)
 
 
-def make_inputs_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None, dist=inverse_power_dist, test_vals=20):
+def make_inputs_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None,
+                           dist=uniform_dist, test_vals=20):
     """
     Generates multiple input wires and sets of test values for
     testing purposes
@@ -40,13 +41,13 @@ def make_inputs_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None, di
     """
     min_bitwidth, max_bitwidth = calcuate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
     wires, vals = list(zip(*(
-        generate_in_wire_and_values(random.randrange(min_bitwidth, max_bitwidth + 1), test_vals, random_dist=dist)
-        for i in range(num_wires))))
+        generate_in_wire_and_values(random.randrange(min_bitwidth, max_bitwidth + 1), test_vals,
+                                    random_dist=dist) for i in range(num_wires))))
     return wires, vals
 
 
 def generate_in_wire_and_values(bitwidth, test_vals=20, name=None,
-                                random_dist=inverse_power_dist):
+                                random_dist=uniform_dist):
     """
     Generates an input wire and a set of test values for
     testing purposes

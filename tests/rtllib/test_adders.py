@@ -22,7 +22,7 @@ class TestAdders(unittest.TestCase):
         self.adder_t_base(adder_func, max_bitwidth=34, num_wires=2)
 
     def adder_t_base(self, adder_func, **kwargs):
-        wires, vals = utils.make_inputs_and_values(**kwargs)
+        wires, vals = utils.make_inputs_and_values(dist=utils.inverse_power_dist, **kwargs)
         outwire = pyrtl.Output(name="test")
         outwire <<= adder_func(*wires)
 
@@ -43,7 +43,8 @@ class TestAdders(unittest.TestCase):
         self.adder_t_base(adders.carrysave_adder, exact_bitwidth=32, num_wires=3)
 
     def test_fast_group_adder_1(self):
-        wires, vals = utils.make_inputs_and_values(max_bitwidth=12, num_wires=7)
+        wires, vals = utils.make_inputs_and_values(max_bitwidth=12, num_wires=7,
+                                                   dist=utils.inverse_power_dist)
         outwire = pyrtl.Output(name="test")
         outwire <<= adders.fast_group_adder(wires)
 
