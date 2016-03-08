@@ -299,7 +299,7 @@ def timing_critical_path(timing_map, block=None, print_cp=True):
             critical_path_pass([], wire_pair[0])
 
     if print_cp:
-        print_critcal_paths(critical_paths)
+        print_critical_paths(critical_paths)
     return critical_paths
 
 
