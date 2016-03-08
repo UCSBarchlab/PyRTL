@@ -81,7 +81,8 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
         # covert to a memory read when the value is actually used
         return as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)
     elif not isinstance(val, WireVector):
-        raise PyrtlError('error, expecting a wirevector, int, or verilog-style const string')
+        raise PyrtlError('error, expecting a wirevector, int, or verilog-style '
+                         'const string got %s instead' % repr(val))
     elif bitwidth == '0':
         raise PyrtlError('error, bitwidth must be >= 1')
     elif val.bitwidth is None:
@@ -400,7 +401,7 @@ def get_stack(wire):
     call_stack = getattr(wire, 'init_call_stack', None)
     if call_stack:
         frames = ' '.join(frame for frame in call_stack[:-1])
-        return "Traceback for wire, most recent call last \n" + frames + "\n"
+        return "Wire Traceback, most recent call last \n" + frames + "\n"
     else:
         return '    No call info found for wire: use set_debug_mode()'\
                ' to provide more information'

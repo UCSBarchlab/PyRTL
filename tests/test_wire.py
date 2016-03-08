@@ -1,8 +1,6 @@
 import unittest
 import pyrtl
 
-from .helperfunctions import *
-
 
 class TestWireVector(unittest.TestCase):
     def setUp(self):
@@ -271,12 +269,18 @@ class TestOutput(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlInternalError):
             x = w & o
 
+    def test_slice_output(self):
+        o = pyrtl.Output(2)
+        with self.assertRaises(pyrtl.PyrtlInternalError):
+            x = o[0]
+
 
 class TestRTLAdderDesign(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
     def test_complete_adders(self):
+        from .helperfunctions import generate_full_adder
         for bitwidth in range(9, 10):
             r = pyrtl.Register(bitwidth=bitwidth, name='r')
             const_one = pyrtl.Const(1)

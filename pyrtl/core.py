@@ -373,7 +373,7 @@ class Block(object):
         for w in self.wirevector_subset():
             if w.bitwidth is None:
                 raise PyrtlError(
-                    'error, missing bitwidth for WireVector "%s" \n %s', w.name, get_stack(w))
+                    'error, missing bitwidth for WireVector "%s" \n\n %s', w.name, get_stack(w))
 
         # check for unique names
         wirevector_names_list = [x.name for x in self.wirevector_set]
@@ -392,14 +392,14 @@ class Block(object):
         connected_minus_allwires = full_set.difference(self.wirevector_set)
         if len(connected_minus_allwires) > 0:
             bad_wire_names = '\n    '.join(str(x) for x in connected_minus_allwires)
-            raise PyrtlError('Unknown wires found in net:\n %s \n %s' % (bad_wire_names,
+            raise PyrtlError('Unknown wires found in net:\n %s \n\n %s' % (bad_wire_names,
                              get_stacks(*connected_minus_allwires)))
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         allwires_minus_connected = allwires_minus_connected.difference(all_input_and_consts)
         #   ^ allow inputs and consts to be unconnected
         if len(allwires_minus_connected) > 0:
             bad_wire_names = '\n    '.join(str(x) for x in allwires_minus_connected)
-            raise PyrtlError('Wires declared but not connected:\n %s \n %s' % (bad_wire_names,
+            raise PyrtlError('Wires declared but not connected:\n %s \n\n %s' % (bad_wire_names,
                              get_stacks(*allwires_minus_connected)))
 
         # Check for wires that are inputs to a logicNet, but are not block inputs and are never
@@ -407,8 +407,8 @@ class Block(object):
         ins = arg_set.difference(dest_set)
         undriven = ins.difference(all_input_and_consts)
         if len(undriven) > 0:
-            raise PyrtlError('Wires used but never driven: %s \n %s' % ([w.name for w in undriven],
-                             get_stacks(*undriven)))
+            raise PyrtlError('Wires used but never driven: %s \n\n %s' %
+                             ([w.name for w in undriven], get_stacks(*undriven)))
 
         # Check for async memories not specified as such
         self.sanity_check_memory_sync()
