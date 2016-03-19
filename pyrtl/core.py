@@ -373,7 +373,7 @@ class Block(object):
         for w in self.wirevector_subset():
             if w.bitwidth is None:
                 raise PyrtlError(
-                    'error, missing bitwidth for WireVector "%s" \n\n %s', w.name, get_stack(w))
+                    'error, missing bitwidth for WireVector "%s" \n\n %s' % (w.name, get_stack(w)))
 
         # check for unique names
         wirevector_names_list = [x.name for x in self.wirevector_set]

@@ -1,0 +1,108 @@
+import pyrtl
+
+
+def prioritized_mux(selects, vals):
+    """
+    Returns the value in the first wire for which its select bit is 1
+
+    :param [WireVector] selects: a list of WireVectors signaling whether
+        a wire should be chosen
+    :param [WireVector] vals: values to return when the corresponding select
+        value is 1
+    :return: WireVector
+
+    If none of the items are high, the last val is returned
+    """
+    if len(selects) != len(vals):
+        raise pyrtl.PyrtlError("Number of select and val signals must match")
+    if len(vals) == 0:
+        raise pyrtl.PyrtlError("Must have a signal to mux")
+    if len(vals) == 1:
+        return vals[0]
+    else:
+        half = len(vals) // 2
+        return pyrtl.select(pyrtl.rtl_any(*selects[:half]),
+                            truecase=prioritized_mux(selects[:half], vals[:half]),
+                            falsecase=prioritized_mux(selects[half:], vals[half:]))
+
+
+def _is_equivelent(w1, w2):
+    if isinstance(w1, pyrtl.Const) & isinstance(w2, pyrtl.Const):
+        return (w1.val == w2.val) & (w1.bitwidth == w2.bitwidth)
+    return w1 is w2
+
+
+SparseDefault = "default"
+
+
+def sparse_mux(sel, vals):
+    """
+    Mux that avoids instantiating unnecessary mux_2s when possible.
+
+    :param WireVector sel: Select wire, determines what is selected on a given cycle
+    :param {int: WireVector} vals: dictionary to store the values that are
+    :return: Wirevector that signifies the change
+
+    This mux supports not having a full specification. indices that are not
+    specified are treated as Don't Cares
+
+    It also supports a specified default value, SparseDefault
+    """
+    import numbers
+
+    max_val = 2**len(sel) - 1
+    if SparseDefault in vals:
+        default_val = vals[SparseDefault]
+        del vals[SparseDefault]
+        for i in range(max_val + 1):
+            if i not in vals:
+                vals[i] = default_val
+
+    for key in vals.keys():
+        if not isinstance(key, numbers.Integral):
+            raise pyrtl.PyrtlError("value %s nust be either an integer or 'default'" % str(key))
+        if key < 0 or key > max_val:
+            raise pyrtl.PyrtlError("value %s is out of range of the sel wire" % str(key))
+
+    return _sparse_mux(sel, vals)
+
+
+def _sparse_mux(sel, vals):
+    """
+    Mux that avoids instantiating unnecessary mux_2s when possible.
+
+    :param WireVector sel: Select wire, determines what is selected on a given cycle
+    :param {int: WireVector} vals: dictionary to store the values that are
+    :return: Wirevector that signifies the change
+
+    This mux supports not having a full specification. indices that are not
+    specified are treated as Don't Cares
+    """
+    items = list(vals.values())
+    if len(vals) <= 1:
+        if len(vals) == 0:
+            raise pyrtl.PyrtlError("Needs at least one parameter for val")
+        return items[0]
+
+    if len(sel) == 1:
+        try:
+            false_result = vals[0]
+            true_result = vals[1]
+        except KeyError:
+            raise pyrtl.PyrtlError("Failed to retrieve values for smartmux. "
+                                   "The length of sel might be wrong")
+    else:
+        half = 2**(len(sel) - 1)
+
+        first_dict = {indx: wire for indx, wire in vals.items() if indx < half}
+        second_dict = {indx-half: wire for indx, wire in vals.items() if indx >= half}
+        if not len(first_dict):
+            return sparse_mux(sel[:-1], second_dict)
+        if not len(second_dict):
+            return sparse_mux(sel[:-1], first_dict)
+
+        false_result = sparse_mux(sel[:-1], first_dict)
+        true_result = sparse_mux(sel[:-1], second_dict)
+    if _is_equivelent(false_result, true_result):
+        return true_result
+    return pyrtl.select(sel[-1], falsecase=false_result, truecase=true_result)
