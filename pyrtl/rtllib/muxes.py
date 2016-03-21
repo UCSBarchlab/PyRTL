@@ -180,3 +180,24 @@ class MultiSelector(object):
         for dest_w, values in self.dest_instrs_info.items():
             mux_vals = dict(zip(self.instructions, values))
             dest_w <<= sparse_mux(self.signal_wire, mux_vals)
+
+
+def demux(select):
+    """
+    Demultiplexes a wire of arbitrary bitwidth
+    :param WireVector select: indicates which wire to set on
+    :return (WireVector, ...): a tuple of wires corresponding to each demultiplexed wire
+    """
+    if len(select) == 1:
+        return _demux_2(select)
+
+    wires = demux(select[:-1])
+    not_select = ~select
+    zero_wires = tuple(not_select & w for w in wires)
+    one_wires = tuple(select & w for w in wires)
+    return zero_wires + one_wires
+
+
+def _demux_2(select):
+    assert(len(select) == 1)
+    return ~select, select

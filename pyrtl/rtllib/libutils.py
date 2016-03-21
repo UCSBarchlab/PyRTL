@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+
 import pyrtl
 
 
@@ -16,27 +17,6 @@ def partition_wire(wire, partition_size):
         raise pyrtl.PyrtlError("Wire {} cannot be evenly partitioned into items of size {}"
                                .format(wire, partition_size))
     return [wire[offset:offset + partition_size] for offset in range(0, len(wire), partition_size)]
-
-
-def demux(select):
-    """
-    Demultiplexes a wire of arbitrary bitwidth
-    :param WireVector select: indicates which wire to set on
-    :return (WireVector, ...): a tuple of wires corresponding to each demultiplexed wire
-    """
-    if len(select) == 1:
-        return _demux_2(select)
-
-    wires = demux(select[:-1])
-    not_select = ~select
-    zero_wires = tuple(not_select & w for w in wires)
-    one_wires = tuple(select & w for w in wires)
-    return zero_wires + one_wires
-
-
-def _demux_2(select):
-    assert(len(select) == 1)
-    return ~select, select
 
 
 def str_to_int_array(string, base=16):

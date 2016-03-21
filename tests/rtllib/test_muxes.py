@@ -208,7 +208,34 @@ class TestMultiSelector(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_incorrect_number_of_wires(self):
-        pass
+        sel = pyrtl.Input(1)
+        wire = pyrtl.WireVector(8)
+        i1_out = pyrtl.Output(name="i1_out")
+        i2_out = pyrtl.Output(name="i2_out")
+        with muxes.MultiSelector(sel, i1_out, i2_out) as mul_sel:
+            mul_sel.option(0, wire, wire)
+            with self.assertRaises(pyrtl.PyrtlError):
+                mul_sel.option(1, wire, wire, wire)
+
+    def test_value_already_set(self):
+        sel = pyrtl.Input(1)
+        wire = pyrtl.WireVector(8)
+        i1_out = pyrtl.Output(name="i1_out")
+        i2_out = pyrtl.Output(name="i2_out")
+        with muxes.MultiSelector(sel, i1_out, i2_out) as mul_sel:
+            mul_sel.option(0, wire, wire)
+            with self.assertRaises(pyrtl.PyrtlError):
+                mul_sel.option(0, wire, wire)
+
+    def test_incorrect_number_of_wires_2(self):
+        sel = pyrtl.Input(1)
+        wire = pyrtl.WireVector(8)
+        i1_out = pyrtl.Output(name="i1_out")
+        i2_out = pyrtl.Output(name="i2_out")
+        i3_out = pyrtl.Output(name="i3_out")
+        mul_sel = muxes.MultiSelector(sel, i1_out, i2_out, i3_out)
+        with self.assertRaises(pyrtl.PyrtlError):
+            mul_sel.option(0, wire, wire)
 
 
 class TestMultiSelectorSim(unittest.TestCase):
@@ -265,5 +292,44 @@ class TestMultiSelectorSim(unittest.TestCase):
         self.assertEqual(actual_outputs[i2_out], expected_i2_out)
         self.assertEqual(actual_outputs[i3_out], expected_i3_out)
 
-    def test_with_block(self):
-        pass
+
+class TestDemux(unittest.TestCase):
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_simple_demux(self):
+        in_w, in_vals = utils.generate_in_wire_and_values(2)
+        outs = (pyrtl.Output(name="output_" + str(i)) for i in range(4))
+        demux_outs = pyrtl.rtllib.muxes.demux(in_w)
+        for out_w, demux_out in zip(outs, demux_outs):
+            out_w <<= demux_out
+        traces = utils.sim_and_ret_outws((in_w,), (in_vals,))
+
+        for cycle in range(20):
+            for i, out_wire in enumerate(outs):
+                self.assertEqual(in_vals[i] == i, traces[out_wire][cycle])
+
+    def test_demux_2(self):
+        in_w, in_vals = utils.generate_in_wire_and_values(1)
+        outs = (pyrtl.Output(name="output_" + str(i)) for i in range(2))
+        demux_outs = pyrtl.rtllib.muxes._demux_2(in_w)
+        for out_w, demux_out in zip(outs, demux_outs):
+            out_w <<= demux_out
+        traces = utils.sim_and_ret_outws((in_w,), (in_vals,))
+
+        for cycle in range(20):
+            for i, out_wire in enumerate(outs):
+                self.assertEqual(in_vals[i] == i, traces[out_wire][cycle])
+
+    def test_large_demux(self):
+        in_w, in_vals = utils.generate_in_wire_and_values(5)
+        outs = (pyrtl.Output(name="output_" + str(i)) for i in range(32))
+        demux_outs = pyrtl.rtllib.muxes.demux(in_w)
+        for out_w, demux_out in zip(outs, demux_outs):
+            out_w <<= demux_out
+        traces = utils.sim_and_ret_outws((in_w,), (in_vals,))
+
+        for cycle in range(20):
+            for i, out_wire in enumerate(outs):
+                self.assertEqual(in_vals[i] == i, traces[out_wire][cycle])
