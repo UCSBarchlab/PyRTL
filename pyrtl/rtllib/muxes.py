@@ -106,3 +106,77 @@ def _sparse_mux(sel, vals):
     if _is_equivelent(false_result, true_result):
         return true_result
     return pyrtl.select(sel[-1], falsecase=false_result, truecase=true_result)
+
+
+class MultiSelector(object):
+    """
+    The MultiSelector is a class that allows you to specify multiple wire value results
+    for a single select wire
+
+    Useful for processors, Finite state machines and other places where many
+
+    """
+    def __init__(self, signal_wire,  *dest_wires):
+        self._final = False
+        self.dest_wires = dest_wires
+        self.signal_wire = signal_wire
+        self.instructions = []
+        self.dest_instrs_info = {dest_w: [] for dest_w in dest_wires}
+
+    def __enter__(self):
+        """
+        For compatability with With statements (which is the recommended method of using this
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            self.finalize()
+        else:
+            print("The MultiSelector was not finalized due to uncaught exception")
+
+    def _check_finalized(self):
+        if self._final:
+            raise pyrtl.PyrtlError("Cannot change InstrConnector, already finalized")
+
+    def option(self, select_val, *data_signals):
+        """
+
+        :param select_val:
+        :param data_signals:
+        :return:
+        """
+        self._check_finalized()
+        instr, ib = pyrtl.wire._gen_val_and_bitwidth(select_val, self.signal_wire.bitwidth)
+        if instr in self.instructions:
+            raise pyrtl.PyrtlError("instruction %s already exists" % str(select_val))
+        self.instructions.append(instr)
+        self._add_signal(data_signals)
+
+    def default(self, *data_signals):
+        self._check_finalized()
+        self.instructions.append(SparseDefault)
+        self._add_signal(data_signals)
+
+    def _add_signal(self, data_signals):
+        self._check_finalized()
+        if len(data_signals) != len(self.dest_wires):
+            raise pyrtl.PyrtlError("Incorrect number of data_signals for "
+                                   "instruction received {} , expected {}"
+                                   .format(len(data_signals), len(self.dest_wires)))
+
+        for dw, sig in zip(self.dest_wires, data_signals):
+            data_signal = pyrtl.as_wires(sig, dw.bitwidth)
+            self.dest_instrs_info[dw].append(data_signal)
+
+    def finalize(self):
+        """
+        actually connect the wires.
+        :return:
+        """
+        self._check_finalized()
+        self._final = True
+
+        for dest_w, values in self.dest_instrs_info.items():
+            mux_vals = dict(zip(self.instructions, values))
+            dest_w <<= sparse_mux(self.signal_wire, mux_vals)

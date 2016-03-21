@@ -3,6 +3,7 @@ import pyrtl
 from pyrtl.rtllib import testingutils as utils
 from pyrtl.rtllib import muxes
 
+gen_in = utils.generate_in_wire_and_values
 
 class TestPrioritizedMuxTrivial(unittest.TestCase):
     @classmethod
@@ -136,17 +137,14 @@ class TestSmartMuxTrivial(unittest.TestCase):
         self.assertIsNot(res, b)
 
 
-gen_in = utils.generate_in_wire_and_values
-
-
 class TestSmartMux(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
     def test_two_vals(self):
-        sel, sel_vals = gen_in(1, random_dist=utils.uniform_dist)
-        a1, a1_vals = gen_in(3, random_dist=utils.uniform_dist)
-        a2, a2_vals = gen_in(3, random_dist=utils.uniform_dist)
+        sel, sel_vals = gen_in(1)
+        a1, a1_vals = gen_in(3)
+        a2, a2_vals = gen_in(3)
         res = pyrtl.Output(name="output")
 
         res <<= muxes.sparse_mux(sel, {0: a1, 1: a2})
@@ -158,8 +156,8 @@ class TestSmartMux(unittest.TestCase):
 
     def test_two_vals_big(self):
         sel = pyrtl.Input(3)
-        a1, a1_vals = gen_in(3, random_dist=utils.uniform_dist)
-        a2, a2_vals = gen_in(3, random_dist=utils.uniform_dist)
+        a1, a1_vals = gen_in(3)
+        a2, a2_vals = gen_in(3)
         res = pyrtl.Output(name="output")
 
         sel_vals = [utils.uniform_dist(1) for i in range(20)]
@@ -172,8 +170,8 @@ class TestSmartMux(unittest.TestCase):
 
     def test_two_big_close(self):
         sel = pyrtl.Input(3)
-        a1, a1_vals = gen_in(3, random_dist=utils.uniform_dist)
-        a2, a2_vals = gen_in(3, random_dist=utils.uniform_dist)
+        a1, a1_vals = gen_in(3)
+        a2, a2_vals = gen_in(3)
         res = pyrtl.Output(name="output")
 
         sel_vals = [utils.uniform_dist(1) for i in range(20)]
@@ -190,16 +188,82 @@ class TestSmartMuxDefault(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_default(self):
-        sel, sel_vals = gen_in(3, random_dist=utils.uniform_dist)
-        a1, a1_vals = gen_in(3, random_dist=utils.uniform_dist)
-        a2, a2_vals = gen_in(3, random_dist=utils.uniform_dist)
-        default, default_vals = gen_in(3, random_dist=utils.uniform_dist)
+        sel, sel_vals = gen_in(3)
+        a1, a1_vals = gen_in(3)
+        a2, a2_vals = gen_in(3)
+        default, default_vals = gen_in(3)
         res = pyrtl.Output(name="output")
 
         res <<= muxes.sparse_mux(sel, {5: a1, 6: a2, muxes.SparseDefault: default})
         out_res = utils.sim_and_ret_out(res, [sel, a1, a2, default],
-                                         [sel_vals, a1_vals, a2_vals, default_vals])
+                                        [sel_vals, a1_vals, a2_vals, default_vals])
 
         expected_out = [e2 if sel == 6 else e1 if sel == 5 else d
                         for sel, e1, e2, d in zip(sel_vals, a1_vals, a2_vals, default_vals)]
         self.assertEqual(out_res, expected_out)
+
+
+class TestMultiSelector(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_incorrect_number_of_wires(self):
+        pass
+
+
+class TestMultiSelectorSim(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_really_simple(self):
+        sel, sel_vals = gen_in(1)
+
+        i1_0, i1_0_vals = gen_in(8)
+        i2_0, i2_0_vals = gen_in(8)
+        i1_1, i1_1_vals = gen_in(8)
+        i2_1, i2_1_vals = gen_in(8)
+
+        i1_out = pyrtl.Output(name="i1_out")
+        i2_out = pyrtl.Output(name="i2_out")
+
+        with muxes.MultiSelector(sel, i1_out, i2_out) as mul_sel:
+            mul_sel.option(0, i1_0, i2_0)
+            mul_sel.option(1, i1_1, i2_1)
+
+        actual_outputs = utils.sim_and_ret_outws([sel, i1_0, i1_1, i2_0, i2_1],
+                                                 [sel_vals, i1_0_vals, i1_1_vals, i2_0_vals, i2_1_vals])
+        expected_i1_out = [v1 if s else v0 for s, v0, v1 in zip(sel_vals, i1_0_vals, i1_1_vals )]
+        expected_i2_out = [v1 if s else v0 for s, v0, v1 in zip(sel_vals, i2_0_vals, i2_1_vals )]
+
+        self.assertEqual(actual_outputs[i1_out], expected_i1_out)
+        self.assertEqual(actual_outputs[i2_out], expected_i2_out)
+
+    def test_simple(self):
+        sel, sel_vals = gen_in(2)
+
+        x1s, x1_vals = (list(x) for x in zip(*(gen_in(8) for i in range(4))))
+        x2s, x2_vals = (list(x) for x in zip(*(gen_in(8) for i in range(4))))
+        x3s, x3_vals = (list(x) for x in zip(*(gen_in(8) for i in range(4))))
+
+        i1_out = pyrtl.Output(name="i1_out")
+        i2_out = pyrtl.Output(name="i2_out")
+        i3_out = pyrtl.Output(name="i3_out")
+
+        with muxes.MultiSelector(sel, i1_out, i2_out, i3_out) as mu:
+            for i in range(4):
+                mu.option(i, x1s[i], x2s[i], x3s[i])
+
+        wires = [sel] + x1s + x2s + x3s
+        vals = [sel_vals] + x1_vals + x2_vals + x3_vals
+        actual_outputs = utils.sim_and_ret_outws(wires, vals)
+
+        expected_i1_out = [v[s] for s, v in zip(sel_vals, zip(*x1_vals))]
+        expected_i2_out = [v[s] for s, v in zip(sel_vals, zip(*x2_vals))]
+        expected_i3_out = [v[s] for s, v in zip(sel_vals, zip(*x3_vals))]
+
+        self.assertEqual(actual_outputs[i1_out], expected_i1_out)
+        self.assertEqual(actual_outputs[i2_out], expected_i2_out)
+        self.assertEqual(actual_outputs[i3_out], expected_i3_out)
+
+    def test_with_block(self):
+        pass
