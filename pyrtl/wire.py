@@ -60,6 +60,16 @@ class WireVector(object):
             import traceback
             self.init_call_stack = traceback.format_stack()
 
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if not isinstance(value, basestring):
+            raise PyrtlError('WireVector names must be strings')
+        self._name = value
+
     def __hash__(self):
         return id(self)
 
