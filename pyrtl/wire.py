@@ -10,7 +10,10 @@ Register: a wire vector that is latched each cycle
 """
 
 from __future__ import print_function, unicode_literals
+
 import numbers
+import six
+
 from . import core  # needed for _setting_keep_wirevector_call_stack
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
@@ -66,7 +69,7 @@ class WireVector(object):
 
     @name.setter
     def name(self, value):
-        if not isinstance(value, basestring):
+        if not isinstance(value, six.string_types):
             raise PyrtlError('WireVector names must be strings')
         self._name = value
 
@@ -461,7 +464,7 @@ def _gen_val_and_bitwidth(val, bitwidth=None):
         return _convert_bool(val, bitwidth)
     elif isinstance(val, numbers.Integral):
         return _validate_const_int(val, bitwidth)
-    elif isinstance(val, str):
+    elif isinstance(val, six.string_types):
         return _convert_verilog_str(val, bitwidth)
     else:
         raise PyrtlError('error, the value of Const is of an improper type, "%s"'

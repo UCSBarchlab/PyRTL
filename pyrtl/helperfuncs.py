@@ -11,6 +11,8 @@ get_block: get the block of the arguments, throw error if they are different
 
 from __future__ import print_function, unicode_literals
 
+import six
+
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, LogicNet
 from .wire import WireVector, Input, Output, Const, Register
@@ -74,7 +76,7 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
     from .memory import _MemIndexed
     block = working_block(block)
 
-    if isinstance(val, (int, str)):
+    if isinstance(val, (int, six.string_types)):
         # note that this case captures bool as well (as bools are instances of ints)
         return Const(val, bitwidth=bitwidth, block=block)
     elif isinstance(val, _MemIndexed):
