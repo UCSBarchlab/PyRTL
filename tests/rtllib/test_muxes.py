@@ -5,6 +5,7 @@ from pyrtl.rtllib import muxes
 
 gen_in = utils.generate_in_wire_and_values
 
+
 class TestPrioritizedMuxTrivial(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -207,16 +208,6 @@ class TestMultiSelector(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_incorrect_number_of_wires(self):
-        sel = pyrtl.Input(1)
-        wire = pyrtl.WireVector(8)
-        i1_out = pyrtl.Output(name="i1_out")
-        i2_out = pyrtl.Output(name="i2_out")
-        with muxes.MultiSelector(sel, i1_out, i2_out) as mul_sel:
-            mul_sel.option(0, wire, wire)
-            with self.assertRaises(pyrtl.PyrtlError):
-                mul_sel.option(1, wire, wire, wire)
-
     def test_value_already_set(self):
         sel = pyrtl.Input(1)
         wire = pyrtl.WireVector(8)
@@ -226,6 +217,16 @@ class TestMultiSelector(unittest.TestCase):
             mul_sel.option(0, wire, wire)
             with self.assertRaises(pyrtl.PyrtlError):
                 mul_sel.option(0, wire, wire)
+
+    def test_incorrect_number_of_wires(self):
+        sel = pyrtl.Input(1)
+        wire = pyrtl.WireVector(8)
+        i1_out = pyrtl.Output(name="i1_out")
+        i2_out = pyrtl.Output(name="i2_out")
+        with muxes.MultiSelector(sel, i1_out, i2_out) as mul_sel:
+            mul_sel.option(0, wire, wire)
+            with self.assertRaises(pyrtl.PyrtlError):
+                mul_sel.option(1, wire, wire, wire)
 
     def test_incorrect_number_of_wires_2(self):
         sel = pyrtl.Input(1)
@@ -294,7 +295,6 @@ class TestMultiSelectorSim(unittest.TestCase):
 
 
 class TestDemux(unittest.TestCase):
-
     def setUp(self):
         pyrtl.reset_working_block()
 

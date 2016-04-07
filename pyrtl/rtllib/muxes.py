@@ -110,10 +110,12 @@ def _sparse_mux(sel, vals):
 
 class MultiSelector(object):
     """
-    The MultiSelector is a class that allows you to specify multiple wire value results
+    The MultiSelector allows you to specify multiple wire value results
     for a single select wire
 
-    Useful for processors, Finite state machines and other places where many
+    Useful for processors, finite state machines and other places where the
+    result of many wire values are determined by a common wire signal
+    (such as a 'state' wire)
 
     """
     def __init__(self, signal_wire,  *dest_wires):
@@ -125,7 +127,8 @@ class MultiSelector(object):
 
     def __enter__(self):
         """
-        For compatability with With statements (which is the recommended method of using this
+        For compatibility with With statements (which is the recommended
+         method of using a MultiSelector)
         """
         return self
 
