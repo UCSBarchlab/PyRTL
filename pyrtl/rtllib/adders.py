@@ -140,36 +140,6 @@ def wallace_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
     :param final_adder: The adder used for the final addition
     :return: wirevector of length result_wirevector
     """
-    return _general_adder_reducer(wire_array_2, result_bitwidth, True, final_adder)
-
-
-def dada_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
-    """
-    The reduction and final adding part of a dada tree. Useful for adding many numbers together
-    The use of single bitwidth wires is to allow for additional flexibility
-
-    :param [[Wirevector]] wire_array_2: An array of arrays of single bitwidth
-    wirevectors
-    :param int result_bitwidth: The bitwidth you want for the resulting wire
-    Used to eliminate unnessary wires
-    :param final_adder: The adder used for the final addition
-    :return: wirevector of length result_wirevector
-    """
-    return _general_adder_reducer(wire_array_2, result_bitwidth, False, final_adder)
-
-
-def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder):
-    """
-    Does the reduction and final adding for bot dada and wallace recucers
-
-    :param [[Wirevector]] wire_array_2: An array of arrays of single bitwidth
-    wirevectors
-    :param int result_bitwidth: The bitwidth you want for the resulting wire
-    Used to eliminate unnessary wires
-    :param Bool reduce_2s: True=Wallace Reducer, False=Dada Reducer
-    :param final_adder: The adder used for the final addition
-    :return: wirevector of length result_wirevector
-    """
     # verification that the wires are actually wirevectors of length 1
     for wire_set in wire_array_2:
         for a_wire in wire_set:
@@ -186,12 +156,60 @@ def _general_adder_reducer(wire_array_2, result_bitwidth, reduce_2s, final_adder
                 deferred[i].append(sum)
                 deferred[i + 1].append(cout)
 
-            if len(w_array) == 2 and reduce_2s:
+            if len(w_array) == 2:
                 cout, sum = half_adder(*w_array)
                 deferred[i].append(sum)
                 deferred[i + 1].append(cout)
             else:
                 deferred[i].extend(w_array)
+        wire_array_2 = deferred[:result_bitwidth]
+
+    # At this stage in the multiplication we have only 2 wire vectors left.
+    # now we need to add them up
+    result = _sparse_adder(wire_array_2, final_adder)
+    if len(result) > result_bitwidth:
+        return result[:result_bitwidth]
+    else:
+        return result
+
+
+def dada_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
+    """
+    The reduction and final adding part of a dada tree. Useful for adding many numbers together
+    The use of single bitwidth wires is to allow for additional flexibility
+
+    :param [[Wirevector]] wire_array_2: An array of arrays of single bitwidth
+    wirevectors
+    :param int result_bitwidth: The bitwidth you want for the resulting wire
+    Used to eliminate unnessary wires
+    :param final_adder: The adder used for the final addition
+    :return: wirevector of length result_wirevector
+    """
+    # verification that the wires are actually wirevectors of length 1
+    for wire_set in wire_array_2:
+        for a_wire in wire_set:
+            if not isinstance(a_wire, pyrtl.WireVector) or len(a_wire) != 1:
+                raise pyrtl.PyrtlError(
+                    "The item {} is not a valid element for the wire_array_2. "
+                    "It must be a WireVector of bitwidth 1".format(a_wire))
+
+    while max(len(i) for i in wire_array_2) > 2:
+        deferred = [[] for weight in range(result_bitwidth + 1)]
+        last_round = (max(len(i) for i in wire_array_2) == 3)
+        for i, w_array in enumerate(wire_array_2):  # Start with low weights and start reducing
+            while len(w_array) >= 3:
+                cout, sum = _one_bit_add_no_concat(*(w_array.pop(0) for j in range(3)))
+                deferred[i].append(sum)
+                deferred[i + 1].append(cout)
+
+            if len(w_array) == 2:
+                if (last_round and len(deferred[i]) % 3 == 1) or (len(deferred[i]) % 3 == 2):
+                    cout, sum = half_adder(*w_array)
+                    w_array = []
+                    deferred[i].append(sum)
+                    deferred[i + 1].append(cout)
+
+            deferred[i].extend(w_array)
         wire_array_2 = deferred[:result_bitwidth]
 
     # At this stage in the multiplication we have only 2 wire vectors left.
