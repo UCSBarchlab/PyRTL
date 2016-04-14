@@ -204,19 +204,16 @@ def dada_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
         last_round = (max(len(i) for i in wire_array_2) == 3)
         for i, w_array in enumerate(wire_array_2):  # Start with low weights and start reducing
             while len(w_array) + len(deferred[i]) > reduction_target:
-                if len(w_array) >= 3:
+                if len(w_array) + len(deferred[i]) - reduction_target >= 2:
                     cout, sum = _one_bit_add_no_concat(*(w_array.pop(0) for j in range(3)))
                     deferred[i].append(sum)
                     deferred[i + 1].append(cout)
-                elif len(w_array) == 2:
+                else:
                     # if (last_round and len(deferred[i]) % 3 == 1) or (len(deferred[i]) % 3 == 2):
                     # if not(last_round and len(wire_array_2[i + 1]) < 3):
-                    cout, sum = half_adder(*w_array)
-                    del w_array[:]
+                    cout, sum = half_adder(*(w_array.pop(0) for j in range(2)))
                     deferred[i].append(sum)
                     deferred[i + 1].append(cout)
-                else:
-                    break
             deferred[i].extend(w_array)
             if len(deferred[i]) > reduction_target:
                 raise pyrtl.PyrtlError("Expected that the code would be able to reduce more wires")
