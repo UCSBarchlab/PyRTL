@@ -78,24 +78,79 @@ class TestBlock(unittest.TestCase):
         for net in block.logic:
             print(net)
 
-    def test_as_graph(self):
-        inwire = pyrtl.Input(bitwidth=1, name="inwire1")
-        inwire2 = pyrtl.Input(bitwidth=1)
-        inwire3 = pyrtl.Input(bitwidth=1)
-        tempwire = pyrtl.WireVector()
-        tempwire2 = pyrtl.WireVector()
-        outwire = pyrtl.Output()
 
-        tempwire <<= inwire | inwire2
-        tempwire2 <<= ~tempwire
-        outwire <<= tempwire2 & inwire3
+class TestAsGraph(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
 
-        g = pyrtl.working_block().as_graph()
-        # note for future: this might fail if we change
-        # the way that temp wires are inserted, but that 
-        # should not matter for this test and so the number
-        # can be safely updated.
-        self.assertEqual(len(g), 10)
+    def check_graph_correctness(self, w_src_graph, w_dst_graph, has_virtual=False):
+        for wire, net in w_src_graph.items():
+            if isinstance(wire, (pyrtl.Input, pyrtl.Const)):
+                if has_virtual:
+                    self.assertIs(wire, net)
+                else:
+                    self.fail("Input or Const, {} should not have a src".format(str(wire)))
+            else:
+                self.assertTrue(any(wire is w for w in net.dests))
+
+        for wire, nets in w_dst_graph.items():
+            if isinstance(wire, pyrtl.Output):
+                if has_virtual:
+                    self.assertEqual(len(nets), 1)
+                    self.assertIs(wire, nets[0])
+                else:
+                    self.fail("Output, {} should not have a dst".format(str(wire)))
+            else:
+                for net in nets:
+                    self.assertTrue(any(wire is w for w in net.args))
+
+    def test_as_graph_trivial(self):
+        i = pyrtl.Input(1)
+        o = pyrtl.Output(1)
+        b = pyrtl.working_block()
+        net = pyrtl.LogicNet('~', None, (i,), (o,))
+        b.add_net(net)
+        src_g, dst_g = b.as_graph(False)
+        self.check_graph_correctness(src_g, dst_g)
+        self.assertEqual(src_g[o], net)
+        self.assertEqual(dst_g[i][0], net)
+        self.assertEqual(len(dst_g[i]), 1)
+
+        self.assertNotIn(i, src_g)
+        self.assertNotIn(o, dst_g)
+
+        src_g, dst_g = b.as_graph(True)
+        self.check_graph_correctness(src_g, dst_g, True)
+        self.assertEqual(src_g[o], net)
+        self.assertEqual(dst_g[i][0], net)
+        self.assertEqual(len(dst_g[i]), 1)
+
+        self.assertIs(src_g[i], i)
+        self.assertIs(dst_g[o][0], o)
+        self.assertEqual(len(dst_g[o]), 1)
+
+    def test_as_graph_2(self):
+        a = pyrtl.Input(2)
+        b = pyrtl.Input(2)
+        c = pyrtl.Input(2)
+        e = pyrtl.Output()
+        f = pyrtl.Output()
+        g = pyrtl.Output()
+
+        d = a & c
+        f <<= b & c
+        e <<= d
+        g <<= ~(d | b)
+
+        b = pyrtl.working_block()
+        src_g, dst_g = b.as_graph(False)
+        self.check_graph_correctness(src_g, dst_g)
+
+        src_g, dst_g = b.as_graph(True)
+        self.check_graph_correctness(src_g, dst_g, True)
+
+
+
 
 
 class TestSanityCheck(unittest.TestCase):

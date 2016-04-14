@@ -136,6 +136,30 @@ class TestOutputTextbench(unittest.TestCase):
             pyrtl.output_verilog_testbench(tbfile, sim_trace)
 
 
+class TestNetGraph(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_as_graph(self):
+        inwire = pyrtl.Input(bitwidth=1, name="inwire1")
+        inwire2 = pyrtl.Input(bitwidth=1)
+        inwire3 = pyrtl.Input(bitwidth=1)
+        tempwire = pyrtl.WireVector()
+        tempwire2 = pyrtl.WireVector()
+        outwire = pyrtl.Output()
+
+        tempwire <<= inwire | inwire2
+        tempwire2 <<= ~tempwire
+        outwire <<= tempwire2 & inwire3
+
+        g = inputoutput.net_graph()
+        # note for future: this might fail if we change
+        # the way that temp wires are inserted, but that
+        # should not matter for this test and so the number
+        # can be safely updated.
+        self.assertEqual(len(g), 10)
+
+
 class TestVerilogNames(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

@@ -228,10 +228,64 @@ def _trivialgraph_default_namer(thing, is_edge=True):
             raise PyrtlError('no naming rule for "%s"' % str(thing))
 
 
+def net_graph(block=None, split_state=False):
+    """ Return a graph representation of the current block.
+
+    Graph has the following form:
+        { node1: { nodeA: edge1A, nodeB: edge1B},
+          node2: { nodeB: edge2B, nodeC: edge2C},
+          ...
+        }
+
+    Each node can be either a logic net or a WireVector (e.g. an Input, and Output, a
+    Const or even an undriven WireVector (which acts as a source or sink in the network)
+    Each edge is a WireVector or derived type (Input, Output, Register, etc.)
+    Note that inputs, consts, and outputs will be both "node" and "edge".
+    WireVectors that are not connected to any nets are not returned as part
+    of the graph.
+    """
+    block = working_block(block)
+    from .wire import Register
+    # self.sanity_check()
+    graph = {}
+
+    # add all of the nodes
+    for net in block.logic:
+        graph[net] = {}
+
+    wire_src_dict, wire_dst_dict = block.as_graph()
+    dest_set = set(wire_src_dict.keys())
+    arg_set = set(wire_dst_dict.keys())
+    dangle_set = dest_set.symmetric_difference(arg_set)
+    for w in dangle_set:
+        graph[w] = {}
+    if split_state:
+        for w in block.wirevector_subset(Register):
+            graph[w] = {}
+
+    # add all of the edges
+    for w in block.wirevector_set:
+        try:
+            _from = wire_src_dict[w]
+        except Exception:
+            _from = w
+        if split_state and isinstance(w, Register):
+            _from = w
+
+        try:
+            _to_list = wire_dst_dict[w]
+        except Exception:
+            _to_list = [w]
+
+        for _to in _to_list:
+            graph[_from][_to] = w
+
+    return graph
+
+
 def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None):
     """ Walk the block and output it in trivial graph format to the open file. """
-    block = working_block(block)
-    graph = block.as_graph()
+    graph = net_graph(block)
     node_index_map = {}  # map node -> index
 
     # print the list of nodes
@@ -305,8 +359,7 @@ def output_to_graphviz(file, namer=_graphviz_default_namer, block=None):
 
 def block_to_graphviz_string(block=None, namer=_graphviz_default_namer):
     """ Return a graphviz string for the block. """
-    block = working_block(block)
-    graph = block.as_graph(split_state=True)
+    graph = net_graph(block, split_state=True)
     node_index_map = {}  # map node -> index
 
     rstring = """\

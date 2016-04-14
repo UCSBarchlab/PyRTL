@@ -232,93 +232,52 @@ class Block(object):
         else:
             return None
 
-    def get_driver_of_wirevector(self, wirevector):
-        """Return the net driving wirevector.
+    def as_graph(self, include_virtual_nodes=False):
+        """ Returns a representation of the current block useful for creating a graph.
 
-        Search the current block and return the driver for the wirevector.  If the
-        wirector is an Input or Const, the wirevector instance passed with be returned
-        (as inputs and consts are in a sense their own drivers).  If is not an input
-        and the wirevector cannot be found it raises PyRTLError. """
+        :param include_virtual_nodes: if enabled, the wire itself will be used to
+          signal an external source or sink (such as the source for an Input net).
+          If disabled, these nodes will be excluded from the adjacency dictionaries
+        :return wire_src_dict, wire_sink_dict
+          Returns two dictionaries: one that map wirevectors to the logic
+          nets that creates their signal and one that maps wirevectors to
+          a list of logic nets that use the signal
 
-        from .wire import Input, Const
-        if isinstance(wirevector, (Input, Const)):
-            return wirevector
-        for net in self.logic:
-            for dest in net.dests:
-                if dest is wirevector:
-                    return net
-        raise PyrtlError('cannot find wirevector driver')
+        These dictionaries make the creation of a graph much easier, as
+        well as facilitate other places in which one would need wire source
+        and wire sink information
 
-    def get_readers_of_wirevector(self, wirevector):
-        """Return the list of nets driven by wirevector.
+        Look at input_output.net_graph for one such graph that uses the information
+        from this function
+        """
+        from .wire import Input, Output, Const
+        src_list = {}
+        dst_list = {}
 
-        Search the current block and return the nets reading wirevector.  If the
-        wirector is an Output, the wirevector instance passed with be returned (as outputs
-        are in a sense their own consumers).  If is not an output and the wirevector cannot
-        be found it raises PyrtlError. """
-        from .wire import Output
-        if isinstance(wirevector, Output):
-            return [wirevector]
-        retval = []
+        def add_wire_src(edge, node):
+            if edge in src_list:
+                raise PyrtlError("wire {} cannot have two sources".format(edge))
+            src_list[edge] = node
+
+        def add_wire_dst(edge, node):
+            if edge in dst_list:
+                dst_list[edge].append(node)
+            else:
+                dst_list[edge] = [node]
+
+        if include_virtual_nodes:
+            for wire in self.wirevector_subset((Input, Const)):
+                add_wire_src(wire, wire)
+
+            for wire in self.wirevector_subset(Output):
+                add_wire_dst(wire, wire)
+
         for net in self.logic:
             for arg in net.args:
-                if arg is wirevector:
-                    retval.append(net)
-        if len(retval) == 0:
-            raise PyrtlError('cannot find wirevector reader/consumer for "%s"' % wirevector)
-        return retval
-
-    def as_graph(self, split_state=False):
-        """ Return a graph representation of the current block.
-
-        Graph has the following form:
-            { node1: { nodeA: edge1A, nodeB: edge1B},
-              node2: { nodeB: edge2B, nodeC: edge2C},
-              ...
-            }
-
-        Each node can be either a logic net or a WireVector (e.g. an Input, and Output, a
-        Const or even an undriven WireVector (which acts as a source or sink in the network)
-        Each edge is a WireVector or derived type (Input, Output, Register, etc.)
-        Note that inputs, consts, and outputs will be both "node" and "edge".
-        WireVectors that are not connected to any nets are not returned as part
-        of the graph.
-        """
-        from .wire import Input, Output, Const, Register
-        # self.sanity_check()
-        graph = {}
-
-        # add all of the nodes
-        for net in self.logic:
-            graph[net] = {}
-        dest_set = set(wire for net in self.logic for wire in net.dests)
-        arg_set = set(wire for net in self.logic for wire in net.args)
-        dangle_set = dest_set.symmetric_difference(arg_set)
-        for w in dangle_set:
-            graph[w] = {}
-        if split_state:
-            for w in self.wirevector_subset(Register):
-                graph[w] = {}
-
-        # add all of the edges
-        for w in self.wirevector_set:
-            try:
-                _from = self.get_driver_of_wirevector(w)
-            except PyrtlError:
-                _from = w
-
-            if split_state and isinstance(w, Register):
-                _from = w
-
-            try:
-                _to_list = self.get_readers_of_wirevector(w)
-            except PyrtlError:
-                _to_list = [w]
-
-            for _to in _to_list:
-                graph[_from][_to] = w
-
-        return graph
+                add_wire_dst(arg, net)
+            for dest in net.dests:
+                add_wire_src(dest, net)
+        return src_list, dst_list
 
     def _repr_svg_(self):
         """ IPython display support for Block. """
