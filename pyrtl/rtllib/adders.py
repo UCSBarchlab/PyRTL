@@ -3,10 +3,6 @@ import pyrtl
 from . import libutils
 
 
-def main():
-    print("You should be looking at the test case folder")
-
-
 def kogge_stone(a, b, cin=0):
     """
     Creates a Kogge-Stone adder given two inputs
@@ -61,14 +57,28 @@ def half_adder(a, b):
 
 
 def ripple_add(a, b, cin=0):
-    a, b = libutils.match_bitwidth(a, b)
+    if len(a) < len(b):  # make sure that b is the shorter wire
+        b, a = a, b
     cin = pyrtl.as_wires(cin)
     if len(a) == 1:
         return one_bit_add(a, b, cin)
     else:
         ripplecarry = one_bit_add(a[0], b[0], cin)
-        msbits = ripple_add(a[1:], b[1:], ripplecarry[1])
+        if len(b) == 1:
+            msbits = ripple_half_add(a[1:], ripplecarry[1])
+        else:
+            msbits = ripple_add(a[1:], b[1:], ripplecarry[1])
         return pyrtl.concat(msbits, ripplecarry[0])
+
+
+def ripple_half_add(a, cin=0):
+    cin = pyrtl.as_wires(cin)
+    if len(a) == 1:
+        return pyrtl.concat(*half_adder(a, cin))
+    else:
+        ripplecarry = half_adder(a[0], cin)
+        msbits = ripple_half_add(a[1:], ripplecarry[0])
+        return pyrtl.concat(msbits, ripplecarry[1])
 
 
 def carrysave_adder(a, b, c, final_adder=ripple_add):
@@ -81,8 +91,7 @@ def carrysave_adder(a, b, c, final_adder=ripple_add):
     a, b, c = libutils.match_bitwidth(a, b, c)
     partial_sum = a ^ b ^ c
     shift_carry = (a | b) & (a | c) & (b | c)
-    shift_carry_1 = pyrtl.concat(shift_carry, 0)
-    return final_adder(partial_sum, shift_carry_1)
+    return pyrtl.concat(final_adder(partial_sum[1:], shift_carry), partial_sum[0])
 
 
 def cla_adder(a, b, cin=0, la_unit_len=4):
@@ -271,7 +280,3 @@ def fast_group_adder(wires_to_add, reducer=wallace_reducer, final_adder=kogge_st
             bits[bit_loc].append(bit)
 
     return reducer(bits, result_bitwidth, final_adder)
-
-
-if __name__ == "__main__":
-    main()
