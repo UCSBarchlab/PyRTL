@@ -6,6 +6,15 @@ import pyrtl.rtllib.testingutils as utils
 from pyrtl.rtllib import multipliers, adders
 
 
+class TestSimpleMult(unittest.TestCase):
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def mult_t_base(self):
+        pass
+
+
 class TestWallace(unittest.TestCase):
 
     @classmethod

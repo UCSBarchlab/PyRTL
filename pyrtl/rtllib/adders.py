@@ -185,6 +185,7 @@ def dada_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
     :param final_adder: The adder used for the final addition
     :return: wirevector of length result_wirevector
     """
+    import math
     # verification that the wires are actually wirevectors of length 1
     for wire_set in wire_array_2:
         for a_wire in wire_set:
@@ -193,23 +194,32 @@ def dada_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
                     "The item {} is not a valid element for the wire_array_2. "
                     "It must be a WireVector of bitwidth 1".format(a_wire))
 
-    while max(len(i) for i in wire_array_2) > 2:
+    max_width = max(len(i) for i in wire_array_2)
+    reduction_schedule = [2]
+    while reduction_schedule[-1] <= max_width:
+        reduction_schedule.append(int(reduction_schedule[-1]*3/2))
+
+    for reduction_target in reversed(reduction_schedule[:-1]):
         deferred = [[] for weight in range(result_bitwidth + 1)]
         last_round = (max(len(i) for i in wire_array_2) == 3)
         for i, w_array in enumerate(wire_array_2):  # Start with low weights and start reducing
-            while len(w_array) >= 3:
-                cout, sum = _one_bit_add_no_concat(*(w_array.pop(0) for j in range(3)))
-                deferred[i].append(sum)
-                deferred[i + 1].append(cout)
-
-            if len(w_array) == 2:
-                if (last_round and len(deferred[i]) % 3 == 1) or (len(deferred[i]) % 3 == 2):
-                    cout, sum = half_adder(*w_array)
-                    w_array = []
+            while len(w_array) + len(deferred[i]) > reduction_target:
+                if len(w_array) >= 3:
+                    cout, sum = _one_bit_add_no_concat(*(w_array.pop(0) for j in range(3)))
                     deferred[i].append(sum)
                     deferred[i + 1].append(cout)
-
+                elif len(w_array) == 2:
+                    # if (last_round and len(deferred[i]) % 3 == 1) or (len(deferred[i]) % 3 == 2):
+                    # if not(last_round and len(wire_array_2[i + 1]) < 3):
+                    cout, sum = half_adder(*w_array)
+                    del w_array[:]
+                    deferred[i].append(sum)
+                    deferred[i + 1].append(cout)
+                else:
+                    break
             deferred[i].extend(w_array)
+            if len(deferred[i]) > reduction_target:
+                raise pyrtl.PyrtlError("Expected that the code would be able to reduce more wires")
         wire_array_2 = deferred[:result_bitwidth]
 
     # At this stage in the multiplication we have only 2 wire vectors left.

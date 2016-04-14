@@ -387,9 +387,9 @@ class Block(object):
 
         While the semantics of 'm' memories reads is asynchronous, if you want your design
         to use a block ram (on an FPGA or otherwise) you want to make sure the index is
-        available at the begining of the clock edge.  This check will walk the logic structure
+        available at the beginning of the clock edge.  This check will walk the logic structure
         and throw an error on any memory if finds that has an index that is not ready at the
-        begining of the cycle.
+        beginning of the cycle.
         """
         async_source = self.legal_ops - set('wcsr')  # produce values after non-zero time
         async_prop = self.legal_ops - set('r')  # ops propagating async behavior from src to dest

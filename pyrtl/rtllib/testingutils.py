@@ -101,3 +101,45 @@ def sim_and_ret_outws(inwires, invals):
         sim.step({wire: val[cycle] for wire, val in zip(inwires, invals)})
 
     return sim_trace.trace  # Pulling the value of wires straight from the trace
+
+
+def sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
+    """
+    Simulation of a circuit that takes multiple cycles to complete
+
+    :param in_dict:
+    :param hold_dict:
+    :param hold_cycles:
+    :param sim:
+    :return:
+    """
+    if sim is None:
+        sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace())
+    sim.step(in_dict)
+    for i in range(hold_cycles):
+        sim.step(hold_dict)
+    return sim.tracer.trace[-1]
+
+
+def multi_sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
+    """
+    Simulates a circuit that takes multiple cycles to complete multiple times
+
+    :param in_dict: {in_wire: [in_values, ...], ...}
+    :param hold_dict: {hold_wire: hold_value} The hold values for the
+    :param hold_cycles:
+    :param sim:
+    :return:
+    """
+    if sim is None:
+        sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace())
+    cycles = len(list(in_dict.values())[0])
+    for cycle in range(cycles):
+        current_dict = {wire: values[cycle] for wire, values in in_dict}
+        cur_result = sim_multicycle(current_dict, hold_dict, hold_cycles, sim)
+        if cycle == 0:
+            results = {wire: [result_val] for wire, result_val in cur_result}
+        else:
+            for wire, result_val in cur_result:
+                results[wire].append(result_val)
+    return results

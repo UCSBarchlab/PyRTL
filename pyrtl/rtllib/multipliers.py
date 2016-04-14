@@ -3,13 +3,6 @@ import pyrtl
 from . import adders
 
 
-def main():
-    # test_simple_mult()
-    # test_wallace_tree()
-    # test_wallace_timing()
-    print("look at the test case folder")
-
-
 def simple_mult(A, B, start):
     """ Generate simple shift-and-add multiplier.
 
@@ -37,7 +30,7 @@ def simple_mult(A, B, start):
             areg.next |= areg[1:]  # right shift
             breg.next |= pyrtl.concat(breg, "1'b0")  # left shift
 
-            # "Multply" shifted breg by LSB of areg by conditionally adding
+            # "Multiply" shifted breg by LSB of areg by conditionally adding
             with areg[0]:
                 accum.next |= accum + breg  # adds to accum only when LSB of areg is 1
 
@@ -156,7 +149,3 @@ def generalized_fma(mult_pairs, add_wires, signed=False, reducer=adders.wallace_
     result_bitwidth = (longest_wire_len +
                        int(math.ceil(math.log(len(add_wires) + len(mult_pairs), 2))))
     return reducer(bits, result_bitwidth, adder_func)
-
-
-if __name__ == "__main__":
-    main()
