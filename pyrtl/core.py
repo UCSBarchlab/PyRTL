@@ -261,6 +261,8 @@ class Block(object):
 
         def add_wire_dst(edge, node):
             if edge in dst_list:
+                # if node in dst_list[edge]:
+                #     raise PyrtlError("The net already exists in the graph")
                 dst_list[edge].append(node)
             else:
                 dst_list[edge] = [node]
@@ -273,7 +275,7 @@ class Block(object):
                 add_wire_dst(wire, wire)
 
         for net in self.logic:
-            for arg in net.args:
+            for arg in set(net.args):  # prevents unexpected duplicates when doing b <<= a & a
                 add_wire_dst(arg, net)
             for dest in net.dests:
                 add_wire_src(dest, net)
@@ -285,35 +287,35 @@ class Block(object):
         return block_to_svg(self)
 
     def __iter__(self):
-        """ BlockIterator iterates over the block passed on init in topographic order.
-            The input is a Block, and when a LogicNet is returned it is always the case
-            that all of it's "parents" have already been returned earlier in the iteration.
+        """
+        BlockIterator iterates over the block passed on init in topographic order.
+        The input is a Block, and when a LogicNet is returned it is always the case
+        that all of it's "parents" have already been returned earlier in the iteration.
 
-            Note: this method will throw an error if there are loops in the
-            logic that do not involve registers"""
+        Note: this method will throw an error if there are loops in the
+        logic that do not involve registers
+        Also, the order of the nets is not guaranteed to be the the same
+        over multiple iterations"""
         from .wire import Input, Const, Register
-        cleared = self.wirevector_subset((Input, Const, Register))
+        src_dict, dest_dict = self.as_graph()
+        to_clear = self.wirevector_subset((Input, Const, Register))
+        cleared = set()
         remaining = self.logic.copy()
-        prev_remain = len(self.logic) + 1  # to make sure it actually runs
-        while len(remaining) < prev_remain:
-            prev_remain = len(remaining)
-            iteration_gates = set()
-            for gate in remaining:  # loop over logicnets not yet returned
-                if all(arg in cleared for arg in gate.args):  # if all args ready
-                    iteration_gates.add(gate)
-                    yield gate
-
-            for gate in iteration_gates:
-                cleared.update(set(gate.dests))  # add dests to set of ready wires
-                remaining.remove(gate)  # remove gate from set of to return
+        while len(to_clear):
+            wire_to_check = to_clear.pop()
+            cleared.add(wire_to_check)
+            if wire_to_check in dest_dict:
+                for gate in dest_dict[wire_to_check]:  # loop over logicnets not yet returned
+                    if all(arg in cleared for arg in gate.args):  # if all args ready
+                        yield gate
+                        remaining.remove(gate)
+                        if gate.op != 'r':
+                            to_clear.update(gate.dests)
 
         if len(remaining) is not 0:
-            from .helperfuncs import find_and_print_loop
+            from pyrtl.helperfuncs import find_and_print_loop
             find_and_print_loop(self)
             raise PyrtlError("Failure in Block Iterator due to non-register loops")
-
-        # raise StopIteration
-        # return BlockIterator(self)
 
     def sanity_check(self):
         """ Check block and throw PyrtlError or PyrtlInternalError if there is an issue.

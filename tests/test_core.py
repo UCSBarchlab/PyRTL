@@ -1,3 +1,4 @@
+from __future__ import print_function
 import unittest
 import pyrtl
 
@@ -44,13 +45,14 @@ class TestBlock(unittest.TestCase):
             foo = net1 > net2
         with self.assertRaises(pyrtl.PyrtlError):
             foo = net1 >= net2
-    def test_logicsubset_no_op(self):  
-    	 w = pyrtl.WireVector(name='testwire1', bitwidth=1)
-    	 v = pyrtl.WireVector(name='testwire2', bitwidth=1)
-    	 sum = w & v
-    	 block = pyrtl.working_block()
-    	 self.assertEqual(block.logic_subset(None), block.logic)
-    	 
+
+    def test_logicsubset_no_op(self):
+        w = pyrtl.WireVector(name='testwire1', bitwidth=1)
+        v = pyrtl.WireVector(name='testwire2', bitwidth=1)
+        sum = w & v
+        block = pyrtl.working_block()
+        self.assertEqual(block.logic_subset(None), block.logic)
+
     def test_sanity_check(self):
         pass
 
@@ -103,6 +105,13 @@ class TestAsGraph(unittest.TestCase):
             else:
                 for net in nets:
                     self.assertTrue(any(wire is w for w in net.args))
+            self.assertEqual(len(nets), len(set(nets)))
+
+        for net in pyrtl.working_block().logic:
+            for wire in net.args:
+                self.assertIn(net, w_dst_graph[wire])
+            for wire in net.dests:
+                self.assertIs(w_src_graph[wire], net)
 
     def test_as_graph_trivial(self):
         i = pyrtl.Input(1)
@@ -149,8 +158,39 @@ class TestAsGraph(unittest.TestCase):
         src_g, dst_g = b.as_graph(True)
         self.check_graph_correctness(src_g, dst_g, True)
 
+    def test_as_graph_memory(self):
+        m = pyrtl.MemBlock(addrwidth=2, bitwidth=2, name='m')
+        i = pyrtl.Register(bitwidth=2, name='i')
+        o = pyrtl.WireVector(bitwidth=2, name='o')
+        i.next <<= i + 1
+        m[i] <<= pyrtl.mux((m[i]!=0), 0, m[i])
+        o <<= m[i]
 
+        b = pyrtl.working_block()
+        src_g, dst_g = b.as_graph(False)
+        self.check_graph_correctness(src_g, dst_g)
 
+        src_g, dst_g = b.as_graph(True)
+        self.check_graph_correctness(src_g, dst_g, True)
+
+    def test_as_graph_duplicate_args(self):
+        a = pyrtl.Input(3)
+        x = pyrtl.Input(1)
+        d = pyrtl.Output()
+        b = a & a
+        c = pyrtl.concat(a, a)
+        m = pyrtl.MemBlock(addrwidth=3, bitwidth=3, name='m')
+        m2 = pyrtl.MemBlock(addrwidth=1, bitwidth=1, name='m')
+        d <<= m[a]
+        m[a] <<= a
+        m2[x] <<= pyrtl.MemBlock.EnabledWrite(x, x)
+
+        b = pyrtl.working_block()
+        src_g, dst_g = b.as_graph(False)
+        self.check_graph_correctness(src_g, dst_g)
+
+        src_g, dst_g = b.as_graph(True)
+        self.check_graph_correctness(src_g, dst_g, True)
 
 
 class TestSanityCheck(unittest.TestCase):
