@@ -202,7 +202,7 @@ class TestLogicNets(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_basic_test(self):
+    def test_string_format(self):
         net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
         self.assertEqual(str(net), "dest <-- + -- arg1, arg2 (xx)")
 
@@ -216,25 +216,62 @@ class TestLogicNets(unittest.TestCase):
         pass
 
     def test_self_equals(self):
-        net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
+        a = pyrtl.WireVector()
+        b = pyrtl.WireVector()
+        c = pyrtl.WireVector()
+        net = pyrtl.LogicNet('+', 'xx', (a, b), (c,))
         self.assertEqual(net, net)
 
     def test_comparison(self):
         net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
         with self.assertRaises(pyrtl.PyrtlError):
             a = net < net
+        with self.assertRaises(pyrtl.PyrtlError):
+            a = net <= net
+        with self.assertRaises(pyrtl.PyrtlError):
+            a = net >= net
+        with self.assertRaises(pyrtl.PyrtlError):
+            a = net > net
 
     def test_equivelence_of_same_nets(self):
-        net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
-        net2 = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
+        a = pyrtl.WireVector(1)
+        b = pyrtl.WireVector(1)
+        c = pyrtl.WireVector(1)
+        net = pyrtl.LogicNet('+', 'xx', (a, b), (c,))
+        net2 = pyrtl.LogicNet('+', 'xx', (a, b), (c,))
         self.assertIsNot(net, net2)
         self.assertEqual(net, net2)
 
+    def assertDifferentNets(self, net1, net2):
+        self.assertIsNot(net1, net2)
+        self.assertNotEqual(net1, net2)
+        self.assertTrue(net1 != net2)  # to test the proper working of __ne__
+
     def test_equivelence_of_different_nets(self):
-        net = pyrtl.LogicNet('+', 'John', ("arg1", "arg2"), ("dest",))
-        net2 = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
-        self.assertIsNot(net, net2)
-        self.assertNotEqual(net, net2)
+        a = pyrtl.WireVector()
+        b = pyrtl.WireVector()
+        c = pyrtl.WireVector()
+
+        n = pyrtl.LogicNet('-', 'John', (a,b), (c,))
+        net = pyrtl.LogicNet('+', 'John', (a, b), (c,))
+        net2 = pyrtl.LogicNet('+', 'xx', (a, b), (c,))
+        net3 = pyrtl.LogicNet('+', 'xx', (b, a), (c,))
+        net4 = pyrtl.LogicNet('+', 'xx', (b, a, c), (c,))
+        net5 = pyrtl.LogicNet('+', 'xx', (b, a, c), (c, a))
+        net6 = pyrtl.LogicNet('+', 'xx', (b, a, c), (a,))
+
+        self.assertDifferentNets(n, net)
+        self.assertDifferentNets(net, net2)
+        self.assertDifferentNets(net2, net3)
+        self.assertDifferentNets(net3, net4)
+        self.assertDifferentNets(net4, net5)
+        self.assertDifferentNets(net4, net6)
+        self.assertDifferentNets(net5, net6)
+
+        # some extra edge cases to check
+        netx_1 = pyrtl.LogicNet('+', 'John', (a, a), (c,))
+        netx_2 = pyrtl.LogicNet('+', 'John', (a,), (c,))
+        self.assertDifferentNets(netx_1, netx_2)
 
 
 class TestMemAsyncCheck(unittest.TestCase):

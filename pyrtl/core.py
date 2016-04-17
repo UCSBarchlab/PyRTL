@@ -212,7 +212,10 @@ class Block(object):
             initial_set = self.wirevector_set
         else:
             initial_set = (x for x in self.wirevector_set if isinstance(x, cls))
-        return set(x for x in initial_set if not isinstance(x, exclude))
+        if exclude == tuple():
+            return set(initial_set)
+        else:
+            return set(x for x in initial_set if not isinstance(x, exclude))
 
     def logic_subset(self, op=None):
         """Return set of logicnets, filtered by the type of logic op provided as op.
@@ -306,16 +309,20 @@ class Block(object):
         to_clear = self.wirevector_subset((Input, Const, Register))
         cleared = set()
         remaining = self.logic.copy()
-        while len(to_clear):
-            wire_to_check = to_clear.pop()
-            cleared.add(wire_to_check)
-            if wire_to_check in dest_dict:
-                for gate in dest_dict[wire_to_check]:  # loop over logicnets not yet returned
-                    if all(arg in cleared for arg in gate.args):  # if all args ready
-                        yield gate
-                        remaining.remove(gate)
-                        if gate.op != 'r':
-                            to_clear.update(gate.dests)
+        try:
+            while len(to_clear):
+                wire_to_check = to_clear.pop()
+                cleared.add(wire_to_check)
+                if wire_to_check in dest_dict:
+                    for gate in dest_dict[wire_to_check]:  # loop over logicnets not yet returned
+                        if all(arg in cleared for arg in gate.args):  # if all args ready
+                            yield gate
+                            remaining.remove(gate)
+                            if gate.op != 'r':
+                                to_clear.update(gate.dests)
+        except KeyError as e:
+            import six
+            six.raise_from(PyrtlError("Cannot Iterate through malformed block"), e)
 
         if len(remaining) is not 0:
             from pyrtl.helperfuncs import find_and_print_loop
