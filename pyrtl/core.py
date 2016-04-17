@@ -218,7 +218,7 @@ class Block(object):
             return set(x for x in initial_set if not isinstance(x, exclude))
 
     def logic_subset(self, op=None):
-        """Return set of logicnets, filtered by the type of logic op provided as op.
+        """Return set of logicnets, filtered by the type(s) of logic op provided as op.
 
         If no op is specified, the full set of logicnets associated with the Block are
         returned.  This is helpful for getting all memories of a block for example."""
@@ -247,8 +247,8 @@ class Block(object):
           signal an external source or sink (such as the source for an Input net).
           If disabled, these nodes will be excluded from the adjacency dictionaries
         :return wire_src_dict, wire_sink_dict
-          Returns two dictionaries: one that map wirevectors to the logic
-          nets that creates their signal and one that maps wirevectors to
+          Returns two dictionaries: one that map WireVectors to the logic
+          nets that creates their signal and one that maps WireVectors to
           a list of logic nets that use the signal
 
         These dictionaries make the creation of a graph much easier, as
@@ -258,13 +258,12 @@ class Block(object):
         Look at input_output.net_graph for one such graph that uses the information
         from this function
         """
-        from .wire import Input, Output, Const
         src_list = {}
         dst_list = {}
 
         def add_wire_src(edge, node):
             if edge in src_list:
-                raise PyrtlError("wire {} cannot have two sources".format(edge))
+                raise PyrtlError("wire {} cannot have two drivers".format(edge))
             src_list[edge] = node
 
         def add_wire_dst(edge, node):
@@ -276,6 +275,7 @@ class Block(object):
                 dst_list[edge] = [node]
 
         if include_virtual_nodes:
+            from .wire import Input, Output, Const
             for wire in self.wirevector_subset((Input, Const)):
                 add_wire_src(wire, wire)
 
@@ -332,7 +332,7 @@ class Block(object):
     def sanity_check(self):
         """ Check block and throw PyrtlError or PyrtlInternalError if there is an issue.
 
-        Should not modify anything, only check datastructures to make sure they have been
+        Should not modify anything, only check data structures to make sure they have been
         built according to the assumptions stated in the Block comments."""
 
         # TODO: check that the wirevector_by_name is sane
@@ -349,9 +349,9 @@ class Block(object):
                     'error, missing bitwidth for WireVector "%s" \n\n %s' % (w.name, get_stack(w)))
 
         # check for unique names
-        wirevector_names_list = [x.name for x in self.wirevector_set]
-        wirevector_names_set = set(wirevector_names_list)
-        if len(wirevector_names_list) != len(wirevector_names_set):
+        wirevector_names_set = set(x.name for x in self.wirevector_set)
+        if len(self.wirevector_set) != len(wirevector_names_set):
+            wirevector_names_list = [x.name for x in self.wirevector_set]
             for w in wirevector_names_set:
                 wirevector_names_list.remove(w)
             raise PyrtlError('Duplicate wire names found for the following '
@@ -359,8 +359,9 @@ class Block(object):
 
         # check for dead input wires (not connected to anything)
         all_input_and_consts = self.wirevector_subset((Input, Const))
-        dest_set = set(wire for net in self.logic for wire in net.dests)
-        arg_set = set(wire for net in self.logic for wire in net.args)
+        wire_src_dict, wire_dst_dict = self.as_graph()  # also checks for duplicate wire drivers
+        dest_set = set(wire_src_dict.keys())
+        arg_set = set(wire_dst_dict.keys())
         full_set = dest_set | arg_set
         connected_minus_allwires = full_set.difference(self.wirevector_set)
         if len(connected_minus_allwires) > 0:
@@ -384,7 +385,7 @@ class Block(object):
                              ([w.name for w in undriven], get_stacks(*undriven)))
 
         # Check for async memories not specified as such
-        self.sanity_check_memory_sync()
+        self.sanity_check_memory_sync(wire_src_dict)
 
         if debug_mode:
             # Check for wires that are destinations of a logicNet, but are not outputs and are never
@@ -396,7 +397,7 @@ class Block(object):
                 print('Warning: Wires driven but never used { %s } ' % names)
                 print(get_stacks(*unused))
 
-    def sanity_check_memory_sync(self):
+    def sanity_check_memory_sync(self, wire_src_dict=None):
         """ Check that all memories are synchronous unless explicitly specified as async.
 
         While the semantics of 'm' memories reads is asynchronous, if you want your design
@@ -405,28 +406,32 @@ class Block(object):
         and throw an error on any memory if finds that has an index that is not ready at the
         beginning of the cycle.
         """
-        async_source = self.legal_ops - set('wcsr')  # produce values after non-zero time
-        async_prop = self.legal_ops - set('r')  # ops propagating async behavior from src to dest
-        async_set = set(wire
-                        for net in self.logic_subset(async_source)
-                        for wire in net.dests)
-        last_async_set_len = len(async_set) - 1  # guarantee at least one iteration
+        sync_mems = set(m for m in self.logic_subset('m') if not m.op_param[1].asynchronous)
+        if not len(sync_mems):
+            return  # nothing to check here
 
-        # propagate "async" behavior through the network
-        while len(async_set) > last_async_set_len:
-            last_async_set_len = len(async_set)
-            for net in self.logic_subset(async_prop):
-                if any(w in async_set for w in net.args):
-                    async_set.update(net.dests)
+        if wire_src_dict is None:
+            wire_src_dict, wdd = self.as_graph()
 
-        # now do the actual check on each memory operation
-        for net in self.logic_subset('m'):
-            is_async = net.args[0] in async_set
-            if is_async and not net.op_param[1].asynchronous:
-                raise PyrtlError(
-                    'memory "%s" is not specified as asynchronous but has and index '
-                    '"%s" that is not ready at the start of the cycle'
-                    % (net.op_param[1].name, net.args[0].name))
+        from .wire import Input, Const
+        sync_src = 'r'
+        sync_prop = 'wcs'
+        for net in sync_mems:
+            wires_to_check = list(net.args)
+            while len(wires_to_check):
+                wire = wires_to_check.pop()
+                if isinstance(wire, (Input, Const)):
+                    continue
+                src_net = wire_src_dict[wire]
+                if src_net.op == sync_src:
+                    continue
+                elif src_net.op in sync_prop:
+                    wires_to_check.extend(src_net.args)
+                else:
+                    raise PyrtlError(
+                        'memory "%s" is not specified as asynchronous but has an index '
+                        '"%s" that is not ready at the start of the cycle due to net "%s"'
+                        % (net.op_param[1].name, net.args[0].name, str(src_net)))
 
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid wirevector type. """
