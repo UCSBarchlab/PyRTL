@@ -473,17 +473,19 @@ class Block(object):
                                      (net.op, self.legal_ops))
 
         # operation specific checks on arguments
-        if net.op in 'w~rs' and len(net.args) != 1:
+        if net.op in 'w~rsm' and len(net.args) != 1:
             raise PyrtlInternalError('error, op only allowed 1 argument')
         if net.op in '&|^n+-*<>=' and len(net.args) != 2:
             raise PyrtlInternalError('error, op only allowed 2 arguments')
-        if net.op in 'x':
+        if net.op == 'x':
             if len(net.args) != 3:
                 raise PyrtlInternalError('error, op only allowed 3 arguments')
             if net.args[1].bitwidth != net.args[2].bitwidth:
                 raise PyrtlInternalError('error, args have mismatched bitwidths')
             if net.args[0].bitwidth != 1:
                 raise PyrtlInternalError('error, mux select must be a single bit')
+        if net.op == '@' and len(net.args) != 3:
+            raise PyrtlInternalError('error, op only allowed 3 arguments')
         if net.op in '&|^n+-*<>=' and net.args[0].bitwidth != net.args[1].bitwidth:
             raise PyrtlInternalError('error, args have mismatched bitwidths')
         if net.op in 'm@' and net.args[0].bitwidth != net.op_param[1].addrwidth:
