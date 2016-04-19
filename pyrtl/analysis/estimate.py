@@ -221,33 +221,18 @@ def timing_analysis(block=None, gate_delay_funcs=None):
         }
 
     cleared = block.wirevector_subset((Input, Const, Register))
-    remaining = block.logic.copy()
     timing_map = {wirevector: 0 for wirevector in cleared}
-    while len(remaining) > 0:
-        items_to_remove = set()
-        for _gate in remaining:  # loop over logicnets not yet returned
-            if cleared.issuperset(_gate.args):  # if all args ready
-                if _gate.op == 'm':
-                    gate_delay = gate_delay_funcs['m'](_gate.op_param[1])  # reads require a memid
-                else:
-                    gate_delay = gate_delay_funcs[_gate.op](len(_gate.args[0]))
+    for _gate in block:  # ordered iteration
+        if _gate.op == 'm':
+            gate_delay = gate_delay_funcs['m'](_gate.op_param[1])  # reads require a memid
+        else:
+            gate_delay = gate_delay_funcs[_gate.op](len(_gate.args[0]))
 
-                if gate_delay < 0:
-                    items_to_remove.add(_gate)
-                    continue
-                time = max(timing_map[a_wire] for a_wire in _gate.args) + gate_delay
-                for dest_wire in _gate.dests:
-                    timing_map[dest_wire] = time
-                cleared.update(set(_gate.dests))  # add dests to set of ready wires
-                items_to_remove.add(_gate)
-
-        if len(items_to_remove) == 0:
-            block_str = ("Cannot do static timing analysis due to nonregister, nonmemory "
-                         "loops in the code")
-            find_and_print_loop()
-            raise PyrtlError(block_str)
-
-        remaining.difference_update(items_to_remove)
+        if gate_delay < 0:
+            continue
+        time = max(timing_map[a_wire] for a_wire in _gate.args) + gate_delay
+        for dest_wire in _gate.dests:
+            timing_map[dest_wire] = time
 
     return timing_map
 
