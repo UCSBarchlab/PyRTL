@@ -29,6 +29,12 @@ class TestBlock(unittest.TestCase):
     def test_undriven_net(self):
         w = pyrtl.WireVector(name='testwire', bitwidth=3)
         self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
+        pyrtl.reset_working_block()
+        r = pyrtl.Register(3)
+        self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
+        pyrtl.reset_working_block()
+        o = pyrtl.Output(3)
+        self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
 
     def test_no_logic_net_comparisons(self):
         a = pyrtl.WireVector(bitwidth=3)

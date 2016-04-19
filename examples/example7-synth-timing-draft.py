@@ -26,13 +26,13 @@ out_wire <<= const_wire + in_wire2
 # Now we will do the timing analysis as well as print out the critical path
 
 # Generating timing analysis information
-timing_map = estimate.timing_analysis()
 print("Pre Synthesis:")
-estimate.print_max_length(timing_map)
+timing = estimate.TimingAnalysis()
+timing.print_max_length()
 
 # We are also able to print out the critical paths as well as get them
 # back as an array.
-critical_path_info = estimate.timing_critical_path(timing_map)
+critical_path_info = timing.critical_path()
 
 # --- Part 2: Area Analysis --------------------------------------------------
 
@@ -58,8 +58,8 @@ print()
 pyrtl.synthesize()
 
 print("Pre Optimization:")
-timing_map = estimate.timing_analysis()
-estimate.print_max_length(timing_map)
+timing = estimate.TimingAnalysis()
+timing.print_max_length()
 for net in pyrtl.working_block().logic:
     print(str(net))
 print()
@@ -73,8 +73,8 @@ pyrtl.optimize()
 
 # Now to see the difference
 print("Post Optimization:")
-timing_map = estimate.timing_analysis()
-estimate.print_max_length(timing_map)
+timing = estimate.TimingAnalysis()
+timing.print_max_length()
 
 for net in pyrtl.working_block().logic:
     print(str(net))
