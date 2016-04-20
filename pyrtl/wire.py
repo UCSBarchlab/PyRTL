@@ -497,7 +497,7 @@ def _validate_const_int(val, bitwidth=None):
 
 
 def _convert_verilog_str(val, bitwidth=None):
-    bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16}
+    bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16, 'x': 16}
     if bitwidth is not None:
         raise PyrtlError('error, bitwidth parameter of const should be'
                          ' unspecified when the const is created from a string'
@@ -527,6 +527,7 @@ def _convert_verilog_str(val, bitwidth=None):
             raise PyrtlError('insufficient bits for negative number')
         num = (1 << bitwidth) - num
     return num, bitwidth
+
 
 class Register(WireVector):
     """ A WireVector with a register state element embedded.

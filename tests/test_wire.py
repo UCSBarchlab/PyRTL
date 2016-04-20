@@ -204,9 +204,13 @@ class TestConst(unittest.TestCase):
         self.check_const("1'1", 1, 1)
         self.check_const("5'3", 3, 5)
         self.check_const("5'b11", 3, 5)
+        self.check_const("-5'b11", 29, 5)
         self.check_const("16'xff", 0xff, 16)
         self.check_const("17'xff", 0xff, 17)
+        self.check_const("16'hff", 0xff, 16)
+        self.check_const("17'hff", 0xff, 17)
         self.check_const("5'b011", 3, 5)
+        self.check_const("5'b0_11", 3, 5)
 
     def test_bad_string(self):
         self.assert_bad_const("1")
