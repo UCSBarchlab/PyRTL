@@ -245,8 +245,11 @@ class RomBlock(_MemReadBase):
 
     def _get_read_data(self, address):
         import types
-        if address < 0 or address > 2**self.addrwidth - 1:
-            raise PyrtlError("Invalid address, " + str(address) + " specified")
+        try:
+            if address < 0 or address > 2**self.addrwidth - 1:
+                raise PyrtlError("Invalid address, " + str(address) + " specified")
+        except TypeError:
+            raise PyrtlError("Address: {} with invalid type specified".format(address))
         if isinstance(self.data, types.FunctionType):
             try:
                 value = self.data(address)
@@ -260,9 +263,12 @@ class RomBlock(_MemReadBase):
             except:
                 raise PyrtlError("invalid type for RomBlock data object")
 
-        if value < 0 or value >= 2**self.bitwidth:
-            raise PyrtlError("invalid value for RomBlock data")
-
+        try:
+            if value < 0 or value >= 2**self.bitwidth:
+                raise PyrtlError("invalid value for RomBlock data")
+        except TypeError:
+            raise PyrtlError("Value: {} from rom {} has an invalid type"
+                             .format(value, self))
         return value
 
     def _make_copy(self, block=None):
