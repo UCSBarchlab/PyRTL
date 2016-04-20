@@ -258,20 +258,15 @@ class TimingAnalysis(object):
 
         block = working_block(block)
         critical_paths = []  # storage of all completed critical paths
+        wire_src_map, dst_map = block.as_graph()
 
         def critical_path_pass(old_critical_path, first_wire):
             if isinstance(first_wire, (Input, Const, Register)):
                 critical_paths.append((first_wire, old_critical_path))
                 return
 
-            source_list = [anet for anet in block.logic if any(
-                (destWire is first_wire) for destWire in anet.dests)]
-
-            if len(source_list) is not 1:
-                raise PyrtlInternalError("The following net has the wrong number of sources:" +
-                                         str(first_wire) + ". It has " + str(len(source_list)))
-            source = source_list[0]
-            critical_path = source_list
+            source = wire_src_map[first_wire]
+            critical_path = [source]
             critical_path.extend(old_critical_path)
             arg_max_time = max(self.timing_map[arg_wire] for arg_wire in source.args)
             for arg_wire in source.args:
