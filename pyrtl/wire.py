@@ -520,7 +520,7 @@ def _convert_verilog_str(val, bitwidth=None):
             sval = sval[1:]
         sval = sval.replace('_', '')
         num = int(sval, base)
-    except ValueError:
+    except (IndexError, ValueError):
         raise PyrtlError('error, string for Const not in verilog style format')
     if neg and num:
         if (num >> bitwidth-1):

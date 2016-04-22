@@ -211,6 +211,8 @@ class TestConst(unittest.TestCase):
         self.check_const("17'hff", 0xff, 17)
         self.check_const("5'b011", 3, 5)
         self.check_const("5'b0_11", 3, 5)
+        self.check_const("5'02_1", 21, 5)
+        self.check_const("16'HFF", 0xff, 16)
 
     def test_bad_string(self):
         self.assert_bad_const("1")
@@ -218,16 +220,18 @@ class TestConst(unittest.TestCase):
         self.assert_bad_const("1bx")
         self.assert_bad_const("1ba")
         self.assert_bad_const("1'bx")
+        self.assert_bad_const("1'z0")
         self.assert_bad_const("1'ba")
         self.assert_bad_const("1'b10")
+        self.assert_bad_const("4'h12")
+        self.assert_bad_const("-'h1")
+        self.assert_bad_const("-2'b10")
         self.assert_bad_const("1'-b10")
         self.assert_bad_const("-1'b10")
         self.assert_bad_const("5'b111111'")
         self.assert_bad_const("'")
         self.assert_bad_const("'1")
-
-    @unittest.skip
-    def test_badstring_broken(self):
+        self.assert_bad_const("2'b01", bitwidth=3)
         self.assert_bad_const("1'")
 
     def test_bool(self):
