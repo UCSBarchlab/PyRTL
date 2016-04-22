@@ -243,6 +243,14 @@ class RomBlock(_MemReadBase):
         super(RomBlock, self).__init__(bitwidth, addrwidth, name, asynchronous, block)
         self.data = romdata
 
+    def __getitem__(self, item):
+        import numbers
+        if isinstance(item, numbers.Number):
+            raise PyrtlError("There is no point in indexing into a RomBlock with an int "
+                             "Instead, get the value from the source data for this Rom")
+            # If you really know what you are doing, use a Const WireVector instead.
+        return super(RomBlock, self).__getitem__(item)
+
     def _get_read_data(self, address):
         import types
         try:

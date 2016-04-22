@@ -23,10 +23,15 @@ class AES(object):
         """
         One-byte left circular rotation, substitution of each byte
         """
+        import numbers
         self.build_memories_if_not_exists()
         a = libutils.partition_wire(word, 8)
         sub = [self.sbox[a[index]] for index in (3, 0, 1, 2)]
-        sub[3] = sub[3] ^ self.rcon[key_expand_round + 1]
+        if isinstance(key_expand_round, numbers.Number):
+            rcon_data = self.rcon_data[key_expand_round + 1]  # int value
+        else:
+            rcon_data = self.rcon[key_expand_round + 1]
+        sub[3] = sub[3] ^ rcon_data
         return pyrtl.concat_list(sub)
 
     def key_expansion(self, old_key, key_expand_round):
