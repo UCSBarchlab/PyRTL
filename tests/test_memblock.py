@@ -86,6 +86,20 @@ class RTLRomBlockWiring(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.memory[self.in1] = self.in2
 
+    def test_int_index_error(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = self.memory[3]
+
+    def test_other_non_wire_index_error(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            y = self.memory[()]
+        with self.assertRaises(pyrtl.PyrtlError):
+            y = self.memory["test"]
+        with self.assertRaises(pyrtl.PyrtlError):
+            y = self.memory["15"]
+        with self.assertRaises(pyrtl.PyrtlError):
+            y = self.memory[False]
+
     def test_write(self):
         with self.assertRaises(pyrtl.PyrtlError):
             self.memory[self.in1] <<= 5
@@ -93,12 +107,14 @@ class RTLRomBlockWiring(unittest.TestCase):
     # test does not check functionality, just that it will generate hardware
     def test_rom_to_rom_direct_operation(self):
         temp = (self.memory[self.in1] == self.memory[self.in2])
-        temp = (self.memory[self.in1] != self.memory[self.in2])
+        temp = (self.memory[self.in1] != self.memory[self.in2])  # != creates two nets
         temp = (self.memory[self.in1] & self.memory[self.in2])
         temp = (self.memory[self.in1] | self.memory[self.in2])
         temp = (self.memory[self.in1] + self.memory[self.in2])
         temp = (self.memory[self.in1] - self.memory[self.in2])
         temp = (self.memory[self.in1] * self.memory[self.in2])
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic), 22)
         self.output1 <<= temp
 
 
