@@ -497,24 +497,35 @@ def _validate_const_int(val, bitwidth=None):
 
 
 def _convert_verilog_str(val, bitwidth=None):
+    bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16, 'x': 16}
     if bitwidth is not None:
         raise PyrtlError('error, bitwidth parameter of const should be'
                          ' unspecified when the const is created from a string'
                          ' (instead use verilog style specification)')
+    neg = False
     if val.startswith('-'):
-        raise PyrtlError('verilog-style consts must be positive')
-    split_string = val.split("'")
+        neg = True
+        val = val[1:]
+    split_string = val.lower().split("'")
     if len(split_string) != 2:
         raise PyrtlError('error, string for Const not in verilog style format')
     try:
         bitwidth = int(split_string[0])
-        if split_string[1][0].isdigit():
-            num = int(split_string[1])
-        else:
-            # this handles strings such as 32'b5 by converting them as int(0b5)
-            num = int('0' + split_string[1], 0)
-    except ValueError:
+        sval = split_string[1]
+        if sval[0] == 's':
+            raise PyrtlError('signed integers are not supported in verilog-style Const')
+        base = 10
+        if sval[0] in bases:
+            base = bases[sval[0]]
+            sval = sval[1:]
+        sval = sval.replace('_', '')
+        num = int(sval, base)
+    except (IndexError, ValueError):
         raise PyrtlError('error, string for Const not in verilog style format')
+    if neg and num:
+        if (num >> bitwidth-1):
+            raise PyrtlError('insufficient bits for negative number')
+        num = (1 << bitwidth) - num
     return num, bitwidth
 
 
