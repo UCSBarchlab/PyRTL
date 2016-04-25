@@ -86,6 +86,20 @@ class RTLRomBlockWiring(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.memory[self.in1] = self.in2
 
+    def test_int_index_error(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = self.memory[3]
+
+    def test_other_non_wire_index_error(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            y = self.memory[()]
+        with self.assertRaises(pyrtl.PyrtlError):
+            y = self.memory["test"]
+        with self.assertRaises(pyrtl.PyrtlError):
+            y = self.memory["15"]
+        with self.assertRaises(pyrtl.PyrtlError):
+            y = self.memory[False]
+
     def test_write(self):
         with self.assertRaises(pyrtl.PyrtlError):
             self.memory[self.in1] <<= 5
@@ -93,13 +107,87 @@ class RTLRomBlockWiring(unittest.TestCase):
     # test does not check functionality, just that it will generate hardware
     def test_rom_to_rom_direct_operation(self):
         temp = (self.memory[self.in1] == self.memory[self.in2])
-        temp = (self.memory[self.in1] != self.memory[self.in2])
+        temp = (self.memory[self.in1] != self.memory[self.in2])  # != creates two nets
         temp = (self.memory[self.in1] & self.memory[self.in2])
         temp = (self.memory[self.in1] | self.memory[self.in2])
         temp = (self.memory[self.in1] + self.memory[self.in2])
         temp = (self.memory[self.in1] - self.memory[self.in2])
         temp = (self.memory[self.in1] * self.memory[self.in2])
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic), 22)
         self.output1 <<= temp
+
+
+class RTLRomGetReadData(unittest.TestCase):
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    @staticmethod
+    def sample_roms():
+        def rom_func(address):
+            return (2 * address + 1) % 8
+        rom = pyrtl.RomBlock(3, 3, [2, 4, 7, 1])
+        romf = pyrtl.RomBlock(3, 3, rom_func)
+        return rom, romf
+
+    def invalid_rom_read(self, rom, address):
+        with self.assertRaises(pyrtl.PyrtlError):
+            rom._get_read_data(address)
+
+    def test_invalid_address(self):
+        for rom in self.sample_roms():
+            self.invalid_rom_read(rom, -1)
+            self.invalid_rom_read(rom, 8)
+            self.invalid_rom_read(rom, 5809)
+
+    def test_invalid_address_types(self):
+        for rom in self.sample_roms():
+            self.invalid_rom_read(rom, 'test')
+            self.invalid_rom_read(rom, pyrtl.Const(10))
+            self.invalid_rom_read(rom, [])
+            self.invalid_rom_read(rom, slice(1, 3))
+            # self.invalid_rom_read(rom, False)  # should this be valid?
+
+    def test_invalid_value_function(self):
+        def bad_func(address):
+            return str(address)
+
+        def bad_func_2(address):
+            return pyrtl.Const(address)
+
+        rom1 = pyrtl.RomBlock(5, 5, ['test', ()])
+        rom2 = pyrtl.RomBlock(5, 5, [pyrtl.Const(0), bad_func])
+        romf1 = pyrtl.RomBlock(5, 5, bad_func)
+        romf2 = pyrtl.RomBlock(5, 5, bad_func_2)
+        for rom in (rom1, rom2, romf1, romf2):
+            self.invalid_rom_read(rom, 0)
+            self.invalid_rom_read(rom, 1)
+
+    def test_value_out_of_range(self):
+        def rom_func(address):
+            return 2 * (8-address) + 1
+
+        rom1 = pyrtl.RomBlock(3, 3, [15, 8, 7, 1])
+        romf1 = pyrtl.RomBlock(3, 3, rom_func)
+
+        for rom in (rom1, romf1):
+            self.invalid_rom_read(rom, 0)
+            self.invalid_rom_read(rom, 1)
+
+    def test_out_of_range(self):
+        for rom in self.sample_roms():
+            self.invalid_rom_read(rom, -1)
+            self.invalid_rom_read(rom, 8)
+            self.invalid_rom_read(rom, 5809)
+
+    def test_valid_get_read(self):
+        rom, romf = self.sample_roms()
+        for address, expected in enumerate((2, 4, 7, 1)):
+            self.assertEqual(rom._get_read_data(address), expected)
+        for address, expected in enumerate((1, 3, 5, 7, 1)):
+            self.assertEqual(romf._get_read_data(address), expected)
+
 
 if __name__ == "__main__":
     unittest.main()

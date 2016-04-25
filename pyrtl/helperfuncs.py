@@ -159,11 +159,11 @@ def rtl_all(*vectorlist):
 
 
 def _basic_mult(A, B):
-    """ a stripped down copy of the dada multiplier in rtllib """
+    """ a stripped down copy of the wallace multiplier in rtllib """
     if len(B) == 1:
         A, B = B, A  # so that we can reuse the code below :)
     if len(A) == 1:
-        return concat_list(list(A & b for b in B) + [Const(0)])  # keep wirevector len consistent
+        return concat_list(list(A & b for b in B) + [Const(0)])  # keep WireVector len consistent
 
     result_bitwidth = len(A) + len(B)
     bits = [[] for weight in range(result_bitwidth)]
@@ -178,7 +178,12 @@ def _basic_mult(A, B):
                 a, b, cin = (w_array.pop(0) for j in range(3))
                 deferred[i].append(a ^ b ^ cin)
                 deferred[i + 1].append(a & b | a & cin | b & cin)
-            deferred[i].extend(w_array)
+            if len(w_array) == 2:
+                a, b = w_array
+                deferred[i].append(a ^ b)
+                deferred[i + 1].append(a & b)
+            else:
+                deferred[i].extend(w_array)
         bits = deferred[:result_bitwidth]
 
     import six

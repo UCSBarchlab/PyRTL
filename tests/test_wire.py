@@ -38,8 +38,8 @@ class TestWireVectorFail(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_undef_wirevector_length(self):
+        x = pyrtl.WireVector()
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector()
             y = len(x)
 
     def test_bad_bitwidth(self):
@@ -49,27 +49,26 @@ class TestWireVectorFail(unittest.TestCase):
             x = pyrtl.WireVector(bitwidth=-1)
         with self.assertRaises(pyrtl.PyrtlError):
             x = pyrtl.WireVector(bitwidth=0)
+        y = pyrtl.WireVector(1)
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = pyrtl.WireVector(y)
 
     def test_no_immed_operators(self):
+        x = pyrtl.WireVector(bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector(bitwidth=3)
             x &= 2
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector(bitwidth=3)
             x ^= 2
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector(bitwidth=3)
             x += 2
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector(bitwidth=3)
             x -= 2
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector(bitwidth=3)
             x *= 2
 
     def test_sign_and_zero_extend_only_increase_bitwidth(self):
+        x = pyrtl.WireVector(bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector(bitwidth=3)
             x.zero_extended(2)
 
 
@@ -95,6 +94,8 @@ class TestWirevectorSlicing(unittest.TestCase):
         w = pyrtl.WireVector()
         with self.assertRaises(pyrtl.PyrtlError):
             x = w[2]
+        with self.assertRaises(pyrtl.PyrtlError):
+            x = w[3:5]
 
     def test_valid_indicies(self):
         self.valid_slice(4, 2)
