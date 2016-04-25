@@ -84,7 +84,7 @@ def copy_block(block=None, update_working_block=True):
     block_in = working_block(block)
     block_out, temp_wv_map = _synth_base(block_in, "_")
     mems = {}
-    for net in block_in:
+    for net in block_in.logic:
         _copy_net(block_out, net, temp_wv_map, mems)
 
     if update_working_block:

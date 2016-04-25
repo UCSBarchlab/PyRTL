@@ -7,11 +7,11 @@ transformation passes over blocks.
 from __future__ import print_function, unicode_literals
 
 from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
-from .helperfuncs import find_and_print_loop, as_wires, concat_list
+from .helperfuncs import find_and_print_loop, as_wires, concat_list, _basic_mult
 from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
-from .transform import net_transform, _get_new_block_mem_instance
+from .transform import net_transform, _get_new_block_mem_instance, copy_block
 
 
 # --------------------------------------------------------------------
@@ -25,7 +25,6 @@ def optimize(update_working_block=True, block=None):
     """ Return an optimized version of a synthesized hardware block. """
     block = working_block(block)
     if not update_working_block:
-        from .transform import copy_block
         block = copy_block(block)
 
     if debug_mode:
@@ -286,16 +285,25 @@ def synthesize(update_working_block=True, block=None):
     more details).
     """
 
-    block_in = working_block(block)
-    block_in.sanity_check()  # before going further, make sure that pressynth is valid
+    block_pre = working_block(block)
+    block_pre.sanity_check()  # before going further, make sure that pressynth is valid
+    block_in = copy_block(block_pre, update_working_block=False)
+
     block_out = PostSynthBlock()
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^nrwcsm@')
     wirevector_map = {}  # map from (vector,index) -> new_wire
+    rev_io_map = {v: k for k, v in block_in.io_map.items()}  # pylint: disable=no-member
     io_map = block_out.io_map  # map from presynth inputs and outputs to postsynth i/o
     uid = 0  # used for unique names
 
-    # First step, create all of the new wires for the new block
+    former_working_block = working_block()
+    set_working_block(block_in)
+
+    # First, replace advanced operators (mul) with simpler ones
+    net_transform(_replace_mul, block_in)
+
+    # Next, create all of the new wires for the new block
     # from the original wires and store them in the wirevector_map
     # for reference.
     for wirevector in block_in.wirevector_subset():
@@ -313,13 +321,19 @@ def synthesize(update_working_block=True, block=None):
 
     # Now connect up the inputs and outputs to maintain the interface
     for wirevector in block_in.wirevector_subset(Input):
-        input_vector = Input(name=wirevector.name, bitwidth=len(wirevector), block=block_out)
-        io_map[wirevector] = input_vector
+        input_vector = Input(
+            name=rev_io_map[wirevector].name,
+            bitwidth=len(wirevector),
+            block=block_out)
+        io_map[rev_io_map[wirevector]] = input_vector
         for i in range(len(wirevector)):
             wirevector_map[(wirevector, i)] <<= input_vector[i]
     for wirevector in block_in.wirevector_subset(Output):
-        output_vector = Output(name=wirevector.name, bitwidth=len(wirevector), block=block_out)
-        io_map[wirevector] = output_vector
+        output_vector = Output(
+            name=rev_io_map[wirevector].name,
+            bitwidth=len(wirevector),
+            block=block_out)
+        io_map[rev_io_map[wirevector]] = output_vector
         # the "reversed" is needed because most significant bit comes first in concat
         output_bits = [wirevector_map[(wirevector, i)]
                        for i in range(len(output_vector))]
@@ -333,7 +347,17 @@ def synthesize(update_working_block=True, block=None):
 
     if update_working_block:
         set_working_block(block_out)
+    else:
+        set_working_block(former_working_block)
     return block_out
+
+
+def _replace_mul(net):
+    if net.op != '*':
+        return True
+    foo = net.dests[0]
+    foo <<= _basic_mult(net.args[0], net.args[1])
+    return False
 
 
 def _decompose(net, wv_map, mems, block_out):

@@ -61,6 +61,49 @@ class TestSynthesis(unittest.TestCase):
         self.check_trace('r 07654321\n')
 
 
+class TestMultiplierSynthesis(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.output = pyrtl.Output(name='r')
+
+    def test_single_mul(self):
+        ina, inb = pyrtl.Input(bitwidth=4), pyrtl.Input(bitwidth=4)
+        self.output <<= ina * inb
+        pyrtl.synthesize()
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for a in range(16):
+            for b in range(16):
+                sim.step({ina: a, inb: b})
+        result = list(sim_trace.trace.values())[0]
+        self.assertEqual(result, [a*b for a in range(16) for b in range(16)])
+
+    def test_chained_mul(self):
+        ina, inb, inc = pyrtl.Input(bitwidth=2), pyrtl.Input(bitwidth=2), pyrtl.Input(bitwidth=2)
+        self.output <<= ina * inb * inc
+        pyrtl.synthesize()
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for a in range(4):
+            for b in range(4):
+                for c in range(4):
+                    sim.step({ina: a, inb: b, inc: c})
+        result = list(sim_trace.trace.values())[0]
+        self.assertEqual(result, [a*b*c for a in range(4) for b in range(4) for c in range(4)])
+
+    def test_singlebit_mul(self):
+        ina, inb = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=3)
+        self.output <<= ina * inb
+        pyrtl.synthesize()
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for a in range(2):
+            for b in range(8):
+                sim.step({ina: a, inb: b})
+        result = list(sim_trace.trace.values())[0]
+        self.assertEqual(result, [a*b for a in range(2) for b in range(8)])
+
+
 class TestOptimization(NetWireNumTestCases):
 
     def test_wire_net_removal_1(self):
