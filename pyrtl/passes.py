@@ -404,16 +404,6 @@ def _decompose(net, wv_map, mems, block_out):
     elif net.op in c_two_var_ops:
         for i in destlen():
             assign_dest(i, c_two_var_ops[net.op](arg(0, i), arg(1, i)))
-    # elif net.op == '=':
-    #    # The == operator is implemented with a nor of xors.
-    #    temp_result = arg(0, 0) ^ arg(1, 0)
-    #    for i in range(1, len(net.args[0])):
-    #        temp_result = temp_result | (arg(0, i) ^ arg(1, i))
-    #    assign_dest(0, ~temp_result)
-    # elif net.op == 'x':
-    #    for i in destlen():
-    #        muxed_bit = ~arg(0, 0) & arg(1, i) | arg(0, 0) & arg(2, i)
-    #        assign_dest(i, muxed_bit)
     elif net.op == 's':
         for i in destlen():
             selected_bit = arg(0, net.op_param[i])
@@ -432,52 +422,6 @@ def _decompose(net, wv_map, mems, block_out):
             dests = (wv_map[(net.dests[0], i)],)
             new_net = LogicNet('r', None, args=args, dests=dests)
             block_out.add_net(new_net)
-    # elif net.op == '+':
-    #    arg0list = [arg(0, i) for i in range(len(net.args[0]))]
-    #    arg1list = [arg(1, i) for i in range(len(net.args[1]))]
-    #    cin = Const(0, bitwidth=1, block=block_out)
-    #    sumbits, cout = _generate_add(arg0list, arg1list, cin)
-    #    destlist = sumbits + [cout]
-    #    for i in destlen():
-    #        assign_dest(i, destlist[i])
-    # elif net.op == '>':
-    #    # where xi = Ai==Bi then
-    #    # A>B = A3 & ~B3 | A2 & ~B2 & x3 | A1 & ~B1 & x3 & x2 | A0 & ~B0 & x3 & x2 & x1
-    #    bitlen = len(net.args[0])
-    #    # Compute the xi above, but don't compute x0 (put None in it's place)
-    #    x = [~(arg(0, i) ^ arg(1, i)) for i in range(1, bitlen)]
-    #    x.insert(0, None)
-    #    # OR over all the terms
-    #    result = None
-    #    for i in range(0, bitlen):
-    #        term = arg(0, i) & ~arg(1, i)
-    #        for j in range(i+1, bitlen):
-    #            term = term & x[j]
-    #        result = (term) if result is None else (result | term)
-    #    assign_dest(0, result)
-    # elif net.op == '<':
-    #    # where xi = Ai==Bi then
-    #    # A<B = ~A3 & B3 | ~A2 & B2 & x3 | ~A1 & B1 & x3 & x2 | ~A0 & B0 & x3 & x2 & x1
-    #    bitlen = len(net.args[0])
-    #    # Compute the xi above, but don't compute x0 (put None in it's place)
-    #    x = [~(arg(0, i) ^ arg(1, i)) for i in range(1, bitlen)]
-    #    x.insert(0, None)
-    #    # OR over all the terms
-    #    result = None
-    #    for i in range(0, bitlen):
-    #        term = ~arg(0, i) & arg(1, i)
-    #        for j in range(i+1, bitlen):
-    #            term = term & x[j]
-    #        result = (term) if result is None else (result | term)
-    #    assign_dest(0, result)
-    # elif net.op == '-':
-    #    arg0list = [arg(0, i) for i in range(len(net.args[0]))]
-    #    arg1list = [~arg(1, i) for i in range(len(net.args[1]))]
-    #    cin = Const(1, bitwidth=1, block=block_out)
-    #    sumbits, cout = _generate_add(arg0list, arg1list, cin)
-    #    destlist = sumbits + [cout]
-    #    for i in destlen():
-    #        assign_dest(i, destlist[i])
     elif net.op == 'm':
         arg0list = [arg(0, i) for i in range(len(net.args[0]))]
         addr = concat_list(arg0list)
@@ -550,28 +494,3 @@ def and_inverter_synth(block=None):
             raise PyrtlError("Op, '{}' is not supported in and_inv_synth".format(net.op))
 
     net_transform(and_inv_op, block)
-
-
-# def _generate_one_bit_add(a, b, cin):
-#    """ Generates hardware for a 1-bit full adder.
-#    :param a, b, cin: 3 1-bit wire vectors
-#    :return a list of wire vectors (the sum), and a single 1-bit wirevector cout
-#    """
-#    sumbit = a ^ b ^ cin
-#    cout = a & b | a & cin | b & cin
-#    return [sumbit], cout
-
-
-# def _generate_add(a, b, cin):
-#    """ a and b are lists of wirevectors (all len 1)
-#        cin is a wirevector (also len 1)
-#        returns sum as list of wirevectors (all len 1)
-#        and a carry out wirevector (also len 1)
-#    """
-#    if len(a) == 1:
-#        sumbits, cout = _generate_one_bit_add(a[0], b[0], cin)
-#    else:
-#        lsbit, ripplecarry = _generate_one_bit_add(a[0], b[0], cin)
-#        msbits, cout = _generate_add(a[1:], b[1:], ripplecarry)
-#        sumbits = lsbit + msbits  # append to lsb to the lowest bits
-#    return sumbits, cout

@@ -241,8 +241,8 @@ def _basic_gt(a, b):
 def _basic_select(s, a, b):
     assert len(a) == len(b)
     assert len(s) == 1
-    sa = concat(*[s]*len(a))
-    sb = concat(*[~s]*len(b))
+    sa = concat(*[~s]*len(a))
+    sb = concat(*[s]*len(b))
     return (a & sa) | (b & sb)
 
 
