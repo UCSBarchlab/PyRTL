@@ -192,6 +192,60 @@ def _basic_mult(A, B):
     return adder_result[:result_bitwidth]
 
 
+def _one_bit_add(a, b, carry_in):
+    assert len(a) == len(b) == 1
+    sumbit = a ^ b ^ carry_in
+    carry_out = a & b | a & carry_in | b & carry_in
+    return sumbit, carry_out
+
+
+def _add_helper(a, b, carry_in):
+    a, b = match_bitwidth(a, b)
+    if len(a) == 1:
+        sumbits, carry_out = _one_bit_add(a, b, carry_in)
+    else:
+        lsbit, ripplecarry = _one_bit_add(a[0], b[0], carry_in)
+        msbits, carry_out = _add_helper(a[1:], b[1:], ripplecarry)
+        sumbits = concat(msbits, lsbit)
+    return sumbits, carry_out
+
+
+def _basic_add(a, b):
+    sumbits, carry_out = _add_helper(a, b, 0)
+    return concat(carry_out, sumbits)
+
+
+def _basic_sub(a, b):
+    sumbits, carry_out = _add_helper(a, ~b, 1)
+    return concat(carry_out, sumbits)
+
+
+def _basic_eq(a, b):
+    return ~ or_all_bits(a ^ b)
+
+
+def _basic_lt(a, b):
+    assert len(a) == len(b)
+    a_msb = a[-1]
+    b_msb = b[-1]
+    if len(a) == 1:
+        return (b_msb & ~a_msb)
+    small = _basic_lt(a[:-1], b[:-1])
+    return (b_msb & ~a_msb) | (small & ~(a_msb ^ b_msb))
+
+
+def _basic_gt(a, b):
+    return _basic_lt(b, a)
+
+
+def _basic_select(s, a, b):
+    assert len(a) == len(b)
+    assert len(s) == 1
+    sa = concat(*[~s]*len(a))
+    sb = concat(*[s]*len(b))
+    return (a & sa) | (b & sb)
+
+
 def mux(index, *mux_ins, **kwargs):
     """ Multiplexer returning the value of the wire in .
 

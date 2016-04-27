@@ -59,6 +59,80 @@ class TestSynthesis(unittest.TestCase):
     def test_const_nobitwidth_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1)
         self.check_trace('r 07654321\n')
+    
+    def test_mux_simulation(self):
+        self.r.next <<= pyrtl.mux(self.r, 4, 3, 1, 7, 2, 6, 0, 5)
+        self.check_trace('r 04213756\n')
+
+
+class TestMultiplierSynthesis(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.output = pyrtl.Output(name='r')
+
+    def test_single_mul(self):
+        ina, inb = pyrtl.Input(bitwidth=4), pyrtl.Input(bitwidth=4)
+        self.output <<= ina * inb
+        pyrtl.synthesize()
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for a in range(16):
+            for b in range(16):
+                sim.step({ina: a, inb: b})
+        result = list(sim_trace.trace.values())[0]
+        self.assertEqual(result, [a*b for a in range(16) for b in range(16)])
+
+    def test_chained_mul(self):
+        ina, inb, inc = pyrtl.Input(bitwidth=2), pyrtl.Input(bitwidth=2), pyrtl.Input(bitwidth=2)
+        self.output <<= ina * inb * inc
+        pyrtl.synthesize()
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for a in range(4):
+            for b in range(4):
+                for c in range(4):
+                    sim.step({ina: a, inb: b, inc: c})
+        result = list(sim_trace.trace.values())[0]
+        self.assertEqual(result, [a*b*c for a in range(4) for b in range(4) for c in range(4)])
+
+    def test_singlebit_mul(self):
+        ina, inb = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=3)
+        self.output <<= ina * inb
+        pyrtl.synthesize()
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for a in range(2):
+            for b in range(8):
+                sim.step({ina: a, inb: b})
+        result = list(sim_trace.trace.values())[0]
+        self.assertEqual(result, [a*b for a in range(2) for b in range(8)])
+
+
+class TestComparisonSynthesis(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.output = pyrtl.Output(name='r')
+    
+    def check_op(self, op):
+        ina, inb = pyrtl.Input(bitwidth=4), pyrtl.Input(bitwidth=4)
+        self.output <<= op(ina, inb)
+        pyrtl.synthesize()
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for a in range(16):
+            for b in range(16):
+                sim.step({ina: a, inb: b})
+        result = list(sim_trace.trace.values())[0]
+        self.assertEqual(result, [op(a, b) for a in range(16) for b in range(16)])
+
+    def test_eq(self):
+        self.check_op(lambda x, y: x == y)
+
+    def test_lt(self):
+        self.check_op(lambda x, y: x < y)
+
+    def test_gt(self):
+        self.check_op(lambda x, y: x > y)
 
 
 class TestOptimization(NetWireNumTestCases):
