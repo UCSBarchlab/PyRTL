@@ -101,7 +101,7 @@ def area_estimation(tech_in_nm=130, block=None):
     total_tracks = sum(stdcell_estimate(a_net) for a_net in block.logic)
     total_length_in_nm = total_tracks * 8 * 55
     # each track is then 72 lambda tall, and converted from nm2 to mm2
-    area_in_mm2_for_130nm = (total_length_in_nm * (72 * 55)) / 1e6
+    area_in_mm2_for_130nm = (total_length_in_nm * (72 * 55)) / 1e12
 
     # scaling from 130nm to the target tech
     logic_area = area_in_mm2_for_130nm / (130.0/tech_in_nm)**2
@@ -238,7 +238,7 @@ class TimingAnalysis(object):
             clock_period_in_ps = scale_factor * (cplength + 189 + 194)
         else:
             clock_period_in_ps = (scale_factor * cplength) + ffoverhead
-        return 1000 * 1.0/clock_period_in_ps
+        return 1e6 * 1.0/clock_period_in_ps
 
     def max_length(self):
         """ Takes a timing map and returns the timing delay of the circuit """
