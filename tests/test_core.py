@@ -87,6 +87,58 @@ class TestBlock(unittest.TestCase):
             print(net)
 
 
+class TestSetWorkingBlock(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.block_a = pyrtl.Block()
+        self.block_b = pyrtl.Block()
+
+    def test_set_working_normal(self):
+        pyrtl.set_working_block(self.block_a)
+        self.assertIs(pyrtl.working_block(), self.block_a)
+        pyrtl.set_working_block(self.block_b)
+        self.assertIs(pyrtl.working_block(), self.block_b)
+
+    def test_set_working_with_block(self):
+        pyrtl.set_working_block(self.block_a)
+        self.assertIs(pyrtl.working_block(), self.block_a)
+        with pyrtl.set_working_block(self.block_b):
+            self.assertIs(pyrtl.working_block(), self.block_b)
+        self.assertIs(pyrtl.working_block(), self.block_a)
+
+    def test_set_working_with_block_exception(self):
+        pyrtl.set_working_block(self.block_a)
+        with self.assertRaises(pyrtl.PyrtlInternalError):
+            with pyrtl.set_working_block(self.block_b):
+                self.assertIs(pyrtl.working_block(), self.block_b)
+                raise pyrtl.PyrtlInternalError()
+        self.assertIs(pyrtl.working_block(), self.block_a)
+
+    def test_invalid_set_working_block(self):
+        x = pyrtl.WireVector()
+        y = 1
+        pyrtl.set_working_block(self.block_a)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.set_working_block(x)
+        self.assertEqual(pyrtl.working_block(), self.block_a)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.set_working_block(y)
+        self.assertEqual(pyrtl.working_block(), self.block_a)
+
+    def test_invalid_set_working_block_with_block(self):
+        x = pyrtl.Input()
+        y = True
+        pyrtl.set_working_block(self.block_a)
+        with self.assertRaises(pyrtl.PyrtlError):
+            with pyrtl.set_working_block(x):
+                pass
+        self.assertEqual(pyrtl.working_block(), self.block_a)
+        with self.assertRaises(pyrtl.PyrtlError):
+            with pyrtl.set_working_block(y):
+                pass
+        self.assertEqual(pyrtl.working_block(), self.block_a)
+
+
 class TestAsGraph(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

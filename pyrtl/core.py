@@ -665,13 +665,30 @@ def reset_working_block():
     _singleton_block = Block()
 
 
-def set_working_block(block):
-    """ Set the working block to be the block passed as argument. """
-    global _singleton_block
-    if not isinstance(block, Block):
-        raise PyrtlError('error, expected instance of Block as block argument')
-    block.sanity_check()
-    _singleton_block = block
+class set_working_block(object):
+    """ Set the working block to be the block passed as argument.
+        Compatible with the 'with' statement
+    """
+
+    @staticmethod
+    def _set_working_block(block, no_sanity_check=False):
+        global _singleton_block
+        if not isinstance(block, Block):
+            raise PyrtlError('error, expected instance of Block as block argument')
+        if not no_sanity_check:
+            block.sanity_check()
+        _singleton_block = block
+
+    def __init__(self, block, no_sanity_check=False):
+        self.old_block = working_block()  # for with statement compatibility
+        self.no_sanity_check = no_sanity_check
+        self._set_working_block(block, no_sanity_check)
+
+    def __enter__(self):
+        return self.old_block
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._set_working_block(self.old_block, self.no_sanity_check)
 
 
 def set_debug_mode(debug=True):
