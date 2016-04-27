@@ -282,7 +282,7 @@ def mux(index, *mux_ins, **kwargs):
                 result = select(index, **kwargs)
                 import warnings
                 warnings.warn("Predicates are being deprecated in Mux. "
-                              "Please use the select operator instead.")
+                              "Use the select operator instead.", stacklevel=2)
                 return result
             except Exception:
                 bad_args = [k for k in kwargs.keys() if k != 'default']
