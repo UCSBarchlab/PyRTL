@@ -263,7 +263,8 @@ class Block(object):
 
         def add_wire_src(edge, node):
             if edge in src_list:
-                raise PyrtlError("wire {} cannot have two drivers".format(edge))
+                raise PyrtlError('Wire "{}" has multiple drivers (check for multiple assignments '
+                                 'with "<<=" or accidental mixing of "|=" and "<<=")'.format(edge))
             src_list[edge] = node
 
         def add_wire_dst(edge, node):
@@ -295,8 +296,7 @@ class Block(object):
         return block_to_svg(self)
 
     def __iter__(self):
-        """
-        BlockIterator iterates over the block passed on init in topographic order.
+        """ BlockIterator iterates over the block passed on init in topographic order.
         The input is a Block, and when a LogicNet is returned it is always the case
         that all of it's "parents" have already been returned earlier in the iteration.
 
