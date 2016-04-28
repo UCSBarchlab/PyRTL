@@ -416,6 +416,25 @@ class TestLoopDetection(unittest.TestCase):
 
         self.assert_has_loop()
 
+    def test_no_loop_special_ops(self):
+        mem1 = pyrtl.MemBlock(8, 8)
+        ins = [pyrtl.Input(8) for i in range(8)]
+        outs = [pyrtl.Output(8) for i in range(3)]
+        reg = pyrtl.Register(8)
+
+        x_1 = ins[4] < reg
+        x_2 = ins[1] * x_1
+        x_3 = pyrtl.mux(x_1, ins[1], ins[2])
+        x_4 = mem1[ins[6]]
+        x_5 = reg + ins[7]
+        mem1[x_4] <<= x_4
+        outs[0] <<= x_2 == x_1
+        reg.next <<= x_5 & ins[1]
+        outs[1] <<= reg
+        outs[2] <<= pyrtl.concat(x_1, x_5[:7])
+
+        self.assert_no_loop()
+
     def test_edge_case_1(self):
         in_1 = pyrtl.Input(10)
         in_2 = pyrtl.Input(9)

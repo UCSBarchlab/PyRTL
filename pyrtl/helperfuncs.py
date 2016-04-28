@@ -535,7 +535,7 @@ def _check_for_loop(block=None):
         for net in logic_left:
             if not any(n_wire in wires_left for n_wire in net.args):
                 nets_to_remove.add(net)
-                wires_left.discard(*net.dests)
+                wires_left.difference_update(net.dests)
         logic_left -= nets_to_remove
 
     if 0 == len(logic_left):
