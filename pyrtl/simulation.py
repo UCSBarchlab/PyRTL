@@ -34,7 +34,8 @@ class Simulation(object):
         '*': lambda l, r: l * r,
         '<': lambda l, r: int(l < r),
         '>': lambda l, r: int(l > r),
-        '=': lambda l, r: int(l == r)
+        '=': lambda l, r: int(l == r),
+        'x': lambda sel, f, t: f if (sel == 0) else t
     }
 
     def __init__(
@@ -123,7 +124,7 @@ class Simulation(object):
             rom = romNet.op_param[1]
             rom_dict = self.memvalue[rom.id]
             if isinstance(rom, RomBlock) and rom not in defined_roms:
-                for address in range(0, 2**rom.addrwidth):
+                for address in range(2**rom.addrwidth):
                     rom_dict[address] = rom._get_read_data(address)
 
         # set all other variables to default value
@@ -227,39 +228,30 @@ class Simulation(object):
         This function, along with edge_update, defined the semantics
         of the primitive ops.  Function updates self.value accordingly.
         """
-        if net.op in self.simple_func:
-            argvals = [self.value[arg] for arg in net.args]
+        if net.op in 'r@':
+            return  # registers and memory write ports have no logic function
+        elif net.op in self.simple_func:
+            argvals = (self.value[arg] for arg in net.args)
             result = self.simple_func[net.op](*argvals)
-            self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
-        elif net.op == 'x':
-            select, a, b = (self.value[net.args[i]] for i in range(3))
-            if select == 0:
-                result = a
-            else:
-                result = b
-            self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 'c':
             result = 0
             for arg in net.args:
                 result = result << len(arg)
                 result = result | self.value[arg]
-            self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 's':
             result = 0
             source = self.value[net.args[0]]
             for b in net.op_param[::-1]:
                 result = (result << 1) | (0x1 & (source >> b))
-            self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
         elif net.op == 'm':
             # memories act async for reads
             memid = net.op_param[0]
             read_addr = self.value[net.args[0]]
-            mem_lookup_result = self.memvalue[memid].get(read_addr, self.default_value)
-            self.value[net.dests[0]] = mem_lookup_result
-        elif net.op == 'r' or net.op == '@':
-            pass  # registers and memory write ports have no logic function
+            result = self.memvalue[memid].get(read_addr, self.default_value)
         else:
             raise PyrtlInternalError('error, unknown op type')
+
+        self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
 
     def _edge_update(self, net, prior_value):
         """Handle the posedge event for the simulation of the given net.
