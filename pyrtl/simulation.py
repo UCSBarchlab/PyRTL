@@ -435,58 +435,46 @@ class FastSimulation(object):
             '<': lambda l, r: 'int(' + l + '<' + r + ')',
             '>': lambda l, r: 'int(' + l + '>' + r + ')',
             '=': lambda l, r: 'int(' + l + '==' + r + ')',
-            'x': lambda sel, a, b: '({}) if ({}==0) else ({})'.format(a, sel, b),
+            'x': lambda sel, f, t: '({}) if ({}==0) else ({})'.format(f, sel, t),
             }
 
         for net in self.block:
-            prog += '#  ' + str(net) + '\n'
-            if net.op in simple_func:
+            if net.op in 'r@':
+                continue  # registers and memory write ports have no logic function
+            elif net.op in simple_func:
                 argvals = (self.varname(arg) for arg in net.args)
-                result = simple_func[net.op](*argvals)
-                mask = str(net.dests[0].bitmask)
-                prog += self.varname(net.dests[0]) + ' = ' + mask + ' & ' + result + '\n'
+                expr = simple_func[net.op](*argvals)
             elif net.op == 'c':
-                result = self.varname(net.dests[0])
-                mask = str(net.dests[0].bitmask)
                 expr = ''
                 for i in range(len(net.args)):
                     if expr is not '':
                         expr += ' | '
-                    shiftby = str(sum(len(net.args[j]) for j in range(i+1, len(net.args))))
+                    shiftby = str(sum(len(j) for j in net.args[i+1:]))
                     expr += '(%s << %s)' % (self.varname(net.args[i]), shiftby)
-                prog += '%s = %s & (%s)\n' % (result, mask, expr)
             elif net.op == 's':
                 source = self.varname(net.args[0])
-                result = self.varname(net.dests[0])
-                mask = str(net.dests[0].bitmask)
                 expr = ''
-                i = 0
-                for b in net.op_param:
+                for i, b in enumerate(net.op_param):
                     if expr is not '':
                         expr += ' | '
                     bit = '(0x1 & (%s >> %d))' % (source, b)
                     expr += '(%s << %d)' % (bit, i)
-                    i += 1
-                prog += '%s = %s & (%s)\n' % (result, mask, expr)
 
             elif net.op == 'm':
                 read_addr = self.varname(net.args[0])
-                mask = str(net.dests[0].bitmask)
-                result = self.varname(net.dests[0])
-
                 if isinstance(net.op_param[1], RomBlock):
                     expr = '%s._get_read_data(%s)' % (self.varname(net.op_param[1]), read_addr)
-                else:
-                    # memories act async for reads
+                else:  # memories act async for reads
                     mem = net.op_param[1]
                     expr = '%s .get(%s, %s)' % (self.varname(mem), read_addr,  self.default_value)
-
-                prog += '%s = %s & %s\n' % (result, mask, expr)
-
-            elif net.op == 'r' or net.op == '@':
-                pass  # registers and memory write ports have no logic function
             else:
                 raise PyrtlError('FastSimulation cannot handle primitive "%s"' % net.op)
+
+            prog += '#  ' + str(net) + '\n'
+
+            result = self.varname(net.dests[0])
+            mask = str(net.dests[0].bitmask)
+            prog += '%s = %s & %s\n' % (result, mask, expr)
 
         return prog
 
