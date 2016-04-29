@@ -237,6 +237,8 @@ def net_graph(block=None, split_state=False):
           ...
         }
 
+    aka: edge = graph[source][dest]
+
     Each node can be either a logic net or a WireVector (e.g. an Input, and Output, a
     Const or even an undriven WireVector (which acts as a source or sink in the network)
     Each edge is a WireVector or derived type (Input, Output, Register, etc.)

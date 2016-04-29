@@ -6,6 +6,12 @@ class TestWireVector(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
+    def test_wirevector_length(self):
+        x = pyrtl.WireVector(1)
+        y = pyrtl.WireVector(13)
+        self.assertEqual(len(x), 1)
+        self.assertEqual(len(y), 13)
+
     def test_basic_assignment(self):
         x = pyrtl.WireVector(1)
         y = pyrtl.WireVector(1)
@@ -128,7 +134,7 @@ class TestInput(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_no_assignment_to_inputs(self):
+    def test_no_connection_to_inputs(self):
         x = pyrtl.WireVector(1)
         y = pyrtl.Input(1)
         with self.assertRaises(pyrtl.PyrtlError):
@@ -140,19 +146,19 @@ class TestRegister(unittest.TestCase):
         pyrtl.reset_working_block()
         self.r = pyrtl.Register(bitwidth=3)
 
-    def test_assignment_small(self):
+    def test_connection_small(self):
         self.r.next <<= pyrtl.Const(1, bitwidth=3)
 
-    def test_assignment_unspec_width(self):
+    def test_connection_unspec_width(self):
         self.r.next <<= pyrtl.Const(1)
 
-    def test_assignment_raw(self):
+    def test_connection_raw(self):
         self.r.next <<= 1
 
-    def test_assignment_large(self):
+    def test_connection_large(self):
         self.r.next <<= pyrtl.Const(202)
 
-    def test_register_assignment_direct(self):
+    def test_register_assignment(self):
         with self.assertRaises(pyrtl.PyrtlError):
             self.r.next = 1
 
@@ -164,7 +170,14 @@ class TestRegister(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.r <<= 1
 
+    @unittest.skip
     def test_assign_next(self):
+        # I really don't know how we can fix this - John
+        w = pyrtl.WireVector(bitwidth=1)
+        with self.assertRaises(pyrtl.PyrtlError):
+            a = self.r.next
+
+    def test_connect_next(self):
         w = pyrtl.WireVector(bitwidth=1)
         with self.assertRaises(pyrtl.PyrtlError):
             w <<= self.r.next
@@ -297,8 +310,8 @@ class TestRTLAdderDesign(unittest.TestCase):
             sum, cout = generate_full_adder(r, addby)
             r.next <<= sum
 
-            self.assertTrue(isinstance(r, pyrtl.Register))
-            self.assertTrue(isinstance(cout, pyrtl.WireVector))
+            self.assertIsInstance(r, pyrtl.Register)
+            self.assertIsInstance(cout, pyrtl.WireVector)
             pyrtl.reset_working_block()
 
 

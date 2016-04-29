@@ -21,15 +21,18 @@ def net_transform(transform_func, block=None):
 def wire_transform(transform_func, select_types=WireVector,
                    exclude_types=(Input, Output, Register, Const), block=None):
     """
+    Maps Wires to new sets of nets and wires accrding to a custom function
 
     :param transform_func:
         Function signature: func(orig_wire (logicnet)) -> src_wire, dst_wire
         src_wire is the src for the stuff you made in the transform func
         and dst_wire is the sink
 
-        to indicate that the wire has not been changed, make src_wire and dst_wire
-    :param block:
-    :return:
+        to indicate that the wire has not been changed, make src_wire and dst_wire both
+        the original wire
+    :param select_types: Type or Tuple of types of WireVectors to replace
+    :param exclude_types: Type or Tuple of types of WireVectors to exclude from replacement
+    :param block: The Block to replace wires on
     """
     block = working_block(block)
     for orig_wire in block.wirevector_subset(select_types, exclude_types):

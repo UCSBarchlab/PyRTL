@@ -544,6 +544,9 @@ def _check_for_loop(block=None):
 
 
 def find_loop(block=None):
+    block = working_block(block)
+    block.sanity_check()  # make sure that the block is sane first
+
     result = _check_for_loop(block)
     if not result:
         return
