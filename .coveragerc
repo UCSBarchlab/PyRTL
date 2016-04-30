@@ -10,7 +10,7 @@ exclude_lines =
 
     # ignore pass statements that are not run:
     # sometimes you need them to make a block (especially for unittetsts)
-    # need to be really careful with this one becuase 'pass' shows up in other olaces as well
+    # need to be really careful with this one because 'pass' shows up in other places as well
     \spass\s
     \spass$
 

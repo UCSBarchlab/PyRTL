@@ -317,19 +317,22 @@ class TestWireConditionalBlock(unittest.TestCase):
     def test_condition_nice_error_message_nested(self):
         with pyrtl.conditional_assignment:
             with self.assertRaises(pyrtl.PyrtlError):
-                with pyrtl.conditional_assignment: pass
+                with pyrtl.conditional_assignment:
+                    pass
 
     def test_condition_nice_error_message_nested2(self):
         i = pyrtl.Register(bitwidth=2, name='i')
         with pyrtl.conditional_assignment:
             with i <= 2:
                 with self.assertRaises(pyrtl.PyrtlError):
-                    with pyrtl.conditional_assignment: pass
+                    with pyrtl.conditional_assignment:
+                        pass
 
     def test_condition_nice_error_message(self):
         i = pyrtl.Register(bitwidth=2, name='i')
         with self.assertRaises(pyrtl.PyrtlError):
-            with i <= 2: pass
+            with i <= 2:
+                pass
 
     def test_condition_error_when_assigned_wire_has_unspecified_bitwidth(self):
         i = pyrtl.Register(bitwidth=2, name='i')
@@ -338,6 +341,22 @@ class TestWireConditionalBlock(unittest.TestCase):
             with i <= 2:
                 with self.assertRaises(pyrtl.PyrtlError):
                     o |= 1
+
+    def test_error_condition_connect_input(self):
+        i = pyrtl.Input(bitwidth=2, name='i')
+        o = pyrtl.WireVector(bitwidth=2, name='o')
+        with pyrtl.conditional_assignment:
+            with i <= 2:
+                with self.assertRaises(pyrtl.PyrtlError):
+                    i |= o
+
+    def test_error_condition_connect_const(self):
+        i = pyrtl.Const(3, 2)
+        o = pyrtl.WireVector(bitwidth=2, name='o')
+        with pyrtl.conditional_assignment:
+            with i <= 2:
+                with self.assertRaises(pyrtl.PyrtlError):
+                    i |= o
 
 
 # ---------------------------------------------------------------

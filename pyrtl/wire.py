@@ -367,7 +367,7 @@ class WireVector(object):
             return self
         elif numext < 0:
             raise PyrtlError(
-                'error, neither zero_extended nor sign_extended can'
+                'Neither zero_extended nor sign_extended can'
                 ' reduce the number of bits')
         else:
             from .helperfuncs import concat
@@ -399,7 +399,17 @@ class Input(WireVector):
     def __ilshift__(self, _):
         """ This is an illegal op for Inputs. They cannot be assigned to in this way """
         raise PyrtlError(
-            'Input, such as "%s", cannot have values generated internally'
+            'Connection using <<= operator attempted on Input. '
+            'Inputs, such as "%s", cannot have values generated internally. '
+            "aka they can't have other wires driving it"
+            % str(self.name))
+
+    def __ior__(self, _):
+        """ This is an illegal op for Inputs. They cannot be assigned to in this way """
+        raise PyrtlError(
+            'Connection using |= operator attempted on Input. '
+            'Inputs, such as "%s", cannot have values generated internally. '
+            "aka they can't have other wires driving it"
             % str(self.name))
 
 
@@ -456,6 +466,14 @@ class Const(WireVector):
         """ This is an illegal op for Consts. Their value is set in the __init__ function"""
         raise PyrtlError(
             'ConstWires, such as "%s", should never be assigned to with <<='
+            % str(self.name))
+
+    def __ior__(self, _):
+        """ This is an illegal op for Inputs. They cannot be assigned to in this way """
+        raise PyrtlError(
+            'Connection using |= operator attempted on Const. '
+            'ConstWires, such as "%s", cannot have values generated internally. '
+            "aka they cannot have other wires driving it"
             % str(self.name))
 
 
