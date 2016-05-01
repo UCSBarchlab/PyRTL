@@ -93,20 +93,31 @@ class TestSetWorkingBlock(unittest.TestCase):
         self.block_a = pyrtl.Block()
         self.block_b = pyrtl.Block()
 
-    def test_set_working_normal(self):
+    def test_normal(self):
         pyrtl.set_working_block(self.block_a)
         self.assertIs(pyrtl.working_block(), self.block_a)
         pyrtl.set_working_block(self.block_b)
         self.assertIs(pyrtl.working_block(), self.block_b)
 
-    def test_set_working_with_block(self):
+    def test_with_block(self):
         pyrtl.set_working_block(self.block_a)
         self.assertIs(pyrtl.working_block(), self.block_a)
         with pyrtl.set_working_block(self.block_b):
             self.assertIs(pyrtl.working_block(), self.block_b)
         self.assertIs(pyrtl.working_block(), self.block_a)
 
-    def test_set_working_with_block_exception(self):
+    def test_with_block_nested(self):
+        self.block_c = pyrtl.Block()
+        pyrtl.set_working_block(self.block_a)
+        self.assertIs(pyrtl.working_block(), self.block_a)
+        with pyrtl.set_working_block(self.block_b):
+            self.assertIs(pyrtl.working_block(), self.block_b)
+            with pyrtl.set_working_block(self.block_c):
+                self.assertIs(pyrtl.working_block(), self.block_c)
+            self.assertIs(pyrtl.working_block(), self.block_b)
+        self.assertIs(pyrtl.working_block(), self.block_a)
+
+    def test_with_block_exception(self):
         pyrtl.set_working_block(self.block_a)
         with self.assertRaises(pyrtl.PyrtlInternalError):
             with pyrtl.set_working_block(self.block_b):
@@ -114,7 +125,7 @@ class TestSetWorkingBlock(unittest.TestCase):
                 raise pyrtl.PyrtlInternalError()
         self.assertIs(pyrtl.working_block(), self.block_a)
 
-    def test_invalid_set_working_block(self):
+    def test_invalid_set_wb(self):
         x = pyrtl.WireVector()
         y = 1
         pyrtl.set_working_block(self.block_a)
@@ -125,7 +136,7 @@ class TestSetWorkingBlock(unittest.TestCase):
             pyrtl.set_working_block(y)
         self.assertEqual(pyrtl.working_block(), self.block_a)
 
-    def test_invalid_set_working_block_with_block(self):
+    def test_invalid_with_set_wb(self):
         x = pyrtl.Input()
         y = True
         pyrtl.set_working_block(self.block_a)
