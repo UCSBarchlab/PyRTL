@@ -297,24 +297,6 @@ class TestOutput(unittest.TestCase):
             x = o[0]
 
 
-class TestRTLAdderDesign(unittest.TestCase):
-    def setUp(self):
-        pyrtl.reset_working_block()
-
-    def test_complete_adders(self):
-        from .helperfunctions import generate_full_adder
-        for bitwidth in range(9, 10):
-            r = pyrtl.Register(bitwidth=bitwidth, name='r')
-            const_one = pyrtl.Const(1)
-            addby = const_one.zero_extended(bitwidth)
-            sum, cout = generate_full_adder(r, addby)
-            r.next <<= sum
-
-            self.assertIsInstance(r, pyrtl.Register)
-            self.assertIsInstance(cout, pyrtl.WireVector)
-            pyrtl.reset_working_block()
-
-
 class TestKeepingCallStack(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

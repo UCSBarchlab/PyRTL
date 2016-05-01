@@ -1,7 +1,8 @@
 import unittest
 import io
 
-from .helperfunctions import *
+import pyrtl
+from pyrtl.helperfuncs import _basic_add
 
 
 class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
@@ -130,11 +131,8 @@ class TestRTLSimulationTraceWithAdder(unittest.TestCase):
         pyrtl.reset_working_block()
         bitwidth = 3
         self.r = pyrtl.Register(bitwidth=bitwidth, name='r')
-        self.sum, self.cout = generate_full_adder(self.r, pyrtl.Const(1).zero_extended(bitwidth))
-        self.r.next <<= self.sum
-
-    def tearDown(self):
-        pass
+        self.result = _basic_add(self.r, pyrtl.Const(1).zero_extended(bitwidth))
+        self.r.next <<= self.result
 
     def test_adder_simulation(self):
         sim_trace = pyrtl.SimulationTrace()
@@ -199,8 +197,8 @@ class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
         pyrtl.reset_working_block()
         bitwidth = 3
         self.r = pyrtl.Register(bitwidth=bitwidth, name='r')
-        self.sum, self.cout = generate_full_adder(self.r, pyrtl.Const(1).zero_extended(bitwidth))
-        self.r.next <<= self.sum
+        self.res = _basic_add(self.r, pyrtl.Const(1).zero_extended(bitwidth))
+        self.r.next <<= self.res
 
     def test_vcd_output(self):
         sim_trace = pyrtl.SimulationTrace()
