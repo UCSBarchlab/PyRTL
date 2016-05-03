@@ -23,23 +23,23 @@ from .transform import net_transform, _get_new_block_mem_instance, copy_block
 #
 
 
-def optimize(update_working_block=True, block=None):
+def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     """ Return an optimized version of a synthesized hardware block. """
     block = working_block(block)
     if not update_working_block:
         block = copy_block(block)
 
+    if not skip_sanity_check or debug_mode:
+        block.sanity_check()
+    _remove_wire_nets(block)
     if debug_mode:
         block.sanity_check()
-        _remove_wire_nets(block)
+    _constant_propagation(block)
+    if debug_mode:
         block.sanity_check()
-        _constant_propagation(block)
+    _remove_unlistened_nets(block)
+    if not skip_sanity_check or debug_mode:
         block.sanity_check()
-        _remove_unlistened_nets(block)
-    else:
-        _remove_wire_nets(block)
-        _constant_propagation(block)
-        _remove_unlistened_nets(block)
     return block
 
 
@@ -96,7 +96,7 @@ def _constant_propagation(block):
         _constant_prop_pass(block)
 
 
-def _constant_prop_pass(block):
+def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
     """ Does one constant propagation pass """
 
     def constant_prop_check(net_checking):
@@ -132,17 +132,13 @@ def _constant_prop_pass(block):
                             for arg_wire in net_checking.args))
 
         if num_constants is 0 or net_checking.op == 'w':
-            return
+            return  # assuming wires are already optimized
 
         if (net_checking.op in two_var_ops) & num_constants is 1:
             # special case
-            arg1, arg2 = net_checking.args
-            if isinstance(arg1, Const):
-                const_wire = arg1
-                other_wire = arg2
-            else:
-                const_wire = arg2
-                other_wire = arg1
+            const_wire, other_wire = net_checking.args
+            if isinstance(other_wire, Const):
+                const_wire, other_wire = other_wire, const_wire
 
             outputs = [two_var_ops[net_checking.op](const_wire.val, other_val)
                        for other_val in range(2)]
@@ -203,33 +199,29 @@ def _remove_unlistened_nets(block):
     """
 
     listened_nets = set()
-    listened_wires_cur = set()
+    listened_wires = set()
     prev_listened_net_count = 0
 
+    def add_to_listened(net):
+        listened_nets.add(net)
+        listened_wires.update(net.args)
+
     for a_net in block.logic:
-        if a_net.op in 'm@':
-            listened_nets.add(a_net)
-            for arg_wire in a_net.args:
-                listened_wires_cur.add(arg_wire)
-        elif isinstance(a_net.dests[0], Output):
-            listened_nets.add(a_net)
-            for arg_wire in a_net.args:
-                listened_wires_cur.add(arg_wire)
+        if a_net.op == '@':
+            add_to_listened(a_net)
+        elif any(isinstance(destW, Output) for destW in a_net.dests):
+            add_to_listened(a_net)
 
     while len(listened_nets) > prev_listened_net_count:
         prev_listened_net_count = len(listened_nets)
-        listened_wires_prev = listened_wires_cur
 
-        for net in block.logic:
-            if net not in listened_nets:
-                if any((destWire in listened_wires_prev) for destWire in net.dests):
-                    listened_nets.add(net)
-                    for arg_wire in net.args:
-                        listened_wires_cur.add(arg_wire)
+        for net in block.logic - listened_nets:
+            if any((destWire in listened_wires) for destWire in net.dests):
+                add_to_listened(net)
 
     # now I need to add back the interface for the inputs that were removed
-    for net in block.logic:
-        if net.op == 's' and isinstance(net.args[0], Input) and net not in listened_nets:
+    for net in block.logic - listened_nets:
+        if any(isinstance(arg_wire, Input) for arg_wire in net.args):
             listened_nets.add(net)
             # notify the user that this net is useless
 
