@@ -166,7 +166,10 @@ class TestOptimization(NetWireNumTestCases):
         self.assert_num_net(5, block)
         self.assert_num_wires(6, block)
 
-    def test_const_folding_basic_one_var_op_1(self):
+
+class TestConstFolding(NetWireNumTestCases):
+
+    def test_basic_one_var_op_1(self):
         constwire = pyrtl.Const(0, 1)
         outwire = pyrtl.Output()
 
@@ -181,7 +184,7 @@ class TestOptimization(NetWireNumTestCases):
         self.assertEqual(len(block.wirevector_set), 2)
         self.num_wire_of_type(Const, 1, block)
 
-    def test_const_folding_adv_one_var_op_1(self):
+    def test_adv_one_var_op_1(self):
         constwire = pyrtl.Const(0, 1)
         outwire = pyrtl.Output()
         tempwire = pyrtl.WireVector()
@@ -200,7 +203,7 @@ class TestOptimization(NetWireNumTestCases):
         self.num_wire_of_type(Const, 1, block)
         self.num_wire_of_type(Output, 1, block)
 
-    def test_const_folding_adv_one_var_op_2(self):
+    def test_adv_one_var_op_2(self):
         # this one tests to see that an input wirevector is properly preserved
 
         inwire = pyrtl.Input(bitwidth=1)
@@ -225,7 +228,7 @@ class TestOptimization(NetWireNumTestCases):
         self.num_wire_of_type(Const, 0, block)
         self.num_wire_of_type(Output, 1, block)
 
-    def test_const_folding_basic_two_var_op_1(self):
+    def test_basic_two_var_op_1(self):
         inwire = pyrtl.Input(bitwidth=1)
         constwire = pyrtl.Const(0, 1)
         outwire = pyrtl.Output()
@@ -233,23 +236,23 @@ class TestOptimization(NetWireNumTestCases):
         outwire <<= inwire & constwire
         pyrtl.synthesize()
         pyrtl.optimize()
-        # should remove the or block and replace it with a
+        # should remove the and block and replace it with a
         # wire net (to separate the const from the output)
         block = pyrtl.working_block(None)
         self.num_net_of_type('&', 0, block)
         self.num_net_of_type('w', 1, block)
-        self.assert_num_net(2, block)
-        self.assert_num_wires(4, block)
+        self.assert_num_net(1, block)
+        self.assert_num_wires(3, block)
         self.num_wire_of_type(Const, 1, block)
 
-    def test_const_folding_basic_two_var_op_2(self):
+    def test_basic_two_var_op_2(self):
         inwire = pyrtl.Input(bitwidth=1)
         constwire = pyrtl.Const(0, 1)
         outwire = pyrtl.Output()
 
         outwire <<= inwire | constwire
         pyrtl.optimize()
-        # should remove the and block and replace it with a
+        # should remove the or block and replace it with a
         # wire net (to separate the const from the output)
         block = pyrtl.working_block(None)
         self.num_net_of_type('|', 0, block)
@@ -258,7 +261,7 @@ class TestOptimization(NetWireNumTestCases):
         self.assert_num_wires(2, block)
         self.num_wire_of_type(Const, 0, block)
 
-    def test_const_folding_basic_two_var_op_3(self):
+    def test_basic_two_var_op_3(self):
         constwire = pyrtl.Const(0, 1)
         outwire = pyrtl.Output()
 
@@ -269,11 +272,72 @@ class TestOptimization(NetWireNumTestCases):
         # should remove the and block and replace it with a
         # wirevector (to separate the input from the output)
         block = pyrtl.working_block(None)
-        self.num_net_of_type('|', 0, block)
+        self.num_net_of_type('^', 0, block)
         self.num_net_of_type('w', 1, block)
         self.assert_num_net(1, block)
         self.assert_num_wires(2, block)
         self.num_wire_of_type(Const, 1, block)
+
+    def test_two_var_op_produce_not(self):
+        constwire = pyrtl.Const(1, 1)
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output()
+
+        # playing with edge cases
+        outwire <<= constwire ^ inwire
+        pyrtl.synthesize()
+        pyrtl.optimize()
+        # should remove the and block and replace it with a
+        # wirevector (to separate the input from the output)
+        block = pyrtl.working_block(None)
+        self.num_net_of_type('~', 1, block)
+        self.num_net_of_type('w', 1, block)
+        self.num_net_of_type('s', 1, block)  # due to synthesis
+        self.assert_num_net(3, block)
+        self.assert_num_wires(4, block)
+        self.num_wire_of_type(Const, 0, block)
+
+    def test_two_var_op_correct_wire_prop(self):
+        ins = [pyrtl.Input(1) for i in range(3)]
+        outwire = pyrtl.Output()
+        const_w = pyrtl.Const(0)
+        temp1 = ins[1] & ins[2]
+        temp2 = temp1 ^ const_w
+        temp3 = const_w | temp2
+
+        outwire <<= temp3 & ins[2]
+
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        block.sanity_check()  # just in case
+
+        self.num_net_of_type('&', 2)
+        self.num_net_of_type('w', 1)
+        self.assert_num_net(3)
+        self.assert_num_wires(6)
+        self.num_wire_of_type(Const, 0)
+
+    def test_two_var_op_correct_not_wire_replacement(self):
+        ins = [pyrtl.Input(1) for i in range(3)]
+        outwire = pyrtl.Output()
+        const_0 = pyrtl.Const(0)
+        const_1 = pyrtl.Const(1)
+        temp1 = ins[0] & ins[1]
+        temp2 = const_0 | temp1
+        temp3 = temp2 ^ const_1
+
+        outwire <<= temp3 & ins[2]
+
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        block.sanity_check()  # just in case
+
+        self.num_net_of_type('&', 2)
+        self.num_net_of_type('~', 1)
+        self.num_net_of_type('w', 1)
+        self.assert_num_net(4)
+        self.assert_num_wires(7)
+        self.num_wire_of_type(Const, 0)
 
 
 class TestSynthOptTiming(NetWireNumTestCases):

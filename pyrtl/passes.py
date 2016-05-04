@@ -29,7 +29,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     if not update_working_block:
         block = copy_block(block)
 
-    if not skip_sanity_check or debug_mode:
+    if (not skip_sanity_check) or debug_mode:
         block.sanity_check()
     _remove_wire_nets(block)
     if debug_mode:
@@ -38,7 +38,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     if debug_mode:
         block.sanity_check()
     _remove_unlistened_nets(block)
-    if not skip_sanity_check or debug_mode:
+    if (not skip_sanity_check) or debug_mode:
         block.sanity_check()
     return block
 
@@ -81,7 +81,7 @@ def _remove_wire_nets(block):
     block.sanity_check()
 
 
-def _constant_propagation(block):
+def _constant_propagation(block, silence_unexpected_net_warnings=False):
     """ Removes excess constants in the block.
 
     Note on resulting block:
@@ -93,11 +93,17 @@ def _constant_propagation(block):
     current_nets = 0
     while len(block.logic) != current_nets:
         current_nets = len(block.logic)
-        _constant_prop_pass(block)
+        _constant_prop_pass(block, silence_unexpected_net_warnings)
 
 
 def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
     """ Does one constant propagation pass """
+    def _constant_prop_error(net, error_str):
+        if not silence_unexpected_net_warnings:
+            raise PyrtlError("Unexpected net, {}, has {}".format(net, error_str))
+
+    valid_net_ops = '~&|^nrwcsm@'
+    no_optimization_ops = 'wcsm@'
 
     def constant_prop_check(net_checking):
 
@@ -131,17 +137,28 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
         num_constants = sum((isinstance(arg_wire, Const)
                             for arg_wire in net_checking.args))
 
-        if num_constants is 0 or net_checking.op == 'w':
-            return  # assuming wires are already optimized
+        if net_checking.op not in valid_net_ops:
+            _constant_prop_error(net_checking, "has a net not handled by constant_propagation")
+            return  # skip if we are ignoring unoptimizable ops
 
-        if (net_checking.op in two_var_ops) & num_constants is 1:
+        if num_constants is 0 or net_checking.op in no_optimization_ops:
+            return  # assuming wire nets are already optimized
+
+        if any(len(wire) != 1 for wire in net_checking.args + net_checking.dests):
+            long_wires = [wire for wire in net_checking.args + net_checking.dests if
+                          len(wire) != 1]
+            _constant_prop_error(net_checking, "has wire(s) {} with bitwidths that are not 1"
+                                 .format(long_wires))
+            return  # skip if we are ignoring unoptimizable ops
+
+        if (net_checking.op in two_var_ops) and num_constants == 1:
             # special case
             const_wire, other_wire = net_checking.args
             if isinstance(other_wire, Const):
                 const_wire, other_wire = other_wire, const_wire
 
             outputs = [two_var_ops[net_checking.op](const_wire.val, other_val)
-                       for other_val in range(2)]
+                       for other_val in (0, 1)]
 
             if outputs[0] == outputs[1]:
                 replace_net_with_const(outputs[0])
@@ -179,19 +196,16 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
     # second full pass to cleanup
 
     new_logic = set()
-    for net in block.logic:
-        if net not in nets_to_remove:
-            new_args = tuple(find_producer(x) for x in net.args)
-            new_net = LogicNet(net.op, net.op_param, new_args, net.dests)
-            new_logic.add(new_net)
-    # now update the block with the new logic and remove wirevectors
+    for net in block.logic.union(nets_to_add) - nets_to_remove:
+        new_args = tuple(find_producer(x) for x in net.args)
+        new_net = LogicNet(net.op, net.op_param, new_args, net.dests)
+        new_logic.add(new_net)
 
-    new_logic = new_logic.union(nets_to_add)
     block.logic = new_logic
     for new_wirevector in wire_add_set:
         block.add_wirevector(new_wirevector)
 
-    _remove_unused_wires(block, "constant folding")
+    _remove_unused_wires(block)
 
 
 def _remove_unlistened_nets(block):
@@ -219,17 +233,11 @@ def _remove_unlistened_nets(block):
             if any((destWire in listened_wires) for destWire in net.dests):
                 add_to_listened(net)
 
-    # now I need to add back the interface for the inputs that were removed
-    for net in block.logic - listened_nets:
-        if any(isinstance(arg_wire, Input) for arg_wire in net.args):
-            listened_nets.add(net)
-            # notify the user that this net is useless
-
     block.logic = listened_nets
-    _remove_unused_wires(block, "unlistened net removal")
+    _remove_unused_wires(block)
 
 
-def _remove_unused_wires(block, parent_process_name):
+def _remove_unused_wires(block, keep_inputs=True):
     """ Removes all unconnected wires from a block"""
     valid_wires = set()
     for logic_net in block.logic:
@@ -238,10 +246,14 @@ def _remove_unused_wires(block, parent_process_name):
     wire_removal_set = block.wirevector_set.difference(valid_wires)
     for removed_wire in wire_removal_set:
         if isinstance(removed_wire, Input):
-            print("Input Wire, " + removed_wire.name + " was removed by " + parent_process_name)
+            term = " optimized away"
+            if keep_inputs:
+                valid_wires.add(removed_wire)
+                term = " deemed useless by optimization"
+
+            print("Input Wire, " + removed_wire.name + " has been" + term)
         if isinstance(removed_wire, Output):
-            PyrtlInternalError("Output wire, " + removed_wire.name +
-                               "was disconnected by" + parent_process_name)
+            PyrtlInternalError("Output wire, " + removed_wire.name + " not driven")
 
     block.wirevector_set = valid_wires
 

@@ -7,16 +7,20 @@ class NetWireNumTestCases(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def assert_num_net(self, num, block):
+    def assert_num_net(self, num, block=None):
+        block = pyrtl.working_block(block)
         self.assertEqual(len(block.logic), num)
 
-    def assert_num_wires(self, num, block):
+    def assert_num_wires(self, num, block=None):
+        block = pyrtl.working_block(block)
         self.assertEqual(len(block.wirevector_set), num)
 
-    def num_net_of_type(self, netOp, num, block):
+    def num_net_of_type(self, netOp, num, block=None):
+        block = pyrtl.working_block(block)
         self.assertEquals(len([net for net in block.logic if net.op == netOp]), num)
 
-    def num_wire_of_type(self, wiretype, num, block):
+    def num_wire_of_type(self, wiretype, num, block=None):
+        block = pyrtl.working_block(block)
         self.assertEquals(len(block.wirevector_subset(wiretype)), num)
 
 
