@@ -2,7 +2,6 @@ import copy
 
 from .core import set_working_block, LogicNet, working_block
 from .wire import Const, Input, Output, WireVector, Register
-from .helperfuncs import get_block
 
 
 def net_transform(transform_func, block=None):
@@ -12,10 +11,11 @@ def net_transform(transform_func, block=None):
     :return:
     """
     block = working_block(block)
-    for net in block.logic.copy():
-        keep_orig_net = transform_func(net)
-        if not keep_orig_net:
-            block.logic.remove(net)
+    with set_working_block(block):
+        for net in block.logic.copy():
+            keep_orig_net = transform_func(net)
+            if not keep_orig_net:
+                block.logic.remove(net)
 
 
 def wire_transform(transform_func, select_types=WireVector,
@@ -41,8 +41,7 @@ def wire_transform(transform_func, select_types=WireVector,
 
 
 def replace_wire(orig_wire, new_src, new_dst, block=None):
-    if not block:
-        block = get_block(orig_wire, new_src, new_dst)
+    block = working_block(block)
     if new_src is not orig_wire:
         # don't need to add the new_src and new_dst because they were made added at creation
         for net in block.logic:
@@ -57,7 +56,7 @@ def replace_wire(orig_wire, new_src, new_dst, block=None):
 
     if new_dst is not orig_wire:
         for net in block.logic:
-            for wire in net.args:
+            for wire in set(net.args):
                 if wire is orig_wire:
                     new_net = LogicNet(
                         op=net.op, op_param=net.op_param, dests=net.dests,
