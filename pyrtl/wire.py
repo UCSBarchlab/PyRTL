@@ -97,12 +97,12 @@ class WireVector(object):
             op_param=None,
             args=(other,),
             dests=(self,))
-        self.block.add_net(net)
+        working_block().add_net(net)
 
     def _prepare_for_assignment(self, rhs):
         # Convert right-hand-side to wires and propagate bitwidth if necessary
         from .helperfuncs import as_wires
-        rhs = as_wires(rhs, bitwidth=self.bitwidth, block=self.block)
+        rhs = as_wires(rhs, bitwidth=self.bitwidth)
         if self.bitwidth is None:
             self.bitwidth = rhs.bitwidth
         return rhs
@@ -128,7 +128,7 @@ class WireVector(object):
 
         a, b = self, other
         # convert constants if necessary
-        b = as_wires(b, block=self.block)
+        b = as_wires(b)
 
         # check size of operands
         a, b = match_bitwidth(a, b)
@@ -142,13 +142,13 @@ class WireVector(object):
         elif op in ['<', '>', '=']:
             resultlen = 1
 
-        s = WireVector(bitwidth=resultlen, block=self.block)
+        s = WireVector(bitwidth=resultlen)
         net = LogicNet(
             op=op,
             op_param=None,
             args=(a, b),
             dests=(s,))
-        self.block.add_net(net)
+        working_block().add_net(net)
         return s
 
     def __bool__(self):
@@ -224,7 +224,7 @@ class WireVector(object):
 
     def __rsub__(self, other):
         from .helperfuncs import as_wires
-        other = as_wires(other, block=self.block)  # '-' op is not symmetric
+        other = as_wires(other)  # '-' op is not symmetric
         return other.logicop(self, '-')
 
     def __isub__(self, other):
@@ -292,13 +292,13 @@ class WireVector(object):
         Creates LogicNets that inverts a wire
         :return Wirevector: a result wire for the operation
         """
-        outwire = WireVector(bitwidth=len(self), block=self.block)
+        outwire = WireVector(bitwidth=len(self))
         net = LogicNet(
             op='~',
             op_param=None,
             args=(self,),
             dests=(outwire,))
-        self.block.add_net(net)
+        working_block().add_net(net)
         return outwire
 
     def __getitem__(self, item):
@@ -315,13 +315,13 @@ class WireVector(object):
             selectednums = tuple(allindex[item])
         if not selectednums:
             raise PyrtlError('selection %s must have at least select one wire' % str(item))
-        outwire = WireVector(bitwidth=len(selectednums), block=self.block)
+        outwire = WireVector(bitwidth=len(selectednums))
         net = LogicNet(
             op='s',
             op_param=selectednums,
             args=(self,),
             dests=(outwire,))
-        self.block.add_net(net)
+        working_block().add_net(net)
         return outwire
 
     def __len__(self):
@@ -372,14 +372,14 @@ class WireVector(object):
         else:
             from .helperfuncs import concat
             if isinstance(extbit, int):
-                extbit = Const(0, bitwidth=1, block=self.block)
-            extvector = WireVector(bitwidth=numext, block=self.block)
+                extbit = Const(0, bitwidth=1)
+            extvector = WireVector(bitwidth=numext)
             net = LogicNet(
                 op='s',
                 op_param=(0,)*numext,
                 args=(extbit,),
                 dests=(extvector,))
-            self.block.add_net(net)
+            working_block().add_net(net)
             return concat(extvector, self)
 
 
@@ -619,14 +619,14 @@ class Register(WireVector):
 
     def _next_ilshift(self, other):
         from .helperfuncs import as_wires
-        other = as_wires(other, bitwidth=self.bitwidth, block=self.block)
+        other = as_wires(other, bitwidth=self.bitwidth)
         if self.bitwidth is None:
             self.bitwidth = other.bitwidth
         return Register._NextSetter(other, is_conditional=False)
 
     def _next_ior(self, other):
         from .helperfuncs import as_wires
-        other = as_wires(other, bitwidth=self.bitwidth, block=self.block)
+        other = as_wires(other, bitwidth=self.bitwidth)
         if not self.bitwidth:
             raise PyrtlError('Conditional assignment only defined on '
                              'Registers with pre-defined bitwidths')
@@ -649,4 +649,4 @@ class Register(WireVector):
         # the property "next" or delayed when there is a conditional assignement
         self.reg_in = next
         net = LogicNet('r', None, args=(self.reg_in,), dests=(self,))
-        self.block.add_net(net)
+        working_block().add_net(net)
