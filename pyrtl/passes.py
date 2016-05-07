@@ -24,22 +24,27 @@ from .transform import net_transform, _get_new_block_mem_instance, copy_block
 
 
 def optimize(update_working_block=True, block=None, skip_sanity_check=False):
-    """ Return an optimized version of a synthesized hardware block. """
+    """ Return an optimized version of a synthesized hardware block.
+
+        :param update_working_block: Don't copy the block and optimize the
+        new block
+    """
     block = working_block(block)
     if not update_working_block:
         block = copy_block(block)
 
-    if (not skip_sanity_check) or debug_mode:
-        block.sanity_check()
-    _remove_wire_nets(block)
-    if debug_mode:
-        block.sanity_check()
-    _constant_propagation(block)
-    if debug_mode:
-        block.sanity_check()
-    _remove_unlistened_nets(block)
-    if (not skip_sanity_check) or debug_mode:
-        block.sanity_check()
+    with set_working_block(block, no_sanity_check=True):
+        if (not skip_sanity_check) or debug_mode:
+            block.sanity_check()
+        _remove_wire_nets(block)
+        if debug_mode:
+            block.sanity_check()
+        _constant_propagation(block)
+        if debug_mode:
+            block.sanity_check()
+        _remove_unlistened_nets(block)
+        if (not skip_sanity_check) or debug_mode:
+            block.sanity_check()
     return block
 
 
@@ -303,7 +308,7 @@ def synthesize(update_working_block=True, block=None):
     io_map = block_out.io_map  # map from presynth inputs and outputs to postsynth i/o
     uid = 0  # used for unique names
 
-    with set_working_block(block_out):
+    with set_working_block(block_out, no_sanity_check=True):
         # First, replace advanced operators with simpler ones
         for op, fun in [
                 ('*', _basic_mult),
@@ -358,7 +363,7 @@ def synthesize(update_working_block=True, block=None):
             _decompose(net, wirevector_map, out_mems, block_out)
 
     if update_working_block:
-        set_working_block(block_out)
+        set_working_block(block_out, no_sanity_check=True)
     return block_out
 
 

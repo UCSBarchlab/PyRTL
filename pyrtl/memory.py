@@ -66,10 +66,6 @@ class _MemIndexed(WireVector):
     def zero_extended(self, bitwidth):
         return as_wires(self).zero_extended(bitwidth)
 
-    @property
-    def block(self):
-        return self.mem.block
-
 
 class _MemReadBase(object):
     """This is the base class for the memories and ROM blocks and
