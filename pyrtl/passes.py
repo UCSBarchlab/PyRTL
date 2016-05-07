@@ -295,9 +295,6 @@ def synthesize(update_working_block=True, block=None):
     # resulting block should only have one of a restricted set of net ops
     block_out.legal_ops = set('~&|^nrwcsm@')
     wirevector_map = {}  # map from (vector,index) -> new_wire
-    rev_io_map = {v: k for k, v in block_in.io_map.items()}  # pylint: disable=no-member
-    io_map = block_out.io_map  # map from presynth inputs and outputs to postsynth i/o
-    uid = 0  # used for unique names
 
     former_working_block = working_block()
     set_working_block(block_in)
@@ -318,8 +315,7 @@ def synthesize(update_working_block=True, block=None):
     # for reference.
     for wirevector in block_in.wirevector_subset():
         for i in range(len(wirevector)):
-            new_name = '_'.join((wirevector.name, 'synth', str(i), str(uid)))
-            uid += 1
+            new_name = '_'.join((wirevector.name, 'synth', str(i)))
             if isinstance(wirevector, Const):
                 new_val = (wirevector.val >> i) & 0x1
                 new_wirevector = Const(bitwidth=1, val=new_val, block=block_out)
@@ -332,18 +328,16 @@ def synthesize(update_working_block=True, block=None):
     # Now connect up the inputs and outputs to maintain the interface
     for wirevector in block_in.wirevector_subset(Input):
         input_vector = Input(
-            name=rev_io_map[wirevector].name,
+            name=wirevector.name,
             bitwidth=len(wirevector),
             block=block_out)
-        io_map[rev_io_map[wirevector]] = input_vector
         for i in range(len(wirevector)):
             wirevector_map[(wirevector, i)] <<= input_vector[i]
     for wirevector in block_in.wirevector_subset(Output):
         output_vector = Output(
-            name=rev_io_map[wirevector].name,
+            name=wirevector.name,
             bitwidth=len(wirevector),
             block=block_out)
-        io_map[rev_io_map[wirevector]] = output_vector
         # the "reversed" is needed because most significant bit comes first in concat
         output_bits = [wirevector_map[(wirevector, i)]
                        for i in range(len(output_vector))]

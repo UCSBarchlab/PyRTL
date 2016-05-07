@@ -71,8 +71,10 @@ def clone_wire(old_wire, block=None):
         block = old_wire.block
     if isinstance(old_wire, Const):
         return Const(old_wire.val, old_wire.bitwidth, block)
-    else:
+    elif block is old_wire.block:
         return old_wire.__class__(old_wire.bitwidth, block=block)
+    else:
+        return old_wire.__class__(old_wire.bitwidth, name=old_wire.name, block=block)
 
 
 def copy_block(block=None, update_working_block=True):
@@ -82,7 +84,7 @@ def copy_block(block=None, update_working_block=True):
     :return: The resulting block
     """
     block_in = working_block(block)
-    block_out, temp_wv_map = _synth_base(block_in, "_")
+    block_out, temp_wv_map = _synth_base(block_in)
     mems = {}
     for net in block_in.logic:
         _copy_net(block_out, net, temp_wv_map, mems)
@@ -92,7 +94,7 @@ def copy_block(block=None, update_working_block=True):
     return block_out
 
 
-def _synth_base(block_in, synth_name="synth"):
+def _synth_base(block_in):
     """
     This is a generic function to copy the wirevectors for another round of
     synthesis This does not split a wirevector with multiple wires.
@@ -104,23 +106,11 @@ def _synth_base(block_in, synth_name="synth"):
     block_in.sanity_check()  # make sure that everything is valid
     block_out = block_in.__class__()
     temp_wv_map = {}
-    temp_io_map = {}
     for wirevector in block_in.wirevector_subset():
-        new_name = '_'.join([synth_name, str(wirevector)])
         new_wv = clone_wire(wirevector, block_out)
         temp_wv_map[wirevector] = new_wv
-        if isinstance(wirevector, (Input, Output)):
-            temp_io_map[wirevector] = new_wv
 
-    block_out.io_map = _create_io_map(block_in, temp_io_map)
     return block_out, temp_wv_map
-
-
-def _create_io_map(block_in, temp_io_map):
-    try:
-        return {orig_wire: temp_io_map[v] for (orig_wire, v) in block_in.io_map.viewitems()}
-    except AttributeError:
-        return temp_io_map
 
 
 def _copy_net(block_out, net, temp_wv_net, mem_map):
@@ -131,7 +121,7 @@ def _copy_net(block_out, net, temp_wv_net, mem_map):
     if net.op in "m@":  # special stuff for copying memories
         new_param = _get_new_block_mem_instance(net.op_param, mem_map, block_out)
     else:
-        new_param = copy.copy(net.op_param)
+        new_param = net.op_param
 
     new_net = LogicNet(net.op, new_param, args=new_args, dests=new_dests)
     block_out.add_net(new_net)

@@ -5,10 +5,11 @@ from __future__ import print_function, unicode_literals
 import sys
 import re
 import numbers
+import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock
-from .wire import Input, Register, Const
+from .wire import Input, Register, Const, WireVector
 from .memory import RomBlock, _MemReadBase
 from .helperfuncs import check_rtl_assertions, _currently_in_ipython
 
@@ -39,12 +40,10 @@ class Simulation(object):
 
     def __init__(
             self, tracer=None, register_value_map=None, memory_value_map=None,
-            default_value=0, use_postsynth_map_if_available=True, block=None):
+            default_value=0, block=None):
         """ Creates a new circuit simulator
 
         :param tracer: an instance of SimulationTrace used to store execution results.
-        :param use_postsynth_map_if_available: will map the I/O to the block from the
-        pre-synthesis block so the names and outputs can be used or generated respectively.
         :param register_value_map: is a map of {Register: value}.
         :param memory_value_map: is a map of maps {Memory: {address: Value}}.
         :param default_value: is the value that all unspecified registers and memories will
@@ -66,7 +65,6 @@ class Simulation(object):
         self.default_value = default_value
         self.tracer = tracer
         self._initialize(register_value_map, memory_value_map)
-        self.use_postsynth_map = use_postsynth_map_if_available
 
     def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
         """ Sets the wire, register, and memory values to default or as specified.
@@ -148,13 +146,15 @@ class Simulation(object):
         input_set = self.block.wirevector_subset(Input)
         supplied_inputs = set()
         for i in provided_inputs:
-            sim_wire = i
-            if isinstance(self.block, PostSynthBlock) and self.use_postsynth_map:
-                sim_wire = self.block.io_map[sim_wire]  # pylint: disable=maybe-no-member
+            if isinstance(i, WireVector):
+                name = i.name
+            else:
+                name = i
+            sim_wire = self.block.wirevector_by_name[name]
             if sim_wire not in input_set:
                 raise PyrtlError(
                     'step provided a value for input for "%s" which is '
-                    'not a known input ' % i.name)
+                    'not a known input ' % name)
             if not isinstance(provided_inputs[i], numbers.Integral) or provided_inputs[i] < 0:
                 raise PyrtlError(
                     'step provided an input "%s" which is not a valid '
@@ -163,7 +163,7 @@ class Simulation(object):
                 raise PyrtlError(
                     'the bitwidth for "%s" is %d, but the provided input '
                     '%d requires %d bits to represent'
-                    % (sim_wire.name, sim_wire.bitwidth,
+                    % (name, sim_wire.bitwidth,
                        provided_inputs[i], len(bin(provided_inputs[i]))-2))
 
             self.value[sim_wire] = provided_inputs[i]
@@ -581,7 +581,29 @@ def _trace_sort_key(w):
             return int(s)
         except ValueError:
             return s
-    return [tryint(c) for c in re.split('([0-9]+)', w.name)]
+    return [tryint(c) for c in re.split('([0-9]+)', w)]
+
+
+class TraceStorage(collections.Mapping):
+    __slots__ = ('__data',)
+
+    def __init__(self, wvs):
+        self.__data = {wv.name: [] for wv in wvs}
+
+    def __len__(self):
+        return len(self.__data)
+
+    def __iter__(self):
+        return iter(self.__data)
+
+    def __getitem__(self, key):
+        if isinstance(key, WireVector):
+            import warnings
+            warnings.warn(
+                'Access to trace by WireVector instead of name is deprecated.',
+                DeprecationWarning)
+            key = key.name
+        return self.__data[key]
 
 
 class SimulationTrace(object):
@@ -596,15 +618,12 @@ class SimulationTrace(object):
                     name.endswith("'"))
 
         if wirevector_subset is None:
-            self.trace = {
-                w: []
-                for w in block.wirevector_set
-                if not is_internal_name(w.name)
-                }
+            wirevector_subset = [w for w in block.wirevector_set if not is_internal_name(w.name)]
         elif wirevector_subset == 'all':
-            self.trace = {w: [] for w in block.wirevector_set}
-        else:
-            self.trace = {w: [] for w in wirevector_subset}
+            wirevector_subset = block.wirevector_set
+
+        self.trace = TraceStorage(wirevector_subset)
+        self._wires = {wv.name: wv for wv in wirevector_subset}
 
     def __len__(self):
         """ Return the current length of the trace in cycles. """
@@ -621,19 +640,21 @@ class SimulationTrace(object):
                              '(by default, unnamed signals are not traced -- try either passing '
                              'a name to a WireVector or setting a "wirevector_subset" option)')
         for wire in self.trace:
-            self.trace[wire].append(value_map[wire])
+            tracelist = self.trace[wire]
+            wirevec = self._wires[wire]
+            tracelist.append(value_map[wirevec])
 
     def add_fast_step(self, fastsim):
         """ Add the fastsim context to the trace. """
         for w in self.trace:
-            self.trace[w].append(fastsim.context[fastsim.varname(w)])
+            self.trace[w].append(fastsim.context[fastsim.varname(self._wires[w])])
 
     def print_trace(self, file=sys.stdout):
         if len(self.trace) == 0:
             raise PyrtlError('error, cannot print an empty trace')
-        maxlen = max([len(w.name) for w in self.trace])
+        maxlen = max(len(w) for w in self.trace)
         for w in sorted(self.trace, key=_trace_sort_key):
-            file.write(' '.join([w.name.rjust(maxlen),
+            file.write(' '.join([w.rjust(maxlen),
                        ''.join(str(x) for x in self.trace[w])+'\n']))
             file.flush()
 
@@ -647,14 +668,11 @@ class SimulationTrace(object):
 
         def print_trace_strs(time):
             for w in sorted(self.trace, key=_trace_sort_key):
-                if w.bitwidth > 1:
-                    print(' '.join([str(bin(self.trace[w][time]))[1:], w.name]), file=file)
-                else:
-                    print(''.join([str(self.trace[w][time]), w.name]), file=file)
+                print(' '.join([str(bin(self.trace[w][time]))[1:], w]), file=file)
 
-        # dump vairables
+        # dump variables
         for w in sorted(self.trace, key=_trace_sort_key):
-            print(' '.join(['$var', 'wire', str(w.bitwidth), w.name, w.name, '$end']), file=file)
+            print(' '.join(['$var', 'wire', str(self._wires[w].bitwidth), w, w, '$end']), file=file)
         print(' '.join(['$upscope', '$end']), file=file)
         print(' '.join(['$enddefinitions', '$end']), file=file)
         print(' '.join(['$dumpvars']), file=file)
@@ -706,22 +724,32 @@ class SimulationTrace(object):
         renderer = render_cls()
 
         def formatted_trace_line(wire, trace):
-            heading = wire.name.rjust(maxnamelen) + ' '
+            heading = wire.rjust(maxnamelen) + ' '
             trace_line = ''
             for i in range(len(trace)):
                 if (i % segment_size == 0) and i > 0:
                     trace_line += segment_delim
-                trace_line += renderer.render_val(wire, i % segment_size, trace[i], symbol_len)
+                trace_line += renderer.render_val(
+                    self._wires[wire],
+                    i % segment_size,
+                    trace[i],
+                    symbol_len)
             return heading + trace_line
 
         # default to printing all signals in sorted order
         if trace_list is None:
             trace_list = sorted(self.trace, key=_trace_sort_key)
+        elif any(isinstance(x, WireVector) for x in trace_list):
+            import warnings
+            warnings.warn(
+                'Access to trace by WireVector instead of name is deprecated.',
+                DeprecationWarning)
+            trace_list = [getattr(x, 'name', x) for x in trace_list]
 
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map
 
-        maxnamelen = max(len(w.name) for w in self.trace)
+        maxnamelen = max(len(w) for w in self.trace)
         maxtracelen = max(len(v) for v in self.trace.values())
         if segment_size is None:
             segment_size = maxtracelen

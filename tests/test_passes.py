@@ -71,19 +71,22 @@ class TestMultiplierSynthesis(unittest.TestCase):
         self.output = pyrtl.Output(name='r')
 
     def test_single_mul(self):
-        ina, inb = pyrtl.Input(bitwidth=4), pyrtl.Input(bitwidth=4)
+        ina, inb = pyrtl.Input(bitwidth=4, name='a'), pyrtl.Input(bitwidth=4, name='b')
         self.output <<= ina * inb
         pyrtl.synthesize()
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         for a in range(16):
             for b in range(16):
-                sim.step({ina: a, inb: b})
-        result = list(sim_trace.trace.values())[0]
+                sim.step({'a': a, 'b': b})
+        result = sim_trace.trace['r']
         self.assertEqual(result, [a*b for a in range(16) for b in range(16)])
 
     def test_chained_mul(self):
-        ina, inb, inc = pyrtl.Input(bitwidth=2), pyrtl.Input(bitwidth=2), pyrtl.Input(bitwidth=2)
+        ina, inb, inc = (
+            pyrtl.Input(bitwidth=2, name='a'),
+            pyrtl.Input(bitwidth=2, name='b'),
+            pyrtl.Input(bitwidth=2, name='c'))
         self.output <<= ina * inb * inc
         pyrtl.synthesize()
         sim_trace = pyrtl.SimulationTrace()
@@ -91,20 +94,20 @@ class TestMultiplierSynthesis(unittest.TestCase):
         for a in range(4):
             for b in range(4):
                 for c in range(4):
-                    sim.step({ina: a, inb: b, inc: c})
-        result = list(sim_trace.trace.values())[0]
+                    sim.step({'a': a, 'b': b, 'c': c})
+        result = sim_trace.trace['r']
         self.assertEqual(result, [a*b*c for a in range(4) for b in range(4) for c in range(4)])
 
     def test_singlebit_mul(self):
-        ina, inb = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=3)
+        ina, inb = pyrtl.Input(bitwidth=1, name='a'), pyrtl.Input(bitwidth=3, name='b')
         self.output <<= ina * inb
         pyrtl.synthesize()
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         for a in range(2):
             for b in range(8):
-                sim.step({ina: a, inb: b})
-        result = list(sim_trace.trace.values())[0]
+                sim.step({'a': a, 'b': b})
+        result = sim_trace.trace['r']
         self.assertEqual(result, [a*b for a in range(2) for b in range(8)])
 
 
@@ -114,15 +117,15 @@ class TestComparisonSynthesis(unittest.TestCase):
         self.output = pyrtl.Output(name='r')
     
     def check_op(self, op):
-        ina, inb = pyrtl.Input(bitwidth=4), pyrtl.Input(bitwidth=4)
+        ina, inb = pyrtl.Input(bitwidth=4, name='a'), pyrtl.Input(bitwidth=4, name='b')
         self.output <<= op(ina, inb)
         pyrtl.synthesize()
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         for a in range(16):
             for b in range(16):
-                sim.step({ina: a, inb: b})
-        result = list(sim_trace.trace.values())[0]
+                sim.step({'a': a, 'b': b})
+        result = sim_trace.trace['r']
         self.assertEqual(result, [op(a, b) for a in range(16) for b in range(16)])
 
     def test_eq(self):
