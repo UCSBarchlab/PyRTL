@@ -54,10 +54,11 @@ class WireVector(object):
         :return: a wirevector object representing a const wire
         """
 
-        self.block = working_block(block)
+        self._block = working_block(block)
+        # used only to verify the one to one relationship of wires and blocks
         self.name = next_tempvar_name(name)
         self._validate_bitwidth(bitwidth)
-        self.block.add_wirevector(self)
+        self._block.add_wirevector(self)
 
         if core._setting_keep_wirevector_call_stack:
             import traceback

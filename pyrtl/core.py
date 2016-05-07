@@ -455,7 +455,7 @@ class Block(object):
             raise PyrtlInternalError('error, LogicNet dests must be tuple')
         for w in net.args + net.dests:
             self.sanity_check_wirevector(w)
-            if w.block is not self:
+            if w._block is not self:
                 raise PyrtlInternalError('error, net references different block')
             if w not in self.wirevector_set:
                 raise PyrtlInternalError('error, net with unknown source "%s"' % w.name)

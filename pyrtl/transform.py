@@ -68,13 +68,11 @@ def replace_wire(orig_wire, new_src, new_dst, block=None):
         block.remove_wirevector(orig_wire)
 
 
-def clone_wire(old_wire, block=None):
-    if not block:
-        block = old_wire.block
+def clone_wire(old_wire, name=None):
     if isinstance(old_wire, Const):
-        return Const(old_wire.val, old_wire.bitwidth, block)
+        return Const(old_wire.val, old_wire.bitwidth)
     else:
-        return old_wire.__class__(old_wire.bitwidth, block=block)
+        return old_wire.__class__(old_wire.bitwidth, name=name)
 
 
 def copy_block(block=None, update_working_block=True):
@@ -107,12 +105,13 @@ def _synth_base(block_in, synth_name="synth"):
     block_out = block_in.__class__()
     temp_wv_map = {}
     temp_io_map = {}
-    for wirevector in block_in.wirevector_subset():
-        new_name = '_'.join([synth_name, str(wirevector)])
-        new_wv = clone_wire(wirevector, block_out)
-        temp_wv_map[wirevector] = new_wv
-        if isinstance(wirevector, (Input, Output)):
-            temp_io_map[wirevector] = new_wv
+    with set_working_block(block_out):
+        for wirevector in block_in.wirevector_subset():
+            new_name = '_'.join([synth_name, str(wirevector)])
+            new_wv = clone_wire(wirevector, None)
+            temp_wv_map[wirevector] = new_wv
+            if isinstance(wirevector, (Input, Output)):
+                temp_io_map[wirevector] = new_wv
 
     block_out.io_map = _create_io_map(block_in, temp_io_map)
     return block_out, temp_wv_map

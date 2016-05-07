@@ -99,7 +99,7 @@ class _MemReadBase(object):
         """ Builds circitry to retrieve an item from the memory
         """
         from .helperfuncs import as_wires
-        item = as_wires(item, bitwidth=self.addrwidth, truncating=False, block=self.block)
+        item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
         if len(item) > self.addrwidth:
             raise PyrtlError('memory index bitwidth > addrwidth')
         return _MemIndexed(mem=self, index=item)
@@ -109,13 +109,13 @@ class _MemReadBase(object):
         return self._build_read_port(addr)
 
     def _build_read_port(self, addr):
-        data = WireVector(bitwidth=self.bitwidth, block=self.block)
+        data = WireVector(bitwidth=self.bitwidth)
         readport_net = LogicNet(
             op='m',
             op_param=(self.id, self),
             args=(addr,),
             dests=(data,))
-        self.block.add_net(readport_net)
+        working_block().add_net(readport_net)
         self.readport_nets.append(readport_net)
         return data
 
@@ -175,7 +175,7 @@ class MemBlock(_MemReadBase):
         from .helperfuncs import as_wires
         from .conditional import _build
 
-        item = as_wires(item, bitwidth=self.addrwidth, truncating=False, block=self.block)
+        item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
         if len(item) > self.addrwidth:
             raise PyrtlError('error, memory index bitwidth > addrwidth')
         addr = item
@@ -183,9 +183,9 @@ class MemBlock(_MemReadBase):
         if isinstance(val, MemBlock.EnabledWrite):
             data, enable = val.data, val.enable
         else:
-            data, enable = val, Const(1, bitwidth=1, block=self.block)
-        data = as_wires(data, bitwidth=self.bitwidth, truncating=False, block=self.block)
-        enable = as_wires(enable, bitwidth=1, truncating=False, block=self.block)
+            data, enable = val, Const(1, bitwidth=1)
+        data = as_wires(data, bitwidth=self.bitwidth, truncating=False)
+        enable = as_wires(enable, bitwidth=1, truncating=False)
 
         if len(data) != self.bitwidth:
             raise PyrtlError('error, write data larger than memory  bitwidth')
@@ -204,12 +204,11 @@ class MemBlock(_MemReadBase):
             op_param=(self.id, self),
             args=(addr, data, enable),
             dests=tuple())
-        self.block.add_net(writeport_net)
+        working_block().add_net(writeport_net)
         self.writeport_nets.append(writeport_net)
 
     def _make_copy(self, block=None):
-        if block is None:
-            block = self.block
+        block = working_block(block)
         return MemBlock(bitwidth=self.bitwidth,
                         addrwidth=self.addrwidth,
                         name=self.name,
@@ -280,8 +279,7 @@ class RomBlock(_MemReadBase):
         return value
 
     def _make_copy(self, block=None):
-        if block is None:
-            block = self.block
+        block = working_block(block)
         return RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
                         romdata=self.data, name=self.name,
                         asynchronous=self.asynchronous, block=block)
