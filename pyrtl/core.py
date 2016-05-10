@@ -681,14 +681,13 @@ class set_working_block(object):
 
     def __init__(self, block, no_sanity_check=False):
         self.old_block = working_block()  # for with statement compatibility
-        self.no_sanity_check = no_sanity_check
         self._set_working_block(block, no_sanity_check)
 
     def __enter__(self):
         return self.old_block
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._set_working_block(self.old_block, self.no_sanity_check)
+        self._set_working_block(self.old_block, no_sanity_check=True)
 
 
 def set_debug_mode(debug=True):
