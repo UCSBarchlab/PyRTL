@@ -43,24 +43,36 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     return block
 
 
+class _ProducerList(object):
+    """  Maps from wire to its immediate producer and finds ultimate producers
+    """
+    def __init__(self):
+        self.dict = {}  # map from wirevector to its direct producer wirevector
+
+    def __getitem__(self, item):  # this is really to make pylint happy
+        raise PyrtlError("You usually don't want the immediate producer")
+
+    def __setitem__(self, key, item):
+        self.dict[key] = item
+
+    def find_producer(self, item):
+        if item in self.dict:
+            return self.find_producer(self.dict[item])
+        else:
+            return item
+
+
 def _remove_wire_nets(block):
     """ Remove all wire nodes from the block. """
 
-    def find_producer(x):
-        # trace back to the root producer of x
-        if x in immediate_producer:
-            return find_producer(immediate_producer[x])
-        else:
-            return x
-
-    immediate_producer = {}  # map from wirevector to its direct producer wirevector
+    wire_src_dict = _ProducerList()
     wire_removal_set = set()  # set of all wirevectors to be removed
 
     # one pass to build the map of value producers and
     # all of the nets and wires to be removed
     for net in block.logic:
         if net.op == 'w':
-            immediate_producer[net.dests[0]] = net.args[0]
+            wire_src_dict[net.dests[0]] = net.args[0]
             if not isinstance(net.dests[0], Output):
                 wire_removal_set.add(net.dests[0])
 
@@ -68,7 +80,7 @@ def _remove_wire_nets(block):
     new_logic = set()
     for net in block.logic:
         if net.op != 'w' or isinstance(net.dests[0], Output):
-            new_args = tuple(find_producer(x) for x in net.args)
+            new_args = tuple(wire_src_dict.find_producer(x) for x in net.args)
             new_net = LogicNet(net.op, net.op_param, new_args, net.dests)
             new_logic.add(new_net)
 
@@ -98,15 +110,24 @@ def _constant_propagation(block, silence_unexpected_net_warnings=False):
 
 def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
     """ Does one constant propagation pass """
+    valid_net_ops = '~&|^nrwcsm@'
+    no_optimization_ops = 'wcsm@'
+    one_var_ops = {
+        '~': lambda x: 1-x,
+        'r': lambda x: x   # This is only valid for constant folding purposes
+    }
+    two_var_ops = {
+        '&': lambda l, r: l & r,
+        '|': lambda l, r: l | r,
+        '^': lambda l, r: l ^ r,
+        'n': lambda l, r: 1-(l & r),
+    }
+
     def _constant_prop_error(net, error_str):
         if not silence_unexpected_net_warnings:
             raise PyrtlError("Unexpected net, {}, has {}".format(net, error_str))
 
-    valid_net_ops = '~&|^nrwcsm@'
-    no_optimization_ops = 'wcsm@'
-
     def constant_prop_check(net_checking):
-
         def replace_net(new_net):
             nets_to_remove.add(net_checking)
             nets_to_add.add(new_net)
@@ -122,24 +143,13 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
                                      dests=net_checking.dests))
             else:
                 nets_to_remove.add(net_checking)
-                replacement_wires[net_checking.dests[0]] = new_wire
-
-        one_var_ops = {
-            '~': lambda x: 1-x,
-            'r': lambda x: x   # This is only valid for constant folding purposes
-        }
-        two_var_ops = {
-            '&': lambda l, r: l & r,
-            '|': lambda l, r: l | r,
-            '^': lambda l, r: l ^ r,
-            'n': lambda l, r: 1-(l & r),
-        }
-        num_constants = sum((isinstance(arg_wire, Const)
-                            for arg_wire in net_checking.args))
+                new_wire_src[net_checking.dests[0]] = new_wire
 
         if net_checking.op not in valid_net_ops:
             _constant_prop_error(net_checking, "has a net not handled by constant_propagation")
             return  # skip if we are ignoring unoptimizable ops
+
+        num_constants = sum((isinstance(arg, Const) for arg in net_checking.args))
 
         if num_constants is 0 or net_checking.op in no_optimization_ops:
             return  # assuming wire nets are already optimized
@@ -172,21 +182,11 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
             if net_checking.op in two_var_ops:
                 output = two_var_ops[net_checking.op](net_checking.args[0].val,
                                                       net_checking.args[1].val)
-            elif net_checking.op in one_var_ops:
-                output = one_var_ops[net_checking.op](net_checking.args[0].val)
             else:
-                # this is for nets that we are not modifying (eg spliting, and memory)
-                return
+                output = one_var_ops[net_checking.op](net_checking.args[0].val)
             replace_net_with_const(output)
 
-    def find_producer(x):
-        # trace back to the root producer of x
-        if x in replacement_wires:
-            return find_producer(replacement_wires[x])
-        else:
-            return x
-
-    replacement_wires = {}  # map from wire to its producer
+    new_wire_src = _ProducerList()
     wire_add_set = set()
     nets_to_add = set()
     nets_to_remove = set()
@@ -197,7 +197,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
 
     new_logic = set()
     for net in block.logic.union(nets_to_add) - nets_to_remove:
-        new_args = tuple(find_producer(x) for x in net.args)
+        new_args = tuple(new_wire_src.find_producer(x) for x in net.args)
         new_net = LogicNet(net.op, net.op_param, new_args, net.dests)
         new_logic.add(new_net)
 
