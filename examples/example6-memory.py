@@ -71,10 +71,10 @@ validate <<= waddr == count
 # for all of the inputs.
 # Write 1 through 8 into the eight registers, then read back out
 simvals = {
-    we:        "00111111110000000000000000",
-    waddr:     "00012345670000000000000000",
-    wdata:     "00123456789990000000000000",
-    raddr:     "00000000000000000123456777"
+    'we':        "00111111110000000000000000",
+    'waddr':     "00012345670000000000000000",
+    'wdata':     "00123456789990000000000000",
+    'raddr':     "00000000000000000123456777"
 }
 
 # for simulation purposes, we can give the spots in memory an initial value
@@ -91,7 +91,7 @@ memvals = {mem1: mem1_init, mem2: mem2_init}
 # value map.
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=memvals)
-for cycle in range(len(simvals[we])):
+for cycle in range(len(simvals['we'])):
     sim.step({k: int(v[cycle]) for k, v in simvals.items()})
 sim_trace.render_trace()
 
@@ -153,8 +153,8 @@ random.seed(4839483)
 # it below are both valid ways of making larger values
 
 simvals = {
-    rom_add_1: [1, 11, 4, 2, 7, 8, 2, 4, 5, 13, 15, 3, 4, 4, 4, 8, 12, 13, 2, 1],
-    rom_add_2: [random.randrange(0, 16) for i in range(20)]
+    'rom_in': [1, 11, 4, 2, 7, 8, 2, 4, 5, 13, 15, 3, 4, 4, 4, 8, 12, 13, 2, 1],
+    'rom_in_2': [random.randrange(0, 16) for i in range(20)]
 }
 
 # Now run the simulation like before. Note that for ROMs, we do not
@@ -163,6 +163,6 @@ simvals = {
 
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
-for cycle in range(len(simvals[rom_add_1])):
+for cycle in range(len(simvals['rom_in'])):
     sim.step({k: v[cycle] for k, v in simvals.items()})
 sim_trace.render_trace()

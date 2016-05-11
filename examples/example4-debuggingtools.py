@@ -55,22 +55,22 @@ sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
 for cycle in range(len(vals1)):
     sim.step({
-        in1: vals1[cycle],
-        in2: vals2[cycle],
-        in3: vals3[cycle]})
+        'in1': vals1[cycle],
+        'in2': vals2[cycle],
+        'in3': vals3[cycle]})
 
 # in order to get the result data, you do not need to print a waveform of the trace
 # You always have the option to just pull the data out of the tracer directly
 
-print("in1:       ", str(sim_trace.trace[in1]))
-print("in2:       ", str(sim_trace.trace[in2]))
-print("debug_out: ", str(sim_trace.trace[debug_out]))
+print("in1:       ", str(sim_trace.trace['in1']))
+print("in2:       ", str(sim_trace.trace['in2']))
+print("debug_out: ", str(sim_trace.trace['debug_out']))
 
 # Below, I am using the ability to directly retrieve the trace data to
 # verify the correctness of the first adder
 
 for i in range(len(vals1)):
-    assert(sim_trace.trace[debug_out][i] == sim_trace.trace[in1][i] + sim_trace.trace[in2][i])
+    assert(sim_trace.trace['debug_out'][i] == sim_trace.trace['in1'][i] + sim_trace.trace['in2'][i])
 
 
 # --- Probe ----

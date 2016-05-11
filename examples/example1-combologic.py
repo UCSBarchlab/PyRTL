@@ -74,16 +74,16 @@ sim = pyrtl.Simulation(tracer=sim_trace)
 
 # Now all we need to do is call "sim.step" to simulate each clock cycle of our
 # design.  We just need to pass in some input each cycle which is a dictionary
-# mapping Inputs (the actual class instances of Input not the *names* of the
-# inputs) and a value for that signal each cycle.  In this simple example we
+# mapping inputs (the *names* of the inputs, not the actual Input instances)
+# and a value for that signal each cycle.  In this simple example we
 # can just specify a random value of 0 or 1 with python's random module.  We
 # call step 15 times to simulate 15 cycles.
 
 for cycle in range(15):
     sim.step({
-        a: random.choice([0, 1]),
-        b: random.choice([0, 1]),
-        c: random.choice([0, 1])
+        'a': random.choice([0, 1]),
+        'b': random.choice([0, 1]),
+        'c': random.choice([0, 1])
         })
 
 # Now all we need to do is print the trace results to the screen. Here we use
@@ -102,14 +102,14 @@ sim_trace.render_trace(symbol_len=5, segment_size=5)
 for cycle in range(15):
     # Note that we are doing all arithmetic on values NOT wirevectors here.
     # We can add the inputs together to get a value for the result
-    add_result = (sim_trace.trace[a][cycle] +
-                  sim_trace.trace[b][cycle] +
-                  sim_trace.trace[c][cycle])
+    add_result = (sim_trace.trace['a'][cycle] +
+                  sim_trace.trace['b'][cycle] +
+                  sim_trace.trace['c'][cycle])
     # We can select off the bits and compare
     python_sum = add_result & 0x1
     python_cout = (add_result >> 1) & 0x1
-    if (python_sum != sim_trace.trace[sum][cycle] or
-       python_cout != sim_trace.trace[carry_out][cycle]):
+    if (python_sum != sim_trace.trace['sum'][cycle] or
+       python_cout != sim_trace.trace['carry_out'][cycle]):
         print('This Example is Broken!!!')
         exit(1)
 
