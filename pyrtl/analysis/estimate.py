@@ -253,7 +253,7 @@ class TimingAnalysis(object):
     def critical_path(self, print_cp=True):
         """ Takes a timing map and returns the critical paths of the system.
 
-        param print_cp: whether to print the critical path to the terminal
+        param print_cp: Whether to print the critical path to the terminal
          after calculation
         :return: a list containing tuples with the 'first' wire as the
         first value and the critical paths (which themselves are lists

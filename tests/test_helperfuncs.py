@@ -417,10 +417,10 @@ class TestLoopDetection(unittest.TestCase):
         self.assert_has_loop()
 
     def test_no_loop_special_ops(self):
-        mem1 = pyrtl.MemBlock(8, 8)
-        ins = [pyrtl.Input(8) for i in range(8)]
-        outs = [pyrtl.Output(8) for i in range(3)]
-        reg = pyrtl.Register(8)
+        mem1 = pyrtl.MemBlock(4, 4)
+        ins = [pyrtl.Input(4) for i in range(8)]
+        outs = [pyrtl.Output(4) for i in range(3)]
+        reg = pyrtl.Register(4)
 
         x_1 = ins[4] < reg
         x_2 = ins[1] * x_1

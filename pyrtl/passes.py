@@ -24,22 +24,27 @@ from .transform import net_transform, _get_new_block_mem_instance, copy_block
 
 
 def optimize(update_working_block=True, block=None, skip_sanity_check=False):
-    """ Return an optimized version of a synthesized hardware block. """
+    """ Return an optimized version of a synthesized hardware block.
+
+        :param update_working_block: Don't copy the block and optimize the
+        new block
+    """
     block = working_block(block)
     if not update_working_block:
         block = copy_block(block)
 
-    if (not skip_sanity_check) or debug_mode:
-        block.sanity_check()
-    _remove_wire_nets(block)
-    if debug_mode:
-        block.sanity_check()
-    _constant_propagation(block)
-    if debug_mode:
-        block.sanity_check()
-    _remove_unlistened_nets(block)
-    if (not skip_sanity_check) or debug_mode:
-        block.sanity_check()
+    with set_working_block(block, no_sanity_check=True):
+        if (not skip_sanity_check) or debug_mode:
+            block.sanity_check()
+        _remove_wire_nets(block)
+        if debug_mode:
+            block.sanity_check()
+        _constant_propagation(block)
+        if debug_mode:
+            block.sanity_check()
+        _remove_unlistened_nets(block)
+        if (not skip_sanity_check) or debug_mode:
+            block.sanity_check()
     return block
 
 
@@ -303,66 +308,62 @@ def synthesize(update_working_block=True, block=None):
     io_map = block_out.io_map  # map from presynth inputs and outputs to postsynth i/o
     uid = 0  # used for unique names
 
-    former_working_block = working_block()
-    set_working_block(block_in)
+    with set_working_block(block_out, no_sanity_check=True):
+        # First, replace advanced operators with simpler ones
+        for op, fun in [
+                ('*', _basic_mult),
+                ('+', _basic_add),
+                ('-', _basic_sub),
+                ('x', _basic_select),
+                ('=', _basic_eq),
+                ('<', _basic_lt),
+                ('>', _basic_gt)]:
+            net_transform(_replace_op(op, fun), block_in)
 
-    # First, replace advanced operators with simpler ones
-    for op, fun in [
-            ('*', _basic_mult),
-            ('+', _basic_add),
-            ('-', _basic_sub),
-            ('x', _basic_select),
-            ('=', _basic_eq),
-            ('<', _basic_lt),
-            ('>', _basic_gt)]:
-        net_transform(_replace_op(op, fun), block_in)
+        # Next, create all of the new wires for the new block
+        # from the original wires and store them in the wirevector_map
+        # for reference.
+        for wirevector in block_in.wirevector_subset():
+            for i in range(len(wirevector)):
+                new_name = '_'.join((wirevector.name, 'synth', str(i), str(uid)))
+                uid += 1
+                if isinstance(wirevector, Const):
+                    new_val = (wirevector.val >> i) & 0x1
+                    new_wirevector = Const(bitwidth=1, val=new_val)
+                elif isinstance(wirevector, (Input, Output)):
+                    new_wirevector = WireVector(name="tmp_" + new_name, bitwidth=1)
+                else:
+                    new_wirevector = wirevector.__class__(name=new_name, bitwidth=1)
+                wirevector_map[(wirevector, i)] = new_wirevector
 
-    # Next, create all of the new wires for the new block
-    # from the original wires and store them in the wirevector_map
-    # for reference.
-    for wirevector in block_in.wirevector_subset():
-        for i in range(len(wirevector)):
-            new_name = '_'.join((wirevector.name, 'synth', str(i), str(uid)))
-            uid += 1
-            if isinstance(wirevector, Const):
-                new_val = (wirevector.val >> i) & 0x1
-                new_wirevector = Const(bitwidth=1, val=new_val, block=block_out)
-            elif isinstance(wirevector, (Input, Output)):
-                new_wirevector = WireVector(name="tmp_" + new_name, bitwidth=1, block=block_out)
-            else:
-                new_wirevector = wirevector.__class__(name=new_name, bitwidth=1, block=block_out)
-            wirevector_map[(wirevector, i)] = new_wirevector
+        # Now connect up the inputs and outputs to maintain the interface
+        for wirevector in block_in.wirevector_subset(Input):
+            input_vector = Input(
+                name=rev_io_map[wirevector].name,
+                bitwidth=len(wirevector),
+                block=block_out)
+            io_map[rev_io_map[wirevector]] = input_vector
+            for i in range(len(wirevector)):
+                wirevector_map[(wirevector, i)] <<= input_vector[i]
+        for wirevector in block_in.wirevector_subset(Output):
+            output_vector = Output(
+                name=rev_io_map[wirevector].name,
+                bitwidth=len(wirevector),
+                block=block_out)
+            io_map[rev_io_map[wirevector]] = output_vector
+            # the "reversed" is needed because most significant bit comes first in concat
+            output_bits = [wirevector_map[(wirevector, i)]
+                           for i in range(len(output_vector))]
+            output_vector <<= concat_list(output_bits)
 
-    # Now connect up the inputs and outputs to maintain the interface
-    for wirevector in block_in.wirevector_subset(Input):
-        input_vector = Input(
-            name=rev_io_map[wirevector].name,
-            bitwidth=len(wirevector),
-            block=block_out)
-        io_map[rev_io_map[wirevector]] = input_vector
-        for i in range(len(wirevector)):
-            wirevector_map[(wirevector, i)] <<= input_vector[i]
-    for wirevector in block_in.wirevector_subset(Output):
-        output_vector = Output(
-            name=rev_io_map[wirevector].name,
-            bitwidth=len(wirevector),
-            block=block_out)
-        io_map[rev_io_map[wirevector]] = output_vector
-        # the "reversed" is needed because most significant bit comes first in concat
-        output_bits = [wirevector_map[(wirevector, i)]
-                       for i in range(len(output_vector))]
-        output_vector <<= concat_list(output_bits)
-
-    # Now that we have all the wires built and mapped, walk all the blocks
-    # and map the logic to the equivalent set of primitives in the system
-    out_mems = block_out.mem_map  # dictionary: PreSynth Map -> PostSynth Map
-    for net in block_in.logic:
-        _decompose(net, wirevector_map, out_mems, block_out)
+        # Now that we have all the wires built and mapped, walk all the blocks
+        # and map the logic to the equivalent set of primitives in the system
+        out_mems = block_out.mem_map  # dictionary: PreSynth Map -> PostSynth Map
+        for net in block_in.logic:
+            _decompose(net, wirevector_map, out_mems, block_out)
 
     if update_working_block:
-        set_working_block(block_out)
-    else:
-        set_working_block(former_working_block)
+        set_working_block(block_out, no_sanity_check=True)
     return block_out
 
 
