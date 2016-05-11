@@ -76,9 +76,9 @@ sim = pyrtl.Simulation(tracer=sim_trace)
 for i in range(15):
     # here we actually generate random booleans for the inputs
     sim.step({
-        x: random.choice([0, 1]),
-        y: random.choice([0, 1]),
-        cin: random.choice([0, 1])
+        'x': random.choice([0, 1]),
+        'y': random.choice([0, 1]),
+        'cin': random.choice([0, 1])
         })
 sim_trace.render_trace(symbol_len=5, segment_size=5)
 
@@ -118,7 +118,7 @@ print("--- Simulation Results ---")
 sim_trace = pyrtl.SimulationTrace([counter_output, zero])
 sim = pyrtl.Simulation(tracer=sim_trace)
 for cycle in range(15):
-    sim.step({zero: random.choice([0, 0, 0, 1])})
+    sim.step({'zero': random.choice([0, 0, 0, 1])})
 sim_trace.render_trace()
 
 # We already did the "hard" work of generating a test input for this simulation so
