@@ -130,6 +130,12 @@ def _bits_and_ports_from_memory(mem):
 #
 
 class TimingAnalysis(object):
+    """
+    Timing analysis estimates the timing delays in the block
+
+    TimingAnalysis has an timing_map object that maps wires to the 'time'
+    after a clock edge at which the signal in the wire settles
+    """
 
     def __init__(self, block=None, gate_delay_funcs=None):
         """ Calculates timing delays in the block.
@@ -140,8 +146,6 @@ class TimingAnalysis(object):
          It takes the gate as an argument.
          If the delay is negative (-1), the gate will be treated as the end
          of the block
-        :return: returns a map consisting of each wirevector and the associated
-         delay
 
         Calculates the timing analysis while allowing for
         different timing delays of different gates of each type
@@ -221,7 +225,6 @@ class TimingAnalysis(object):
 
         :param tech_in_nm: the size of the circuit technology to be estimated,
           with 65 being 65nm and 250 being 0.25um for example.
-        :param self: timing_map to use (instead of generating a new one)
         :param ffoverhead: setup and ff propagation delay in picoseconds
         :return: a number representing an estimate of the max frequency in Mhz
 
@@ -240,17 +243,18 @@ class TimingAnalysis(object):
         return 1e6 * 1.0/clock_period_in_ps
 
     def max_length(self):
-        """ Takes a timing map and returns the timing delay of the circuit """
+        """Returns the max timing delay of the circuit """
         return max(self.timing_map.values())
 
     def print_max_length(self):
+        """Prints the max timing delay of the circuit """
         print("The total block timing delay is ", self.max_length())
 
     def critical_path(self, print_cp=True):
         """ Takes a timing map and returns the critical paths of the system.
 
-        :param self: a timing map from the timing analysis
-        :param print_cp: Whether to print the critical path
+        param print_cp: Whether to print the critical path to the terminal
+         after calculation
         :return: a list containing tuples with the 'first' wire as the
         first value and the critical paths (which themselves are lists
         of nets) as the second
