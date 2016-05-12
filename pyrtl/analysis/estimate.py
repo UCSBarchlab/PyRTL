@@ -155,6 +155,7 @@ class TimingAnalysis(object):
 
         self.block = working_block(block)
         self.timing_map = None
+        self.block.sanity_check()
         self._generate_timing_map(gate_delay_funcs)
 
     def _generate_timing_map(self, gate_delay_funcs):
@@ -233,12 +234,12 @@ class TimingAnalysis(object):
         on Dennard Scaling assumption and does not include wiring effect -- as a result
         the estimates may be optimistic (especially below 65nm).
         """
-        cplength = self.max_length()
+        cp_length = self.max_length()
         scale_factor = 130.0 / tech_in_nm
         if ffoverhead is None:
-            clock_period_in_ps = scale_factor * (cplength + 189 + 194)
+            clock_period_in_ps = scale_factor * (cp_length + 189 + 194)
         else:
-            clock_period_in_ps = (scale_factor * cplength) + ffoverhead
+            clock_period_in_ps = (scale_factor * cp_length) + ffoverhead
         return 1e6 * 1.0/clock_period_in_ps
 
     def max_length(self):
@@ -249,19 +250,17 @@ class TimingAnalysis(object):
         """Prints the max timing delay of the circuit """
         print("The total block timing delay is ", self.max_length())
 
-    def critical_path(self, block=None, print_cp=True):
+    def critical_path(self, print_cp=True):
         """ Takes a timing map and returns the critical paths of the system.
 
-        param print_cp: whether to print the critical path to the terminal
+        param print_cp: Whether to print the critical path to the terminal
          after calculation
         :return: a list containing tuples with the 'first' wire as the
         first value and the critical paths (which themselves are lists
         of nets) as the second
         """
-
-        block = working_block(block)
         critical_paths = []  # storage of all completed critical paths
-        wire_src_map, dst_map = block.as_graph()
+        wire_src_map, dst_map = self.block.as_graph()
 
         def critical_path_pass(old_critical_path, first_wire):
             if isinstance(first_wire, (Input, Const, Register)):
@@ -286,7 +285,8 @@ class TimingAnalysis(object):
             self.print_critical_paths(critical_paths)
         return critical_paths
 
-    def print_critical_paths(self, critical_paths):
+    @staticmethod
+    def print_critical_paths(critical_paths):
         """ Prints the results of the critical path length analysis
             Done by default by the timing_critical_path function
         """

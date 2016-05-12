@@ -133,8 +133,7 @@ def rtl_any(*vectorlist):
     """
     if len(vectorlist) <= 0:
         raise PyrtlError('rtl_any requires at least 1 argument')
-    block = get_block(*vectorlist)
-    converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
+    converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
         raise PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
     return or_all_bits(concat_list(converted_vectorlist))
@@ -151,8 +150,7 @@ def rtl_all(*vectorlist):
     """
     if len(vectorlist) <= 0:
         raise PyrtlError('rtl_all requires at least 1 argument')
-    block = get_block(*vectorlist)
-    converted_vectorlist = [as_wires(v, block=block) for v in vectorlist]
+    converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
         raise PyrtlError('only length 1 wirevectors can be inputs to rtl_all')
     return and_all_bits(concat_list(converted_vectorlist))
@@ -321,43 +319,13 @@ def select(sel, truecase, falsecase):
     Example of mux as "ternary operator" to take the max of 'a' and 5:
         mux( a<5, truecase=a, falsecase=5)
     """
-
-    block = get_block(sel, falsecase, truecase)
-    sel, f, t = (as_wires(w, block=block) for w in (sel, falsecase, truecase))
-
-    if len(sel) != 1:
-        raise PyrtlError('error, select input to the mux must be 1-bit wirevector')
+    sel, f, t = (as_wires(w) for w in (sel, falsecase, truecase))
     f, t = match_bitwidth(f, t)
-    resultlen = len(f)  # both are the same length now
+    outwire = WireVector(bitwidth=len(f))
 
-    outwire = WireVector(bitwidth=resultlen, block=block)
-    net = LogicNet(op='x', op_param=None,
-                   args=(sel, f, t), dests=(outwire,))
-    block.add_net(net)
+    net = LogicNet(op='x', op_param=None, args=(sel, f, t), dests=(outwire,))
+    working_block().add_net(net)  # this includes sanity check on the mux
     return outwire
-
-
-def get_block(*arglist):
-    """ Take any number of wire vector params and return the block they are all in.
-
-    If any of the arguments come from different blocks, throw an error.
-    If none of the arguments are wirevectors, return the working_block.
-    """
-    blocks = set()
-    for arg in arglist:
-        if isinstance(arg, WireVector):
-            blocks.add(arg.block)
-
-    blocks.difference_update({None})  # remove the non block elements
-
-    if len(blocks) > 1:
-        raise PyrtlError('get_block passed WireVectors from different blocks')
-    elif len(blocks):
-        block = blocks.pop()
-    else:
-        block = working_block()
-
-    return block
 
 
 def concat(*args):
@@ -376,16 +344,15 @@ def concat(*args):
     if len(args) == 1:
         return as_wires(args[0])
 
-    block = get_block(*args)
-    arg_wirevectors = tuple(as_wires(arg, block=block) for arg in args)
+    arg_wirevectors = tuple(as_wires(arg) for arg in args)
     final_width = sum(len(arg) for arg in arg_wirevectors)
-    outwire = WireVector(bitwidth=final_width, block=block)
+    outwire = WireVector(bitwidth=final_width)
     net = LogicNet(
         op='c',
         op_param=None,
         args=arg_wirevectors,
         dests=(outwire,))
-    block.add_net(net)
+    working_block().add_net(net)
     return outwire
 
 
@@ -440,7 +407,7 @@ def probe(w, name=None):
     else:
         pname = '(Probe-%d : %s)' % (_probe_number, w.name)
 
-    p = Output(name=pname, block=get_block(w))
+    p = Output(name=pname)
     p <<= w  # late assigns len from w automatically
     _probe_number += 1
     return w
@@ -492,7 +459,7 @@ def rtl_assert(w, exp, block=None):
         raise PyrtlError('the second argument to rtl_assert must be an instance of Exception')
     if isinstance(exp, KeyError):
         raise PyrtlError('the second argument to rtl_assert cannot be a KeyError')
-    if get_block(w) is not block:
+    if w not in block.wirevector_set:
         raise PyrtlError('assertion wire not part of the block to which it is being added')
     if w not in block.wirevector_set:
         raise PyrtlError('assertion not a known wirevector in the target block')
