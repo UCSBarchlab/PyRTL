@@ -72,6 +72,8 @@ def clone_wire(old_wire, name=None):
     if isinstance(old_wire, Const):
         return Const(old_wire.val, old_wire.bitwidth)
     else:
+        if name is None:
+            return old_wire.__class__(old_wire.bitwidth, name=old_wire.name)
         return old_wire.__class__(old_wire.bitwidth, name=name)
 
 
@@ -106,7 +108,7 @@ def _synth_base(block_in):
     temp_wv_map = {}
     with set_working_block(block_out, no_sanity_check=True):
         for wirevector in block_in.wirevector_subset():
-            new_wv = clone_wire(wirevector, block_out)
+            new_wv = clone_wire(wirevector)
             temp_wv_map[wirevector] = new_wv
 
     return block_out, temp_wv_map

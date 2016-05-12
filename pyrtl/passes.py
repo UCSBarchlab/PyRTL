@@ -325,26 +325,20 @@ def synthesize(update_working_block=True, block=None):
                 new_name = '_'.join((wirevector.name, 'synth', str(i)))
                 if isinstance(wirevector, Const):
                     new_val = (wirevector.val >> i) & 0x1
-                    new_wirevector = Const(bitwidth=1, val=new_val, block=block_out)
+                    new_wirevector = Const(bitwidth=1, val=new_val)
                 elif isinstance(wirevector, (Input, Output)):
-                    new_wirevector = WireVector(name="tmp_" + new_name, bitwidth=1, block=block_out)
+                    new_wirevector = WireVector(name="tmp_" + new_name, bitwidth=1)
                 else:
-                    new_wirevector = wirevector.__class__(name=new_name, bitwidth=1, block=block_out)
+                    new_wirevector = wirevector.__class__(name=new_name, bitwidth=1)
                 wirevector_map[(wirevector, i)] = new_wirevector
 
         # Now connect up the inputs and outputs to maintain the interface
         for wirevector in block_in.wirevector_subset(Input):
-            input_vector = Input(
-                name=wirevector.name,
-                bitwidth=len(wirevector),
-                block=block_out)
+            input_vector = Input(name=wirevector.name, bitwidth=len(wirevector))
             for i in range(len(wirevector)):
                 wirevector_map[(wirevector, i)] <<= input_vector[i]
         for wirevector in block_in.wirevector_subset(Output):
-            output_vector = Output(
-                name=wirevector.name,
-                bitwidth=len(wirevector),
-                block=block_out)
+            output_vector = Output(name=wirevector.name, bitwidth=len(wirevector))
             # the "reversed" is needed because most significant bit comes first in concat
             output_bits = [wirevector_map[(wirevector, i)]
                            for i in range(len(output_vector))]
