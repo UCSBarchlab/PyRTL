@@ -250,7 +250,10 @@ class TimingAnalysis(object):
         """Prints the max timing delay of the circuit """
         print("The total block timing delay is ", self.max_length())
 
-    def critical_path(self, print_cp=True):
+    class TooManyCPsError(Exception):
+        pass
+
+    def critical_path(self, print_cp=True, cp_limit=100):
         """ Takes a timing map and returns the critical paths of the system.
 
         param print_cp: Whether to print the critical path to the terminal
@@ -267,6 +270,9 @@ class TimingAnalysis(object):
                 critical_paths.append((first_wire, old_critical_path))
                 return
 
+            if len(critical_paths) >= cp_limit:
+                raise self.TooManyCPsError()
+
             source = wire_src_map[first_wire]
             critical_path = [source]
             critical_path.extend(old_critical_path)
@@ -277,9 +283,12 @@ class TimingAnalysis(object):
                     critical_path_pass(critical_path, arg_wire)
 
         max_time = self.max_length()
-        for wire_pair in self.timing_map.items():
-            if wire_pair[1] == max_time:
-                critical_path_pass([], wire_pair[0])
+        try:
+            for wire_pair in self.timing_map.items():
+                if wire_pair[1] == max_time:
+                    critical_path_pass([], wire_pair[0])
+        except self.TooManyCPsError:
+            print("Critical path count limit reached")
 
         if print_cp:
             self.print_critical_paths(critical_paths)

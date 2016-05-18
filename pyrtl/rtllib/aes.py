@@ -18,6 +18,7 @@ from pyrtl.rtllib import libutils
 class AES(object):
     def __init__(self):
         self.memories_built = False
+        self._key_len = 128
 
     def _g(self, word, key_expand_round):
         """
@@ -173,6 +174,10 @@ class AES(object):
         return keys
 
     def decryption(self, ciphertext, key):
+        if len(ciphertext) != self._key_len:
+            raise pyrtl.PyrtlError("Ciphertext length is invalid")
+        if len(key) != self._key_len:
+            raise pyrtl.PyrtlError("key length is invalid")
         key_list = self.decryption_key_gen(key)
         t = self.add_round_key(ciphertext, key_list[10])
 
