@@ -5,7 +5,7 @@ import pyrtl
 from pyrtl.helperfuncs import _basic_add
 
 
-class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
+class RTLTraceWithBasicOpsBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         self.bitwidth = 3
@@ -13,7 +13,7 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = self.sim(tracer=sim_trace)
         for i in range(8):
             sim.step({})
         output = io.StringIO()
@@ -106,11 +106,8 @@ class TestRTLSimulationTraceWithBasicOperations(unittest.TestCase):
         self.check_trace(' r 00224466\nr2 02244660\n')
 
 
-class TestRTLSimulationInputValidation(unittest.TestCase):
+class RTLSimInputValidationBase(unittest.TestCase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_input_out_of_bitwidth(self):
@@ -119,14 +116,14 @@ class TestRTLSimulationInputValidation(unittest.TestCase):
         counter.next <<= counter + i
 
         sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = self.sim(tracer=sim_trace)
         for cycle in range(4):
             sim.step({i: cycle})
         with self.assertRaises(pyrtl.PyrtlError):
             sim.step({i: 5})
 
 
-class TestRTLSimulationTraceWithAdder(unittest.TestCase):
+class RTLTraceWithAdderBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         bitwidth = 3
@@ -138,7 +135,7 @@ class TestRTLSimulationTraceWithAdder(unittest.TestCase):
         sim_trace = pyrtl.SimulationTrace()
         on_reset = {}  # signal states to be set when reset is asserted
         # build the actual simulation environment
-        sim = pyrtl.Simulation(register_value_map=on_reset, default_value=0, tracer=sim_trace)
+        sim = self.sim(register_value_map=on_reset, default_value=0, tracer=sim_trace)
 
         # step through 15 cycles
         for i in range(15):
@@ -192,19 +189,19 @@ b110 r
 """
 
 
-class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
+class RTLSimulationVCDWithAdderBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         bitwidth = 3
         self.r = pyrtl.Register(bitwidth=bitwidth, name='r')
-        self.res = _basic_add(self.r, pyrtl.Const(1).zero_extended(bitwidth))
-        self.r.next <<= self.res
+        self.result = _basic_add(self.r, pyrtl.Const(1).zero_extended(bitwidth))
+        self.r.next <<= self.result
 
     def test_vcd_output(self):
         sim_trace = pyrtl.SimulationTrace()
         on_reset = {}  # signal states to be set when reset is asserted
         # build the actual simulation environment
-        sim = pyrtl.Simulation(register_value_map=on_reset, default_value=0, tracer=sim_trace)
+        sim = self.sim(register_value_map=on_reset, default_value=0, tracer=sim_trace)
 
         # step through 15 cycles
         for i in range(15):
@@ -215,7 +212,7 @@ class TestRTLSimulationTraceVCDWithAdder(unittest.TestCase):
         self.assertEqual(VCD_OUTPUT, test_output.getvalue())
 
 
-class TestRTLSimulationTraceWithMux(unittest.TestCase):
+class RTLSimTraceWithMuxBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         bitwidth = 3
@@ -227,7 +224,7 @@ class TestRTLSimulationTraceWithMux(unittest.TestCase):
 
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()
-        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+        self.sim = self.sim(tracer=self.sim_trace)
 
     def test_adder_simulation(self):
         input_signals = {0: {self.a: 0, self.b: 1, self.sel: 1},
@@ -244,7 +241,7 @@ class TestRTLSimulationTraceWithMux(unittest.TestCase):
         self.assertEqual(output.getvalue(), 'muxout 120120\n')
 
 
-class TestRTLMemBlockSimulation(unittest.TestCase):
+class RTLMemBlockBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         self.bitwidth = 3
@@ -265,7 +262,7 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
         self.sim_trace = pyrtl.SimulationTrace()
 
     def test_simple_memblock(self):
-        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+        self.sim = self.sim(tracer=self.sim_trace)
 
         input_signals = [[0, 1, 4, 5],
                          [4, 1, 0, 5],
@@ -281,7 +278,7 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
     def test_simple2_memblock(self):
-        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+        self.sim = self.sim(tracer=self.sim_trace)
         input_signals = [
             {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x7},
             {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 1, self.write_data: 0x6},
@@ -305,7 +302,7 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
         pyrtl.synthesize()
         pyrtl.optimize()
         self.sim_trace = pyrtl.SimulationTrace()
-        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+        self.sim = self.sim(tracer=self.sim_trace)
         input_signals = [[0, 1, 4, 5],
                          [4, 1, 0, 5],
                          [0, 4, 1, 6],
@@ -320,7 +317,7 @@ class TestRTLMemBlockSimulation(unittest.TestCase):
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
 
-class TestRTLRomBlockSimulation(unittest.TestCase):
+class RTLRomBlockSimBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -360,7 +357,7 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
         self.output2 <<= self.rom[self.read_addr2]
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()
-        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+        self.sim = self.sim(tracer=self.sim_trace)
 
         input_signals = {}
         for i in range(0, 5):
@@ -368,7 +365,7 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
             self.sim.step(input_signals[i])
 
         exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x)),
-                                                ("o2", lambda x: rom_data_function(2*x))), 6)
+                                                 ("o2", lambda x: rom_data_function(2*x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
     def test_function_RomBlock_with_optimization(self):
@@ -381,14 +378,11 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
         self.addrwidth = 4
         self.output1 = pyrtl.Output(self.bitwidth, "o1")
         self.output2 = pyrtl.Output(self.bitwidth, "o2")
-        # self.output3 = pyrtl.Output(self.bitwidth, "o3")
-        # self.read_out = pyrtl.WireVector(self.bitwidth)
+
         self.read_addr1 = pyrtl.Input(self.addrwidth)
         self.read_addr2 = pyrtl.Input(self.addrwidth)
         self.rom = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
                                   name='rom', romdata=rom_data_function)
-        # self.read_out <<= self.rom[self.read_addr1]
-        # self.output1 <<= self.read_out - 1
         self.output1 <<= self.rom[self.read_addr1]
         self.output2 <<= self.rom[self.read_addr2]
 
@@ -396,7 +390,7 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
         pyrtl.optimize()
         # build the actual simulation environment
         self.sim_trace = pyrtl.SimulationTrace()
-        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+        self.sim = self.sim(tracer=self.sim_trace)
 
         input_signals = {}
         for i in range(0, 5):
@@ -409,21 +403,48 @@ class TestRTLRomBlockSimulation(unittest.TestCase):
                                                  ("o2", lambda x: rom_data_function(2*x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
-    def test_rom_error(self):
-        rom_data_array = [15, 13, 11, 9, 7, 5, 3, 1]
+    @unittest.skip
+    def test_rom_out_of_range_error(self):
+        rom_data_array = [15, 13, 11, 9, 7, 5, 3]
         rom1 = pyrtl.RomBlock(bitwidth=4, addrwidth=3, romdata=rom_data_array)
         rom_add_1 = pyrtl.Input(3, "rom_in")
         rom_out_1 = pyrtl.Output(4, "rom_out_1")
         rom_out_1 <<= rom1[rom_add_1]
 
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        sim.step({rom_add_1: 3})
         with self.assertRaises(pyrtl.PyrtlError):
-            simvals = {
-                rom_add_1: "392081",
-            }
-            sim_trace = pyrtl.SimulationTrace()
-            sim = pyrtl.Simulation(tracer=sim_trace)
-            for cycle in range(len(simvals[rom_add_1])):
-                sim.step({k: int(v[cycle]) for k, v in list(simvals.items())})
+            sim.step({rom_add_1: 7})
+
+
+sims = (pyrtl.Simulation, pyrtl.FastSimulation)
+
+
+def make_unittests():
+    """
+    Generates separate unittests for each of the simulators
+    """
+    g = globals()
+    unittests = {}
+    base_tests = {name: v for name, v in g.items()
+                  if isinstance(v, type) and issubclass(v, unittest.TestCase)}
+    for name, v in base_tests.items():
+        del g[name]
+        if name[-4:].lower() == 'base':
+            name = name[:-4]
+        else:
+            # Add Base to the end of your unittest name to tell this that you actually
+            # made the unittest as such
+            raise Exception("You should be making unittests that are compatible with"
+                            "both Fastsim and Simulation")
+        for sim in sims:
+            unit_name = "Test" + name + sim.__name__
+            unittests[unit_name] = type(unit_name, (v,), {'sim': sim})
+    g.update(unittests)
+
+
+make_unittests()
 
 
 if __name__ == '__main__':

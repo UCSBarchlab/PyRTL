@@ -9,7 +9,7 @@ import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock
-from .wire import Input, Register, Const, WireVector
+from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock, _MemReadBase
 from .helperfuncs import check_rtl_assertions, _currently_in_ipython
 
@@ -288,13 +288,13 @@ class Simulation(object):
 #   |    /~~\ .__/  |     .__/ |  |  |
 #
 
+
 class FastSimulation(object):
     """A class for running JIT implementations of blocks.
 
-    As of right now (7/12/2015), the interface is the same as Simulation.
+    As of right now (5/26/2016), the interface is the same as Simulation.
     They should still be similar in the future
     """
-
     def __init__(
             self, register_value_map=None, memory_value_map=None,
             default_value=0, tracer=None, block=None):
@@ -305,74 +305,69 @@ class FastSimulation(object):
         self.block = block
         self.default_value = default_value
         self.tracer = tracer
-        self.context = {}
+        self.sim_func = None
+        self.mems = {}
+        self.regs = {}
         self._initialize(register_value_map, memory_value_map)
 
     def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
-
         if default_value is None:
             default_value = self.default_value
+        if register_value_map is None:
+            register_value_map = {}
 
         # set registers to their values
         reg_set = self.block.wirevector_subset(Register)
-        if register_value_map is not None:
-            for r in reg_set:
-                if r in register_value_map:
-                    self.context[self.varname(r)] = register_value_map[r]
-                else:
-                    self.context[self.varname(r)] = default_value
-
-        # set constants to their set values
-        for w in self.block.wirevector_subset(Const):
-            self.context[self.varname(w)] = w.val
+        for r in reg_set:
+            if r in register_value_map:
+                self.regs[self.varname(r)] = register_value_map[r]
+            else:
+                self.regs[self.varname(r)] = default_value
 
         # set memories to their passed values or default value
         for net in self.block.logic_subset('m@'):
             mem = net.op_param[1]
-            if self.varname(mem) not in self.context:
+            if self.mem_varname(mem) not in self.mems:
                 if isinstance(mem, RomBlock):
-                    self.context[self.varname(mem)] = mem
+                    self.mems[self.mem_varname(mem)] = mem
                 else:
-                    self.context[self.varname(mem)] = {}
+                    self.mems[self.mem_varname(mem)] = {}
 
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
-                self.context[self.varname(mem)] = mem_map
-
-        # set all other variables to default value
-        for w in self.block.wirevector_set:
-            if self.varname(w) not in self.context:
-                self.context[self.varname(w)] = default_value
+                self.mems[self.mem_varname(mem)] = mem_map
 
         s = self.compiled()
-        self.logic_function = compile(s, '<string>', 'exec')
+        # with open('example_code', 'w') as file:
+        #     file.write(s)
+
+        context = {}
+        logic_creator = compile(s, '<string>', 'exec')
+        exec(logic_creator, context)
+        self.sim_func = context['sim_func']
 
     def step(self, provided_inputs):
-        # update state
-        # Note: Performance could be improved by walking backwards through block
-        # in topo order, rather than making a full copy of the state every time
-        self.prior_context = self.context.copy()
-        for net in self.block.logic:  # unordered walk
-            if net.op == 'r':
-                dest = net.dests[0]
-                arg = net.args[0]
-                priorval = self.prior_context[self.varname(arg)]
-                self.context[self.varname(dest)] = dest.bitmask & priorval
-            elif net.op == '@':
-                mem = net.op_param[1]
-                write_addr = self.prior_context[self.varname(net.args[0])]
-                write_val = self.prior_context[self.varname(net.args[1])]
-                write_enable = self.prior_context[self.varname(net.args[2])]
-                if write_enable:
-                    self.context[self.varname(mem)][write_addr] = write_val
-
-        # update inputs
+        # validate_inputs
         for wire, value in provided_inputs.items():
-            self.context[self.varname(wire)] = wire.bitmask & value
+            if value > wire.bitmask or value < 0:
+                raise PyrtlError("Wire {} has value {} which cannot be represented"
+                                 " using its bitwidth".format(wire, value))
+
+        # building the simulation data
+        ins = {self.varname(wire): value for wire, value in provided_inputs.items()}
+        ins.update(self.regs)
+        ins.update(self.mems)
 
         # propagate through logic
-        exec(self.logic_function, self.context)
+        self.regs, self.outs, mem_writes = self.sim_func(ins)
 
+        for mem, addr, value in mem_writes:
+            self.mems[mem][addr] = value
+
+        # for tracer compatibility
+        self.context = self.outs.copy()
+        self.context.update(self.regs)
+        self.context.update(ins)
         if self.tracer is not None:
             self.tracer.add_fast_step(self)
 
@@ -404,18 +399,71 @@ class FastSimulation(object):
 
     @staticmethod
     def varname(val):
-        # TODO check if w.name is a legal python identifier
         if isinstance(val, _MemReadBase):
             return 'fs_mem' + str(val.id)
         else:
             return val.name
 
+    def mem_varname(self, val):
+        return 'fs_mem' + str(val.id)
+
+    @staticmethod
+    def arg_varname(wire):
+        """
+        Input, Const, and Registers have special input values
+
+        :return:
+        """
+        if isinstance(wire, (Input, Register)):
+            return 'd["' + wire.name + '"]'
+        elif isinstance(wire, Const):
+            return str(wire.val)
+        else:
+            return wire.name
+
+    @staticmethod
+    def dest_varname(wire):
+        if isinstance(wire, Output):
+            return 'outs["' + wire.name + '"]'
+        elif isinstance(wire, Register):
+            return 'regs["' + wire.name + '"]'
+        else:
+            return wire.name
+
+    expected_bitwidth = {
+        'w': lambda net: len(net.args[0]),
+        'r': lambda net: len(net.args[0]),
+        '~': lambda net: -1,  # bitflips always need masking
+        '&': lambda net: len(net.args[0]),
+        '|': lambda net: len(net.args[0]),
+        '^': lambda net: len(net.args[0]),
+        'n': lambda net: -1,  # bitflips always need masking
+        '+': lambda net: len(net.args[0]) + 1,
+        '-': lambda net: len(net.args[0]) + 1,
+        '*': lambda net: len(net.args[0]) + len(net.args[1]),
+        '<': lambda net: 1,
+        '>': lambda net: 1,
+        '=': lambda net: 1,
+        'x': lambda net: len(net.args[1]),
+        'c': lambda net: sum(len(a) for a in net.args),
+        's': lambda net: len(net.op_param),
+        'm': lambda net: -1,   # just not going to optimize this right now
+    }
+
+    # Yeah, triple quotes don't respect indentation (aka the 4 spaces on the
+    # start of each line is part of the string
+    prog_start = """def sim_func(d):
+    regs = {}
+    outs = {}
+    mem_ws = []"""
+
     def compiled(self):
         """Return a string of the self.block compiled to python. """
-        prog = ''
+        prog = [self.prog_start]
 
         simple_func = {  # OPS
             'w': lambda x: x,
+            'r': lambda x: x,
             '~': lambda x: '(~' + x + ')',
             '&': lambda l, r: '(' + l + '&' + r + ')',
             '|': lambda l, r: '(' + l + '|' + r + ')',
@@ -428,47 +476,89 @@ class FastSimulation(object):
             '>': lambda l, r: 'int(' + l + '>' + r + ')',
             '=': lambda l, r: 'int(' + l + '==' + r + ')',
             'x': lambda sel, f, t: '({}) if ({}==0) else ({})'.format(f, sel, t),
-            }
+        }
+
+        def shift(value, direction, shift_amt):
+            if shift_amt == 0:
+                return value
+            else:
+                return '(%s %s %d)' % (value, direction, shift_amt)
+
+        def make_split():
+            if split_start_bit == 0:
+                bit = '(%d & %s)' % ((1 << split_length) - 1, source)
+            elif len(net.args[0]) - split_start_bit == split_length:
+                bit = '(%s >> %d)' % (source, split_start_bit)
+            else:
+                bit = '(%d & (%s >> %d))' % ((1 << split_length) - 1, source, split_start_bit)
+            return shift(bit, '<<', split_res_start_bit)
 
         for net in self.block:
-            if net.op in 'r@':
-                continue  # registers and memory write ports have no logic function
-            elif net.op in simple_func:
-                argvals = (self.varname(arg) for arg in net.args)
+            if net.op in simple_func:
+                argvals = (self.arg_varname(arg) for arg in net.args)
                 expr = simple_func[net.op](*argvals)
             elif net.op == 'c':
                 expr = ''
                 for i in range(len(net.args)):
                     if expr is not '':
                         expr += ' | '
-                    shiftby = str(sum(len(j) for j in net.args[i+1:]))
-                    expr += '(%s << %s)' % (self.varname(net.args[i]), shiftby)
+                    shiftby = sum(len(j) for j in net.args[i+1:])
+                    expr += shift(self.arg_varname(net.args[i]), '<<', shiftby)
             elif net.op == 's':
-                source = self.varname(net.args[0])
+                source = self.arg_varname(net.args[0])
                 expr = ''
-                for i, b in enumerate(net.op_param):
-                    if expr is not '':
-                        expr += ' | '
-                    bit = '(0x1 & (%s >> %d))' % (source, b)
-                    expr += '(%s << %d)' % (bit, i)
+                split_length = 0
+                split_start_bit = -2
+                split_res_start_bit = -1
 
+                for i, b in enumerate(net.op_param):
+                    if b != split_start_bit + split_length:
+                        if split_start_bit >= 0:
+                            # create a wire
+                            expr += make_split() + '|'
+                        split_length = 1
+                        split_start_bit = b
+                        split_res_start_bit = i
+                    else:
+                        split_length += 1
+                expr += make_split()
             elif net.op == 'm':
-                read_addr = self.varname(net.args[0])
+                read_addr = self.arg_varname(net.args[0])
+                mem = net.op_param[1]
                 if isinstance(net.op_param[1], RomBlock):
-                    expr = '%s._get_read_data(%s)' % (self.varname(net.op_param[1]), read_addr)
+                    expr = 'd["%s"]._get_read_data(%s)' % (self.mem_varname(mem), read_addr)
                 else:  # memories act async for reads
-                    mem = net.op_param[1]
-                    expr = '%s .get(%s, %s)' % (self.varname(mem), read_addr,  self.default_value)
+                    expr = 'd["%s"].get(%s, %s)' % (self.mem_varname(mem),
+                                                    read_addr,  self.default_value)
+            elif net.op == '@':
+                mem = self.mem_varname(net.op_param[1])
+                write_addr = self.arg_varname(net.args[0])
+                write_val = self.arg_varname(net.args[1])
+                write_enable = self.arg_varname(net.args[2])
+                prog.append('    if {}:'.format(write_enable))
+                prog.append('        mem_ws.append(("{}", {}, {}))'
+                            .format(mem, write_addr, write_val))
+                continue  # memwrites are special
             else:
                 raise PyrtlError('FastSimulation cannot handle primitive "%s"' % net.op)
 
-            prog += '#  ' + str(net) + '\n'
+            # prog.append('    #  ' + str(net))
+            result = self.dest_varname(net.dests[0])
+            if len(net.dests[0]) == self.expected_bitwidth[net.op](net):
+                prog.append("    %s = %s" % (result, expr))
+            else:
+                mask = str(net.dests[0].bitmask)
+                prog.append('    %s = %s & %s' % (result, mask, expr))
 
-            result = self.varname(net.dests[0])
-            mask = str(net.dests[0].bitmask)
-            prog += '%s = %s & %s\n' % (result, mask, expr)
+        # add traced wires to dict
+        if self.tracer is not None:
+            for wire_name in self.tracer.trace:
+                wire = self.block.wirevector_by_name[wire_name]
+                if not isinstance(wire, (Input, Const, Register, Output)):
+                    prog.append('    outs["%s"] = %s' % (wire_name, wire_name))
 
-        return prog
+        prog.append("    return regs, outs, mem_ws")
+        return '\n'.join(prog)
 
 
 # ----------------------------------------------------------------
@@ -476,6 +566,7 @@ class FastSimulation(object):
 #     |  |__)  /\  /  ` |__
 #     |  |  \ /~~\ \__, |___
 #
+
 
 class _WaveRendererBase(object):
     _tick, _up, _down, _x, _low, _high, _revstart, _revstop = ('' for i in range(8))
