@@ -60,7 +60,7 @@ class Simulation(object):
         block = working_block(block)
         block.sanity_check()  # check that this is a good hw block
 
-        self.value = {}   # map from signal->value
+        self.value = {}  # map from signal->value
         self.memvalue = {}  # map from {memid :{address: value}}
         self.block = block
         self.default_value = default_value
@@ -173,8 +173,7 @@ class Simulation(object):
         # Check that only inputs are specified, and set the values
         if input_set != supplied_inputs:
             for i in input_set.difference(supplied_inputs):
-                raise PyrtlError(
-                    'Input "%s" has no input value specified' % i.name)
+                raise PyrtlError('Input "%s" has no input value specified' % i.name)
 
         # Do all of the clock-edge triggered operations based off of the priors
         for net in self.edge_update_nets:
@@ -399,10 +398,7 @@ class FastSimulation(object):
 
     @staticmethod
     def varname(val):
-        if isinstance(val, _MemReadBase):
-            return 'fs_mem' + str(val.id)
-        else:
-            return val.name
+        return val.name
 
     def mem_varname(self, val):
         return 'fs_mem' + str(val.id)
@@ -427,8 +423,7 @@ class FastSimulation(object):
             return 'outs["' + wire.name + '"]'
         elif isinstance(wire, Register):
             return 'regs["' + wire.name + '"]'
-        else:
-            return wire.name
+        return wire.name
 
     expected_bitwidth = {
         'w': lambda net: len(net.args[0]),

@@ -188,7 +188,7 @@ class TestAsGraph(unittest.TestCase):
         b = pyrtl.working_block()
         net = pyrtl.LogicNet('~', None, (i,), (o,))
         b.add_net(net)
-        src_g, dst_g = b.as_graph(False)
+        src_g, dst_g = b.net_connections(False)
         self.check_graph_correctness(src_g, dst_g)
         self.assertEqual(src_g[o], net)
         self.assertEqual(dst_g[i][0], net)
@@ -197,7 +197,7 @@ class TestAsGraph(unittest.TestCase):
         self.assertNotIn(i, src_g)
         self.assertNotIn(o, dst_g)
 
-        src_g, dst_g = b.as_graph(True)
+        src_g, dst_g = b.net_connections(True)
         self.check_graph_correctness(src_g, dst_g, True)
         self.assertEqual(src_g[o], net)
         self.assertEqual(dst_g[i][0], net)
@@ -221,10 +221,10 @@ class TestAsGraph(unittest.TestCase):
         g <<= ~(d | b)
 
         b = pyrtl.working_block()
-        src_g, dst_g = b.as_graph(False)
+        src_g, dst_g = b.net_connections(False)
         self.check_graph_correctness(src_g, dst_g)
 
-        src_g, dst_g = b.as_graph(True)
+        src_g, dst_g = b.net_connections(True)
         self.check_graph_correctness(src_g, dst_g, True)
 
     def test_as_graph_memory(self):
@@ -236,10 +236,10 @@ class TestAsGraph(unittest.TestCase):
         o <<= m[i]
 
         b = pyrtl.working_block()
-        src_g, dst_g = b.as_graph(False)
+        src_g, dst_g = b.net_connections(False)
         self.check_graph_correctness(src_g, dst_g)
 
-        src_g, dst_g = b.as_graph(True)
+        src_g, dst_g = b.net_connections(True)
         self.check_graph_correctness(src_g, dst_g, True)
 
     def test_as_graph_duplicate_args(self):
@@ -255,10 +255,10 @@ class TestAsGraph(unittest.TestCase):
         m2[x] <<= pyrtl.MemBlock.EnabledWrite(x, x)
 
         b = pyrtl.working_block()
-        src_g, dst_g = b.as_graph(False)
+        src_g, dst_g = b.net_connections(False)
         self.check_graph_correctness(src_g, dst_g)
 
-        src_g, dst_g = b.as_graph(True)
+        src_g, dst_g = b.net_connections(True)
         self.check_graph_correctness(src_g, dst_g, True)
 
 

@@ -255,7 +255,7 @@ def net_graph(block=None, split_state=False):
     for net in block.logic:
         graph[net] = {}
 
-    wire_src_dict, wire_dst_dict = block.as_graph()
+    wire_src_dict, wire_dst_dict = block.net_connections()
     dest_set = set(wire_src_dict.keys())
     arg_set = set(wire_dst_dict.keys())
     dangle_set = dest_set.symmetric_difference(arg_set)

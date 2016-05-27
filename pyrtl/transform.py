@@ -1,5 +1,3 @@
-import copy
-
 from .core import set_working_block, LogicNet, working_block
 from .wire import Const, Input, Output, WireVector, Register
 

@@ -240,7 +240,7 @@ class Block(object):
         else:
             return None
 
-    def as_graph(self, include_virtual_nodes=False):
+    def net_connections(self, include_virtual_nodes=False):
         """ Returns a representation of the current block useful for creating a graph.
 
         :param include_virtual_nodes: if enabled, the wire itself will be used to
@@ -305,7 +305,7 @@ class Block(object):
         Also, the order of the nets is not guaranteed to be the the same
         over multiple iterations"""
         from .wire import Input, Const, Register
-        src_dict, dest_dict = self.as_graph()
+        src_dict, dest_dict = self.net_connections()
         to_clear = self.wirevector_subset((Input, Const, Register))
         cleared = set()
         remaining = self.logic.copy()
@@ -359,7 +359,9 @@ class Block(object):
 
         # check for dead input wires (not connected to anything)
         all_input_and_consts = self.wirevector_subset((Input, Const))
-        wire_src_dict, wire_dst_dict = self.as_graph()  # also checks for duplicate wire drivers
+
+        # The following line also checks for duplicate wire drivers
+        wire_src_dict, wire_dst_dict = self.net_connections()
         dest_set = set(wire_src_dict.keys())
         arg_set = set(wire_dst_dict.keys())
         full_set = dest_set | arg_set
@@ -411,7 +413,7 @@ class Block(object):
             return  # nothing to check here
 
         if wire_src_dict is None:
-            wire_src_dict, wdd = self.as_graph()
+            wire_src_dict, wdd = self.net_connections()
 
         from .wire import Input, Const
         sync_src = 'r'
