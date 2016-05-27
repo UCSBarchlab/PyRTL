@@ -98,7 +98,7 @@ def sim_and_ret_outws(inwires, invals):
     sim_trace = pyrtl.SimulationTrace()  # Creating a logger for the simulator
     sim = pyrtl.Simulation(tracer=sim_trace)  # Creating the simulation
     for cycle in range(len(invals[0])):
-        sim.step({wire: val[cycle] for wire, val in zip(inwires, invals)})
+        sim.step({wire.name: val[cycle] for wire, val in zip(inwires, invals)})
 
     return sim_trace.trace  # Pulling the value of wires straight from the trace
 

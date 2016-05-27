@@ -263,7 +263,7 @@ class TimingAnalysis(object):
         of nets) as the second
         """
         critical_paths = []  # storage of all completed critical paths
-        wire_src_map, dst_map = self.block.as_graph()
+        wire_src_map, dst_map = self.block.net_connections()
 
         def critical_path_pass(old_critical_path, first_wire):
             if isinstance(first_wire, (Input, Const, Register)):
