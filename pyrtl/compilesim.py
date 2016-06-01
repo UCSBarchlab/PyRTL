@@ -4,6 +4,7 @@ import ctypes
 import subprocess
 import tempfile
 import shutil
+import os
 from os import path
 
 from .core import working_block
@@ -46,6 +47,7 @@ class CompiledSimulation(object):
 
     def _create_code(self, regmap, memmap):
         code = ['#include <stdint.h>']
+        windows = os.name == 'nt'
         highest_bw = max(w.bitwidth for w in self.block.wirevector_set)
         if highest_bw > 128:
             raise PyrtlError('CompiledSimulation does not yet support large WireVectors')  # TODO
@@ -89,6 +91,8 @@ class CompiledSimulation(object):
                         name=vn, size=1 << mem.addrwidth, width=usewidth))
             self.memid[mem] = uid
             uid += 1
+        if windows:
+            code.append('__declspec(dllexport)')
         code.append('const uint{}_t* sim_get_mem(uint64_t memnum) {{'.format(usewidth))
         code.append('switch (memnum) {')
         for mem in mems:
@@ -96,6 +100,8 @@ class CompiledSimulation(object):
                 num=self.memid[mem], mem=self.varname[mem]))
         code.append('default: return (uint{}_t*)(0);'.format(usewidth))
         code.append('}}')
+        if windows:
+            code.append('__declspec(dllexport)')
         code.append('void sim_run_step(uint64_t inputs[], uint64_t outputs[]) {')
         # memory writes
         for net in self.block.logic_subset('@'):
@@ -190,7 +196,7 @@ class CompiledSimulation(object):
                 code.append('{dest} = {expr};'.format(
                     dest=self.varname[net.dests[0]], expr=expr))
             else:
-                code.append('{dest} = {mask} & {expr};'.format(
+                code.append('{dest} = {mask} & ({expr});'.format(
                     dest=self.varname[net.dests[0]],
                     mask=hex(net.dests[0].bitmask),
                     expr=expr))
@@ -205,6 +211,8 @@ class CompiledSimulation(object):
                 code.append('outputs[{}] = {};'.format(n, self.varname[w]))
         code.append('}')
         # multiple steps
+        if windows:
+            code.append('__declspec(dllexport)')
         code.append('void sim_run_all(uint64_t stepcount, uint64_t inputs[], uint64_t outputs[]) {')
         code.append('uint64_t input_pos = 0, output_pos = 0;')
         code.append('for (uint64_t stepnum = 0; stepnum < stepcount; stepnum++) {')
