@@ -56,6 +56,7 @@ from .conditional import ConditionalUpdate  # eliminated, now just throws useful
 from .simulation import Simulation
 from .simulation import FastSimulation
 from .simulation import SimulationTrace
+from .compilesim import CompiledSimulation
 
 # input and output to file format routines
 from .inputoutput import input_from_blif

@@ -624,6 +624,11 @@ class SimulationTrace(object):
             wirevec = self._wires[wire]
             tracelist.append(value_map[wirevec])
 
+    def add_step_named(self, value_map):
+        for wire in value_map:
+            if wire in self.trace:
+                self.trace[wire].append(value_map[wire])
+
     def add_fast_step(self, fastsim):
         """ Add the fastsim context to the trace. """
         for w in self.trace:
