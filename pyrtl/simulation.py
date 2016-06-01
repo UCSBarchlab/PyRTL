@@ -407,13 +407,11 @@ class FastSimulation(object):
     def arg_varname(wire):
         """
         Input, Const, and Registers have special input values
-
-        :return:
         """
         if isinstance(wire, (Input, Register)):
-            return 'd["' + wire.name + '"]'
+            return 'd["' + wire.name + '"]'  # passed in
         elif isinstance(wire, Const):
-            return str(wire.val)
+            return str(wire.val)  # hardcoded
         else:
             return wire.name
 
@@ -446,7 +444,7 @@ class FastSimulation(object):
     }
 
     # Yeah, triple quotes don't respect indentation (aka the 4 spaces on the
-    # start of each line is part of the string
+    # start of each line is part of the string)
     prog_start = """def sim_func(d):
     regs = {}
     outs = {}
