@@ -16,9 +16,18 @@ class TestBlock(unittest.TestCase):
         self.assertTrue(w in pyrtl.working_block().wirevector_set)
         self.assertTrue('testwire' in pyrtl.working_block().wirevector_by_name)
 
+    def invalid_wire(self, *args):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.working_block().add_wirevector(*args)
+
     def invalid_net(self, *args):
         with self.assertRaises(pyrtl.PyrtlInternalError):
             pyrtl.working_block().add_net(*args)
+
+    def test_add_wire(self):
+        self.invalid_wire(None)
+        self.invalid_wire("Hi John")
+        self.invalid_wire(42)
 
     def test_add_net(self):
         self.invalid_net(None)

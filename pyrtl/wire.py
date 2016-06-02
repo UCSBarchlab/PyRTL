@@ -54,11 +54,11 @@ class WireVector(object):
         :return: a wirevector object representing a const wire
         """
 
+        self._name = None
         self._block = working_block(block)
         # used only to verify the one to one relationship of wires and blocks
         self.name = next_tempvar_name(name)
         self._validate_bitwidth(bitwidth)
-        self._block.add_wirevector(self)
 
         if core._setting_keep_wirevector_call_stack:
             import traceback
@@ -72,7 +72,9 @@ class WireVector(object):
     def name(self, value):
         if not isinstance(value, six.string_types):
             raise PyrtlError('WireVector names must be strings')
+        self._block.wirevector_by_name.pop(self._name, None)
         self._name = value
+        self._block.add_wirevector(self)
 
     def __hash__(self):
         return id(self)

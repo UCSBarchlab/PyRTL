@@ -38,6 +38,16 @@ class TestWireVector(unittest.TestCase):
     def test_truncating(self):
         pass
 
+    def test_rename(self):
+        block = pyrtl.working_block()
+        w = pyrtl.WireVector(1, "test1")
+        self.assertIn("test1", block.wirevector_by_name)
+        self.assertIn(w, block.wirevector_set)
+        w.name = "testJohn"
+        self.assertNotIn("test1", block.wirevector_by_name)
+        self.assertIn("testJohn", block.wirevector_by_name)
+        self.assertIn(w, block.wirevector_set)
+
 
 class TestWireVectorFail(unittest.TestCase):
     def setUp(self):
