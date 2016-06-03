@@ -12,6 +12,7 @@ get_block: get the block of the arguments, throw error if they are different
 from __future__ import print_function, unicode_literals
 
 import six
+import re
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, LogicNet
@@ -403,9 +404,9 @@ def probe(w, name=None):
     print(get_stack(w))
 
     if name:
-        pname = '(Probe-%d : %s : %s)' % (_probe_number, name, w.name)
+        pname = 'Probe%d_%s__%s)' % (_probe_number, name, w.name)
     else:
-        pname = '(Probe-%d : %s)' % (_probe_number, w.name)
+        pname = '(Probe%d__%s)' % (_probe_number, w.name)
 
     p = Output(name=pname)
     p <<= w  # late assigns len from w automatically
@@ -594,3 +595,9 @@ def _currently_in_ipython():
         return True
     except NameError:
         return False
+
+py_identifier = re.compile('^[^\d\W]\w*\Z')
+
+
+def isPythonIdentifer(string):
+    return re.match(py_identifier, string)

@@ -11,7 +11,7 @@ from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock
 from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock, _MemReadBase
-from .helperfuncs import check_rtl_assertions, _currently_in_ipython
+from .helperfuncs import check_rtl_assertions, _currently_in_ipython, isPythonIdentifer
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -77,7 +77,6 @@ class Simulation(object):
          object (default to 0)
         """
 
-        self.value = {}
         if default_value is None:
             default_value = self.default_value
 
@@ -296,17 +295,24 @@ class FastSimulation(object):
     """
     def __init__(
             self, register_value_map=None, memory_value_map=None,
-            default_value=0, tracer=None, block=None):
+            default_value=0, tracer=None, block=None, code_file=None):
+        """
+        :param code_file: The file in which to store a copy of the generated
+        python code
+        """
 
         block = working_block(block)
         block.sanity_check()  # check that this is a good hw block
 
         self.block = block
         self.default_value = default_value
+        self._sim_temp_num = 0  # for renaming wires that are not valid python identifiers
         self.tracer = tracer
         self.sim_func = None
+        self.code_file = code_file
         self.mems = {}
         self.regs = {}
+        self.sim_wire_name_map = {}
         self._initialize(register_value_map, memory_value_map)
 
     def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
@@ -323,7 +329,24 @@ class FastSimulation(object):
             else:
                 self.regs[self.varname(r)] = default_value
 
-        # set memories to their passed values or default value
+        self._initialize_mems(memory_value_map)
+        self._build_sim_wire_name_map()
+
+        s = self.compiled()
+        if self.code_file is not None:
+            with open(self.code_file, 'w') as file:
+                file.write(s)
+
+        context = {}
+        logic_creator = compile(s, '<string>', 'exec')
+        exec(logic_creator, context)
+        self.sim_func = context['sim_func']
+
+    def _initialize_mems(self, memory_value_map):
+        if memory_value_map is not None:
+            for (mem, mem_map) in memory_value_map.items():
+                self.mems[self.mem_varname(mem)] = mem_map
+
         for net in self.block.logic_subset('m@'):
             mem = net.op_param[1]
             if self.mem_varname(mem) not in self.mems:
@@ -332,18 +355,11 @@ class FastSimulation(object):
                 else:
                     self.mems[self.mem_varname(mem)] = {}
 
-        if memory_value_map is not None:
-            for (mem, mem_map) in memory_value_map.items():
-                self.mems[self.mem_varname(mem)] = mem_map
-
-        s = self.compiled()
-        # with open('example_code', 'w') as file:
-        #     file.write(s)
-
-        context = {}
-        logic_creator = compile(s, '<string>', 'exec')
-        exec(logic_creator, context)
-        self.sim_func = context['sim_func']
+    def _build_sim_wire_name_map(self):
+        for wire in self.block.wirevector_set:
+            if not isPythonIdentifer(wire.name):
+                self.sim_wire_name_map[wire] = '_simTemp' + str(self._sim_temp_num)
+                self._sim_temp_num += 1
 
     def step(self, provided_inputs):
         # validate_inputs
@@ -396,15 +412,13 @@ class FastSimulation(object):
             raise PyrtlError("ROM blocks are not stored in the simulation object")
         return self.context[self.varname(mem)]
 
-    @staticmethod
-    def varname(val):
-        return val.name
+    def varname(self, val):
+        return self.sim_wire_name_map.get(val, val.name)
 
     def mem_varname(self, val):
         return 'fs_mem' + str(val.id)
 
-    @staticmethod
-    def arg_varname(wire):
+    def arg_varname(self, wire):
         """
         Input, Const, and Registers have special input values
         """
@@ -413,15 +427,15 @@ class FastSimulation(object):
         elif isinstance(wire, Const):
             return str(wire.val)  # hardcoded
         else:
-            return wire.name
+            return self.varname(wire)
 
-    @staticmethod
-    def dest_varname(wire):
+    def dest_varname(self, wire):
         if isinstance(wire, Output):
             return 'outs["' + wire.name + '"]'
         elif isinstance(wire, Register):
             return 'regs["' + wire.name + '"]'
-        return wire.name
+        else:
+            return self.varname(wire)
 
     expected_bitwidth = {
         'w': lambda net: len(net.args[0]),
@@ -547,8 +561,9 @@ class FastSimulation(object):
         if self.tracer is not None:
             for wire_name in self.tracer.trace:
                 wire = self.block.wirevector_by_name[wire_name]
+                v_wire_name = self.varname(wire)
                 if not isinstance(wire, (Input, Const, Register, Output)):
-                    prog.append('    outs["%s"] = %s' % (wire_name, wire_name))
+                    prog.append('    outs["%s"] = %s' % (wire_name, v_wire_name))
 
         prog.append("    return regs, outs, mem_ws")
         return '\n'.join(prog)
@@ -710,8 +725,8 @@ class SimulationTrace(object):
 
     def add_fast_step(self, fastsim):
         """ Add the fastsim context to the trace. """
-        for w in self.trace:
-            self.trace[w].append(fastsim.context[fastsim.varname(self._wires[w])])
+        for wire_name in self.trace:
+            self.trace[wire_name].append(fastsim.context[wire_name])
 
     def print_trace(self, file=sys.stdout):
         if len(self.trace) == 0:
