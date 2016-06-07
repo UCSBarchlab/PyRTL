@@ -410,7 +410,7 @@ class FastSimulation(object):
         """
         if isinstance(mem, RomBlock):
             raise PyrtlError("ROM blocks are not stored in the simulation object")
-        return self.context[self.varname(mem)]
+        return self.mems[self.mem_varname(mem)]
 
     def varname(self, val):
         return self.sim_wire_name_map.get(val, val.name)
