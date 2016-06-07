@@ -66,25 +66,19 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def _compare_error(self):
+    def _compare_error(self, other):
         """ Throw error when LogicNets are compared.
 
         Comparisons get you in a bad place between while you can compare op and op_param
         safely, the args and dests are references to mutable objects.
         """
-        raise PyrtlError('Comparison between LogicNets is not supported')
+        raise PyrtlError('Greater than and less than comparisons between'
+                         ' LogicNets are not supported')
 
-    def __lt__(self, other):
-        self._compare_error()
-
-    def __le__(self, other):
-        self._compare_error()
-
-    def __gt__(self, other):
-        self._compare_error()
-
-    def __ge__(self, other):
-        self._compare_error()
+    __lt__ = _compare_error
+    __gt__ = _compare_error
+    __le__ = _compare_error
+    __ge__ = _compare_error
 
 
 class Block(object):

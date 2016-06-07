@@ -327,6 +327,24 @@ class WireVector(object):
         working_block().add_net(net)
         return outwire
 
+    def __lshift__(self, other):
+        raise PyrtlError("Shifting using the << and >> operators are not supported"
+                         "in PyRTL."
+                         "Instead if you are trying to select bits in a wire, use"
+                         "the indexing operator (wire[indexes]) instead.\n\n"
+                         "For example: wire[2:9] selects the wires from index 2 to "
+                         "index 8 to make a new length 7 wire.")
+
+    __rshift__ = __lshift__
+
+    def __mod__(self, other):
+        raise PyrtlError("Masking with the % operator is not supported"
+                         "in PyRTL. "
+                         "Instead if you are trying to select bits in a wire, use"
+                         "the indexing operator (wire[indexes]) instead.\n\n"
+                         "For example: wire[2:9] selects the wires from index 2 to "
+                         "index 8 to make a new length 7 wire.")
+
     def __len__(self):
         if self.bitwidth is None:
             raise PyrtlError('length of wirevector not yet defined')

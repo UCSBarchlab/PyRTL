@@ -5,7 +5,7 @@ import pyrtl
 from pyrtl.helperfuncs import _basic_add
 
 
-class RTLTraceWithBasicOpsBase(unittest.TestCase):
+class TraceWithBasicOpsBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         self.bitwidth = 3
@@ -106,7 +106,15 @@ class RTLTraceWithBasicOpsBase(unittest.TestCase):
         self.check_trace(' r 00224466\nr2 02244660\n')
 
 
-class RTLSimInputValidationBase(unittest.TestCase):
+class SimWithSpecialWiresBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_reg_directly_before_reg(self):
+        pass
+
+
+class SimInputValidationBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -123,7 +131,7 @@ class RTLSimInputValidationBase(unittest.TestCase):
             sim.step({i: 5})
 
 
-class RTLTraceWithAdderBase(unittest.TestCase):
+class TraceWithAdderBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         bitwidth = 3
@@ -147,7 +155,16 @@ class RTLTraceWithAdderBase(unittest.TestCase):
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
         self.assertEqual(sim.inspect(self.r), 6)
 
-VCD_OUTPUT = """$timescale 1ns $end
+
+class SimulationVCDWithAdderBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        bitwidth = 3
+        self.r = pyrtl.Register(bitwidth=bitwidth, name='r')
+        self.result = _basic_add(self.r, pyrtl.Const(1).zero_extended(bitwidth))
+        self.r.next <<= self.result
+
+    VCD_OUTPUT = """$timescale 1ns $end
 $scope module logic $end
 $var wire 3 r r $end
 $upscope $end
@@ -188,15 +205,6 @@ b110 r
 #15
 """
 
-
-class RTLSimulationVCDWithAdderBase(unittest.TestCase):
-    def setUp(self):
-        pyrtl.reset_working_block()
-        bitwidth = 3
-        self.r = pyrtl.Register(bitwidth=bitwidth, name='r')
-        self.result = _basic_add(self.r, pyrtl.Const(1).zero_extended(bitwidth))
-        self.r.next <<= self.result
-
     def test_vcd_output(self):
         sim_trace = pyrtl.SimulationTrace()
         on_reset = {}  # signal states to be set when reset is asserted
@@ -209,10 +217,10 @@ class RTLSimulationVCDWithAdderBase(unittest.TestCase):
 
         test_output = io.StringIO()
         sim_trace.print_vcd(test_output)
-        self.assertEqual(VCD_OUTPUT, test_output.getvalue())
+        self.assertEqual(self.VCD_OUTPUT, test_output.getvalue())
 
 
-class RTLSimTraceWithMuxBase(unittest.TestCase):
+class SimTraceWithMuxBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         bitwidth = 3
@@ -241,7 +249,7 @@ class RTLSimTraceWithMuxBase(unittest.TestCase):
         self.assertEqual(output.getvalue(), 'muxout 120120\n')
 
 
-class RTLMemBlockBase(unittest.TestCase):
+class MemBlockBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         self.bitwidth = 3
@@ -262,7 +270,7 @@ class RTLMemBlockBase(unittest.TestCase):
         self.sim_trace = pyrtl.SimulationTrace()
 
     def test_simple_memblock(self):
-        self.sim = self.sim(tracer=self.sim_trace)
+        sim = self.sim(tracer=self.sim_trace)
 
         input_signals = [[0, 1, 4, 5],
                          [4, 1, 0, 5],
@@ -270,7 +278,7 @@ class RTLMemBlockBase(unittest.TestCase):
                          [1, 1, 0, 0],
                          [6, 0, 6, 7]]
         for signals in input_signals:
-            self.sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
+            sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
                            self.write_addr: signals[2], self.write_data: signals[3]})
 
         output = io.StringIO()
@@ -278,7 +286,7 @@ class RTLMemBlockBase(unittest.TestCase):
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
     def test_simple2_memblock(self):
-        self.sim = self.sim(tracer=self.sim_trace)
+        sim = self.sim(tracer=self.sim_trace)
         input_signals = [
             {self.read_addr1: 0, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x7},
             {self.read_addr1: 1, self.read_addr2: 2, self.write_addr: 1, self.write_data: 0x6},
@@ -292,7 +300,7 @@ class RTLMemBlockBase(unittest.TestCase):
             {self.read_addr1: 2, self.read_addr2: 1, self.write_addr: 0, self.write_data: 0x6}]
 
         for signal in input_signals:
-            self.sim.step(signal)
+            sim.step(signal)
 
         output = io.StringIO()
         self.sim_trace.print_trace(output)
@@ -302,14 +310,14 @@ class RTLMemBlockBase(unittest.TestCase):
         pyrtl.synthesize()
         pyrtl.optimize()
         self.sim_trace = pyrtl.SimulationTrace()
-        self.sim = self.sim(tracer=self.sim_trace)
+        sim = self.sim(tracer=self.sim_trace)
         input_signals = [[0, 1, 4, 5],
                          [4, 1, 0, 5],
                          [0, 4, 1, 6],
                          [1, 1, 0, 0],
                          [6, 0, 6, 7]]
         for signals in input_signals:
-            self.sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
+            sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
                            self.write_addr: signals[2], self.write_data: signals[3]})
 
         output = io.StringIO()
@@ -317,7 +325,7 @@ class RTLMemBlockBase(unittest.TestCase):
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
 
-class RTLRomBlockSimBase(unittest.TestCase):
+class RomBlockSimBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -416,6 +424,55 @@ class RTLRomBlockSimBase(unittest.TestCase):
         sim.step({rom_add_1: 3})
         with self.assertRaises(pyrtl.PyrtlError):
             sim.step({rom_add_1: 7})
+
+
+class InspectBase(unittest.TestCase):
+    """
+    Unittests for both sim.inspect and sim.inspectmem
+    """
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_invalid_inspect(self):
+        a = pyrtl.Input(8, 'a')
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        sim.step({a: 28})
+        with self.assertRaises(KeyError):
+            sim.inspect('asd')
+
+    def test_inspect(self):
+        a = pyrtl.Input(8, 'b')
+        b = pyrtl.Output(name='a')
+        b <<= a
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        if self.sim is pyrtl.Simulation:
+            self.assertEqual(sim.inspect(a), 0)
+            self.assertEqual(sim.inspect(b), 0)
+        else:
+            with self.assertRaises(pyrtl.PyrtlError):
+                sim.inspect(a)
+
+        sim.step({a: 28})
+        self.assertEqual(sim.inspect(a), 28)
+        # self.assertEqual(sim.inspect('a'), 28)
+        self.assertEqual(sim.inspect(b), 28)
+
+    def test_inspect_mem(self):
+        a = pyrtl.Input(8, 'a')
+        b = pyrtl.Input(8, 'b')
+        mem = pyrtl.MemBlock(8, 8, 'mem')
+        mem[b] <<= a
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        self.assertEqual(sim.inspect_mem(mem), {})
+        sim.step({a: 3, b: 23})
+        if self.sim is pyrtl.Simulation:
+            self.skipTest("Simulation is currently not working in a certain way")
+        else:
+            self.assertEqual(sim.inspect_mem(mem), {23: 3})
 
 
 sims = (pyrtl.Simulation, pyrtl.FastSimulation)

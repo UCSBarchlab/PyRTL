@@ -13,6 +13,7 @@ from __future__ import print_function, unicode_literals
 
 import six
 import re
+import keyword
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, LogicNet
@@ -599,5 +600,5 @@ def _currently_in_ipython():
 py_identifier = re.compile('^[^\d\W]\w*\Z')
 
 
-def isPythonIdentifer(string):
-    return re.match(py_identifier, string)
+def is_python_identifer(string):
+    return re.match(py_identifier, string) and not keyword.iskeyword(string)

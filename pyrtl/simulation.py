@@ -11,7 +11,7 @@ from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock
 from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock, _MemReadBase
-from .helperfuncs import check_rtl_assertions, _currently_in_ipython, isPythonIdentifer
+from .helperfuncs import check_rtl_assertions, _currently_in_ipython, is_python_identifer
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -211,7 +211,8 @@ class Simulation(object):
         """
         return self.memvalue[mem.id]
 
-    def _sanitize(self, val, wirevector):
+    @staticmethod
+    def _sanitize(val, wirevector):
         """Return a modified version of val that would fit in wirevector.
 
         This function should be applied to every primitive call, and it's
@@ -357,7 +358,7 @@ class FastSimulation(object):
 
     def _build_sim_wire_name_map(self):
         for wire in self.block.wirevector_set:
-            if not isPythonIdentifer(wire.name):
+            if not is_python_identifer(wire.name):
                 self.sim_wire_name_map[wire] = '_simTemp' + str(self._sim_temp_num)
                 self._sim_temp_num += 1
 
@@ -397,7 +398,19 @@ class FastSimulation(object):
 
         Will throw KeyError if w does not exist in the simulation.
         """
-        return self.context[self.varname(w)]
+        if isinstance(w, WireVector):
+            w_name = self.varname(w)
+        else:
+            w_name = w
+        try:
+            return self.context[w_name]
+        except AttributeError:
+            raise PyrtlError("No context available. Please run a simulation step in "
+                             "order to populate values for wires")
+        # except KeyError:
+        #     raise PyrtlError("Wire {} is not in the simulation trace. Please probe it"
+        #                      "and measure the probe value to measure this wire's value"
+        #                     .format(w))
 
     def inspect_mem(self, mem):
         """ Get the values in a map during the current simulation cycle.
