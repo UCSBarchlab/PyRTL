@@ -11,7 +11,7 @@ from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock
 from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock, _MemReadBase
-from .helperfuncs import check_rtl_assertions, _currently_in_ipython, is_python_identifer
+from .helperfuncs import check_rtl_assertions, _currently_in_ipython, PythonSanitizer
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -307,13 +307,12 @@ class FastSimulation(object):
 
         self.block = block
         self.default_value = default_value
-        self._sim_temp_num = 0  # for renaming wires that are not valid python identifiers
         self.tracer = tracer
         self.sim_func = None
         self.code_file = code_file
         self.mems = {}
         self.regs = {}
-        self.sim_wire_name_map = {}
+        self.internal_names = PythonSanitizer('_fastsim_tmp_')
         self._initialize(register_value_map, memory_value_map)
 
     def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
@@ -321,6 +320,9 @@ class FastSimulation(object):
             default_value = self.default_value
         if register_value_map is None:
             register_value_map = {}
+
+        for wire in self.block.wirevector_set:
+            self.internal_names.make_valid_string(wire.name)
 
         # set registers to their values
         reg_set = self.block.wirevector_subset(Register)
@@ -331,7 +333,6 @@ class FastSimulation(object):
                 self.regs[self.varname(r)] = default_value
 
         self._initialize_mems(memory_value_map)
-        self._build_sim_wire_name_map()
 
         s = self.compiled()
         if self.code_file is not None:
@@ -356,12 +357,6 @@ class FastSimulation(object):
                 else:
                     self.mems[self.mem_varname(mem)] = {}
 
-    def _build_sim_wire_name_map(self):
-        for wire in self.block.wirevector_set:
-            if not is_python_identifer(wire.name):
-                self.sim_wire_name_map[wire] = '_simTemp' + str(self._sim_temp_num)
-                self._sim_temp_num += 1
-
     def step(self, provided_inputs):
         # validate_inputs
         for wire, value in provided_inputs.items():
@@ -370,7 +365,7 @@ class FastSimulation(object):
                                  " using its bitwidth".format(wire, value))
 
         # building the simulation data
-        ins = {self.varname(wire): value for wire, value in provided_inputs.items()}
+        ins = {self.to_name(wire): value for wire, value in provided_inputs.items()}
         ins.update(self.regs)
         ins.update(self.mems)
 
@@ -398,12 +393,8 @@ class FastSimulation(object):
 
         Will throw KeyError if w does not exist in the simulation.
         """
-        if isinstance(w, WireVector):
-            w_name = self.varname(w)
-        else:
-            w_name = w
         try:
-            return self.context[w_name]
+            return self.context[self.to_name(w)]
         except AttributeError:
             raise PyrtlError("No context available. Please run a simulation step in "
                              "order to populate values for wires")
@@ -425,8 +416,15 @@ class FastSimulation(object):
             raise PyrtlError("ROM blocks are not stored in the simulation object")
         return self.mems[self.mem_varname(mem)]
 
+    def to_name(self, name):
+        """ Converts Wires to strings, changes strings to internal string names """
+        if isinstance(name, WireVector):
+            name = name.name
+        return self.internal_names[name]
+
     def varname(self, val):
-        return self.sim_wire_name_map.get(val, val.name)
+        """ Converts WireVectors to internal names """
+        return self.internal_names[val.name]
 
     def mem_varname(self, val):
         return 'fs_mem' + str(val.id)

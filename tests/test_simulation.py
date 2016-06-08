@@ -475,9 +475,6 @@ class InspectBase(unittest.TestCase):
             self.assertEqual(sim.inspect_mem(mem), {23: 3})
 
 
-sims = (pyrtl.Simulation, pyrtl.FastSimulation)
-
-
 def make_unittests():
     """
     Generates separate unittests for each of the simulators
@@ -501,6 +498,7 @@ def make_unittests():
     g.update(unittests)
 
 
+sims = (pyrtl.Simulation, pyrtl.FastSimulation)
 make_unittests()
 
 

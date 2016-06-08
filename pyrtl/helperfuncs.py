@@ -597,8 +597,68 @@ def _currently_in_ipython():
     except NameError:
         return False
 
-py_identifier = re.compile('^[^\d\W]\w*\Z')
+py_regex = '^[^\d\W]\w*\Z'
 
 
-def is_python_identifer(string):
-    return re.match(py_identifier, string) and not keyword.iskeyword(string)
+class NameIndexer(object):
+    """ Provides internal names that are based on a prefix and an index"""
+    def __init__(self, internal_prefix='_sani_temp'):
+        self.internal_prefix = internal_prefix
+        self.internal_index = 0
+
+    def make_valid_string(self):
+        """ Inputting a value for the first time """
+        internal_name = self.internal_prefix + str(self.internal_index)
+        self.internal_index += 1
+        return internal_name
+
+
+class NameSanitizer(NameIndexer):
+    """
+    Sanitizes the names so that names can be used in places that don't allow
+    for arbitrary names while not mangling valid names
+
+    Put the values you want to validate into make_valid_string the first time
+    you want to sanitize a particular string (or before the first time), and
+    retrieve from the NameSanitizer through indexing directly thereafter
+    eg: sani["__&sfhs"] for retrieval after the first time
+
+    """
+    def __init__(self, identifier_regex_str, internal_prefix='_sani_temp', map_valid_vals=True):
+        self.identifier = re.compile(identifier_regex_str)
+        self.val_map = {}
+        self.map_valid = map_valid_vals
+        super(NameSanitizer, self).__init__(internal_prefix)
+
+    def __getitem__(self, item):
+        """ Get a value from the sanitizer"""
+        if not self.map_valid and self.is_valid_str(item):
+            return item
+        return self.val_map[item]
+
+    def is_valid_str(self, string):
+        return re.match(self.identifier, string) and self._extra_checks(string)
+
+    def _extra_checks(self, string):
+        return True
+
+    def make_valid_string(self, string=''):
+        """ Inputting a value for the first time """
+        if not self.is_valid_str(string):
+            if string in self.val_map:
+                raise IndexError("Value {} has already been given to the sanitizer".format(string))
+            internal_name = super(NameSanitizer, self).make_valid_string()
+            self.val_map[string] = internal_name
+            return internal_name
+        else:
+            if self.map_valid:
+                self.val_map[string] = string
+            return string
+
+
+class PythonSanitizer(NameSanitizer):
+    def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
+        super(PythonSanitizer, self).__init__(py_regex, internal_prefix, map_valid_vals)
+
+    def _extra_checks(self, str):
+        return not keyword.iskeyword(str)
