@@ -334,7 +334,7 @@ class FastSimulation(object):
 
         self._initialize_mems(memory_value_map)
 
-        s = self.compiled()
+        s = self._compiled()
         if self.code_file is not None:
             with open(self.code_file, 'w') as file:
                 file.write(s)
@@ -358,6 +358,12 @@ class FastSimulation(object):
                     self.mems[self._mem_varname(mem)] = {}
 
     def step(self, provided_inputs):
+        """ Run the simulation for a cycle
+
+        :param provided_inputs: a dictionary mapping WireVectors (or their names)
+          to their values for this step
+          eg: {wire: 3, "wire_name": 17}
+        """
         # validate_inputs
         for wire, value in provided_inputs.items():
             if value > wire.bitmask or value < 0:
@@ -388,10 +394,14 @@ class FastSimulation(object):
     def inspect(self, w):
         """ Get the value of a wirevector in the current simulation cycle.
 
-        :param w: the wirevector to inspect
+        :param w: WireVector object or name of WireVector to inspect
         :return: value of w in the current step of simulation
 
         Will throw KeyError if w does not exist in the simulation.
+
+        Note for multiple blocks: If w is a wirevector, and is not part of
+        the block currently simulated, inspect will look for a wire with
+        the same name in the simulated block
         """
         try:
             return self.context[self._to_name(w)]
@@ -448,7 +458,7 @@ class FastSimulation(object):
         else:
             return self._varname(wire)
 
-    _expected_bitwidth = {
+    _expected_bitwidth = {  # bitwidth that the dest has in order to not need masking
         'w': lambda net: len(net.args[0]),
         'r': lambda net: len(net.args[0]),
         '~': lambda net: -1,  # bitflips always need masking
@@ -475,8 +485,13 @@ class FastSimulation(object):
     outs = {}
     mem_ws = []"""
 
-    def compiled(self):
-        """Return a string of the self.block compiled to python. """
+    def _compiled(self):
+        """Return a string of the self.block compiled to a block of
+         code that can be execed to get a function to execute"""
+        # Dev Notes:
+        # Because of fast locals in functions in both CPython and PyPy, getting a
+        # function to execute makes the code a few times faster than
+        # just executing it in the global exec scope.
         prog = [self._prog_start]
 
         simple_func = {  # OPS
