@@ -328,9 +328,9 @@ class FastSimulation(object):
         reg_set = self.block.wirevector_subset(Register)
         for r in reg_set:
             if r in register_value_map:
-                self.regs[self.varname(r)] = register_value_map[r]
+                self.regs[self._varname(r)] = register_value_map[r]
             else:
-                self.regs[self.varname(r)] = default_value
+                self.regs[self._varname(r)] = default_value
 
         self._initialize_mems(memory_value_map)
 
@@ -347,15 +347,15 @@ class FastSimulation(object):
     def _initialize_mems(self, memory_value_map):
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
-                self.mems[self.mem_varname(mem)] = mem_map
+                self.mems[self._mem_varname(mem)] = mem_map
 
         for net in self.block.logic_subset('m@'):
             mem = net.op_param[1]
-            if self.mem_varname(mem) not in self.mems:
+            if self._mem_varname(mem) not in self.mems:
                 if isinstance(mem, RomBlock):
-                    self.mems[self.mem_varname(mem)] = mem
+                    self.mems[self._mem_varname(mem)] = mem
                 else:
-                    self.mems[self.mem_varname(mem)] = {}
+                    self.mems[self._mem_varname(mem)] = {}
 
     def step(self, provided_inputs):
         # validate_inputs
@@ -365,7 +365,7 @@ class FastSimulation(object):
                                  " using its bitwidth".format(wire, value))
 
         # building the simulation data
-        ins = {self.to_name(wire): value for wire, value in provided_inputs.items()}
+        ins = {self._to_name(wire): value for wire, value in provided_inputs.items()}
         ins.update(self.regs)
         ins.update(self.mems)
 
@@ -394,7 +394,7 @@ class FastSimulation(object):
         Will throw KeyError if w does not exist in the simulation.
         """
         try:
-            return self.context[self.to_name(w)]
+            return self.context[self._to_name(w)]
         except AttributeError:
             raise PyrtlError("No context available. Please run a simulation step in "
                              "order to populate values for wires")
@@ -414,22 +414,22 @@ class FastSimulation(object):
         """
         if isinstance(mem, RomBlock):
             raise PyrtlError("ROM blocks are not stored in the simulation object")
-        return self.mems[self.mem_varname(mem)]
+        return self.mems[self._mem_varname(mem)]
 
-    def to_name(self, name):
+    def _to_name(self, name):
         """ Converts Wires to strings, changes strings to internal string names """
         if isinstance(name, WireVector):
             name = name.name
         return self.internal_names[name]
 
-    def varname(self, val):
+    def _varname(self, val):
         """ Converts WireVectors to internal names """
         return self.internal_names[val.name]
 
-    def mem_varname(self, val):
+    def _mem_varname(self, val):
         return 'fs_mem' + str(val.id)
 
-    def arg_varname(self, wire):
+    def _arg_varname(self, wire):
         """
         Input, Const, and Registers have special input values
         """
@@ -438,17 +438,17 @@ class FastSimulation(object):
         elif isinstance(wire, Const):
             return str(wire.val)  # hardcoded
         else:
-            return self.varname(wire)
+            return self._varname(wire)
 
-    def dest_varname(self, wire):
+    def _dest_varname(self, wire):
         if isinstance(wire, Output):
             return 'outs["' + wire.name + '"]'
         elif isinstance(wire, Register):
             return 'regs["' + wire.name + '"]'
         else:
-            return self.varname(wire)
+            return self._varname(wire)
 
-    expected_bitwidth = {
+    _expected_bitwidth = {
         'w': lambda net: len(net.args[0]),
         'r': lambda net: len(net.args[0]),
         '~': lambda net: -1,  # bitflips always need masking
@@ -470,14 +470,14 @@ class FastSimulation(object):
 
     # Yeah, triple quotes don't respect indentation (aka the 4 spaces on the
     # start of each line is part of the string)
-    prog_start = """def sim_func(d):
+    _prog_start = """def sim_func(d):
     regs = {}
     outs = {}
     mem_ws = []"""
 
     def compiled(self):
         """Return a string of the self.block compiled to python. """
-        prog = [self.prog_start]
+        prog = [self._prog_start]
 
         simple_func = {  # OPS
             'w': lambda x: x,
@@ -513,7 +513,7 @@ class FastSimulation(object):
 
         for net in self.block:
             if net.op in simple_func:
-                argvals = (self.arg_varname(arg) for arg in net.args)
+                argvals = (self._arg_varname(arg) for arg in net.args)
                 expr = simple_func[net.op](*argvals)
             elif net.op == 'c':
                 expr = ''
@@ -521,9 +521,9 @@ class FastSimulation(object):
                     if expr is not '':
                         expr += ' | '
                     shiftby = sum(len(j) for j in net.args[i+1:])
-                    expr += shift(self.arg_varname(net.args[i]), '<<', shiftby)
+                    expr += shift(self._arg_varname(net.args[i]), '<<', shiftby)
             elif net.op == 's':
-                source = self.arg_varname(net.args[0])
+                source = self._arg_varname(net.args[0])
                 expr = ''
                 split_length = 0
                 split_start_bit = -2
@@ -541,18 +541,18 @@ class FastSimulation(object):
                         split_length += 1
                 expr += make_split()
             elif net.op == 'm':
-                read_addr = self.arg_varname(net.args[0])
+                read_addr = self._arg_varname(net.args[0])
                 mem = net.op_param[1]
                 if isinstance(net.op_param[1], RomBlock):
-                    expr = 'd["%s"]._get_read_data(%s)' % (self.mem_varname(mem), read_addr)
+                    expr = 'd["%s"]._get_read_data(%s)' % (self._mem_varname(mem), read_addr)
                 else:  # memories act async for reads
-                    expr = 'd["%s"].get(%s, %s)' % (self.mem_varname(mem),
-                                                    read_addr,  self.default_value)
+                    expr = 'd["%s"].get(%s, %s)' % (self._mem_varname(mem),
+                                                    read_addr, self.default_value)
             elif net.op == '@':
-                mem = self.mem_varname(net.op_param[1])
-                write_addr = self.arg_varname(net.args[0])
-                write_val = self.arg_varname(net.args[1])
-                write_enable = self.arg_varname(net.args[2])
+                mem = self._mem_varname(net.op_param[1])
+                write_addr = self._arg_varname(net.args[0])
+                write_val = self._arg_varname(net.args[1])
+                write_enable = self._arg_varname(net.args[2])
                 prog.append('    if {}:'.format(write_enable))
                 prog.append('        mem_ws.append(("{}", {}, {}))'
                             .format(mem, write_addr, write_val))
@@ -561,8 +561,8 @@ class FastSimulation(object):
                 raise PyrtlError('FastSimulation cannot handle primitive "%s"' % net.op)
 
             # prog.append('    #  ' + str(net))
-            result = self.dest_varname(net.dests[0])
-            if len(net.dests[0]) == self.expected_bitwidth[net.op](net):
+            result = self._dest_varname(net.dests[0])
+            if len(net.dests[0]) == self._expected_bitwidth[net.op](net):
                 prog.append("    %s = %s" % (result, expr))
             else:
                 mask = str(net.dests[0].bitmask)
@@ -572,7 +572,7 @@ class FastSimulation(object):
         if self.tracer is not None:
             for wire_name in self.tracer.trace:
                 wire = self.block.wirevector_by_name[wire_name]
-                v_wire_name = self.varname(wire)
+                v_wire_name = self._varname(wire)
                 if not isinstance(wire, (Input, Const, Register, Output)):
                     prog.append('    outs["%s"] = %s' % (wire_name, v_wire_name))
 
