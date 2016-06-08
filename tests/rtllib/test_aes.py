@@ -1,6 +1,7 @@
 import unittest
 
 import pyrtl
+import pyrtl.corecircuits
 from pyrtl.rtllib import aes, testingutils
 
 
@@ -43,7 +44,7 @@ class TestAES(unittest.TestCase):
     @unittest.skip
     def test_key_expansion(self):
         # This is not at all correct. Needs to be completely rewritten
-        self.out_vector <<= pyrtl.concat_list(self.aes.decryption_key_gen(self.in_vector))
+        self.out_vector <<= pyrtl.corecircuits.concat_list(self.aes.decryption_key_gen(self.in_vector))
 
         in_vals = [0xd1876c0f79c4300ab45594add66ff41f, 0xfa636a2825b339c940668a3157244d17]
         true_result = [0x3e175076b61c04678dfc2295f6a8bfc0, 0x2dfb02343f6d12dd09337ec75b36e3f0]

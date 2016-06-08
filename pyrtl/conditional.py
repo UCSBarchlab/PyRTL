@@ -177,7 +177,7 @@ def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
 def _finalize():
     """Build the required muxes and call back to WireVector to finalize the wirevector build."""
     from .memory import MemBlock
-    from .helperfuncs import select
+    from pyrtl.corecircuits import select
     for lhs in _predicate_map:
         # handle memory write ports
         if isinstance(lhs, MemBlock):

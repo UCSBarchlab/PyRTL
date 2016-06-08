@@ -195,7 +195,7 @@ class TestVerilog(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_romblock_does_not_throw_error(self):
-        from pyrtl.helperfuncs import _basic_add
+        from pyrtl.corecircuits import _basic_add
         a = pyrtl.Input(bitwidth=3, name='a')
         b = pyrtl.Input(bitwidth=3, name='b')
         o = pyrtl.Output(bitwidth=3, name='o')

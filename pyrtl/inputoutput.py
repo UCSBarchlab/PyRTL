@@ -13,7 +13,8 @@ import collections
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block
 from .wire import WireVector, Input, Output, Const, Register
-from .helperfuncs import concat
+from .corecircuits import concat
+
 
 # -----------------------------------------------------------------
 #            __       ___

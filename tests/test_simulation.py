@@ -2,7 +2,7 @@ import unittest
 import io
 
 import pyrtl
-from pyrtl.helperfuncs import _basic_add
+from pyrtl.corecircuits import _basic_add
 
 
 class TraceWithBasicOpsBase(unittest.TestCase):

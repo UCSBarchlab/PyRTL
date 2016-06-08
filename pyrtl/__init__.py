@@ -25,16 +25,6 @@ from .helperfuncs import output_list
 from .helperfuncs import register_list
 from .helperfuncs import wirevector_list
 from .helperfuncs import as_wires
-from .helperfuncs import concat
-from .helperfuncs import concat_list
-from .helperfuncs import mux
-from .helperfuncs import select
-from .helperfuncs import and_all_bits
-from .helperfuncs import or_all_bits
-from .helperfuncs import xor_all_bits
-from .helperfuncs import parity
-from .helperfuncs import rtl_all
-from .helperfuncs import rtl_any
 from .helperfuncs import match_bitwidth
 from .helperfuncs import probe
 from .helperfuncs import rtl_assert
@@ -42,6 +32,8 @@ from .helperfuncs import check_rtl_assertions
 from .helperfuncs import find_loop
 from .helperfuncs import find_and_print_loop
 
+from pyrtl.corecircuits import (and_all_bits, or_all_bits, xor_all_bits, rtl_any,
+                                rtl_all, mux, select, concat, concat_list, parity)
 # memory blocks
 from .memory import MemBlock
 from .memory import RomBlock

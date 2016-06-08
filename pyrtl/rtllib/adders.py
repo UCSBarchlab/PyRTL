@@ -131,7 +131,7 @@ def _cla_adder_unit(a, b, cin):
     for i in range(1, len(prop)):
         cur_gen = gen[i] | (prop[i] & cur_gen)
         cur_prop = cur_prop & prop[i]
-        sum_bit = pyrtl.concat(prop[i] ^ carry[i-1], sum_bit)
+        sum_bit = pyrtl.concat(prop[i] ^ carry[i - 1], sum_bit)
         carry.append(gen[i] | (prop[i] & carry[i-1]))
     cout = cur_gen | (cur_prop & cin)
     return sum_bit, cout

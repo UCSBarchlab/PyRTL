@@ -7,13 +7,13 @@ transformation passes over blocks.
 from __future__ import print_function, unicode_literals
 
 from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
-from .helperfuncs import (
-    find_and_print_loop, as_wires, concat_list,
-    _basic_mult, _basic_add, _basic_sub, _basic_select, _basic_eq, _basic_lt, _basic_gt)
+from .helperfuncs import as_wires
+from .corecircuits import (_basic_mult, _basic_add, _basic_sub, _basic_eq,
+                           _basic_lt, _basic_gt, _basic_select, concat_list)
 from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
-from .transform import net_transform, _get_new_block_mem_instance, copy_block
+from .transform import net_transform, _get_new_block_mem_instance, copy_block, replace_wires
 
 
 # --------------------------------------------------------------------
@@ -211,6 +211,48 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
         block.add_wirevector(new_wirevector)
 
     _remove_unused_wires(block)
+
+
+def _remove_duplicate_nets(block):
+    raise PyrtlInternalError("NOT WORKING!!!!!!")
+    block = working_block(block)
+
+    net_table = {}  # {net (without dest) : [net, ...]
+    duplicate_nets = False
+    t = tuple()
+    for net in block.logic:
+        net_sub = LogicNet(net[0], net[1], net[2], t)  # don't care about dests
+        if len(net.dests) == 1 and net.dests[0].name == 'tmp22157':
+            t = t  # place for a breakpoint
+        if net_sub in net_table:
+            duplicate_nets = True
+            net_table[net_sub].append(net)
+        else:
+            net_table[net_sub] = [net]
+
+    if not duplicate_nets:
+        return
+
+    wire_map = {}
+    unnecessary_nets = []
+    for nets in net_table.values():
+        if len(nets) > 1:
+            net_to_keep = nets[0]
+            nets_to_discard = nets[1:]
+            dest_w = net_to_keep.dests[0]  # should be safe
+            for net in nets_to_discard:
+                old_dst = net.dests[0]
+                if isinstance(old_dst, (Register, Output)):
+                    continue
+                # assert(old_dst is not dest_w)
+                wire_map[old_dst] = dest_w
+                # block.remove_wirevector(old_dst)
+                unnecessary_nets.append(net)
+
+    block.logic.difference_update(unnecessary_nets)
+    replace_wires(wire_map, block)
+
+    block.sanity_check()
 
 
 def _remove_unlistened_nets(block):

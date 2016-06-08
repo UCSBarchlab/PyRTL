@@ -391,7 +391,7 @@ class WireVector(object):
                 'Neither zero_extended nor sign_extended can'
                 ' reduce the number of bits')
         else:
-            from .helperfuncs import concat
+            from .corecircuits import concat
             if isinstance(extbit, int):
                 extbit = Const(0, bitwidth=1)
             extvector = WireVector(bitwidth=numext)

@@ -7,9 +7,10 @@
     has other ways to store data, namely memories and ROMs.
 """
 
+import random
+
 import pyrtl
 from pyrtl import *
-import random
 
 # --- Part 1: Memories -------------------------------------------------------
 

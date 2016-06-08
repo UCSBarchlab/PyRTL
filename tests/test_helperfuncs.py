@@ -3,6 +3,7 @@ import random
 import unittest
 
 import pyrtl
+import pyrtl.corecircuits
 from pyrtl import helperfuncs
 from pyrtl.rtllib import testingutils as utils
 
@@ -27,31 +28,31 @@ class TestAnyAll(unittest.TestCase):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=1)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.rtl_any(a, b)
+            r = pyrtl.corecircuits.rtl_any(a, b)
 
     def test_all_only_on_1_bit_vectors(self):
         a = pyrtl.WireVector(name='a', bitwidth=1)
         b = pyrtl.WireVector(name='b', bitwidth=1)
         c = pyrtl.WireVector(name='c', bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.rtl_all(a, b, c)
+            r = pyrtl.corecircuits.rtl_all(a, b, c)
 
     def test_any_works_with_consts(self):
         a = pyrtl.WireVector(name='a', bitwidth=1)
         c = pyrtl.WireVector(name='c', bitwidth=1)
-        r = pyrtl.rtl_any(a, 1, c)
+        r = pyrtl.corecircuits.rtl_any(a, 1, c)
 
     def test_all_works_with_consts(self):
         a = pyrtl.WireVector(name='a', bitwidth=1)
         c = pyrtl.WireVector(name='c', bitwidth=1)
-        r = pyrtl.rtl_all(a, 1, c)
+        r = pyrtl.corecircuits.rtl_all(a, 1, c)
 
     def test_any_does_simulation_correct(self):
         r = pyrtl.Register(3, 'r')
         r.next <<= r + 1
         a, b, c = r[0], r[1], r[2]
         o = pyrtl.Output(name='o')
-        o <<= pyrtl.rtl_any(a, b, c)
+        o <<= pyrtl.corecircuits.rtl_any(a, b, c)
         self.check_trace('o 01111111\nr 01234567\n')
 
     def test_all_does_simulation_correct(self):
@@ -59,7 +60,7 @@ class TestAnyAll(unittest.TestCase):
         r.next <<= r + 1
         a, b, c = r[0], r[1], r[2]
         o = pyrtl.Output(name='o')
-        o <<= pyrtl.rtl_all(a, b, c)
+        o <<= pyrtl.corecircuits.rtl_all(a, b, c)
         self.check_trace('o 00000001\nr 01234567\n')
 
 
@@ -80,20 +81,20 @@ class TestXorAllBits(unittest.TestCase):
         r = pyrtl.Register(3, 'r')
         r.next <<= r + 1
         o = pyrtl.Output(name='o')
-        o <<= pyrtl.xor_all_bits(r)
+        o <<= pyrtl.corecircuits.xor_all_bits(r)
         self.check_trace('o 01101001\nr 01234567\n')
 
     def test_list_of_one_bit_wires(self):
         r = pyrtl.Register(2, 'r')
         r.next <<= r + 1
         o = pyrtl.Output(name='o')
-        o <<= pyrtl.xor_all_bits([r[0], r[1]])
+        o <<= pyrtl.corecircuits.xor_all_bits([r[0], r[1]])
         self.check_trace('o 01100110\nr 01230123\n')
 
     def test_list_of_long_wires(self):
         in_wires, vals = utils.make_inputs_and_values(4, exact_bitwidth=13)
         out = pyrtl.Output(name='o')
-        out <<= pyrtl.xor_all_bits(in_wires)
+        out <<= pyrtl.corecircuits.xor_all_bits(in_wires)
         expected = [v1 ^ v2 ^ v3 ^ v4 for v1, v2, v3, v4 in zip(*vals)]
         self.assertEqual(expected, utils.sim_and_ret_out(out, in_wires, vals))
 
@@ -108,7 +109,7 @@ class TestMux(unittest.TestCase):
         c = pyrtl.WireVector(name='c', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=1)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.mux(s, a, b, c)
+            r = pyrtl.corecircuits.mux(s, a, b, c)
 
     def test_mux_not_enough_inputs(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
@@ -116,13 +117,13 @@ class TestMux(unittest.TestCase):
         c = pyrtl.WireVector(name='c', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=2)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.mux(s, a, b, c)
+            r = pyrtl.corecircuits.mux(s, a, b, c)
 
     def test_mux_not_enough_inputs_but_default(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=2)
-        r = pyrtl.mux(s, a, b, default=0)
+        r = pyrtl.corecircuits.mux(s, a, b, default=0)
 
     def test_mux_enough_inputs_with_default(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
@@ -130,7 +131,7 @@ class TestMux(unittest.TestCase):
         c = pyrtl.WireVector(name='c', bitwidth=1)
         d = pyrtl.WireVector(name='d', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=2)
-        r = pyrtl.mux(s, a, b, c, d, default=0)
+        r = pyrtl.corecircuits.mux(s, a, b, c, d, default=0)
 
     def test_mux_too_many_inputs_with_default(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
@@ -140,14 +141,14 @@ class TestMux(unittest.TestCase):
         e = pyrtl.WireVector(name='e', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=2)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.mux(s, a, b, c, d, e, default=0)
+            r = pyrtl.corecircuits.mux(s, a, b, c, d, e, default=0)
 
     def test_mux_too_many_inputs_with_extra_kwarg(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=2)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.mux(s, a, b, default=0, foo=1)
+            r = pyrtl.corecircuits.mux(s, a, b, default=0, foo=1)
 
 
 class TestMuxSimulation(unittest.TestCase):
@@ -170,7 +171,7 @@ class TestMuxSimulation(unittest.TestCase):
         control, testctrl = utils.generate_in_wire_and_values(addr_width, 40, "mux_ctrl")
 
         out = pyrtl.Output(val_width, "mux_out")
-        out <<= pyrtl.mux(control, *mux_ins)
+        out <<= pyrtl.corecircuits.mux(control, *mux_ins)
 
         true_result = [vals[i] for i in testctrl]
         mux_result = utils.sim_and_ret_out(out, (control,), (testctrl,))
@@ -189,7 +190,7 @@ class TestMuxSimulation(unittest.TestCase):
             vals.append(default_val)
 
         out = pyrtl.Output(val_width, "mux_out")
-        out <<= pyrtl.mux(control, *mux_ins, default=pyrtl.Const(default_val))
+        out <<= pyrtl.corecircuits.mux(control, *mux_ins, default=pyrtl.Const(default_val))
 
         true_result = [vals[i] for i in testctrl]
         mux_result = utils.sim_and_ret_out(out, (control,), (testctrl,))
@@ -201,7 +202,7 @@ class TestMuxSimulation(unittest.TestCase):
         control, testctrl = utils.generate_in_wire_and_values(1, 40, "sel_ctrl", utils.uniform_dist)
 
         out = pyrtl.Output(5, "mux_out")
-        out <<= pyrtl.select(control, falsecase=mux_ins[0], truecase=mux_ins[1])
+        out <<= pyrtl.corecircuits.select(control, falsecase=mux_ins[0], truecase=mux_ins[1])
 
         true_result = [vals[i] for i in testctrl]
         mux_result = utils.sim_and_ret_out(out, (control,), (testctrl,))
@@ -213,7 +214,7 @@ class TestMuxSimulation(unittest.TestCase):
         control, testctrl = utils.generate_in_wire_and_values(1, 40, "sel_ctrl", utils.uniform_dist)
 
         out = pyrtl.Output(5, "mux_out")
-        out <<= pyrtl.select(control, mux_ins[1], mux_ins[0])
+        out <<= pyrtl.corecircuits.select(control, mux_ins[1], mux_ins[0])
 
         true_result = [vals[i] for i in testctrl]
         mux_result = utils.sim_and_ret_out(out, (control,), (testctrl,))
@@ -256,7 +257,7 @@ class TestBasicMult(unittest.TestCase):
         # Creating the logic nets
         a, b = pyrtl.Input(len_a, "a"), pyrtl.Input(len_b, "b")
         product = pyrtl.Output(name="product")
-        product <<= helperfuncs._basic_mult(a, b)
+        product <<= pyrtl.corecircuits._basic_mult(a, b)
 
         self.assertEquals(len(product), len_a + len_b)
 
@@ -424,14 +425,14 @@ class TestLoopDetection(unittest.TestCase):
 
         x_1 = ins[4] < reg
         x_2 = ins[1] * x_1
-        x_3 = pyrtl.mux(x_1, ins[1], ins[2])
+        x_3 = pyrtl.corecircuits.mux(x_1, ins[1], ins[2])
         x_4 = mem1[ins[6]]
         x_5 = reg + ins[7]
         mem1[x_4] <<= x_4
         outs[0] <<= x_2 == x_1
         reg.next <<= x_5 & ins[1]
         outs[1] <<= reg
-        outs[2] <<= pyrtl.concat(x_1, x_5[:7])
+        outs[2] <<= pyrtl.corecircuits.concat(x_1, x_5[:7])
 
         self.assert_no_loop()
 
@@ -439,7 +440,7 @@ class TestLoopDetection(unittest.TestCase):
         in_1 = pyrtl.Input(10)
         in_2 = pyrtl.Input(9)
         fake_loop_wire = pyrtl.WireVector(1)
-        comp_wire = pyrtl.concat(in_2[0:4], fake_loop_wire, in_2[4:9])
+        comp_wire = pyrtl.corecircuits.concat(in_2[0:4], fake_loop_wire, in_2[4:9])
         r_wire = in_1 & comp_wire
         fake_loop_wire <<= r_wire[3]
         out = pyrtl.Output(10)
@@ -460,7 +461,7 @@ class TestLoopDetection(unittest.TestCase):
         in_2 = pyrtl.Input(9)
         fake_loop_wire = pyrtl.WireVector(1)
         # Note the slight difference from the last test case on the next line
-        comp_wire = pyrtl.concat(in_2[0:6], fake_loop_wire, in_2[6:9])
+        comp_wire = pyrtl.corecircuits.concat(in_2[0:6], fake_loop_wire, in_2[6:9])
         r_wire = in_1 & comp_wire
         fake_loop_wire <<= r_wire[3]
         out = pyrtl.Output(10)

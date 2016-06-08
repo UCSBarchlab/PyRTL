@@ -9,7 +9,7 @@ def net_transform(transform_func, block=None):
     :return:
     """
     block = working_block(block)
-    with set_working_block(block):
+    with set_working_block(block, True):
         for net in block.logic.copy():
             keep_orig_net = transform_func(net)
             if not keep_orig_net:
@@ -61,6 +61,62 @@ def replace_wire(orig_wire, new_src, new_dst, block=None):
                         args=tuple(new_src if w is orig_wire else w for w in net.args))
                     block.add_net(new_net)
                     block.logic.remove(net)
+
+    if new_dst is not orig_wire and new_src is not orig_wire:
+        block.remove_wirevector(orig_wire)
+
+
+def replace_wires(wire_map, block=None):
+    """
+    Quickly replace all wires in a block
+
+    :param {old_wire, new_wire} wire_map: mapping of old wires to
+      new wires
+    """
+    block = working_block(block)
+    src_nets, dst_nets = block.net_connections(include_virtual_nodes=False)
+    for old_w, new_w in wire_map.items():
+        replace_wire_fast(old_w, new_w, new_w, src_nets, dst_nets, block)
+
+
+def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=None):
+    def remove_net(net_):
+        for arg in set(net_.args):
+            dst_nets[arg].remove(net_)
+            if not len(dst_nets[arg]):
+                del dst_nets[arg]
+        if len(net_.dests) == 1:
+            del src_nets[net_.dests[0]]
+        block.logic.remove(net_)
+
+    def add_net(net_):
+        for arg in set(net_.args):
+            if arg not in dst_nets:
+                dst_nets[arg] = [net_]
+            else:
+                dst_nets[arg].append(net_)
+        if len(net_.dests) == 1:
+            src_nets[net_.dests[0]] = net_
+        block.add_net(new_net)
+
+    # src and dst in this function are all relative to wires
+    block = working_block(block)
+    if new_src is not orig_wire and orig_wire in src_nets:
+        # don't need to add the new_src and new_dst because they were made added at creation
+        net = src_nets[orig_wire]
+        new_net = LogicNet(
+            op=net.op, op_param=net.op_param, args=net.args,
+            dests=tuple(new_src if w is orig_wire else w for w in net.dests))
+        remove_net(net)
+        add_net(new_net)
+
+    if new_dst is not orig_wire and orig_wire in dst_nets:
+        for net in dst_nets[orig_wire]:
+            new_net = LogicNet(
+                op=net.op, op_param=net.op_param, dests=net.dests,
+                args=tuple(new_dst if w is orig_wire else w for w in net.args))
+            remove_net(net)
+            add_net(new_net)
 
     if new_dst is not orig_wire and new_src is not orig_wire:
         block.remove_wirevector(orig_wire)
