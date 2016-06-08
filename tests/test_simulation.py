@@ -50,6 +50,19 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.r.next <<= self.r - pyrtl.Const(1, bitwidth=self.bitwidth)
         self.check_trace('r 07654321\n')
 
+    def test_minus_sim_overflow(self):
+        pyrtl.reset_working_block()
+        i = pyrtl.Input(8, 'i')
+        o = pyrtl.Output(name='o')
+        o <<= i - 1
+
+        tracer = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=tracer)
+        sim.step({i: 1})
+        self.assertEqual(sim.inspect(o), 0)
+        sim.step({i: 0})
+        self.assertEqual(sim.inspect(o), 0x1ff)
+
     def test_multiply_simulation(self):
         self.r.next <<= self.r * pyrtl.Const(2, bitwidth=self.bitwidth) + \
             pyrtl.Const(1, bitwidth=self.bitwidth)

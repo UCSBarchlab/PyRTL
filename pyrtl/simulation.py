@@ -457,7 +457,7 @@ class FastSimulation(object):
         '^': lambda net: len(net.args[0]),
         'n': lambda net: -1,  # bitflips always need masking
         '+': lambda net: len(net.args[0]) + 1,
-        '-': lambda net: len(net.args[0]) + 1,
+        '-': lambda net: -1,  # need to handle negative numbers correctly
         '*': lambda net: len(net.args[0]) + len(net.args[1]),
         '<': lambda net: 1,
         '>': lambda net: 1,
