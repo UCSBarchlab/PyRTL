@@ -294,6 +294,17 @@ class FastSimulation(object):
     As of right now (5/26/2016), the interface is the same as Simulation.
     They should still be similar in the future
     """
+
+    # Dev Notes:
+    #  Wire name processing:
+    #  Sanitized names are only used when using and assigning variables inside of
+    #  the generated function. Normal names are used when interacting with
+    #  the dictionaries passed in and created by the exec'ed function.
+    #  Therefore, everything outside of this function uses normal
+    #  WireVector names.
+    #  Careful use of repr() is used to make sure that strings stay the same
+    #  when put into the generated code
+
     def __init__(
             self, register_value_map=None, memory_value_map=None,
             default_value=0, tracer=None, block=None, code_file=None):
@@ -328,9 +339,9 @@ class FastSimulation(object):
         reg_set = self.block.wirevector_subset(Register)
         for r in reg_set:
             if r in register_value_map:
-                self.regs[self._varname(r)] = register_value_map[r]
+                self.regs[r.name] = register_value_map[r]
             else:
-                self.regs[self._varname(r)] = default_value
+                self.regs[r.name] = default_value
 
         self._initialize_mems(memory_value_map)
 
@@ -427,10 +438,10 @@ class FastSimulation(object):
         return self.mems[self._mem_varname(mem)]
 
     def _to_name(self, name):
-        """ Converts Wires to strings, changes strings to internal string names """
+        """ Converts Wires to strings, keeps strings as is """
         if isinstance(name, WireVector):
-            name = name.name
-        return self.internal_names[name]
+            return name.name
+        return name
 
     def _varname(self, val):
         """ Converts WireVectors to internal names """
@@ -444,7 +455,7 @@ class FastSimulation(object):
         Input, Const, and Registers have special input values
         """
         if isinstance(wire, (Input, Register)):
-            return 'd["' + wire.name + '"]'  # passed in
+            return 'd[' + repr(wire.name) + ']'  # passed in
         elif isinstance(wire, Const):
             return str(wire.val)  # hardcoded
         else:
@@ -452,9 +463,9 @@ class FastSimulation(object):
 
     def _dest_varname(self, wire):
         if isinstance(wire, Output):
-            return 'outs["' + wire.name + '"]'
+            return 'outs[' + repr(wire.name) + ']'
         elif isinstance(wire, Register):
-            return 'regs["' + wire.name + '"]'
+            return 'regs[' + repr(wire.name) + ']'
         else:
             return self._varname(wire)
 

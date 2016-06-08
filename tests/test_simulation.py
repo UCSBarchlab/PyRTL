@@ -5,6 +5,15 @@ import pyrtl
 from pyrtl.corecircuits import _basic_add
 
 
+def fastsim_only(sim):
+    # Mostly useful for allowing people to search for
+    # where there is not feature parity
+
+    # other ways to figure out feature differences are by searching for Simulation
+    # through this file
+    return sim is pyrtl.FastSimulation
+
+
 class TraceWithBasicOpsBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -125,6 +134,39 @@ class SimWithSpecialWiresBase(unittest.TestCase):
 
     def test_reg_directly_before_reg(self):
         pass
+
+    def test_weird_wire_names(self):
+        """
+        Some simulations need to be careful when handling special names
+        (eg Fastsim June 2016)
+        """
+        i = pyrtl.Input(8, '"182&!!!\n')
+        o = pyrtl.Output(8, '*^*)#*$\'*')
+        o2 = pyrtl.Output(8, 'test@+')
+        w = pyrtl.WireVector(8, '[][[-=--09888')
+        r = pyrtl.Register(8, '&@#)^#@^&(asdfkhafkjh')
+
+        w <<= i
+        r.next <<= i
+        o <<= w
+        o2 <<= r
+
+        trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=trace)
+
+        sim.step({i: 28})
+        self.assertEqual(sim.inspect(o), 28)
+        if fastsim_only(self.sim):
+            self.assertEqual(sim.inspect(o.name), 28)
+        self.assertEqual(trace.trace[o.name], [28])
+
+        sim.step({i: 233})
+        self.assertEqual(sim.inspect(o), 233)
+        self.assertEqual(sim.inspect(o2), 28)
+        if fastsim_only(self.sim):
+            self.assertEqual(sim.inspect(o2.name), 28)
+        self.assertEqual(trace.trace[o2.name], [0, 28])
+
 
 
 class SimInputValidationBase(unittest.TestCase):
@@ -470,7 +512,8 @@ class InspectBase(unittest.TestCase):
 
         sim.step({a: 28})
         self.assertEqual(sim.inspect(a), 28)
-        # self.assertEqual(sim.inspect('a'), 28)
+        if fastsim_only(self.sim):
+            self.assertEqual(sim.inspect('a'), 28)
         self.assertEqual(sim.inspect(b), 28)
 
     def test_inspect_mem(self):
