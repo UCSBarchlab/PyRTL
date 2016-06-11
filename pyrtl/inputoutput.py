@@ -509,13 +509,16 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
 #    \/  |___ |  \ | |___ \__/ \__>
 #
 
-def output_to_verilog(dest_file, block=None):
-    """ Walk the block and output it in verilog format to the open file """
+def output_to_verilog(dest_file, block=None, open_collectors=[]):
+    """ Walk the block and output it in verilog format to the open file
+        The open_collector param is a list of output wirevectors
+        that shall be configured to be open collectors.
+    """
 
     block = working_block(block)
     _verilog_check_all_wirenames(block)
     _to_verilog_comment(dest_file)
-    _to_verilog_header(dest_file, block)
+    _to_verilog_header(dest_file, block, open_collectors)
     _to_verilog_combinational(dest_file, block)
     _to_verilog_sequential(dest_file, block)
     _to_verilog_footer(dest_file, block)
@@ -569,8 +572,15 @@ def _to_verilog_comment(file):
     print('//   yosys -p "synth_xilinx -top toplevel" thisfile.v\n', file=file)
 
 
-def _to_verilog_header(file, block):
-    io_list = [w.name for w in block.wirevector_subset((Input, Output))]
+def _to_verilog_header(file, block, open_collectors):
+    io_list = list()
+    for w in block.wirevector_subset((Input, Output)):
+        if any(map(lambda oc: w is oc, open_collectors)):
+            # inserts an output shim that denotes
+            # an output as an open-collector
+            io_list.append(w.name+"_oc")
+        else:
+            io_list.append(w.name)
     io_list.append('clk')
     io_list_str = ', '.join(io_list)
     print('module toplevel(%s);' % io_list_str, file=file)
@@ -592,7 +602,16 @@ def _to_verilog_header(file, block):
         print('    input%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
     print('    input clk;', file=file)
     for w in outputs:
-        print('    output%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
+        if any(map(lambda oc: w is oc, open_collectors)):
+            # inserts an open-collector shim that tells verilog to write
+            # high-impedance instead of HIGH signal output.
+            print('    wire%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
+            print('    output%s %s_oc;' % (_verilog_vector_decl(w), w.name), file=file)
+            print('    assign %s_oc = %s ? %d\'b%s : %d\'b%s;' % (w.name, w.name,
+                                                                  len(w), 'z'*len(w),
+                                                                  len(w), '0'*len(w)), file=file)
+        else:
+            print('    output%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
     print('', file=file)
 
     for w in registers:
