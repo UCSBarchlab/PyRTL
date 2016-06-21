@@ -1,4 +1,4 @@
-""" Conditional assignement of registers and wirevectors based on a predicate.
+""" Conditional assignment of registers and WireVectors based on a predicate.
 
 The management of selected assignments is expected to happen through
 the "with" blocks which will ensure that the region of execution for
@@ -22,7 +22,7 @@ to see with an example:
 >       with d:
 >           w3.next |= m  # d is true (assignments must be independent)
 
-This is equivelent to:
+This is equivalent to:
 r1.next <<= cond(a, i, cond(c, k, default))
 r2.next <<= cond(a, cond(b, j, default), cond(c, k, l))
 w3 <<= cond(d, m, 0)
@@ -48,11 +48,6 @@ from .wire import WireVector, Const, Register
 def currently_under_condition():
     """Returns True if execution is currently in the context of a _ConditionalAssignment."""
     return _depth > 0
-
-
-class ConditionalUpdate(object):
-    def __init__(self, *x):
-        raise PyrtlError('ConditionalUpdate removed, please use "conditional_assignment"')
 
 
 # -----------------------------------------------------------------------
