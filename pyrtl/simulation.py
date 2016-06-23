@@ -10,7 +10,7 @@ import collections
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock
 from .wire import Input, Register, Const, Output, WireVector
-from .memory import RomBlock, _MemReadBase
+from .memory import RomBlock
 from .helperfuncs import check_rtl_assertions, _currently_in_ipython, PythonSanitizer
 
 # ----------------------------------------------------------------
@@ -198,7 +198,8 @@ class Simulation(object):
 
         Will throw KeyError if w does not exist in the simulation.
         """
-        return self.value[w]
+        wire = self.block.wirevector_by_name.get(w, w)
+        return self.value[wire]
 
     def inspect_mem(self, mem):
         """ Get the values in a map during the current simulation cycle.
@@ -469,7 +470,7 @@ class FastSimulation(object):
         else:
             return self._varname(wire)
 
-    _expected_bitwidth = {  # bitwidth that the dest has in order to not need masking
+    _no_mask_bitwidth = {  # bitwidth that the dest has to have in order to not need masking
         'w': lambda net: len(net.args[0]),
         'r': lambda net: len(net.args[0]),
         '~': lambda net: -1,  # bitflips always need masking
@@ -588,7 +589,7 @@ class FastSimulation(object):
 
             # prog.append('    #  ' + str(net))
             result = self._dest_varname(net.dests[0])
-            if len(net.dests[0]) == self._expected_bitwidth[net.op](net):
+            if len(net.dests[0]) == self._no_mask_bitwidth[net.op](net):
                 prog.append("    %s = %s" % (result, expr))
             else:
                 mask = str(net.dests[0].bitmask)

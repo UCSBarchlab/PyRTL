@@ -6,6 +6,8 @@ from . import adders
 def simple_mult(A, B, start):
     """ Generate simple shift-and-add multiplier.
 
+    :param
+
     Builds a slow, small multiplier using the simple shift-and-add algorithm.
     Requires very small area (it uses only a single adder), but has long delay
     (worst case is len(a) cycles). a and b are arbitrary-length inputs; start
@@ -13,12 +15,16 @@ def simple_mult(A, B, start):
     output raised when the multiplication is finished, at which point the
     product will be on the result line (returned by the function).
     """
+    triv_result = _trivial_mult(A, B)
+    if triv_result is not None:
+        return triv_result, pyrtl.Const(1, 1)
+
     alen = len(A)
     blen = len(B)
     areg = pyrtl.Register(alen)
     breg = pyrtl.Register(blen + alen)
     accum = pyrtl.Register(blen + alen)
-    done = areg == 0  # Multiplication is finished when a becomes 0
+    done = (areg == 0)  # Multiplication is finished when a becomes 0
 
     # During multiplication, shift a right every cycle, b left every cycle
     with pyrtl.conditional_assignment:
@@ -28,13 +34,31 @@ def simple_mult(A, B, start):
             accum.next |= 0
         with ~done:  # don't run when there's no work to do
             areg.next |= areg[1:]  # right shift
-            breg.next |= pyrtl.concat(breg, "1'b0")  # left shift
+            breg.next |= pyrtl.concat(breg, pyrtl.Const(0, 1))  # left shift
+            a_0_val = areg[0].sign_extended(len(accum))
 
-            # "Multiply" shifted breg by LSB of areg by conditionally adding
-            with areg[0]:
-                accum.next |= accum + breg  # adds to accum only when LSB of areg is 1
+            # adds to accum only when LSB of areg is 1
+            accum.next |= accum + (a_0_val & breg)
 
     return accum, done
+
+
+def _trivial_mult(A, B):
+    """
+    turns a multiplication into an And gate if one of the
+    wires is a bitwidth of 1
+
+    :param A:
+    :param B:
+    :return:
+    """
+    if len(B) == 1:
+        A, B = B, A  # so that we can reuse the code below :)
+    if len(A) == 1:
+        a_vals = A.sign_extended(len(B))
+
+        # keep the wirevector len consistent
+        return pyrtl.concat_list([a_vals & B, pyrtl.Const(0)])
 
 
 def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
@@ -53,11 +77,9 @@ def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogg
     The two tree multipliers basically works by splitting the multiplication
     into a series of many additions, and it works by applying 'reductions'.
     """
-    if len(B) == 1:
-        A, B = B, A  # so that we can reuse the code below :)
-    if len(A) == 1:
-        # keep the wirevector len consistent
-        return pyrtl.concat_list(list(A & b for b in B) + [pyrtl.Const(0)])
+    triv_res = _trivial_mult(A, B)
+    if triv_res is not None:
+        return triv_res
 
     bits_length = (len(A) + len(B))
 
