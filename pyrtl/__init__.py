@@ -42,7 +42,6 @@ from .memory import RomBlock
 from .conditional import conditional_assignment
 from .conditional import otherwise
 from .conditional import currently_under_condition
-from .conditional import ConditionalUpdate  # eliminated, now just throws useful error
 
 # block simulation support
 from .simulation import Simulation
