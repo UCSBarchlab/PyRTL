@@ -79,7 +79,7 @@ class TestComplexMult(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.mult_t_base(2, 9, 4)
 
-    def test_complex_mult_3(self):
+    def test_complex_mult_4(self):
         with self.assertRaises(pyrtl.PyrtlError):
             self.mult_t_base(8, 4, 6)
 
