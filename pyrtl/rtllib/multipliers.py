@@ -61,6 +61,85 @@ def _trivial_mult(A, B):
         return pyrtl.concat_list([a_vals & B, pyrtl.Const(0)])
 
 
+def complex_mult(A, B, shifts, start):
+    """ Generate shift-and-add multiplier that can shift and add multiple bits per clock cycle
+
+    :param WireVector A, B: two input wires for the multiplication
+    :param int shifts: number of spaces Register is to be shifted per clk cycle
+    :param bool start: start signal
+    :return Register accum: Register containing the product
+    :return bool done: done ("finished") signal
+    """
+
+    alen = len(A)
+    blen = len(B)
+    areg = pyrtl.Register(alen)
+    breg = pyrtl.Register(alen + blen)
+    accum = pyrtl.Register(alen + blen)
+    done = (areg == 0)  # Multiplication is finished when a becomes 0
+    if (shifts > alen) or (shifts > blen):
+        raise pyrtl.PyrtlError("shift is larger than one or both of the parameters A or B,"
+                               "please choose smaller shift")
+
+    # During multiplication, shift a right every cycle 'shift' times,
+    # shift b left every cycle 'shift' times
+    with pyrtl.conditional_assignment:
+        with start:  # initialization
+            areg.next |= A
+            breg.next |= B
+            accum.next |= 0
+
+        with ~done:  # don't run when there's no work to do
+            # "Multiply" shifted breg by LSB of areg by cond. adding
+            areg.next |= _shifted_reg_next(areg, 'r', shifts)  # right shift
+            breg.next |= _shifted_reg_next(breg, 'l', shifts)  # left shift
+            accum.next |= accum + _one_cycle_mult(areg, breg, shifts)
+
+    return accum, done
+
+
+def _one_cycle_mult(areg, breg, rem_bits, sum_sf=0, curr_bit=0):
+    """ returns a WireVector sum of rem_bits multiplies (in one clock cycle)
+    note: this method requires a lot of area because of the indexing in the else statement """
+    if rem_bits == 0:
+        return sum_sf
+    else:
+        a_curr_val = areg[curr_bit].sign_extended(len(breg))
+        if curr_bit == 0:  # if no shift
+            return(_one_cycle_mult(areg, breg, rem_bits-1,  # areg, breg, rem_bits
+                                   sum_sf + (a_curr_val & breg),  # sum_sf
+                                   curr_bit+1))  # curr_bit
+        else:
+            return _one_cycle_mult(
+                areg, breg, rem_bits-1,  # areg, breg, rem_bits
+                sum_sf + (a_curr_val &
+                          pyrtl.concat(breg, pyrtl.Const(0, curr_bit))),  # sum_sf
+                curr_bit+1  # curr_bit
+            )
+
+
+def _shifted_reg_next(reg, direct, num=1):
+    """
+    use: myReg.next = shifted_reg_next(myReg, 'l', 4)
+    :param string direct: direction of shift, either 'l' or 'r'
+    :param int num: number of shifts
+    :return Register reg_next: a 'next' property for shifted (left or right) register
+    """
+    if direct == 'l':
+        if num >= len(reg):
+            return 0
+        else:
+            return pyrtl.concat(reg, pyrtl.Const(0, num))
+    elif direct == 'r':
+        if num >= len(reg):
+            return 0
+        else:
+            return reg[num:]
+    else:
+        raise pyrtl.PyrtlError("direction must be specified with 'direct'"
+                               "parameter as either 'l' or 'r'")
+
+
 def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
     """ Build an fast unclocked multiplier for inputs A and B using a Wallace or Dada Tree.
 
