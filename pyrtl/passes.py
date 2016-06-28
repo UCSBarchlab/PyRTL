@@ -7,7 +7,7 @@ transformation passes over blocks.
 from __future__ import print_function, unicode_literals
 
 from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
-from .helperfuncs import as_wires
+from .helperfuncs import as_wires, _NetCount
 from .corecircuits import (_basic_mult, _basic_add, _basic_sub, _basic_eq,
                            _basic_lt, _basic_gt, _basic_select, concat_list)
 from .memory import MemBlock
@@ -39,7 +39,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
         _remove_wire_nets(block)
         if debug_mode:
             block.sanity_check()
-        _constant_propagation(block)
+        constant_propagation(block)
         if debug_mode:
             block.sanity_check()
         _remove_unlistened_nets(block)
@@ -98,7 +98,7 @@ def _remove_wire_nets(block):
     block.sanity_check()
 
 
-def _constant_propagation(block, silence_unexpected_net_warnings=False):
+def constant_propagation(block, silence_unexpected_net_warnings=False):
     """ Removes excess constants in the block.
 
     Note on resulting block:
@@ -106,10 +106,8 @@ def _constant_propagation(block, silence_unexpected_net_warnings=False):
     listened to. This is to be expected. These are to be removed by the
     _remove_unlistened_nets function
     """
-
-    current_nets = 0
-    while len(block.logic) != current_nets:
-        current_nets = len(block.logic)
+    net_count = _NetCount(block)
+    while net_count.shrinking():
         _constant_prop_pass(block, silence_unexpected_net_warnings)
 
 
@@ -213,46 +211,69 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
     _remove_unused_wires(block)
 
 
-def _remove_duplicate_nets(block):
-    raise PyrtlInternalError("NOT WORKING!!!!!!")
-    block = working_block(block)
+def common_subexp_elimination(block=None, abs_thresh=1, percent_thresh=0):
+    """
+    Common Subexpression Elimination for PyRTL blocks
 
+    :param block: the block to run the subexpression elimination on
+    :param abs_thresh: absolute threshold for stopping optimization
+    :param percent_thresh: percent threshold for stopping optimization
+    """
+    block = working_block(block)
+    net_count = _NetCount(block)
+
+    while net_count.shrinking(block, percent_thresh, abs_thresh):
+        net_table = _find_common_subexps(block)
+        _replace_subexps(block, net_table)
+
+
+def _const_to_int(wire):
+    if isinstance(wire, Const):
+        return wire.val, wire.bitwidth
+    return wire
+
+
+def _find_common_subexps(block):
     net_table = {}  # {net (without dest) : [net, ...]
-    duplicate_nets = False
-    t = tuple()
+    t = tuple()  # just a placeholder
     for net in block.logic:
-        net_sub = LogicNet(net[0], net[1], net[2], t)  # don't care about dests
-        if len(net.dests) == 1 and net.dests[0].name == 'tmp22157':
-            t = t  # place for a breakpoint
+        new_args = tuple(_const_to_int(w) for w in net.args)
+        net_sub = LogicNet(net[0], net[1], new_args, t)  # don't care about dests
         if net_sub in net_table:
-            duplicate_nets = True
             net_table[net_sub].append(net)
         else:
             net_table[net_sub] = [net]
+    return net_table
 
-    if not duplicate_nets:
-        return
 
+def _replace_subexps(block, net_table):
     wire_map = {}
     unnecessary_nets = []
     for nets in net_table.values():
-        if len(nets) > 1:
-            net_to_keep = nets[0]
-            nets_to_discard = nets[1:]
-            dest_w = net_to_keep.dests[0]  # should be safe
-            for net in nets_to_discard:
-                old_dst = net.dests[0]
-                if isinstance(old_dst, (Register, Output)):
-                    continue
-                # assert(old_dst is not dest_w)
-                wire_map[old_dst] = dest_w
-                # block.remove_wirevector(old_dst)
-                unnecessary_nets.append(net)
+        _process_nets_to_discard(nets, wire_map, unnecessary_nets)
 
     block.logic.difference_update(unnecessary_nets)
     replace_wires(wire_map, block)
-
     block.sanity_check()
+
+
+def _has_normal_dest_wire(net):
+    return not isinstance(net.dests[0], (Register, Output))
+
+
+def _process_nets_to_discard(nets, wire_map, unnecessary_nets):
+    if len(nets) == 1:
+        return  # also deals with nets with no dest wires
+    nets_to_consider = list(filter(_has_normal_dest_wire, nets))
+
+    if len(nets) > 1:  # needed to handle cases with only special wires
+        net_to_keep = nets_to_consider[0]
+        nets_to_discard = nets_to_consider[1:]
+        dest_w = net_to_keep.dests[0]
+        for net in nets_to_discard:
+            old_dst = net.dests[0]
+            wire_map[old_dst] = dest_w
+            unnecessary_nets.append(net)
 
 
 def _remove_unlistened_nets(block):

@@ -385,8 +385,44 @@ class NameSanitizer(NameIndexer):
 
 
 class PythonSanitizer(NameSanitizer):
+    """ Name Sanitizer specifically built for Python identifers"""
     def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
         super(PythonSanitizer, self).__init__(py_regex, internal_prefix, map_valid_vals)
 
     def _extra_checks(self, str):
         return not keyword.iskeyword(str)
+
+
+class _NetCount(object):
+    """
+    Helper class to track when to stop an iteration that depends on number of nets
+
+    Mainly useful for iterations that are for optimization
+    """
+    def __init__(self, block=None):
+        self.block = working_block(block)
+        self.prev_nets = len(self.block.logic) * 1000
+
+    def shrank(self, block=None, percent_diff=0, abs_diff=1):
+        """
+        Returns whether a block has less nets than before
+
+        :param Block block: block to check (if changed)
+        :param Number percent_diff: percentage difference threshold
+        :param int abs_diff: absolute difference threshold
+        :return: boolean
+
+        This function checks whether the change in the number of
+        nets is greater than the percentage and absolute difference
+        thresholds.
+        """
+        if block is None:
+            block = self.block
+        cur_nets = len(block.logic)
+        net_goal = self.prev_nets * (1 - percent_diff) - abs_diff
+        less_nets = (cur_nets <= net_goal)
+        self.prev_nets = cur_nets
+        return less_nets
+
+    shrinking = shrank
+
