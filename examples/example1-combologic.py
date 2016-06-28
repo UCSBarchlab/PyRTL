@@ -91,6 +91,9 @@ for cycle in range(15):
 print('--- One Bit Adder Simulation ---')
 sim_trace.render_trace(symbol_len=5, segment_size=5)
 
+a_value = sim.inspect(a)
+print("The latest value of a was: " + str(a_value))
+
 # --- Verification of Simulated Design ---------------------------------------
 
 # Now finally, let's check the trace to make sure that sum and carry_out are actually
