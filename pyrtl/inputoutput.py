@@ -310,11 +310,9 @@ def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None):
 def _graphviz_default_namer(thing, is_edge=True, is_to_splitmerge=False):
     """ Returns a "good" graphviz label for thing. """
     if is_edge:
-        if (
-           thing.name is None
-           or thing.name.startswith('tmp')
-           or isinstance(thing, (Input, Output, Const, Register))
-           ):
+        if (thing.name is None or
+                thing.name.startswith('tmp') or
+                isinstance(thing, (Input, Output, Const, Register))):
             name = ''
         else:
             name = '/'.join([thing.name, str(len(thing))])

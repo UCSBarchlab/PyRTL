@@ -111,7 +111,8 @@ def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=Non
         add_net(new_net)
 
     if new_dst is not orig_wire and orig_wire in dst_nets:
-        for net in dst_nets[orig_wire]:
+        old_nets = tuple(dst_nets[orig_wire])  # need a copy bc the original will be modified
+        for net in old_nets:
             new_net = LogicNet(
                 op=net.op, op_param=net.op_param, dests=net.dests,
                 args=tuple(new_dst if w is orig_wire else w for w in net.args))
