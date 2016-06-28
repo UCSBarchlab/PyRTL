@@ -425,4 +425,3 @@ class _NetCount(object):
         return less_nets
 
     shrinking = shrank
-

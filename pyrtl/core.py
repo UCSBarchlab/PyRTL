@@ -22,6 +22,16 @@ from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
     """ The basic immutable datatype for storing a "net" in a netlist.
 
+    This is used for the Internal representation that Python stores
+    Knowledge of what this is, and how it is used is only required for
+    advanced users of PyRTL.
+
+    A 'net' is a structure in Python that is representative of hardware
+    logic operations. These include binary operations, such as 'and'
+    'or' and 'not', Arithmetic Operations such as '+' and '-', as well
+    as other operations such as Memory ops, and concat, split, wire,
+    and reg logic.
+
     The details of what is allowed in each of these fields is defined
     in the comments of Block, and is checked by block.sanity_check
     """
@@ -70,7 +80,8 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         """ Throw error when LogicNets are compared.
 
         Comparisons get you in a bad place between while you can compare op and op_param
-        safely, the args and dests are references to mutable objects.
+        safely, the args and dests are references to mutable objects with comparison
+        operators overloaded.
         """
         raise PyrtlError('Greater than and less than comparisons between'
                          ' LogicNets are not supported')

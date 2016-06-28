@@ -1,3 +1,7 @@
+"""
+Transform contains structures helpful for writing analysis and
+transformation passes over blocks.
+"""
 from .core import set_working_block, LogicNet, working_block
 from .wire import Const, Input, Output, WireVector, Register
 

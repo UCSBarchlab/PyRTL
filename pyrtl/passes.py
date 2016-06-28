@@ -1,7 +1,7 @@
-
 """
-Passes contains structures helpful for writing analysis and
-transformation passes over blocks.
+Passes contains prebuilt transformantion passes to do optimization
+lowering of the design to single wire gates, along with other
+ways to change a block.
 """
 
 from __future__ import print_function, unicode_literals
@@ -24,10 +24,15 @@ from .transform import net_transform, _get_new_block_mem_instance, copy_block, r
 
 
 def optimize(update_working_block=True, block=None, skip_sanity_check=False):
-    """ Return an optimized version of a synthesized hardware block.
+    """
+    Return an optimized version of a synthesized hardware block.
 
-        :param update_working_block: Don't copy the block and optimize the
-        new block
+    :param Boolean update_working_block: Don't copy the block and optimize the
+    new block
+    :param Block block: the block to optimize (defaults to working block)
+
+    Note:
+    optimize works on all hardware designs, both synthesized and non synthesized
     """
     block = working_block(block)
     if not update_working_block:
@@ -37,12 +42,9 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
         if (not skip_sanity_check) or debug_mode:
             block.sanity_check()
         _remove_wire_nets(block)
-        if debug_mode:
-            block.sanity_check()
-        constant_propagation(block)
-        if debug_mode:
-            block.sanity_check()
+        constant_propagation(block, True)
         _remove_unlistened_nets(block)
+        common_subexp_elimination(block)
         if (not skip_sanity_check) or debug_mode:
             block.sanity_check()
     return block
