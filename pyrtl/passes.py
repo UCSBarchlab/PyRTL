@@ -229,23 +229,40 @@ def common_subexp_elimination(block=None, abs_thresh=1, percent_thresh=0):
         _replace_subexps(block, net_table)
 
 
-def _const_to_int(wire):
-    if isinstance(wire, Const):
-        return wire.val, wire.bitwidth
-    return wire
+ops_where_arg_order_matters = 'm@xc<>-'
 
 
 def _find_common_subexps(block):
     net_table = {}  # {net (without dest) : [net, ...]
     t = tuple()  # just a placeholder
+    const_dict = {}
     for net in block.logic:
-        new_args = tuple(_const_to_int(w) for w in net.args)
+        if net.op in ops_where_arg_order_matters:
+            new_args = tuple(_const_to_int(w, const_dict) for w in net.args)
+        else:
+            new_args = tuple(sorted((_const_to_int(w, const_dict) for w in net.args), key=hash))
         net_sub = LogicNet(net[0], net[1], new_args, t)  # don't care about dests
         if net_sub in net_table:
             net_table[net_sub].append(net)
         else:
             net_table[net_sub] = [net]
     return net_table
+
+
+def _const_to_int(wire, const_dict):
+    if isinstance(wire, Const):
+        # a very bad hack to make sure two consts will compare
+        # correctly with an 'is'
+        bitwidth = wire.bitwidth
+        val = wire.val
+        if bitwidth not in const_dict:
+            const_dict[bitwidth] = {val: (bitwidth, val)}
+        else:
+            if val not in const_dict[bitwidth]:
+                const_dict[bitwidth][val] = (bitwidth, val)
+        return const_dict[bitwidth][val]
+
+    return wire
 
 
 def _replace_subexps(block, net_table):
@@ -268,7 +285,7 @@ def _process_nets_to_discard(nets, wire_map, unnecessary_nets):
         return  # also deals with nets with no dest wires
     nets_to_consider = list(filter(_has_normal_dest_wire, nets))
 
-    if len(nets) > 1:  # needed to handle cases with only special wires
+    if len(nets_to_consider) > 1:  # needed to handle cases with only special wires
         net_to_keep = nets_to_consider[0]
         nets_to_discard = nets_to_consider[1:]
         dest_w = net_to_keep.dests[0]

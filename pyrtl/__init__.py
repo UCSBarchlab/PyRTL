@@ -59,6 +59,8 @@ from .inputoutput import block_to_svg
 from .inputoutput import trace_to_html
 
 # different analysis and transform passes
+from .passes import common_subexp_elimination
+from .passes import constant_propagation
 from .passes import synthesize
 from .passes import nand_synth
 from .passes import and_inverter_synth
