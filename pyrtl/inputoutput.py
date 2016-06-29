@@ -534,7 +534,7 @@ class VerilogSanitizer(NameSanitizer):
 
     def _extra_checks(self, str):
         return(str not in _verilog_reserved_set and  # is not a Verilog reserved keyword
-               len(str) >= 1024)                     # not too long to be a Verilog id
+               len(str) <= 1024)                     # not too long to be a Verilog id
 
 
 class VerilogOutput(object):
