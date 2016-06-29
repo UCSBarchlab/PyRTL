@@ -508,33 +508,32 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
 #    \/  |___ |  \ | |___ \__/ \__>
 #
 
-ver_regex = '[_A-Za-z][_a-zA-Z0-9\$]*$'
-
-
-_verilog_reserved = \
-    """always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos
-    config deassign default defparam design disable edge else end endcase endconfig
-    endfunction endgenerate endmodule endprimitive endspecify endtable endtask
-    event for force forever fork function generate genvar highz0 highz1 if ifnone
-    incdir include initial inout input instance integer join large liblist library
-    localparam macromodule medium module nand negedge nmos nor noshowcancelledno
-    not notif0 notif1 or output parameter pmos posedge primitive pull0 pull1
-    pulldown pullup pulsestyle_oneventglitch pulsestyle_ondetectglitch remos real
-    realtime reg release repeat rnmos rpmos rtran rtranif0 rtranif1 scalared
-    showcancelled signed small specify specparam strong0 strong1 supply0 supply1
-    table task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg unsigned
-    use vectored wait wand weak0 weak1 while wire wor xnor xor
-    """
-_verilog_reserved_set = frozenset(_verilog_reserved.split())
-
 
 class VerilogSanitizer(NameSanitizer):
+    ver_regex = '[_A-Za-z][_a-zA-Z0-9\$]*$'
+
+    _verilog_reserved = \
+        """always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos
+        config deassign default defparam design disable edge else end endcase endconfig
+        endfunction endgenerate endmodule endprimitive endspecify endtable endtask
+        event for force forever fork function generate genvar highz0 highz1 if ifnone
+        incdir include initial inout input instance integer join large liblist library
+        localparam macromodule medium module nand negedge nmos nor noshowcancelledno
+        not notif0 notif1 or output parameter pmos posedge primitive pull0 pull1
+        pulldown pullup pulsestyle_oneventglitch pulsestyle_ondetectglitch remos real
+        realtime reg release repeat rnmos rpmos rtran rtranif0 rtranif1 scalared
+        showcancelled signed small specify specparam strong0 strong1 supply0 supply1
+        table task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg unsigned
+        use vectored wait wand weak0 weak1 while wire wor xnor xor
+        """
+
     def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
-        super(VerilogSanitizer, self).__init__(ver_regex, internal_prefix, map_valid_vals)
+        self._verilog_reserved_set = frozenset(self._verilog_reserved.split())
+        super(VerilogSanitizer, self).__init__(self.ver_regex, internal_prefix, map_valid_vals)
 
     def _extra_checks(self, str):
-        return(str not in _verilog_reserved_set and  # is not a Verilog reserved keyword
-               len(str) <= 1024)                     # not too long to be a Verilog id
+        return(str not in self._verilog_reserved_set and  # is not a Verilog reserved keyword
+               len(str) <= 1024)                          # not too long to be a Verilog id
 
 
 class VerilogOutput(object):
