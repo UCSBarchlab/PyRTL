@@ -1,11 +1,14 @@
 from __future__ import print_function, unicode_literals, absolute_import
-from .test_transform import NetWireNumTestCases
+
+import unittest
+import io
+import operator
+
+import pyrtl
 from pyrtl.wire import Const,  Output
 from pyrtl.analysis import estimate
 
-import unittest
-import pyrtl
-import io
+from .test_transform import NetWireNumTestCases
 
 
 class TestSynthesis(unittest.TestCase):
@@ -341,6 +344,147 @@ class TestConstFolding(NetWireNumTestCases):
         self.assert_num_net(4)
         self.assert_num_wires(7)
         self.num_wire_of_type(Const, 0)
+
+
+class TestSubexpElimination(NetWireNumTestCases):
+
+    def test_basic_1(self):
+        ins = [pyrtl.Input(5) for i in range(2)]
+        outs = [pyrtl.Output(5) for i in range(2)]
+        outs[0] <<= ins[1] & ins[0]
+        outs[1] <<= ins[1] & ins[0]
+
+        pyrtl.common_subexp_elimination()
+        self.num_net_of_type('&', 1)
+        self.num_net_of_type('w', 2)
+        self.assert_num_net(3)
+        self.assert_num_wires(5)
+        pyrtl.working_block().sanity_check()
+
+    def test_different_arg_order(self):
+        ins = [pyrtl.Input(5) for i in range(2)]
+        outs = [pyrtl.Output(5) for i in range(2)]
+        outs[0] <<= ins[1] & ins[0]
+        outs[1] <<= ins[0] & ins[1]
+
+        pyrtl.common_subexp_elimination()
+        self.num_net_of_type('&', 1)
+        self.num_net_of_type('w', 2)
+        self.assert_num_net(3)
+        self.assert_num_wires(5)
+        pyrtl.working_block().sanity_check()
+
+    def test_concat(self):
+        # concat's args are order dependent, therefore we need to check
+        # that we aren't mangling them
+        ins = [pyrtl.Input(5) for i in range(2)]
+        outs = [pyrtl.Output(10) for i in range(2)]
+        outs[0] <<= pyrtl.concat(ins[1], ins[0])
+        outs[1] <<= pyrtl.concat(ins[0], ins[1])
+
+        pyrtl.common_subexp_elimination()
+        self.num_net_of_type('c', 2)
+        self.num_net_of_type('w', 2)
+        self.assert_num_net(4)
+        self.assert_num_wires(6)
+        pyrtl.working_block().sanity_check()
+
+    def test_order_dependent_ops(self):
+        # subtract, lt, gt simarlarly are order dependent.
+        # therefore we need to check that we aren't mangling them
+        for op, opcode in ((operator.sub, '-'), (operator.gt, '>'), (operator.lt, '<')):
+            pyrtl.reset_working_block()
+            ins = [pyrtl.Input(5) for i in range(2)]
+            outs = [pyrtl.Output(10) for i in range(2)]
+            outs[0] <<= op(ins[1], ins[0])
+            outs[1] <<= op(ins[0], ins[1])
+
+            pyrtl.common_subexp_elimination()
+            self.num_net_of_type(opcode, 2)
+            self.num_net_of_type('w', 2)
+            pyrtl.working_block().sanity_check()
+
+    def test_const_values_1(self):
+        in_w = pyrtl.Input(5)
+        out = pyrtl.Output(5)
+        const = pyrtl.Const(23, 5)
+        wire_1 = in_w + const
+        wire_2 = in_w + const
+        out <<= wire_1 | wire_2
+
+        pyrtl.common_subexp_elimination()
+        self.num_net_of_type('+', 1)
+        self.num_net_of_type('w', 1)
+        self.assert_num_net(4)  # because we cut off a bit after the add
+        self.assert_num_wires(6)
+        pyrtl.working_block().sanity_check()
+
+    def test_const_values_2(self):
+        in_w = pyrtl.Input(5)
+        const = pyrtl.Const(23, 5)
+        const_2 = pyrtl.Const(23, 5)
+        wire_1 = in_w + const
+        wire_2 = in_w + const_2
+
+        pyrtl.common_subexp_elimination()
+        self.num_net_of_type('+', 1)
+        pyrtl.working_block().sanity_check()
+
+    def test_const_different_bitwidth_1(self):
+        in_w = pyrtl.Input(5)
+        const = pyrtl.Const(23, 5)
+        const_2 = pyrtl.Const(23, 6)
+        wire_1 = in_w + const
+        wire_2 = in_w + const_2
+
+        pyrtl.common_subexp_elimination()
+        self.num_net_of_type('+', 2)
+        pyrtl.working_block().sanity_check()
+
+    def test_no_elimination_of_different_const_bitwidths(self):
+        # trying to merge const wires with different bitwidths
+        # together will cause mismatches in bitwidths of certain wires
+        const_1 = pyrtl.Const(3, 3)
+        const_2 = pyrtl.Const(3, 5)
+        out_1 = pyrtl.Output(5)
+        out_2 = pyrtl.Output(5)
+        out_1 <<= const_1 | const_1
+        out_2 <<= const_2 | const_2
+        pyrtl.common_subexp_elimination()
+
+        self.num_net_of_type('|', 2)
+        self.num_net_of_type('w', 2)
+        self.assert_num_net(6)
+        self.assert_num_wires(9)
+        pyrtl.working_block().sanity_check()
+
+    def test_multiple_elimination(self):
+        ins = [pyrtl.Input(5) for i in range(3)]
+        out_1 = pyrtl.Output(5)
+        a = ins[0] ^ ins[1]
+        b = ins[0] ^ ins[1]
+        c = ins[0] ^ ins[1]
+
+        out_1 <<= a | b | c
+        pyrtl.common_subexp_elimination()
+        self.num_net_of_type('^', 1)
+        self.num_net_of_type('|', 2)
+        pyrtl.working_block().sanity_check()
+
+    def test_nested_elimination(self):
+        ins = [pyrtl.Input(5) for i in range(3)]
+        out_1 = pyrtl.Output(5)
+        a = ins[0] ^ ins[0]
+        b = ins[0] ^ ins[0]
+
+        a2 = a & ins[2]
+        b2 = b & ins[2]
+
+        out_1 <<= a2 | b2
+        pyrtl.common_subexp_elimination()
+        self.num_net_of_type('^', 1)
+        self.num_net_of_type('&', 1)
+        pyrtl.working_block().sanity_check()
 
 
 class TestSynthOptTiming(NetWireNumTestCases):
