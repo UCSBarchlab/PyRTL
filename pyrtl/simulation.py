@@ -758,7 +758,7 @@ class SimulationTrace(object):
         :param wires_to_track: The wires that the tracer should track
         :param block:
         """
-        block = working_block(block)
+        self.block = working_block(block)
 
         def is_internal_name(name):
             return (name.startswith('tmp') or name.startswith('const') or
@@ -766,10 +766,11 @@ class SimulationTrace(object):
                     name.endswith("'"))
 
         if wires_to_track is None:
-            wires_to_track = [w for w in block.wirevector_set if not is_internal_name(w.name)]
+            wires_to_track = [w for w in self.block.wirevector_set if not is_internal_name(w.name)]
         elif wires_to_track == 'all':
-            wires_to_track = block.wirevector_set
+            wires_to_track = self.block.wirevector_set
 
+        self.wires_to_track = wires_to_track
         self.trace = TraceStorage(wires_to_track)
         self._wires = {wv.name: wv for wv in wires_to_track}
 
@@ -812,7 +813,7 @@ class SimulationTrace(object):
         # file_timestamp = time.strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", time.gmtime())
         # print >>file, " ".join(["$date", file_timestamp, "$end"])
         self.internal_names = VerilogSanitizer('_vcd_tmp_')
-        for wire in self.block.wirevector_set:
+        for wire in self.wires_to_track:
             self.internal_names.make_valid_string(wire.name)
 
         def _varname(wireName):
