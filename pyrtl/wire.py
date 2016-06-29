@@ -13,17 +13,64 @@ from __future__ import print_function, unicode_literals
 
 import numbers
 import six
+import re
 
-from . import core  # needed for _setting_keep_wirevector_call_stack
+from . import core  # needed for _setting_keep_wirevector_call_stack,
+#                     _get_useful_callpoint_name()
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, next_constvar_name, next_tempvar_name, LogicNet
+from .core import working_block, LogicNet, NameIndexer
 
 # ----------------------------------------------------------------
 #        ___  __  ___  __   __
 #  \  / |__  /  `  |  /  \ |__)
 #   \/  |___ \__,  |  \__/ |  \
 #
+
+
+class WVIndexer(NameIndexer):
+    """ Provides WireVector internal names and Memory ID's based on prefix and index """
+    def __init__(self, internal_prefix='tmp'):
+        self.internal_prefix = internal_prefix
+        self.internal_index = 1
+        self.internal_memid = 0
+
+    def next_tempvar_name(self, name=None):
+        wire_name = None
+
+        if name is not None:
+            if name.lower() in ['clk', 'clock']:
+                raise PyrtlError('Clock signals should never be explicit')
+            wire_name = name
+        else:
+            callpoint = core._get_useful_callpoint_name()
+            if callpoint:
+                filename, lineno = callpoint
+                # strip out non alphanumeric characters
+                safename = re.sub('[\W]+', '', filename)
+                wire_name = '%s%d_%s_line%d' % (self.internal_prefix,
+                                                self.internal_index, safename, lineno)
+                self.internal_index += 1
+
+        if not wire_name:
+            wire_name = '%s%d' % (self.internal_prefix, self.internal_index)
+            self.internal_index += 1
+
+        return wire_name
+
+    def next_constvar_name(self, val):
+        wire_name = ''.join(['const', str(self.internal_index), '_', str(val)])
+        self.internal_index += 1
+        return wire_name
+
+    # includes memid assignment because MemoryBlock names
+    # use same indexing as WireVector names
+    def next_memid(self):
+        self.internal_memid += 1
+        return self.internal_memid
+
+
+wvIndexer = WVIndexer()
 
 
 class WireVector(object):
@@ -57,7 +104,7 @@ class WireVector(object):
         self._name = None
         self._block = working_block(block)
         # used only to verify the one to one relationship of wires and blocks
-        self.name = next_tempvar_name(name)
+        self.name = wvIndexer.next_tempvar_name(name)
         self._validate_bitwidth(bitwidth)
 
         if core._setting_keep_wirevector_call_stack:
@@ -477,7 +524,7 @@ class Const(WireVector):
                 'error constant "%s" cannot fit in the specified %d bits'
                 % (str(num), bitwidth))
 
-        name = next_constvar_name(num)
+        name = wvIndexer.next_constvar_name(num)
 
         super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)
         # add the member "val" to track the value of the constant

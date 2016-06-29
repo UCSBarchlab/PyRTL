@@ -11,10 +11,9 @@ import re
 import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block
+from .core import working_block, NameSanitizer
 from .wire import WireVector, Input, Output, Const, Register
 from .corecircuits import concat
-from .helperfuncs import NameSanitizer
 
 
 # -----------------------------------------------------------------
