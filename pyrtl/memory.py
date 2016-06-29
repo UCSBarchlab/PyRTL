@@ -14,8 +14,8 @@ from __future__ import print_function, unicode_literals
 import collections
 
 from .pyrtlexceptions import PyrtlError
-from .core import working_block, next_tempvar_name, next_memid, LogicNet
-from .wire import WireVector, Const
+from .core import working_block, LogicNet
+from .wire import WireVector, Const, wvIndexer
 from .helperfuncs import as_wires
 
 # ------------------------------------------------------------------------
@@ -77,7 +77,7 @@ class _MemReadBase(object):
 
     def __init__(self,  bitwidth, addrwidth, name, asynchronous, block):
         self.block = working_block(block)
-        name = next_tempvar_name(name)
+        name = wvIndexer.next_tempvar_name(name)
 
         if bitwidth <= 0:
             raise PyrtlError('bitwidth must be >= 1')
@@ -88,7 +88,7 @@ class _MemReadBase(object):
         self.name = name
         self.addrwidth = addrwidth
         self.readport_nets = []
-        self.id = next_memid()
+        self.id = wvIndexer.next_memid()
         self.asynchronous = asynchronous
 
     def __getitem__(self, item):

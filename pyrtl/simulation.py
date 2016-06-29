@@ -8,10 +8,10 @@ import numbers
 import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, PostSynthBlock
+from .core import working_block, PostSynthBlock, PythonSanitizer
 from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock
-from .helperfuncs import check_rtl_assertions, _currently_in_ipython, PythonSanitizer
+from .helperfuncs import check_rtl_assertions, _currently_in_ipython
 from .inputoutput import VerilogSanitizer
 
 # ----------------------------------------------------------------
