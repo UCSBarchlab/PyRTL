@@ -17,7 +17,7 @@ import sys
 from ..core import working_block
 from ..wire import Input, Const, Register
 from ..pyrtlexceptions import PyrtlError, PyrtlInternalError
-from ..inputoutput import output_to_verilog
+from ..inputoutput import OutputToVerilog
 
 
 # --------------------------------------------------------------------
@@ -358,7 +358,7 @@ def yosys_area_delay(library, abc_cmd=None, block=None):
     try:
         # write the verilog to a temp
         with os.fdopen(temp_d, 'w') as f:
-            output_to_verilog(f, block=block)
+            OutputToVerilog(f, block=block)
         # call yosys on the temp, and grab the output
         yosys_arg = yosys_arg_template % (temp_path, library, library, abc_cmd)
         yosys_output = subprocess.check_output(['yosys', yosys_arg])

@@ -14,6 +14,7 @@ from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block
 from .wire import WireVector, Input, Output, Const, Register
 from .corecircuits import concat
+from .helperfuncs import NameSanitizer
 
 
 # -----------------------------------------------------------------
@@ -311,9 +312,9 @@ def _graphviz_default_namer(thing, is_edge=True, is_to_splitmerge=False):
     """ Returns a "good" graphviz label for thing. """
     if is_edge:
         if (
-           thing.name is None
-           or thing.name.startswith('tmp')
-           or isinstance(thing, (Input, Output, Const, Register))
+           thing.name is None or
+                thing.name.startswith('tmp') or
+                isinstance(thing, (Input, Output, Const, Register))
            ):
             name = ''
         else:
@@ -509,24 +510,7 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
 #    \/  |___ |  \ | |___ \__/ \__>
 #
 
-def output_to_verilog(dest_file, block=None):
-    """ Walk the block and output it in verilog format to the open file """
-
-    block = working_block(block)
-    _verilog_check_all_wirenames(block)
-    _to_verilog_comment(dest_file)
-    _to_verilog_header(dest_file, block)
-    _to_verilog_combinational(dest_file, block)
-    _to_verilog_sequential(dest_file, block)
-    _to_verilog_footer(dest_file, block)
-
-
-def _verilog_vector_decl(w):
-    return '' if len(w) == 1 else '[%d:0]' % (len(w) - 1)
-
-
-def _verilog_vector_pow_decl(w):
-    return '' if len(w) == 1 else '[%d:0]' % (2 ** len(w) - 1)
+ver_regex = '[_A-Za-z][_a-zA-Z0-9\$]*$'
 
 
 _verilog_reserved = \
@@ -546,191 +530,226 @@ _verilog_reserved = \
 _verilog_reserved_set = frozenset(_verilog_reserved.split())
 
 
-def _verilog_check_all_wirenames(block):
-    for w in block.wirevector_set:
-        _verilog_check_name(w.name)
+class VerilogSanitizer(NameSanitizer):
+    def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
+        super(VerilogSanitizer, self).__init__(ver_regex, internal_prefix, map_valid_vals)
+
+    def _extra_checks(self, str):
+        return(str not in _verilog_reserved_set and  # is not a Verilog reserved keyword
+               len(str) >= 1024)                     # not too long to be a Verilog id
 
 
-def _verilog_check_name(name):
-    if not re.match('[_A-Za-z][_a-zA-Z0-9\$]*$', name):
-        raise PyrtlError('error, the wirevector name "%s"'
-                         ' is not a valid Verilog identifier' % name)
-    if name in _verilog_reserved_set:
-        raise PyrtlError('error, the wirevector name "%s"'
-                         ' is a Verilog reserved keyword' % name)
-    if len(name) >= 1024:
-        raise PyrtlError('error, the wirevector name "%s" is too'
-                         ' long to be a Verilog id' % name)
+class VerilogOutput(object):
+    def __init__(self, dest_file, block=None):
+        self.block = working_block(block)
+        self.file = dest_file
+        self.internal_names = VerilogSanitizer('_verout_tmp_')
+        for wire in self.block.wirevector_set:
+            self.internal_names.make_valid_string(wire.name)
+
+    def _varname(self, wire):
+        """ Converts WireVectors to internal names """
+        return self.internal_names[wire.name]
+
+    @staticmethod
+    def _verilog_vector_decl(w):
+        return '' if len(w) == 1 else '[%d:0]' % (len(w) - 1)
+
+    @staticmethod
+    def _verilog_vector_pow_decl(w):
+        return '' if len(w) == 1 else '[%d:0]' % (2 ** len(w) - 1)
 
 
-def _to_verilog_comment(file):
-    print('// Generated automatically via PyRTL', file=file)
-    print('// As one initial test of synthesis, map to FPGA with:', file=file)
-    print('//   yosys -p "synth_xilinx -top toplevel" thisfile.v\n', file=file)
+class OutputToVerilog(VerilogOutput):
+    def __init__(self, dest_file, block=None):
+        """ A class to walk the block and output it in verilog format to the open file """
 
+        super(OutputToVerilog, self).__init__(dest_file, block)
+        self._to_verilog_comment()
+        self._to_verilog_header()
+        self._to_verilog_combinational()
+        self._to_verilog_sequential()
+        self._to_verilog_footer()
 
-def _to_verilog_header(file, block):
-    io_list = [w.name for w in block.wirevector_subset((Input, Output))]
-    io_list.append('clk')
-    io_list_str = ', '.join(io_list)
-    print('module toplevel(%s);' % io_list_str, file=file)
+    def _to_verilog_comment(self):
+        print('// Generated automatically via PyRTL', file=self.file)
+        print('// As one initial test of synthesis, map to FPGA with:', file=self.file)
+        print('//   yosys -p "synth_xilinx -top toplevel" thisfile.v\n', file=self.file)
 
-    inputs = block.wirevector_subset(Input)
-    outputs = block.wirevector_subset(Output)
-    registers = block.wirevector_subset(Register)
-    wires = block.wirevector_subset() - (inputs | outputs | registers)
-    memory_nets = block.logic_subset(('m', '@'))
-    memories = set()
+    def _to_verilog_header(self):
+        io_list = [self._varname(w) for w in self.block.wirevector_subset((Input, Output))]
+        io_list.append('clk')
+        io_list_str = ', '.join(io_list)
+        print('module toplevel(%s);' % io_list_str, file=self.file)
 
-    # Create a set of nets representitive of all memories (eliminating
-    # duplicates caused by multiple ports).
-    for m in memory_nets:
-        if not any(m.op_param[0] == x.op_param[0] for x in memories):
-            memories.add(m)
+        inputs = self.block.wirevector_subset(Input)
+        outputs = self.block.wirevector_subset(Output)
+        registers = self.block.wirevector_subset(Register)
+        wires = self.block.wirevector_subset() - (inputs | outputs | registers)
+        memory_nets = self.block.logic_subset(('m', '@'))
+        memories = set()
 
-    for w in inputs:
-        print('    input%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
-    print('    input clk;', file=file)
-    for w in outputs:
-        print('    output%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
-    print('', file=file)
+        # Create a set of nets representitive of all memories (eliminating
+        # duplicates caused by multiple ports).
+        for m in memory_nets:
+            if not any(m.op_param[0] == x.op_param[0] for x in memories):
+                memories.add(m)
 
-    for w in registers:
-        print('    reg%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
-    for w in wires:
-        print('    wire%s %s;' % (_verilog_vector_decl(w), w.name), file=file)
-    print('', file=file)
-
-    for w in memories:
-        if w.op == 'm':
-            print('    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]),
-                                           w.op_param[0],
-                                           _verilog_vector_pow_decl(w.args[0])), file=file)
-        elif w.op == '@':
-            print('    reg%s mem_%s%s;' % (_verilog_vector_decl(w.args[1]),
-                                           w.op_param[0],
-                                           _verilog_vector_pow_decl(w.args[0])), file=file)
-
-    print('', file=file)
-
-    # Generate the initial block for those memories that need it (such as ROMs).
-    # FIXME: Right now, the memblock is the only place where those rom values are stored
-    # which is bad form (it means the functionality of tne hardware is not completely
-    # contained in "core".
-    mems_with_initials = [w for w in memories if hasattr(w.op_param[1], 'initialdata')]
-    for w in mems_with_initials:
-        print('    initial begin', file=file)
-        for i in range(2**len(w.args[0])):
-            print("        mem_%s[%d]=%d'h%x;" % (
-                w.op_param[0], i, len(w), w.op_param[1]._get_read_data(i)), file=file)
-        print('    end', file=file)
-        print('', file=file)
-
-
-def _to_verilog_combinational(file, block):
-    for const in block.wirevector_subset(Const):
-            print('    assign %s = %d;' % (const.name, const.val), file=file)
-
-    for net in block.logic:
-        if net.op in set('w~'):  # unary ops
-            opstr = '' if net.op == 'w' else net.op
-            t = (net.dests[0].name, opstr, net.args[0].name)
-            print('    assign %s = %s%s;' % t, file=file)
-        elif net.op in '&|^+-*<>':  # binary ops
-            t = (net.dests[0].name, net.args[0].name, net.op, net.args[1].name)
-            print('    assign %s = %s %s %s;' % t, file=file)
-        elif net.op == '=':
-            t = (net.dests[0].name, net.args[0].name, net.args[1].name)
-            print('    assign %s = %s == %s;' % t, file=file)
-        elif net.op == 'x':
-            # note that the argument order for 'x' is backwards from the ternary operator
-            t = (net.dests[0].name, net.args[0].name, net.args[2].name, net.args[1].name)
-            print('    assign %s = %s ? %s : %s;' % t, file=file)
-        elif net.op == 'c':
-            catlist = ', '.join([w.name for w in net.args])
-            t = (net.dests[0].name, catlist)
-            print('    assign %s = {%s};' % t, file=file)
-        elif net.op == 's':
-            catlist = ', '.join([net.args[0].name + '[%s]' % str(i) if len(net.args[0]) > 1
-                                else net.args[0].name for i in net.op_param])
-            t = (net.dests[0].name, catlist)
-            print('    assign %s = {%s};' % t, file=file)
-        elif net.op == 'r':
-            pass  # do nothing for registers
-        elif net.op == 'm':
-            t = (net.dests[0].name, net.op_param[0], net.args[0].name)
-            print('        assign %s = mem_%s[%s];' % t, file=file)
-        elif net.op == '@':
-            pass
-        else:
-            raise PyrtlInternalError
-    print('', file=file)
-
-
-def _to_verilog_sequential(file, block):
-    print('    always @( posedge clk )', file=file)
-    print('    begin', file=file)
-    for net in block.logic:
-        if net.op == 'r':
-            t = (net.dests[0].name, net.args[0].name)
-            print('        %s <= %s;' % t, file=file)
-        elif net.op == '@':
-            t = (net.args[2].name, net.op_param[0], net.args[0].name, net.args[1].name)
-            print(('        if (%s) begin\n'
-                   '                mem_%s[%s] <= %s;\n'
-                   '        end') % t, file=file)
-    print('    end', file=file)
-
-
-def _to_verilog_footer(file, block):
-    print('endmodule\n', file=file)
-
-
-def output_verilog_testbench(file, simulation_trace=None, block=None):
-    """Output a verilog testbanch for the block/inputs used in the simulation trace."""
-
-    block = working_block(block)
-    inputs = block.wirevector_subset(Input)
-    outputs = block.wirevector_subset(Output)
-
-    # Output header
-    print('module tb();', file=file)
-
-    # Declare all block inputs as reg
-    print('    reg clk;', file=file)
-    for w in inputs:
-        print('    reg {:s} {:s};'.format(_verilog_vector_decl(w), w.name), file=file)
-
-    # Declare all block outputs as wires
-    for w in outputs:
-        print('    wire {:s} {:s};'.format(_verilog_vector_decl(w), w.name), file=file)
-    print('', file=file)
-
-    # Instantiate logic block
-    io_list = [w.name for w in block.wirevector_subset((Input, Output))]
-    io_list.append('clk')
-    io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
-    print('    toplevel block({:s});\n'.format(', '.join(io_list_str)), file=file)
-
-    # Generate clock signal
-    print('    always', file=file)
-    print('        #0.5 clk = ~clk;\n', file=file)
-
-    # Move through all steps of trace, writing out input assignments per cycle
-    print('    initial begin', file=file)
-    print('        $dumpfile ("waveform.vcd");', file=file)
-    print('        $dumpvars;\n', file=file)
-    print('        clk = 0;', file=file)
-
-    for i in range(len(simulation_trace)):
         for w in inputs:
-            print('        {:s} = {:s}{:d};'.format(
-                w.name,
-                "{:d}'d".format(len(w)),
-                simulation_trace.trace[w][i]), file=file)
-        print('\n        #2', file=file)
+            print('    input%s %s;' % (self._verilog_vector_decl(w),
+                                       self._varname(w)), file=self.file)
+        print('    input clk;', file=self.file)
+        for w in outputs:
+            print('    output%s %s;' % (self._verilog_vector_decl(w),
+                                        self._varname(w)), file=self.file)
+        print('', file=self.file)
 
-    # Footer
-    print('        $finish;', file=file)
-    print('    end', file=file)
-    print('endmodule', file=file)
+        for w in registers:
+            print('    reg%s %s;' % (self._verilog_vector_decl(w),
+                                     self._varname(w)), file=self.file)
+        for w in wires:
+            print('    wire%s %s;' % (self._verilog_vector_decl(w),
+                                      self._varname(w)), file=self.file)
+        print('', file=self.file)
+
+        for w in memories:
+            if w.op == 'm':
+                print('    reg%s mem_%s%s;' % (self._verilog_vector_decl(w.dests[0]),
+                                               w.op_param[0],
+                                               self._verilog_vector_pow_decl(w.args[0])),
+                      file=self.file)
+            elif w.op == '@':
+                print('    reg%s mem_%s%s;' % (self._verilog_vector_decl(w.args[1]),
+                                               w.op_param[0],
+                                               self._verilog_vector_pow_decl(w.args[0])),
+                      file=self.file)
+
+        print('', file=self.file)
+
+        # Generate the initial block for those memories that need it (such as ROMs).
+        # FIXME: Right now, the memblock is the only place where those rom values are stored
+        # which is bad form (it means the functionality of tne hardware is not completely
+        # contained in "core".
+        mems_with_initials = [w for w in memories if hasattr(w.op_param[1], 'initialdata')]
+        for w in mems_with_initials:
+            print('    initial begin', file=self.file)
+            for i in range(2**len(w.args[0])):
+                print("        mem_%s[%d]=%d'h%x;" % (
+                    w.op_param[0], i, len(w), w.op_param[1]._get_read_data(i)), file=self.file)
+            print('    end', file=self.file)
+            print('', file=self.file)
+
+    def _to_verilog_combinational(self):
+        for const in self.block.wirevector_subset(Const):
+                print('    assign %s = %d;' % (self._varname(const), const.val), file=self.file)
+
+        for net in self.block.logic:
+            if net.op in set('w~'):  # unary ops
+                opstr = '' if net.op == 'w' else net.op
+                t = (self._varname(net.dests[0]), opstr, self._varname(net.args[0]))
+                print('    assign %s = %s%s;' % t, file=self.file)
+            elif net.op in '&|^+-*<>':  # binary ops
+                t = (self._varname(net.dests[0]), self._varname(net.args[0]),
+                     net.op, self._varname(net.args[1]))
+                print('    assign %s = %s %s %s;' % t, file=self.file)
+            elif net.op == '=':
+                t = (self._varname(net.dests[0]), self._varname(net.args[0]),
+                     self._varname(net.args[1]))
+                print('    assign %s = %s == %s;' % t, file=self.file)
+            elif net.op == 'x':
+                # note that the argument order for 'x' is backwards from the ternary operator
+                t = (self._varname(net.dests[0]), self._varname(net.args[0]),
+                     self._varname(net.args[2]), self._varname(net.args[1]))
+                print('    assign %s = %s ? %s : %s;' % t, file=self.file)
+            elif net.op == 'c':
+                catlist = ', '.join([self._varname(w) for w in net.args])
+                t = (self._varname(net.dests[0]), catlist)
+                print('    assign %s = {%s};' % t, file=self.file)
+            elif net.op == 's':
+                catlist = ', '.join([self._varname(net.args[0]) +
+                                     '[%s]' % str(i) if len(net.args[0]) > 1
+                                    else self._varname(net.args[0]) for i in net.op_param])
+                t = (self._varname(net.dests[0]), catlist)
+                print('    assign %s = {%s};' % t, file=self.file)
+            elif net.op == 'r':
+                pass  # do nothing for registers
+            elif net.op == 'm':
+                t = (self._varname(net.dests[0]), net.op_param[0], self._varname(net.args[0]))
+                print('        assign %s = mem_%s[%s];' % t, file=self.file)
+            elif net.op == '@':
+                pass
+            else:
+                raise PyrtlInternalError
+        print('', file=self.file)
+
+    def _to_verilog_sequential(self):
+        print('    always @( posedge clk )', file=self.file)
+        print('    begin', file=self.file)
+        for net in self.block.logic:
+            if net.op == 'r':
+                t = (self._varname(net.dests[0]), self._varname(net.args[0]))
+                print('        %s <= %s;' % t, file=self.file)
+            elif net.op == '@':
+                t = (self._varname(net.args[2]), net.op_param[0],
+                     self._varname(net.args[0]), self._varname(net.args[1]))
+                print(('        if (%s) begin\n'
+                       '                mem_%s[%s] <= %s;\n'
+                       '        end') % t, file=self.file)
+        print('    end', file=self.file)
+
+    def _to_verilog_footer(self):
+        print('endmodule\n', file=self.file)
+
+
+class OutputVerilogTestbench(VerilogOutput):
+    def __init__(self, dest_file, simulation_trace=None, block=None):
+        """A class to output a verilog testbanch for the block/inputs
+        used in the simulation trace."""
+
+        super(OutputVerilogTestbench, self).__init__(dest_file, block)
+        inputs = self.block.wirevector_subset(Input)
+        outputs = self.block.wirevector_subset(Output)
+
+        # Output header
+        print('module tb();', file=self.file)
+
+        # Declare all block inputs as reg
+        print('    reg clk;', file=self.file)
+        for w in inputs:
+            print('    reg {:s} {:s};'.format(self._verilog_vector_decl(w),
+                                              self._varname(w)), file=self.file)
+
+        # Declare all block outputs as wires
+        for w in outputs:
+            print('    wire {:s} {:s};'.format(self._verilog_vector_decl(w),
+                                               self._varname(w)), file=self.file)
+        print('', file=self.file)
+
+        # Instantiate logic block
+        io_list = [self._varname(wire=w) for w in self.block.wirevector_subset((Input, Output))]
+        io_list.append('clk')
+        io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
+        print('    toplevel block({:s});\n'.format(', '.join(io_list_str)), file=self.file)
+
+        # Generate clock signal
+        print('    always', file=self.file)
+        print('        #0.5 clk = ~clk;\n', file=self.file)
+
+        # Move through all steps of trace, writing out input assignments per cycle
+        print('    initial begin', file=self.file)
+        print('        $dumpfile ("waveform.vcd");', file=self.file)
+        print('        $dumpvars;\n', file=self.file)
+        print('        clk = 0;', file=self.file)
+
+        for i in range(len(simulation_trace)):
+            for w in inputs:
+                print('        {:s} = {:s}{:d};'.format(
+                    self._varname(w),
+                    "{:d}'d".format(len(w)),
+                    simulation_trace.trace[w][i]), file=self.file)
+            print('\n        #2', file=self.file)
+
+        # Footer
+        print('        $finish;', file=self.file)
+        print('    end', file=self.file)
+        print('endmodule', file=self.file)

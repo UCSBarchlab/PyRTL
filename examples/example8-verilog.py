@@ -111,7 +111,7 @@ print()
 
 print("--- Verilog for the Counter ---")
 with io.StringIO() as vfile:
-    pyrtl.output_to_verilog(vfile)
+    pyrtl.OutputToVerilog(vfile)
     print(vfile.getvalue())
 
 print("--- Simulation Results ---")
@@ -123,12 +123,12 @@ sim_trace.render_trace()
 
 # We already did the "hard" work of generating a test input for this simulation so
 # we might want to reuse that work when we take this design through a verilog toolchain.
-# The function output_verilog_testbench grabs the inputs used in the simulation trace
-# and sets them up in a standar verilog testbench.
+# The class OutputVerilogTestbench grabs the inputs used in the simulation trace
+# and sets them up in a standard verilog testbench.
 
 print("--- Verilog for the TestBench ---")
 with io.StringIO() as tbfile:
-    pyrtl.output_verilog_testbench(tbfile, sim_trace)
+    pyrtl.OutputVerilogTestbench(dest_file=tbfile, simulation_trace=sim_trace)
     print(tbfile.getvalue())
 
 
@@ -145,5 +145,5 @@ pyrtl.synthesize()
 pyrtl.optimize()
 
 with io.StringIO() as vfile:
-    pyrtl.output_to_verilog(vfile)
+    pyrtl.OutputToVerilog(vfile)
     print(vfile.getvalue())
