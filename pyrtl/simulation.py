@@ -46,12 +46,17 @@ class Simulation(object):
         """ Creates a new circuit simulator
 
         :param tracer: an instance of SimulationTrace used to store execution results.
+            defaults to a SimulationTrace with no params passed to it
         :param register_value_map: is a map of {Register: value}.
         :param memory_value_map: is a map of maps {Memory: {address: Value}}.
         :param default_value: is the value that all unspecified registers and memories will
          default to. If no default_value is specified, it will use the value stored in the
          object (default to 0)
         :param block: the hardware block to be traced (which might be of type PostSynthesisBlock).
+
+        Warning: Simulation initializes some things when called with __init__,
+        so changing items in the block for Simulation will liely break
+        the simulation.
         """
 
         """ Creates object and initializes it with self._initialize.
@@ -65,6 +70,8 @@ class Simulation(object):
         self.memvalue = {}  # map from {memid :{address: value}}
         self.block = block
         self.default_value = default_value
+        if tracer is None:
+            tracer = SimulationTrace()
         self.tracer = tracer
         self._initialize(register_value_map, memory_value_map)
 
@@ -137,6 +144,13 @@ class Simulation(object):
         """ Take the simulation forward one cycle
 
         :param provided_inputs: a dictionary mapping wirevectors to their values for this step
+
+        All input wires must be in the provided_inputs in order for the simulation
+        to accept these values
+
+        Example: if we have inputs named 'a' and 'x', we can call:
+        sim.step({'a': 1, 'x': 23}) to simulate a cycle with values 1 and 23
+        respectively
         """
 
         # To avoid weird loops, we need a copy of the old values which
@@ -311,8 +325,16 @@ class FastSimulation(object):
             self, register_value_map=None, memory_value_map=None,
             default_value=0, tracer=None, block=None, code_file=None):
         """
+        Instantiates a Fast Simulation instance.
+
         :param code_file: The file in which to store a copy of the generated
         python code
+
+        Look at Simulation.__init__ for descriptions for the other parameters
+
+        This builds the Fast Simulation compiled Python code, so all changes
+        to the circuit after calling this function will not be reflected in
+        the simulation
         """
 
         block = working_block(block)
@@ -320,6 +342,8 @@ class FastSimulation(object):
 
         self.block = block
         self.default_value = default_value
+        if tracer is None:
+            tracer = SimulationTrace()
         self.tracer = tracer
         self.sim_func = None
         self.code_file = code_file
@@ -727,22 +751,27 @@ class TraceStorage(collections.Mapping):
 class SimulationTrace(object):
     """ Storage and presentation of simulation waveforms. """
 
-    def __init__(self, wirevector_subset=None, block=None):
-        self.block = working_block(block)
+    def __init__(self, wires_to_track=None, block=None):
+        """
+        Creates a new Simulation Trace
+
+        :param wires_to_track: The wires that the tracer should track
+        :param block:
+        """
+        block = working_block(block)
 
         def is_internal_name(name):
             return (name.startswith('tmp') or name.startswith('const') or
                     # or name.startswith('synth_')
                     name.endswith("'"))
 
-        if wirevector_subset is None:
-            wirevector_subset = [w for w in self.block.wirevector_set
-                                 if not is_internal_name(w.name)]
-        elif wirevector_subset == 'all':
-            wirevector_subset = self.block.wirevector_set
+        if wires_to_track is None:
+            wires_to_track = [w for w in block.wirevector_set if not is_internal_name(w.name)]
+        elif wires_to_track == 'all':
+            wires_to_track = block.wirevector_set
 
-        self.trace = TraceStorage(wirevector_subset)
-        self._wires = {wv.name: wv for wv in wirevector_subset}
+        self.trace = TraceStorage(wires_to_track)
+        self._wires = {wv.name: wv for wv in wires_to_track}
 
     def __len__(self):
         """ Return the current length of the trace in cycles. """
@@ -821,10 +850,6 @@ class SimulationTrace(object):
 
         """ Render the trace to a file using unicode and ASCII escape sequences.
 
-        The resulting output can be viewed directly on the terminal or looked
-        at with "more" or "less -R" which both should handle the ASCII escape
-        sequences used in rendering. render_trace takes the following optional
-        arguments.
         :param trace_list: A list of signals to be output in the specified order.
         :param file: The place to write output, default to stdout.
         :param render_cls: A class that translates traces into output bytes.
@@ -832,6 +857,11 @@ class SimulationTrace(object):
         :param segment_size: Traces are broken in the segments of this number of cycles.
         :param segment_delim: The character to be output between segments.
         :param extra_line: A Boolean to determin if we should print a blank line between signals.
+
+        The resulting output can be viewed directly on the terminal or looked
+        at with "more" or "less -R" which both should handle the ASCII escape
+        sequences used in rendering. render_trace takes the following optional
+        arguments.
         """
         if _currently_in_ipython():
             from IPython.display import display, HTML, Javascript  # pylint: disable=import-error

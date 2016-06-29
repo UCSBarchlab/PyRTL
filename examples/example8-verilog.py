@@ -70,7 +70,7 @@ x, y, cin = [pyrtl.working_block().get_wirevector_by_name(s) for s in ['x', 'y',
 io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
 
 # we are only going to trace the input and output vectors for clarity
-sim_trace = pyrtl.SimulationTrace(wirevector_subset=io_vectors)
+sim_trace = pyrtl.SimulationTrace(wires_to_track=io_vectors)
 # now simulate the logic with some random inputs
 sim = pyrtl.Simulation(tracer=sim_trace)
 for i in range(15):
