@@ -12,6 +12,7 @@ from .core import working_block, PostSynthBlock
 from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock
 from .helperfuncs import check_rtl_assertions, _currently_in_ipython, PythonSanitizer
+from .inputoutput import VerilogSanitizer
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -727,7 +728,7 @@ class SimulationTrace(object):
     """ Storage and presentation of simulation waveforms. """
 
     def __init__(self, wirevector_subset=None, block=None):
-        block = working_block(block)
+        self.block = working_block(block)
 
         def is_internal_name(name):
             return (name.startswith('tmp') or name.startswith('const') or
@@ -735,9 +736,10 @@ class SimulationTrace(object):
                     name.endswith("'"))
 
         if wirevector_subset is None:
-            wirevector_subset = [w for w in block.wirevector_set if not is_internal_name(w.name)]
+            wirevector_subset = [w for w in self.block.wirevector_set
+                                 if not is_internal_name(w.name)]
         elif wirevector_subset == 'all':
-            wirevector_subset = block.wirevector_set
+            wirevector_subset = self.block.wirevector_set
 
         self.trace = TraceStorage(wirevector_subset)
         self._wires = {wv.name: wv for wv in wirevector_subset}
@@ -780,16 +782,25 @@ class SimulationTrace(object):
         # dump header info
         # file_timestamp = time.strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", time.gmtime())
         # print >>file, " ".join(["$date", file_timestamp, "$end"])
+        self.internal_names = VerilogSanitizer('_vcd_tmp_')
+        for wire in self.block.wirevector_set:
+            self.internal_names.make_valid_string(wire.name)
+
+        def _varname(wireName):
+            """ Converts WireVector names to internal names """
+            return self.internal_names[wireName]
+
         print(' '.join(['$timescale', '1ns', '$end']), file=file)
         print(' '.join(['$scope', 'module logic', '$end']), file=file)
 
         def print_trace_strs(time):
-            for w in sorted(self.trace, key=_trace_sort_key):
-                print(' '.join([str(bin(self.trace[w][time]))[1:], w]), file=file)
+            for wn in sorted(self.trace, key=_trace_sort_key):
+                print(' '.join([str(bin(self.trace[wn][time]))[1:], _varname(wn)]), file=file)
 
         # dump variables
-        for w in sorted(self.trace, key=_trace_sort_key):
-            print(' '.join(['$var', 'wire', str(self._wires[w].bitwidth), w, w, '$end']), file=file)
+        for wn in sorted(self.trace, key=_trace_sort_key):
+            print(' '.join(['$var', 'wire', str(self._wires[wn].bitwidth),
+                            _varname(wn), _varname(wn), '$end']), file=file)
         print(' '.join(['$upscope', '$end']), file=file)
         print(' '.join(['$enddefinitions', '$end']), file=file)
         print(' '.join(['$dumpvars']), file=file)
