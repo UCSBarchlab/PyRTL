@@ -1,5 +1,13 @@
 """
-Defines MemBlock, a block of memory that can be read (potentially async) and written (sync)
+Defines PyRTL memories.
+These blocks of memories can be read (potentially async) and written (sync)
+
+MemBlocks supports any number of the following operations:
+read: d = mem[address]
+write: mem[address] = d
+write with an enable: mem[address] = MemBlock.EnabledWrite(d,enable=we)
+Based on the number of reads and writes a memory will be inferred
+with the correct number of ports to support that
 """
 
 from __future__ import print_function, unicode_literals
@@ -18,15 +26,8 @@ from .helperfuncs import as_wires
 #
 
 
-# MemBlock supports any number of the following operations:
-# read: d = mem[address]
-# write: mem[address] = d
-# write with an enable: mem[address] = MemBlock.EnabledWrite(d,enable=we)
-# Based on the number of reads and writes a memory will be inferred
-# with the correct number of ports to support that
-
-# _MemAssignment is the type returned from assignment by |= or <<=
 _MemAssignment = collections.namedtuple('_MemAssignment', 'rhs, is_conditional')
+"""_MemAssignment is the type returned from assignment by |= or <<="""
 
 
 class _MemIndexed(WireVector):
@@ -75,7 +76,6 @@ class _MemReadBase(object):
     # FIXME: right now read port is built unconditionally (no read enable)
 
     def __init__(self,  bitwidth, addrwidth, name, asynchronous, block):
-
         self.block = working_block(block)
         name = next_tempvar_name(name)
 
@@ -92,7 +92,7 @@ class _MemReadBase(object):
         self.asynchronous = asynchronous
 
     def __getitem__(self, item):
-        """ Builds circitry to retrieve an item from the memory
+        """ Builds circuitry to retrieve an item from the memory
         """
         from .helperfuncs import as_wires
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
@@ -141,7 +141,8 @@ class MemBlock(_MemReadBase):
     # data <<= memory[addr]  (infer read port)
     # memory[addr] <<= data  (infer write port)
     def __init__(self, bitwidth, addrwidth, name=None, asynchronous=False, block=None):
-        """ Create MemBlock.
+        """
+        Create a PyRTL read-write memory.
 
         :param int bitwidth: Defines the bitwidth of each element in the memory
         :param int addrwidth: The number of bits used to address an element of the
@@ -216,11 +217,11 @@ class RomBlock(_MemReadBase):
     """ PyRTL Read Only Memory.
 
     RomBlocks are the read only memory format in PyRTL
-    By default, they synthesize down to transistor-based
-    logic during synthesis
     """
     def __init__(self, bitwidth, addrwidth, romdata, name=None, asynchronous=False, block=None):
-        """ Create a RomBlock
+        """
+        Create a Python Read Only Memory
+
         :param int bitwidth: The bitwidth of each item stored in the ROM
         :param int addrwidth: The bitwidth of the address bus (determines number of addresses)
         :param function or iterable romdata: This can either be a function or an array that maps
