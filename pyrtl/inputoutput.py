@@ -11,7 +11,7 @@ import re
 import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, NameSanitizer
+from .core import working_block, _NameSanitizer
 from .wire import WireVector, Input, Output, Const, Register
 from .corecircuits import concat
 
@@ -508,7 +508,7 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
 #
 
 
-class VerilogSanitizer(NameSanitizer):
+class VerilogSanitizer(_NameSanitizer):
     ver_regex = '[_A-Za-z][_a-zA-Z0-9\$]*$'
 
     _verilog_reserved = \

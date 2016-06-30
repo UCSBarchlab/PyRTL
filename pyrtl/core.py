@@ -672,7 +672,7 @@ def set_debug_mode(debug=True):
 py_regex = '^[^\d\W]\w*\Z'
 
 
-class NameIndexer(object):
+class _NameIndexer(object):
     """ Provides internal names that are based on a prefix and an index"""
     def __init__(self, internal_prefix='_sani_temp'):
         self.internal_prefix = internal_prefix
@@ -689,14 +689,14 @@ class NameIndexer(object):
         pass
 
 
-class NameSanitizer(NameIndexer):
+class _NameSanitizer(_NameIndexer):
     """
     Sanitizes the names so that names can be used in places that don't allow
     for arbitrary names while not mangling valid names
 
     Put the values you want to validate into make_valid_string the first time
     you want to sanitize a particular string (or before the first time), and
-    retrieve from the NameSanitizer through indexing directly thereafter
+    retrieve from the _NameSanitizer through indexing directly thereafter
     eg: sani["__&sfhs"] for retrieval after the first time
 
     """
@@ -704,7 +704,7 @@ class NameSanitizer(NameIndexer):
         self.identifier = re.compile(identifier_regex_str)
         self.val_map = {}
         self.map_valid = map_valid_vals
-        super(NameSanitizer, self).__init__(internal_prefix)
+        super(_NameSanitizer, self).__init__(internal_prefix)
 
     def __getitem__(self, item):
         """ Get a value from the sanitizer"""
@@ -723,7 +723,7 @@ class NameSanitizer(NameIndexer):
         if not self.is_valid_str(string):
             if string in self.val_map:
                 raise IndexError("Value {} has already been given to the sanitizer".format(string))
-            internal_name = super(NameSanitizer, self).make_valid_string()
+            internal_name = super(_NameSanitizer, self).make_valid_string()
             self.val_map[string] = internal_name
             return internal_name
         else:
@@ -732,7 +732,7 @@ class NameSanitizer(NameIndexer):
             return string
 
 
-class PythonSanitizer(NameSanitizer):
+class PythonSanitizer(_NameSanitizer):
     """ Name Sanitizer specifically built for Python identifers"""
     def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
         super(PythonSanitizer, self).__init__(py_regex, internal_prefix, map_valid_vals)

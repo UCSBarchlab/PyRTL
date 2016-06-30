@@ -19,7 +19,7 @@ from . import core  # needed for _setting_keep_wirevector_call_stack,
 #                     _get_useful_callpoint_name()
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, LogicNet, NameIndexer
+from .core import working_block, LogicNet, _NameIndexer
 
 # ----------------------------------------------------------------
 #        ___  __  ___  __   __
@@ -28,11 +28,11 @@ from .core import working_block, LogicNet, NameIndexer
 #
 
 
-class WVIndexer(NameIndexer):
+class _WVIndexer(_NameIndexer):
     """ Provides WireVector internal names and Memory ID's based on prefix and index """
     def __init__(self, internal_prefix='tmp'):
-        self.internal_prefix = internal_prefix
-        self.internal_index = 1
+        super(_WVIndexer, self).__init__(internal_prefix)
+        self.internal_index += 1
         self.internal_memid = 0
 
     def next_tempvar_name(self, name=None):
@@ -70,7 +70,7 @@ class WVIndexer(NameIndexer):
         return self.internal_memid
 
 
-wvIndexer = WVIndexer()
+wvIndexer = _WVIndexer()
 
 
 class WireVector(object):
