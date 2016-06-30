@@ -684,6 +684,10 @@ class NameIndexer(object):
         self.internal_index += 1
         return internal_name
 
+    def next_indexed(self):
+        """ Pure virtual, will return wire, name, etc. """
+        pass
+
 
 class NameSanitizer(NameIndexer):
     """
