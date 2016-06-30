@@ -1,4 +1,4 @@
-Input and Output
+Adders
 ================
 
 .. automodule:: pyrtl.rtllib.adders

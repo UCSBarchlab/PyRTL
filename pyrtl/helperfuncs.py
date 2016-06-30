@@ -14,7 +14,7 @@ from __future__ import print_function, unicode_literals
 import re
 import six
 
-from .core import working_block, NameIndexer
+from .core import working_block, _NameIndexer
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
 
@@ -106,10 +106,10 @@ def match_bitwidth(*args):
     return (wv.zero_extended(max_len) for wv in args)
 
 
-class ProbeIndexer(NameIndexer):
+class _ProbeIndexer(_NameIndexer):
     """ Provides indexed probe names for probe() """
     def __init__(self, internal_prefix='Probe'):
-        super(ProbeIndexer, self).__init__(internal_prefix)
+        super(_ProbeIndexer, self).__init__(internal_prefix)
         self.internal_index += 1
 
     def next_indexed(self, w, name):
@@ -130,7 +130,7 @@ class ProbeIndexer(NameIndexer):
         return w
 
 
-probeIndexer = ProbeIndexer()
+probeIndexer = _ProbeIndexer()
 
 
 def probe(w, name=None):
@@ -174,10 +174,10 @@ def get_stack(wire):
                ' to provide more information'
 
 
-class AssertIndexer(NameIndexer):
+class _AssertIndexer(_NameIndexer):
     """ Provides indexed assertion names for rtl_assert() """
     def __init__(self, internal_prefix='assertion'):
-        super(AssertIndexer, self).__init__(internal_prefix)
+        super(_AssertIndexer, self).__init__(internal_prefix)
         self.internal_index += 1
 
     def next_indexed(self, w):
@@ -185,7 +185,7 @@ class AssertIndexer(NameIndexer):
         self.internal_index += 1
         return res
 
-assertIndexer = AssertIndexer()
+assertIndexer = _AssertIndexer()
 
 
 def rtl_assert(w, exp, block=None):
