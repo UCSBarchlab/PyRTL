@@ -14,12 +14,9 @@ from __future__ import print_function, unicode_literals
 import re
 import six
 
-from .core import working_block
+from .core import working_block, NameIndexer
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
-
-_rtl_assert_number = 1
-_probe_number = 1
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -109,6 +106,33 @@ def match_bitwidth(*args):
     return (wv.zero_extended(max_len) for wv in args)
 
 
+class ProbeIndexer(NameIndexer):
+    """ Provides indexed probe names for probe() """
+    def __init__(self, internal_prefix='Probe'):
+        super(ProbeIndexer, self).__init__(internal_prefix)
+        self.internal_index += 1
+
+    def next_indexed(self, w, name):
+        if not isinstance(w, WireVector):
+            raise PyrtlError('Only WireVectors can be probed')
+
+        print('(%s-%d)' % (self.internal_prefix, self.internal_index), end=' ')
+        print(get_stack(w))
+
+        if name:
+            pname = '%s%d_%s__%s)' % (self.internal_prefix, self.internal_index, name, w.name)
+        else:
+            pname = '(%s%d__%s)' % (self.internal_prefix, self.internal_index, w.name)
+
+        p = Output(name=pname)
+        p <<= w  # late assigns len from w automatically
+        self.internal_index += 1
+        return w
+
+
+probeIndexer = ProbeIndexer()
+
+
 def probe(w, name=None):
     """ Print useful information about a WireVector when in debug mode.
 
@@ -124,22 +148,8 @@ def probe(w, name=None):
     valid uses of probe.  Note: probe does actually add wire to the working block of w (which can
     confuse various post-processing transforms such as output to verilog)
     """
-    global _probe_number
-    if not isinstance(w, WireVector):
-        raise PyrtlError('Only WireVectors can be probed')
-
-    print('(Probe-%d)' % _probe_number, end=' ')
-    print(get_stack(w))
-
-    if name:
-        pname = 'Probe%d_%s__%s)' % (_probe_number, name, w.name)
-    else:
-        pname = '(Probe%d__%s)' % (_probe_number, w.name)
-
-    p = Output(name=pname)
-    p <<= w  # late assigns len from w automatically
-    _probe_number += 1
-    return w
+    global probeIndexer
+    return probeIndexer.next_indexed(w, name)
 
 
 def get_stacks(*wires):
@@ -164,6 +174,20 @@ def get_stack(wire):
                ' to provide more information'
 
 
+class AssertIndexer(NameIndexer):
+    """ Provides indexed assertion names for rtl_assert() """
+    def __init__(self, internal_prefix='assertion'):
+        super(AssertIndexer, self).__init__(internal_prefix)
+        self.internal_index += 1
+
+    def next_indexed(self, w):
+        res = '%s%d' % (self.internal_prefix, self.internal_index)
+        self.internal_index += 1
+        return res
+
+assertIndexer = AssertIndexer()
+
+
 def rtl_assert(w, exp, block=None):
     """ Add hardware assertions to be checked on the RTL design.
 
@@ -176,7 +200,7 @@ def rtl_assert(w, exp, block=None):
     then simulation will raise exp.
     """
 
-    global _rtl_assert_number
+    global assertIndexer
 
     block = working_block(block)
 
@@ -196,10 +220,8 @@ def rtl_assert(w, exp, block=None):
     if w in block.rtl_assert_dict:
         raise PyrtlInternalError('assertion conflicts with existing registered assertion')
 
-    assertion_name = 'assertion%d' % _rtl_assert_number
-    assert_wire = Output(bitwidth=1, name=assertion_name, block=block)
+    assert_wire = Output(bitwidth=1, name=assertIndexer.next_indexed(w), block=block)
     assert_wire <<= w
-    _rtl_assert_number += 1
     block.rtl_assert_dict[assert_wire] = exp
     return assert_wire
 
