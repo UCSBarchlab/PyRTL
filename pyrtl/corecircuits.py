@@ -1,6 +1,13 @@
 """
 A set of basic circuits for PyRTL users to use
 Some of these circuits are used internally
+Others are used to help make building circuits easier
+
+Some stuff in CoreCircuits include:
+and_all_bits, or_all_bits, xor_all_bits: apply function across all bits
+parity: same as xor_all_bits
+mux: generate a multiplexer
+concat: concatenate multiple wirevectors into one long vector
 """
 
 

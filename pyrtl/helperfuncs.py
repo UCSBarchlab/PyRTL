@@ -2,11 +2,8 @@
 
 The set of functions includes
 as_wires: converts consts to wires if needed (and does nothing to wires)
-and_all_bits, or_all_bits, xor_all_bits: apply function across all bits
-parity: same as xor_all_bits
-mux: generate a multiplexer
-concat: concatenate multiple wirevectors into one long vector
-get_block: get the block of the arguments, throw error if they are different
+probe: a way to check the values of wires during simulation time
+rtl_assert: Simulation time hardware value assertions
 """
 
 from __future__ import print_function, unicode_literals
