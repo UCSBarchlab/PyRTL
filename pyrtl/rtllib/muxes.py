@@ -127,7 +127,7 @@ class MultiSelector(object):
 
     def __enter__(self):
         """
-        For compatibility with With statements (which is the recommended
+        For compatibility with `with` statements (which is the recommended
          method of using a MultiSelector)
         """
         return self
@@ -143,12 +143,6 @@ class MultiSelector(object):
             raise pyrtl.PyrtlError("Cannot change InstrConnector, already finalized")
 
     def option(self, select_val, *data_signals):
-        """
-
-        :param select_val:
-        :param data_signals:
-        :return:
-        """
         self._check_finalized()
         instr, ib = pyrtl.wire._gen_val_and_bitwidth(select_val, self.signal_wire.bitwidth)
         if instr in self.instructions:
@@ -174,8 +168,7 @@ class MultiSelector(object):
 
     def finalize(self):
         """
-        actually connect the wires.
-        :return:
+        Connects the wires.
         """
         self._check_finalized()
         self._final = True
@@ -188,6 +181,7 @@ class MultiSelector(object):
 def demux(select):
     """
     Demultiplexes a wire of arbitrary bitwidth
+
     :param WireVector select: indicates which wire to set on
     :return (WireVector, ...): a tuple of wires corresponding to each demultiplexed wire
     """

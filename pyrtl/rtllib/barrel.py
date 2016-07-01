@@ -6,13 +6,14 @@ import math
 def barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0):
     """
     Create a barrel shifter that operates on data based on the wire width
-    :param shift_in:the input wire;
-    :param bit_in: the 1-bit wire giving the value to shift in.
-    :param direction: direction is a one bit wirevector representing shift direction
+
+    :param shift_in: the input wire
+    :param bit_in: the 1-bit wire giving the value to shift in
+    :param direction: a one bit WireVector representing shift direction
         0 = shift down, 1 = shift up.
-    :param shift_dist: wirevector representing offset to shift
+    :param shift_dist: WireVector representing offset to shift
     :param wrap_around: ****currently not implemented*****
-    :return: shifted wirevector
+    :return: shifted WireVector
     """
     # Implement with logN stages pyrtl.muxing between shifted and un-shifted values
 

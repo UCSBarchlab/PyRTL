@@ -18,7 +18,7 @@ class TestAES(unittest.TestCase):
         self.out_vector = pyrtl.Output(bitwidth=128, name='out_vector')
 
     def test_inv_shift_rows(self):
-        self.out_vector <<= self.aes.inv_shift_rows(self.in_vector)
+        self.out_vector <<= self.aes._inv_shift_rows(self.in_vector)
 
         in_vals = [0x3e1c22c0b6fcbf768da85067f6170495, 0x2d6d7ef03f33e334093602dd5bfb12c7]
         true_result = [0x3e175076b61c04678dfc2295f6a8bfc0, 0x2dfb02343f6d12dd09337ec75b36e3f0]
@@ -26,7 +26,7 @@ class TestAES(unittest.TestCase):
         self.assertEqual(calculated_result, true_result)
 
     def test_inv_sub_bytes(self):
-        self.out_vector <<= self.aes.inv_sub_bytes(self.in_vector)
+        self.out_vector <<= self.aes._inv_sub_bytes(self.in_vector)
 
         in_vals = [0x3e175076b61c04678dfc2295f6a8bfc0, 0x2dfb02343f6d12dd09337ec75b36e3f0]
         true_result = [0xd1876c0f79c4300ab45594add66ff41f, 0xfa636a2825b339c940668a3157244d17]
@@ -34,7 +34,7 @@ class TestAES(unittest.TestCase):
         self.assertEqual(calculated_result, true_result)
 
     def test_inv_mix_columns(self):
-        self.out_vector <<= self.aes.inv_mix_columns(self.in_vector)
+        self.out_vector <<= self.aes._inv_mix_columns(self.in_vector)
 
         in_vals = [0xe9f74eec023020f61bf2ccf2353c21c7, 0xbaa03de7a1f9b56ed5512cba5f414d23]
         real_res = [0x54d990a16ba09ab596bbf40ea111702f, 0x3e1c22c0b6fcbf768da85067f6170495]
@@ -44,7 +44,7 @@ class TestAES(unittest.TestCase):
     @unittest.skip
     def test_key_expansion(self):
         # This is not at all correct. Needs to be completely rewritten
-        self.out_vector <<= pyrtl.corecircuits.concat_list(self.aes.decryption_key_gen(self.in_vector))
+        self.out_vector <<= pyrtl.corecircuits.concat_list(self.aes._decryption_key_gen(self.in_vector))
 
         in_vals = [0xd1876c0f79c4300ab45594add66ff41f, 0xfa636a2825b339c940668a3157244d17]
         true_result = [0x3e175076b61c04678dfc2295f6a8bfc0, 0x2dfb02343f6d12dd09337ec75b36e3f0]
