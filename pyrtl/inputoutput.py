@@ -508,7 +508,7 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
 #
 
 
-class VerilogSanitizer(_NameSanitizer):
+class _VerilogSanitizer(_NameSanitizer):
     ver_regex = '[_A-Za-z][_a-zA-Z0-9\$]*$'
 
     _verilog_reserved = \
@@ -528,18 +528,18 @@ class VerilogSanitizer(_NameSanitizer):
 
     def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
         self._verilog_reserved_set = frozenset(self._verilog_reserved.split())
-        super(VerilogSanitizer, self).__init__(self.ver_regex, internal_prefix, map_valid_vals)
+        super(_VerilogSanitizer, self).__init__(self.ver_regex, internal_prefix, map_valid_vals)
 
     def _extra_checks(self, str):
         return(str not in self._verilog_reserved_set and  # is not a Verilog reserved keyword
                len(str) <= 1024)                          # not too long to be a Verilog id
 
 
-class VerilogOutput(object):
+class _VerilogOutput(object):
     def __init__(self, dest_file, block=None):
         self.block = working_block(block)
         self.file = dest_file
-        self.internal_names = VerilogSanitizer('_verout_tmp_')
+        self.internal_names = _VerilogSanitizer('_verout_tmp_')
         for wire in self.block.wirevector_set:
             self.internal_names.make_valid_string(wire.name)
 
@@ -556,7 +556,7 @@ class VerilogOutput(object):
         return '' if len(w) == 1 else '[%d:0]' % (2 ** len(w) - 1)
 
 
-class OutputToVerilog(VerilogOutput):
+class OutputToVerilog(_VerilogOutput):
     def __init__(self, dest_file, block=None):
         """ A class to walk the block and output it in verilog format to the open file """
 
@@ -669,9 +669,12 @@ class OutputToVerilog(VerilogOutput):
                 print('    assign %s = {%s};' % t, file=self.file)
             elif net.op == 'r':
                 pass  # do nothing for registers
-            elif net.op == 'm':
+            elif net.op == 'm':  # use always block and assign as Verilog register
+                print('    always @( posedge clk )', file=self.file)
+                print('    begin', file=self.file)
                 t = (self._varname(net.dests[0]), net.op_param[0], self._varname(net.args[0]))
-                print('        assign %s = mem_%s[%s];' % t, file=self.file)
+                print('        %s <= mem_%s[%s];' % t, file=self.file)
+                print('    end', file=self.file)
             elif net.op == '@':
                 pass
             else:
@@ -697,7 +700,7 @@ class OutputToVerilog(VerilogOutput):
         print('endmodule\n', file=self.file)
 
 
-class OutputVerilogTestbench(VerilogOutput):
+class OutputVerilogTestbench(_VerilogOutput):
     def __init__(self, dest_file, simulation_trace=None, block=None):
         """A class to output a verilog testbanch for the block/inputs
         used in the simulation trace."""

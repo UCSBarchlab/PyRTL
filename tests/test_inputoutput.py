@@ -161,7 +161,7 @@ class TestNetGraph(unittest.TestCase):
 class TestVerilogNames(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        self.vnames = inputoutput.VerilogSanitizer("_sani_test")
+        self.vnames = inputoutput._VerilogSanitizer("_sani_test")
 
     def checkname(self, name):
         self.assertEqual(self.vnames.make_valid_string(name), name)

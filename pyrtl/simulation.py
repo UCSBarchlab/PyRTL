@@ -8,11 +8,11 @@ import numbers
 import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, PostSynthBlock, PythonSanitizer
+from .core import working_block, PostSynthBlock, _PythonSanitizer
 from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock
 from .helperfuncs import check_rtl_assertions, _currently_in_ipython
-from .inputoutput import VerilogSanitizer
+from .inputoutput import _VerilogSanitizer
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -349,7 +349,7 @@ class FastSimulation(object):
         self.code_file = code_file
         self.mems = {}
         self.regs = {}
-        self.internal_names = PythonSanitizer('_fastsim_tmp_')
+        self.internal_names = _PythonSanitizer('_fastsim_tmp_')
         self._initialize(register_value_map, memory_value_map)
 
     def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
@@ -812,7 +812,7 @@ class SimulationTrace(object):
         # dump header info
         # file_timestamp = time.strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", time.gmtime())
         # print >>file, " ".join(["$date", file_timestamp, "$end"])
-        self.internal_names = VerilogSanitizer('_vcd_tmp_')
+        self.internal_names = _VerilogSanitizer('_vcd_tmp_')
         for wire in self.wires_to_track:
             self.internal_names.make_valid_string(wire.name)
 

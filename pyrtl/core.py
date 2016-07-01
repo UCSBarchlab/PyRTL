@@ -732,10 +732,10 @@ class _NameSanitizer(_NameIndexer):
             return string
 
 
-class PythonSanitizer(_NameSanitizer):
+class _PythonSanitizer(_NameSanitizer):
     """ Name Sanitizer specifically built for Python identifers"""
     def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
-        super(PythonSanitizer, self).__init__(py_regex, internal_prefix, map_valid_vals)
+        super(_PythonSanitizer, self).__init__(py_regex, internal_prefix, map_valid_vals)
 
     def _extra_checks(self, str):
         return not keyword.iskeyword(str)
