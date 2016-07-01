@@ -1,7 +1,7 @@
-Adders
+Barrel
 ======
 
-.. automodule:: pyrtl.rtllib.adders
+.. automodule:: pyrtl.rtllib.barrel
    :members:
    :show-inheritance:
    :special-members:

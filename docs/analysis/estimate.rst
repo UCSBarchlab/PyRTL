@@ -1,7 +1,7 @@
-Adders
-======
+Estimate
+========
 
-.. automodule:: pyrtl.rtllib.adders
+.. automodule:: pyrtl.analysis.estimate
    :members:
    :show-inheritance:
    :special-members:

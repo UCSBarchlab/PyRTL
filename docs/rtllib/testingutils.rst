@@ -1,7 +1,7 @@
-Adders
-======
+Testing Utilities
+=================
 
-.. automodule:: pyrtl.rtllib.adders
+.. automodule:: pyrtl.rtllib.testingutils
    :members:
    :show-inheritance:
    :special-members:

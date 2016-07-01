@@ -1,7 +1,7 @@
-Adders
-======
+Library Utilities
+=================
 
-.. automodule:: pyrtl.rtllib.adders
+.. automodule:: pyrtl.rtllib.libutils
    :members:
    :show-inheritance:
    :special-members:

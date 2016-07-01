@@ -1,7 +1,7 @@
-Adders
-======
+Multipliers
+===========
 
-.. automodule:: pyrtl.rtllib.adders
+.. automodule:: pyrtl.rtllib.multipliers
    :members:
    :show-inheritance:
    :special-members:

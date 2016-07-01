@@ -1,7 +1,7 @@
-Adders
-======
+AES
+===
 
-.. automodule:: pyrtl.rtllib.adders
+.. automodule:: pyrtl.rtllib.aes
    :members:
    :show-inheritance:
    :special-members:

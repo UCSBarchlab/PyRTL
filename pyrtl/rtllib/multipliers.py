@@ -1,19 +1,20 @@
+# coding=utf-8
 from __future__ import absolute_import
 import pyrtl
 from . import adders
 
 
 def simple_mult(A, B, start):
-    """ Generate simple shift-and-add multiplier.
-
-    :param
-
-    Builds a slow, small multiplier using the simple shift-and-add algorithm.
+    """ Builds a slow, small multiplier using the simple shift-and-add algorithm.
     Requires very small area (it uses only a single adder), but has long delay
     (worst case is len(a) cycles). a and b are arbitrary-length inputs; start
     is a one-bit input to indicate inputs are ready.done is a one-bit signal
     output raised when the multiplication is finished, at which point the
     product will be on the result line (returned by the function).
+
+    :param WireVector A, B: two input wires for the multiplication
+    :returns: Register containing the product; the "done" signal
+
     """
     triv_result = _trivial_mult(A, B)
     if triv_result is not None:
@@ -66,9 +67,9 @@ def complex_mult(A, B, shifts, start):
 
     :param WireVector A, B: two input wires for the multiplication
     :param int shifts: number of spaces Register is to be shifted per clk cycle
+        (cannot be greater than the length of `A` or `B`)
     :param bool start: start signal
-    :return Register accum: Register containing the product
-    :return bool done: done ("finished") signal
+    :returns: Register containing the product; the "done" signal
     """
 
     alen = len(A)
@@ -91,8 +92,8 @@ def complex_mult(A, B, shifts, start):
 
         with ~done:  # don't run when there's no work to do
             # "Multiply" shifted breg by LSB of areg by cond. adding
-            areg.next |= _shifted_reg_next(areg, 'r', shifts)  # right shift
-            breg.next |= _shifted_reg_next(breg, 'l', shifts)  # left shift
+            areg.next |= shifted_reg_next(areg, 'r', shifts)  # right shift
+            breg.next |= shifted_reg_next(breg, 'l', shifts)  # left shift
             accum.next |= accum + _one_cycle_mult(areg, breg, shifts)
 
     return accum, done
@@ -118,12 +119,14 @@ def _one_cycle_mult(areg, breg, rem_bits, sum_sf=0, curr_bit=0):
             )
 
 
-def _shifted_reg_next(reg, direct, num=1):
+def shifted_reg_next(reg, direct, num=1):
     """
-    use: myReg.next = shifted_reg_next(myReg, 'l', 4)
+    Creates a shifted 'next' property for shifted (left or right) register.\n
+    Use: `myReg.next = shifted_reg_next(myReg, 'l', 4)`
+
     :param string direct: direction of shift, either 'l' or 'r'
     :param int num: number of shifts
-    :return Register reg_next: a 'next' property for shifted (left or right) register
+    :return: Register containing reg's (shifted) next state
     """
     if direct == 'l':
         if num >= len(reg):
@@ -143,11 +146,11 @@ def _shifted_reg_next(reg, direct, num=1):
 def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
     """ Build an fast unclocked multiplier for inputs A and B using a Wallace or Dada Tree.
 
-    :param Wirevector A, B: two input wires for the multiplication
+    :param WireVector A, B: two input wires for the multiplication
     :param function reducer: Reduce the tree using either a Dada recuder or a Wallace reducer
       determines whether it is a Wallace tree multiplier or a Dada tree multiplier
     :param function adder_func: an adder function that will be used to do the last addition
-    :return Wirevector: The multiplied result
+    :return WireVector: The multiplied result
 
     Delay is order logN, while area is order N^2.
     """

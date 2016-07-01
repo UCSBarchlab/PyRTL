@@ -7,7 +7,7 @@ Some stuff in CoreCircuits include:
 and_all_bits, or_all_bits, xor_all_bits: apply function across all bits
 parity: same as xor_all_bits
 mux: generate a multiplexer
-concat: concatenate multiple wirevectors into one long vector
+concat: concatenate multiple WireVectors into one long vector
 """
 
 
@@ -45,39 +45,39 @@ def _apply_op_over_all_bits(op, vector):
 def rtl_any(*vectorlist):
     """ Hardware equivalent of python native "any".
 
-    :param WireVector *vectorlist: all arguments are WireVectors of length 1
+    :param WireVector vectorlist: all arguments are WireVectors of length 1
     :return: WireVector of length 1
 
-    Returns a 1-bit wirevector which will hold a '1' if any of the inputs
-    are '1' (i.e. it is a big 'ol OR gate)
+    Returns a 1-bit WireVector which will hold a '1' if any of the inputs
+    are '1' (i.e. it is a big ol' OR gate)
     """
     if len(vectorlist) <= 0:
         raise PyrtlError('rtl_any requires at least 1 argument')
     converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
-        raise PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
+        raise PyrtlError('only length 1 WireVectors can be inputs to rtl_any')
     return or_all_bits(concat_list(converted_vectorlist))
 
 
 def rtl_all(*vectorlist):
     """ Hardware equivalent of python native "all".
 
-    :param WireVector *vectorlist: all arguments are WireVectors of length 1
+    :param WireVector vectorlist: all arguments are WireVectors of length 1
     :return: WireVector of length 1
 
-    Returns a 1-bit wirevector which will hold a '1' only if all of the
-    inputs are '1' (i.e. it is a big 'ol AND gate)
+    Returns a 1-bit WireVector which will hold a '1' only if all of the
+    inputs are '1' (i.e. it is a big ol' AND gate)
     """
     if len(vectorlist) <= 0:
         raise PyrtlError('rtl_all requires at least 1 argument')
     converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
-        raise PyrtlError('only length 1 wirevectors can be inputs to rtl_all')
+        raise PyrtlError('only length 1 WireVectors can be inputs to rtl_all')
     return and_all_bits(concat_list(converted_vectorlist))
 
 
 def _basic_mult(A, B):
-    """ a stripped down copy of the wallace multiplier in rtllib """
+    """ A stripped-down copy of the Wallace multiplier in rtllib """
     if len(B) == 1:
         A, B = B, A  # so that we can reuse the code below :)
     if len(A) == 1:
@@ -167,9 +167,9 @@ def _basic_select(s, a, b):
 def mux(index, *mux_ins, **kwargs):
     """ Multiplexer returning the value of the wire in .
 
-    :param WireVector index: used as the select input to the multiplexor
-    :param additional WireVector arguments *mux_ins: wirevectors selected when select>1
-    :param additional WireVector arguments **default: keyword arg "default"
+    :param WireVector index: used as the select input to the multiplexer
+    :param WireVector mux_ins: additional WireVector arguments selected when select>1
+    :param WireVector kwargs: additional WireVectors, keyword arg "default"
       If you are selecting between less items than your index can address, you can
       use the "default" keyword argument to auto-expand those terms.  For example,
       if you have a 3-bit index but are selecting between 6 options, you need to specify
@@ -233,9 +233,9 @@ def mux(index, *mux_ins, **kwargs):
 def select(sel, truecase, falsecase):
     """ Multiplexer returning falsecase for select==0, otherwise truecase.
 
-    :param WireVector sel: used as the select input to the multiplexor
-    :param WireVector falsecase: the wirevector selected if select==0
-    :param WireVector truecase: the wirevector selected if select==1
+    :param WireVector sel: used as the select input to the multiplexer
+    :param WireVector falsecase: the WireVector selected if select==0
+    :param WireVector truecase: the WireVector selected if select==1
     Example of mux as "ternary operator" to take the max of 'a' and 5:
         mux( a<5, truecase=a, falsecase=5)
     """
@@ -250,11 +250,10 @@ def select(sel, truecase, falsecase):
 
 def concat(*args):
     """
-    Concats multiple wirevectors into a single wirevector
+    Concatenates multiple WireVectors into a single WireVector
 
-    :type args: WireVector
-    :return wirevector: wirevector with length equal
-      to the sum of the args' lengths
+    :param WireVector args: inputs to be concatenated
+    :return: WireVector with length equal to the sum of the args' lengths
 
     Usually you will want to use concat_list as you will not need to reverse the list
     The concatenation order places the MSB as arg[0] with less significant bits following.
@@ -278,11 +277,10 @@ def concat(*args):
 
 def concat_list(wire_list):
     """
-    Concats a list of wirevectors into a single wirevector
+    Concatenates a list of WireVectors into a single WireVector
 
-    :param wire_list: List of wirevectors to concat
-    :return wirevector: wirevector with length equal
-      to the sum of the args' lengths
+    :param wire_list: list of WireVectors to concat
+    :return: WireVector with length equal to the sum of the args' lengths
 
     The concatenation order is LSB (UNLIKE Concat)
     """
