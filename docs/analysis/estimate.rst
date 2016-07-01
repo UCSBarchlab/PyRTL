@@ -1,5 +1,5 @@
 Estimate
-================
+========
 
 .. automodule:: pyrtl.analysis.estimate
    :members:

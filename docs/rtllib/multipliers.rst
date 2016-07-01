@@ -1,5 +1,5 @@
 Multipliers
-================
+===========
 
 .. automodule:: pyrtl.rtllib.multipliers
    :members:

@@ -1,5 +1,5 @@
 Barrel
-================
+======
 
 .. automodule:: pyrtl.rtllib.barrel
    :members:

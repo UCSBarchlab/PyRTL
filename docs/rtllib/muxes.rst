@@ -1,5 +1,5 @@
 Muxes
-================
+=====
 
 .. automodule:: pyrtl.rtllib.muxes
    :members:

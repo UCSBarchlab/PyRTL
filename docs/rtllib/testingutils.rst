@@ -1,5 +1,5 @@
 Testing Utilities
-================
+=================
 
 .. automodule:: pyrtl.rtllib.testingutils
    :members:

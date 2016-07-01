@@ -1,5 +1,5 @@
 Adders
-================
+======
 
 .. automodule:: pyrtl.rtllib.adders
    :members:
