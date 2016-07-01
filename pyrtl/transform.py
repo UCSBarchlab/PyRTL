@@ -1,13 +1,32 @@
 """
 Transform contains structures helpful for writing analysis and
 transformation passes over blocks.
+
+Most of the functions in this module are for advanced users only.
+However, the following functions are prebuilt transformations
+that everyone can use:
+(As of 7/1/16 there are none in this folder).
+
+Other user accessible transforms that are based on these function
+can be found in the passes module.
+
+
+PyRTL makes it easy to make your own transformation. However
+in order to make your first transform, some knowledge about the
+structure of PyRTL Internal Representation (IR) of the circuit
+is necessary. Specifically, one must know what Block, LogicNet,
+and WireVector are as well as how Blocks store the latter two
+structures (through Block.logic, block.Wirevector_set, etc).
 """
+
 from .core import set_working_block, LogicNet, working_block
 from .wire import Const, Input, Output, WireVector, Register
 
 
 def net_transform(transform_func, block=None):
     """
+    Maps nets to new sets of nets according to a custom function
+
     :param transform_func:
         Function signature: func(orig_net (logicnet)) -> keep_orig_net (bool)
     :return:
@@ -23,10 +42,10 @@ def net_transform(transform_func, block=None):
 def wire_transform(transform_func, select_types=WireVector,
                    exclude_types=(Input, Output, Register, Const), block=None):
     """
-    Maps Wires to new sets of nets and wires accrding to a custom function
+    Maps Wires to new sets of nets and wires according to a custom function
 
-    :param transform_func:
-        Function signature: func(orig_wire (logicnet)) -> src_wire, dst_wire
+    :param transform_func: The function you want to run on all wires
+        Function signature: func(orig_wire (WireVector)) -> src_wire, dst_wire
         src_wire is the src for the stuff you made in the transform func
         and dst_wire is the sink
 
@@ -74,7 +93,7 @@ def replace_wires(wire_map, block=None):
     """
     Quickly replace all wires in a block
 
-    :param {old_wire, new_wire} wire_map: mapping of old wires to
+    :param {old_wire: new_wire} wire_map: mapping of old wires to
       new wires
     """
     block = working_block(block)
@@ -128,6 +147,16 @@ def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=Non
 
 
 def clone_wire(old_wire, name=None):
+    """
+    Makes a copy of any existing wire
+
+    :param old_wire: The wire to clone
+    :param name: a name fo rhte new wire
+
+    Note that this function is mainly intended to be used when the
+    two wires are from different blocks. Making two wires with the
+    same name in the same block is not allowed
+    """
     if isinstance(old_wire, Const):
         return Const(old_wire.val, old_wire.bitwidth)
     else:
@@ -139,7 +168,8 @@ def clone_wire(old_wire, name=None):
 def copy_block(block=None, update_working_block=True):
     """
     Makes a copy of an existing block
-    :param block: The block to clone.
+
+    :param block: The block to clone. (defaults to the working block)
     :return: The resulting block
     """
     block_in = working_block(block)
@@ -155,12 +185,12 @@ def copy_block(block=None, update_working_block=True):
 
 def _synth_base(block_in):
     """
-    This is a generic function to copy the wirevectors for another round of
-    synthesis This does not split a wirevector with multiple wires.
+    This is a generic function to copy the WireVectors for another round of
+    synthesis This does not split a WireVector with multiple wires.
 
     :param block_in: The block to change
     :param synth_name: a name to prepend to all new copies of a wire
-    :return: the resulting block and a wirevector map
+    :return: the resulting block and a WireVector map
     """
     block_in.sanity_check()  # make sure that everything is valid
     block_out = block_in.__class__()
