@@ -40,11 +40,11 @@ def sparse_mux(sel, vals):
     Mux that avoids instantiating unnecessary mux_2s when possible.
 
     :param WireVector sel: Select wire, determines what is selected on a given cycle
-    :param {int: WireVector} vals: dictionary to store the values that are
-    :return: Wirevector that signifies the change
+    :param dictionary vals: dictionary of values at mux inputs (of type `{int:WireVector}`)
+    :return: WireVector that signifies the change
 
-    This mux supports not having a full specification. indices that are not
-    specified are treated as Don't Cares
+    This mux supports not having a full specification. Indices that are not
+    specified are treated as don't-cares
 
     It also supports a specified default value, SparseDefault
     """
@@ -111,11 +111,11 @@ def _sparse_mux(sel, vals):
 class MultiSelector(object):
     """
     The MultiSelector allows you to specify multiple wire value results
-    for a single select wire
+    for a single select wire.
 
     Useful for processors, finite state machines and other places where the
     result of many wire values are determined by a common wire signal
-    (such as a 'state' wire)
+    (such as a 'state' wire).
 
     """
     def __init__(self, signal_wire,  *dest_wires):
@@ -127,8 +127,8 @@ class MultiSelector(object):
 
     def __enter__(self):
         """
-        For compatibility with `with` statements (which is the recommended
-         method of using a MultiSelector)
+        For compatibility with `with` statements, which is the recommended
+         method of using a MultiSelector
         """
         return self
 

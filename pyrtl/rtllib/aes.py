@@ -1,5 +1,3 @@
-""" AES-128 """
-
 from __future__ import division, absolute_import
 import pyrtl
 from pyrtl.rtllib import libutils
@@ -81,8 +79,8 @@ class AES(object):
 
     def decryption_statem(self, ciphertext_in, key_in, reset):
         """
-        return ready, decryption_result: ready is a one bit signal showing
-        that the answer decryption result has been calculated.
+        :return: ready, decryption_result: `ready` is a one bit signal showing
+            that the answer `decryption_result` has been calculated
         """
         if len(key_in) != len(ciphertext_in):
             raise pyrtl.PyrtlError("AES key and ciphertext should be the same length")
