@@ -7,10 +7,8 @@ from . import adders
 def simple_mult(A, B, start):
     """ Builds a slow, small multiplier using the simple shift-and-add algorithm.
     Requires very small area (it uses only a single adder), but has long delay
-    (worst case is len(a) cycles). a and b are arbitrary-length inputs; start
-    is a one-bit input to indicate inputs are ready.done is a one-bit signal
-    output raised when the multiplication is finished, at which point the
-    product will be on the result line (returned by the function).
+    (worst case is len(A) cycles). start is a one-bit input to indicate inputs are ready.
+    done is a one-bit output signal raised when the multiplication is finished.
 
     :param WireVector A, B: two input wires for the multiplication
     :returns: Register containing the product; the "done" signal
@@ -63,7 +61,8 @@ def _trivial_mult(A, B):
 
 
 def complex_mult(A, B, shifts, start):
-    """ Generate shift-and-add multiplier that can shift and add multiple bits per clock cycle
+    """ Generate shift-and-add multiplier that can shift and add multiple bits per clock cycle.
+    Uses substantially more space than `simple_mult()` but is much faster.
 
     :param WireVector A, B: two input wires for the multiplication
     :param int shifts: number of spaces Register is to be shifted per clk cycle
@@ -182,18 +181,17 @@ def fused_multiply_adder(mult_A, mult_B, add, signed=False, reducer=adders.walla
 
     Multiplies two wirevectors together and adds a third wirevector to the
     multiplication result, all in
-    one step. By doing it this way (instead of separately), you reduce both
+    one step. By doing it this way (instead of separately), one reduces both
     the area and the timing delay of the circuit.
 
 
     :param Bool signed: Currently not supported (will be added in the future)
       The default will likely be changed to True, so if you want the smallest
-      set of wires in the future, specify this as false
+      set of wires in the future, specify this as False
+    :param reducer: (advanced) The tree reducer to use
+    :param adder_func: (advanced) The adder to use to add the two results at the end
     :return WireVector: The result WireVector
 
-    Advanced Parameters:
-    :param reducer: The tree reducer to use
-    :param adder_func: The adder to use to add the two results at the end
     """
 
     # TODO: Specify the length of the result wirevector
@@ -207,24 +205,23 @@ def generalized_fma(mult_pairs, add_wires, signed=False, reducer=adders.wallace_
 
     A generalized FMA unit that multiplies each pair of numbers in mult_pairs,
     then adds the resulting numbers and and the values of the add wires all
-    together to form an answer. This is faster than sepserate adders and
+    together to form an answer. This is faster than separate adders and
     multipliers because you avoid unnecessary adder structures for intermediate
     representations.
 
     :param mult_pairs: Either None (if there are no pairs to multiply) or
-      a list of pairs of wires to multiply.
-      ((mult1_1, mult1_2), ...)
-    :param [WireVector] or None add_wires: Either None (if there are no individual
-      items to add other than the mult_pairs, or a list of wires for adding on
+      a list of pairs of wires to multiply:
+      [(mult1_1, mult1_2), ...]
+    :param add_wires: Either None (if there are no individual
+      items to add other than the mult_pairs), or a list of wires for adding on
       top of the result of the pair multiplication.
     :param Bool signed: Currently not supported (will be added in the future)
       The default will likely be changed to True, so if you want the smallest
-      set of wires in the future, specify this as false
+      set of wires in the future, specify this as False
+    :param reducer: (advanced) The tree reducer to use
+    :param adder_func: (advanced) The adder to use to add the two results at the end
     :return WireVector: The result WireVector
 
-    Advanced Parameters:
-    :param reducer: The tree reducer to use
-    :param adder_func: The adder to use to add the two results at the end
     """
     # first need to figure out the max length
     if mult_pairs:  # Need to deal with the case when it is empty
