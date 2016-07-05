@@ -582,6 +582,10 @@ class OutputToVerilog(_VerilogOutput):
         outputs = self.block.wirevector_subset(Output)
         registers = self.block.wirevector_subset(Register)
         wires = self.block.wirevector_subset() - (inputs | outputs | registers)
+        wire_regs = set()
+        for net in self.block.logic:
+            if net.op == 'm':
+                wire_regs.add(net.dests[0])
         memory_nets = self.block.logic_subset(('m', '@'))
         memories = set()
 
@@ -604,8 +608,8 @@ class OutputToVerilog(_VerilogOutput):
             print('    reg%s %s;' % (self._verilog_vector_decl(w),
                                      self._varname(w)), file=self.file)
         for w in wires:
-            decl = 'reg' if w.op == 'm' else 'wire'
-            print('    %s%s %s;' % (decl, self._verilog_vector_decl(w),
+            type = 'reg' if w in wire_regs else 'wire'
+            print('    %s%s %s;' % (type, self._verilog_vector_decl(w),
                                     self._varname(w)), file=self.file)
         print('', file=self.file)
 
