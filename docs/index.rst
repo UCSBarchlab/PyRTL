@@ -103,12 +103,15 @@ PyRTL Modules:
    :maxdepth: 2
 
    core
+   corecircuits
    wire
    memory
    passes
    simulation
    inputoutput
    helperfuncs
+   rtllib
+   analysis
 
 Indices and tables
 ------------------
