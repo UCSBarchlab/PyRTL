@@ -51,8 +51,8 @@ class _MemIndexed(WireVector):
     def __ior__(self, other):
         return _MemAssignment(rhs=other, is_conditional=True)
 
-    def logicop(self, other, op):
-        return as_wires(self).logicop(other, op)
+    def _two_var_op(self, other, op):
+        return as_wires(self)._two_var_op(other, op)
 
     def __invert__(self):
         return as_wires(self).__invert__()
