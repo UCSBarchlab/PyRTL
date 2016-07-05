@@ -508,8 +508,8 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
 #
 
 
-class VerilogSanitizer(_NameSanitizer):
-    ver_regex = '[_A-Za-z][_a-zA-Z0-9\$]*$'
+class _VerilogSanitizer(_NameSanitizer):
+    _ver_regex = '[_A-Za-z][_a-zA-Z0-9\$]*$'
 
     _verilog_reserved = \
         """always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos
@@ -528,44 +528,40 @@ class VerilogSanitizer(_NameSanitizer):
 
     def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
         self._verilog_reserved_set = frozenset(self._verilog_reserved.split())
-        super(VerilogSanitizer, self).__init__(self.ver_regex, internal_prefix, map_valid_vals)
+        super(_VerilogSanitizer, self).__init__(self._ver_regex, internal_prefix,
+                                                map_valid_vals, self._extra_checks)
 
     def _extra_checks(self, str):
         return(str not in self._verilog_reserved_set and  # is not a Verilog reserved keyword
                len(str) <= 1024)                          # not too long to be a Verilog id
 
 
-class VerilogOutput(object):
-    def __init__(self, dest_file, block=None):
-        self.block = working_block(block)
-        self.file = dest_file
-        self.internal_names = VerilogSanitizer('_verout_tmp_')
-        for wire in self.block.wirevector_set:
-            self.internal_names.make_valid_string(wire.name)
-
-    def _varname(self, wire):
-        """ Converts WireVectors to internal names """
-        return self.internal_names[wire.name]
-
-    @staticmethod
-    def _verilog_vector_decl(w):
-        return '' if len(w) == 1 else '[%d:0]' % (len(w) - 1)
-
-    @staticmethod
-    def _verilog_vector_pow_decl(w):
-        return '' if len(w) == 1 else '[%d:0]' % (2 ** len(w) - 1)
+def _verilog_vector_decl(w):
+    return '' if len(w) == 1 else '[%d:0]' % (len(w) - 1)
 
 
-class OutputToVerilog(VerilogOutput):
+def _verilog_vector_pow_decl(w):
+    return '' if len(w) == 1 else '[%d:0]' % (2 ** len(w) - 1)
+
+
+class OutputToVerilog(object):
     def __init__(self, dest_file, block=None):
         """ A class to walk the block and output it in verilog format to the open file """
 
-        super(OutputToVerilog, self).__init__(dest_file, block)
+        self.block = working_block(block)
+        self.file = dest_file
+        self.internal_names = _VerilogSanitizer('_verout_tmp_')
+        for wire in self.block.wirevector_set:
+            self.internal_names.make_valid_string(wire.name)
         self._to_verilog_comment()
         self._to_verilog_header()
         self._to_verilog_combinational()
         self._to_verilog_sequential()
         self._to_verilog_footer()
+
+    def _varname(self, wire):
+        """ Converts WireVectors to internal names """
+        return self.internal_names[wire.name]
 
     def _to_verilog_comment(self):
         print('// Generated automatically via PyRTL', file=self.file)
@@ -592,32 +588,32 @@ class OutputToVerilog(VerilogOutput):
                 memories.add(m)
 
         for w in inputs:
-            print('    input%s %s;' % (self._verilog_vector_decl(w),
+            print('    input%s %s;' % (_verilog_vector_decl(w),
                                        self._varname(w)), file=self.file)
         print('    input clk;', file=self.file)
         for w in outputs:
-            print('    output%s %s;' % (self._verilog_vector_decl(w),
+            print('    output%s %s;' % (_verilog_vector_decl(w),
                                         self._varname(w)), file=self.file)
         print('', file=self.file)
 
         for w in registers:
-            print('    reg%s %s;' % (self._verilog_vector_decl(w),
+            print('    reg%s %s;' % (_verilog_vector_decl(w),
                                      self._varname(w)), file=self.file)
         for w in wires:
-            print('    wire%s %s;' % (self._verilog_vector_decl(w),
+            print('    wire%s %s;' % (_verilog_vector_decl(w),
                                       self._varname(w)), file=self.file)
         print('', file=self.file)
 
         for w in memories:
             if w.op == 'm':
-                print('    reg%s mem_%s%s;' % (self._verilog_vector_decl(w.dests[0]),
+                print('    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]),
                                                w.op_param[0],
-                                               self._verilog_vector_pow_decl(w.args[0])),
+                                               _verilog_vector_pow_decl(w.args[0])),
                       file=self.file)
             elif w.op == '@':
-                print('    reg%s mem_%s%s;' % (self._verilog_vector_decl(w.args[1]),
+                print('    reg%s mem_%s%s;' % (_verilog_vector_decl(w.args[1]),
                                                w.op_param[0],
-                                               self._verilog_vector_pow_decl(w.args[0])),
+                                               _verilog_vector_pow_decl(w.args[0])),
                       file=self.file)
 
         print('', file=self.file)
@@ -697,55 +693,55 @@ class OutputToVerilog(VerilogOutput):
         print('endmodule\n', file=self.file)
 
 
-class OutputVerilogTestbench(VerilogOutput):
-    def __init__(self, dest_file, simulation_trace=None, block=None):
-        """A class to output a verilog testbanch for the block/inputs
-        used in the simulation trace."""
+def output_verilog_testbench(dest_file, simulation_trace=None, block=None):
+    """Output a verilog testbanch for the block/inputs used in the simulation trace."""
+    block = working_block(block)
+    inputs = block.wirevector_subset(Input)
+    outputs = block.wirevector_subset(Output)
+    ver_name = _VerilogSanitizer('_ver_out_tmp_')
+    for wire in block.wirevector_set:
+        ver_name.make_valid_string(wire.name)
 
-        super(OutputVerilogTestbench, self).__init__(dest_file, block)
-        inputs = self.block.wirevector_subset(Input)
-        outputs = self.block.wirevector_subset(Output)
+    # Output header
+    print('module tb();', file=dest_file)
 
-        # Output header
-        print('module tb();', file=self.file)
+    # Declare all block inputs as reg
+    print('    reg clk;', file=dest_file)
+    for w in inputs:
+        print('    reg {:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
+              file=dest_file)
 
-        # Declare all block inputs as reg
-        print('    reg clk;', file=self.file)
+    # Declare all block outputs as wires
+    for w in outputs:
+        print('    wire {:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
+              file=dest_file)
+    print('', file=dest_file)
+
+    # Instantiate logic block
+    io_list = [ver_name[w.name] for w in block.wirevector_subset((Input, Output))]
+    io_list.append('clk')
+    io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
+    print('    toplevel block({:s});\n'.format(', '.join(io_list_str)), file=dest_file)
+
+    # Generate clock signal
+    print('    always', file=dest_file)
+    print('        #0.5 clk = ~clk;\n', file=dest_file)
+
+    # Move through all steps of trace, writing out input assignments per cycle
+    print('    initial begin', file=dest_file)
+    print('        $dumpfile ("waveform.vcd");', file=dest_file)
+    print('        $dumpvars;\n', file=dest_file)
+    print('        clk = 0;', file=dest_file)
+
+    for i in range(len(simulation_trace)):
         for w in inputs:
-            print('    reg {:s} {:s};'.format(self._verilog_vector_decl(w),
-                                              self._varname(w)), file=self.file)
+            print('        {:s} = {:s}{:d};'.format(
+                ver_name[w.name],
+                "{:d}'d".format(len(w)),
+                simulation_trace.trace[w][i]), file=dest_file)
+        print('\n        #2', file=dest_file)
 
-        # Declare all block outputs as wires
-        for w in outputs:
-            print('    wire {:s} {:s};'.format(self._verilog_vector_decl(w),
-                                               self._varname(w)), file=self.file)
-        print('', file=self.file)
-
-        # Instantiate logic block
-        io_list = [self._varname(wire=w) for w in self.block.wirevector_subset((Input, Output))]
-        io_list.append('clk')
-        io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
-        print('    toplevel block({:s});\n'.format(', '.join(io_list_str)), file=self.file)
-
-        # Generate clock signal
-        print('    always', file=self.file)
-        print('        #0.5 clk = ~clk;\n', file=self.file)
-
-        # Move through all steps of trace, writing out input assignments per cycle
-        print('    initial begin', file=self.file)
-        print('        $dumpfile ("waveform.vcd");', file=self.file)
-        print('        $dumpvars;\n', file=self.file)
-        print('        clk = 0;', file=self.file)
-
-        for i in range(len(simulation_trace)):
-            for w in inputs:
-                print('        {:s} = {:s}{:d};'.format(
-                    self._varname(w),
-                    "{:d}'d".format(len(w)),
-                    simulation_trace.trace[w][i]), file=self.file)
-            print('\n        #2', file=self.file)
-
-        # Footer
-        print('        $finish;', file=self.file)
-        print('    end', file=self.file)
-        print('endmodule', file=self.file)
+    # Footer
+    print('        $finish;', file=dest_file)
+    print('    end', file=dest_file)
+    print('endmodule', file=dest_file)

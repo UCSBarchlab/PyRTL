@@ -669,7 +669,7 @@ def set_debug_mode(debug=True):
     _setting_slower_but_more_descriptive_tmps = debug
 
 
-py_regex = '^[^\d\W]\w*\Z'
+_py_regex = '^[^\d\W]\w*\Z'
 
 
 class _NameIndexer(object):
@@ -679,14 +679,13 @@ class _NameIndexer(object):
         self.internal_index = 0
 
     def make_valid_string(self):
-        """ Inputting a value for the first time """
-        internal_name = self.internal_prefix + str(self.internal_index)
-        self.internal_index += 1
-        return internal_name
+        """Build a valid string based on the prefix and internal index"""
+        return self.internal_prefix + str(self.next_index())
 
-    def next_indexed(self):
-        """ Pure virtual, will return wire, name, etc. """
-        pass
+    def next_index(self):
+        index = self.internal_index
+        self.internal_index += 1
+        return index
 
 
 class _NameSanitizer(_NameIndexer):
@@ -700,10 +699,15 @@ class _NameSanitizer(_NameIndexer):
     eg: sani["__&sfhs"] for retrieval after the first time
 
     """
-    def __init__(self, identifier_regex_str, internal_prefix='_sani_temp', map_valid_vals=True):
+    def __init__(self, identifier_regex_str, internal_prefix='_sani_temp',
+                 map_valid_vals=True, extra_checks=lambda x: True, allow_duplicates=False):
+        if identifier_regex_str[-1] != '$':
+            identifier_regex_str += '$'
         self.identifier = re.compile(identifier_regex_str)
         self.val_map = {}
         self.map_valid = map_valid_vals
+        self.extra_checks = extra_checks
+        self.allow_dups = allow_duplicates
         super(_NameSanitizer, self).__init__(internal_prefix)
 
     def __getitem__(self, item):
@@ -713,15 +717,12 @@ class _NameSanitizer(_NameIndexer):
         return self.val_map[item]
 
     def is_valid_str(self, string):
-        return re.match(self.identifier, string) and self._extra_checks(string)
-
-    def _extra_checks(self, string):
-        return True
+        return self.identifier.match(string) and self.extra_checks(string)
 
     def make_valid_string(self, string=''):
         """ Inputting a value for the first time """
         if not self.is_valid_str(string):
-            if string in self.val_map:
+            if string in self.val_map and not self.allow_dups:
                 raise IndexError("Value {} has already been given to the sanitizer".format(string))
             internal_name = super(_NameSanitizer, self).make_valid_string()
             self.val_map[string] = internal_name
@@ -735,7 +736,5 @@ class _NameSanitizer(_NameIndexer):
 class PythonSanitizer(_NameSanitizer):
     """ Name Sanitizer specifically built for Python identifers"""
     def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
-        super(PythonSanitizer, self).__init__(py_regex, internal_prefix, map_valid_vals)
-
-    def _extra_checks(self, str):
-        return not keyword.iskeyword(str)
+        super(PythonSanitizer, self).__init__(_py_regex, internal_prefix, map_valid_vals)
+        self.extra_checks = lambda s: not keyword.iskeyword(s)

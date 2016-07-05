@@ -1,5 +1,6 @@
 import unittest
 import pyrtl
+from pyrtl import wire
 
 
 class TestWireVector(unittest.TestCase):
@@ -47,6 +48,22 @@ class TestWireVector(unittest.TestCase):
         self.assertNotIn("test1", block.wirevector_by_name)
         self.assertIn("testJohn", block.wirevector_by_name)
         self.assertIn(w, block.wirevector_set)
+
+
+class TestWireVectorNames(unittest.TestCase):
+    def is_valid_str(self, s):
+        return wire.next_tempvar_name(s) == s
+
+    def test_invalid_name(self):
+        self.assertFalse(self.is_valid_str(''))
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.is_valid_str('clock')
+
+    def test_valid_names(self):
+        self.assertTrue(self.is_valid_str('xxx'))
+        self.assertTrue(self.is_valid_str('h'))
+        self.assertTrue(self.is_valid_str(' '))
+        self.assertTrue(self.is_valid_str('#$)(*&#@_+!#)('))
 
 
 class TestWireVectorFail(unittest.TestCase):

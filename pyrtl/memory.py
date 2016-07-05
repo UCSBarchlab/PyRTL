@@ -14,8 +14,8 @@ from __future__ import print_function, unicode_literals
 import collections
 
 from .pyrtlexceptions import PyrtlError
-from .core import working_block, LogicNet
-from .wire import WireVector, Const, wvIndexer
+from .core import working_block, LogicNet, _NameIndexer
+from .wire import WireVector, Const, next_tempvar_name
 from .helperfuncs import as_wires
 
 # ------------------------------------------------------------------------
@@ -25,6 +25,8 @@ from .helperfuncs import as_wires
 #   |  | |___  |  | \__/ |  \  |     |__) |___ \__/ \__, |  \
 #
 
+
+_memIndex = _NameIndexer()
 
 _MemAssignment = collections.namedtuple('_MemAssignment', 'rhs, is_conditional')
 """_MemAssignment is the type returned from assignment by |= or <<="""
@@ -77,7 +79,7 @@ class _MemReadBase(object):
 
     def __init__(self,  bitwidth, addrwidth, name, asynchronous, block):
         self.block = working_block(block)
-        name = wvIndexer.next_tempvar_name(name)
+        name = next_tempvar_name(name)
 
         if bitwidth <= 0:
             raise PyrtlError('bitwidth must be >= 1')
@@ -88,7 +90,7 @@ class _MemReadBase(object):
         self.name = name
         self.addrwidth = addrwidth
         self.readport_nets = []
-        self.id = wvIndexer.next_memid()
+        self.id = _memIndex.next_index()
         self.asynchronous = asynchronous
 
     def __getitem__(self, item):
@@ -140,7 +142,7 @@ class MemBlock(_MemReadBase):
 
     # data <<= memory[addr]  (infer read port)
     # memory[addr] <<= data  (infer write port)
-    def __init__(self, bitwidth, addrwidth, name=None, asynchronous=False, block=None):
+    def __init__(self, bitwidth, addrwidth, name='', asynchronous=False, block=None):
         """
         Create a PyRTL read-write memory.
 
@@ -174,7 +176,7 @@ class MemBlock(_MemReadBase):
 
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
         if len(item) > self.addrwidth:
-            raise PyrtlError('error, memory index bitwidth > addrwidth')
+            raise PyrtlError('error, the wire indexing the memory bitwidth > addrwidth')
         addr = item
 
         if isinstance(val, MemBlock.EnabledWrite):
@@ -218,7 +220,7 @@ class RomBlock(_MemReadBase):
 
     RomBlocks are the read only memory format in PyRTL
     """
-    def __init__(self, bitwidth, addrwidth, romdata, name=None, asynchronous=False, block=None):
+    def __init__(self, bitwidth, addrwidth, romdata, name='', asynchronous=False, block=None):
         """
         Create a Python Read Only Memory
 

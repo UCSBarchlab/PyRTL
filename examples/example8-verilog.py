@@ -128,7 +128,7 @@ sim_trace.render_trace()
 
 print("--- Verilog for the TestBench ---")
 with io.StringIO() as tbfile:
-    pyrtl.OutputVerilogTestbench(dest_file=tbfile, simulation_trace=sim_trace)
+    pyrtl.output_verilog_testbench(dest_file=tbfile, simulation_trace=sim_trace)
     print(tbfile.getvalue())
 
 

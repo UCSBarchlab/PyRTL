@@ -47,7 +47,7 @@ def make_inputs_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None,
     return wires, vals
 
 
-def generate_in_wire_and_values(bitwidth, test_vals=20, name=None,
+def generate_in_wire_and_values(bitwidth, test_vals=20, name='',
                                 random_dist=uniform_dist):
     """
     Generates an input wire and a set of test values for

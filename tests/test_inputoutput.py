@@ -131,7 +131,7 @@ class TestOutputTextbench(unittest.TestCase):
         for cycle in range(15):
             sim.step({zero: random.choice([0, 0, 0, 1])})
         with io.StringIO() as tbfile:
-            pyrtl.OutputVerilogTestbench(tbfile, sim_trace)
+            pyrtl.output_verilog_testbench(tbfile, sim_trace)
 
 
 class TestNetGraph(unittest.TestCase):
@@ -161,7 +161,7 @@ class TestNetGraph(unittest.TestCase):
 class TestVerilogNames(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        self.vnames = inputoutput.VerilogSanitizer("_sani_test")
+        self.vnames = inputoutput._VerilogSanitizer("_sani_test")
 
     def checkname(self, name):
         self.assertEqual(self.vnames.make_valid_string(name), name)
