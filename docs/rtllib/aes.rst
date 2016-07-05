@@ -1,5 +1,5 @@
-AES
-===
+AES-128
+=======
 
 .. automodule:: pyrtl.rtllib.aes
    :members:

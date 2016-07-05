@@ -8,7 +8,7 @@ import numbers
 import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, PostSynthBlock, PythonSanitizer
+from .core import working_block, PostSynthBlock, _PythonSanitizer
 from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock
 from .helperfuncs import check_rtl_assertions, _currently_in_ipython
@@ -349,7 +349,7 @@ class FastSimulation(object):
         self.code_file = code_file
         self.mems = {}
         self.regs = {}
-        self.internal_names = PythonSanitizer('_fastsim_tmp_')
+        self.internal_names = _PythonSanitizer('_fastsim_tmp_')
         self._initialize(register_value_map, memory_value_map)
 
     def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):

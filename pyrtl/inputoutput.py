@@ -578,6 +578,10 @@ class OutputToVerilog(object):
         outputs = self.block.wirevector_subset(Output)
         registers = self.block.wirevector_subset(Register)
         wires = self.block.wirevector_subset() - (inputs | outputs | registers)
+        wire_regs = set()
+        for net in self.block.logic:
+            if net.op == 'm':
+                wire_regs.add(net.dests[0])
         memory_nets = self.block.logic_subset(('m', '@'))
         memories = set()
 
@@ -600,8 +604,9 @@ class OutputToVerilog(object):
             print('    reg%s %s;' % (_verilog_vector_decl(w),
                                      self._varname(w)), file=self.file)
         for w in wires:
-            print('    wire%s %s;' % (_verilog_vector_decl(w),
-                                      self._varname(w)), file=self.file)
+            type = 'reg' if w in wire_regs else 'wire'
+            print('    %s%s %s;' % (type, _verilog_vector_decl(w),
+                                    self._varname(w)), file=self.file)
         print('', file=self.file)
 
         for w in memories:
@@ -665,9 +670,12 @@ class OutputToVerilog(object):
                 print('    assign %s = {%s};' % t, file=self.file)
             elif net.op == 'r':
                 pass  # do nothing for registers
-            elif net.op == 'm':
+            elif net.op == 'm':  # use always block and assign as Verilog register
+                print('    always @( posedge clk )', file=self.file)
+                print('    begin', file=self.file)
                 t = (self._varname(net.dests[0]), net.op_param[0], self._varname(net.args[0]))
-                print('        assign %s = mem_%s[%s];' % t, file=self.file)
+                print('        %s <= mem_%s[%s];' % t, file=self.file)
+                print('    end', file=self.file)
             elif net.op == '@':
                 pass
             else:
