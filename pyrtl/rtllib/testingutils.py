@@ -38,7 +38,7 @@ def make_inputs_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None,
     testing purposes
 
     :param function dist: function to generate the random values
-    :return: wires, lists of values for the wires
+    :return: wires; list of values for the wires
     """
     min_bitwidth, max_bitwidth = calcuate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
     wires, vals = list(zip(*(
@@ -53,10 +53,10 @@ def generate_in_wire_and_values(bitwidth, test_vals=20, name='',
     Generates an input wire and a set of test values for
     testing purposes
 
-    :param bitwidth: The bitwidth of the value you wish to generate
+    :param bitwidth: The bitwidth of the value to be generated
     :param int test_vals: number of values to generate per wire
     :param name: name for the input wire to be generated
-    :return: tuple consisting of input_wire, test_vaues
+    :return: tuple consisting of input_wire, test_values
     """
     input_wire = pyrtl.Input(bitwidth, name=name)  # Creating a new input wire
     test_vals = [random_dist(bitwidth) for i in range(test_vals)]
@@ -76,12 +76,12 @@ def make_consts(num_wires, max_bitwidth=None, exact_bitwidth=None, random_dist=i
 
 def sim_and_ret_out(outwire, inwires, invals):
     """
-    Simulates the net using the inwires, invalues and returns the output array
-    Used for rapid test development
+    Simulates the net using inwires and invalues, and returns the output array.
+    Used for rapid test development.
 
     :param outwire: The wire to return the output of
-    :param inwires: a list of wires to read in from ([Input, ...])
-    :param invals: a list of input value lists ([ [int, ...], ...])
+    :param inwires: a list of wires to read in from (`[Input, ...]`)
+    :param invals: a list of input value lists (`[ [int, ...], ...]`)
     :return: a list of values from the output wire simulation result
     """
     # Pulling the value of outwire straight from the log
@@ -90,11 +90,11 @@ def sim_and_ret_out(outwire, inwires, invals):
 
 def sim_and_ret_outws(inwires, invals):
     """
-    Simulates the net using the inwires, invalues and returns the output array
-    Used for rapid test development
+    Simulates the net using inwires and invalues, and returns the output array.
+    Used for rapid test development.
 
-    :param inwires: a list of wires to read in from ([Input, ...])
-    :param invals: a list of input value lists ([[int, ...], ...])
+    :param inwires: a list of wires to read in from (`[Input, ...]`)
+    :param invals: a list of input value lists (`[[int, ...], ...]`)
     :return: a list of values from the output wire simulation result
     """
     sim_trace = pyrtl.SimulationTrace()  # Creating a logger for the simulator
@@ -108,7 +108,7 @@ def sim_and_ret_outws(inwires, invals):
 def sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
     # TODO: write param and return descriptions
     """
-    Simulation of a circuit that takes multiple cycles to complete
+    Simulation of a circuit that takes multiple cycles to complete.
 
     :param in_dict:
     :param hold_dict:
@@ -127,7 +127,7 @@ def sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
 def multi_sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
     # TODO: write param and return descriptions
     """
-    Simulates a circuit that takes multiple cycles to complete multiple times
+    Simulates a circuit that takes multiple cycles to complete multiple times.
 
     :param in_dict: {in_wire: [in_values, ...], ...}
     :param hold_dict: {hold_wire: hold_value} The hold values for the

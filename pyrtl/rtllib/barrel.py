@@ -10,9 +10,9 @@ def barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0):
     :param shift_in: the input wire
     :param bit_in: the 1-bit wire giving the value to shift in
     :param direction: a one bit WireVector representing shift direction
-        0 = shift down, 1 = shift up.
+        (0 = shift down, 1 = shift up)
     :param shift_dist: WireVector representing offset to shift
-    :param wrap_around: ****currently not implemented*****
+    :param wrap_around: ****currently not implemented****
     :return: shifted WireVector
     """
     # Implement with logN stages pyrtl.muxing between shifted and un-shifted values
