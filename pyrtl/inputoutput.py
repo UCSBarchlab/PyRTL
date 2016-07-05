@@ -604,8 +604,9 @@ class OutputToVerilog(_VerilogOutput):
             print('    reg%s %s;' % (self._verilog_vector_decl(w),
                                      self._varname(w)), file=self.file)
         for w in wires:
-            print('    wire%s %s;' % (self._verilog_vector_decl(w),
-                                      self._varname(w)), file=self.file)
+            decl = 'reg' if w.op == 'm' else 'wire'
+            print('    %s%s %s;' % (decl, self._verilog_vector_decl(w),
+                                    self._varname(w)), file=self.file)
         print('', file=self.file)
 
         for w in memories:
