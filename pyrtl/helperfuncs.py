@@ -8,7 +8,7 @@ rtl_assert: Simulation time hardware value assertions
 
 from __future__ import print_function, unicode_literals
 
-import re
+# import re
 import six
 
 from .core import working_block, _NameIndexer
@@ -59,14 +59,14 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
     :param val: a wirevector-like object or something that can be converted into
       a Const
     :param bitwidth: The bitwidth the resulting wire should be
-    :param bool truncating: determines whether bits will be dropped to acheive
-     the desired bitwidth if it is too long (if true, the most-significant-bits
+    :param bool truncating: determines whether bits will be dropped to achieve
+     the desired bitwidth if it is too long (if true, the most-significant bits
      will be dropped)
     :param Block block: block to use for wire
 
     This function is mainly used to coerce values into WireVectors (for
     example, operations such as "x+1" where "1" needs to be converted to
-    a Const WireVector.)
+    a Const WireVector).
     """
     from .memory import _MemIndexed
     block = working_block(block)
@@ -75,8 +75,9 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
         # note that this case captures bool as well (as bools are instances of ints)
         return Const(val, bitwidth=bitwidth, block=block)
     elif isinstance(val, _MemIndexed):
-        # covert to a memory read when the value is actually used
-        return as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)
+        # convert to a memory read when the value is actually used
+        # ONLY USAGE OF _build_read_port()
+        return as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)  # _brp
     elif not isinstance(val, WireVector):
         raise PyrtlError('error, expecting a wirevector, int, or verilog-style '
                          'const string got %s instead' % repr(val))

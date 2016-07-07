@@ -426,9 +426,11 @@ class TestLoopDetection(unittest.TestCase):
         x_1 = ins[4] < reg
         x_2 = ins[1] * x_1
         x_3 = pyrtl.corecircuits.mux(x_1, ins[1], ins[2])
+        # x_4 = pyrtl.as_wires(mem1[ins[6]])
         x_4 = mem1[ins[6]]
         x_5 = reg + ins[7]
-        mem1[x_4] <<= x_4
+        x_9 = pyrtl.as_wires(x_4)
+        mem1[pyrtl.as_wires(x_4)] <<= x_9
         outs[0] <<= x_2 == x_1
         reg.next <<= x_5 & ins[1]
         outs[1] <<= reg

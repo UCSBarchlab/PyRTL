@@ -237,7 +237,7 @@ class TestAsGraph(unittest.TestCase):
         self.check_graph_correctness(src_g, dst_g, True)
 
     def test_as_graph_memory(self):
-        m = pyrtl.MemBlock(addrwidth=2, bitwidth=2, name='m')
+        m = pyrtl.MemBlock(addrwidth=2, bitwidth=2, name='m', max_read_ports=None)
         i = pyrtl.Register(bitwidth=2, name='i')
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
