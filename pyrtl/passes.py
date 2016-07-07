@@ -273,7 +273,6 @@ def _replace_subexps(block, net_table):
 
     block.logic.difference_update(unnecessary_nets)
     replace_wires(wire_map, block)
-    block.sanity_check()
 
 
 def _has_normal_dest_wire(net):
