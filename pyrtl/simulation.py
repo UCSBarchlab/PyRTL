@@ -47,12 +47,16 @@ class Simulation(object):
 
         :param tracer: an instance of SimulationTrace used to store execution results.
             defaults to a SimulationTrace with no params passed to it
-        :param register_value_map: is a map of {Register: value}.
-        :param memory_value_map: is a map of maps {Memory: {address: Value}}.
-        :param default_value: is the value that all unspecified registers and memories will
-         default to. If no default_value is specified, it will use the value stored in the
-         object (default to 0)
+        :param register_value_map: Defines the initial value for
+          the roms specified. Format: {Register: value}.
+        :param memory_value_map: Defines initial values for many
+          addresses in a single or multiple memory. Format: {Memory: {address: Value}}.
+          Memory is a memory block, address is the address of a value
+        :param default_value: is the value that all unspecified registers and
+          memories will initialize to. If no default_value is specified, it will
+          use the value stored in the object (default to 0)
         :param block: the hardware block to be traced (which might be of type PostSynthesisBlock).
+          defaults to the working block
 
         Warning: Simulation initializes some things when called with __init__,
         so changing items in the block for Simulation will liely break
@@ -206,9 +210,10 @@ class Simulation(object):
         check_rtl_assertions(self)
 
     def inspect(self, w):
-        """ Get the value of a wirevector in the current simulation cycle.
+        """ Get the value of a wirevector in the last simulation cycle.
 
-        :param w: the wirevector to inspect
+        :param w: the name of the WireVector to inspect
+            (passing in a WireVector instead of a name is deprecated)
         :return: value of w in the current step of simulation
 
         Will throw KeyError if w does not exist in the simulation.
@@ -276,25 +281,19 @@ class Simulation(object):
         semantics of the primitive ops.  Function updates self.value and
         self.memvalue accordingly (using prior_value)
         """
-        if net.op in 'w~&|^n+-*<>=xcsm':
-            return  # stateless elements and memory-read
+        if net.op == 'r':
+            # copy result from input to output of register
+            argval = prior_value[net.args[0]]
+            self.value[net.dests[0]] = self._sanitize(argval, net.dests[0])
+        elif net.op == '@':
+            memid = net.op_param[0]
+            write_addr = prior_value[net.args[0]]
+            write_val = prior_value[net.args[1]]
+            write_enable = prior_value[net.args[2]]
+            if write_enable:
+                self.memvalue[memid][write_addr] = write_val
         else:
-            if net.op == 'r':
-                # copy result from input to output of register
-                argval = prior_value[net.args[0]]
-                self.value[net.dests[0]] = self._sanitize(argval, net.dests[0])
-            elif net.op == '@':
-                memid = net.op_param[0]
-                write_addr = prior_value[net.args[0]]
-                write_val = prior_value[net.args[1]]
-                write_enable = prior_value[net.args[2]]
-                if write_enable:
-                    self.memvalue[memid][write_addr] = write_val
-            else:
-                raise PyrtlInternalError
-
-    def _print_values(self):
-        print(' '.join([str(v) for _, v in sorted(self.value.items())]))
+            raise PyrtlInternalError
 
 
 # ----------------------------------------------------------------
@@ -328,7 +327,7 @@ class FastSimulation(object):
         Instantiates a Fast Simulation instance.
 
         :param code_file: The file in which to store a copy of the generated
-        python code
+        python code. Defaults to no code being stored.
 
         Look at Simulation.__init__ for descriptions for the other parameters
 
@@ -429,16 +428,13 @@ class FastSimulation(object):
         check_rtl_assertions(self)
 
     def inspect(self, w):
-        """ Get the value of a wirevector in the current simulation cycle.
+        """ Get the value of a wirevector in the last simulation cycle.
 
-        :param w: WireVector object or name of WireVector to inspect
+        :param w: the name of the WireVector to inspect
+            (passing in a WireVector instead of a name is deprecated)
         :return: value of w in the current step of simulation
 
-        Will throw KeyError if w does not exist in the simulation.
-
-        Note for multiple blocks: If w is a wirevector, and is not part of
-        the block currently simulated, inspect will look for a wire with
-        the same name in the simulated block
+        Will throw KeyError if w is not being tracked in the simulation.
         """
         try:
             return self.context[self._to_name(w)]
