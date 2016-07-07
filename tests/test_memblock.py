@@ -15,7 +15,7 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         self.mem_write_address = pyrtl.Input(self.addrwidth, name='mem_write_address')
         self.mem_write_data = pyrtl.Input(self.bitwidth, name='mem_write_data')
         self.memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
-                                     name='self.memory')
+                                     name='self.memory', max_read_ports=None)
 
     def tearDown(self):
         pyrtl.reset_working_block()
@@ -62,6 +62,42 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         self.output2 <<= temp2
         pyrtl.working_block().sanity_check()
 
+    def test_2read_1write(self):
+        small_memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
+                                           name='small_memory', max_read_ports=2,
+                                           max_write_ports=1)
+        temp = small_memory[self.mem_read_address1]  # read
+        temp2 = small_memory[self.mem_read_address2]  # read
+
+        self.output1 <<= temp
+        self.output2 <<= temp2
+        small_memory[self.mem_write_address] <<= pyrtl.Const(6)  # write
+        pyrtl.working_block().sanity_check()
+
+    def test_over_max_read_ports(self):
+        lim_memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
+                                    name='lim_memory', max_read_ports=8)
+        for i in range(lim_memory.max_read_ports):
+            self.output1 <<= lim_memory[self.mem_read_address1]
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.output2 <<= lim_memory[self.mem_read_address2]
+
+    def test_over_max_write_ports(self):
+        lim_memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
+                                    name='lim_memory', max_write_ports=4)
+        for i in range(lim_memory.max_write_ports):
+            lim_memory[self.mem_write_address] <<= pyrtl.Const(6)
+        with self.assertRaises(pyrtl.PyrtlError):
+            lim_memory[self.mem_write_address] <<= pyrtl.Const(6)
+
+    @unittest.skip('temporary bug')
+    def test_write_mem_to_mem(self):
+        read_mem = pyrtl.MemBlock(32, 32, max_read_ports=1, max_write_ports=0)
+        write_mem = pyrtl.MemBlock(32, 32, max_read_ports=0, max_write_ports=1)
+
+        x = read_mem[pyrtl.Const(21)]
+        write_mem[x] <<= pyrtl.Const(34)
+
 
 class RTLRomBlockWiring(unittest.TestCase):
     data = list(range(2**5))
@@ -74,7 +110,7 @@ class RTLRomBlockWiring(unittest.TestCase):
         self.in1 = pyrtl.Input(self.addrwidth, name='mem_write_address')
         self.in2 = pyrtl.Input(self.addrwidth, name='mem_write_address')
         self.memory = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
-                                     name='self.memory', romdata=self.data)
+                                     name='self.memory', romdata=self.data, max_read_ports=None)
 
     def tearDown(self):
         pyrtl.reset_working_block()
@@ -181,12 +217,37 @@ class RTLRomGetReadData(unittest.TestCase):
             self.invalid_rom_read(rom, 8)
             self.invalid_rom_read(rom, 5809)
 
+    def test_over_max_read_ports(self):
+        width = 6
+        rom = pyrtl.RomBlock(width, width, [2, 4, 7, 1])
+        for i in range(rom.max_read_ports):
+            rom_read_address = pyrtl.Input(width)
+            rom_out = pyrtl.Output(width)
+            rom_out <<= rom[rom_read_address]
+        rom_read_address = pyrtl.Input(width)
+        rom_out = pyrtl.Output(width)
+        with self.assertRaises(pyrtl.PyrtlError):
+            rom_out <<= rom[rom_read_address]
+
     def test_valid_get_read(self):
         rom, romf = self.sample_roms()
         for address, expected in enumerate((2, 4, 7, 1)):
             self.assertEqual(rom._get_read_data(address), expected)
         for address, expected in enumerate((1, 3, 5, 7, 1)):
             self.assertEqual(romf._get_read_data(address), expected)
+
+    def test_build_new_roms(self):
+        width = 6
+        rom = pyrtl.RomBlock(6, 6, [2, 4, 7, 1], build_new_roms=True)
+        for i in range(width):
+            rom_read_address = pyrtl.Input(width)
+            rom_out = pyrtl.Output(width)
+            rom_out <<= rom[rom_read_address]
+        roms = set()
+        for romNet in pyrtl.working_block().logic_subset('m'):
+            curr_rom = romNet.op_param[1]
+            roms.add(curr_rom)
+        self.assertEquals(len(roms), 3)
 
 
 if __name__ == "__main__":
