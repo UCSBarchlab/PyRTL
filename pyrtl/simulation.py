@@ -55,7 +55,7 @@ class Simulation(object):
         :param block: the hardware block to be traced (which might be of type PostSynthesisBlock).
 
         Warning: Simulation initializes some things when called with __init__,
-        so changing items in the block for Simulation will liely break
+        so changing items in the block for Simulation will likely break
         the simulation.
         """
 
@@ -110,6 +110,9 @@ class Simulation(object):
                 self.memvalue[memid] = {}
 
         if memory_value_map is not None:
+            for memory in memory_value_map:
+                if isinstance(memory, RomBlock):
+                    raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
             for (mem, mem_map) in memory_value_map.items():
                 if isinstance(self.block, PostSynthBlock):
                     mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
@@ -383,6 +386,9 @@ class FastSimulation(object):
 
     def _initialize_mems(self, memory_value_map):
         if memory_value_map is not None:
+            for memory in memory_value_map:
+                if isinstance(memory, RomBlock):
+                    raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
             for (mem, mem_map) in memory_value_map.items():
                 self.mems[self._mem_varname(mem)] = mem_map
 
