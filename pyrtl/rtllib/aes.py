@@ -14,8 +14,34 @@ from pyrtl.rtllib import libutils
 
 
 class AES(object):
-    # TODO: (put usage example (at bottom) in the rst file because
-    #        formatting would not be preserved here
+    """
+    ``Example``::
+
+        aes = AES_Encrypt()
+        aes_plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
+        aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
+        aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
+        reset = pyrtl.Input(1)
+        ready = pyrtl.Output(1, name='ready')
+        ready_out, aes_ciphertext_out = aes.encryption_statem(aes_plaintext, aes_key, reset)
+        ready <<= ready_out
+        aes_ciphertext <<= aes_ciphertext_out
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim.step ({
+            aes_plaintext: 0x00112233445566778899aabbccddeeff,
+            aes_key: 0x000102030405060708090a0b0c0d0e0f,
+            reset: 1
+        })
+        for cycle in range(1,10):
+            sim.step ({
+                aes_plaintext: 0x00112233445566778899aabbccddeeff,
+                aes_key: 0x000102030405060708090a0b0c0d0e0f,
+                reset: 0
+            })
+        sim_trace.render_trace(symbol_len=40, segment_size=1)
+
+    """
     def __init__(self):
         self.memories_built = False
         self._key_len = 128
@@ -428,30 +454,3 @@ class AES(object):
         7c 72 60 6e 44 4a 58 56 37 39 2b 25 0f 01 13 1d 47 49 5b 55 7f 71 63 6d
         d7 d9 cb c5 ef e1 f3 fd a7 a9 bb b5 9f 91 83 8d
         ''')
-
-# Hardware build.
-"""
-aes = AES_Encrypt()
-aes_plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
-aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
-aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
-reset = pyrtl.Input(1)
-ready = pyrtl.Output(1, name='ready')
-ready_out, aes_ciphertext_out = aes.encryption_statem(aes_plaintext, aes_key, reset)
-ready <<= ready_out
-aes_ciphertext <<= aes_ciphertext_out
-sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace)
-sim.step ({
-                aes_plaintext: 0x00112233445566778899aabbccddeeff,
-                aes_key: 0x000102030405060708090a0b0c0d0e0f,
-                reset: 1
-         })
-for cycle in range(1,10):
-    sim.step ({
-                aes_plaintext: 0x00112233445566778899aabbccddeeff,
-                aes_key: 0x000102030405060708090a0b0c0d0e0f,
-                reset: 0
-             })
-sim_trace.render_trace(symbol_len=40, segment_size=1)
-"""
