@@ -156,15 +156,13 @@ class SimWithSpecialWiresBase(unittest.TestCase):
 
         sim.step({i: 28})
         self.assertEqual(sim.inspect(o), 28)
-        if fastsim_only(self.sim):
-            self.assertEqual(sim.inspect(o.name), 28)
+        self.assertEqual(sim.inspect(o.name), 28)
         self.assertEqual(trace.trace[o.name], [28])
 
         sim.step({i: 233})
         self.assertEqual(sim.inspect(o), 233)
         self.assertEqual(sim.inspect(o2), 28)
-        if fastsim_only(self.sim):
-            self.assertEqual(sim.inspect(o2.name), 28)
+        self.assertEqual(sim.inspect(o2.name), 28)
         self.assertEqual(trace.trace[o2.name], [0, 28])
 
 
@@ -465,7 +463,7 @@ class RomBlockSimBase(unittest.TestCase):
                                                  ("o2", lambda x: rom_data_function(2*x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
-    @unittest.skip
+    @unittest.skip('This is not currently working')
     def test_rom_out_of_range_error(self):
         rom_data_array = [15, 13, 11, 9, 7, 5, 3]
         rom1 = pyrtl.RomBlock(bitwidth=4, addrwidth=3, romdata=rom_data_array)
@@ -511,8 +509,7 @@ class InspectBase(unittest.TestCase):
 
         sim.step({a: 28})
         self.assertEqual(sim.inspect(a), 28)
-        if fastsim_only(self.sim):
-            self.assertEqual(sim.inspect('a'), 28)
+        self.assertEqual(sim.inspect('a'), 28)
         self.assertEqual(sim.inspect(b), 28)
 
     def test_inspect_mem(self):
