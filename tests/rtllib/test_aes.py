@@ -44,7 +44,7 @@ class TestAESDecrypt(unittest.TestCase):
     @unittest.skip
     def test_key_expansion(self):
         # This is not at all correct. Needs to be completely rewritten
-        self.out_vector <<= pyrtl.corecircuits.concat_list(self.aes_decrypt._decryption_key_gen(self.in_vector))
+        self.out_vector <<= pyrtl.corecircuits.concat_list(self.aes_decrypt._key_gen(self.in_vector))
 
         in_vals = [0xd1876c0f79c4300ab45594add66ff41f, 0xfa636a2825b339c940668a3157244d17]
         true_result = [0x3e175076b61c04678dfc2295f6a8bfc0, 0x2dfb02343f6d12dd09337ec75b36e3f0]
@@ -147,7 +147,7 @@ class TestAESEncrypt(unittest.TestCase):
     @unittest.skip
     def test_key_expansion(self):
         # This is not at all correct. Needs to be completely rewritten
-        self.out_vector <<= pyrtl.concat_list(self.aes_encrypt._decryption_key_gen(self.in_vector))
+        self.out_vector <<= pyrtl.concat_list(self.aes_encrypt._key_gen(self.in_vector))
 
         in_vals = [0x4c9c1e66f771f0762c3f868e534df256, 0xc57e1c159a9bd286f05f4be098c63439]
         true_result = [0x3bd92268fc74fb735767cbe0c0590e2d, 0xb458124c68b68a014b99f82e5f15554c]
@@ -173,8 +173,8 @@ class TestAESEncrypt(unittest.TestCase):
         reset = pyrtl.Input(1)
         ready = pyrtl.Output(1, name='ready')
 
-        encrypt_ready, encrypt_out = self.aes_encrypt.encryption_statem(self.in_vector, aes_key,
-                                                                        reset)
+        encrypt_ready, encrypt_out = self.aes_encrypt.encrypt_state_m(self.in_vector, aes_key,
+                                                                      reset)
         self.out_vector <<= encrypt_out
         ready <<= encrypt_ready
 

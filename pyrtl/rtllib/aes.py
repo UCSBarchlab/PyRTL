@@ -46,7 +46,14 @@ class AES(object):
         self._key_len = 128
 
     def encryption(self, plaintext, key):
-        key_list = self._encryption_key_gen(key)
+        """
+        Builds a single cycle AES Encryption circuit
+
+        :param WireVector plaintext: text to encrypt
+        :param WireVector key: AES key to use to encrypt
+        :return: a WireVector containing the ciphertext
+        """
+        key_list = self._key_gen(key)
         t = self._add_round_key(plaintext, key_list[0])
         pyrtl.probe(t, 'add key')
 
@@ -62,9 +69,13 @@ class AES(object):
             t = self._add_round_key(t, key_list[round])
         return t
 
-    def encryption_statem(self, plaintext_in, key_in, reset):
+    def encrypt_state_m(self, plaintext_in, key_in, reset):
         """
-        return ready, cipher_text: ready is a one bit signal showing
+        Builds a multiple cycle AES Encryption state machine circuit
+
+        :param reset: a one bit signal telling the state machine
+          to reset and accept the current plaintext and key
+        :return ready, cipher_text: ready is a one bit signal showing
         that the encryption result (cipher_text) has been calculated.
         """
         if len(key_in) != len(plaintext_in):
@@ -74,7 +85,7 @@ class AES(object):
         key_exp_in, add_round_in = (pyrtl.WireVector(len(plaintext_in)) for i in range(2))
 
         # list of generated keys, not stored in memory
-        key_list = (self._encryption_key_gen(key_exp_in))
+        key_list = (self._key_gen(key_exp_in))
         counter = pyrtl.Register(4, 'counter')
         round = pyrtl.WireVector(4)
         counter.next <<= round
@@ -108,19 +119,19 @@ class AES(object):
         ready = (counter == 10)
         return ready, plain_text
 
-    def _encryption_key_gen(self, key):
-        keys = [key]
-        for enc_round in range(10):
-            key = self._key_expansion(key, enc_round)
-            keys.append(key)
-        return keys
-
     def decryption(self, ciphertext, key):
+        """
+        Builds a single cycle AES Decryption circuit
+
+        :param WireVector ciphertext: data to decrypt
+        :param WireVector key: AES key to use to encrypt (AES is symmetric)
+        :return: a WireVector containing the plaintext
+        """
         if len(ciphertext) != self._key_len:
             raise pyrtl.PyrtlError("Ciphertext length is invalid")
         if len(key) != self._key_len:
             raise pyrtl.PyrtlError("key length is invalid")
-        key_list = self._decryption_key_gen(key)
+        key_list = self._key_gen(key)
         t = self._add_round_key(ciphertext, key_list[10])
 
         for round in range(1, 11):
@@ -134,7 +145,11 @@ class AES(object):
 
     def decryption_statem(self, ciphertext_in, key_in, reset):
         """
-        return ready, plain_text: ready is a one bit signal showing
+        Builds a multiple cycle AES Decryption state machine circuit
+
+        :param reset: a one bit signal telling the state machine
+          to reset and accept the current plaintext and key
+        :return ready, plain_text: ready is a one bit signal showing
         that the decryption result (plain_text) has been calculated.
         """
         if len(key_in) != len(ciphertext_in):
@@ -145,7 +160,7 @@ class AES(object):
 
         # this is not part of the state machine as we need the keys in
         # reverse order...
-        reversed_key_list = reversed(self._decryption_key_gen(key_exp_in))
+        reversed_key_list = reversed(self._key_gen(key_exp_in))
 
         counter = pyrtl.Register(4, 'counter')
         round = pyrtl.WireVector(4)
@@ -183,12 +198,21 @@ class AES(object):
         ready = (counter == 10)
         return ready, cipher_text
 
-    def _decryption_key_gen(self, key):
+    def _key_gen(self, key):
         keys = [key]
         for enc_round in range(10):
             key = self._key_expansion(key, enc_round)
             keys.append(key)
         return keys
+
+    def _key_expansion(self, old_key, key_expand_round):
+        self._build_memories_if_not_exists()
+        w = libutils.partition_wire(old_key, 32)
+        x = [w[3] ^ self._g(w[0], key_expand_round)]
+        x.insert(0, x[0] ^ w[2])
+        x.insert(0, x[0] ^ w[1])
+        x.insert(0, x[0] ^ w[0])
+        return pyrtl.concat_list(x)
 
     def _g(self, word, key_expand_round):
         """
@@ -204,15 +228,6 @@ class AES(object):
             rcon_data = self.rcon[key_expand_round + 1]
         sub[3] = sub[3] ^ rcon_data
         return pyrtl.concat_list(sub)
-
-    def _key_expansion(self, old_key, key_expand_round):
-        self._build_memories_if_not_exists()
-        w = libutils.partition_wire(old_key, 32)
-        x = [w[3] ^ self._g(w[0], key_expand_round)]
-        x.insert(0, x[0] ^ w[2])
-        x.insert(0, x[0] ^ w[1])
-        x.insert(0, x[0] ^ w[0])
-        return pyrtl.concat_list(x)
 
     def _sub_bytes(self, in_vector, inverse=False):
         self._build_memories_if_not_exists()
