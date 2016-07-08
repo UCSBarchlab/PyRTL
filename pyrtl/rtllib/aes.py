@@ -2,6 +2,35 @@ from __future__ import division, absolute_import
 import pyrtl
 from pyrtl.rtllib import libutils
 
+"""
+
+``Example``::
+
+    aes = AES()
+    aes_plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
+    aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
+    aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
+    reset = pyrtl.Input(1)
+    ready = pyrtl.Output(1, name='ready')
+    ready_out, aes_ciphertext_out = aes.encryption_statem(aes_plaintext, aes_key, reset)
+    ready <<= ready_out
+    aes_ciphertext <<= aes_ciphertext_out
+    sim_trace = pyrtl.SimulationTrace()
+    sim = pyrtl.Simulation(tracer=sim_trace)
+    sim.step ({
+        aes_plaintext: 0x00112233445566778899aabbccddeeff,
+        aes_key: 0x000102030405060708090a0b0c0d0e0f,
+        reset: 1
+    })
+    for cycle in range(1,10):
+        sim.step ({
+            aes_plaintext: 0x00112233445566778899aabbccddeeff,
+            aes_key: 0x000102030405060708090a0b0c0d0e0f,
+            reset: 0
+        })
+    sim_trace.render_trace(symbol_len=40, segment_size=1)
+"""
+
 # TODO:
 # 2) All ROMs should be synchronous.  This should be easy once (3) is completed
 # 3) Right now decryption generates one GIANT combinatorial block. Instead
@@ -14,34 +43,6 @@ from pyrtl.rtllib import libutils
 
 
 class AES(object):
-    """
-    ``Example``::
-
-        aes = AES_Encrypt()
-        aes_plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
-        aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
-        aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
-        reset = pyrtl.Input(1)
-        ready = pyrtl.Output(1, name='ready')
-        ready_out, aes_ciphertext_out = aes.encryption_statem(aes_plaintext, aes_key, reset)
-        ready <<= ready_out
-        aes_ciphertext <<= aes_ciphertext_out
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step ({
-            aes_plaintext: 0x00112233445566778899aabbccddeeff,
-            aes_key: 0x000102030405060708090a0b0c0d0e0f,
-            reset: 1
-        })
-        for cycle in range(1,10):
-            sim.step ({
-                aes_plaintext: 0x00112233445566778899aabbccddeeff,
-                aes_key: 0x000102030405060708090a0b0c0d0e0f,
-                reset: 0
-            })
-        sim_trace.render_trace(symbol_len=40, segment_size=1)
-
-    """
     def __init__(self):
         self.memories_built = False
         self._key_len = 128
@@ -117,6 +118,23 @@ class AES(object):
     def _add_round_key(t, key):
         return t ^ key
 
+    def encryption(self, plaintext, key):
+        key_list = self._encryption_key_gen(key)
+        t = self._add_round_key(plaintext, key_list[0])
+        pyrtl.probe(t, 'add key')
+
+        for round in range(1, 11):
+            t = self._sub_bytes(t)
+            pyrtl.probe(t, 'sub' + str(round))
+            t = self._shift_rows(t)
+            pyrtl.probe(t, 'shift_row round ' + str(round))
+            if round != 10:
+                t = self._mix_columns(t)
+                pyrtl.probe(t, 'mix columns round ' + str(round))
+            # print 'after shift rows ' + t
+            t = self._add_round_key(t, key_list[round])
+        return t
+
     def encryption_statem(self, plaintext_in, key_in, reset):
         """
         return ready, cipher_text: ready is a one bit signal showing
@@ -134,16 +152,10 @@ class AES(object):
         round = pyrtl.WireVector(4)
         counter.next <<= round
         sub_out = self._sub_bytes(plain_text)
-        pyrtl.probe(sub_out, 'sub_row round ' + str(round))
         shift_out = self._shift_rows(sub_out)
-        pyrtl.probe(shift_out, 'shift_row round ' + str(round))
         mix_out = self._mix_columns(shift_out)
-        pyrtl.probe(mix_out, 'mix_row round ' + str(round))
         key_out = pyrtl.mux(round, *key_list, default=0)
-        pyrtl.probe(key_out, 'key round ' + str(round))
         add_round_out = self._add_round_key(add_round_in, key_out)
-        pyrtl.probe(add_round_out, 'add key round ' + str(round))
-        pyrtl.probe(plain_text, 'plain text' + str(round))
         with pyrtl.conditional_assignment:
             with reset == 1:
                 round |= 0
@@ -176,21 +188,21 @@ class AES(object):
             keys.append(key)
         return keys
 
-    def encryption(self, plaintext, key):
-        key_list = self._encryption_key_gen(key)
-        t = self._add_round_key(plaintext, key_list[0])
-        pyrtl.probe(t, 'add key')
+    def decryption(self, ciphertext, key):
+        if len(ciphertext) != self._key_len:
+            raise pyrtl.PyrtlError("Ciphertext length is invalid")
+        if len(key) != self._key_len:
+            raise pyrtl.PyrtlError("key length is invalid")
+        key_list = self._decryption_key_gen(key)
+        t = self._add_round_key(ciphertext, key_list[10])
 
         for round in range(1, 11):
-            t = self._sub_bytes(t)
-            pyrtl.probe(t, 'sub' + str(round))
-            t = self._shift_rows(t)
-            pyrtl.probe(t, 'shift_row round ' + str(round))
+            t = self._inv_shift_rows(t)
+            t = self._sub_bytes(t, True)
+            t = self._add_round_key(t, key_list[10 - round])
             if round != 10:
-                t = self._mix_columns(t)
-                pyrtl.probe(t, 'mix columns round ' + str(round))
-            # print 'after shift rows ' + t
-            t = self._add_round_key(t, key_list[round])
+                t = self._mix_columns(t, True)
+
         return t
 
     def decryption_statem(self, ciphertext_in, key_in, reset):
@@ -244,65 +256,12 @@ class AES(object):
         ready = (counter == 10)
         return ready, cipher_text
 
-    def _decryption_statem_with_rom_in(self, ciphertext_in, key_ROM, reset):
-        cipher_text = pyrtl.Register(len(ciphertext_in))
-        add_round_in = pyrtl.WireVector(len(ciphertext_in))
-
-        counter = pyrtl.Register(4, 'counter')
-        round = pyrtl.WireVector(4)
-        counter.next <<= round
-
-        inv_shift = self._inv_shift_rows(cipher_text)
-        inv_sub = self._sub_bytes(inv_shift, True)
-        key_out = key_ROM[(10 - round)[0:4]]
-        add_round_out = self._add_round_key(inv_sub, key_out)
-        inv_mix_out = self._mix_columns(add_round_out, True)
-
-        with pyrtl.conditional_assignment:
-            with reset == 1:
-                round |= 0
-                cipher_text.next |= add_round_out
-                add_round_in |= ciphertext_in
-
-            with counter == 10:  # keep everything the same
-                round |= counter
-                cipher_text.next |= cipher_text
-
-            with pyrtl.otherwise:  # running through AES
-                round |= counter + 1
-
-                add_round_in |= key_out
-                with counter == 9:
-                    cipher_text.next |= add_round_out
-                with pyrtl.otherwise:
-                    cipher_text.next |= inv_mix_out
-
-        ready = (counter == 10)
-        return ready, cipher_text
-
     def _decryption_key_gen(self, key):
         keys = [key]
         for enc_round in range(10):
             key = self._key_expansion(key, enc_round)
             keys.append(key)
         return keys
-
-    def decryption(self, ciphertext, key):
-        if len(ciphertext) != self._key_len:
-            raise pyrtl.PyrtlError("Ciphertext length is invalid")
-        if len(key) != self._key_len:
-            raise pyrtl.PyrtlError("key length is invalid")
-        key_list = self._decryption_key_gen(key)
-        t = self._add_round_key(ciphertext, key_list[10])
-
-        for round in range(1, 11):
-            t = self._inv_shift_rows(t)
-            t = self._sub_bytes(t, True)
-            t = self._add_round_key(t, key_list[10 - round])
-            if round != 10:
-                t = self._mix_columns(t, True)
-
-        return t
 
     def _build_memories_if_not_exists(self):
         if not self.memories_built:
