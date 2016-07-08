@@ -115,6 +115,8 @@ class Simulation(object):
 
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
+                if isinstance(mem, RomBlock):
+                    raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
                 if isinstance(self.block, PostSynthBlock):
                     mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
                 self.memvalue[mem.id] = mem_map
@@ -384,6 +386,8 @@ class FastSimulation(object):
     def _initialize_mems(self, memory_value_map):
         if memory_value_map is not None:
             for (mem, mem_map) in memory_value_map.items():
+                if isinstance(mem, RomBlock):
+                    raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
                 self.mems[self._mem_varname(mem)] = mem_map
 
         for net in self.block.logic_subset('m@'):
