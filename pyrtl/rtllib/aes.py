@@ -70,10 +70,9 @@ class AES(object):
         x.insert(0, x[0] ^ w[0])
         return pyrtl.concat_list(x)
 
-    def _sub_bytes(self, in_vector, direct=0):
-        """ direct is 0 for normal, 1 for inv """
+    def _sub_bytes(self, in_vector, inverse=False):
         self._build_memories_if_not_exists()
-        subbed = [self.inv_sbox[byte] if direct else self.sbox[byte]
+        subbed = [self.inv_sbox[byte] if inverse else self.sbox[byte]
                   for byte in libutils.partition_wire(in_vector, 8)]
         return pyrtl.concat_list(subbed)
 
@@ -99,10 +98,9 @@ class AES(object):
         else:
             return self._inv_gal_mult_dict[mult_table][c]
 
-    def _mix_columns(self, in_vector, direct=0):
-        """ direct is 0 for normal, 1 for inv """
+    def _mix_columns(self, in_vector, inverse=False):
         self._build_memories_if_not_exists()
-        igm_mults = [14, 9, 13, 11] if direct else [2, 1, 1, 3]
+        igm_mults = [14, 9, 13, 11] if inverse else [2, 1, 1, 3]
         subgroups = libutils.partition_wire(in_vector, 32)
         return pyrtl.concat_list([self._mix_col_subgroup(sg, igm_mults) for sg in subgroups])
 
@@ -215,10 +213,10 @@ class AES(object):
         counter.next <<= round
 
         inv_shift = self._inv_shift_rows(cipher_text)
-        inv_sub = self._sub_bytes(inv_shift, 1)
+        inv_sub = self._sub_bytes(inv_shift, True)
         key_out = pyrtl.mux(round, *reversed_key_list, default=0)
         add_round_out = self._add_round_key(add_round_in, key_out)
-        inv_mix_out = self._mix_columns(add_round_out, 1)
+        inv_mix_out = self._mix_columns(add_round_out, True)
 
         with pyrtl.conditional_assignment:
             with reset == 1:
@@ -255,10 +253,10 @@ class AES(object):
         counter.next <<= round
 
         inv_shift = self._inv_shift_rows(cipher_text)
-        inv_sub = self._sub_bytes(inv_shift, 1)
+        inv_sub = self._sub_bytes(inv_shift, True)
         key_out = key_ROM[(10 - round)[0:4]]
         add_round_out = self._add_round_key(inv_sub, key_out)
-        inv_mix_out = self._mix_columns(add_round_out, 1)
+        inv_mix_out = self._mix_columns(add_round_out, True)
 
         with pyrtl.conditional_assignment:
             with reset == 1:
@@ -299,10 +297,10 @@ class AES(object):
 
         for round in range(1, 11):
             t = self._inv_shift_rows(t)
-            t = self._sub_bytes(t, 1)
+            t = self._sub_bytes(t, True)
             t = self._add_round_key(t, key_list[10 - round])
             if round != 10:
-                t = self._mix_columns(t, 1)
+                t = self._mix_columns(t, True)
 
         return t
 
