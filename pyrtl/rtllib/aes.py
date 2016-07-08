@@ -36,8 +36,6 @@ from pyrtl.rtllib import libutils
 # 3) Right now decryption generates one GIANT combinatorial block. Instead
 #    it should generate one of 2 options -- Either an iterative design or a
 #    pipelined design.  Both will add registers between each round of AES
-# 4) aes_encryption should be added to this file as well so that an
-#    aes encrypter similar to (3) above is generated
 # 5) a single "aes-unit" combining encryption and decryption (without making
 #    full independent hardware units) would be a plus as well
 
@@ -46,77 +44,6 @@ class AES(object):
     def __init__(self):
         self.memories_built = False
         self._key_len = 128
-
-    def _g(self, word, key_expand_round):
-        """
-        One-byte left circular rotation, substitution of each byte
-        """
-        import numbers
-        self._build_memories_if_not_exists()
-        a = libutils.partition_wire(word, 8)
-        sub = [self.sbox[a[index]] for index in (3, 0, 1, 2)]
-        if isinstance(key_expand_round, numbers.Number):
-            rcon_data = self._rcon_data[key_expand_round + 1]  # int value
-        else:
-            rcon_data = self.rcon[key_expand_round + 1]
-        sub[3] = sub[3] ^ rcon_data
-        return pyrtl.concat_list(sub)
-
-    def _key_expansion(self, old_key, key_expand_round):
-        self._build_memories_if_not_exists()
-        w = libutils.partition_wire(old_key, 32)
-        x = [w[3] ^ self._g(w[0], key_expand_round)]
-        x.insert(0, x[0] ^ w[2])
-        x.insert(0, x[0] ^ w[1])
-        x.insert(0, x[0] ^ w[0])
-        return pyrtl.concat_list(x)
-
-    def _sub_bytes(self, in_vector, inverse=False):
-        self._build_memories_if_not_exists()
-        subbed = [self.inv_sbox[byte] if inverse else self.sbox[byte]
-                  for byte in libutils.partition_wire(in_vector, 8)]
-        return pyrtl.concat_list(subbed)
-
-    @staticmethod
-    def _inv_shift_rows(in_vector):
-        a = libutils.partition_wire(in_vector, 8)
-        return pyrtl.concat_list((a[12], a[9],  a[6],  a[3],
-                                  a[0],  a[13], a[10], a[7],
-                                  a[4],  a[1],  a[14], a[11],
-                                  a[8],  a[5],  a[2],  a[15]))
-
-    @staticmethod
-    def _shift_rows(in_vector):
-        a = libutils.partition_wire(in_vector, 8)
-        return pyrtl.concat_list((a[4], a[9], a[14], a[3],
-                                  a[8], a[13], a[2], a[7],
-                                  a[12], a[1], a[6], a[11],
-                                  a[0], a[5], a[10], a[15]))
-
-    def galois_mult(self, c, mult_table):
-        if mult_table == 1:
-            return c
-        else:
-            return self._inv_gal_mult_dict[mult_table][c]
-
-    def _mix_columns(self, in_vector, inverse=False):
-        self._build_memories_if_not_exists()
-        igm_mults = [14, 9, 13, 11] if inverse else [2, 1, 1, 3]
-        subgroups = libutils.partition_wire(in_vector, 32)
-        return pyrtl.concat_list([self._mix_col_subgroup(sg, igm_mults) for sg in subgroups])
-
-    def _mix_col_subgroup(self, in_vector, gm_multipliers):
-        def _mix_single(index):
-            mult_items = [self.galois_mult(a[(index + loc) % 4], mult_table)
-                          for loc, mult_table in enumerate(gm_multipliers)]
-            return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
-
-        a = libutils.partition_wire(in_vector, 8)
-        return pyrtl.concat_list([_mix_single(index) for index in range(len(a))])
-
-    @staticmethod
-    def _add_round_key(t, key):
-        return t ^ key
 
     def encryption(self, plaintext, key):
         key_list = self._encryption_key_gen(key)
@@ -263,6 +190,77 @@ class AES(object):
             keys.append(key)
         return keys
 
+    def _g(self, word, key_expand_round):
+        """
+        One-byte left circular rotation, substitution of each byte
+        """
+        import numbers
+        self._build_memories_if_not_exists()
+        a = libutils.partition_wire(word, 8)
+        sub = [self.sbox[a[index]] for index in (3, 0, 1, 2)]
+        if isinstance(key_expand_round, numbers.Number):
+            rcon_data = self._rcon_data[key_expand_round + 1]  # int value
+        else:
+            rcon_data = self.rcon[key_expand_round + 1]
+        sub[3] = sub[3] ^ rcon_data
+        return pyrtl.concat_list(sub)
+
+    def _key_expansion(self, old_key, key_expand_round):
+        self._build_memories_if_not_exists()
+        w = libutils.partition_wire(old_key, 32)
+        x = [w[3] ^ self._g(w[0], key_expand_round)]
+        x.insert(0, x[0] ^ w[2])
+        x.insert(0, x[0] ^ w[1])
+        x.insert(0, x[0] ^ w[0])
+        return pyrtl.concat_list(x)
+
+    def _sub_bytes(self, in_vector, inverse=False):
+        self._build_memories_if_not_exists()
+        subbed = [self.inv_sbox[byte] if inverse else self.sbox[byte]
+                  for byte in libutils.partition_wire(in_vector, 8)]
+        return pyrtl.concat_list(subbed)
+
+    @staticmethod
+    def _inv_shift_rows(in_vector):
+        a = libutils.partition_wire(in_vector, 8)
+        return pyrtl.concat_list((a[12], a[9],  a[6],  a[3],
+                                  a[0],  a[13], a[10], a[7],
+                                  a[4],  a[1],  a[14], a[11],
+                                  a[8],  a[5],  a[2],  a[15]))
+
+    @staticmethod
+    def _shift_rows(in_vector):
+        a = libutils.partition_wire(in_vector, 8)
+        return pyrtl.concat_list((a[4], a[9], a[14], a[3],
+                                  a[8], a[13], a[2], a[7],
+                                  a[12], a[1], a[6], a[11],
+                                  a[0], a[5], a[10], a[15]))
+
+    def _galois_mult(self, c, mult_table):
+        if mult_table == 1:
+            return c
+        else:
+            return self._inv_gal_mult_dict[mult_table][c]
+
+    def _mix_columns(self, in_vector, inverse=False):
+        self._build_memories_if_not_exists()
+        igm_mults = [14, 9, 13, 11] if inverse else [2, 1, 1, 3]
+        subgroups = libutils.partition_wire(in_vector, 32)
+        return pyrtl.concat_list([self._mix_col_subgroup(sg, igm_mults) for sg in subgroups])
+
+    def _mix_col_subgroup(self, in_vector, gm_multipliers):
+        def _mix_single(index):
+            mult_items = [self._galois_mult(a[(index + loc) % 4], mult_table)
+                          for loc, mult_table in enumerate(gm_multipliers)]
+            return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
+
+        a = libutils.partition_wire(in_vector, 8)
+        return pyrtl.concat_list([_mix_single(index) for index in range(len(a))])
+
+    @staticmethod
+    def _add_round_key(t, key):
+        return t ^ key
+
     def _build_memories_if_not_exists(self):
         if not self.memories_built:
             self._build_memories()
@@ -275,8 +273,8 @@ class AES(object):
         self.sbox = build_mem(self._sbox_data)
         self.inv_sbox = build_mem(self._inv_sbox_data)
         self.rcon = build_mem(self._rcon_data)
-        self.GM2 = build_mem(self.GM2_data)
-        self.GM3 = build_mem(self.GM3_data)
+        self.GM2 = build_mem(self._GM2_data)
+        self.GM3 = build_mem(self._GM3_data)
         self.GM9 = build_mem(self._GM9_data)
         self.GM11 = build_mem(self._GM11_data)
         self.GM13 = build_mem(self._GM13_data)
@@ -329,7 +327,7 @@ class AES(object):
 
     # Galois Multiplication tables for 2, 3, 9, 11, 13, and 14.
 
-    GM2_data = libutils.str_to_int_array('''
+    _GM2_data = libutils.str_to_int_array('''
         00 02 04 06 08 0a 0c 0e 10 12 14 16 18 1a 1c 1e 20 22 24 26 28 2a 2c 2e
         30 32 34 36 38 3a 3c 3e 40 42 44 46 48 4a 4c 4e 50 52 54 56 58 5a 5c 5e
         60 62 64 66 68 6a 6c 6e 70 72 74 76 78 7a 7c 7e 80 82 84 86 88 8a 8c 8e
@@ -342,7 +340,8 @@ class AES(object):
         ab a9 af ad a3 a1 a7 a5 db d9 df dd d3 d1 d7 d5 cb c9 cf cd c3 c1 c7 c5
         fb f9 ff fd f3 f1 f7 f5 eb e9 ef ed e3 e1 e7 e5
         ''')
-    GM3_data = libutils.str_to_int_array('''
+
+    _GM3_data = libutils.str_to_int_array('''
         00 03 06 05 0c 0f 0a 09 18 1b 1e 1d 14 17 12 11 30 33 36 35 3c 3f 3a 39
         28 2b 2e 2d 24 27 22 21 60 63 66 65 6c 6f 6a 69 78 7b 7e 7d 74 77 72 71
         50 53 56 55 5c 5f 5a 59 48 4b 4e 4d 44 47 42 41 c0 c3 c6 c5 cc cf ca c9
