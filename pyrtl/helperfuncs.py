@@ -76,8 +76,9 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
         return Const(val, bitwidth=bitwidth, block=block)
     elif isinstance(val, _MemIndexed):
         # convert to a memory read when the value is actually used
-        # ONLY USAGE OF _build_read_port()
-        return as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)  # _brp
+        if val.wire is None:
+            val.wire = as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)
+        return val.wire
     elif not isinstance(val, WireVector):
         raise PyrtlError('error, expecting a wirevector, int, or verilog-style '
                          'const string got %s instead' % repr(val))

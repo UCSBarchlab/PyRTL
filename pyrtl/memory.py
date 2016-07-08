@@ -44,6 +44,7 @@ class _MemIndexed(WireVector):
     def __init__(self, mem, index):
         self.mem = mem
         self.index = index
+        self.wire = None
 
     def __ilshift__(self, other):
         return _MemAssignment(rhs=other, is_conditional=False)
@@ -68,6 +69,10 @@ class _MemIndexed(WireVector):
 
     def zero_extended(self, bitwidth):
         return as_wires(self).zero_extended(bitwidth)
+
+    @property
+    def name(self):
+        raise PyrtlError("MemIndexed is a temporary object and therefore doesn't have a name")
 
 
 class _MemReadBase(object):

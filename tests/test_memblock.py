@@ -99,6 +99,59 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         write_mem[x] <<= pyrtl.Const(34)
 
 
+class MemIndexedTests(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.mem = pyrtl.MemBlock(8, 8)
+
+    def test_memindexed_name(self):
+        x = self.mem[2]
+        with self.assertRaises(pyrtl.PyrtlError):
+            print(x.name)
+
+    def test_read_memindexed_ilshift(self):
+        x = self.mem[2]
+        y = pyrtl.Output()
+        z = pyrtl.Output()
+        y <<= x
+        z <<= x
+        self.assertEqual(self.mem.read_ports, 1)
+
+    def test_write_memindexed_ilshift(self):
+        x = self.mem[2]
+        self.mem[x] <<= pyrtl.Const(8)
+        self.assertEqual(self.mem.read_ports, 1)
+        self.assertEqual(self.mem.write_ports, 1)
+
+    def test_read_memindexed_ior(self):
+        a = pyrtl.Const(1, 1)  # true
+        b = pyrtl.Const(0, 1)  # false
+        x = self.mem[2]
+        y = pyrtl.Output(8)
+        z = pyrtl.Output(8)
+        w = pyrtl.Output(8)
+        with pyrtl.conditional_assignment:
+            with a:
+                y |= x
+                z |= x
+            with b:
+                w |= x
+        self.assertEqual(self.mem.read_ports, 1)
+
+    def test_write_memindexed_ior(self):
+        a = pyrtl.Const(1, 1)  # true
+        b = pyrtl.Const(0, 1)  # false
+        self.mem = pyrtl.MemBlock(8, 8)
+        x = self.mem[2]
+        with pyrtl.conditional_assignment:
+            with a:
+                self.mem[x] |= pyrtl.Const(8)
+            with b:
+                self.mem[x] |= pyrtl.Const(8)
+        self.assertEqual(self.mem.read_ports, 1)
+        self.assertEqual(self.mem.write_ports, 1)
+
+
 class RTLRomBlockWiring(unittest.TestCase):
     data = list(range(2**5))
 
