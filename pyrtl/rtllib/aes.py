@@ -3,6 +3,9 @@ import pyrtl
 from pyrtl.rtllib import libutils
 
 """
+A class for building a PyRTL AES circuit.
+
+Currently this class only supports 128 bit AES encryption/decryption
 
 ``Example``::
 
@@ -53,19 +56,19 @@ class AES(object):
         :param WireVector key: AES key to use to encrypt
         :return: a WireVector containing the ciphertext
         """
+        if len(plaintext) != self._key_len:
+            raise pyrtl.PyrtlError("Ciphertext length is invalid")
+        if len(key) != self._key_len:
+            raise pyrtl.PyrtlError("key length is invalid")
+
         key_list = self._key_gen(key)
         t = self._add_round_key(plaintext, key_list[0])
-        pyrtl.probe(t, 'add key')
 
         for round in range(1, 11):
             t = self._sub_bytes(t)
-            pyrtl.probe(t, 'sub' + str(round))
             t = self._shift_rows(t)
-            pyrtl.probe(t, 'shift_row round ' + str(round))
             if round != 10:
                 t = self._mix_columns(t)
-                pyrtl.probe(t, 'mix columns round ' + str(round))
-            # print 'after shift rows ' + t
             t = self._add_round_key(t, key_list[round])
         return t
 
@@ -255,7 +258,7 @@ class AES(object):
         if mult_table == 1:
             return c
         else:
-            return self._inv_gal_mult_dict[mult_table][c]
+            return self._galois_mults[mult_table][c]
 
     def _mix_columns(self, in_vector, inverse=False):
         self._build_memories_if_not_exists()
@@ -294,8 +297,8 @@ class AES(object):
         self.GM11 = build_mem(self._GM11_data)
         self.GM13 = build_mem(self._GM13_data)
         self.GM14 = build_mem(self._GM14_data)
-        self._inv_gal_mult_dict = {3: self.GM3, 2: self.GM2, 9: self.GM9, 11: self.GM11,
-                                   13: self.GM13, 14: self.GM14}
+        self._galois_mults = {3: self.GM3, 2: self.GM2, 9: self.GM9, 11: self.GM11,
+                              13: self.GM13, 14: self.GM14}
         self.memories_built = True
 
     _sbox_data = libutils.str_to_int_array('''
