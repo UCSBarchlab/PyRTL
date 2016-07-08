@@ -16,6 +16,8 @@ from pyrtl.rtllib import libutils
 
 
 class AES(object):
+    # TODO: (put usage example (at bottom) in the rst file because
+    #        formatting would not be preserved here
     def __init__(self):
         self.memories_built = False
         self._key_len = 128
@@ -44,14 +46,11 @@ class AES(object):
         x.insert(0, x[0] ^ w[0])
         return pyrtl.concat_list(x)
 
-    def _inv_sub_bytes(self, in_vector):
+    def _sub_bytes(self, in_vector, direct=0):
+        """ direct is 0 for normal, 1 for inv """
         self._build_memories_if_not_exists()
-        subbed = [self.inv_sbox[byte] for byte in libutils.partition_wire(in_vector, 8)]
-        return pyrtl.concat_list(subbed)
-
-    def _sub_bytes(self, in_vector):
-        self._build_memories_if_not_exists()
-        subbed = [self.sbox[byte] for byte in libutils.partition_wire(in_vector, 8)]
+        subbed = [self.inv_sbox[byte] if direct else self.sbox[byte]
+                  for byte in libutils.partition_wire(in_vector, 8)]
         return pyrtl.concat_list(subbed)
 
     @staticmethod
@@ -76,15 +75,10 @@ class AES(object):
         else:
             return self._inv_gal_mult_dict[mult_table][c]
 
-    def _inv_mix_columns(self, in_vector):
+    def _mix_columns(self, in_vector, direct=0):
+        """ direct is 0 for normal, 1 for inv """
         self._build_memories_if_not_exists()
-        igm_mults = [14, 9, 13, 11]
-        subgroups = libutils.partition_wire(in_vector, 32)
-        return pyrtl.concat_list([self._mix_col_subgroup(sg, igm_mults) for sg in subgroups])
-
-    def _mix_columns(self, in_vector):
-        self._build_memories_if_not_exists()
-        igm_mults = [2, 1, 1, 3]
+        igm_mults = [14, 9, 13, 11] if direct else [2, 1, 1, 3]
         subgroups = libutils.partition_wire(in_vector, 32)
         return pyrtl.concat_list([self._mix_col_subgroup(sg, igm_mults) for sg in subgroups])
 
@@ -103,13 +97,13 @@ class AES(object):
 
     def encryption_statem(self, plaintext_in, key_in, reset):
         """
-        return ready, cypher_text: ready is a one bit signal showing
-        that the encryption result (cypher_text) has been calculated.
+        return ready, cipher_text: ready is a one bit signal showing
+        that the encryption result (cipher_text) has been calculated.
         """
         if len(key_in) != len(plaintext_in):
             raise pyrtl.PyrtlError("AES key and plaintext should be the same length")
 
-        cypher_text, key = (pyrtl.Register(len(plaintext_in)) for i in range(2))
+        plain_text, key = (pyrtl.Register(len(plaintext_in)) for i in range(2))
         key_exp_in, add_round_in = (pyrtl.WireVector(len(plaintext_in)) for i in range(2))
 
         # list of generated keys, not stored in memory
@@ -117,7 +111,7 @@ class AES(object):
         counter = pyrtl.Register(4, 'counter')
         round = pyrtl.WireVector(4)
         counter.next <<= round
-        sub_out = self._sub_bytes(cypher_text)
+        sub_out = self._sub_bytes(plain_text)
         pyrtl.probe(sub_out, 'sub_row round ' + str(round))
         shift_out = self._shift_rows(sub_out)
         pyrtl.probe(shift_out, 'shift_row round ' + str(round))
@@ -127,31 +121,31 @@ class AES(object):
         pyrtl.probe(key_out, 'key round ' + str(round))
         add_round_out = self._add_round_key(add_round_in, key_out)
         pyrtl.probe(add_round_out, 'add key round ' + str(round))
-        pyrtl.probe(cypher_text, 'plain text' + str(round))
+        pyrtl.probe(plain_text, 'plain text' + str(round))
         with pyrtl.conditional_assignment:
             with reset == 1:
                 round |= 0
                 key.next |= key_in
                 key_exp_in |= key_in  # to lower the number of cycles needed
-                cypher_text.next |= add_round_out
+                plain_text.next |= add_round_out
                 add_round_in |= plaintext_in
 
             with counter == 10:  # keep everything the same
                 round |= counter
-                cypher_text.next |= cypher_text
+                plain_text.next |= plain_text
 
             with pyrtl.otherwise:  # running through AES
                 round |= counter + 1
                 key.next |= key
                 key_exp_in |= key
-                cypher_text.next |= add_round_out
+                plain_text.next |= add_round_out
                 with counter == 9:
                     add_round_in |= shift_out
                 with pyrtl.otherwise:
                     add_round_in |= mix_out
 
         ready = (counter == 10)
-        return ready, cypher_text
+        return ready, plain_text
 
     def _encryption_key_gen(self, key):
         keys = [key]
@@ -185,7 +179,7 @@ class AES(object):
         if len(key_in) != len(ciphertext_in):
             raise pyrtl.PyrtlError("AES key and ciphertext should be the same length")
 
-        plain_text, key = (pyrtl.Register(len(ciphertext_in)) for i in range(2))
+        cipher_text, key = (pyrtl.Register(len(ciphertext_in)) for i in range(2))
         key_exp_in, add_round_in = (pyrtl.WireVector(len(ciphertext_in)) for i in range(2))
 
         # this is not part of the state machine as we need the keys in
@@ -196,23 +190,23 @@ class AES(object):
         round = pyrtl.WireVector(4)
         counter.next <<= round
 
-        inv_shift = self._inv_shift_rows(plain_text)
-        inv_sub = self._inv_sub_bytes(inv_shift)
+        inv_shift = self._inv_shift_rows(cipher_text)
+        inv_sub = self._sub_bytes(inv_shift, 1)
         key_out = pyrtl.mux(round, *reversed_key_list, default=0)
         add_round_out = self._add_round_key(add_round_in, key_out)
-        inv_mix_out = self._inv_mix_columns(add_round_out)
+        inv_mix_out = self._mix_columns(add_round_out, 1)
 
         with pyrtl.conditional_assignment:
             with reset == 1:
                 round |= 0
                 key.next |= key_in
                 key_exp_in |= key_in  # to lower the number of cycles needed
-                plain_text.next |= add_round_out
+                cipher_text.next |= add_round_out
                 add_round_in |= ciphertext_in
 
             with counter == 10:  # keep everything the same
                 round |= counter
-                plain_text.next |= plain_text
+                cipher_text.next |= cipher_text
 
             with pyrtl.otherwise:  # running through AES
                 round |= counter + 1
@@ -221,12 +215,12 @@ class AES(object):
                 key_exp_in |= key
                 add_round_in |= inv_sub
                 with counter == 9:
-                    plain_text.next |= add_round_out
+                    cipher_text.next |= add_round_out
                 with pyrtl.otherwise:
-                    plain_text.next |= inv_mix_out
+                    cipher_text.next |= inv_mix_out
 
         ready = (counter == 10)
-        return ready, plain_text
+        return ready, cipher_text
 
     def _decryption_statem_with_rom_in(self, ciphertext_in, key_ROM, reset):
         cipher_text = pyrtl.Register(len(ciphertext_in))
@@ -237,10 +231,10 @@ class AES(object):
         counter.next <<= round
 
         inv_shift = self._inv_shift_rows(cipher_text)
-        inv_sub = self._inv_sub_bytes(inv_shift)
+        inv_sub = self._sub_bytes(inv_shift, 1)
         key_out = key_ROM[(10 - round)[0:4]]
         add_round_out = self._add_round_key(inv_sub, key_out)
-        inv_mix_out = self._inv_mix_columns(add_round_out)
+        inv_mix_out = self._mix_columns(add_round_out, 1)
 
         with pyrtl.conditional_assignment:
             with reset == 1:
@@ -281,10 +275,10 @@ class AES(object):
 
         for round in range(1, 11):
             t = self._inv_shift_rows(t)
-            t = self._inv_sub_bytes(t)
+            t = self._sub_bytes(t, 1)
             t = self._add_round_key(t, key_list[10 - round])
             if round != 10:
-                t = self._inv_mix_columns(t)
+                t = self._mix_columns(t, 1)
 
         return t
 
