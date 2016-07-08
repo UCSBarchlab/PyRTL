@@ -405,16 +405,19 @@ class MemBlockBase(unittest.TestCase):
                        self.mem2: {0: 4, 1: 5}}
         self.sim_trace = pyrtl.SimulationTrace()
         sim = self.sim(tracer=self.sim_trace, memory_value_map=mem_val_map)
-        sim.step({
-            self.read_addr1: 4,
-            self.read_addr2: 5,
-            read_addr3: 6,
-            self.write_addr: 0,
-            self.write_data: 0
-        })
+        for i in range(2, 16):
+            sim.step({
+                self.read_addr1: i,
+                self.read_addr2: 16-i+1,
+                read_addr3: i,
+                self.write_addr: 0,
+                self.write_data: 0
+            })
         output = io.StringIO()
         self.sim_trace.print_trace(output)
-        self.assertEqual(output.getvalue(), 'o1 0\no2 0\no3 0\n')
+        self.assertEqual(output.getvalue(), 'o1 00000000000000\n'
+                                            'o2 00000000000000\n'
+                                            'o3 00000000000000\n')
 
 
 class RomBlockSimBase(unittest.TestCase):
