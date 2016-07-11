@@ -1,5 +1,6 @@
 import unittest
 import pyrtl
+from random import randint
 
 
 # -------------------------------------------------------------------
@@ -64,8 +65,7 @@ class RTLMemBlockDesignBase(unittest.TestCase):
 
     def test_2read_1write(self):
         small_memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
-                                           name='small_memory', max_read_ports=2,
-                                           max_write_ports=1)
+                                      name='small_memory', max_read_ports=2, max_write_ports=1)
         temp = small_memory[self.mem_read_address1]  # read
         temp2 = small_memory[self.mem_read_address2]  # read
 
@@ -106,49 +106,81 @@ class MemIndexedTests(unittest.TestCase):
 
     def test_memindexed_name(self):
         x = self.mem[2]
-        with self.assertRaises(pyrtl.PyrtlError):
-            print(x.name)
+        x.name = 'test_name'  # setter
+        self.assertEquals(x.name, 'test_name')  # getter
+        # with self.assertRaises(pyrtl.PyrtlError):
+        #     print(x.name)
 
     def test_read_memindexed_ilshift(self):
-        x = self.mem[2]
-        y = pyrtl.Output()
-        z = pyrtl.Output()
+        self.mem = pyrtl.MemBlock(8, 8, name='self.mem')
+        x = self.mem[6]
+        y = pyrtl.Output(8, 'y')
+        z = pyrtl.Output(8, 'z')
         y <<= x
         z <<= x
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(5):
+            sim.step({})
         self.assertEqual(self.mem.read_ports, 1)
 
     def test_write_memindexed_ilshift(self):
-        x = self.mem[2]
-        self.mem[x] <<= pyrtl.Const(8)
-        self.assertEqual(self.mem.read_ports, 1)
+        a = pyrtl.Input(3)
+        x = self.mem[6]
+        self.mem[x] <<= a
+        out = pyrtl.Output(8, name='out')
+        out <<= self.mem[6]
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(5):
+            sim.step({
+                a: i+1
+            })
+        self.assertEqual(self.mem.read_ports, 2)  # 2 b/c of the output read
         self.assertEqual(self.mem.write_ports, 1)
 
     def test_read_memindexed_ior(self):
-        a = pyrtl.Const(1, 1)  # true
-        b = pyrtl.Const(0, 1)  # false
-        x = self.mem[2]
-        y = pyrtl.Output(8)
-        z = pyrtl.Output(8)
-        w = pyrtl.Output(8)
+        a = pyrtl.Input(1)
+        self.mem = pyrtl.MemBlock(8, 8, name='self.mem')
+        x = self.mem[6]
+        y = pyrtl.Output(8, 'y')
+        z = pyrtl.Output(8, 'z')
+        w = pyrtl.Output(8, 'w')
         with pyrtl.conditional_assignment:
             with a:
                 y |= x
                 z |= x
-            with b:
+            with pyrtl.otherwise:
                 w |= x
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(5):
+            sim.step({
+                a: randint(0, 1)
+            })
         self.assertEqual(self.mem.read_ports, 1)
 
     def test_write_memindexed_ior(self):
-        a = pyrtl.Const(1, 1)  # true
-        b = pyrtl.Const(0, 1)  # false
-        self.mem = pyrtl.MemBlock(8, 8)
-        x = self.mem[2]
+        self.mem = pyrtl.MemBlock(8, 8, asynchronous=True)
+        a = pyrtl.Input(1)
+        b = pyrtl.Input(3)
+        x = self.mem[6]
+        x.name = 'x'
+        out = pyrtl.Output(8, name='out')
         with pyrtl.conditional_assignment:
             with a:
-                self.mem[x] |= pyrtl.Const(8)
-            with b:
-                self.mem[x] |= pyrtl.Const(8)
-        self.assertEqual(self.mem.read_ports, 1)
+                self.mem[x] |= b
+            with pyrtl.otherwise:
+                self.mem[x] |= ~b
+        out <<= self.mem[x]
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(5):
+            sim.step({
+                a: randint(0, 1),
+                b: i+1
+            })
+        self.assertEqual(self.mem.read_ports, 2)
         self.assertEqual(self.mem.write_ports, 1)
 
 
