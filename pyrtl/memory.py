@@ -28,7 +28,7 @@ from .helperfuncs import as_wires
 _memIndex = _NameIndexer()
 
 _MemAssignment = collections.namedtuple('_MemAssignment', 'rhs, is_conditional')
-_MemAssignment.__doc__ = """_MemAssignment is the type returned from assignment by |= or <<="""
+"""_MemAssignment is the type returned from assignment by |= or <<="""
 
 
 class _MemIndexed(WireVector):
@@ -139,16 +139,14 @@ class MemBlock(_MemReadBase):
         mem[address] = MemBlock.EnabledWrite(data,enable=we)
 
     `addr`, `data`, and `we` are wires
-    """
-    # FIXME: write ports assume that only one port is under control of the conditional
-    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
-    EnabledWrite.__doc__ = """
-    Allows for an enable bit for each write port
 
     When the address of a memory is assigned to using a EnableWrite object
     items will only be written to the memory when the enable WireVector is
     set to high (1)
     """
+    # FIXME: write ports assume that only one port is under control of the conditional
+    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
+    """ Allows for an enable bit for each write port """
 
     def __init__(self, bitwidth, addrwidth, name='', max_read_ports=2, max_write_ports=1,
                  asynchronous=False, block=None):
