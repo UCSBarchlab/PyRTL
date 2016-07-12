@@ -305,7 +305,7 @@ class MemBlockBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         self.bitwidth = 3
-        self.addrwidth = 4
+        self.addrwidth = 3
         self.output1 = pyrtl.Output(self.bitwidth, "o1")
         self.output2 = pyrtl.Output(self.bitwidth, "o2")
         self.read_addr1 = pyrtl.Input(self.addrwidth)
@@ -384,16 +384,26 @@ class MemBlockBase(unittest.TestCase):
                        self.mem2: {0: 4, 1: 5, 2: 6, 3: 7}}
         self.sim_trace = pyrtl.SimulationTrace()
         sim = self.sim(tracer=self.sim_trace, memory_value_map=mem_val_map)
-        sim.step({
-            self.read_addr1: 1,
-            self.read_addr2: 3,
-            read_addr3: 2,
-            self.write_addr: 0,
-            self.write_data: 0
-        })
-        output = io.StringIO()
-        self.sim_trace.print_trace(output)
-        self.assertEqual(output.getvalue(), 'o1 1\no2 3\no3 6\n')
+        # put new entries in
+        for i in range(2):
+            sim.step({
+                self.read_addr1: 4 + i,  # d.c.
+                self.read_addr2: 4 + i,  # d.c.
+                read_addr3: 2,
+                self.write_addr: 4 + i,  # put a 4 and a 5 in the 4th and 5th addr of mem1
+                self.write_data: 4 + i
+            })
+        # modify existing entries
+        for i in range(2):
+            sim.step({
+                self.read_addr1: 1 + i,  # d.c.
+                self.read_addr2: 1 + i,  # d.c.
+                read_addr3: 2,
+                self.write_addr: 1 + i,  # put a 2 and a 3 in the 1st and 2nd addr of mem1
+                self.write_data: 2 + i
+            })
+        # check consistency of memory_value_map assignment, insertion, and modification
+        self.assertEquals(sim.inspect_mem(self.mem1), {0: 0, 1: 2, 2: 3, 3: 3, 4: 4, 5: 5})
 
     def test_mem_val_map_defaults(self):
         read_addr3 = pyrtl.Input(self.addrwidth)
@@ -403,19 +413,19 @@ class MemBlockBase(unittest.TestCase):
                        self.mem2: {0: 4, 1: 5}}
         self.sim_trace = pyrtl.SimulationTrace()
         sim = self.sim(tracer=self.sim_trace, memory_value_map=mem_val_map)
-        for i in range(2, 16):
+        for i in range(2, 8):
             sim.step({
                 self.read_addr1: i,
-                self.read_addr2: 16-i+1,
+                self.read_addr2: 8-i+1,
                 read_addr3: i,
                 self.write_addr: 0,
                 self.write_data: 0
             })
         output = io.StringIO()
         self.sim_trace.print_trace(output)
-        self.assertEqual(output.getvalue(), 'o1 00000000000000\n'
-                                            'o2 00000000000000\n'
-                                            'o3 00000000000000\n')
+        self.assertEqual(output.getvalue(), 'o1 000000\n'
+                                            'o2 000000\n'
+                                            'o3 000000\n')
 
 
 class RomBlockSimBase(unittest.TestCase):
