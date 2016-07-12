@@ -17,7 +17,6 @@ from .pyrtlexceptions import PyrtlError
 from .core import working_block, LogicNet, _NameIndexer
 from .wire import WireVector, Const, next_tempvar_name
 from .helperfuncs import as_wires
-
 # ------------------------------------------------------------------------
 #
 #         ___        __   __          __        __   __
@@ -29,7 +28,7 @@ from .helperfuncs import as_wires
 _memIndex = _NameIndexer()
 
 _MemAssignment = collections.namedtuple('_MemAssignment', 'rhs, is_conditional')
-"""_MemAssignment is the type returned from assignment by |= or <<="""
+_MemAssignment.__doc__ = """_MemAssignment is the type returned from assignment by |= or <<="""
 
 
 class _MemIndexed(WireVector):
@@ -131,17 +130,20 @@ class _MemReadBase(object):
 
 
 class MemBlock(_MemReadBase):
-    """ An object for specifying read and write enabled block memories """
-    # FIXME: write ports assume that only one port is under control of the conditional
-    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
-    """ Allows for an enable bit for each write port
+    """ An object for specifying read and write enabled block memories
 
-    Usage:
-    data <<= memory[addr]  (infer read port)
-    memory[addr] <<= data  (infer write port)
-    mem[address] = MemBlock.EnabledWrite(data,enable=we)
+    Usage::
+
+        data <<= memory[addr]  (infer read port)
+        memory[addr] <<= data  (infer write port)
+        mem[address] = MemBlock.EnabledWrite(data,enable=we)
 
     `addr`, `data`, and `we` are wires
+    """
+    # FIXME: write ports assume that only one port is under control of the conditional
+    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
+    EnabledWrite.__doc__ = """
+    Allows for an enable bit for each write port
 
     When the address of a memory is assigned to using a EnableWrite object
     items will only be written to the memory when the enable WireVector is
