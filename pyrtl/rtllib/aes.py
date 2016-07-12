@@ -6,14 +6,14 @@ Currently this class only supports 128 bit AES encryption/decryption
 ``Example``::
 
     aes = AES()
-    aes_plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
-    aes_key = pyrtl.Input(bitwidth=128, name='aes_key')
+    plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
+    key = pyrtl.Input(bitwidth=128, name='aes_key')
     aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
     reset = pyrtl.Input(1)
     ready = pyrtl.Output(1, name='ready')
-    ready_out, aes_ciphertext_out = aes.encryption_statem(aes_plaintext, aes_key, reset)
+    ready_out, aes_cipher = aes.encryption_statem(plaintext, key, reset)
     ready <<= ready_out
-    aes_ciphertext <<= aes_ciphertext_out
+    aes_ciphertext <<= aes_cipher
     sim_trace = pyrtl.SimulationTrace()
     sim = pyrtl.Simulation(tracer=sim_trace)
     sim.step ({
