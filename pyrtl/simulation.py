@@ -144,7 +144,8 @@ class Simulation(object):
                 self.value[w] = default_value
 
         self.ordered_nets = tuple((i for i in self.block))
-        self.edge_update_nets = tuple((self.block.logic_subset('r@')))
+        self.reg_update_nets = tuple((self.block.logic_subset('r')))
+        self.mem_update_nets = tuple((self.block.logic_subset('@')))
 
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle
@@ -194,12 +195,17 @@ class Simulation(object):
             for i in input_set.difference(supplied_inputs):
                 raise PyrtlError('Input "%s" has no input value specified' % i.name)
 
-        # Do all of the clock-edge triggered operations based off of the priors
-        for net in self.edge_update_nets:
-            self._edge_update(net, prior_value)
+        # Do all of the reg operations based off of the priors at clk edge
+        for net in self.reg_update_nets:
+            argval = prior_value[net.args[0]]
+            self.value[net.dests[0]] = self._sanitize(argval, net.dests[0])
 
         for net in self.ordered_nets:
             self._execute(net)
+
+            # Do all of the mem operations based off the new values changed in _execute()
+        for net in self.mem_update_nets:
+            self._mem_update(net)
 
         # at the end of the step, record the values to the trace
         # print self.value # Helpful Debug Print
@@ -274,27 +280,22 @@ class Simulation(object):
 
         self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
 
-    def _edge_update(self, net, prior_value):
-        """Handle the posedge event for the simulation of the given net.
+    def _mem_update(self, net):
+        """Handle the mem update for the simulation of the given net (which is a memory).
 
         Combinational logic should have no posedge behavior, but registers and
-        memory should.  This function, along with _execute, defined the
-        semantics of the primitive ops.  Function updates self.value and
-        self.memvalue accordingly (using prior_value)
+        memory should.  This function, used after _execute, defines the
+        semantics of the primitive ops.  Function updates self.memvalue accordingly
+        (using prior_value)
         """
-        if net.op == 'r':
-            # copy result from input to output of register
-            argval = prior_value[net.args[0]]
-            self.value[net.dests[0]] = self._sanitize(argval, net.dests[0])
-        elif net.op == '@':
-            memid = net.op_param[0]
-            write_addr = prior_value[net.args[0]]
-            write_val = prior_value[net.args[1]]
-            write_enable = prior_value[net.args[2]]
-            if write_enable:
-                self.memvalue[memid][write_addr] = write_val
-        else:
+        if net.op != '@':
             raise PyrtlInternalError
+        memid = net.op_param[0]
+        write_addr = self.value[net.args[0]]
+        write_val = self.value[net.args[1]]
+        write_enable = self.value[net.args[2]]
+        if write_enable:
+            self.memvalue[memid][write_addr] = write_val
 
 
 # ----------------------------------------------------------------
