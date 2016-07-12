@@ -1,6 +1,6 @@
 """
-Passes contains prebuilt transformantion passes to do optimization
-lowering of the design to single wire gates, along with other
+Passes contains prebuilt transformantion passes to do optimization,
+lowering of the design to single wire gates (synthesis), along with other
 ways to change a block.
 """
 

@@ -158,7 +158,6 @@ class Simulation(object):
         sim.step({'a': 1, 'x': 23}) to simulate a cycle with values 1 and 23
         respectively
         """
-
         # To avoid weird loops, we need a copy of the old values which
         # we can then use to make our updates from
         prior_value = self.value.copy()

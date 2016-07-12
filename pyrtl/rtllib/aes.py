@@ -1,7 +1,3 @@
-from __future__ import division, absolute_import
-import pyrtl
-from pyrtl.rtllib import libutils
-
 """
 A class for building a PyRTL AES circuit.
 
@@ -32,7 +28,13 @@ Currently this class only supports 128 bit AES encryption/decryption
             reset: 0
         })
     sim_trace.render_trace(symbol_len=40, segment_size=1)
+
 """
+
+from __future__ import division, absolute_import
+import pyrtl
+from pyrtl.rtllib import libutils
+
 
 # TODO:
 # 2) All ROMs should be synchronous.  This should be easy once (3) is completed
@@ -55,6 +57,7 @@ class AES(object):
         :param WireVector plaintext: text to encrypt
         :param WireVector key: AES key to use to encrypt
         :return: a WireVector containing the ciphertext
+
         """
         if len(plaintext) != self._key_len:
             raise pyrtl.PyrtlError("Ciphertext length is invalid")
@@ -79,7 +82,8 @@ class AES(object):
         :param reset: a one bit signal telling the state machine
           to reset and accept the current plaintext and key
         :return ready, cipher_text: ready is a one bit signal showing
-        that the encryption result (cipher_text) has been calculated.
+          that the encryption result (cipher_text) has been calculated.
+
         """
         if len(key_in) != len(plaintext_in):
             raise pyrtl.PyrtlError("AES key and plaintext should be the same length")
@@ -153,7 +157,8 @@ class AES(object):
         :param reset: a one bit signal telling the state machine
           to reset and accept the current plaintext and key
         :return ready, plain_text: ready is a one bit signal showing
-        that the decryption result (plain_text) has been calculated.
+          that the decryption result (plain_text) has been calculated.
+
         """
         if len(key_in) != len(ciphertext_in):
             raise pyrtl.PyrtlError("AES key and ciphertext should be the same length")

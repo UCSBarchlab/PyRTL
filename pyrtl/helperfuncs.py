@@ -1,9 +1,9 @@
-""" Defines a set of helper functions that make constructing hardware easier.
+""" Helper functions that make constructing hardware easier.
 
 The set of functions includes
-as_wires: converts consts to wires if needed (and does nothing to wires)
-probe: a way to check the values of wires during simulation time
-rtl_assert: Simulation time hardware value assertions
+* as_wires: converts consts to wires if needed (and does nothing to wires)
+* probe: a way to check the values of wires during simulation time
+* rtl_assert: Simulation time hardware value assertions
 """
 
 from __future__ import print_function, unicode_literals

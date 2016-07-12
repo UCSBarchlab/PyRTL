@@ -221,8 +221,10 @@ class WireVector(object):
     def __add__(self, other):
         """
         Creates a LogicNet that adds two wires together into a single wire
+
         :return Wirevector: the result wire of the operation
           The resulting wire has one more bit than the longer of the two input wires
+
         Addition is compatible with two's complement signed numbers
         """
         return self._two_var_op(other, '+')
@@ -236,8 +238,10 @@ class WireVector(object):
     def __sub__(self, other):
         """
         Creates a LogicNet that subtracts the right wire from the left one
+
         :return Wirevector: the result wire of the operation
           The resulting wire has one more bit than the longer of the two input wires
+
         Subtraction is compatible with two's complement signed numbers
         """
         return self._two_var_op(other, '-')
@@ -253,9 +257,11 @@ class WireVector(object):
     def __mul__(self, other):
         """
         Creates a LogicNet that multiplies two different wirevectors
+
         :return Wirevector: the result wire of the operation
           The resulting wire's bitwidth is the sum of the two input wires' bitwidths
-        Subtraction is compatible with two's complement signed numbers
+
+        multiplication is not compatible with two's complement signed numbers
         """
         return self._two_var_op(other, '*')
 
@@ -268,6 +274,7 @@ class WireVector(object):
     def __lt__(self, other):
         """
         Creates a LogicNet that calculates whether a wire is less than another
+
         :return Wirevector: a one bit result wire of the operation
         """
         return self._two_var_op(other, '<')
@@ -275,6 +282,7 @@ class WireVector(object):
     def __le__(self, other):
         """
         Creates LogicNets that calculates whether a wire is less than or equal to another
+
         :return Wirevector: a one bit result wire of the operation
         """
         return ~ self._two_var_op(other, '>')
@@ -282,6 +290,7 @@ class WireVector(object):
     def __eq__(self, other):
         """
         Creates a LogicNet that calculates whether a wire is equal to another
+
         :return Wirevector: a one bit result wire of the operation
         """
         return self._two_var_op(other, '=')
