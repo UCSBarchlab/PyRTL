@@ -37,7 +37,7 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
     in the comments of Block, and is checked by `block.sanity_check`
 
 
-    `Operators`::
+    `Logical Operations`::
 
         ('&', None, (a1, a2), (out)) => AND two wires together, put result into out
         ('|', None, (a1, a2), (out)) => OR two wires together, put result into out
@@ -51,11 +51,12 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         ('*', None, (a1, a2), (out) => multiply a1 & a2, put result into out
                                        len(out) = len(a1) + len(a2)
             '+', '-', '*' are compatible w/ twos-compliment numbers
-        ('==', None, (a1, a2), (out)) => check a1 & a2 equal, put result into out (0 | 1)
+        ('=', None, (a1, a2), (out)) => check a1 & a2 equal, put result into out (0 | 1)
         ('<', None, (a1, a2), (out)) => check a2 greater than a1, put result into out (0 | 1)
         ('>', None, (a1, a2), (out)) => check a1 greater than a2, put result into out (0 | 1)
 
     """
+    # TODO: fill in rest of quickrefs^^^
 
     def __str__(self):
         rhs = ', '.join(str(x) for x in self.args)
