@@ -102,86 +102,129 @@ class RTLMemBlockDesignBase(unittest.TestCase):
 class MemIndexedTests(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        self.mem = pyrtl.MemBlock(8, 8)
 
     def test_memindexed_name(self):
+        self.mem = pyrtl.MemBlock(8, 8)
         x = self.mem[2]
-        x.name = 'test_name'  # setter
-        self.assertEquals(x.name, 'test_name')  # getter
-        # with self.assertRaises(pyrtl.PyrtlError):
-        #     print(x.name)
+        x.name = 'test_name'
+        self.assertEquals(x.name, 'test_name')
+        self.assertEquals(x.wire.name, 'test_name')
 
     def test_read_memindexed_ilshift(self):
-        self.mem = pyrtl.MemBlock(8, 8, name='self.mem')
-        x = self.mem[6]
+        self.mem = pyrtl.MemBlock(8, 8)
+        self.mem_val_map = {self.mem: {0: 5, 1: 4, 2: 3, 3: 2, 4: 1, 5: 0}}
+        a = pyrtl.Input(3)
+        x = self.mem[a]
         y = pyrtl.Output(8, 'y')
         z = pyrtl.Output(8, 'z')
         y <<= x
         z <<= x
         sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=self.mem_val_map)
         for i in range(5):
-            sim.step({})
+            sim.step({
+                a: i
+            })
+            self.assertEqual(sim.inspect(y), 5-i)
+            self.assertEqual(sim.inspect(z), 5-i)
         self.assertEqual(self.mem.read_ports, 1)
 
     def test_write_memindexed_ilshift(self):
-        a = pyrtl.Input(3)
-        x = self.mem[6]
-        self.mem[x] <<= a
-        out = pyrtl.Output(8, name='out')
-        out <<= self.mem[6]
+        self.mem1 = pyrtl.MemBlock(8, 8)
+        self.mem2 = pyrtl.MemBlock(8, 8, asynchronous=True)
+        self.mem_val_map = {self.mem1: {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5}}
+        addr1 = pyrtl.Input(3)
+        addr2 = pyrtl.Input(3)  # will be one behind addr1
+        inp = pyrtl.Input(3)
+        x = self.mem1[addr1]  # value follows addr1
+        self.mem2[x] <<= inp
+        out = pyrtl.Output(9, name='out')
+        out <<= self.mem2[addr2]  # one behind addr1, so one behind x
         sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=self.mem_val_map)
         for i in range(5):
             sim.step({
-                a: i+1
+                addr1: i,
+                addr2: 0 if i == 0 else i-1,  # one behind addr1
+                inp: 5-i
             })
-        self.assertEqual(self.mem.read_ports, 2)  # 2 b/c of the output read
-        self.assertEqual(self.mem.write_ports, 1)
+            self.assertEqual(sim.inspect(out), 0 if i ==0 else 5-(i-1))
+        self.assertEqual(self.mem1.read_ports, 1)  # 2 b/c of the output read
+        self.assertEqual(self.mem2.write_ports, 1)
 
     def test_read_memindexed_ior(self):
-        a = pyrtl.Input(1)
-        self.mem = pyrtl.MemBlock(8, 8, name='self.mem')
-        x = self.mem[6]
+        self.mem = pyrtl.MemBlock(8, 8)
+        self.mem_val_map = {self.mem: {0: 5, 1: 4, 2: 3, 3: 2, 4: 1, 5: 0}}
+        decide = pyrtl.Input(1)
+        ind = pyrtl.Input(3)
+        x = self.mem[ind]
         y = pyrtl.Output(8, 'y')
         z = pyrtl.Output(8, 'z')
         w = pyrtl.Output(8, 'w')
         with pyrtl.conditional_assignment:
-            with a:
+            with decide:
                 y |= x
                 z |= x
             with pyrtl.otherwise:
                 w |= x
         sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=self.mem_val_map)
         for i in range(5):
             sim.step({
-                a: randint(0, 1)
+                decide: i % 2,
+                ind: i
             })
+            if i ==0:
+                y_exp, z_exp, w_exp = 0, 0, 5
+            elif i == 1:
+                y_exp, z_exp, w_exp = 4, 4, 0
+            elif i == 2:
+                y_exp, z_exp, w_exp = 0, 0, 3
+            elif i == 3:
+                y_exp, z_exp, w_exp = 2, 2, 0
+            else:
+                y_exp, z_exp, w_exp = 0, 0, 1
+            self.assertEqual(sim.inspect(y), y_exp)
+            self.assertEqual(sim.inspect(z), z_exp)
+            self.assertEqual(sim.inspect(w), w_exp)
         self.assertEqual(self.mem.read_ports, 1)
 
     def test_write_memindexed_ior(self):
-        self.mem = pyrtl.MemBlock(8, 8, asynchronous=True)
-        a = pyrtl.Input(1)
-        b = pyrtl.Input(3)
-        x = self.mem[6]
+        self.mem1 = pyrtl.MemBlock(8, 8)
+        self.mem2 = pyrtl.MemBlock(8, 8, asynchronous=True)
+        self.mem_val_map = {self.mem1: {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5}}
+        decide = pyrtl.Input(1)
+        inp = pyrtl.Input(3)
+        addr1 = pyrtl.Input(3)
+        addr2 = pyrtl.Input(3)  # will be one behind addr1
+        zero = pyrtl.Const(0, 3)
+        x = self.mem1[addr1]
         x.name = 'x'
         out = pyrtl.Output(8, name='out')
         with pyrtl.conditional_assignment:
-            with a:
-                self.mem[x] |= b
+            with decide:
+                self.mem2[x] |= inp
             with pyrtl.otherwise:
-                self.mem[x] |= ~b
-        out <<= self.mem[x]
+                self.mem2[x] |= zero
+        out <<= self.mem2[addr2]  # one behind addr1, so one behind x
         sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=self.mem_val_map)
         for i in range(5):
             sim.step({
-                a: randint(0, 1),
-                b: i+1
+                decide: i % 2,
+                addr1: i,
+                addr2: 0 if i == 0 else i-1,  # one behind addr1
+                inp: 5-i
             })
-        self.assertEqual(self.mem.read_ports, 2)
-        self.assertEqual(self.mem.write_ports, 1)
+            if (i == 0) | (i == 1) | (i == 3):
+                out_exp = 0
+            elif i == 2:
+                out_exp = 4
+            else:
+                out_exp = 2
+            self.assertEqual(sim.inspect(out), out_exp)
+        self.assertEqual(self.mem1.read_ports, 1)
+        self.assertEqual(self.mem2.write_ports, 1)
 
 
 class RTLRomBlockWiring(unittest.TestCase):
