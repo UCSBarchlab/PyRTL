@@ -44,16 +44,15 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
 
         if self.op in 'w~&|^n+-*<>=xcsr':
             return "{} <-- {} -- {} {}".format(lhs, self.op, rhs, options)
-        elif self.op == 'm':
+        elif self.op in 'm@':
             memid, memblock = self.op_param
             extrainfo = 'memid=' + str(memid)
-            return ''.join([lhs, '  <-- m --  ', memblock.name, '[', rhs, '] (', extrainfo, ')'])
-        elif self.op == '@':
-            memid, memblock = self.op_param
-            addr, data, we = [str(x) for x in self.args]
-            extrainfo = 'memid=' + str(memid)
-            return ''.join([memblock.name, '[', addr, '] <-- @ --  ', data,
-                            ' we=', we, ' (', extrainfo, ')'])
+            if self.op == 'm':
+                return "{} <-- m --  {}[{}]({})".format(lhs, memblock.name, rhs, extrainfo)
+            else:
+                addr, data, we = (str(x) for x in self.args)
+                return "{}[{}] <-- @ -- {} we={} ({})".format(
+                    memblock.name, addr, data, we, extrainfo)
         else:
             raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
 
