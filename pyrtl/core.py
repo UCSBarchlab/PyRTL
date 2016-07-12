@@ -29,12 +29,32 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
 
     A 'net' is a structure in Python that is representative of hardware
     logic operations. These include binary operations, such as 'and'
-    'or' and 'not', Arithmetic Operations such as '+' and '-', as well
+    'or' and 'not', arithmetic operations such as '+' and '-', as well
     as other operations such as Memory ops, and concat, split, wire,
     and reg logic.
 
     The details of what is allowed in each of these fields is defined
-    in the comments of Block, and is checked by block.sanity_check
+    in the comments of Block, and is checked by `block.sanity_check`
+
+
+    `Operators`::
+
+        ('&', None, (a1, a2), (out)) => AND two wires together, put result into out
+        ('|', None, (a1, a2), (out)) => OR two wires together, put result into out
+        ('^', None, (a1, a2), (out)) => XOR two wires together, put result into out
+        ('n', None, (a1, a2), (out)) => NAND two wires together, put result into out
+        ('~', None, (a1), (out)) => invert one wire, put result into out
+        ('+', None, (a1, a2), (out)) => add a1 & a2, put result into out
+                                        len(out) = max(len(a1), len(a2)) + 1
+        ('-', None, (a1, a2), (out)) => subtract a2 frm a1, put result into out
+                                        len(out) = max(len(a1), len(a2)) + 1
+        ('*', None, (a1, a2), (out) => multiply a1 & a2, put result into out
+                                       len(out) = len(a1) + len(a2)
+            '+', '-', '*' are compatible w/ twos-compliment numbers
+        ('==', None, (a1, a2), (out)) => check a1 & a2 equal, put result into out (0 | 1)
+        ('<', None, (a1, a2), (out)) => check a2 greater than a1, put result into out (0 | 1)
+        ('>', None, (a1, a2), (out)) => check a1 greater than a2, put result into out (0 | 1)
+
     """
 
     def __str__(self):
@@ -118,7 +138,7 @@ class Block(object):
 
     * Most logical and arithmetic ops are pretty self explanatory, each takes
       exactly two arguments and they should perform the arithmetic or logical
-      operation specified. OPS: ('&','|','^','n','+','-','*').  All inputs must
+      operation specified. OPS: ('&','|','^','n','~','+','-','*').  All inputs must
       be the same bitwidth.  Logical operations produce as many bits as are in
       the input, while '+' and '-' produce n+1 bits, and '*' produced 2n bits.
 
