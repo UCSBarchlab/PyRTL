@@ -29,12 +29,44 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
 
     A 'net' is a structure in Python that is representative of hardware
     logic operations. These include binary operations, such as 'and'
-    'or' and 'not', Arithmetic Operations such as '+' and '-', as well
+    'or' and 'not', arithmetic operations such as '+' and '-', as well
     as other operations such as Memory ops, and concat, split, wire,
     and reg logic.
 
     The details of what is allowed in each of these fields is defined
-    in the comments of Block, and is checked by block.sanity_check
+    in the comments of Block, and is checked by `block.sanity_check`
+
+
+    `Logical Operations`::
+
+        ('&', None, (a1, a2), (out)) => AND two wires together, put result into out
+        ('|', None, (a1, a2), (out)) => OR two wires together, put result into out
+        ('^', None, (a1, a2), (out)) => XOR two wires together, put result into out
+        ('n', None, (a1, a2), (out)) => NAND two wires together, put result into out
+        ('~', None, (a1), (out)) => invert one wire, put result into out
+        ('+', None, (a1, a2), (out)) => add a1 & a2, put result into out
+                                        len(out) = max(len(a1), len(a2)) + 1
+        ('-', None, (a1, a2), (out)) => subtract a2 frm a1, put result into out
+                                        len(out) = max(len(a1), len(a2)) + 1
+        ('*', None, (a1, a2), (out) => multiply a1 & a2, put result into out
+                                       len(out) = len(a1) + len(a2)
+            ('+', '-', '*' are compatible w/ twos-compliment numbers)
+        ('=', None, (a1, a2), (out)) => check a1 & a2 equal, put result into out (0 | 1)
+        ('<', None, (a1, a2), (out)) => check a2 greater than a1, put result into out (0 | 1)
+        ('>', None, (a1, a2), (out)) => check a1 greater than a2, put result into out (0 | 1)
+        ('w', None, (w1), (w2) => directional wire w/ no logical operation: connects w1 to w2
+        ('x', None, (x, a1, a2), (out)) => mux: connect a1 (x=0), a2 (x=1) to out;
+                                           x must be one bit; len(a1) = len(a2)
+        ('c', None, (*args), (out)) => concatenates *args (wires) into single WireVector;
+                                       puts first arg at MSB, last arg at LSB
+        ('s', (sel), (wire), (out)) => selects bits frm wire based on sel (std slicing syntax),
+                                       puts into out
+        ('r', None, (r1.next), (r1)) => on pos clk edge copies inp of Register r1 to its output
+        ('m', (memid, mem), (addr), (data)) => read address addr of mem (w/ id memid),
+                                               put it into data
+        ('@', (memid, mem), (addr, data, wr_en), None) => write data to mem (w/ id memid) at
+                                                          address addr; req. write enable (wr_en)
+
     """
 
     def __str__(self):
@@ -117,7 +149,7 @@ class Block(object):
 
     * Most logical and arithmetic ops are pretty self explanatory, each takes
       exactly two arguments and they should perform the arithmetic or logical
-      operation specified. OPS: ('&','|','^','n','+','-','*').  All inputs must
+      operation specified. OPS: ('&','|','^','n','~','+','-','*').  All inputs must
       be the same bitwidth.  Logical operations produce as many bits as are in
       the input, while '+' and '-' produce n+1 bits, and '*' produced 2n bits.
 
@@ -138,8 +170,8 @@ class Block(object):
       wirevectors (a,b,...,z) into a single new wirevector with "a" in the MSB
       and "z" (or whatever is last) in the LSB position.
 
-    * The 's' operator is the selection operator and chooses, based in the
-      op_param specificied, a subset of the logic bits from a wire vector to
+    * The 's' operator is the selection operator and chooses, based on the
+      op_param specificied, a subset of the logic bits from a WireVector to
       select.  Repeats are accepted.
 
     * The 'r' operator is a register and on posedge, simply copies the value
