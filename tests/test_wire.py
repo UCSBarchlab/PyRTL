@@ -197,7 +197,7 @@ class TestRegister(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.r <<= 1
 
-    @unittest.skip
+    @unittest.skip("I don't think this is fixable")
     def test_assign_next(self):
         # I really don't know how we can fix this - John
         w = pyrtl.WireVector(bitwidth=1)

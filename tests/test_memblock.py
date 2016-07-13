@@ -90,14 +90,6 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             lim_memory[self.mem_write_address] <<= pyrtl.Const(6)
 
-    @unittest.skip('temporary bug')
-    def test_write_mem_to_mem(self):
-        read_mem = pyrtl.MemBlock(32, 32, max_read_ports=1, max_write_ports=0)
-        write_mem = pyrtl.MemBlock(32, 32, max_read_ports=0, max_write_ports=1)
-
-        x = read_mem[pyrtl.Const(21)]
-        write_mem[x] <<= pyrtl.Const(34)
-
 
 class MemIndexedTests(unittest.TestCase):
     def setUp(self):

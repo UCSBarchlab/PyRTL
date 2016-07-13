@@ -302,6 +302,7 @@ class SimTraceWithMuxBase(unittest.TestCase):
 
 
 class MemBlockBase(unittest.TestCase):
+
     def setUp(self):
         pyrtl.reset_working_block()
         self.bitwidth = 3
@@ -588,10 +589,7 @@ class InspectBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
         self.assertEqual(sim.inspect_mem(mem), {})
         sim.step({a: 3, b: 23})
-        if self.sim is pyrtl.Simulation:
-            self.skipTest("Simulation is currently not working in a certain way")
-        else:
-            self.assertEqual(sim.inspect_mem(mem), {23: 3})
+        self.assertEqual(sim.inspect_mem(mem), {23: 3})
 
 
 class TraceErrorBase(unittest.TestCase):
