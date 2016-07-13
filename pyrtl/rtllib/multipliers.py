@@ -5,7 +5,7 @@ Multipliers contains various PyRTL sample multipliers for people to use
 """
 from __future__ import absolute_import
 import pyrtl
-from . import adders
+from . import adders, libutils
 
 
 def simple_mult(A, B, start):
@@ -95,8 +95,8 @@ def complex_mult(A, B, shifts, start):
 
         with ~done:  # don't run when there's no work to do
             # "Multiply" shifted breg by LSB of areg by cond. adding
-            areg.next |= _shifted_reg_next(areg, 'r', shifts)  # right shift
-            breg.next |= _shifted_reg_next(breg, 'l', shifts)  # left shift
+            areg.next |= libutils._shifted_reg_next(areg, 'r', shifts)  # right shift
+            breg.next |= libutils._shifted_reg_next(breg, 'l', shifts)  # left shift
             accum.next |= accum + _one_cycle_mult(areg, breg, shifts)
 
     return accum, done
@@ -120,30 +120,6 @@ def _one_cycle_mult(areg, breg, rem_bits, sum_sf=0, curr_bit=0):
                           pyrtl.concat(breg, pyrtl.Const(0, curr_bit))),  # sum_sf
                 curr_bit+1  # curr_bit
             )
-
-
-def _shifted_reg_next(reg, direct, num=1):
-    """
-    Creates a shifted 'next' property for shifted (left or right) register.\n
-    Use: `myReg.next = shifted_reg_next(myReg, 'l', 4)`
-
-    :param string direct: direction of shift, either 'l' or 'r'
-    :param int num: number of shifts
-    :return: Register containing reg's (shifted) next state
-    """
-    if direct == 'l':
-        if num >= len(reg):
-            return 0
-        else:
-            return pyrtl.concat(reg, pyrtl.Const(0, num))
-    elif direct == 'r':
-        if num >= len(reg):
-            return 0
-        else:
-            return reg[num:]
-    else:
-        raise pyrtl.PyrtlError("direction must be specified with 'direct'"
-                               "parameter as either 'l' or 'r'")
 
 
 def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):

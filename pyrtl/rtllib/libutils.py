@@ -31,3 +31,27 @@ def str_to_int_array(string, base=16):
 
     int_strings = string.split()
     return [int(int_str, base) for int_str in int_strings]
+
+
+def _shifted_reg_next(reg, direct, num=1):
+    """
+    Creates a shifted 'next' property for shifted (left or right) register.\n
+    Use: `myReg.next = shifted_reg_next(myReg, 'l', 4)`
+
+    :param string direct: direction of shift, either 'l' or 'r'
+    :param int num: number of shifts
+    :return: Register containing reg's (shifted) next state
+    """
+    if direct == 'l':
+        if num >= len(reg):
+            return 0
+        else:
+            return pyrtl.concat(reg, pyrtl.Const(0, num))
+    elif direct == 'r':
+        if num >= len(reg):
+            return 0
+        else:
+            return reg[num:]
+    else:
+        raise pyrtl.PyrtlError("direction must be specified with 'direct'"
+                               "parameter as either 'l' or 'r'")
