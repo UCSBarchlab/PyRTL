@@ -53,31 +53,6 @@ def wirevector_list(names, bitwidth=1, wvtype=WireVector):
     return wirelist
 
 
-def shifted_reg_next(reg, direct, num=1):
-    """
-    Creates a shifted 'next' property for shifted (left or right) register.\n
-    Use: `myReg.next = shifted_reg_next(myReg, 'l', 4)`
-
-    :param string direct: direction of shift, either 'l' or 'r'
-    :param int num: number of shifts
-    :return: Register containing reg's (shifted) next state
-    """
-    from .corecircuits import concat
-    if direct == 'l':
-        if num >= len(reg):
-            return 0
-        else:
-            return concat(reg, Const(0, num))
-    elif direct == 'r':
-        if num >= len(reg):
-            return 0
-        else:
-            return reg[num:]
-    else:
-        raise PyrtlError("direction must be specified with 'direct'"
-                         "parameter as either 'l' or 'r'")
-
-
 def as_wires(val, bitwidth=None, truncating=True, block=None):
     """ Return wires from val which may be wires, integers, strings, or bools.
 

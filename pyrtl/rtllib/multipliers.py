@@ -1,7 +1,7 @@
 # coding=utf-8
 from __future__ import absolute_import
 import pyrtl
-from . import adders
+from . import adders, libutils
 
 
 def simple_mult(A, B, start):
@@ -91,8 +91,8 @@ def complex_mult(A, B, shifts, start):
 
         with ~done:  # don't run when there's no work to do
             # "Multiply" shifted breg by LSB of areg by cond. adding
-            areg.next |= pyrtl.helperfuncs.shifted_reg_next(areg, 'r', shifts)  # right shift
-            breg.next |= pyrtl.helperfuncs.shifted_reg_next(breg, 'l', shifts)  # left shift
+            areg.next |= libutils._shifted_reg_next(areg, 'r', shifts)  # right shift
+            breg.next |= libutils._shifted_reg_next(breg, 'l', shifts)  # left shift
             accum.next |= accum + _one_cycle_mult(areg, breg, shifts)
 
     return accum, done
