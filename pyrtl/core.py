@@ -54,13 +54,14 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         ('=', None, (a1, a2), (out)) => check a1 & a2 equal, put result into out (0 | 1)
         ('<', None, (a1, a2), (out)) => check a2 greater than a1, put result into out (0 | 1)
         ('>', None, (a1, a2), (out)) => check a1 greater than a2, put result into out (0 | 1)
+        ('w', None, (w1), None) => a directional wire (w1) w/ no logical operation
         ('x', None, (x, a1, a2), (out)) => mux: connect a1 (x=0), a2 (x=1) to out;
                                            x must be one bit; len(a1) = len(a2)
         ('c', None, (*args), (out)) => concatenates *args (wires) into single WireVector;
                                        puts first arg at MSB, last arg at LSB
         ('s', (sel), (wire), (out)) => selects bits frm wire based on sel (std slicing syntax),
                                        puts into out
-        ('r', None, (r1), None) => on pos clk edge copies inp of Register r1 to its outp
+        ('r', None, (r1), None) => on pos clk edge copies inp of Register r1 to its output
         ('m', (memid, mem), (addr), (data)) => read address addr of mem (w/ id memid),
                                                put it into data
         ('@', (memid, mem), (addr, data, wr_en), None) => write data to mem (w/ id memid) at
