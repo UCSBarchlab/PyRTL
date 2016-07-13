@@ -2,11 +2,12 @@
 wire has the basic extended types useful for creating logic.
 
 Types defined in this file include:
-WireVector: the base class for ordered collections of wires
-Input: a wire vector that receives an input for a block
-Output: a wire vector that defines an output for a block
-Const: a wire vector fed by a constant
-Register: a wire vector that is latched each cycle
+
+* `WireVector` -- the base class for ordered collections of wires
+* `Input` -- a wire vector that receives an input for a block
+* `Output` -- a wire vector that defines an output for a block
+* `Const` -- a wire vector fed by a constant
+* `Register` -- a wire vector that is latched each cycle
 """
 
 from __future__ import print_function, unicode_literals

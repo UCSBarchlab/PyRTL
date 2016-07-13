@@ -1,10 +1,12 @@
 """ The core abstraction for hardware in PyRTL.
 
 Included in this file you will find:
-LogicNet -- the core class holding a "net" in the netlist
-Block -- a collection of nets with associated access and error checking
-working_block -- the "current" Block to which, by default, all created nets are added
-modes -- access methods for "modes" such as debug
+
+* `LogicNet` -- the core class holding a "net" in the netlist
+* `Block` -- a collection of nets with associated access and error checking
+* `working_block` -- the "current" Block to which, by default, all created nets are added
+* `modes` -- access methods for "modes" such as debug
+
 """
 from __future__ import print_function, unicode_literals
 import collections

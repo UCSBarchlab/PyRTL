@@ -3,9 +3,10 @@ Defines PyRTL memories.
 These blocks of memories can be read (potentially async) and written (sync)
 
 MemBlocks supports any number of the following operations:
-read: d = mem[address]
-write: mem[address] = d
-write with an enable: mem[address] = MemBlock.EnabledWrite(d,enable=we)
+
+* read: `d = mem[address]`
+* write: `mem[address] = d`
+* write with an enable: `mem[address] = MemBlock.EnabledWrite(d,enable=we)`
 Based on the number of reads and writes a memory will be inferred
 with the correct number of ports to support that
 """
