@@ -26,7 +26,6 @@ class TestSimpleMult(unittest.TestCase):
     def test_simple_mult_2(self):
         self.mult_t_base(2, 9)
 
-
     def mult_t_base(self, len_a, len_b):
         a, b, reset = pyrtl.Input(len_a, "a"), pyrtl.Input(len_b, "b"), pyrtl.Input(1, 'reset')
         product, done = pyrtl.Output(name="product"), pyrtl.Output(name="done")
