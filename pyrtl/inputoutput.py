@@ -402,49 +402,6 @@ def block_to_svg(block=None):
         raise PyrtlError('need graphviz installed (try "pip install graphviz")')
 
 
-def oldtrace_to_html(simtrace, trace_list=None, sortkey=None):
-    """ Return a HTML block showing the trace. """
-
-    from .simulation import SimulationTrace, _trace_sort_key
-    if not isinstance(simtrace, SimulationTrace):
-        raise PyrtlError('first arguement must be of type SimulationTrace')
-
-    trace = simtrace.trace
-    if sortkey is None:
-        sortkey = _trace_sort_key
-
-    def rle(trace):
-        l = []
-        last = ''
-        for i in range(len(trace)):
-            if last == trace[i]:
-                l.append('.')
-            else:
-                l.append(str(trace[i]))
-                last = trace[i]
-        return ''.join(l)
-
-    if trace_list is None:
-        trace_list = sorted(trace, key=sortkey)
-
-    wave_template = (
-        """\
-        <script src="http://wavedrom.com/skins/default.js" type="text/javascript"></script>
-        <script src="http://wavedrom.com/WaveDrom.js" type="text/javascript"></script>
-        <script type="WaveDrom">
-        { signal : [
-        %s
-        ]}
-        </script>
-        """
-        )
-    signal_template = '{ name: "%s",  wave: "%s" },'
-    signals = [signal_template % (w.name, rle(trace[w])) for w in trace_list]
-    all_signals = '\n'.join(signals)
-    wave = wave_template % all_signals
-    return wave
-
-
 def trace_to_html(simtrace, trace_list=None, sortkey=None):
     """ Return a HTML block showing the trace. """
 
@@ -680,7 +637,7 @@ class OutputToVerilog(object):
             elif net.op == '@':
                 pass
             else:
-                raise PyrtlInternalError
+                raise PyrtlInternalError("nets with op '{}' not supported".format(net.op))
         print('', file=self.file)
 
     def _to_verilog_sequential(self):
