@@ -663,9 +663,10 @@ class OutputToVerilog(object):
                 t = (self._varname(net.dests[0]), catlist)
                 print('    assign %s = {%s};' % t, file=self.file)
             elif net.op == 's':
-                catlist = ', '.join([self._varname(net.args[0]) +
-                                     '[%s]' % str(i) if len(net.args[0]) > 1
-                                    else self._varname(net.args[0]) for i in reversed(net.op_param)])
+                # someone please check if we need this special handling for scalars
+                catlist = ', '.join([self._varname(net.args[0]) + '[%s]' % str(i)
+                                     if len(net.args[0]) > 1 else self._varname(net.args[0])
+                                     for i in reversed(net.op_param)])
                 t = (self._varname(net.dests[0]), catlist)
                 print('    assign %s = {%s};' % t, file=self.file)
             elif net.op == 'r':
