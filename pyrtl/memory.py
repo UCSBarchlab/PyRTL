@@ -310,6 +310,8 @@ class RomBlock(_MemReadBase):
                 value = self.data[address]
             except KeyError:
                 value = 0
+            except IndexError:
+                raise PyrtlError("RomBlock index is invalid")
             except:
                 raise PyrtlError("invalid type for RomBlock data object")
 

@@ -129,15 +129,6 @@ class Simulation(object):
                         raise PyrtlError('error, %s at %s in %s outside of bounds' %
                                          (str(val), str(addr), mem.name))
 
-        defined_roms = []
-        # set ROMs to their default values
-        for romNet in self.block.logic_subset('m'):
-            rom = romNet.op_param[1]
-            rom_dict = self.memvalue[rom.id]
-            if isinstance(rom, RomBlock) and rom not in defined_roms:
-                for address in range(2**rom.addrwidth):
-                    rom_dict[address] = rom._get_read_data(address)
-
         # set all other variables to default value
         for w in self.block.wirevector_set:
             if w not in self.value:
@@ -253,7 +244,7 @@ class Simulation(object):
         """Handle the combinational logic update rules for the given net.
 
         This function, along with edge_update, defined the semantics
-        of the primitive ops.  Function updates self.value accordingly.
+        of the primitive ops. Function updates self.value accordingly.
         """
         if net.op in 'r@':
             return  # registers and memory write ports have no logic function
@@ -273,8 +264,12 @@ class Simulation(object):
         elif net.op == 'm':
             # memories act async for reads
             memid = net.op_param[0]
+            mem = net.op_param[1]
             read_addr = self.value[net.args[0]]
-            result = self.memvalue[memid].get(read_addr, self.default_value)
+            if isinstance(mem, RomBlock):
+                result = mem._get_read_data(read_addr)
+            else:
+                result = self.memvalue[memid].get(read_addr, self.default_value)
         else:
             raise PyrtlInternalError('error, unknown op type')
 
