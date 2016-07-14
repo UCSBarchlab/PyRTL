@@ -288,6 +288,7 @@ class TestBasicMult(unittest.TestCase):
     def test_mult_3(self):
         self.mult_t_base(5, 2)
 
+
 class TestRtlAssert(unittest.TestCase):
 
     class RTLSampleException(Exception):
@@ -319,11 +320,10 @@ class TestRtlAssert(unittest.TestCase):
         self.bad_rtl_assert(w, w)
         self.bad_rtl_assert(w, KeyError())
 
-    @unittest.skip
     def test_duplicate_assert(self):
         w = pyrtl.Input(1)
         pyrtl.rtl_assert(w, self.RTLSampleException())
-        self.bad_rtl_assert(w, self.RTLSampleException())
+        pyrtl.rtl_assert(w, self.RTLSampleException())
 
     def test_wire_from_another_block(self):
         w = pyrtl.Input(1)
