@@ -41,9 +41,7 @@ class TestAreaEstimate(unittest.TestCase):
         atimesb <<= a*b
         memread <<= mem[0]
         mem[1] <<= a
-        curr_area = estimate.area_estimation()
-        for i in range(10):
-            self.assertEquals(curr_area, estimate.area_estimation())
+        self.assertEquals(estimate.area_estimation(), (0.00734386752, 0.01879779717361501))
 
 
 class TestTimingEstimate(unittest.TestCase):
@@ -80,10 +78,8 @@ class TestTimingEstimate(unittest.TestCase):
         memread <<= mem[0]
         mem[1] <<= a
         timing = estimate.TimingAnalysis()
-        maxlength = timing.max_length()
-        self.assertEquals(maxlength, timing.max_length())
-        timing2 = estimate.TimingAnalysis()
-        self.assertEqual(maxlength, timing2.max_length())
+        self.assertEqual(timing.max_freq(), 610.2770657878676)
+        self.assertEquals(timing.max_length(), 1255.6000000000001)
 
 class TestYosysInterface(unittest.TestCase):
 
