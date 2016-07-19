@@ -100,8 +100,8 @@ def match_bitwidth(*args):
     # TODO: allow for custom bit extension functions
     """ Matches the bitwidth of all of the input arguments
 
-    :type args: WireVector
-    :return tuple of args in order with extended bits
+    :param args: WireVectors of which to match bitwidths
+    :return: tuple of args in order with extended bits
     """
     max_len = max(len(wv) for wv in args)
     return (wv.zero_extended(max_len) for wv in args)
@@ -113,19 +113,19 @@ probeIndexer = _NameIndexer('Probe')
 def probe(w, name=None):
     """ Print useful information about a WireVector when in debug mode.
 
-    :type w: WireVector
-    :type name: None or string
+    :param w: WireVector from which to get info
+    :param name: optional name for probe (None or string)
     :return: original WireVector w
 
     Probe can be inserted into a existing design easily as it returns the original wire unmodified.
-    For example "y <<= x[0:3] + 4" could be turned into "y <<= probe(x)[0:3] + 4" to give visibility
-    into both the origin of x (including the line that WireVector was originally created) and the
-    run-time values of x (which will be named and thus show up by default in a trace.  Likewise
-    "y <<= probe(x[0:3]) + 4", "y <<= probe(x[0:3] + 4)", and "probe(y) <<= x[0:3] + 4" are all
-    valid uses of probe.  Note: probe does actually add wire to the working block of w (which can
-    confuse various post-processing transforms such as output to verilog)
+    For example ``y <<= x[0:3] + 4`` could be turned into ``y <<= probe(x)[0:3] + 4`` to give
+    visibility into both the origin of ``x`` (including the line that WireVector was originally
+    created) and the run-time values of ``x`` (which will be named and thus show up by default in
+    a trace.  Likewise ``y <<= probe(x[0:3]) + 4``, ``y <<= probe(x[0:3] + 4)``, and
+    ``probe(y) <<= x[0:3] + 4`` are all valid uses of `probe`.
+    Note: `probe` does actually add a wire to the working block of w (which can
+    confuse various post-processing transforms such as output to verilog).
     """
-    global probeIndexer
     index = probeIndexer.next_index()
     prefix = probeIndexer.internal_prefix
 
@@ -135,10 +135,7 @@ def probe(w, name=None):
     print('(%s-%d)' % (prefix, index), end=' ')
     print(get_stack(w))
 
-    if name:
-        pname = name
-    else:
-        pname = '(%s%d__%s)' % (prefix, index, w.name)
+    pname = name if name else '(%s%d__%s)' % (prefix, index, w.name)
 
     p = Output(name=pname)
     p <<= w  # late assigns len from w automatically
@@ -181,8 +178,6 @@ def rtl_assert(w, exp, block=None):
     If at any time during execution the wire w is not `true` (i.e. asserted low)
     then simulation will raise exp.
     """
-
-    global assertIndexer
 
     block = working_block(block)
 
