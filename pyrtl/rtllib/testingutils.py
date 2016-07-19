@@ -23,11 +23,11 @@ def calcuate_max_and_min_bitwidths(max_bitwidth=None, exact_bitwidth=None):
 
 
 def inverse_power_dist(bitwidth):
+    # Note that this is not uniformly distributed
     return int(2**random.uniform(0, bitwidth)-1)
 
 
 def uniform_dist(bitwidth):
-    # Note that this is not uniformly distributed
     return random.randrange(2**bitwidth)
 
 
@@ -39,16 +39,20 @@ def make_inputs_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None,
 
     :param function dist: function to generate the random values
     :return: wires; list of values for the wires
+
+    The list of values is a list of lists. the interior lists represent the
+    values of a single wire for all of the simulation cycles
+
     """
     min_bitwidth, max_bitwidth = calcuate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
     wires, vals = list(zip(*(
-        generate_in_wire_and_values(random.randrange(min_bitwidth, max_bitwidth + 1), test_vals,
-                                    random_dist=dist) for i in range(num_wires))))
+        an_input_and_vals(random.randrange(min_bitwidth, max_bitwidth + 1), test_vals,
+                          random_dist=dist) for i in range(num_wires))))
     return wires, vals
 
 
-def generate_in_wire_and_values(bitwidth, test_vals=20, name='',
-                                random_dist=uniform_dist):
+def an_input_and_vals(bitwidth, test_vals=20, name='',
+                      random_dist=uniform_dist):
     """
     Generates an input wire and a set of test values for
     testing purposes
@@ -61,6 +65,10 @@ def generate_in_wire_and_values(bitwidth, test_vals=20, name='',
     input_wire = pyrtl.Input(bitwidth, name=name)  # Creating a new input wire
     test_vals = [random_dist(bitwidth) for i in range(test_vals)]
     return input_wire, test_vals
+
+
+# deprecated name
+generate_in_wire_and_values = an_input_and_vals
 
 
 def make_consts(num_wires, max_bitwidth=None, exact_bitwidth=None, random_dist=inverse_power_dist):
