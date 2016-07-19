@@ -107,31 +107,7 @@ def match_bitwidth(*args):
     return (wv.zero_extended(max_len) for wv in args)
 
 
-class _ProbeIndexer(_NameIndexer):
-    """ Provides indexed probe names for probe() """
-    def __init__(self, internal_prefix='Probe'):
-        super(_ProbeIndexer, self).__init__(internal_prefix)
-        self.internal_index += 1
-
-    def next_indexed(self, w, name):
-        if not isinstance(w, WireVector):
-            raise PyrtlError('Only WireVectors can be probed')
-
-        print('(%s-%d)' % (self.internal_prefix, self.internal_index), end=' ')
-        print(get_stack(w))
-
-        if name:
-            pname = '%s%d_%s__%s)' % (self.internal_prefix, self.internal_index, name, w.name)
-        else:
-            pname = '(%s%d__%s)' % (self.internal_prefix, self.internal_index, w.name)
-
-        p = Output(name=pname)
-        p <<= w  # late assigns len from w automatically
-        self.internal_index += 1
-        return w
-
-
-probeIndexer = _ProbeIndexer()
+probeIndexer = _NameIndexer('Probe')
 
 
 def probe(w, name=None):
@@ -150,7 +126,23 @@ def probe(w, name=None):
     confuse various post-processing transforms such as output to verilog)
     """
     global probeIndexer
-    return probeIndexer.next_indexed(w, name)
+    index = probeIndexer.next_index()
+    prefix = probeIndexer.internal_prefix
+
+    if not isinstance(w, WireVector):
+        raise PyrtlError('Only WireVectors can be probed')
+
+    print('(%s-%d)' % (prefix, index), end=' ')
+    print(get_stack(w))
+
+    if name:
+        pname = name
+    else:
+        pname = '(%s%d__%s)' % (prefix, index, w.name)
+
+    p = Output(name=pname)
+    p <<= w  # late assigns len from w automatically
+    return w
 
 
 def get_stacks(*wires):
@@ -175,18 +167,7 @@ def get_stack(wire):
                ' to provide more information'
 
 
-class _AssertIndexer(_NameIndexer):
-    """ Provides indexed assertion names for rtl_assert() """
-    def __init__(self, internal_prefix='assertion'):
-        super(_AssertIndexer, self).__init__(internal_prefix)
-        self.internal_index += 1
-
-    def next_indexed(self, w):
-        res = '%s%d' % (self.internal_prefix, self.internal_index)
-        self.internal_index += 1
-        return res
-
-assertIndexer = _AssertIndexer()
+assertIndexer = _NameIndexer('assertion')
 
 
 def rtl_assert(w, exp, block=None):
@@ -221,7 +202,8 @@ def rtl_assert(w, exp, block=None):
     if w in block.rtl_assert_dict:
         raise PyrtlInternalError('assertion conflicts with existing registered assertion')
 
-    assert_wire = Output(bitwidth=1, name=assertIndexer.next_indexed(w), block=block)
+    res = '%s%d' % (assertIndexer.internal_prefix, assertIndexer.next_index())
+    assert_wire = Output(bitwidth=1, name=res, block=block)
     assert_wire <<= w
     block.rtl_assert_dict[assert_wire] = exp
     return assert_wire
