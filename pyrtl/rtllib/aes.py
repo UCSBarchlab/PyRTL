@@ -89,20 +89,22 @@ class AES(object):
             raise pyrtl.PyrtlError("AES key and plaintext should be the same length")
 
         plain_text, key = (pyrtl.Register(len(plaintext_in)) for i in range(2))
-        add_round_in = pyrtl.WireVector(len(plaintext_in))
+        key_exp_in, add_round_in = (pyrtl.WireVector(len(plaintext_in)) for i in range(2))
 
-        # list of generated keys, not stored in memory
         counter = pyrtl.Register(4, 'counter')
-        round = pyrtl.WireVector(4)
+        round = pyrtl.WireVector(4, 'round')
         counter.next <<= round
         sub_out = self._sub_bytes(plain_text)
         shift_out = self._shift_rows(sub_out)
         mix_out = self._mix_columns(shift_out)
+        key_out = self._key_expansion(key, counter)
+        add_round_out = self._add_round_key(add_round_in, key_exp_in)
         with pyrtl.conditional_assignment:
             with reset == 1:
                 round |= 0
-                plain_text.next |= self._add_round_key(add_round_in, key_in)
-                key.next |= self._key_expansion(key_in, round)
+                key_exp_in |= key_in  # to lower the number of cycles
+                plain_text.next |= add_round_out
+                key.next |= key_in
                 add_round_in |= plaintext_in
 
             with counter == 10:  # keep everything the same
@@ -111,8 +113,9 @@ class AES(object):
 
             with pyrtl.otherwise:  # running through AES
                 round |= counter + 1
-                plain_text.next |= self._add_round_key(add_round_in, key)
-                key.next |= self._key_expansion(key, round)
+                key_exp_in |= key_out
+                plain_text.next |= add_round_out
+                key.next |= key_out
                 with counter == 9:
                     add_round_in |= shift_out
                 with pyrtl.otherwise:
