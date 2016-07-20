@@ -135,9 +135,10 @@ def probe(w, name=None):
     print('(%s-%d)' % (prefix, index), end=' ')
     print(get_stack(w))
 
-    pname = name if name else '(%s%d__%s)' % (prefix, index, w.name)
+    if name is None:
+        name = '(Probe-%d : %s)' % (index, w.name)
 
-    p = Output(name=pname)
+    p = Output(name=name)
     p <<= w  # late assigns len from w automatically
     return w
 
