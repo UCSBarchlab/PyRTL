@@ -168,7 +168,7 @@ class TestMuxSimulation(unittest.TestCase):
 
     def mux_t_subprocess(self, addr_width, val_width):
         mux_ins, vals = utils.make_consts(num_wires=2**addr_width, exact_bitwidth=val_width)
-        control, testctrl = utils.generate_in_wire_and_values(addr_width, 40, "mux_ctrl")
+        control, testctrl = utils.an_input_and_vals(addr_width, 40, "mux_ctrl")
 
         out = pyrtl.Output(val_width, "mux_out")
         out <<= pyrtl.corecircuits.mux(control, *mux_ins)
@@ -184,7 +184,7 @@ class TestMuxSimulation(unittest.TestCase):
         num_defaults = 5
         mux_ins, vals = utils.make_consts(num_wires=2**addr_width - num_defaults,
                                           exact_bitwidth=val_width, random_dist=utils.uniform_dist)
-        control, testctrl = utils.generate_in_wire_and_values(addr_width, 40, "mux_ctrl", utils.uniform_dist)
+        control, testctrl = utils.an_input_and_vals(addr_width, 40, "mux_ctrl", utils.uniform_dist)
 
         for i in range(5):
             vals.append(default_val)
@@ -199,7 +199,7 @@ class TestMuxSimulation(unittest.TestCase):
     def test_select(self):
         vals = 12, 27
         mux_ins = [pyrtl.Const(x) for x in vals]
-        control, testctrl = utils.generate_in_wire_and_values(1, 40, "sel_ctrl", utils.uniform_dist)
+        control, testctrl = utils.an_input_and_vals(1, 40, "sel_ctrl", utils.uniform_dist)
 
         out = pyrtl.Output(5, "mux_out")
         out <<= pyrtl.corecircuits.select(control, falsecase=mux_ins[0], truecase=mux_ins[1])
@@ -211,7 +211,7 @@ class TestMuxSimulation(unittest.TestCase):
     def test_select_no_pred(self):
         vals = 12, 27
         mux_ins = [pyrtl.Const(x) for x in vals]
-        control, testctrl = utils.generate_in_wire_and_values(1, 40, "sel_ctrl", utils.uniform_dist)
+        control, testctrl = utils.an_input_and_vals(1, 40, "sel_ctrl", utils.uniform_dist)
 
         out = pyrtl.Output(5, "mux_out")
         out <<= pyrtl.corecircuits.select(control, mux_ins[1], mux_ins[0])

@@ -3,7 +3,7 @@ import pyrtl
 from pyrtl.rtllib import testingutils as utils
 from pyrtl.rtllib import muxes
 
-gen_in = utils.generate_in_wire_and_values
+gen_in = utils.an_input_and_vals
 
 
 class TestPrioritizedMuxTrivial(unittest.TestCase):
@@ -299,7 +299,7 @@ class TestDemux(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_simple_demux(self):
-        in_w, in_vals = utils.generate_in_wire_and_values(2)
+        in_w, in_vals = utils.an_input_and_vals(2)
         outs = (pyrtl.Output(name="output_" + str(i)) for i in range(4))
         demux_outs = pyrtl.rtllib.muxes.demux(in_w)
         for out_w, demux_out in zip(outs, demux_outs):
@@ -311,7 +311,7 @@ class TestDemux(unittest.TestCase):
                 self.assertEqual(in_vals[i] == i, traces[out_wire][cycle])
 
     def test_demux_2(self):
-        in_w, in_vals = utils.generate_in_wire_and_values(1)
+        in_w, in_vals = utils.an_input_and_vals(1)
         outs = (pyrtl.Output(name="output_" + str(i)) for i in range(2))
         demux_outs = pyrtl.rtllib.muxes._demux_2(in_w)
         for out_w, demux_out in zip(outs, demux_outs):
@@ -323,7 +323,7 @@ class TestDemux(unittest.TestCase):
                 self.assertEqual(in_vals[i] == i, traces[out_wire][cycle])
 
     def test_large_demux(self):
-        in_w, in_vals = utils.generate_in_wire_and_values(5)
+        in_w, in_vals = utils.an_input_and_vals(5)
         outs = (pyrtl.Output(name="output_" + str(i)) for i in range(32))
         demux_outs = pyrtl.rtllib.muxes.demux(in_w)
         for out_w, demux_out in zip(outs, demux_outs):
