@@ -8,7 +8,7 @@ PyRTL comes with various features to help you find mistakes.
 
 import random
 import io
-from pyrtl.rtllib import adders
+from pyrtl.rtllib import adders, multipliers
 import pyrtl
 
 random.seed(93729473)  # used to make random calls deterministic for this example
@@ -61,10 +61,11 @@ for cycle in range(len(vals1)):
 
 # in order to get the result data, you do not need to print a waveform of the trace
 # You always have the option to just pull the data out of the tracer directly
-
+print("---- Inputs and debug_out ----")
 print("in1:       ", str(sim_trace.trace['in1']))
 print("in2:       ", str(sim_trace.trace['in2']))
 print("debug_out: ", str(sim_trace.trace['debug_out']))
+print('\n')
 
 # Below, I am using the ability to directly retrieve the trace data to
 # verify the correctness of the first adder
@@ -75,15 +76,57 @@ for i in range(len(vals1)):
 
 # --- Probe ----
 
-# now that we have built some stuff, let's clear it so we can try again in a
+# Now that we have built some stuff, let's clear it so we can try again in a
 # different way.  We can start by clearing all of the hardware from the current working
 # block.  The working block is a global structure that keeps track of all the
 # hardware you have built thus far.  A "reset" will clear it so we can start fresh.
-# pyrtl.reset_working_block()
+pyrtl.reset_working_block()
+print("---- Using Probes ----")
 
-# ...
+# In this example, we will be multiplying two numbers using tree_multiplier()
+# Again, create the two inputs and an output
+in1, in2 = (pyrtl.Input(8, "in" + str(x)) for x in range(1, 3))
 
-# ----WireVector Stack Trace ----
+multout = multipliers.tree_multiplier(in1, in2)
+
+# The following line will create a probe named 'stdout_probe" for later use, like an output.
+# We could also use it during assignment like "out <<= pyrtl.probe(multout, 'stdout_probe')"
+# if 'out' were an Output.
+pyrtl.probe(multout, 'stdout_probe')
+# probe can also be used with other operations like this:
+pyrtl.probe(multout + 32, 'adderout_probe')
+# or this:
+pyrtl.probe(multout[2:7], 'selectout_probe')
+# or, similarly:
+pyrtl.probe(multout)[2:16]  # notice probe names are not absolutely necessary
+
+# Now on to the simulation...
+# For variation, we'll recreate the random inputs:
+vals1 = [int(2**random.uniform(1, 8) - 2) for _ in range(10)]
+vals2 = [int(2**random.uniform(1, 8) - 2) for _ in range(10)]
+
+sim_trace = pyrtl.SimulationTrace()
+sim = pyrtl.Simulation(tracer=sim_trace)
+for cycle in range(len(vals1)):
+    sim.step({
+        'in1': vals1[cycle],
+        'in2': vals2[cycle]})
+
+# Now we will show the values of the inputs and probes
+# and look at that, we didn't need to make any outputs!
+sim_trace.render_trace()
+sim_trace.print_trace()
+
+# Say we wanted to have gotten more information about
+# one of those probes above at declaration.
+# We could have used pyrtl.set_debug_mode() before their creation, like so:
+print("--- Probe w/ debugging: ---")
+pyrtl.set_debug_mode()
+pyrtl.probe(multout - 16, 'debugsubtr_probe)')
+pyrtl.set_debug_mode(debug=False)
+
+
+# ---- WireVector Stack Trace ----
 
 # Another case that might arise is that a certain wire is causing an error to occur
 # in your program. WireVector Stack Traces allow you to find out more about where a particular
@@ -96,10 +139,9 @@ for i in range(len(vals1)):
 
 pyrtl.set_debug_mode()
 
-# a test wire to show this feature
-
+print("---- Stack Trace ----")
 test_out = pyrtl.Output(9, "test_out")
-test_out <<= adders.kogge_stone(in1, in3)
+test_out <<= adders.kogge_stone(in1, in2)
 
 # Now to retrieve information
 wire_trace = test_out.init_call_stack
@@ -109,8 +151,8 @@ wire_trace = test_out.init_call_stack
 # details on the function). Therefore, the stack traces are stored as a list with the
 # outermost call first.
 
-# for frame in wire_trace:
-#     print(frame)
+for frame in wire_trace:
+    print(frame)
 
 # Storage of Additional Debug Data
 
@@ -142,16 +184,16 @@ dummy_wv.custom_value_028493 = 13
 # this example
 pyrtl.working_block().remove_wirevector(dummy_wv)
 
-# ---- Trivial Graph Format
+# ---- Trivial Graph Format ----
 
 # Finally, there is a handy way to view your hardware creations as a graph.
 # The function output_to_trivialgraph will render your hardware a formal that
 # you can then open with the free software "yEd"
-# (http://en.wikipedia.org/wiki/YEd).  There are options under the
-# "hierarchical" rendering to draw something looks quite like a circuit.
+# (http://en.wikipedia.org/wiki/YEd). There are options under the
+# "hierarchical" rendering to draw something that looks quite like a circuit.
 
+pyrtl.working_block().sanity_check()
 
-import io
 print("--- Trivial Graph Format  ---")
 with io.StringIO() as tgf:
     pyrtl.output_to_trivialgraph(tgf)
