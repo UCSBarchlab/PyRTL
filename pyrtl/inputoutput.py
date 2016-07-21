@@ -247,6 +247,7 @@ def net_graph(block=None, split_state=False):
     WireVectors that are not connected to any nets are not returned as part
     of the graph.
     """
+    # FIXME: make it not try to add unused wires (issue #204)
     block = working_block(block)
     from .wire import Register
     # self.sanity_check()

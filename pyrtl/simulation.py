@@ -794,6 +794,7 @@ class SimulationTrace(object):
             self.trace[wire_name].append(fastsim.context[wire_name])
 
     def print_trace(self, file=sys.stdout):
+        # TODO: make multi-digit values more readable and implement better alignment (issue #203)
         if len(self.trace) == 0:
             raise PyrtlError('error, cannot print an empty trace')
         maxlen = max(len(w) for w in self.trace)
