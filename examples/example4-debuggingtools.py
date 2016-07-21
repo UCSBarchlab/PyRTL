@@ -92,12 +92,19 @@ multout = multipliers.tree_multiplier(in1, in2)
 
 # The following line will create a probe named 'std_probe" for later use, like an output.
 pyrtl.probe(multout, 'std_probe')
-# We could also use it subtly during assignment like so:
+
+# We could also do the same thing during assignment. The next command will
+# create a probe (named 'stdout_probe') that refers to multout.
+# This achieves virtually the same thing as 4 lines above, but it is done during assignment,
+# so we skip a step by probing the wire before the multiplication
 out <<= pyrtl.probe(multout, 'stdout_probe') * 2
+
 # probe can also be used with other operations like this:
 pyrtl.probe(multout + 32, 'adder_probe')
+
 # or this:
 pyrtl.probe(multout[2:7], 'select_probe')
+
 # or, similarly:
 pyrtl.probe(multout)[2:16]  # notice probe names are not absolutely necessary
 
