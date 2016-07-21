@@ -251,12 +251,10 @@ def net_graph(block=None, split_state=False):
     from .wire import Register
     # self.sanity_check()
     graph = {}
-    valid_wires = set()
 
     # add all of the nodes
     for net in block.logic:
         graph[net] = {}
-        valid_wires.update(net.args, net.dests)
 
     wire_src_dict, wire_dst_dict = block.net_connections()
     dest_set = set(wire_src_dict.keys())
@@ -269,7 +267,7 @@ def net_graph(block=None, split_state=False):
             graph[w] = {}
 
     # add all of the edges
-    for w in block.wirevector_set.intersection(valid_wires):
+    for w in block.wirevector_set.intersection(arg_set, dest_set):
         try:
             _from = wire_src_dict[w]
         except Exception:
