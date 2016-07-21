@@ -177,7 +177,7 @@ class WireVector(object):
         # python provides no way to overload these logical operations, and thus they
         # are very much not likely to be doing the thing that the programmer would be
         # expecting.
-        raise PyrtlError('cannot covert wirevector to compile-time boolean.  This error '
+        raise PyrtlError('cannot convert wirevector to compile-time boolean.  This error '
                          'often happens when you attempt to use WireVectors with "==" or '
                          'something that calls "__eq__", such as when you test if a '
                          'wirevector is "in" something')

@@ -48,7 +48,7 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         ('~', None, (a1), (out)) => invert one wire, put result into out
         ('+', None, (a1, a2), (out)) => add a1 & a2, put result into out
                                         len(out) = max(len(a1), len(a2)) + 1
-        ('-', None, (a1, a2), (out)) => subtract a2 frm a1, put result into out
+        ('-', None, (a1, a2), (out)) => subtract a2 from a1, put result into out
                                         len(out) = max(len(a1), len(a2)) + 1
         ('*', None, (a1, a2), (out) => multiply a1 & a2, put result into out
                                        len(out) = len(a1) + len(a2)
@@ -66,7 +66,7 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         ('r', None, (r1.next), (r1)) => on pos clk edge copies inp of Register r1 to its output
         ('m', (memid, mem), (addr), (data)) => read address addr of mem (w/ id memid),
                                                put it into data
-        ('@', (memid, mem), (addr, data, wr_en), None) => write data to mem (w/ id memid) at
+        ('@', (memid, mem), (addr, data, wr_en), ()) => write data to mem (w/ id memid) at
                                                           address addr; req. write enable (wr_en)
 
     """
