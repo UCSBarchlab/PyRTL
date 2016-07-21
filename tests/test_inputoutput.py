@@ -87,6 +87,7 @@ state_machine_blif = """\
 .end
 """
 
+
 class TestInputFromBlif(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -156,6 +157,15 @@ class TestNetGraph(unittest.TestCase):
         # should not matter for this test and so the number
         # can be safely updated.
         self.assertEqual(len(g), 10)
+
+    def test_netgraph_unused_wires(self):
+        genwire = pyrtl.WireVector(8, "genwire")
+        inwire = pyrtl.Input(8, "inwire")
+        outwire = pyrtl.Output(8, "outwire")
+        constwire = pyrtl.Const(8, 8)
+        reg = pyrtl.Register(8, "reg")
+        g = inputoutput.net_graph()
+        self.assertEquals(len(g), 0)
 
 
 class TestVerilogNames(unittest.TestCase):

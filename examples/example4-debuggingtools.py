@@ -193,7 +193,6 @@ pyrtl.working_block().remove_wirevector(dummy_wv)
 # "hierarchical" rendering to draw something that looks quite like a circuit.
 
 pyrtl.working_block().sanity_check()
-pyrtl.passes._remove_unused_wires(pyrtl.working_block())  # so that trivial_graph() will work
 
 print("--- Trivial Graph Format  ---")
 with io.StringIO() as tgf:

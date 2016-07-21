@@ -247,15 +247,16 @@ def net_graph(block=None, split_state=False):
     WireVectors that are not connected to any nets are not returned as part
     of the graph.
     """
-    # FIXME: make it not try to add unused wires (issue #204)
     block = working_block(block)
     from .wire import Register
     # self.sanity_check()
     graph = {}
+    valid_wires = set()
 
     # add all of the nodes
     for net in block.logic:
         graph[net] = {}
+        valid_wires.update(net.args, net.dests)
 
     wire_src_dict, wire_dst_dict = block.net_connections()
     dest_set = set(wire_src_dict.keys())
@@ -268,7 +269,7 @@ def net_graph(block=None, split_state=False):
             graph[w] = {}
 
     # add all of the edges
-    for w in block.wirevector_set:
+    for w in block.wirevector_set.intersection(valid_wires):
         try:
             _from = wire_src_dict[w]
         except Exception:
