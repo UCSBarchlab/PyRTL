@@ -86,19 +86,23 @@ print("---- Using Probes ----")
 # In this example, we will be multiplying two numbers using tree_multiplier()
 # Again, create the two inputs and an output
 in1, in2 = (pyrtl.Input(8, "in" + str(x)) for x in range(1, 3))
+out = pyrtl.Output(8, "out")
 
 multout = multipliers.tree_multiplier(in1, in2)
 
-# The following line will create a probe named 'stdout_probe" for later use, like an output.
-# We could also use it during assignment like "out <<= pyrtl.probe(multout, 'stdout_probe')"
-# if 'out' were an Output.
-pyrtl.probe(multout, 'stdout_probe')
+# The following line will create a probe named 'std_probe" for later use, like an output.
+pyrtl.probe(multout, 'std_probe')
+# We could also use it subtly during assignment like so:
+out <<= pyrtl.probe(multout, 'stdout_probe') * 2
 # probe can also be used with other operations like this:
-pyrtl.probe(multout + 32, 'adderout_probe')
+pyrtl.probe(multout + 32, 'adder_probe')
 # or this:
-pyrtl.probe(multout[2:7], 'selectout_probe')
+pyrtl.probe(multout[2:7], 'select_probe')
 # or, similarly:
 pyrtl.probe(multout)[2:16]  # notice probe names are not absolutely necessary
+
+# as one can see, probe can be used on any wire any time,
+# such as during its operation, assignment, etc.
 
 # Now on to the simulation...
 # For variation, we'll recreate the random inputs:
@@ -114,6 +118,7 @@ for cycle in range(len(vals1)):
 
 # Now we will show the values of the inputs and probes
 # and look at that, we didn't need to make any outputs!
+# (althoguh we did, for demonstrative purposes
 sim_trace.render_trace()
 sim_trace.print_trace()
 
