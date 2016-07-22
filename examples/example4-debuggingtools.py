@@ -86,7 +86,7 @@ print("---- Using Probes ----")
 # In this example, we will be multiplying two numbers using tree_multiplier()
 # Again, create the two inputs and an output
 in1, in2 = (pyrtl.Input(8, "in" + str(x)) for x in range(1, 3))
-out = pyrtl.Output(8, "out")
+out1, out2 = (pyrtl.Output(8, "out" + str(x)) for x in range(1, 3))
 
 multout = multipliers.tree_multiplier(in1, in2)
 
@@ -94,10 +94,11 @@ multout = multipliers.tree_multiplier(in1, in2)
 pyrtl.probe(multout, 'std_probe')
 
 # We could also do the same thing during assignment. The next command will
-# create a probe (named 'stdout_probe') that refers to multout.
+# create a probe (named 'stdout_probe') that refers to multout (returns the wire multout).
 # This achieves virtually the same thing as 4 lines above, but it is done during assignment,
-# so we skip a step by probing the wire before the multiplication
-out <<= pyrtl.probe(multout, 'stdout_probe') * 2
+# so we skip a step by probing the wire before the multiplication.
+# The probe returns multout, the original wire, and out will be assigned multout * 2
+out1 <<= pyrtl.probe(multout, 'stdout_probe') * 2
 
 # probe can also be used with other operations like this:
 pyrtl.probe(multout + 32, 'adder_probe')
@@ -106,10 +107,11 @@ pyrtl.probe(multout + 32, 'adder_probe')
 pyrtl.probe(multout[2:7], 'select_probe')
 
 # or, similarly:
-pyrtl.probe(multout)[2:16]  # notice probe names are not absolutely necessary
+# (this will create a probe of multout while passing multout[2:16] to out)
+out2 <<= pyrtl.probe(multout)[2:16]  # notice probe names are not absolutely necessary
 
 # as one can see, probe can be used on any wire any time,
-# such as during its operation, assignment, etc.
+# such as before or during its operation, assignment, etc.
 
 # Now on to the simulation...
 # For variation, we'll recreate the random inputs:
@@ -125,14 +127,14 @@ for cycle in range(len(vals1)):
 
 # Now we will show the values of the inputs and probes
 # and look at that, we didn't need to make any outputs!
-# (althoguh we did, for demonstrative purposes
+# (although we did, to demonstrate the power and convenience of probes)
 sim_trace.render_trace()
 sim_trace.print_trace()
 
+print("--- Probe w/ debugging: ---")
 # Say we wanted to have gotten more information about
 # one of those probes above at declaration.
 # We could have used pyrtl.set_debug_mode() before their creation, like so:
-print("--- Probe w/ debugging: ---")
 pyrtl.set_debug_mode()
 pyrtl.probe(multout - 16, 'debugsubtr_probe)')
 pyrtl.set_debug_mode(debug=False)
@@ -146,7 +148,7 @@ pyrtl.set_debug_mode(debug=False)
 # store exactly were it was created, which should help with issues where
 # there is a problem with an identified wire.
 
-# To enable this, just add the following line before the relevant WireVector
+# Like above, just add the following line before the relevant WireVector
 # might be made or at the beginning of the program.
 
 pyrtl.set_debug_mode()
