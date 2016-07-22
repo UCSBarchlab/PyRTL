@@ -267,7 +267,7 @@ def net_graph(block=None, split_state=False):
             graph[w] = {}
 
     # add all of the edges
-    for w in block.wirevector_set.intersection(arg_set, dest_set):
+    for w in (dest_set & arg_set):
         try:
             _from = wire_src_dict[w]
         except Exception:
