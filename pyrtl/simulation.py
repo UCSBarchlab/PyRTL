@@ -793,15 +793,48 @@ class SimulationTrace(object):
         for wire_name in self.trace:
             self.trace[wire_name].append(fastsim.context[wire_name])
 
-    def print_trace(self, file=sys.stdout):
-        # TODO: make multi-digit values more readable and implement better alignment (issue #203)
+    def print_trace(self, file=sys.stdout, base=10, compact=False):
+        """
+        Prints a list of wires and their current values.
+        :param int base: the base the values are to be printed in
+        :param bool compact: whether to omit spaces in output lines
+        """
         if len(self.trace) == 0:
             raise PyrtlError('error, cannot print an empty trace')
-        maxlen = max(len(w) for w in self.trace)
-        for w in sorted(self.trace, key=_trace_sort_key):
-            file.write(' '.join([w.rjust(maxlen),
-                       ''.join(str(x) for x in self.trace[w])+'\n']))
-            file.flush()
+        if base not in (2, 8, 10, 16):
+            raise PyrtlError('please choose a valid base')
+
+        def dec(i):
+            return '0d' + str(i)
+
+        maxlenleft = max(len(w) for w in self.trace)
+        if compact:
+            for w in sorted(self.trace, key=_trace_sort_key):
+                file.write(' '.join([w.rjust(maxlenleft),
+                                     ''.join(str(x) for x in self.trace[w]) + '\n']))
+                file.flush()
+
+        else:
+            bfunc = dec
+            if base == 2:
+                bfunc = bin
+            elif base == 8:
+                bfunc = oct
+            elif base == 16:
+                bfunc = hex
+            maxlenval = max(max((len(bfunc(x)[(1 if bfunc == oct else 2):])
+                                 for x in self.trace[w])) for w in self.trace)
+            maxlenright = (maxlenval+1) * len(list(self.trace.values())[0])
+            print(' '*(maxlenleft-1) + "--- Values in base %d ---" % base)
+            for w in sorted(self.trace, key=_trace_sort_key):
+                file.write(w.ljust(maxlenleft))
+                line = str()
+                for x in self.trace[w]:
+                    strx = bfunc(x)[(1 if bfunc == oct else 2):]
+                    padding = maxlenval - len(strx) + 1
+                    line += (' '*padding) + strx
+                file.write(line.rjust(maxlenright)+'\n')
+                file.flush()
 
     def print_vcd(self, file=sys.stdout):
         """ Print the trace out as a VCD File for use in other tools. """
