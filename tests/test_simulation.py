@@ -26,7 +26,7 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_not_simulation(self):
@@ -202,7 +202,7 @@ class TraceWithAdderBase(unittest.TestCase):
             sim.step({})
 
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         sim_trace.render_trace()  # want to make sure the code at least runs
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
         self.assertEqual(sim.inspect(self.r), 6)
@@ -297,7 +297,7 @@ class SimTraceWithMuxBase(unittest.TestCase):
             self.sim.step(input_signals[i])
 
         output = io.StringIO()
-        self.sim_trace.print_trace(output)
+        self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'muxout 120120\n')
 
 
@@ -335,7 +335,7 @@ class MemBlockBase(unittest.TestCase):
                            self.write_addr: signals[2], self.write_data: signals[3]})
 
         output = io.StringIO()
-        self.sim_trace.print_trace(output)
+        self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
     def test_simple2_memblock(self):
@@ -356,7 +356,7 @@ class MemBlockBase(unittest.TestCase):
             sim.step(signal)
 
         output = io.StringIO()
-        self.sim_trace.print_trace(output)
+        self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'o1 0077653107\no2 0076452310\n')
 
     def test_synth_simple_memblock(self):
@@ -374,7 +374,7 @@ class MemBlockBase(unittest.TestCase):
                       self.write_addr: signals[2], self.write_data: signals[3]})
 
         output = io.StringIO()
-        self.sim_trace.print_trace(output)
+        self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
     def test_mem_val_map(self):
@@ -423,7 +423,7 @@ class MemBlockBase(unittest.TestCase):
                 self.write_data: 0
             })
         output = io.StringIO()
-        self.sim_trace.print_trace(output)
+        self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'o1 000000\n'
                                             'o2 000000\n'
                                             'o3 000000\n')
@@ -448,7 +448,7 @@ class RomBlockSimBase(unittest.TestCase):
 
     def compareIO(self, sim_trace_a, expected_output):
         output = io.StringIO()
-        sim_trace_a.print_trace(output)
+        sim_trace_a.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), expected_output)
 
     def test_function_RomBlock(self):
@@ -600,7 +600,6 @@ class TraceErrorBase(unittest.TestCase):
         sim = self.sim(tracer=self.sim_trace)
         with self.assertRaises(pyrtl.PyrtlError):
             self.sim_trace.print_trace()
-
 
 
 def make_unittests():
