@@ -6,6 +6,7 @@ import sys
 import re
 import numbers
 import collections
+import six
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -793,15 +794,35 @@ class SimulationTrace(object):
         for wire_name in self.trace:
             self.trace[wire_name].append(fastsim.context[wire_name])
 
-    def print_trace(self, file=sys.stdout):
-        # TODO: make multi-digit values more readable and implement better alignment (issue #203)
+    def print_trace(self, file=sys.stdout, base=10, compact=False):
+        """
+        Prints a list of wires and their current values.
+        :param int base: the base the values are to be printed in
+        :param bool compact: whether to omit spaces in output lines
+        """
         if len(self.trace) == 0:
             raise PyrtlError('error, cannot print an empty trace')
-        maxlen = max(len(w) for w in self.trace)
-        for w in sorted(self.trace, key=_trace_sort_key):
-            file.write(' '.join([w.rjust(maxlen),
-                       ''.join(str(x) for x in self.trace[w])+'\n']))
-            file.flush()
+        if base not in (2, 8, 10, 16):
+            raise PyrtlError('please choose a valid base')
+
+        basekey = {2: 'b', 8: 'o', 10: 'd', 16: 'x'}[base]
+        maxlenleft = max(len(w) for w in self.trace)
+
+        if compact:
+            for w in sorted(self.trace, key=_trace_sort_key):
+                file.write(' '.join([w.rjust(maxlenleft), ''.join('{0:{1}}'.format(x, basekey)
+                                                                  for x in self.trace[w]) + '\n']))
+                file.flush()
+
+        else:
+            maxlenval = max(len('{0:{1}}'.format(x, basekey))
+                            for w in self.trace for x in self.trace[w])
+            file.write(' '*(maxlenleft-3) + "--- Values in base %d ---\n" % base)
+            for w in sorted(self.trace, key=_trace_sort_key):
+                file.write(''.join([w.ljust(maxlenleft), ''.join('{0:{1}}'.format(x, basekey)
+                                                                 .rjust(maxlenval+1)
+                                                                 for x in self.trace[w]) + '\n']))
+                file.flush()
 
     def print_vcd(self, file=sys.stdout):
         """ Print the trace out as a VCD File for use in other tools. """
