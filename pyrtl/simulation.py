@@ -6,6 +6,7 @@ import sys
 import re
 import numbers
 import collections
+import six
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -804,31 +805,24 @@ class SimulationTrace(object):
         if base not in (2, 8, 10, 16):
             raise PyrtlError('please choose a valid base')
 
-        def dec(i):
-            return '0d' + str(i)
-
-        def octal(i):
-            return ('0o' + oct(i)[(0 if i == 0 else 1):] if sys.version_info.major == 2
-                    else oct(i))
-
-        bfunc = {2: bin, 8: octal, 10: dec, 16: hex}[base]
+        basekey = {2: 'b', 8: 'o', 10: 'd', 16: 'x'}[base]
         maxlenleft = max(len(w) for w in self.trace)
+
         if compact:
             for w in sorted(self.trace, key=_trace_sort_key):
-                file.write(' '.join([w.rjust(maxlenleft),
-                                     ''.join(bfunc(x)[2:] for x in self.trace[w]) + '\n']))
+                file.write(' '.join([w.rjust(maxlenleft), ''.join('{0:{1}}'.format(x, basekey)
+                                                                  for x in self.trace[w]) + '\n']))
                 file.flush()
 
         else:
-            maxlenval = max(len(bfunc(x)[2:])
+            maxlenval = max(len('{0:{1}}'.format(x, basekey))
                             for w in self.trace for x in self.trace[w])
             maxlenright = (maxlenval+1) * len(list(self.trace.values())[0])
             file.write(' '*(maxlenleft-3) + "--- Values in base %d ---\n" % base)
             for w in sorted(self.trace, key=_trace_sort_key):
-                file.write(w.ljust(maxlenleft)+'')
-                line = str()
-                for x in self.trace[w]:
-                    line += bfunc(x)[2:].rjust(maxlenval+1)
+                file.write(six.u(str(w.ljust(maxlenleft))))
+                line = ''.join('{0:{1}}'.format(x, basekey).rjust(maxlenval+1)
+                               for x in self.trace[w])
                 file.write(line.rjust(maxlenright)+'\n')
                 file.flush()
 
