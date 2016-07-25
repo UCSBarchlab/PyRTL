@@ -807,32 +807,28 @@ class SimulationTrace(object):
         def dec(i):
             return '0d' + str(i)
 
+        def octal(i):
+            return ('0o' + oct(i)[(0 if i == 0 else 1):] if sys.version_info.major == 2
+                    else oct(i))
+
+        bfunc = {2: bin, 8: octal, 10: dec, 16: hex}[base]
         maxlenleft = max(len(w) for w in self.trace)
         if compact:
             for w in sorted(self.trace, key=_trace_sort_key):
                 file.write(' '.join([w.rjust(maxlenleft),
-                                     ''.join(str(x) for x in self.trace[w]) + '\n']))
+                                     ''.join(bfunc(x)[2:] for x in self.trace[w]) + '\n']))
                 file.flush()
 
         else:
-            bfunc = dec
-            if base == 2:
-                bfunc = bin
-            elif base == 8:
-                bfunc = oct
-            elif base == 16:
-                bfunc = hex
-            maxlenval = max(max((len(bfunc(x)[(1 if bfunc == oct else 2):])
-                                 for x in self.trace[w])) for w in self.trace)
+            maxlenval = max(len(bfunc(x)[2:])
+                            for w in self.trace for x in self.trace[w])
             maxlenright = (maxlenval+1) * len(list(self.trace.values())[0])
-            print(' '*(maxlenleft-1) + "--- Values in base %d ---" % base)
+            file.write(' '*(maxlenleft-3) + "--- Values in base %d ---\n" % base)
             for w in sorted(self.trace, key=_trace_sort_key):
-                file.write(w.ljust(maxlenleft))
+                file.write(w.ljust(maxlenleft)+'')
                 line = str()
                 for x in self.trace[w]:
-                    strx = bfunc(x)[(1 if bfunc == oct else 2):]
-                    padding = maxlenval - len(strx) + 1
-                    line += (' '*padding) + strx
+                    line += bfunc(x)[2:].rjust(maxlenval+1)
                 file.write(line.rjust(maxlenright)+'\n')
                 file.flush()
 
