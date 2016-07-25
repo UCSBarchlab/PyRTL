@@ -246,6 +246,25 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         self.assertEqual(sim.inspect(o2.name), 28)
         self.assertEqual(trace.trace[o2.name], [0, 28])
 
+    def test_fastsim_wire_names(self):
+        """ Testing both Simulation classes' ability to use wire names instead of wires"""
+        in1 = pyrtl.Input(8, "in1")
+        in2 = pyrtl.Input(8, "in2")
+        in3 = pyrtl.Input(8, "in3")
+        truth = pyrtl.Const(1, 1)
+        out1 = pyrtl.Output(16, "out2")
+        out2 = pyrtl.Output(16, "out3")
+        out1 <<= in1 + in2
+        out2 <<= in3 | truth
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        for i in range(10):
+            sim.step({
+                'in1': 2*i,
+                'in2': 3*i,
+                'in3': 40 - 2*i
+            })
+
 
 class SimInputValidationBase(unittest.TestCase):
     def setUp(self):
@@ -692,7 +711,6 @@ class TraceErrorBase(unittest.TestCase):
             sim.step({self.in1: i})
         with self.assertRaises(pyrtl.PyrtlError):
             self.sim_trace.print_trace(base=4)
-
 
 def make_unittests():
     """
