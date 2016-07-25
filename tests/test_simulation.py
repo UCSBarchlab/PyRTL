@@ -128,6 +128,87 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.check_trace(' r 00224466\nr2 02244660\n')
 
 
+class PrintTraceBase(unittest.TestCase):
+    # note: doesn't include tests for compact=True because all the tests test that
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.in1 = pyrtl.Input(8, "in1")
+        self.in2 = pyrtl.Input(8, "in2")
+        self.out = pyrtl.Output(16, "out")
+
+    def test_print_trace_single_dig_notcompact(self):
+        self.out <<= pyrtl.probe(self.in1, "in1_probe") + self.in2
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        for i in range(5):
+            sim.step({
+                self.in1: i,
+                self.in2: 5-i
+            })
+        correct_outp = ("      --- Values in base 10 ---\n"
+                        "in1       0 1 2 3 4\n"
+                        "in1_probe 0 1 2 3 4\n"
+                        "in2       5 4 3 2 1\n"
+                        "out       5 5 5 5 5\n")
+        output = io.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_outp)
+
+    def test_print_trace_base2(self):
+        self.out <<= pyrtl.probe(self.in1, "in1_probe") + self.in2
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        for i in range(5):
+            sim.step({
+                self.in1: 4*i,
+                self.in2: 4*(5 - i)
+            })
+        correct_outp = ("      --- Values in base 2 ---\n"
+                        "in1           0   100  1000  1100 10000\n"
+                        "in1_probe     0   100  1000  1100 10000\n"
+                        "in2       10100 10000  1100  1000   100\n"
+                        "out       10100 10100 10100 10100 10100\n")
+        output = io.StringIO()
+        sim_trace.print_trace(output, base=2)
+        self.assertEqual(output.getvalue(), correct_outp)
+
+    def test_print_trace_base8(self):
+        self.out <<= pyrtl.probe(self.in1, "in1_probe") + self.in2
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        for i in range(5):
+            sim.step({
+                self.in1: 6*i,
+                self.in2: 6*(5 - i)
+            })
+        correct_outp = ("      --- Values in base 8 ---\n"
+                        "in1        0  6 14 22 30\n"
+                        "in1_probe  0  6 14 22 30\n"
+                        "in2       36 30 22 14  6\n"
+                        "out       36 36 36 36 36\n")
+        output = io.StringIO()
+        sim_trace.print_trace(output, base=8)
+        self.assertEqual(output.getvalue(), correct_outp)
+
+    def test_print_trace_base16(self):
+        self.out <<= pyrtl.probe(self.in1, "in1_probe") * self.in2
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        for i in range(5):
+            sim.step({
+                self.in1: 9*i,
+                self.in2: 9*(5 - i)
+            })
+        correct_outp = ("      --- Values in base 16 ---\n"
+                        "in1         0   9  12  1b  24\n"
+                        "in1_probe   0   9  12  1b  24\n"
+                        "in2        2d  24  1b  12   9\n"
+                        "out         0 144 1e6 1e6 144\n")
+        output = io.StringIO()
+        sim_trace.print_trace(output, base=16)
+        self.assertEqual(output.getvalue(), correct_outp)
+
+
 class SimWithSpecialWiresBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
