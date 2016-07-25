@@ -26,7 +26,7 @@ class TestSynthesis(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_not_simulation(self):

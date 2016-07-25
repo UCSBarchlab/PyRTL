@@ -13,7 +13,7 @@ class TestConditional(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -161,7 +161,7 @@ class TestMemConditionalBlock(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -234,7 +234,7 @@ class TestWireConditionalBlock(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -353,7 +353,7 @@ class TestNonExclusiveBlocks(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 

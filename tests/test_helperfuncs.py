@@ -21,7 +21,7 @@ class TestAnyAll(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_any_only_on_1_bit_vectors(self):
@@ -74,7 +74,7 @@ class TestXorAllBits(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_one_wirevector(self):
