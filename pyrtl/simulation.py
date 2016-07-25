@@ -401,8 +401,8 @@ class FastSimulation(object):
         """
         # validate_inputs
         for wire, value in provided_inputs.items():
-            if value > (self.block.get_wirevector_by_name(wire) if isinstance(wire, str)
-                        else wire).bitmask or value < 0:
+            wire = self.block.get_wirevector_by_name(wire) if isinstance(wire, str) else wire
+            if value > wire.bitmask or value < 0:
                 raise PyrtlError("Wire {} has value {} which cannot be represented"
                                  " using its bitwidth".format(wire, value))
 
