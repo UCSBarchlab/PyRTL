@@ -817,13 +817,11 @@ class SimulationTrace(object):
         else:
             maxlenval = max(len('{0:{1}}'.format(x, basekey))
                             for w in self.trace for x in self.trace[w])
-            maxlenright = (maxlenval+1) * len(list(self.trace.values())[0])
             file.write(' '*(maxlenleft-3) + "--- Values in base %d ---\n" % base)
             for w in sorted(self.trace, key=_trace_sort_key):
-                file.write(six.u(str(w.ljust(maxlenleft))))
-                line = ''.join('{0:{1}}'.format(x, basekey).rjust(maxlenval+1)
-                               for x in self.trace[w])
-                file.write(line.rjust(maxlenright)+'\n')
+                file.write(''.join([w.ljust(maxlenleft), ''.join('{0:{1}}'.format(x, basekey)
+                                                                 .rjust(maxlenval+1)
+                                                                 for x in self.trace[w]) + '\n']))
                 file.flush()
 
     def print_vcd(self, file=sys.stdout):
