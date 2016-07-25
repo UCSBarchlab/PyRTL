@@ -682,6 +682,17 @@ class TraceErrorBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.sim_trace.print_trace()
 
+    def test_invalid_base(self):
+        self.in1 = pyrtl.Input(8, "in1")
+        self.out = pyrtl.Output(8, "out")
+        self.out <<= self.in1
+        self.sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=self.sim_trace)
+        for i in range(5):
+            sim.step({self.in1: i})
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.sim_trace.print_trace(base = 4)
+
 
 def make_unittests():
     """
