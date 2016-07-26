@@ -6,7 +6,6 @@ import sys
 import re
 import numbers
 import collections
-import six
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -806,23 +805,21 @@ class SimulationTrace(object):
             raise PyrtlError('please choose a valid base')
 
         basekey = {2: 'b', 8: 'o', 10: 'd', 16: 'x'}[base]
-        maxlenleft = max(len(w) for w in self.trace)
+        ident_len = max(len(w) for w in self.trace)
 
         if compact:
             for w in sorted(self.trace, key=_trace_sort_key):
-                file.write(' '.join([w.rjust(maxlenleft), ''.join('{0:{1}}'.format(x, basekey)
-                                                                  for x in self.trace[w]) + '\n']))
-                file.flush()
-
+                vals = ''.join('{0:{1}}'.format(x, basekey) for x in self.trace[w])
+                file.write(w.rjust(ident_len) + ' ' + vals + '\n')
         else:
             maxlenval = max(len('{0:{1}}'.format(x, basekey))
                             for w in self.trace for x in self.trace[w])
-            file.write(' '*(maxlenleft-3) + "--- Values in base %d ---\n" % base)
+            file.write(' ' * (ident_len - 3) + "--- Values in base %d ---\n" % base)
             for w in sorted(self.trace, key=_trace_sort_key):
-                file.write(''.join([w.ljust(maxlenleft), ''.join('{0:{1}}'.format(x, basekey)
-                                                                 .rjust(maxlenval+1)
-                                                                 for x in self.trace[w]) + '\n']))
-                file.flush()
+                vals = ' '.join('{0:>{1}{2}}'.format(x, maxlenval, basekey) for x in self.trace[w])
+                file.write(w.ljust(ident_len + 1) + vals + '\n')
+
+        file.flush()
 
     def print_vcd(self, file=sys.stdout):
         """ Print the trace out as a VCD File for use in other tools. """
