@@ -239,7 +239,7 @@ def select(sel, truecase, falsecase):
     :param WireVector falsecase: the WireVector selected if select==0
     :param WireVector truecase: the WireVector selected if select==1
     Example of mux as "ternary operator" to take the max of 'a' and 5:
-        mux( a<5, truecase=a, falsecase=5)
+        select( a<5, truecase=a, falsecase=5)
     """
     sel, f, t = (as_wires(w) for w in (sel, falsecase, truecase))
     f, t = match_bitwidth(f, t)

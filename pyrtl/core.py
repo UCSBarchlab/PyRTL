@@ -63,11 +63,11 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
                                        puts first arg at MSB, last arg at LSB
         ('s', (sel), (wire), (out)) => selects bits frm wire based on sel (std slicing syntax),
                                        puts into out
-        ('r', None, (r1.next), (r1)) => on pos clk edge copies inp of Register r1 to its output
+        ('r', None, (next), (r1)) => on positive clock edge: copies next to r1
         ('m', (memid, mem), (addr), (data)) => read address addr of mem (w/ id memid),
                                                put it into data
         ('@', (memid, mem), (addr, data, wr_en), ()) => write data to mem (w/ id memid) at
-                                                          address addr; req. write enable (wr_en)
+                                                        address addr; req. write enable (wr_en)
 
     """
 
@@ -363,7 +363,7 @@ class Block(object):
             import six
             six.raise_from(PyrtlError("Cannot Iterate through malformed block"), e)
 
-        if len(remaining) is not 0:
+        if len(remaining) != 0:
             from pyrtl.helperfuncs import find_and_print_loop
             find_and_print_loop(self)
             raise PyrtlError("Failure in Block Iterator due to non-register loops")
@@ -597,12 +597,12 @@ class PostSynthBlock(Block):
 # block, but in the future we should support multiple Blocks.
 # The argument "singleton_block" should never be passed.
 _singleton_block = Block()
-debug_mode = False
 
-# settings help tweek the behavior of pyrtl as needed, especially
-# when there is a tradeoff between speed and debugability.  These
+# settings help tweak the behavior of pyrtl as needed, especially
+# when there is a trade off between speed and debugability.  These
 # are useful for developers to adjust behaviors in the different modes
 # but should not be set directly by users.
+debug_mode = False
 _setting_keep_wirevector_call_stack = False
 _setting_slower_but_more_descriptive_tmps = False
 
