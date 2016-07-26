@@ -270,7 +270,7 @@ class SimWithSpecialWiresBase(unittest.TestCase):
                         "in3  40 38 36 34 32 30 28 26 24 22\n"
                         "out2  0  5 10 15 20 25 30 35 40 45\n"
                         "out3 41 39 37 35 33 31 29 27 25 23\n")
-        output = io.StringIO()
+        output = six.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_outp)
 
