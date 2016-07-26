@@ -275,7 +275,6 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         self.assertEqual(output.getvalue(), correct_outp)
 
 
-
 class SimInputValidationBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
