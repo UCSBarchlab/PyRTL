@@ -264,6 +264,16 @@ class SimWithSpecialWiresBase(unittest.TestCase):
                 'in2': 3*i,
                 'in3': 40 - 2*i
             })
+        correct_outp = (" --- Values in base 10 ---\n"
+                        "in1   0  2  4  6  8 10 12 14 16 18\n"
+                        "in2   0  3  6  9 12 15 18 21 24 27\n"
+                        "in3  40 38 36 34 32 30 28 26 24 22\n"
+                        "out2  0  5 10 15 20 25 30 35 40 45\n"
+                        "out3 41 39 37 35 33 31 29 27 25 23\n")
+        output = io.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_outp)
+
 
 
 class SimInputValidationBase(unittest.TestCase):
