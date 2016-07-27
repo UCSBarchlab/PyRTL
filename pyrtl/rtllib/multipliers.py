@@ -155,6 +155,44 @@ def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogg
     return reducer(bits, bits_length, adder_func)
 
 
+def signed_tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
+    """Same as tree_multiplier, but uses two's complement signed integers"""
+    if len(A) == 1 or len(B) == 1:
+        raise pyrtl.PyrtlError("sign bit required, one or both wires too small")
+
+    aneg = A[-1]
+    bneg = B[-1]
+    a = pyrtl.WireVector(len(A))
+    b = pyrtl.WireVector(len(B))
+    neg = aneg ^ bneg
+    with pyrtl.conditional_assignment:
+        with aneg:
+            a |= ~A + 1
+        with pyrtl.otherwise:
+            a |= A
+    with pyrtl.conditional_assignment:
+        with bneg:
+            b |= ~B + 1
+        with pyrtl.otherwise:
+            b |= B
+
+    bits_length = len(a) + len(b)
+    bits = [[] for weight in range(bits_length)]
+    for i, x in enumerate(a):
+        for j, y in enumerate(b):
+            bits[i + j].append(x & y)
+
+    res = reducer(bits, bits_length+1, adder_func)
+    answ = pyrtl.WireVector(bits_length+1)
+    with pyrtl.conditional_assignment:
+        with neg:
+            answ |= ~res + 1
+        with pyrtl.otherwise:
+            answ |= res
+
+    return answ
+
+
 def fused_multiply_adder(mult_A, mult_B, add, signed=False, reducer=adders.wallace_reducer,
                          adder_func=adders.kogge_stone):
     """ Generate efficient hardware for a*b+c.

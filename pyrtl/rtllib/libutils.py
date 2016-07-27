@@ -33,6 +33,39 @@ def str_to_int_array(string, base=16):
     return [int(int_str, base) for int_str in int_strings]
 
 
+def twos_comp_repr(val, bitwidth):
+    """
+    Converts a value to it's two's-complement (positive) integer representation using a
+    given bitwidth (only converts the value if it is negative).
+    For use with Simulation.step() etc. in passing negative numbers, which it does not accept
+    """
+    correctbw = abs(val).bit_length() + 1
+    if bitwidth < correctbw:
+        raise pyrtl.PyrtlError("please choose a larger target bitwidth")
+    if val >= 0:
+        return val
+    else:
+        return (~abs(val) & (2**bitwidth-1)) + 1  # flip the bits and add one
+
+
+def rev_twos_comp_repr(val, bitwidth):
+    """
+    Takes a two's-complement represented value and
+    converts it to a signed integer based on the provided bitwidth.
+    For use with Simulation.inspect() etc. when expecting negative numbers,
+    which it does not recognize
+    """
+    valbl = val.bit_length()
+    if bitwidth < val.bit_length() or val == 2**(bitwidth-1):
+        raise pyrtl.PyrtlError("please choose a larger target bitwidth")
+    if val == 0:
+        return 0
+    if bitwidth == valbl:  # MSB is a 1, value is negative
+        return -((~val & (2**bitwidth-1)) + 1)
+    else:
+        return val
+
+
 def _shifted_reg_next(reg, direct, num=1):
     """
     Creates a shifted 'next' property for shifted (left or right) register.\n
