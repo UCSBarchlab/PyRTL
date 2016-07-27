@@ -159,14 +159,13 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
         if num_constants is 0 or net_checking.op in no_optimization_ops:
             return  # assuming wire nets are already optimized
 
-        if any(len(wire) != 1 for wire in net_checking.args + net_checking.dests):
-            long_wires = [wire for wire in net_checking.args + net_checking.dests if
-                          len(wire) != 1]
-            _constant_prop_error(net_checking, "has wire(s) {} with bitwidths that are not 1"
-                                 .format(long_wires))
-            return  # skip if we are ignoring unoptimizable ops
-
         if (net_checking.op in two_var_ops) and num_constants == 1:
+            long_wires = [w for w in net_checking.args + net_checking.dests if len(w) != 1]
+            if len(long_wires):
+                _constant_prop_error(net_checking, "has wire(s) {} with bitwidths that are not 1"
+                                     .format(long_wires))
+                return  # skip if we are ignoring unoptimizable ops
+
             # special case
             const_wire, other_wire = net_checking.args
             if isinstance(other_wire, Const):
@@ -184,6 +183,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
                                      dests=net_checking.dests))
 
         else:
+            # this optimization is actually compatible with long wires
             if net_checking.op in two_var_ops:
                 output = two_var_ops[net_checking.op](net_checking.args[0].val,
                                                       net_checking.args[1].val)
