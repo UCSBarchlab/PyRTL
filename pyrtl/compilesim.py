@@ -14,7 +14,25 @@ from .pyrtlexceptions import PyrtlError
 
 
 class CompiledSimulation(object):
-    """Simulate a block, compiling to C for efficiency."""
+    """Simulate a block, compiling to C for efficiency.
+
+    THIS IS AN EXPERIMENTAL SIMULATION CLASS. NO SUPPORT WILL BE GIVEN
+    TO PEOPLE WHO CANNOT GET IT TO RUN. EXPECT THE API TO CHANGE IN THE FUTURE
+
+    This module provides significant speed improvements for people who are looking
+    for high performance simulation. It is not built to be a debugging tool, though
+    it may help with debugging
+
+    In order to use this, you must have:
+    clang compiler
+    linker (install visual studio compiler on Windows)
+    64 bit version of python running
+
+    KNOWN ISSUES:
+    Not compatible with a design with any wires where wires.bitwidth > 128
+    compatible but very slow with a design with any wires where 64 < wires.bitwidth <= 128
+    Temporary files are not cleaned up properly (need work on the windows side)
+    """
 
     def __init__(
             self, tracer=None, register_value_map={}, memory_value_map={},
@@ -29,18 +47,25 @@ class CompiledSimulation(object):
             f.write(code)
         subprocess.check_call([
             'clang', '-O0', '-march=native', '-std=c99',
-            '-shared', '-fPIC', '-s', '-mcmodel=medium',
+            '-shared', '-fPIC', '-mcmodel=medium',
             path.join(self._dir, 'pyrtlsim.c'), '-o', path.join(self._dir, 'pyrtlsim.so')])
+        self._setup_dll()
+
+    def _setup_dll(self):
         inputbuf_type = ctypes.c_uint64*(2*len(self._inputorder))
         outputbuf_type = ctypes.c_uint64*(2*len(self._outputorder))
         self._inputbuf = inputbuf_type()
         self._outputbuf = outputbuf_type()
+
         self._dll = ctypes.CDLL(path.join(self._dir, 'pyrtlsim.so'))
+
         self._cstep = self._dll.sim_run_step
         self._cstep.argtypes = [inputbuf_type, outputbuf_type]
         self._cstep.restype = None
+
         self._crun = self._dll.sim_run_all
         self._crun.restype = None  # argtypes later
+
         self._cgetmem = self._dll.sim_get_mem
         self._cgetmem.argtypes = [ctypes.c_uint64]
         self._cgetmem.restype = ctypes.POINTER(ctypes.c_uint64)
@@ -292,4 +317,8 @@ class CompiledSimulation(object):
         return {n: v for n, v in enumerate(buf)}
 
     def __del__(self):
-        shutil.rmtree(self._dir)  # clean up temporary directory
+        # cannot call this in Windows, as the library is still bound to, and therefore
+        # the directory is still in use in Windows
+        # TODO: Fix this
+        if os.name != 'nt':
+            shutil.rmtree(self._dir)  # clean up temporary directory
