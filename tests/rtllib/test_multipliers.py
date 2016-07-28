@@ -212,7 +212,7 @@ class TestSignedTreeMult(unittest.TestCase):
             product = pyrtl.Output(name="product")
             product <<= multipliers.signed_tree_multiplier(a, b, **mult_args)
 
-            self.assertEquals(len(product), len_a + len_b + 1)
+            self.assertEquals(len(product), len_a + len_b)
 
             # creating the testing values and the correct results
             bound_a = 2**(len_a-1) - 1

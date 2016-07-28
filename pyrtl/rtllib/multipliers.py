@@ -164,13 +164,7 @@ def signed_tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adde
     a = _twos_comp_conditional(A, aneg)
     b = _twos_comp_conditional(B, bneg)
 
-    bits_length = len(a) + len(b)
-    bits = [[] for weight in range(bits_length)]
-    for i, x in enumerate(a):
-        for j, y in enumerate(b):
-            bits[i + j].append(x & y)
-
-    res = reducer(bits, bits_length+1, adder_func)
+    res = tree_multiplier(a[:-1], b[:-1]).zero_extended(len(A) + len(B))
     return _twos_comp_conditional(res, aneg ^ bneg)
 
 
