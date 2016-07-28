@@ -156,25 +156,14 @@ def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogg
 
 
 def signed_tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
-    """Same as tree_multiplier, but uses two's complement signed integers"""
+    """Same as tree_multiplier, but uses two's-complement signed integers"""
     if len(A) == 1 or len(B) == 1:
         raise pyrtl.PyrtlError("sign bit required, one or both wires too small")
 
-    aneg = A[-1]
-    bneg = B[-1]
-    a = pyrtl.WireVector(len(A))
-    b = pyrtl.WireVector(len(B))
-    neg = aneg ^ bneg
-    with pyrtl.conditional_assignment:
-        with aneg:
-            a |= ~A + 1
-        with pyrtl.otherwise:
-            a |= A
-    with pyrtl.conditional_assignment:
-        with bneg:
-            b |= ~B + 1
-        with pyrtl.otherwise:
-            b |= B
+    aneg, bneg = A[-1], B[-1]
+    a, b = (pyrtl.WireVector(len(w)) for w in (A, B))
+    _twos_comp_conditional(A, a, aneg)
+    _twos_comp_conditional(B, b, bneg)
 
     bits_length = len(a) + len(b)
     bits = [[] for weight in range(bits_length)]
@@ -184,13 +173,17 @@ def signed_tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adde
 
     res = reducer(bits, bits_length+1, adder_func)
     answ = pyrtl.WireVector(bits_length+1)
-    with pyrtl.conditional_assignment:
-        with neg:
-            answ |= ~res + 1
-        with pyrtl.otherwise:
-            answ |= res
-
+    _twos_comp_conditional(res, answ, aneg ^ bneg)
     return answ
+
+
+def _twos_comp_conditional(orig_wire, new_wire, sign_bit):
+    """Put the two's complement of orig_wire in new_wire if sign_bit == 1"""
+    with pyrtl.conditional_assignment:
+        with sign_bit:
+            new_wire |= ~orig_wire + 1
+        with pyrtl.otherwise:
+            new_wire |= orig_wire
 
 
 def fused_multiply_adder(mult_A, mult_B, add, signed=False, reducer=adders.wallace_reducer,
