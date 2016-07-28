@@ -189,9 +189,10 @@ def demux(select):
         return _demux_2(select)
 
     wires = demux(select[:-1])
-    not_select = ~select
+    sel = select[-1]
+    not_select = ~sel
     zero_wires = tuple(not_select & w for w in wires)
-    one_wires = tuple(select & w for w in wires)
+    one_wires = tuple(sel & w for w in wires)
     return zero_wires + one_wires
 
 
