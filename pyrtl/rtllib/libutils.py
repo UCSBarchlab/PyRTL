@@ -58,10 +58,8 @@ def rev_twos_comp_repr(val, bitwidth):
     valbl = val.bit_length()
     if bitwidth < val.bit_length() or val == 2**(bitwidth-1):
         raise pyrtl.PyrtlError("please choose a larger target bitwidth")
-    if val == 0:
-        return 0
     if bitwidth == valbl:  # MSB is a 1, value is negative
-        return -((~val & (2**bitwidth-1)) + 1)
+        return -((~val & (2**bitwidth-1)) + 1)  # flip the bits, add one, and make negative
     else:
         return val
 
