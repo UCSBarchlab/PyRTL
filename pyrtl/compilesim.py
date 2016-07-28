@@ -11,6 +11,7 @@ from .core import working_block
 from .wire import Input, Output, Const, WireVector
 from .memory import RomBlock
 from .pyrtlexceptions import PyrtlError
+from .simulation import SimulationTrace
 
 
 class CompiledSimulation(object):
@@ -39,6 +40,9 @@ class CompiledSimulation(object):
             default_value=0, block=None):
         self.block = working_block(block)
         self.block.sanity_check()
+
+        if tracer is None:
+            tracer = SimulationTrace()
         self.tracer = tracer
         self.default_value = default_value
         self._dir = tempfile.mkdtemp()
@@ -263,14 +267,13 @@ class CompiledSimulation(object):
             else:
                 self._inputbuf[self._inputorder[name]] = inputs[inp]
         self._cstep(self._inputbuf, self._outputbuf)
-        if self.tracer is not None:
-            if self._use128:
-                values = {w: (
-                    self._outputbuf[2*self._outputorder[w]] << 64) |
-                    self._outputbuf[2*self._outputorder[w]+1] for w in self._outputorder}
-            else:
-                values = {w: self._outputbuf[self._outputorder[w]] for w in self._outputorder}
-            self.tracer.add_step_named(values)
+        if self._use128:
+            values = {w: (
+                self._outputbuf[2*self._outputorder[w]] << 64) |
+                self._outputbuf[2*self._outputorder[w]+1] for w in self._outputorder}
+        else:
+            values = {w: self._outputbuf[self._outputorder[w]] for w in self._outputorder}
+        self.tracer.add_step_named(values)
 
     def run(self, inputs):
         """Run many steps of the simulation.
@@ -298,8 +301,6 @@ class CompiledSimulation(object):
                 else:
                     ibuf[n*ilen+self._inputorder[name]] = inmap[w]
         self._crun(steps, ibuf, obuf)
-        if self.tracer is None:
-            return
         for w in self.tracer.trace:
             if self._use128:
                 values = (
