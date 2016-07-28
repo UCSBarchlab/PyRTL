@@ -722,6 +722,7 @@ class TraceErrorBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.sim_trace.print_trace(base=4)
 
+
 def make_unittests():
     """
     Generates separate unittests for each of the simulators
@@ -744,6 +745,7 @@ def make_unittests():
             unittests[unit_name] = type(unit_name, (v,), {'sim': sim})
     g.update(unittests)
 
+# add compiledsim here if you want to unittest that as well
 sims = (pyrtl.Simulation, pyrtl.FastSimulation)
 make_unittests()
 
