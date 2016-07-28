@@ -7,8 +7,8 @@ def kogge_stone(a, b, cin=0):
     """
     Creates a Kogge-Stone adder given two inputs
 
-    :param a, b: The two Wirevectors to add up (bitwidths don't need to match)
-    :param cin: An optimal carry in Wirevector or value
+    :param WireVector a, b: The two WireVectors to add up (bitwidths don't need to match)
+    :param cin: An optimal carry in WireVector or value
     :return: a Wirevector representing the output of the adder
 
     The Kogge-Stone adder is a fast tree-based adder with O(log(n))
@@ -131,7 +131,7 @@ def _cla_adder_unit(a, b, cin):
     for i in range(1, len(prop)):
         cur_gen = gen[i] | (prop[i] & cur_gen)
         cur_prop = cur_prop & prop[i]
-        sum_bit = pyrtl.concat(prop[i] ^ carry[i-1], sum_bit)
+        sum_bit = pyrtl.concat(prop[i] ^ carry[i - 1], sum_bit)
         carry.append(gen[i] | (prop[i] & carry[i-1]))
     cout = cur_gen | (cur_prop & cin)
     return sum_bit, cout
@@ -143,9 +143,9 @@ def wallace_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
     The use of single bitwidth wires is to allow for additional flexibility
 
     :param [[Wirevector]] wire_array_2: An array of arrays of single bitwidth
-    wirevectors
-    :param int result_bitwidth: The bitwidth you want for the resulting wire
-    Used to eliminate unnessary wires
+        wirevectors
+    :param int result_bitwidth: The bitwidth you want for the resulting wire.
+        Used to eliminate unnessary wires.
     :param final_adder: The adder used for the final addition
     :return: wirevector of length result_wirevector
     """
@@ -188,9 +188,9 @@ def dada_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
     The use of single bitwidth wires is to allow for additional flexibility
 
     :param [[Wirevector]] wire_array_2: An array of arrays of single bitwidth
-    wirevectors
-    :param int result_bitwidth: The bitwidth you want for the resulting wire
-    Used to eliminate unnessary wires
+        wirevectors
+    :param int result_bitwidth: The bitwidth you want for the resulting wire.
+        Used to eliminate unnessary wires.
     :param final_adder: The adder used for the final addition
     :return: wirevector of length result_wirevector
     """

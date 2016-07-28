@@ -111,6 +111,69 @@ class TestCopyBlock(NetWireNumTestCases):
         self.num_memories(2, new_block)
 
 
+class TestFastWireReplace(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_replace_multiple_wires(self):
+        j, n = pyrtl.Input(8), pyrtl.Output(8)
+        o, h = pyrtl.WireVector(), pyrtl.WireVector()
+        x, y = pyrtl.WireVector(8), pyrtl.WireVector(8)
+
+        o <<= j
+        h <<= o
+        n <<= h
+        block = pyrtl.working_block()
+        src_nets, dst_nets = block.net_connections()
+        transform.replace_wire_fast(o, x, x, src_nets, dst_nets)
+        transform.replace_wire_fast(h, y, y, src_nets, dst_nets)
+        for old_wire in (o, h):
+            self.assertNotIn(old_wire, src_nets)
+            self.assertNotIn(old_wire, dst_nets)
+            self.assertNotIn(old_wire, block.wirevector_set)
+        block.sanity_check()
+
+    def test_replace_multiple_wires_2(self):
+        j, n = pyrtl.Input(8), pyrtl.Output(8)
+        o = pyrtl.WireVector()
+        x, y, z = pyrtl.WireVector(8), pyrtl.WireVector(8), pyrtl.WireVector(8)
+
+        o <<= j
+        l = ~ j
+        h = o & l
+        n <<= h
+        block = pyrtl.working_block()
+        src_nets, dst_nets = block.net_connections()
+        transform.replace_wire_fast(o, x, x, src_nets, dst_nets)
+        transform.replace_wire_fast(l, z, z, src_nets, dst_nets)
+        transform.replace_wire_fast(h, y, y, src_nets, dst_nets)
+        for old_wire in (o, h, l):
+            self.assertNotIn(old_wire, src_nets)
+            self.assertNotIn(old_wire, dst_nets)
+            self.assertNotIn(old_wire, block.wirevector_set)
+        block.sanity_check()
+
+    def test_wire_used_in_multiple_places(self):
+        j, k = pyrtl.Input(8), pyrtl.Input(8)
+        n, o = pyrtl.Output(8), pyrtl.Output(8)
+        x = pyrtl.WireVector(8)
+
+        r = j & k
+        n <<= j | r
+        o <<= r ^ k
+
+        block = pyrtl.working_block()
+        src_nets, dst_nets = block.net_connections()
+        transform.replace_wire_fast(r, x, x, src_nets, dst_nets)
+
+        for old_wire in (r,):
+            self.assertNotIn(old_wire, src_nets)
+            self.assertNotIn(old_wire, dst_nets)
+            self.assertNotIn(old_wire, block.wirevector_set)
+        block.sanity_check()
+
+
+
 # this code needs mocking from python 3's unittests to work
 """
 @mock.patch('transform_examples.pyrtl.probe')

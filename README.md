@@ -59,6 +59,7 @@ Testing requires the packages `tox` and `nose`.  Once installed a complete test 
 *Workflow*
 
 * A useful reference for working with Git is this [Git tutorial](https://www.atlassian.com/git/tutorials/)
+* A useful Git Fork workflow for working on this repo is [found here](http://blog.scottlowe.org/2015/01/27/using-fork-branch-git-workflow/)
 * The "master" branch should always be stable and is updated only on major revisions (with a merge from "development" by the core development team)
 * The "development" branch is the primary stable working branch (everyone is invited to submit pull requests)
 * Bugs and minor enhancements tracked directly through the [issue tracker](https://github.com/UCSBarchlab/PyRTL/issues)

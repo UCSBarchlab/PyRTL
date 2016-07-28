@@ -25,16 +25,6 @@ from .helperfuncs import output_list
 from .helperfuncs import register_list
 from .helperfuncs import wirevector_list
 from .helperfuncs import as_wires
-from .helperfuncs import concat
-from .helperfuncs import concat_list
-from .helperfuncs import mux
-from .helperfuncs import select
-from .helperfuncs import and_all_bits
-from .helperfuncs import or_all_bits
-from .helperfuncs import xor_all_bits
-from .helperfuncs import parity
-from .helperfuncs import rtl_all
-from .helperfuncs import rtl_any
 from .helperfuncs import match_bitwidth
 from .helperfuncs import probe
 from .helperfuncs import rtl_assert
@@ -42,6 +32,8 @@ from .helperfuncs import check_rtl_assertions
 from .helperfuncs import find_loop
 from .helperfuncs import find_and_print_loop
 
+from pyrtl.corecircuits import (and_all_bits, or_all_bits, xor_all_bits, rtl_any,
+                                rtl_all, mux, select, concat, concat_list, parity)
 # memory blocks
 from .memory import MemBlock
 from .memory import RomBlock
@@ -50,7 +42,6 @@ from .memory import RomBlock
 from .conditional import conditional_assignment
 from .conditional import otherwise
 from .conditional import currently_under_condition
-from .conditional import ConditionalUpdate  # eliminated, now just throws useful error
 
 # block simulation support
 from .simulation import Simulation
@@ -62,13 +53,15 @@ from .compilesim import CompiledSimulation
 from .inputoutput import input_from_blif
 from .inputoutput import output_to_trivialgraph
 from .inputoutput import output_to_graphviz
-from .inputoutput import output_to_verilog
+from .inputoutput import OutputToVerilog
 from .inputoutput import output_verilog_testbench
 from .inputoutput import block_to_graphviz_string
 from .inputoutput import block_to_svg
 from .inputoutput import trace_to_html
 
 # different analysis and transform passes
+from .passes import common_subexp_elimination
+from .passes import constant_propagation
 from .passes import synthesize
 from .passes import nand_synth
 from .passes import and_inverter_synth

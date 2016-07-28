@@ -7,9 +7,10 @@
     has other ways to store data, namely memories and ROMs.
 """
 
+import random
+
 import pyrtl
 from pyrtl import *
-import random
 
 # --- Part 1: Memories -------------------------------------------------------
 
@@ -116,8 +117,9 @@ rom_data_array = [rom_data_func(a) for a in range(16)]
 # but because they are read only, they also need to be passed in a set of
 # data to be initialized as
 
-rom1 = RomBlock(bitwidth=5, addrwidth=4, romdata=rom_data_func)
-rom2 = RomBlock(5, 4, rom_data_array)
+# FIXME: rework how memassigns work to account for more read ports
+rom1 = RomBlock(bitwidth=5, addrwidth=4, romdata=rom_data_func, max_read_ports=10)
+rom2 = RomBlock(5, 4, rom_data_array, max_read_ports=10)
 
 rom_add_1, rom_add_2 = Input(4, "rom_in"), Input(4, "rom_in_2")
 

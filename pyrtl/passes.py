@@ -1,19 +1,19 @@
-
 """
-Passes contains structures helpful for writing analysis and
-transformation passes over blocks.
+Passes contains prebuilt transformantion passes to do optimization,
+lowering of the design to single wire gates (synthesis), along with other
+ways to change a block.
 """
 
 from __future__ import print_function, unicode_literals
 
 from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
-from .helperfuncs import (
-    find_and_print_loop, as_wires, concat_list,
-    _basic_mult, _basic_add, _basic_sub, _basic_select, _basic_eq, _basic_lt, _basic_gt)
+from .helperfuncs import as_wires, _NetCount
+from .corecircuits import (_basic_mult, _basic_add, _basic_sub, _basic_eq,
+                           _basic_lt, _basic_gt, _basic_select, concat_list)
 from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
-from .transform import net_transform, _get_new_block_mem_instance, copy_block
+from .transform import net_transform, _get_new_block_mem_instance, copy_block, replace_wires
 
 
 # --------------------------------------------------------------------
@@ -24,10 +24,15 @@ from .transform import net_transform, _get_new_block_mem_instance, copy_block
 
 
 def optimize(update_working_block=True, block=None, skip_sanity_check=False):
-    """ Return an optimized version of a synthesized hardware block.
+    """
+    Return an optimized version of a synthesized hardware block.
 
-        :param update_working_block: Don't copy the block and optimize the
-        new block
+    :param Boolean update_working_block: Don't copy the block and optimize the
+    new block
+    :param Block block: the block to optimize (defaults to working block)
+
+    Note:
+    optimize works on all hardware designs, both synthesized and non synthesized
     """
     block = working_block(block)
     if not update_working_block:
@@ -37,12 +42,9 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
         if (not skip_sanity_check) or debug_mode:
             block.sanity_check()
         _remove_wire_nets(block)
-        if debug_mode:
-            block.sanity_check()
-        _constant_propagation(block)
-        if debug_mode:
-            block.sanity_check()
+        constant_propagation(block, True)
         _remove_unlistened_nets(block)
+        common_subexp_elimination(block)
         if (not skip_sanity_check) or debug_mode:
             block.sanity_check()
     return block
@@ -98,7 +100,7 @@ def _remove_wire_nets(block):
     block.sanity_check()
 
 
-def _constant_propagation(block, silence_unexpected_net_warnings=False):
+def constant_propagation(block, silence_unexpected_net_warnings=False):
     """ Removes excess constants in the block.
 
     Note on resulting block:
@@ -106,10 +108,8 @@ def _constant_propagation(block, silence_unexpected_net_warnings=False):
     listened to. This is to be expected. These are to be removed by the
     _remove_unlistened_nets function
     """
-
-    current_nets = 0
-    while len(block.logic) != current_nets:
-        current_nets = len(block.logic)
+    net_count = _NetCount(block)
+    while net_count.shrinking():
         _constant_prop_pass(block, silence_unexpected_net_warnings)
 
 
@@ -159,14 +159,13 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
         if num_constants is 0 or net_checking.op in no_optimization_ops:
             return  # assuming wire nets are already optimized
 
-        if any(len(wire) != 1 for wire in net_checking.args + net_checking.dests):
-            long_wires = [wire for wire in net_checking.args + net_checking.dests if
-                          len(wire) != 1]
-            _constant_prop_error(net_checking, "has wire(s) {} with bitwidths that are not 1"
-                                 .format(long_wires))
-            return  # skip if we are ignoring unoptimizable ops
-
         if (net_checking.op in two_var_ops) and num_constants == 1:
+            long_wires = [w for w in net_checking.args + net_checking.dests if len(w) != 1]
+            if len(long_wires):
+                _constant_prop_error(net_checking, "has wire(s) {} with bitwidths that are not 1"
+                                     .format(long_wires))
+                return  # skip if we are ignoring unoptimizable ops
+
             # special case
             const_wire, other_wire = net_checking.args
             if isinstance(other_wire, Const):
@@ -184,6 +183,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
                                      dests=net_checking.dests))
 
         else:
+            # this optimization is actually compatible with long wires
             if net_checking.op in two_var_ops:
                 output = two_var_ops[net_checking.op](net_checking.args[0].val,
                                                       net_checking.args[1].val)
@@ -211,6 +211,87 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
         block.add_wirevector(new_wirevector)
 
     _remove_unused_wires(block)
+
+
+def common_subexp_elimination(block=None, abs_thresh=1, percent_thresh=0):
+    """
+    Common Subexpression Elimination for PyRTL blocks
+
+    :param block: the block to run the subexpression elimination on
+    :param abs_thresh: absolute threshold for stopping optimization
+    :param percent_thresh: percent threshold for stopping optimization
+    """
+    block = working_block(block)
+    net_count = _NetCount(block)
+
+    while net_count.shrinking(block, percent_thresh, abs_thresh):
+        net_table = _find_common_subexps(block)
+        _replace_subexps(block, net_table)
+
+
+ops_where_arg_order_matters = 'm@xc<>-'
+
+
+def _find_common_subexps(block):
+    net_table = {}  # {net (without dest) : [net, ...]
+    t = tuple()  # just a placeholder
+    const_dict = {}
+    for net in block.logic:
+        if net.op in ops_where_arg_order_matters:
+            new_args = tuple(_const_to_int(w, const_dict) for w in net.args)
+        else:
+            new_args = tuple(sorted((_const_to_int(w, const_dict) for w in net.args), key=hash))
+        net_sub = LogicNet(net[0], net[1], new_args, t)  # don't care about dests
+        if net_sub in net_table:
+            net_table[net_sub].append(net)
+        else:
+            net_table[net_sub] = [net]
+    return net_table
+
+
+def _const_to_int(wire, const_dict):
+    if isinstance(wire, Const):
+        # a very bad hack to make sure two consts will compare
+        # correctly with an 'is'
+        bitwidth = wire.bitwidth
+        val = wire.val
+        if bitwidth not in const_dict:
+            const_dict[bitwidth] = {val: (bitwidth, val)}
+        else:
+            if val not in const_dict[bitwidth]:
+                const_dict[bitwidth][val] = (bitwidth, val)
+        return const_dict[bitwidth][val]
+
+    return wire
+
+
+def _replace_subexps(block, net_table):
+    wire_map = {}
+    unnecessary_nets = []
+    for nets in net_table.values():
+        _process_nets_to_discard(nets, wire_map, unnecessary_nets)
+
+    block.logic.difference_update(unnecessary_nets)
+    replace_wires(wire_map, block)
+
+
+def _has_normal_dest_wire(net):
+    return not isinstance(net.dests[0], (Register, Output))
+
+
+def _process_nets_to_discard(nets, wire_map, unnecessary_nets):
+    if len(nets) == 1:
+        return  # also deals with nets with no dest wires
+    nets_to_consider = list(filter(_has_normal_dest_wire, nets))
+
+    if len(nets_to_consider) > 1:  # needed to handle cases with only special wires
+        net_to_keep = nets_to_consider[0]
+        nets_to_discard = nets_to_consider[1:]
+        dest_w = net_to_keep.dests[0]
+        for net in nets_to_discard:
+            old_dst = net.dests[0]
+            wire_map[old_dst] = dest_w
+            unnecessary_nets.append(net)
 
 
 def _remove_unlistened_nets(block):

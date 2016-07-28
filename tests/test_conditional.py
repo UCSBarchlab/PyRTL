@@ -2,27 +2,6 @@ import unittest
 import pyrtl
 import io
 
-# ---------------------------------------------------------------
-
-
-class TestConditionalUpdateRemoved(unittest.TestCase):
-    def setUp(self):
-        pyrtl.reset_working_block()
-
-    def test_old_conditionupdate_provides_notice(self):
-        c = pyrtl.Const(1)
-        r = pyrtl.Register(bitwidth=2, name='r')
-        with self.assertRaises(pyrtl.PyrtlError):
-            with pyrtl.ConditionalUpdate() as condition: pass
-
-    def test_old_shortcut_form_of_conditionalupdate_provides_notice(self):
-        c = pyrtl.Const(1)
-        r = pyrtl.Register(bitwidth=2, name='r')
-        with self.assertRaises(pyrtl.PyrtlError):
-            with pyrtl.ConditionalUpdate(c): pass
-
-# ---------------------------------------------------------------
-
 
 class TestConditional(unittest.TestCase):
     def setUp(self):
@@ -34,7 +13,7 @@ class TestConditional(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -182,7 +161,7 @@ class TestMemConditionalBlock(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -255,7 +234,7 @@ class TestWireConditionalBlock(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -374,7 +353,7 @@ class TestNonExclusiveBlocks(unittest.TestCase):
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim_trace.print_trace(output, compact=True)
         print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 

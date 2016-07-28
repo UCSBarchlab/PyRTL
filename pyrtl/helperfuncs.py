@@ -1,24 +1,21 @@
-""" Defines a set of helper functions that make constructing hardware easier.
+""" Helper functions that make constructing hardware easier.
 
 The set of functions includes
-as_wires: converts consts to wires if needed (and does nothing to wires)
-and_all_bits, or_all_bits, xor_all_bits: apply function across all bits
-parity: same as xor_all_bits
-mux: generate a multiplexer
-concat: concatenate multiple wirevectors into one long vector
-get_block: get the block of the arguments, throw error if they are different
+
+* `as_wires`: converts consts to wires if needed (and does nothing to wires)
+* `probe`: a way to check the values of wires during simulation time
+* `rtl_assert`: Simulation time hardware value assertions
+
 """
 
 from __future__ import print_function, unicode_literals
 
+# import re
 import six
 
+from .core import working_block, _NameIndexer
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, LogicNet
 from .wire import WireVector, Input, Output, Const, Register
-
-_rtl_assert_number = 1
-_probe_number = 1
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -64,14 +61,14 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
     :param val: a wirevector-like object or something that can be converted into
       a Const
     :param bitwidth: The bitwidth the resulting wire should be
-    :param bool truncating: determines whether bits will be dropped to acheive
-     the desired bitwidth if it is too long (if true, the most-significant-bits
+    :param bool truncating: determines whether bits will be dropped to achieve
+     the desired bitwidth if it is too long (if true, the most-significant bits
      will be dropped)
     :param Block block: block to use for wire
 
     This function is mainly used to coerce values into WireVectors (for
     example, operations such as "x+1" where "1" needs to be converted to
-    a Const WireVector.)
+    a Const WireVector).
     """
     from .memory import _MemIndexed
     block = working_block(block)
@@ -80,8 +77,10 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
         # note that this case captures bool as well (as bools are instances of ints)
         return Const(val, bitwidth=bitwidth, block=block)
     elif isinstance(val, _MemIndexed):
-        # covert to a memory read when the value is actually used
-        return as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)
+        # convert to a memory read when the value is actually used
+        if val.wire is None:
+            val.wire = as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)
+        return val.wire
     elif not isinstance(val, WireVector):
         raise PyrtlError('error, expecting a wirevector, int, or verilog-style '
                          'const string got %s instead' % repr(val))
@@ -97,319 +96,48 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
         return val
 
 
-def and_all_bits(vector):
-    """ Returns WireVector, the result of "and"ing all items of the argument vector."""
-    return _apply_op_over_all_bits(lambda a, b: a & b, vector)
-
-
-def or_all_bits(vector):
-    """ Returns WireVector, the result of "or"ing all items of the argument vector."""
-    return _apply_op_over_all_bits(lambda a, b: a | b, vector)
-
-
-def xor_all_bits(vector):
-    """ Returns WireVector, the result of "xor"ing all items of the argument vector."""
-    return _apply_op_over_all_bits(lambda a, b: a ^ b, vector)
-
-
-parity = xor_all_bits  # shadowing the xor_all_bits_function
-
-
-def _apply_op_over_all_bits(op, vector):
-    if len(vector) == 1:
-        return vector[0]
-    rest = _apply_op_over_all_bits(op, vector[1:])
-    return op(vector[0], rest)
-
-
-def rtl_any(*vectorlist):
-    """ Hardware equivalent of python native "any".
-
-    :param WireVector *vectorlist: all arguments are WireVectors of length 1
-    :return: WireVector of length 1
-
-    Returns a 1-bit wirevector which will hold a '1' if any of the inputs
-    are '1' (i.e. it is a big 'ol OR gate)
-    """
-    if len(vectorlist) <= 0:
-        raise PyrtlError('rtl_any requires at least 1 argument')
-    converted_vectorlist = [as_wires(v) for v in vectorlist]
-    if any(len(v) != 1 for v in converted_vectorlist):
-        raise PyrtlError('only length 1 wirevectors can be inputs to rtl_any')
-    return or_all_bits(concat_list(converted_vectorlist))
-
-
-def rtl_all(*vectorlist):
-    """ Hardware equivalent of python native "all".
-
-    :param WireVector *vectorlist: all arguments are WireVectors of length 1
-    :return: WireVector of length 1
-
-    Returns a 1-bit wirevector which will hold a '1' only if all of the
-    inputs are '1' (i.e. it is a big 'ol AND gate)
-    """
-    if len(vectorlist) <= 0:
-        raise PyrtlError('rtl_all requires at least 1 argument')
-    converted_vectorlist = [as_wires(v) for v in vectorlist]
-    if any(len(v) != 1 for v in converted_vectorlist):
-        raise PyrtlError('only length 1 wirevectors can be inputs to rtl_all')
-    return and_all_bits(concat_list(converted_vectorlist))
-
-
-def _basic_mult(A, B):
-    """ a stripped down copy of the wallace multiplier in rtllib """
-    if len(B) == 1:
-        A, B = B, A  # so that we can reuse the code below :)
-    if len(A) == 1:
-        return concat_list(list(A & b for b in B) + [Const(0)])  # keep WireVector len consistent
-
-    result_bitwidth = len(A) + len(B)
-    bits = [[] for weight in range(result_bitwidth)]
-    for i, a in enumerate(A):
-        for j, b in enumerate(B):
-            bits[i + j].append(a & b)
-
-    while not all(len(i) <= 2 for i in bits):
-        deferred = [[] for weight in range(result_bitwidth + 1)]
-        for i, w_array in enumerate(bits):  # Start with low weights and start reducing
-            while len(w_array) >= 3:  # build a new full adder
-                a, b, cin = (w_array.pop(0) for j in range(3))
-                deferred[i].append(a ^ b ^ cin)
-                deferred[i + 1].append(a & b | a & cin | b & cin)
-            if len(w_array) == 2:
-                a, b = w_array
-                deferred[i].append(a ^ b)
-                deferred[i + 1].append(a & b)
-            else:
-                deferred[i].extend(w_array)
-        bits = deferred[:result_bitwidth]
-
-    import six
-    add_wires = tuple(six.moves.zip_longest(*bits, fillvalue=Const(0)))
-    adder_result = concat_list(add_wires[0]) + concat_list(add_wires[1])
-    return adder_result[:result_bitwidth]
-
-
-def _one_bit_add(a, b, carry_in):
-    assert len(a) == len(b) == 1
-    sumbit = a ^ b ^ carry_in
-    carry_out = a & b | a & carry_in | b & carry_in
-    return sumbit, carry_out
-
-
-def _add_helper(a, b, carry_in):
-    a, b = match_bitwidth(a, b)
-    if len(a) == 1:
-        sumbits, carry_out = _one_bit_add(a, b, carry_in)
-    else:
-        lsbit, ripplecarry = _one_bit_add(a[0], b[0], carry_in)
-        msbits, carry_out = _add_helper(a[1:], b[1:], ripplecarry)
-        sumbits = concat(msbits, lsbit)
-    return sumbits, carry_out
-
-
-def _basic_add(a, b):
-    sumbits, carry_out = _add_helper(a, b, 0)
-    return concat(carry_out, sumbits)
-
-
-def _basic_sub(a, b):
-    sumbits, carry_out = _add_helper(a, ~b, 1)
-    return concat(carry_out, sumbits)
-
-
-def _basic_eq(a, b):
-    return ~ or_all_bits(a ^ b)
-
-
-def _basic_lt(a, b):
-    assert len(a) == len(b)
-    a_msb = a[-1]
-    b_msb = b[-1]
-    if len(a) == 1:
-        return (b_msb & ~a_msb)
-    small = _basic_lt(a[:-1], b[:-1])
-    return (b_msb & ~a_msb) | (small & ~(a_msb ^ b_msb))
-
-
-def _basic_gt(a, b):
-    return _basic_lt(b, a)
-
-
-def _basic_select(s, a, b):
-    assert len(a) == len(b)
-    assert len(s) == 1
-    sa = concat(*[~s]*len(a))
-    sb = concat(*[s]*len(b))
-    return (a & sa) | (b & sb)
-
-
-def mux(index, *mux_ins, **kwargs):
-    """ Multiplexer returning the value of the wire in .
-
-    :param WireVector index: used as the select input to the multiplexor
-    :param additional WireVector arguments *mux_ins: wirevectors selected when select>1
-    :param additional WireVector arguments **default: keyword arg "default"
-      If you are selecting between less items than your index can address, you can
-      use the "default" keyword argument to auto-expand those terms.  For example,
-      if you have a 3-bit index but are selecting between 6 options, you need to specify
-      a value for those other 2 possible values of index (0b110 and 0b111).
-    :return: WireVector of length of the longest input (not including select)
-
-    To avoid confusion, if you are using the mux where the select is a "predicate"
-    (meaning something that you are checking the truth value of rather than using it
-    as a number) it is recommended that you use the select function instead
-    as named arguments because the ordering is different from the classic ternary
-    operator of some languages.
-
-    Example of mux as "selector" to pick between a0 and a1:
-        index = WireVector(1)
-        mux( index, a0, a1 )
-
-    Example of mux as "selector" to pick between a0 ... a3:
-        index = WireVector(2)
-        mux( index, a0, a1, a2, a3 )
-
-    Example of "default" to specify additional arguments:
-        index = WireVector(3)
-        mux( index, a0, a1, a2, a3, a4, a5, default=0 )
-    """
-    if kwargs:  # only "default" is allowed as kwarg.
-        if len(kwargs) != 1 or 'default' not in kwargs:
-            try:
-                result = select(index, **kwargs)
-                import warnings
-                warnings.warn("Predicates are being deprecated in Mux. "
-                              "Use the select operator instead.", stacklevel=2)
-                return result
-            except Exception:
-                bad_args = [k for k in kwargs.keys() if k != 'default']
-                raise PyrtlError('unknown keywords %s applied to mux' % str(bad_args))
-        default = kwargs['default']
-    else:
-        default = None
-
-    # find the diff between the addressable range and number of inputs given
-    short_by = 2**len(index) - len(mux_ins)
-    if short_by > 0:
-        if default is not None:  # extend the list to appropriate size
-            mux_ins = list(mux_ins)
-            extention = [default] * short_by
-            mux_ins.extend(extention)
-
-    if 2 ** len(index) != len(mux_ins):
-        raise PyrtlError(
-            'Mux select line is %d bits, but selecting from %d inputs. '
-            % (len(index), len(mux_ins)))
-
-    if len(index) == 1:
-        return select(index, falsecase=mux_ins[0], truecase=mux_ins[1])
-    half = len(mux_ins) // 2
-    return select(index[-1],
-                  falsecase=mux(index[0:-1], *mux_ins[:half]),
-                  truecase=mux(index[0:-1], *mux_ins[half:]))
-
-
-def select(sel, truecase, falsecase):
-    """ Multiplexer returning falsecase for select==0, otherwise truecase.
-
-    :param WireVector sel: used as the select input to the multiplexor
-    :param WireVector falsecase: the wirevector selected if select==0
-    :param WireVector truecase: the wirevector selected if select==1
-    Example of mux as "ternary operator" to take the max of 'a' and 5:
-        mux( a<5, truecase=a, falsecase=5)
-    """
-    sel, f, t = (as_wires(w) for w in (sel, falsecase, truecase))
-    f, t = match_bitwidth(f, t)
-    outwire = WireVector(bitwidth=len(f))
-
-    net = LogicNet(op='x', op_param=None, args=(sel, f, t), dests=(outwire,))
-    working_block().add_net(net)  # this includes sanity check on the mux
-    return outwire
-
-
-def concat(*args):
-    """
-    Concats multiple wirevectors into a single wirevector
-
-    :type args: WireVector
-    :return wirevector: wirevector with length equal
-      to the sum of the args' lengths
-
-    Usually you will want to use concat_list as you will not need to reverse the list
-    The concatenation order places the MSB as arg[0] with less significant bits following.
-    """
-    if len(args) <= 0:
-        raise PyrtlError('error, concat requires at least 1 argument')
-    if len(args) == 1:
-        return as_wires(args[0])
-
-    arg_wirevectors = tuple(as_wires(arg) for arg in args)
-    final_width = sum(len(arg) for arg in arg_wirevectors)
-    outwire = WireVector(bitwidth=final_width)
-    net = LogicNet(
-        op='c',
-        op_param=None,
-        args=arg_wirevectors,
-        dests=(outwire,))
-    working_block().add_net(net)
-    return outwire
-
-
-def concat_list(wire_list):
-    """
-    Concats a list of wirevectors into a single wirevector
-
-    :param wire_list: List of wirevectors to concat
-    :return wirevector: wirevector with length equal
-      to the sum of the args' lengths
-
-    The concatenation order is LSB (UNLIKE Concat)
-    """
-    return concat(*reversed(wire_list))
-
-
 def match_bitwidth(*args):
     # TODO: allow for custom bit extension functions
     """ Matches the bitwidth of all of the input arguments
 
-    :type args: WireVector
-    :return tuple of args in order with extended bits
+    :param args: WireVectors of which to match bitwidths
+    :return: tuple of args in order with extended bits
     """
     max_len = max(len(wv) for wv in args)
     return (wv.zero_extended(max_len) for wv in args)
 
 
+probeIndexer = _NameIndexer('Probe-')
+
+
 def probe(w, name=None):
     """ Print useful information about a WireVector when in debug mode.
 
-    :type w: WireVector
-    :type name: None or string
+    :param w: WireVector from which to get info
+    :param name: optional name for probe (defaults to an autogenerated name)
     :return: original WireVector w
 
-    Probe can be inserted into a existing design easily as it returns the original wire unmodified.
-    For example "y <<= x[0:3] + 4" could be turned into "y <<= probe(x)[0:3] + 4" to give visibility
-    into both the origin of x (including the line that WireVector was originally created) and the
-    run-time values of x (which will be named and thus show up by default in a trace.  Likewise
-    "y <<= probe(x[0:3]) + 4", "y <<= probe(x[0:3] + 4)", and "probe(y) <<= x[0:3] + 4" are all
-    valid uses of probe.  Note: probe does actually add wire to the working block of w (which can
-    confuse various post-processing transforms such as output to verilog)
+    Probe can be inserted into a existing design easily as it returns the
+    original wire unmodified. For example ``y <<= x[0:3] + 4`` could be turned
+    into ``y <<= probe(x)[0:3] + 4`` to give visibility into both the origin of
+    ``x`` (including the line that WireVector was originally created) and
+    the run-time values of ``x`` (which will be named and thus show up by
+    default in a trace.  Likewise ``y <<= probe(x[0:3]) + 4``,
+    ``y <<= probe(x[0:3] + 4)``, and ``probe(y) <<= x[0:3] + 4`` are all
+    valid uses of `probe`.
+
+    Note: `probe` does actually add a wire to the working block of w (which can
+    confuse various post-processing transforms such as output to verilog).
     """
-    global _probe_number
     if not isinstance(w, WireVector):
         raise PyrtlError('Only WireVectors can be probed')
 
-    print('(Probe-%d)' % _probe_number, end=' ')
-    print(get_stack(w))
+    if name is None:
+        name = '(%s: %s)' % (probeIndexer.make_valid_string(), w.name)
+    print(name + ' ' + get_stack(w))
 
-    if name:
-        pname = '(Probe-%d : %s : %s)' % (_probe_number, name, w.name)
-    else:
-        pname = '(Probe-%d : %s)' % (_probe_number, w.name)
-
-    p = Output(name=pname)
+    p = Output(name=name)
     p <<= w  # late assigns len from w automatically
-    _probe_number += 1
     return w
 
 
@@ -435,6 +163,9 @@ def get_stack(wire):
                ' to provide more information'
 
 
+assertIndexer = _NameIndexer('assertion')
+
+
 def rtl_assert(w, exp, block=None):
     """ Add hardware assertions to be checked on the RTL design.
 
@@ -446,9 +177,6 @@ def rtl_assert(w, exp, block=None):
     If at any time during execution the wire w is not `true` (i.e. asserted low)
     then simulation will raise exp.
     """
-
-    global _rtl_assert_number
-
     block = working_block(block)
 
     if not isinstance(w, WireVector):
@@ -467,10 +195,8 @@ def rtl_assert(w, exp, block=None):
     if w in block.rtl_assert_dict:
         raise PyrtlInternalError('assertion conflicts with existing registered assertion')
 
-    assertion_name = 'assertion%d' % _rtl_assert_number
-    assert_wire = Output(bitwidth=1, name=assertion_name, block=block)
+    assert_wire = Output(bitwidth=1, name=assertIndexer.make_valid_string(), block=block)
     assert_wire <<= w
-    _rtl_assert_number += 1
     block.rtl_assert_dict[assert_wire] = exp
     return assert_wire
 
@@ -594,3 +320,37 @@ def _currently_in_ipython():
         return True
     except NameError:
         return False
+
+
+class _NetCount(object):
+    """
+    Helper class to track when to stop an iteration that depends on number of nets
+
+    Mainly useful for iterations that are for optimization
+    """
+    def __init__(self, block=None):
+        self.block = working_block(block)
+        self.prev_nets = len(self.block.logic) * 1000
+
+    def shrank(self, block=None, percent_diff=0, abs_diff=1):
+        """
+        Returns whether a block has less nets than before
+
+        :param Block block: block to check (if changed)
+        :param Number percent_diff: percentage difference threshold
+        :param int abs_diff: absolute difference threshold
+        :return: boolean
+
+        This function checks whether the change in the number of
+        nets is greater than the percentage and absolute difference
+        thresholds.
+        """
+        if block is None:
+            block = self.block
+        cur_nets = len(block.logic)
+        net_goal = self.prev_nets * (1 - percent_diff) - abs_diff
+        less_nets = (cur_nets <= net_goal)
+        self.prev_nets = cur_nets
+        return less_nets
+
+    shrinking = shrank

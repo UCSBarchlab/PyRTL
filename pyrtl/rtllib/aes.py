@@ -1,16 +1,46 @@
-""" AES-128 """
+"""
+A class for building a PyRTL AES circuit.
+
+Currently this class only supports 128 bit AES encryption/decryption
+
+``Example``::
+
+    aes = AES()
+    plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
+    key = pyrtl.Input(bitwidth=128, name='aes_key')
+    aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
+    reset = pyrtl.Input(1)
+    ready = pyrtl.Output(1, name='ready')
+    ready_out, aes_cipher = aes.encryption_statem(plaintext, key, reset)
+    ready <<= ready_out
+    aes_ciphertext <<= aes_cipher
+    sim_trace = pyrtl.SimulationTrace()
+    sim = pyrtl.Simulation(tracer=sim_trace)
+    sim.step ({
+        aes_plaintext: 0x00112233445566778899aabbccddeeff,
+        aes_key: 0x000102030405060708090a0b0c0d0e0f,
+        reset: 1
+    })
+    for cycle in range(1,10):
+        sim.step ({
+            aes_plaintext: 0x00112233445566778899aabbccddeeff,
+            aes_key: 0x000102030405060708090a0b0c0d0e0f,
+            reset: 0
+        })
+    sim_trace.render_trace(symbol_len=40, segment_size=1)
+
+"""
 
 from __future__ import division, absolute_import
 import pyrtl
 from pyrtl.rtllib import libutils
+
 
 # TODO:
 # 2) All ROMs should be synchronous.  This should be easy once (3) is completed
 # 3) Right now decryption generates one GIANT combinatorial block. Instead
 #    it should generate one of 2 options -- Either an iterative design or a
 #    pipelined design.  Both will add registers between each round of AES
-# 4) aes_encryption should be added to this file as well so that an
-#    aes encrypter similar to (3) above is generated
 # 5) a single "aes-unit" combining encryption and decryption (without making
 #    full independent hardware units) would be a plus as well
 
@@ -18,70 +48,115 @@ from pyrtl.rtllib import libutils
 class AES(object):
     def __init__(self):
         self.memories_built = False
+        self._key_len = 128
 
-    def _g(self, word, key_expand_round):
+    def encryption(self, plaintext, key):
         """
-        One-byte left circular rotation, substitution of each byte
+        Builds a single cycle AES Encryption circuit
+
+        :param WireVector plaintext: text to encrypt
+        :param WireVector key: AES key to use to encrypt
+        :return: a WireVector containing the ciphertext
+
         """
-        import numbers
-        self.build_memories_if_not_exists()
-        a = libutils.partition_wire(word, 8)
-        sub = [self.sbox[a[index]] for index in (3, 0, 1, 2)]
-        if isinstance(key_expand_round, numbers.Number):
-            rcon_data = self.rcon_data[key_expand_round + 1]  # int value
-        else:
-            rcon_data = self.rcon[key_expand_round + 1]
-        sub[3] = sub[3] ^ rcon_data
-        return pyrtl.concat_list(sub)
+        if len(plaintext) != self._key_len:
+            raise pyrtl.PyrtlError("Ciphertext length is invalid")
+        if len(key) != self._key_len:
+            raise pyrtl.PyrtlError("key length is invalid")
 
-    def key_expansion(self, old_key, key_expand_round):
-        self.build_memories_if_not_exists()
-        w = libutils.partition_wire(old_key, 32)
-        x = [w[3] ^ self._g(w[0], key_expand_round)]
-        x.insert(0, x[0] ^ w[2])
-        x.insert(0, x[0] ^ w[1])
-        x.insert(0, x[0] ^ w[0])
-        return pyrtl.concat_list(x)
+        key_list = self._key_gen(key)
+        t = self._add_round_key(plaintext, key_list[0])
 
-    def inv_sub_bytes(self, in_vector):
-        self.build_memories_if_not_exists()
-        subbed = [self.inv_sbox[byte] for byte in libutils.partition_wire(in_vector, 8)]
-        return pyrtl.concat_list(subbed)
+        for round in range(1, 11):
+            t = self._sub_bytes(t)
+            t = self._shift_rows(t)
+            if round != 10:
+                t = self._mix_columns(t)
+            t = self._add_round_key(t, key_list[round])
+        return t
 
-    @staticmethod
-    def inv_shift_rows(in_vector):
-        a = libutils.partition_wire(in_vector, 8)
-        return pyrtl.concat_list((a[12], a[9],  a[6],  a[3],
-                                  a[0],  a[13], a[10], a[7],
-                                  a[4],  a[1],  a[14], a[11],
-                                  a[8],  a[5],  a[2],  a[15]))
+    def encrypt_state_m(self, plaintext_in, key_in, reset):
+        """
+        Builds a multiple cycle AES Encryption state machine circuit
 
-    def galois_mult(self, c, mult_table):
-        return self._inv_gal_mult_dict[mult_table][c]
+        :param reset: a one bit signal telling the state machine
+          to reset and accept the current plaintext and key
+        :return ready, cipher_text: ready is a one bit signal showing
+          that the encryption result (cipher_text) has been calculated.
 
-    def inv_mix_columns(self, in_vector):
-        self.build_memories_if_not_exists()
-        igm_mults = [14, 9, 13, 11]
-        subgroups = libutils.partition_wire(in_vector, 32)
-        return pyrtl.concat_list([self._mix_col_subgroup(sg, igm_mults) for sg in subgroups])
+        """
+        if len(key_in) != len(plaintext_in):
+            raise pyrtl.PyrtlError("AES key and plaintext should be the same length")
 
-    def _mix_col_subgroup(self, in_vector, gm_multipliers):
-        def _mix_single(index):
-            mult_items = [self.galois_mult(a[(index + loc) % 4], mult_table)
-                          for loc, mult_table in enumerate(gm_multipliers)]
-            return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
+        plain_text, key = (pyrtl.Register(len(plaintext_in)) for i in range(2))
+        key_exp_in, add_round_in = (pyrtl.WireVector(len(plaintext_in)) for i in range(2))
 
-        a = libutils.partition_wire(in_vector, 8)
-        return pyrtl.concat_list([_mix_single(index) for index in range(len(a))])
+        counter = pyrtl.Register(4, 'counter')
+        round = pyrtl.WireVector(4, 'round')
+        counter.next <<= round
+        sub_out = self._sub_bytes(plain_text)
+        shift_out = self._shift_rows(sub_out)
+        mix_out = self._mix_columns(shift_out)
+        key_out = self._key_expansion(key, counter)
+        add_round_out = self._add_round_key(add_round_in, key_exp_in)
+        with pyrtl.conditional_assignment:
+            with reset == 1:
+                round |= 0
+                key_exp_in |= key_in  # to lower the number of cycles
+                plain_text.next |= add_round_out
+                key.next |= key_in
+                add_round_in |= plaintext_in
 
-    @staticmethod
-    def add_round_key(t, key):
-        return t ^ key
+            with counter == 10:  # keep everything the same
+                round |= counter
+                plain_text.next |= plain_text
+
+            with pyrtl.otherwise:  # running through AES
+                round |= counter + 1
+                key_exp_in |= key_out
+                plain_text.next |= add_round_out
+                key.next |= key_out
+                with counter == 9:
+                    add_round_in |= shift_out
+                with pyrtl.otherwise:
+                    add_round_in |= mix_out
+
+        ready = (counter == 10)
+        return ready, plain_text
+
+    def decryption(self, ciphertext, key):
+        """
+        Builds a single cycle AES Decryption circuit
+
+        :param WireVector ciphertext: data to decrypt
+        :param WireVector key: AES key to use to encrypt (AES is symmetric)
+        :return: a WireVector containing the plaintext
+        """
+        if len(ciphertext) != self._key_len:
+            raise pyrtl.PyrtlError("Ciphertext length is invalid")
+        if len(key) != self._key_len:
+            raise pyrtl.PyrtlError("key length is invalid")
+        key_list = self._key_gen(key)
+        t = self._add_round_key(ciphertext, key_list[10])
+
+        for round in range(1, 11):
+            t = self._inv_shift_rows(t)
+            t = self._sub_bytes(t, True)
+            t = self._add_round_key(t, key_list[10 - round])
+            if round != 10:
+                t = self._mix_columns(t, True)
+
+        return t
 
     def decryption_statem(self, ciphertext_in, key_in, reset):
         """
-        return ready, decryption_result: ready is a one bit signal showing
-        that the answer decryption result has been calculated.
+        Builds a multiple cycle AES Decryption state machine circuit
+
+        :param reset: a one bit signal telling the state machine
+          to reset and accept the current plaintext and key
+        :return ready, plain_text: ready is a one bit signal showing
+          that the decryption result (plain_text) has been calculated.
+
         """
         if len(key_in) != len(ciphertext_in):
             raise pyrtl.PyrtlError("AES key and ciphertext should be the same length")
@@ -91,17 +166,17 @@ class AES(object):
 
         # this is not part of the state machine as we need the keys in
         # reverse order...
-        reversed_key_list = reversed(self.decryption_key_gen(key_exp_in))
+        reversed_key_list = reversed(self._key_gen(key_exp_in))
 
         counter = pyrtl.Register(4, 'counter')
         round = pyrtl.WireVector(4)
         counter.next <<= round
 
-        inv_shift = self.inv_shift_rows(cipher_text)
-        inv_sub = self.inv_sub_bytes(inv_shift)
+        inv_shift = self._inv_shift_rows(cipher_text)
+        inv_sub = self._sub_bytes(inv_shift, True)
         key_out = pyrtl.mux(round, *reversed_key_list, default=0)
-        add_round_out = self.add_round_key(add_round_in, key_out)
-        inv_mix_out = self.inv_mix_columns(add_round_out)
+        add_round_out = self._add_round_key(add_round_in, key_out)
+        inv_mix_out = self._mix_columns(add_round_out, True)
 
         with pyrtl.conditional_assignment:
             with reset == 1:
@@ -129,81 +204,107 @@ class AES(object):
         ready = (counter == 10)
         return ready, cipher_text
 
-    def decryption_statem_with_rom_in(self, ciphertext_in, key_ROM, reset):
-        cipher_text = pyrtl.Register(len(ciphertext_in))
-        add_round_in = pyrtl.WireVector(len(ciphertext_in))
-
-        counter = pyrtl.Register(4, 'counter')
-        round = pyrtl.WireVector(4)
-        counter.next <<= round
-
-        inv_shift = self.inv_shift_rows(cipher_text)
-        inv_sub = self.inv_sub_bytes(inv_shift)
-        key_out = key_ROM[(10 - round)[0:4]]
-        add_round_out = self.add_round_key(inv_sub, key_out)
-        inv_mix_out = self.inv_mix_columns(add_round_out)
-
-        with pyrtl.conditional_assignment:
-            with reset == 1:
-                round |= 0
-                cipher_text.next |= add_round_out
-                add_round_in |= ciphertext_in
-
-            with counter == 10:  # keep everything the same
-                round |= counter
-                cipher_text.next |= cipher_text
-
-            with pyrtl.otherwise:  # running through AES
-                round |= counter + 1
-
-                add_round_in |= key_out
-                with counter == 9:
-                    cipher_text.next |= add_round_out
-                with pyrtl.otherwise:
-                    cipher_text.next |= inv_mix_out
-
-        ready = (counter == 10)
-        return ready, cipher_text
-
-    def decryption_key_gen(self, key):
+    def _key_gen(self, key):
         keys = [key]
         for enc_round in range(10):
-            key = self.key_expansion(key, enc_round)
+            key = self._key_expansion(key, enc_round)
             keys.append(key)
         return keys
 
-    def decryption(self, ciphertext, key):
-        key_list = self.decryption_key_gen(key)
-        t = self.add_round_key(ciphertext, key_list[10])
+    def _key_expansion(self, old_key, key_expand_round):
+        self._build_memories_if_not_exists()
+        w = libutils.partition_wire(old_key, 32)
+        x = [w[3] ^ self._g(w[0], key_expand_round)]
+        x.insert(0, x[0] ^ w[2])
+        x.insert(0, x[0] ^ w[1])
+        x.insert(0, x[0] ^ w[0])
+        return pyrtl.concat_list(x)
 
-        for round in range(1, 11):
-            t = self.inv_shift_rows(t)
-            t = self.inv_sub_bytes(t)
-            t = self.add_round_key(t, key_list[10 - round])
-            if round != 10:
-                t = self.inv_mix_columns(t)
+    def _g(self, word, key_expand_round):
+        """
+        One-byte left circular rotation, substitution of each byte
+        """
+        import numbers
+        self._build_memories_if_not_exists()
+        a = libutils.partition_wire(word, 8)
+        sub = [self.sbox[a[index]] for index in (3, 0, 1, 2)]
+        if isinstance(key_expand_round, numbers.Number):
+            rcon_data = self._rcon_data[key_expand_round + 1]  # int value
+        else:
+            rcon_data = self.rcon[key_expand_round + 1]
+        sub[3] = sub[3] ^ rcon_data
+        return pyrtl.concat_list(sub)
 
-        return t
+    def _sub_bytes(self, in_vector, inverse=False):
+        self._build_memories_if_not_exists()
+        subbed = [self.inv_sbox[byte] if inverse else self.sbox[byte]
+                  for byte in libutils.partition_wire(in_vector, 8)]
+        return pyrtl.concat_list(subbed)
 
-    def build_memories_if_not_exists(self):
+    @staticmethod
+    def _inv_shift_rows(in_vector):
+        a = libutils.partition_wire(in_vector, 8)
+        return pyrtl.concat_list((a[12], a[9],  a[6],  a[3],
+                                  a[0],  a[13], a[10], a[7],
+                                  a[4],  a[1],  a[14], a[11],
+                                  a[8],  a[5],  a[2],  a[15]))
+
+    @staticmethod
+    def _shift_rows(in_vector):
+        a = libutils.partition_wire(in_vector, 8)
+        return pyrtl.concat_list((a[4], a[9], a[14], a[3],
+                                  a[8], a[13], a[2], a[7],
+                                  a[12], a[1], a[6], a[11],
+                                  a[0], a[5], a[10], a[15]))
+
+    def _galois_mult(self, c, mult_table):
+        if mult_table == 1:
+            return c
+        else:
+            return self._galois_mults[mult_table][c]
+
+    def _mix_columns(self, in_vector, inverse=False):
+        self._build_memories_if_not_exists()
+        igm_mults = [14, 9, 13, 11] if inverse else [2, 1, 1, 3]
+        subgroups = libutils.partition_wire(in_vector, 32)
+        return pyrtl.concat_list([self._mix_col_subgroup(sg, igm_mults) for sg in subgroups])
+
+    def _mix_col_subgroup(self, in_vector, gm_multipliers):
+        def _mix_single(index):
+            mult_items = [self._galois_mult(a[(index + loc) % 4], mult_table)
+                          for loc, mult_table in enumerate(gm_multipliers)]
+            return mult_items[0] ^ mult_items[1] ^ mult_items[2] ^ mult_items[3]
+
+        a = libutils.partition_wire(in_vector, 8)
+        return pyrtl.concat_list([_mix_single(index) for index in range(len(a))])
+
+    @staticmethod
+    def _add_round_key(t, key):
+        return t ^ key
+
+    def _build_memories_if_not_exists(self):
         if not self.memories_built:
-            self.build_memories()
+            self._build_memories()
 
-    def build_memories(self):
+    def _build_memories(self):
         def build_mem(data):
-            return pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=data, asynchronous=True)
+            return pyrtl.RomBlock(bitwidth=8, addrwidth=8, romdata=data, build_new_roms=True,
+                                  asynchronous=True)
 
-        self.sbox = build_mem(self.sbox_data)
-        self.inv_sbox = build_mem(self.inv_sbox_data)
-        self.rcon = build_mem(self.rcon_data)
-        self.GM9 = build_mem(self.GM9_data)
-        self.GM11 = build_mem(self.GM11_data)
-        self.GM13 = build_mem(self.GM13_data)
-        self.GM14 = build_mem(self.GM14_data)
-        self._inv_gal_mult_dict = {9: self.GM9, 11: self.GM11, 13: self.GM13, 14: self.GM14}
+        self.sbox = build_mem(self._sbox_data)
+        self.inv_sbox = build_mem(self._inv_sbox_data)
+        self.rcon = build_mem(self._rcon_data)
+        self.GM2 = build_mem(self._GM2_data)
+        self.GM3 = build_mem(self._GM3_data)
+        self.GM9 = build_mem(self._GM9_data)
+        self.GM11 = build_mem(self._GM11_data)
+        self.GM13 = build_mem(self._GM13_data)
+        self.GM14 = build_mem(self._GM14_data)
+        self._galois_mults = {3: self.GM3, 2: self.GM2, 9: self.GM9, 11: self.GM11,
+                              13: self.GM13, 14: self.GM14}
         self.memories_built = True
 
-    sbox_data = libutils.str_to_int_array('''
+    _sbox_data = libutils.str_to_int_array('''
         63 7c 77 7b f2 6b 6f c5 30 01 67 2b fe d7 ab 76 ca 82 c9 7d fa 59 47 f0
         ad d4 a2 af 9c a4 72 c0 b7 fd 93 26 36 3f f7 cc 34 a5 e5 f1 71 d8 31 15
         04 c7 23 c3 18 96 05 9a 07 12 80 e2 eb 27 b2 75 09 83 2c 1a 1b 6e 5a a0
@@ -217,7 +318,7 @@ class AES(object):
         8c a1 89 0d bf e6 42 68 41 99 2d 0f b0 54 bb 16
         ''')
 
-    inv_sbox_data = libutils.str_to_int_array('''
+    _inv_sbox_data = libutils.str_to_int_array('''
         52 09 6a d5 30 36 a5 38 bf 40 a3 9e 81 f3 d7 fb 7c e3 39 82 9b 2f ff 87
         34 8e 43 44 c4 de e9 cb 54 7b 94 32 a6 c2 23 3d ee 4c 95 0b 42 fa c3 4e
         08 2e a1 66 28 d9 24 b2 76 5b a2 49 6d 8b d1 25 72 f8 f6 64 86 68 98 16
@@ -231,7 +332,7 @@ class AES(object):
         17 2b 04 7e ba 77 d6 26 e1 69 14 63 55 21 0c 7d
         ''')
 
-    rcon_data = libutils.str_to_int_array('''
+    _rcon_data = libutils.str_to_int_array('''
         8d 01 02 04 08 10 20 40 80 1b 36 6c d8 ab 4d 9a 2f 5e bc 63 c6 97 35 6a
         d4 b3 7d fa ef c5 91 39 72 e4 d3 bd 61 c2 9f 25 4a 94 33 66 cc 83 1d 3a
         74 e8 cb 8d 01 02 04 08 10 20 40 80 1b 36 6c d8 ab 4d 9a 2f 5e bc 63 c6
@@ -245,9 +346,37 @@ class AES(object):
         61 c2 9f 25 4a 94 33 66 cc 83 1d 3a 74 e8 cb 8d
         ''')
 
-    # Galois Multiplication tables for 9, 11, 13, and 14.
+    # Galois Multiplication tables for 2, 3, 9, 11, 13, and 14.
 
-    GM9_data = libutils.str_to_int_array('''
+    _GM2_data = libutils.str_to_int_array('''
+        00 02 04 06 08 0a 0c 0e 10 12 14 16 18 1a 1c 1e 20 22 24 26 28 2a 2c 2e
+        30 32 34 36 38 3a 3c 3e 40 42 44 46 48 4a 4c 4e 50 52 54 56 58 5a 5c 5e
+        60 62 64 66 68 6a 6c 6e 70 72 74 76 78 7a 7c 7e 80 82 84 86 88 8a 8c 8e
+        90 92 94 96 98 9a 9c 9e a0 a2 a4 a6 a8 aa ac ae b0 b2 b4 b6 b8 ba bc be
+        c0 c2 c4 c6 c8 ca cc ce d0 d2 d4 d6 d8 da dc de e0 e2 e4 e6 e8 ea ec ee
+        f0 f2 f4 f6 f8 fa fc fe 1b 19 1f 1d 13 11 17 15 0b 09 0f 0d 03 01 07 05
+        3b 39 3f 3d 33 31 37 35 2b 29 2f 2d 23 21 27 25 5b 59 5f 5d 53 51 57 55
+        4b 49 4f 4d 43 41 47 45 7b 79 7f 7d 73 71 77 75 6b 69 6f 6d 63 61 67 65
+        9b 99 9f 9d 93 91 97 95 8b 89 8f 8d 83 81 87 85 bb b9 bf bd b3 b1 b7 b5
+        ab a9 af ad a3 a1 a7 a5 db d9 df dd d3 d1 d7 d5 cb c9 cf cd c3 c1 c7 c5
+        fb f9 ff fd f3 f1 f7 f5 eb e9 ef ed e3 e1 e7 e5
+        ''')
+
+    _GM3_data = libutils.str_to_int_array('''
+        00 03 06 05 0c 0f 0a 09 18 1b 1e 1d 14 17 12 11 30 33 36 35 3c 3f 3a 39
+        28 2b 2e 2d 24 27 22 21 60 63 66 65 6c 6f 6a 69 78 7b 7e 7d 74 77 72 71
+        50 53 56 55 5c 5f 5a 59 48 4b 4e 4d 44 47 42 41 c0 c3 c6 c5 cc cf ca c9
+        d8 db de dd d4 d7 d2 d1 f0 f3 f6 f5 fc ff fa f9 e8 eb ee ed e4 e7 e2 e1
+        a0 a3 a6 a5 ac af aa a9 b8 bb be bd b4 b7 b2 b1 90 93 96 95 9c 9f 9a 99
+        88 8b 8e 8d 84 87 82 81 9b 98 9d 9e 97 94 91 92 83 80 85 86 8f 8c 89 8a
+        ab a8 ad ae a7 a4 a1 a2 b3 b0 b5 b6 bf bc b9 ba fb f8 fd fe f7 f4 f1 f2
+        e3 e0 e5 e6 ef ec e9 ea cb c8 cd ce c7 c4 c1 c2 d3 d0 d5 d6 df dc d9 da
+        5b 58 5d 5e 57 54 51 52 43 40 45 46 4f 4c 49 4a 6b 68 6d 6e 67 64 61 62
+        73 70 75 76 7f 7c 79 7a 3b 38 3d 3e 37 34 31 32 23 20 25 26 2f 2c 29 2a
+        0b 08 0d 0e 07 04 01 02 13 10 15 16 1f 1c 19 1a
+        ''')
+
+    _GM9_data = libutils.str_to_int_array('''
         00 09 12 1b 24 2d 36 3f 48 41 5a 53 6c 65 7e 77 90 99 82 8b b4 bd a6 af
         d8 d1 ca c3 fc f5 ee e7 3b 32 29 20 1f 16 0d 04 73 7a 61 68 57 5e 45 4c
         ab a2 b9 b0 8f 86 9d 94 e3 ea f1 f8 c7 ce d5 dc 76 7f 64 6d 52 5b 40 49
@@ -261,7 +390,7 @@ class AES(object):
         31 38 23 2a 15 1c 07 0e 79 70 6b 62 5d 54 4f 46
         ''')
 
-    GM11_data = libutils.str_to_int_array('''
+    _GM11_data = libutils.str_to_int_array('''
         00 0b 16 1d 2c 27 3a 31 58 53 4e 45 74 7f 62 69 b0 bb a6 ad 9c 97 8a 81
         e8 e3 fe f5 c4 cf d2 d9 7b 70 6d 66 57 5c 41 4a 23 28 35 3e 0f 04 19 12
         cb c0 dd d6 e7 ec f1 fa 93 98 85 8e bf b4 a9 a2 f6 fd e0 eb da d1 cc c7
@@ -275,7 +404,7 @@ class AES(object):
         ca c1 dc d7 e6 ed f0 fb 92 99 84 8f be b5 a8 a3
         ''')
 
-    GM13_data = libutils.str_to_int_array('''
+    _GM13_data = libutils.str_to_int_array('''
         00 0d 1a 17 34 39 2e 23 68 65 72 7f 5c 51 46 4b d0 dd ca c7 e4 e9 fe f3
         b8 b5 a2 af 8c 81 96 9b bb b6 a1 ac 8f 82 95 98 d3 de c9 c4 e7 ea fd f0
         6b 66 71 7c 5f 52 45 48 03 0e 19 14 37 3a 2d 20 6d 60 77 7a 59 54 43 4e
@@ -289,7 +418,7 @@ class AES(object):
         dc d1 c6 cb e8 e5 f2 ff b4 b9 ae a3 80 8d 9a 97
         ''')
 
-    GM14_data = libutils.str_to_int_array('''
+    _GM14_data = libutils.str_to_int_array('''
         00 0e 1c 12 38 36 24 2a 70 7e 6c 62 48 46 54 5a e0 ee fc f2 d8 d6 c4 ca
         90 9e 8c 82 a8 a6 b4 ba db d5 c7 c9 e3 ed ff f1 ab a5 b7 b9 93 9d 8f 81
         3b 35 27 29 03 0d 1f 11 4b 45 57 59 73 7d 6f 61 ad a3 b1 bf 95 9b 89 87

@@ -87,6 +87,7 @@ state_machine_blif = """\
 .end
 """
 
+
 class TestInputFromBlif(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -157,17 +158,26 @@ class TestNetGraph(unittest.TestCase):
         # can be safely updated.
         self.assertEqual(len(g), 10)
 
+    def test_netgraph_unused_wires(self):
+        genwire = pyrtl.WireVector(8, "genwire")
+        inwire = pyrtl.Input(8, "inwire")
+        outwire = pyrtl.Output(8, "outwire")
+        constwire = pyrtl.Const(8, 8)
+        reg = pyrtl.Register(8, "reg")
+        g = inputoutput.net_graph()
+        self.assertEquals(len(g), 0)
+
 
 class TestVerilogNames(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
+        self.vnames = inputoutput._VerilogSanitizer("_sani_test")
 
     def checkname(self, name):
-        inputoutput._verilog_check_name(name)
+        self.assertEqual(self.vnames.make_valid_string(name), name)
 
     def assert_invalid_name(self, name):
-        with self.assertRaises(pyrtl.PyrtlError):
-            self.checkname(name)
+        self.assertNotEqual(self.vnames.make_valid_string(name), name)
 
     def test_verilog_check_valid_name_good(self):
         self.checkname('abc')
@@ -195,7 +205,7 @@ class TestVerilog(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_romblock_does_not_throw_error(self):
-        from pyrtl.helperfuncs import _basic_add
+        from pyrtl.corecircuits import _basic_add
         a = pyrtl.Input(bitwidth=3, name='a')
         b = pyrtl.Input(bitwidth=3, name='b')
         o = pyrtl.Output(bitwidth=3, name='o')
@@ -204,7 +214,7 @@ class TestVerilog(unittest.TestCase):
         mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, romdata=rdat)
         o <<= mixtable[res[:-1]]
         with io.StringIO() as testbuffer:
-            pyrtl.output_to_verilog(testbuffer)
+            pyrtl.OutputToVerilog(testbuffer)
 
     def test_textual_correctness(self):
         pass

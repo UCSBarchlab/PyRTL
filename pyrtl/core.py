@@ -1,14 +1,17 @@
 """ The core abstraction for hardware in PyRTL.
 
 Included in this file you will find:
-LogicNet -- the core class holding a "net" in the netlist
-Block -- a collection of nets with associated access and error checking
-working_block -- the "current" Block to which, by default, all created nets are added
-modes -- access methods for "modes" such as debug
+
+* `LogicNet` -- the core class holding a "net" in the netlist
+* `Block` -- a collection of nets with associated access and error checking
+* `working_block` -- the "current" Block to which, by default, all created nets are added
+* `modes` -- access methods for "modes" such as debug
+
 """
 from __future__ import print_function, unicode_literals
 import collections
 import re
+import keyword
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 
@@ -22,8 +25,50 @@ from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
     """ The basic immutable datatype for storing a "net" in a netlist.
 
+    This is used for the Internal representation that Python stores
+    Knowledge of what this is, and how it is used is only required for
+    advanced users of PyRTL.
+
+    A 'net' is a structure in Python that is representative of hardware
+    logic operations. These include binary operations, such as 'and'
+    'or' and 'not', arithmetic operations such as '+' and '-', as well
+    as other operations such as Memory ops, and concat, split, wire,
+    and reg logic.
+
     The details of what is allowed in each of these fields is defined
-    in the comments of Block, and is checked by block.sanity_check
+    in the comments of Block, and is checked by `block.sanity_check`
+
+
+    `Logical Operations`::
+
+        ('&', None, (a1, a2), (out)) => AND two wires together, put result into out
+        ('|', None, (a1, a2), (out)) => OR two wires together, put result into out
+        ('^', None, (a1, a2), (out)) => XOR two wires together, put result into out
+        ('n', None, (a1, a2), (out)) => NAND two wires together, put result into out
+        ('~', None, (a1), (out)) => invert one wire, put result into out
+        ('+', None, (a1, a2), (out)) => add a1 & a2, put result into out
+                                        len(out) = max(len(a1), len(a2)) + 1
+        ('-', None, (a1, a2), (out)) => subtract a2 from a1, put result into out
+                                        len(out) = max(len(a1), len(a2)) + 1
+        ('*', None, (a1, a2), (out) => multiply a1 & a2, put result into out
+                                       len(out) = len(a1) + len(a2)
+            ('+', '-', '*' are compatible w/ twos-compliment numbers)
+        ('=', None, (a1, a2), (out)) => check a1 & a2 equal, put result into out (0 | 1)
+        ('<', None, (a1, a2), (out)) => check a2 greater than a1, put result into out (0 | 1)
+        ('>', None, (a1, a2), (out)) => check a1 greater than a2, put result into out (0 | 1)
+        ('w', None, (w1), (w2) => directional wire w/ no logical operation: connects w1 to w2
+        ('x', None, (x, a1, a2), (out)) => mux: connect a1 (x=0), a2 (x=1) to out;
+                                           x must be one bit; len(a1) = len(a2)
+        ('c', None, (*args), (out)) => concatenates *args (wires) into single WireVector;
+                                       puts first arg at MSB, last arg at LSB
+        ('s', (sel), (wire), (out)) => selects bits frm wire based on sel (std slicing syntax),
+                                       puts into out
+        ('r', None, (next), (r1)) => on positive clock edge: copies next to r1
+        ('m', (memid, mem), (addr), (data)) => read address addr of mem (w/ id memid),
+                                               put it into data
+        ('@', (memid, mem), (addr, data, wr_en), ()) => write data to mem (w/ id memid) at
+                                                        address addr; req. write enable (wr_en)
+
     """
 
     def __str__(self):
@@ -33,16 +78,15 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
 
         if self.op in 'w~&|^n+-*<>=xcsr':
             return "{} <-- {} -- {} {}".format(lhs, self.op, rhs, options)
-        elif self.op == 'm':
+        elif self.op in 'm@':
             memid, memblock = self.op_param
             extrainfo = 'memid=' + str(memid)
-            return ''.join([lhs, '  <-- m --  ', memblock.name, '[', rhs, '] (', extrainfo, ')'])
-        elif self.op == '@':
-            memid, memblock = self.op_param
-            addr, data, we = [str(x) for x in self.args]
-            extrainfo = 'memid=' + str(memid)
-            return ''.join([memblock.name, '[', addr, '] <-- @ --  ', data,
-                            ' we=', we, ' (', extrainfo, ')'])
+            if self.op == 'm':
+                return "{} <-- m --  {}[{}]({})".format(lhs, memblock.name, rhs, extrainfo)
+            else:
+                addr, data, we = (str(x) for x in self.args)
+                return "{}[{}] <-- @ -- {} we={} ({})".format(
+                    memblock.name, addr, data, we, extrainfo)
         else:
             raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
 
@@ -66,25 +110,20 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def _compare_error(self):
+    def _compare_error(self, other):
         """ Throw error when LogicNets are compared.
 
         Comparisons get you in a bad place between while you can compare op and op_param
-        safely, the args and dests are references to mutable objects.
+        safely, the args and dests are references to mutable objects with comparison
+        operators overloaded.
         """
-        raise PyrtlError('Comparison between LogicNets is not supported')
+        raise PyrtlError('Greater than and less than comparisons between'
+                         ' LogicNets are not supported')
 
-    def __lt__(self, other):
-        self._compare_error()
-
-    def __le__(self, other):
-        self._compare_error()
-
-    def __gt__(self, other):
-        self._compare_error()
-
-    def __ge__(self, other):
-        self._compare_error()
+    __lt__ = _compare_error
+    __gt__ = _compare_error
+    __le__ = _compare_error
+    __ge__ = _compare_error
 
 
 class Block(object):
@@ -112,7 +151,7 @@ class Block(object):
 
     * Most logical and arithmetic ops are pretty self explanatory, each takes
       exactly two arguments and they should perform the arithmetic or logical
-      operation specified. OPS: ('&','|','^','n','+','-','*').  All inputs must
+      operation specified. OPS: ('&','|','^','n','~','+','-','*').  All inputs must
       be the same bitwidth.  Logical operations produce as many bits as are in
       the input, while '+' and '-' produce n+1 bits, and '*' produced 2n bits.
 
@@ -133,8 +172,8 @@ class Block(object):
       wirevectors (a,b,...,z) into a single new wirevector with "a" in the MSB
       and "z" (or whatever is last) in the LSB position.
 
-    * The 's' operator is the selection operator and chooses, based in the
-      op_param specificied, a subset of the logic bits from a wire vector to
+    * The 's' operator is the selection operator and chooses, based on the
+      op_param specificied, a subset of the logic bits from a WireVector to
       select.  Repeats are accepted.
 
     * The 'r' operator is a register and on posedge, simply copies the value
@@ -240,7 +279,7 @@ class Block(object):
         else:
             return None
 
-    def as_graph(self, include_virtual_nodes=False):
+    def net_connections(self, include_virtual_nodes=False):
         """ Returns a representation of the current block useful for creating a graph.
 
         :param include_virtual_nodes: if enabled, the wire itself will be used to
@@ -305,7 +344,7 @@ class Block(object):
         Also, the order of the nets is not guaranteed to be the the same
         over multiple iterations"""
         from .wire import Input, Const, Register
-        src_dict, dest_dict = self.as_graph()
+        src_dict, dest_dict = self.net_connections()
         to_clear = self.wirevector_subset((Input, Const, Register))
         cleared = set()
         remaining = self.logic.copy()
@@ -324,7 +363,7 @@ class Block(object):
             import six
             six.raise_from(PyrtlError("Cannot Iterate through malformed block"), e)
 
-        if len(remaining) is not 0:
+        if len(remaining) != 0:
             from pyrtl.helperfuncs import find_and_print_loop
             find_and_print_loop(self)
             raise PyrtlError("Failure in Block Iterator due to non-register loops")
@@ -359,7 +398,9 @@ class Block(object):
 
         # check for dead input wires (not connected to anything)
         all_input_and_consts = self.wirevector_subset((Input, Const))
-        wire_src_dict, wire_dst_dict = self.as_graph()  # also checks for duplicate wire drivers
+
+        # The following line also checks for duplicate wire drivers
+        wire_src_dict, wire_dst_dict = self.net_connections()
         dest_set = set(wire_src_dict.keys())
         arg_set = set(wire_dst_dict.keys())
         full_set = dest_set | arg_set
@@ -411,7 +452,7 @@ class Block(object):
             return  # nothing to check here
 
         if wire_src_dict is None:
-            wire_src_dict, wdd = self.as_graph()
+            wire_src_dict, wdd = self.net_connections()
 
         from .wire import Input, Const
         sync_src = 'r'
@@ -556,57 +597,14 @@ class PostSynthBlock(Block):
 # block, but in the future we should support multiple Blocks.
 # The argument "singleton_block" should never be passed.
 _singleton_block = Block()
-debug_mode = False
 
-# settings help tweek the behavior of pyrtl as needed, especially
-# when there is a tradeoff between speed and debugability.  These
+# settings help tweak the behavior of pyrtl as needed, especially
+# when there is a trade off between speed and debugability.  These
 # are useful for developers to adjust behaviors in the different modes
 # but should not be set directly by users.
+debug_mode = False
 _setting_keep_wirevector_call_stack = False
 _setting_slower_but_more_descriptive_tmps = False
-
-# some functions for generating unique names.  Keeping them synced
-# between subclasses of Block was problematic, so instead they should just
-# be kept as global
-_tempvar_count = 1
-_memid_count = 0
-
-
-def next_constvar_name(val):
-    global _tempvar_count
-    wire_name = ''.join(['const', str(_tempvar_count), '_', str(val)])
-    _tempvar_count += 1
-    return wire_name
-
-
-def next_memid():
-    global _memid_count
-    _memid_count += 1
-    return _memid_count
-
-
-def next_tempvar_name(name=None):
-    global _tempvar_count
-    wire_name = None
-
-    if name is not None:
-        if name.lower() in ['clk', 'clock']:
-            raise PyrtlError('Clock signals should never be explicit')
-        wire_name = name
-    else:
-        callpoint = _get_useful_callpoint_name()
-        if callpoint:
-            filename, lineno = callpoint
-            # strip out non alphanumeric characters
-            safename = re.sub('[\W]+', '', filename)
-            wire_name = 'tmp%d_%s_line%d' % (_tempvar_count, safename, lineno)
-            _tempvar_count += 1
-
-    if not wire_name:
-        wire_name = 'tmp%d' % _tempvar_count
-        _tempvar_count += 1
-
-    return wire_name
 
 
 def _get_useful_callpoint_name():
@@ -702,3 +700,74 @@ def set_debug_mode(debug=True):
     debug_mode = debug
     _setting_keep_wirevector_call_stack = debug
     _setting_slower_but_more_descriptive_tmps = debug
+
+
+_py_regex = '^[^\d\W]\w*\Z'
+
+
+class _NameIndexer(object):
+    """ Provides internal names that are based on a prefix and an index"""
+    def __init__(self, internal_prefix='_sani_temp'):
+        self.internal_prefix = internal_prefix
+        self.internal_index = 0
+
+    def make_valid_string(self):
+        """Build a valid string based on the prefix and internal index"""
+        return self.internal_prefix + str(self.next_index())
+
+    def next_index(self):
+        index = self.internal_index
+        self.internal_index += 1
+        return index
+
+
+class _NameSanitizer(_NameIndexer):
+    """
+    Sanitizes the names so that names can be used in places that don't allow
+    for arbitrary names while not mangling valid names
+
+    Put the values you want to validate into make_valid_string the first time
+    you want to sanitize a particular string (or before the first time), and
+    retrieve from the _NameSanitizer through indexing directly thereafter
+    eg: sani["__&sfhs"] for retrieval after the first time
+
+    """
+    def __init__(self, identifier_regex_str, internal_prefix='_sani_temp',
+                 map_valid_vals=True, extra_checks=lambda x: True, allow_duplicates=False):
+        if identifier_regex_str[-1] != '$':
+            identifier_regex_str += '$'
+        self.identifier = re.compile(identifier_regex_str)
+        self.val_map = {}
+        self.map_valid = map_valid_vals
+        self.extra_checks = extra_checks
+        self.allow_dups = allow_duplicates
+        super(_NameSanitizer, self).__init__(internal_prefix)
+
+    def __getitem__(self, item):
+        """ Get a value from the sanitizer"""
+        if not self.map_valid and self.is_valid_str(item):
+            return item
+        return self.val_map[item]
+
+    def is_valid_str(self, string):
+        return self.identifier.match(string) and self.extra_checks(string)
+
+    def make_valid_string(self, string=''):
+        """ Inputting a value for the first time """
+        if not self.is_valid_str(string):
+            if string in self.val_map and not self.allow_dups:
+                raise IndexError("Value {} has already been given to the sanitizer".format(string))
+            internal_name = super(_NameSanitizer, self).make_valid_string()
+            self.val_map[string] = internal_name
+            return internal_name
+        else:
+            if self.map_valid:
+                self.val_map[string] = string
+            return string
+
+
+class _PythonSanitizer(_NameSanitizer):
+    """ Name Sanitizer specifically built for Python identifers"""
+    def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
+        super(_PythonSanitizer, self).__init__(_py_regex, internal_prefix, map_valid_vals)
+        self.extra_checks = lambda s: not keyword.iskeyword(s)

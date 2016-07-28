@@ -16,9 +16,18 @@ class TestBlock(unittest.TestCase):
         self.assertTrue(w in pyrtl.working_block().wirevector_set)
         self.assertTrue('testwire' in pyrtl.working_block().wirevector_by_name)
 
+    def invalid_wire(self, *args):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.working_block().add_wirevector(*args)
+
     def invalid_net(self, *args):
         with self.assertRaises(pyrtl.PyrtlInternalError):
             pyrtl.working_block().add_net(*args)
+
+    def test_add_wire(self):
+        self.invalid_wire(None)
+        self.invalid_wire("Hi John")
+        self.invalid_wire(42)
 
     def test_add_net(self):
         self.invalid_net(None)
@@ -188,7 +197,7 @@ class TestAsGraph(unittest.TestCase):
         b = pyrtl.working_block()
         net = pyrtl.LogicNet('~', None, (i,), (o,))
         b.add_net(net)
-        src_g, dst_g = b.as_graph(False)
+        src_g, dst_g = b.net_connections(False)
         self.check_graph_correctness(src_g, dst_g)
         self.assertEqual(src_g[o], net)
         self.assertEqual(dst_g[i][0], net)
@@ -197,7 +206,7 @@ class TestAsGraph(unittest.TestCase):
         self.assertNotIn(i, src_g)
         self.assertNotIn(o, dst_g)
 
-        src_g, dst_g = b.as_graph(True)
+        src_g, dst_g = b.net_connections(True)
         self.check_graph_correctness(src_g, dst_g, True)
         self.assertEqual(src_g[o], net)
         self.assertEqual(dst_g[i][0], net)
@@ -221,14 +230,14 @@ class TestAsGraph(unittest.TestCase):
         g <<= ~(d | b)
 
         b = pyrtl.working_block()
-        src_g, dst_g = b.as_graph(False)
+        src_g, dst_g = b.net_connections(False)
         self.check_graph_correctness(src_g, dst_g)
 
-        src_g, dst_g = b.as_graph(True)
+        src_g, dst_g = b.net_connections(True)
         self.check_graph_correctness(src_g, dst_g, True)
 
     def test_as_graph_memory(self):
-        m = pyrtl.MemBlock(addrwidth=2, bitwidth=2, name='m')
+        m = pyrtl.MemBlock(addrwidth=2, bitwidth=2, name='m', max_read_ports=None)
         i = pyrtl.Register(bitwidth=2, name='i')
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
@@ -236,10 +245,10 @@ class TestAsGraph(unittest.TestCase):
         o <<= m[i]
 
         b = pyrtl.working_block()
-        src_g, dst_g = b.as_graph(False)
+        src_g, dst_g = b.net_connections(False)
         self.check_graph_correctness(src_g, dst_g)
 
-        src_g, dst_g = b.as_graph(True)
+        src_g, dst_g = b.net_connections(True)
         self.check_graph_correctness(src_g, dst_g, True)
 
     def test_as_graph_duplicate_args(self):
@@ -255,10 +264,10 @@ class TestAsGraph(unittest.TestCase):
         m2[x] <<= pyrtl.MemBlock.EnabledWrite(x, x)
 
         b = pyrtl.working_block()
-        src_g, dst_g = b.as_graph(False)
+        src_g, dst_g = b.net_connections(False)
         self.check_graph_correctness(src_g, dst_g)
 
-        src_g, dst_g = b.as_graph(True)
+        src_g, dst_g = b.net_connections(True)
         self.check_graph_correctness(src_g, dst_g, True)
 
 

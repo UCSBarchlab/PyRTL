@@ -40,11 +40,11 @@ def sparse_mux(sel, vals):
     Mux that avoids instantiating unnecessary mux_2s when possible.
 
     :param WireVector sel: Select wire, determines what is selected on a given cycle
-    :param {int: WireVector} vals: dictionary to store the values that are
-    :return: Wirevector that signifies the change
+    :param dictionary vals: dictionary of values at mux inputs (of type `{int:WireVector}`)
+    :return: WireVector that signifies the change
 
-    This mux supports not having a full specification. indices that are not
-    specified are treated as Don't Cares
+    This mux supports not having a full specification. Indices that are not
+    specified are treated as don't-cares
 
     It also supports a specified default value, SparseDefault
     """
@@ -111,11 +111,11 @@ def _sparse_mux(sel, vals):
 class MultiSelector(object):
     """
     The MultiSelector allows you to specify multiple wire value results
-    for a single select wire
+    for a single select wire.
 
     Useful for processors, finite state machines and other places where the
     result of many wire values are determined by a common wire signal
-    (such as a 'state' wire)
+    (such as a 'state' wire).
 
     """
     def __init__(self, signal_wire,  *dest_wires):
@@ -127,8 +127,8 @@ class MultiSelector(object):
 
     def __enter__(self):
         """
-        For compatibility with With statements (which is the recommended
-         method of using a MultiSelector)
+        For compatibility with `with` statements, which is the recommended
+         method of using a MultiSelector
         """
         return self
 
@@ -143,12 +143,6 @@ class MultiSelector(object):
             raise pyrtl.PyrtlError("Cannot change InstrConnector, already finalized")
 
     def option(self, select_val, *data_signals):
-        """
-
-        :param select_val:
-        :param data_signals:
-        :return:
-        """
         self._check_finalized()
         instr, ib = pyrtl.wire._gen_val_and_bitwidth(select_val, self.signal_wire.bitwidth)
         if instr in self.instructions:
@@ -174,8 +168,7 @@ class MultiSelector(object):
 
     def finalize(self):
         """
-        actually connect the wires.
-        :return:
+        Connects the wires.
         """
         self._check_finalized()
         self._final = True
@@ -188,6 +181,7 @@ class MultiSelector(object):
 def demux(select):
     """
     Demultiplexes a wire of arbitrary bitwidth
+
     :param WireVector select: indicates which wire to set on
     :return (WireVector, ...): a tuple of wires corresponding to each demultiplexed wire
     """

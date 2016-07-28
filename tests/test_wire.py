@@ -1,5 +1,6 @@
 import unittest
 import pyrtl
+from pyrtl import wire
 
 
 class TestWireVector(unittest.TestCase):
@@ -37,6 +38,32 @@ class TestWireVector(unittest.TestCase):
 
     def test_truncating(self):
         pass
+
+    def test_rename(self):
+        block = pyrtl.working_block()
+        w = pyrtl.WireVector(1, "test1")
+        self.assertIn("test1", block.wirevector_by_name)
+        self.assertIn(w, block.wirevector_set)
+        w.name = "testJohn"
+        self.assertNotIn("test1", block.wirevector_by_name)
+        self.assertIn("testJohn", block.wirevector_by_name)
+        self.assertIn(w, block.wirevector_set)
+
+
+class TestWireVectorNames(unittest.TestCase):
+    def is_valid_str(self, s):
+        return wire.next_tempvar_name(s) == s
+
+    def test_invalid_name(self):
+        self.assertFalse(self.is_valid_str(''))
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.is_valid_str('clock')
+
+    def test_valid_names(self):
+        self.assertTrue(self.is_valid_str('xxx'))
+        self.assertTrue(self.is_valid_str('h'))
+        self.assertTrue(self.is_valid_str(' '))
+        self.assertTrue(self.is_valid_str('#$)(*&#@_+!#)('))
 
 
 class TestWireVectorFail(unittest.TestCase):
@@ -170,7 +197,7 @@ class TestRegister(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.r <<= 1
 
-    @unittest.skip
+    @unittest.skip("I don't think this is fixable")
     def test_assign_next(self):
         # I really don't know how we can fix this - John
         w = pyrtl.WireVector(bitwidth=1)

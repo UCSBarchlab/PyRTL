@@ -2,13 +2,13 @@ from setuptools import setup
 
 setup(
     name = 'pyrtl',
-    version = '0.8.2',
+    version = '0.8.3',
     packages =  ['pyrtl'],
     description = 'RTL-level Hardware Design and Simulation Toolkit',
     author =  'Timothy Sherwood, John Clow, and UCSBarchlab',
     author_email =  'sherwood@cs.ucsb.edu',
     url =  'http://ucsbarchlab.github.io/PyRTL/',
-    download_url = 'https://github.com/UCSBarchlab/PyRTL/tarball/0.8.2',
+    download_url = 'https://github.com/UCSBarchlab/PyRTL/tarball/0.8.3',
     install_requires =  ['six'],
     tests_require =  ['tox','nose'],
     extras_require =  {

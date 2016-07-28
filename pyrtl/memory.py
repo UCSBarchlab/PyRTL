@@ -1,15 +1,23 @@
 """
-Defines MemBlock, a block of memory that can be read (potentially async) and written (sync)
+Defines PyRTL memories.
+These blocks of memories can be read (potentially async) and written (sync)
+
+MemBlocks supports any number of the following operations:
+
+* read: `d = mem[address]`
+* write: `mem[address] = d`
+* write with an enable: `mem[address] = MemBlock.EnabledWrite(d,enable=we)`
+Based on the number of reads and writes a memory will be inferred
+with the correct number of ports to support that
 """
 
 from __future__ import print_function, unicode_literals
 import collections
 
 from .pyrtlexceptions import PyrtlError
-from .core import working_block, next_tempvar_name, next_memid, LogicNet
-from .wire import WireVector, Const
+from .core import working_block, LogicNet, _NameIndexer
+from .wire import WireVector, Const, next_tempvar_name
 from .helperfuncs import as_wires
-
 # ------------------------------------------------------------------------
 #
 #         ___        __   __          __        __   __
@@ -18,15 +26,10 @@ from .helperfuncs import as_wires
 #
 
 
-# MemBlock supports any number of the following operations:
-# read: d = mem[address]
-# write: mem[address] = d
-# write with an enable: mem[address] = MemBlock.EnabledWrite(d,enable=we)
-# Based on the number of reads and writes a memory will be inferred
-# with the correct number of ports to support that
+_memIndex = _NameIndexer()
 
-# _MemAssignment is the type returned from assignment by |= or <<=
 _MemAssignment = collections.namedtuple('_MemAssignment', 'rhs, is_conditional')
+"""_MemAssignment is the type returned from assignment by |= or <<="""
 
 
 class _MemIndexed(WireVector):
@@ -41,6 +44,7 @@ class _MemIndexed(WireVector):
     def __init__(self, mem, index):
         self.mem = mem
         self.index = index
+        self.wire = None
 
     def __ilshift__(self, other):
         return _MemAssignment(rhs=other, is_conditional=False)
@@ -48,8 +52,8 @@ class _MemIndexed(WireVector):
     def __ior__(self, other):
         return _MemAssignment(rhs=other, is_conditional=True)
 
-    def logicop(self, other, op):
-        return as_wires(self).logicop(other, op)
+    def _two_var_op(self, other, op):
+        return as_wires(self)._two_var_op(other, op)
 
     def __invert__(self):
         return as_wires(self).__invert__()
@@ -66,6 +70,15 @@ class _MemIndexed(WireVector):
     def zero_extended(self, bitwidth):
         return as_wires(self).zero_extended(bitwidth)
 
+    @property
+    def name(self):
+        return as_wires(self).name
+        # raise PyrtlError("MemIndexed is a temporary object and therefore doesn't have a name")
+
+    @name.setter
+    def name(self, n):
+        as_wires(self).name = n
+
 
 class _MemReadBase(object):
     """This is the base class for the memories and ROM blocks and
@@ -74,8 +87,9 @@ class _MemReadBase(object):
 
     # FIXME: right now read port is built unconditionally (no read enable)
 
-    def __init__(self,  bitwidth, addrwidth, name, asynchronous, block):
-
+    def __init__(self,  bitwidth, addrwidth, name, max_read_ports, asynchronous, block):
+        self.max_read_ports = max_read_ports
+        self.read_ports = 0
         self.block = working_block(block)
         name = next_tempvar_name(name)
 
@@ -88,12 +102,11 @@ class _MemReadBase(object):
         self.name = name
         self.addrwidth = addrwidth
         self.readport_nets = []
-        self.id = next_memid()
+        self.id = _memIndex.next_index()
         self.asynchronous = asynchronous
 
     def __getitem__(self, item):
-        """ Builds circitry to retrieve an item from the memory
-        """
+        """ Builds circuitry to retrieve an item from the memory """
         from .helperfuncs import as_wires
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
         if len(item) > self.addrwidth:
@@ -105,6 +118,10 @@ class _MemReadBase(object):
         return self._build_read_port(addr)
 
     def _build_read_port(self, addr):
+        if self.max_read_ports is not None:
+            self.read_ports += 1
+            if self.read_ports > self.max_read_ports:
+                raise PyrtlError('maximum number of read ports (%d) exceeded' % self.max_read_ports)
         data = WireVector(bitwidth=self.bitwidth)
         readport_net = LogicNet(
             op='m',
@@ -124,32 +141,41 @@ class _MemReadBase(object):
 
 
 class MemBlock(_MemReadBase):
-    """ An object for specifying read and write enabled block memories """
-    # FIXME: write ports assume that only one port is under control of the conditional
+    """ An object for specifying read and write enabled block memories
 
-    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
-    """ Allows for an enable bit for each write port
+    Usage::
 
-    Usage:
-    mem[address] = MemBlock.EnabledWrite(d,enable=we)
+        data <<= memory[addr]  (infer read port)
+        memory[addr] <<= data  (infer write port)
+        mem[address] = MemBlock.EnabledWrite(data,enable=we)
+
+    `addr`, `data`, and `we` are wires
 
     When the address of a memory is assigned to using a EnableWrite object
     items will only be written to the memory when the enable WireVector is
     set to high (1)
     """
+    # FIXME: write ports assume that only one port is under control of the conditional
+    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
+    """ Allows for an enable bit for each write port """
 
-    # data <<= memory[addr]  (infer read port)
-    # memory[addr] <<= data  (infer write port)
-    def __init__(self, bitwidth, addrwidth, name=None, asynchronous=False, block=None):
-        """ Create MemBlock.
+    def __init__(self, bitwidth, addrwidth, name='', max_read_ports=2, max_write_ports=1,
+                 asynchronous=False, block=None):
+        """
+        Create a PyRTL read-write memory.
 
         :param int bitwidth: Defines the bitwidth of each element in the memory
         :param int addrwidth: The number of bits used to address an element of the
          memory. This also defines the size of the memory
-        :param bool asynchronous: if false check that memories only indexed by registers
-        :param basestring or None name: Name of the memory. Defaults to an autogenerated
-         name
-        :param block: the block to add it to. Defaults to the working block
+        :param str name: The identifier for the memory
+        :param max_read_ports, max_write_ports: limits the number of read and write ports each
+            block can create; passing `None` to either indicates there is no limit
+        :param bool asynchronous: If false make sure that memory reads are only done
+            using values straight from a register. (aka make sure that the
+            read is synchronous)
+        :param basestring name: Name of the memory. Defaults to an autogenerated
+            name
+        :param block: The block to add it to, defaults to the working block
 
         It is best practice to make sure your block memory/fifos read/write
         operations start on a clock edge.  MemBlocks will enforce this by making sure that
@@ -157,7 +183,10 @@ class MemBlock(_MemReadBase):
         the memory as asynchronous with that flag.  Note that asynchronous mems are
         harder to synthesize (and can't be mapped to block rams in FPGAs).
         """
-        super(MemBlock, self).__init__(bitwidth, addrwidth, name, asynchronous, block)
+        super(MemBlock, self).__init__(bitwidth, addrwidth, name, max_read_ports,
+                                       asynchronous, block)
+        self.max_write_ports = max_write_ports
+        self.write_ports = 0
         self.writeport_nets = []
 
     def __setitem__(self, item, assignment):
@@ -173,7 +202,7 @@ class MemBlock(_MemReadBase):
 
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
         if len(item) > self.addrwidth:
-            raise PyrtlError('error, memory index bitwidth > addrwidth')
+            raise PyrtlError('error, the wire indexing the memory bitwidth > addrwidth')
         addr = item
 
         if isinstance(val, MemBlock.EnabledWrite):
@@ -184,7 +213,7 @@ class MemBlock(_MemReadBase):
         enable = as_wires(enable, bitwidth=1, truncating=False)
 
         if len(data) != self.bitwidth:
-            raise PyrtlError('error, write data larger than memory  bitwidth')
+            raise PyrtlError('error, write data larger than memory bitwidth')
         if len(enable) != 1:
             raise PyrtlError('error, enable signal not exactly 1 bit')
 
@@ -195,6 +224,11 @@ class MemBlock(_MemReadBase):
 
     def _build(self, addr, data, enable):
         """ Builds a write port. """
+        if self.max_write_ports is not None:
+            self.write_ports += 1
+            if self.write_ports > self.max_write_ports:
+                raise PyrtlError('maximum number of write ports (%d) exceeded' %
+                                 self.max_write_ports)
         writeport_net = LogicNet(
             op='@',
             op_param=(self.id, self),
@@ -208,6 +242,8 @@ class MemBlock(_MemReadBase):
         return MemBlock(bitwidth=self.bitwidth,
                         addrwidth=self.addrwidth,
                         name=self.name,
+                        max_read_ports=self.max_read_ports,
+                        max_write_ports=self.max_write_ports,
                         asynchronous=self.asynchronous,
                         block=block)
 
@@ -216,17 +252,25 @@ class RomBlock(_MemReadBase):
     """ PyRTL Read Only Memory.
 
     RomBlocks are the read only memory format in PyRTL
-    By default, they synthesize down to transistor-based
-    logic during synthesis
     """
-    def __init__(self, bitwidth, addrwidth, romdata, name=None, asynchronous=False, block=None):
-        """ Create a RomBlock
+    def __init__(self, bitwidth, addrwidth, romdata, name='', max_read_ports=2,
+                 build_new_roms=False, asynchronous=False, block=None):
+        """
+        Create a Python Read Only Memory
+
         :param int bitwidth: The bitwidth of each item stored in the ROM
         :param int addrwidth: The bitwidth of the address bus (determines number of addresses)
-        :param function or iterable romdata: This can either be a function or an array that maps
+        :param romdata: This can either be a function or an array (iterable) that maps
           an address as an input to a result as an output
         :param str name: The identifier for the memory
-        :param bool asynchronous: If False, check that memory reads start on clock edge
+        :param max_read_ports: limits the number of read ports each block can create;
+            passing `None` indicates there is no limit
+        :param bool build_new_roms: indicates whether to create and pass new RomBlocks during
+            `__getitem__` to avoid exceeding `max_read_ports`
+        :param bool asynchronous: If false make sure that memory reads are only done
+            using values straight from a register. (aka make sure that reads
+            are synchronous)
+        :param block: The block to add to, defaults to the working block
 
         It is best practice to make sure your block memory/fifos read/write
         operations start on a clock edge.  MemBlocks will enforce this by making sure that
@@ -235,8 +279,11 @@ class RomBlock(_MemReadBase):
         harder to synthesize (and can't be mapped to block rams in FPGAs).
         """
 
-        super(RomBlock, self).__init__(bitwidth, addrwidth, name, asynchronous, block)
+        super(RomBlock, self).__init__(bitwidth, addrwidth, name, max_read_ports,
+                                       asynchronous, block)
         self.data = romdata
+        self.build_new_roms = build_new_roms
+        self.current_copy = self
 
     def __getitem__(self, item):
         import numbers
@@ -263,6 +310,8 @@ class RomBlock(_MemReadBase):
                 value = self.data[address]
             except KeyError:
                 value = 0
+            except IndexError:
+                raise PyrtlError("RomBlock index is invalid")
             except:
                 raise PyrtlError("invalid type for RomBlock data object")
 
@@ -274,8 +323,14 @@ class RomBlock(_MemReadBase):
                              .format(value, self))
         return value
 
-    def _make_copy(self, block=None):
+    def _build_read_port(self, addr):
+        if self.build_new_roms and \
+                (self.current_copy.read_ports >= self.current_copy.max_read_ports):
+            self.current_copy = self._make_copy()
+        return super(RomBlock, self.current_copy)._build_read_port(addr)
+
+    def _make_copy(self, block=None,):
         block = working_block(block)
         return RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
-                        romdata=self.data, name=self.name,
+                        romdata=self.data, name=self.name, max_read_ports=self.max_read_ports,
                         asynchronous=self.asynchronous, block=block)
