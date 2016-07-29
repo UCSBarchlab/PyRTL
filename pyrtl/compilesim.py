@@ -23,17 +23,18 @@ class CompiledSimulation(object):
 
     This module provides significant speed improvements for people who are looking
     for high performance simulation. It is not built to be a debugging tool, though
-    it may help with debugging
+    it may help with debugging. Generally this will do better than fastsim for
+    simulations requiring over 1000 iterations.
 
     In order to use this, you must have:
-    clang compiler
-    linker (install visual studio compiler on Windows)
-    64 bit version of python running
+      clang compiler
+      linker (install visual studio compiler on Windows)
+      64 bit version of python running
 
     KNOWN ISSUES:
     Not compatible with a design with any wires where wires.bitwidth > 128
     compatible but very slow with a design with any wires where 64 < wires.bitwidth <= 128
-    Temporary files are not cleaned up properly (need work on the windows side)
+    Temporary files might not be cleaned up properly
     """
 
     def __init__(
@@ -348,4 +349,3 @@ class CompiledSimulation(object):
         # the directory is still in use in Windows
         self.unload_dll()
         shutil.rmtree(self._dir)  # clean up temporary directory
-
