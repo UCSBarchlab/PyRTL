@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals
 import ctypes
 import subprocess
 import tempfile
+import traceback
 import shutil
 import os
 from os import path
@@ -45,6 +46,16 @@ class CompiledSimulation(object):
             tracer = SimulationTrace()
         self.tracer = tracer
         self.default_value = default_value
+
+        try:
+            self._create_and_compile_code(register_value_map, memory_value_map)
+            self._setup_dll()
+        except EnvironmentError:
+            traceback.print_exc()
+            self._create_and_compile_code(register_value_map, memory_value_map)
+            self._setup_dll()
+
+    def _create_and_compile_code(self, register_value_map, memory_value_map):
         self._dir = tempfile.mkdtemp()
         code = self._create_code(register_value_map, memory_value_map)
         with open(path.join(self._dir, 'pyrtlsim.c'), 'w') as f:
@@ -53,7 +64,6 @@ class CompiledSimulation(object):
             'clang', '-O0', '-march=native', '-std=c99',
             '-shared', '-fPIC', '-mcmodel=medium',
             path.join(self._dir, 'pyrtlsim.c'), '-o', path.join(self._dir, 'pyrtlsim.so')])
-        self._setup_dll()
 
     def _setup_dll(self):
         inputbuf_type = ctypes.c_uint64*(2*len(self._inputorder))
@@ -310,6 +320,22 @@ class CompiledSimulation(object):
                 values = (obuf[n*olen+self._outputorder[w]] for n in range(steps))
             self.tracer.trace[w].extend(values)
 
+    def unload_dll(self):
+        # from http://stackoverflow.com/questions/19547084/can-i-explicitly-close-a-ctypes-cdll
+        handle = self._dll._handle
+        if os.name == 'nt':
+            # needed to make sure that the handle is properly converted to a windows
+            # sized pointer
+            # http://stackoverflow.com/questions/23522055/error-when-unload-a-
+            # 64bit-dll-using-ctypes-windll?rq=1
+            from ctypes import wintypes
+            ctypes.windll.kernel32.FreeLibrary.argtypes = [wintypes.HMODULE]
+
+            ctypes.windll.kernel32.FreeLibrary(handle)
+        else:
+            # don't know if this works
+            ctypes.cdll.LoadLibrary(path.join(self._dir, 'pyrtlsim.so')).dlclose(handle)
+
     def inspect_mem(self, mem):
         ptr = self._cgetmem(self.memid[mem])
         if ptr is None:
@@ -320,6 +346,6 @@ class CompiledSimulation(object):
     def __del__(self):
         # cannot call this in Windows, as the library is still bound to, and therefore
         # the directory is still in use in Windows
-        # TODO: Fix this
-        if os.name != 'nt':
-            shutil.rmtree(self._dir)  # clean up temporary directory
+        self.unload_dll()
+        shutil.rmtree(self._dir)  # clean up temporary directory
+
