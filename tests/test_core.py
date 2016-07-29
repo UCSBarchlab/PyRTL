@@ -197,6 +197,10 @@ class TestSanityCheckNet(unittest.TestCase):
         self.invalid_net("op_param out of bounds", net)
         net = self.new_net(op='s', op_param=(10,), args=1)
         self.invalid_net("op_param out of bounds", net)
+        net = self.new_net(op='s', op_param=(0, 1, 3), args=1)
+        self.invalid_net("op_param out of bounds", net)
+        net = self.new_net(op='s', op_param=(0, True, False, dict(), 'hi'), args=1)
+        self.invalid_net("select op_param requires ints", net)
 
     def test_net_wrong_op_param_mem(self):
         for op in 'm@':
@@ -391,7 +395,7 @@ class TestAsGraph(unittest.TestCase):
         i = pyrtl.Register(bitwidth=2, name='i')
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
-        m[i] <<= pyrtl.mux((m[i]!=0), 0, m[i])
+        m[i] <<= pyrtl.mux((m[i] != 0), 0, m[i])
         o <<= m[i]
 
         b = pyrtl.working_block()
@@ -480,7 +484,7 @@ class TestLogicNets(unittest.TestCase):
         b = pyrtl.WireVector()
         c = pyrtl.WireVector()
 
-        n = pyrtl.LogicNet('-', 'John', (a,b), (c,))
+        n = pyrtl.LogicNet('-', 'John', (a, b), (c,))
         net = pyrtl.LogicNet('+', 'John', (a, b), (c,))
         net2 = pyrtl.LogicNet('+', 'xx', (a, b), (c,))
         net3 = pyrtl.LogicNet('+', 'xx', (b, a), (c,))
