@@ -543,6 +543,8 @@ class Block(object):
             if not isinstance(net.op_param, tuple):
                 raise PyrtlInternalError('error, select op requires tuple op_param')
             for p in net.op_param:
+                if not isinstance(p, int):
+                    raise PyrtlInternalError('error, select op_param requires ints')
                 if p < 0 or p >= net.args[0].bitwidth:
                     raise PyrtlInternalError('error, op_param out of bounds')
         if net.op in 'm@':
