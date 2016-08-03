@@ -327,6 +327,7 @@ class TestDemux(unittest.TestCase):
         outs = (pyrtl.Output(name="output_" + str(i)) for i in range(32))
         demux_outs = pyrtl.rtllib.muxes.demux(in_w)
         for out_w, demux_out in zip(outs, demux_outs):
+            self.assertEqual(len(demux_out), 1)
             out_w <<= demux_out
         traces = utils.sim_and_ret_outws((in_w,), (in_vals,))
 
