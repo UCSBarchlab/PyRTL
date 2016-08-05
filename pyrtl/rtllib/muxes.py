@@ -117,6 +117,15 @@ class MultiSelector(object):
     result of many wire values are determined by a common wire signal
     (such as a 'state' wire).
 
+    Example::
+
+    with muxes.MultiSelector(select, res0, res1, res2, ...) as ms:
+        ms.option(val1, data0, data1, data2, ...)
+        ms.option(val2, data0_2, data1_2, data2_2, ...)
+
+    This means that when the select wire equals the val1 wire
+    the results will have the values in the coresponding data wires
+    (all ints are converted to wires)
     """
     def __init__(self, signal_wire,  *dest_wires):
         self._final = False
