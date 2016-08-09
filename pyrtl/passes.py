@@ -14,6 +14,7 @@ from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
 from .transform import net_transform, _get_new_block_mem_instance, copy_block, replace_wires
+from . import transform  # transform.all_nets loos better than all_nets
 
 
 # --------------------------------------------------------------------
@@ -517,54 +518,50 @@ def _decompose(net, wv_map, mems, block_out):
     return
 
 
-def nand_synth(block=None):
+@transform.all_nets
+def nand_synth(net):
     """
     Synthesizes an Post-Synthesis block into one consisting of nands and inverters in place
     :param block: The block to synthesize.
     """
-    def nand_synth_op(net):
-        if net.op in '~nrwcsm@':
-            return True
+    if net.op in '~nrwcsm@':
+        return True
 
-        def arg(num):
-            return net.args[num]
+    def arg(num):
+        return net.args[num]
 
-        dest = net.dests[0]
-        if net.op == '&':
-            dest <<= ~(arg(0).nand(arg(1)))
-        elif net.op == '|':
-            dest <<= (~arg(0)).nand(~arg(1))
-        elif net.op == '^':
-            temp_0 = arg(0).nand(arg(1))
-            dest <<= temp_0.nand(arg(0)).nand(temp_0.nand(arg(1)))
-        else:
-            raise PyrtlError("Op, '{}' is not supported in nand_synth".format(net.op))
-
-    net_transform(nand_synth_op, block)
+    dest = net.dests[0]
+    if net.op == '&':
+        dest <<= ~(arg(0).nand(arg(1)))
+    elif net.op == '|':
+        dest <<= (~arg(0)).nand(~arg(1))
+    elif net.op == '^':
+        temp_0 = arg(0).nand(arg(1))
+        dest <<= temp_0.nand(arg(0)).nand(temp_0.nand(arg(1)))
+    else:
+        raise PyrtlError("Op, '{}' is not supported in nand_synth".format(net.op))
 
 
-def and_inverter_synth(block=None):
+@transform.all_nets
+def and_inverter_synth(net):
     """
     Transforms a decomposed block into one consisting of ands and inverters in place
     :param block: The block to synthesize
     """
-    def and_inv_op(net):
-        if net.op in '~&rwcsm@':
-            return True
+    if net.op in '~&rwcsm@':
+        return True
 
-        def arg(num):
-            return net.args[num]
+    def arg(num):
+        return net.args[num]
 
-        dest = net.dests[0]
-        if net.op == '|':
-            dest <<= ~(~arg(0) & ~arg(1))
-        elif net.op == '^':
-            all_1 = arg(0) & arg(1)
-            all_0 = ~arg(0) & ~arg(1)
-            dest <<= all_0 & ~all_1
-        elif net.op == 'n':
-            dest <<= ~(arg(0) & arg(1))
-        else:
-            raise PyrtlError("Op, '{}' is not supported in and_inv_synth".format(net.op))
-
-    net_transform(and_inv_op, block)
+    dest = net.dests[0]
+    if net.op == '|':
+        dest <<= ~(~arg(0) & ~arg(1))
+    elif net.op == '^':
+        all_1 = arg(0) & arg(1)
+        all_0 = ~arg(0) & ~arg(1)
+        dest <<= all_0 & ~all_1
+    elif net.op == 'n':
+        dest <<= ~(arg(0) & arg(1))
+    else:
+        raise PyrtlError("Op, '{}' is not supported in and_inv_synth".format(net.op))

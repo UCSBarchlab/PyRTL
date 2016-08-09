@@ -18,12 +18,13 @@ is necessary. Specifically, one must know what Block, LogicNet,
 and WireVector are as well as how Blocks store the latter two
 structures (through Block.logic, block.Wirevector_set, etc).
 """
+import functools
 
 from .core import set_working_block, LogicNet, working_block
 from .wire import Const, Input, Output, WireVector, Register
 
 
-def net_transform(transform_func, block=None):
+def net_transform(transform_func, block=None, **kwargs):
     """
     Maps nets to new sets of nets according to a custom function
 
@@ -34,9 +35,17 @@ def net_transform(transform_func, block=None):
     block = working_block(block)
     with set_working_block(block, True):
         for net in block.logic.copy():
-            keep_orig_net = transform_func(net)
+            keep_orig_net = transform_func(net, **kwargs)
             if not keep_orig_net:
                 block.logic.remove(net)
+
+
+def all_nets(transform_func):
+    """Decorator that wraps a net transform function"""
+    @functools.wraps(transform_func)
+    def t_res(**kwargs):
+        net_transform(transform_func, **kwargs)
+    return t_res
 
 
 def wire_transform(transform_func, select_types=WireVector,
@@ -59,6 +68,14 @@ def wire_transform(transform_func, select_types=WireVector,
     for orig_wire in block.wirevector_subset(select_types, exclude_types):
         new_src, new_dst = transform_func(orig_wire)
         replace_wire(orig_wire, new_src, new_dst, block)
+
+
+def all_wires(transform_func):
+    """Decorator that wraps a wire transform function"""
+    @functools.wraps(transform_func)
+    def t_res(**kwargs):
+        wire_transform(transform_func, **kwargs)
+    return t_res
 
 
 def replace_wire(orig_wire, new_src, new_dst, block=None):
