@@ -134,7 +134,7 @@ def probe(w, name=None):
 
     if name is None:
         name = '(%s: %s)' % (probeIndexer.make_valid_string(), w.name)
-    print(name + ' ' + get_stack(w))
+    print("Probe: " + name + ' ' + get_stack(w))
 
     p = Output(name=name)
     p <<= w  # late assigns len from w automatically
