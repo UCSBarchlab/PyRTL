@@ -124,7 +124,7 @@ class Simulation(object):
                 for (addr, val) in mem_map.items():
                     if addr < 0 or addr >= max_addr_val:
                         raise PyrtlError('error, address %s in %s outside of bounds' %
-                                         (str(addr)), mem.name)
+                                         (str(addr), mem.name))
                     if val < 0 or val >= max_bit_val:
                         raise PyrtlError('error, %s at %s in %s outside of bounds' %
                                          (str(val), str(addr), mem.name))
