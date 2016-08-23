@@ -117,7 +117,10 @@ def _bits_and_ports_from_memory(mem):
     """ Helper to extract mem bits and ports for estimation. """
     bits = 2**mem.addrwidth * mem.bitwidth
     read_ports = len(mem.readport_nets)
-    write_ports = len(mem.writeport_nets)
+    try:
+        write_ports = len(mem.writeport_nets)
+    except AttributeError:  # dealing with ROMs
+        write_ports = 0
     ports = max(read_ports, write_ports)
     return bits, ports
 
