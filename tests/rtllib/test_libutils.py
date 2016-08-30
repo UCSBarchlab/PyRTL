@@ -97,3 +97,31 @@ class TestTwosComp(unittest.TestCase):
                 'in2': libutils.twos_comp_repr(-2*i, 8)
             })
             self.assertEquals(-i, libutils.rev_twos_comp_repr(sim.inspect('out'), 8))
+
+
+class TestAddOverflowDetect(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.in1, self.in2 = (pyrtl.Input(4, 'in%d' % i) for i in range(1, 3))
+        self.res_s, self.res_ns = (pyrtl.Output(5, 'res_%s' % s) for s in ('s', 'ns'))
+        self.overflow_s, self.overflow_ns = (pyrtl.Output(1, 'overflow_%s' % s) for s in ('s', 'ns'))
+
+        _res_s, _ov_s = libutils.detect_add_overflow(self.in1, self.in2)
+        _res_ns, _ov_ns = libutils.detect_add_overflow(self.in1, self.in2, signed=False)
+        self.res_s <<= _res_s
+        self.overflow_s <<= _ov_s
+        self.res_ns <<= _res_ns
+        self.overflow_ns <<= _ov_ns
+
+        self.sim_trace = pyrtl.SimulationTrace()
+        self.sim = pyrtl.Simulation(tracer=self.sim_trace)
+
+    def test_pos_overflow(self):
+        self.sim.step({self.in1: 0b0111, self.in2: 0b0010})
+        self.assertEqual(self.sim.inspect(self.overflow_s), 1)
+        self.assertEqual(self.sim.inspect(self.overflow_ns), 0)
+
+    def test_neg_overflow(self):
+        self.sim.step({self.in1: 0b1001, self.in2: 0b1110})
+        self.assertEqual(self.sim.inspect(self.overflow_s), 1)
+        self.assertEqual(self.sim.inspect(self.overflow_ns), 0)

@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from operator import add
 
 import pyrtl
 
@@ -86,3 +87,12 @@ def _shifted_reg_next(reg, direct, num=1):
     else:
         raise pyrtl.PyrtlError("direction must be specified with 'direct'"
                                "parameter as either 'l' or 'r'")
+
+
+def detect_add_overflow(in1, in2, add_func=add, signed=True):
+    res = add_func(in1, in2)
+    ov_bit = res[-2 if signed else -1]
+    neg_overflow = in1[-1] & in2[-1] & ~ov_bit if signed else pyrtl.Const(0, 1)
+    pos_overflow = ~in1[-1] & ~in2[-1] & ov_bit
+    overflow = neg_overflow | pos_overflow
+    return res, overflow
