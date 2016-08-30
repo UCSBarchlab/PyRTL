@@ -426,8 +426,42 @@ class TestAsGraph(unittest.TestCase):
 
 
 class TestSanityCheck(unittest.TestCase):
-    # TODO: We need to test all of sanity check
-    pass
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def sanity_error(self, msg):
+        with self.assertRaisesRegexp(pyrtl.PyrtlError, msg):
+            pyrtl.working_block().sanity_check()
+
+    def test_missing_bitwidth(self):
+        inp = pyrtl.Input()
+        out = pyrtl.Output(8)
+        self.sanity_error("missing bitwidth")
+
+    def test_duplicate_names(self):
+        inp = pyrtl.Input(8, 'hi')
+        out = pyrtl.Output(8, 'hi')
+        out <<= inp
+        self.sanity_error("Duplicate wire names")
+
+    def test_unknown_wires(self):
+        inp = pyrtl.Input(8, 'inp')
+        out = pyrtl.Output(8, 'out')
+        out <<= inp
+        pyrtl.working_block().wirevector_set.discard(inp)
+        with self.assertRaises(pyrtl.PyrtlInternalError):  # sanity_check_net()
+            self.sanity_error("Unknown wires")
+
+    def test_not_connected(self):
+        inp = pyrtl.Input(8, 'inp')
+        out = pyrtl.Output(8, 'out')
+        self.sanity_error("declared but not connected")
+
+    def test_not_driven(self):
+        w = pyrtl.WireVector(8, 'w')
+        out = pyrtl.Output(8, 'out')
+        out <<= w
+        self.sanity_error("used but never driven")
 
 
 class TestLogicNets(unittest.TestCase):
