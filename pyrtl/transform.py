@@ -190,7 +190,7 @@ def copy_block(block=None, update_working_block=True):
     :return: The resulting block
     """
     block_in = working_block(block)
-    block_out, temp_wv_map = _synth_base(block_in)
+    block_out, temp_wv_map = _clone_block_and_wires(block_in)
     mems = {}
     for net in block_in.logic:
         _copy_net(block_out, net, temp_wv_map, mems)
@@ -201,7 +201,7 @@ def copy_block(block=None, update_working_block=True):
     return block_out
 
 
-def _synth_base(block_in):
+def _clone_block_and_wires(block_in):
     """
     This is a generic function to copy the WireVectors for another round of
     synthesis This does not split a WireVector with multiple wires.
