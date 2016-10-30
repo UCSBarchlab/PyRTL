@@ -598,9 +598,7 @@ class FastSimulation(object):
                                                     read_addr, self.default_value)
             elif net.op == '@':
                 mem = self._mem_varname(net.op_param[1])
-                write_addr = self._arg_varname(net.args[0])
-                write_val = self._arg_varname(net.args[1])
-                write_enable = self._arg_varname(net.args[2])
+                write_addr, write_val, write_enable = (self._arg_varname(a) for a in net.args)
                 prog.append('    if {}:'.format(write_enable))
                 prog.append('        mem_ws.append(("{}", {}, {}))'
                             .format(mem, write_addr, write_val))
@@ -620,8 +618,8 @@ class FastSimulation(object):
         if self.tracer is not None:
             for wire_name in self.tracer.trace:
                 wire = self.block.wirevector_by_name[wire_name]
-                v_wire_name = self._varname(wire)
                 if not isinstance(wire, (Input, Const, Register, Output)):
+                    v_wire_name = self._varname(wire)
                     prog.append('    outs["%s"] = %s' % (wire_name, v_wire_name))
 
         prog.append("    return regs, outs, mem_ws")
