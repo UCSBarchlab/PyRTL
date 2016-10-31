@@ -100,9 +100,10 @@ class CompiledSimulation(object):
         with open(path.join(self._dir, 'pyrtlsim.c'), 'w') as f:
             f.write(code)
         subprocess.check_call([
-            'gcc', '-O0', '-march=native', '-std=c99',
+            'gcc', '-O0', '-march=native', '-std=c99', '-m64',
             '-shared', '-fPIC', '-mcmodel=medium',
-            path.join(self._dir, 'pyrtlsim.c'), '-o', path.join(self._dir, 'pyrtlsim.so')])
+            path.join(self._dir, 'pyrtlsim.c'), '-o', path.join(self._dir, 'pyrtlsim.so')],
+            shell=(platform.system() == 'Windows'))
         self._dll = ctypes.CDLL(path.join(self._dir, 'pyrtlsim.so'))
         self._crun = self._dll.sim_run_all
         self._crun.restype = None  # argtypes set on use
@@ -174,6 +175,8 @@ class CompiledSimulation(object):
                     code.append(makeini(mem, rv)+',')
                 code.append('};')
             else:
+                if platform.system() == 'Windows':
+                    code.append('__declspec(dllexport)')
                 if mem in memmap:
                     memval = [
                         memmap[mem].get(n, 0) for n in
