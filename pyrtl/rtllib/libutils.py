@@ -1,6 +1,7 @@
 from __future__ import absolute_import
-from operator import add
+from functools import reduce
 
+import operator
 import pyrtl
 
 
@@ -89,10 +90,36 @@ def _shifted_reg_next(reg, direct, num=1):
                                "parameter as either 'l' or 'r'")
 
 
-def detect_add_overflow(in1, in2, add_func=add, signed=True):
-    res = add_func(in1, in2)
-    ov_bit = res[-2 if signed else -1]
-    neg_overflow = in1[-1] & in2[-1] & ~ov_bit if signed else pyrtl.Const(0, 1)
-    pos_overflow = ~in1[-1] & ~in2[-1] & ov_bit
-    overflow = neg_overflow | pos_overflow
-    return res, overflow
+def detect_add_overflow(add_func=None, signed=False):
+    """ Detects whether the passed function call will create overflow based on parameter `signed`.
+        Can be used as a decorator"""
+
+    if add_func is None:  # decorator
+        def signed_add_func(add_func):
+
+            def wrapper(in1, in2):
+                res = add_func(in1, in2)
+                ov_bit = res[-2 if signed else -1]
+                if signed:
+                    neg_overflow = (in1[-1] & in2[-1]) & (ov_bit ^ reduce(operator.or_, res[0:-2]))
+                else:
+                    neg_overflow = pyrtl.Const(0, 1)
+                pos_overflow = ~in1[-1] & ~in2[-1] & ov_bit
+                overflow = neg_overflow | pos_overflow
+                return res, overflow
+            return wrapper
+
+    else:
+
+        def signed_add_func(in1, in2):
+            res = add_func(in1, in2)
+            ov_bit = res[-2 if signed else -1]
+            if signed:
+                neg_overflow = (in1[-1] & in2[-1]) & (ov_bit ^ reduce(operator.or_, res[0:-2]))
+            else:
+                neg_overflow = pyrtl.Const(0, 1)
+            pos_overflow = ~in1[-1] & ~in2[-1] & ov_bit
+            overflow = neg_overflow | pos_overflow
+            return res, overflow
+
+    return signed_add_func

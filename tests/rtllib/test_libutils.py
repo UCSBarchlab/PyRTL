@@ -1,8 +1,12 @@
 import unittest
+import random
 
 import pyrtl
 import pyrtl.rtllib.testingutils as utils
+
+from operator import add
 from pyrtl.rtllib import libutils
+from pyrtl.rtllib.adders import kogge_stone
 
 
 class TestPartitionWire(unittest.TestCase):
@@ -101,13 +105,22 @@ class TestTwosComp(unittest.TestCase):
 
 class TestAddOverflowDetect(unittest.TestCase):
     def setUp(self):
+        random.seed(123456789)
+        self.in1_vals = [a if a != 8 else 0 for a in [random.randint(0, 15) for i in range(30)]]
+        self.in2_vals = [a if a != 8 else 0 for a in [random.randint(0, 15) for i in range(30)]]
+
         pyrtl.reset_working_block()
         self.in1, self.in2 = (pyrtl.Input(4, 'in%d' % i) for i in range(1, 3))
         self.res_s, self.res_ns = (pyrtl.Output(5, 'res_%s' % s) for s in ('s', 'ns'))
         self.overflow_s, self.overflow_ns = (pyrtl.Output(1, 'overflow_%s' % s) for s in ('s', 'ns'))
 
-        _res_s, _ov_s = libutils.detect_add_overflow(self.in1, self.in2)
-        _res_ns, _ov_ns = libutils.detect_add_overflow(self.in1, self.in2, signed=False)
+        # test decorator functionality with parameter
+        @libutils.detect_add_overflow(signed=True)
+        def checked_add_signed(in1, in2):
+            return kogge_stone(in1, in2)
+
+        _res_s, _ov_s = checked_add_signed(self.in1, self.in2)
+        _res_ns, _ov_ns = libutils.detect_add_overflow(add, signed=False)(self.in1, self.in2)
         self.res_s <<= _res_s
         self.overflow_s <<= _ov_s
         self.res_ns <<= _res_ns
@@ -116,12 +129,10 @@ class TestAddOverflowDetect(unittest.TestCase):
         self.sim_trace = pyrtl.SimulationTrace()
         self.sim = pyrtl.Simulation(tracer=self.sim_trace)
 
-    def test_pos_overflow(self):
-        self.sim.step({self.in1: 0b0111, self.in2: 0b0010})
-        self.assertEqual(self.sim.inspect(self.overflow_s), 1)
-        self.assertEqual(self.sim.inspect(self.overflow_ns), 0)
-
-    def test_neg_overflow(self):
-        self.sim.step({self.in1: 0b1001, self.in2: 0b1110})
-        self.assertEqual(self.sim.inspect(self.overflow_s), 1)
-        self.assertEqual(self.sim.inspect(self.overflow_ns), 0)
+    def test_overflow(self):
+        for in1, in2 in zip(self.in1_vals, self.in2_vals):
+            self.sim.step({self.in1: in1, self.in2: in2})
+            self.assertEqual(self.sim.inspect(self.overflow_s), int(libutils.rev_twos_comp_repr(in1, 4) +
+                                                                    libutils.rev_twos_comp_repr(in2, 4)
+                                                                    not in range(-7, 8)))
+            self.assertEqual(self.sim.inspect(self.overflow_ns), int(in1 + in2 not in range(0, 32)))
