@@ -42,6 +42,9 @@ nosetests.xml
 # pycharm
 .idea
 
+# Apple crap
+.DS_Store
+
 # Stuff specifically for PyRTL
 spice.net
 docs/_build
