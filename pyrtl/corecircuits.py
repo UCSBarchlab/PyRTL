@@ -12,7 +12,7 @@ Some stuff in CoreCircuits include:
 
 """
 
-
+from __future__ import division
 from .pyrtlexceptions import PyrtlError
 from .helperfuncs import match_bitwidth, as_wires
 from .core import LogicNet, working_block
@@ -36,6 +36,12 @@ def xor_all_bits(vector):
 
 parity = xor_all_bits  # shadowing the xor_all_bits_function
 
+def tree_reduce(op, vector):
+    if len(vector) == 1:
+        return vector[0]
+    left = tree_reduce(op, vector[:len(vector) // 2])
+    right = tree_reduce(op, vector[len(vector) // 2:])
+    return op(left, right)
 
 def _apply_op_over_all_bits(op, vector):
     if len(vector) == 1:
