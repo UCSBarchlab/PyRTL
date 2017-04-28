@@ -33,7 +33,8 @@ from .helperfuncs import find_loop
 from .helperfuncs import find_and_print_loop
 
 from pyrtl.corecircuits import (and_all_bits, or_all_bits, xor_all_bits, rtl_any,
-                                rtl_all, mux, select, concat, concat_list, parity)
+                                rtl_all, mux, select, concat, concat_list, parity,
+                                tree_reduce)
 # memory blocks
 from .memory import MemBlock
 from .memory import RomBlock

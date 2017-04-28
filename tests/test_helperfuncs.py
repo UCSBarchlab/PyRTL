@@ -1,6 +1,7 @@
 import io
 import random
 import unittest
+import six
 
 import pyrtl
 import pyrtl.corecircuits
@@ -62,6 +63,23 @@ class TestAnyAll(unittest.TestCase):
         o = pyrtl.Output(name='o')
         o <<= pyrtl.corecircuits.rtl_all(a, b, c)
         self.check_trace('o 00000001\nr 01234567\n')
+
+
+class TestTreeReduce(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def basic_test_xor(self):
+        wires, vals = utils.make_inputs_and_values(7, exact_bitwidth=8, dist=utils.uniform_dist)
+        outwire = pyrtl.Output(name="test")
+
+        import operator
+        from six.moves import reduce
+        outwire <<= pyrtl.tree_reduce(operator.xor, wires)
+
+        out_vals = utils.sim_and_ret_out(outwire, wires, vals)
+        true_result = [reduce(operator.xor, v) for v in zip(*vals)]
+        self.assertEqual(out_vals, true_result)
 
 
 class TestXorAllBits(unittest.TestCase):
