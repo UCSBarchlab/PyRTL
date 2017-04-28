@@ -69,7 +69,7 @@ class TestTreeReduce(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def basic_test_xor(self):
+    def test_xor(self):
         wires, vals = utils.make_inputs_and_values(7, exact_bitwidth=8, dist=utils.uniform_dist)
         outwire = pyrtl.Output(name="test")
 
@@ -80,6 +80,11 @@ class TestTreeReduce(unittest.TestCase):
         out_vals = utils.sim_and_ret_out(outwire, wires, vals)
         true_result = [reduce(operator.xor, v) for v in zip(*vals)]
         self.assertEqual(out_vals, true_result)
+
+    def test_empty(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            import operator
+            pyrtl.tree_reduce(operator.add, [])
 
 
 class TestXorAllBits(unittest.TestCase):

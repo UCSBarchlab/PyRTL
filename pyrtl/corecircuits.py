@@ -21,23 +21,25 @@ from .wire import Const, WireVector
 
 def and_all_bits(vector):
     """ Returns WireVector, the result of "and"ing all items of the argument vector."""
-    return _apply_op_over_all_bits(lambda a, b: a & b, vector)
+    return tree_reduce(lambda a, b: a & b, vector)
 
 
 def or_all_bits(vector):
     """ Returns WireVector, the result of "or"ing all items of the argument vector."""
-    return _apply_op_over_all_bits(lambda a, b: a | b, vector)
+    return tree_reduce(lambda a, b: a | b, vector)
 
 
 def xor_all_bits(vector):
     """ Returns WireVector, the result of "xor"ing all items of the argument vector."""
-    return _apply_op_over_all_bits(lambda a, b: a ^ b, vector)
+    return tree_reduce(lambda a, b: a ^ b, vector)
 
 
 parity = xor_all_bits  # shadowing the xor_all_bits_function
 
 
 def tree_reduce(op, vector):
+    if len(vector) < 1:
+        raise PyrtlError("Cannot reduce empty vectors")
     if len(vector) == 1:
         return vector[0]
     left = tree_reduce(op, vector[:len(vector) // 2])
@@ -46,6 +48,8 @@ def tree_reduce(op, vector):
 
 
 def _apply_op_over_all_bits(op, vector):
+    if len(vector) < 1:
+        raise PyrtlError("Cannot reduce empty vectors")
     if len(vector) == 1:
         return vector[0]
     rest = _apply_op_over_all_bits(op, vector[1:])
