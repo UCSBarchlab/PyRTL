@@ -33,19 +33,22 @@ command fails due to insufficient permissions, you may need to do
 
 **Prerequisites**:
 
-PyRTL will work with Python 2.7 and 3.4.
+PyRTL will work with Python 2.7 and 3.4+.
 
 
 PyRTL Classes:
 --------------
 
 
-Perhaps the most important class to understand the interface of is `WireVector`.  
-A bunch of other related classes, including `Input`, `Output`, `Const`, and `Register`
-are all derived from `WireVector`. Coupled with `MemBlock` (and `RomBlock`), this is
+Perhaps the most important class to understand is ``WireVector``, which is the basic type from 
+which you build all hardware.  If you are coming to PyRTL from Verilog, a `WireVector` is closest
+to a multi-bit `wire`.  Every new `WireVector` builds a set of wires which you can then connect with
+other `WireVector` through overloaded operations such as `addition` or `bitwise or`.
+A bunch of other related classes, including ``Input``, ``Output``, ``Const``, and ``Register``
+are all derived from `WireVector`. Coupled with ``MemBlock`` (and ``RomBlock``), this is
 all a user needs to create a functional hardware design.
 
-* :py:class:`~pyrtl.wire.WireVector` ()
+* :py:class:`~pyrtl.wire.WireVector`
     * :py:class:`~pyrtl.wire.Input` (WireVector)
     * :py:class:`~pyrtl.wire.Output` (WireVector)
     * :py:class:`~pyrtl.wire.Const` (WireVector)
@@ -54,6 +57,10 @@ all a user needs to create a functional hardware design.
 * Memory blocks [base class for internal use only]
     * :py:class:`~pyrtl.memory.MemBlock` (_MemReadBase)
     * :py:class:`~pyrtl.memory.RomBlock` (_MemReadBase)
+
+After specifying a hardware design, there are then options to simulate your design right in PyRTL,
+synthesize it down to primitive 1-bit operations, optimize it, and export it to Verilog (along with
+a testbench),.
 
 To simulate your hardware design one needs to do a simulation, and to view the output we need
 to capture a "trace".  Simulation is how your hardware is "executed" for the purposes of testing,
@@ -69,9 +76,9 @@ configurations, most end users should not need to even be aware of these Rendere
 describe other ways that the trace may be handled, including extraction as a test bench and export
 to a VCD file.
 
-* :py:class:`~pyrtl.simulation.Simulation` () 
-* :py:class:`~pyrtl.simulation.FastSimulation` ()
-* :py:class:`~pyrtl.simulation.SimulationTrace` ()
+* :py:class:`~pyrtl.simulation.Simulation` 
+* :py:class:`~pyrtl.simulation.FastSimulation`
+* :py:class:`~pyrtl.simulation.SimulationTrace`
 * Renderers [base class for internal use only]
     * :py:class:`~pyrtl.simulation.Utf8WaveRenderer` (_WaveRendererBase)
     * :py:class:`~pyrtl.simulation.AsciiWaveRenderer` (_WaveRendererBase)
@@ -86,8 +93,8 @@ back the block on which we are implicitly working.  When we write hardware trans
 `Block` from an old one and augment the information kept with my hardware block and `PostSynthBlock` is
 one example of this pattern in action.
 
-* :py:class:`~pyrtl.core.LogicNet` () 
-* :py:class:`~pyrtl.core.Block` () 
+* :py:class:`~pyrtl.core.LogicNet` 
+* :py:class:`~pyrtl.core.Block` 
     * :py:class:`~pyrtl.core.PostSynthBlock` (Block) 
 
 Finally, when things go wrong you may hit on one of two Exceptions, neither of which is likely recoverable
@@ -96,6 +103,46 @@ to capture end user errors such as invalid constant strings and mis-matched bitw
 PyrtlInternalError captures internal invariants and assertions over the core logic graph which should never
 be hit when constructing designs in the normal ways.  If you hit a confusing `PyrtlError` or any
 `PyrtlInternalError` feel free to file an issue.
+
+PyRTL Quick Reference:
+--------------
+
+* Helpful RTL constructs
+    * mux(index, *mux_ins, **kwargs)
+    * select(sel, truecase, falsecase)
+    * concat(*args)
+    * concat_list(wire_list)
+    * barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0)
+    * prioritized_mux(selects, vals)
+    * sparse_mux(sel, vals)
+    * twos_comp_repr(val, bitwidth)
+    * rev_twos_comp_repr(val, bitwidth)
+
+* Functions useful for debug:
+    * set_debug_mode(debug=True)
+    * probe(w, name=None)
+    * rtl_assert(w, exp, block=None)
+    * working_block(block=None)
+    * reset_working_block()
+
+* Allocating and modifying wirevectors
+    * as_wires(val, bitwidth=None, truncating=True, block=None)
+    * match_bitwidth(*args)
+    * partition_wire(wire, partition_size)
+    * input_list(names, bitwidth=1)
+    * output_list(names, bitwidth=1)
+    * register_list(names, bitwidth=1)
+    * wirevector_list(names, bitwidth=1, wvtype=WireVector)
+    * WireVector.bitmask(self)
+    * WireVector.sign_extended(self, bitwidth)
+    * WireVector.zero_extended(self, bitwidth)
+
+* Estimating and optimizing hardware
+    * timing_estimation(tech_in_nm=130, block=None)
+    * area_estimation(tech_in_nm=130, block=None)
+    * yosys_area_delay(library, abc_cmd=None, block=None)
+    * optimize(update_working_block=True, block=None, skip_sanity_check=False)
+    * synthesize(update_working_block=True, block=None)
 
 PyRTL Modules:
 --------------
