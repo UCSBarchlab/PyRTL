@@ -1,6 +1,6 @@
-""" Example 3:  A State Machine built with ConditionalUpdate
+""" Example 3:  A State Machine built with conditional_assignment
 
-    In this example we describe how ConditionalUpdate works in the context of
+    In this example we describe how conditional_assignment works in the context of
     a vending machine that will dispense an item when it has received 4 tokens.
     If a refund is requested, it returns the tokens.
 """
@@ -18,7 +18,7 @@ WAIT, TOK1, TOK2, TOK3, DISPENSE, REFUND = [pyrtl.Const(x, bitwidth=3) for x in 
 
 # Now we could build a state machine using just the registers and logic discussed
 # in the earlier examples, but doing operations *conditional* on some input is a pretty
-# fundamental operation in hardware design.  PyRTL provides a class "ConditionalUpdate"
+# fundamental operation in hardware design.  PyRTL provides an instance "conditional_assignment"
 # to provide a predicated update to a registers, wires, and memories.
 #
 # Conditional assignments are specified with a "|=" instead of a "<<=" operator.  The
@@ -28,7 +28,7 @@ WAIT, TOK1, TOK2, TOK3, DISPENSE, REFUND = [pyrtl.Const(x, bitwidth=3) for x in 
 # is describing a big logic function NOT an "if-then-else" clause.  All of these things will
 # execute straight through when "build_everything" is called.  More comments after the code.
 #
-# One more thing: ConditionalUpdate might not always be the best item to use.
+# One more thing: conditional_assignment might not always be the best item to use.
 # if the update is simple, a regular mux(sel_wire, falsecase=f_wire, truecase=t_wire)
 # can be sufficient.
 

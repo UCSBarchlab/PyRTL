@@ -106,8 +106,9 @@ PyRTL Modules:
    corecircuits
    wire
    memory
-   passes
    simulation
+   conditional
+   passes
    inputoutput
    helperfuncs
    rtllib

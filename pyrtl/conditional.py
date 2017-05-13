@@ -3,34 +3,45 @@
 The management of selected assignments is expected to happen through
 the "with" blocks which will ensure that the region of execution for
 which the condition should apply is well defined.  It is easiest
-to see with an example:
+to see with an example::
 
->   r1 = Register()
->   r2 = Register()
->   w3 = WireVector()
->   with conditional_assignment:
->       with a:
->           r1.next |= i  # set when a is true
->           with b:
->               r2.next |= j  # set when a and b are true
->       with c:
->           r1.next |= k  # set when a is false and c is true
->           r2.next |= k
->       with otherwise:
->           r2.next |= l  # a is false and c is false
->
->       with d:
->           w3.next |= m  # d is true (assignments must be independent)
+   r1 = Register()
+   r2 = Register()
+   w3 = WireVector()
+   with conditional_assignment:
+       with a:
+           r1.next |= i  # set when a is true
+           with b:
+               r2.next |= j  # set when a and b are true
+       with c:
+           r1.next |= k  # set when a is false and c is true
+           r2.next |= k
+       with otherwise:
+           r2.next |= l  # a is false and c is false
 
-This is equivalent to:
-r1.next <<= cond(a, i, cond(c, k, default))
-r2.next <<= cond(a, cond(b, j, default), cond(c, k, l))
-w3 <<= cond(d, m, 0)
-(where cond(p, a, b) = mux(p, truecase=a, falsecase=b)
+       with d:
+           w3.next |= m  # d is true (assignments must be independent)
 
-Access should be done through instances "conditional_update" and "otherwise",
-as described above, not through the classes themselves.
+This is equivalent to::
+
+    r1.next <<= cond(a, i, cond(c, k, default))
+    r2.next <<= cond(a, cond(b, j, default), cond(c, k, l))
+    w3 <<= cond(d, m, 0)
+    (where cond(p, a, b) = mux(p, truecase=a, falsecase=b)
+
+This functionality is provided through two instances: "conditional_update", which
+is a context manager (under which conditional assignements can be made), and "otherwise",
+which is an instance that stands in for a 'fall through' case.  The details of how these
+should be used, and the difference between normal assignments and condtional assignments,
+described in more detail in the state machine example from in prytl/examples.
+
+In addition to the conditional context, there is a helper function "currently_under_condition"
+which will test if the code where it is called is currently elaborating hardware
+under a condition.
+
 """
+# Access should be done through instances "conditional_update" and "otherwise",
+# as described above, not through the classes themselves.
 
 from __future__ import print_function, unicode_literals
 
