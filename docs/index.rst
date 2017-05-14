@@ -108,40 +108,40 @@ PyRTL Quick Reference:
 --------------
 
 * Helpful RTL constructs
-    * mux(index, *mux_ins, **kwargs)
-    * select(sel, truecase, falsecase)
-    * concat(*args)
-    * concat_list(wire_list)
+    * mux(index_val, val_1, val_2, ... val_n, default=val_x)
+    * select(selector, truecase, falsecase)
+    * concat(wire_msbs, wire_next, ..., wire_lsbs) 
+    * concat_list(wire_list)  # wire_list[0] will be lsb
     * barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0)
-    * prioritized_mux(selects, vals)
-    * sparse_mux(sel, vals)
+    * prioritized_mux(select_list, val_list)  # priority encoder
+    * sparse_mux(selects, vals)
+    * mult_signed(val1, val2)
+
+* Functions useful for test and debug:
+    * set_debug_mode(debug=True)
+    * probe(wire, name=None)
+    * rtl_assert(test_wire, exception_to_be_thrown, block=None)
+    * working_block(block=None)
+    * reset_working_block()
     * twos_comp_repr(val, bitwidth)
     * rev_twos_comp_repr(val, bitwidth)
 
-* Functions useful for debug:
-    * set_debug_mode(debug=True)
-    * probe(w, name=None)
-    * rtl_assert(w, exp, block=None)
-    * working_block(block=None)
-    * reset_working_block()
-
 * Allocating and modifying wirevectors
     * as_wires(val, bitwidth=None, truncating=True, block=None)
-    * match_bitwidth(*args)
+    * match_bitwidth(a, b, c, ..., signed=False)
     * partition_wire(wire, partition_size)
     * input_list(names, bitwidth=1)
     * output_list(names, bitwidth=1)
     * register_list(names, bitwidth=1)
     * wirevector_list(names, bitwidth=1, wvtype=WireVector)
-    * WireVector.bitmask(self)
-    * WireVector.sign_extended(self, bitwidth)
-    * WireVector.zero_extended(self, bitwidth)
+    * WireVector.sign_extended(bitwidth)
+    * WireVector.zero_extended(bitwidth)
 
 * Estimating and optimizing hardware
     * timing_estimation(tech_in_nm=130, block=None)
     * area_estimation(tech_in_nm=130, block=None)
     * yosys_area_delay(library, abc_cmd=None, block=None)
-    * optimize(update_working_block=True, block=None, skip_sanity_check=False)
+    * optimize(update_working_block=True, block=None)
     * synthesize(update_working_block=True, block=None)
 
 PyRTL Modules:

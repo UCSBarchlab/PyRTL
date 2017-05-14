@@ -55,6 +55,18 @@ def wirevector_list(names, bitwidth=1, wvtype=WireVector):
     return wirelist
 
 
+def mult_signed(a, b):
+    """ Return a*b where a and b are treated as signed values. """
+    a, b = as_wires(a), as_wires(b)
+    final_len = len(a) + len(b)
+    # sign extend both inputs to the final target length
+    a, b = a.sign_extended(final_len), b.sign_extended(final_len)
+    # the result is the multiplication of both, but truncated
+    # TODO: this may make estimates based on the multiplication overly
+    # pessimistic as half of the multiply result is thrown right away!
+    return (a * b)[0:final_len]
+
+
 def as_wires(val, bitwidth=None, truncating=True, block=None):
     """ Return wires from val which may be wires, integers, strings, or bools.
 
@@ -96,15 +108,27 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
         return val
 
 
-def match_bitwidth(*args):
-    # TODO: allow for custom bit extension functions
-    """ Matches the bitwidth of all of the input arguments
+def match_bitwidth(*args, **opt):
+    """ Matches the bitwidth of all of the input arguments with zero or sign extend
 
     :param args: WireVectors of which to match bitwidths
+    :param opt: Optional keyword argument 'signed=True' (defaults to False)
     :return: tuple of args in order with extended bits
     """
+    # TODO: when we drop 2.7 support, this code should be cleaned up with explicit
+    # kwarg support for "signed" rather than the less than helpful "**opt"
+    if len(opt) == 0:
+        signed = False
+    else:
+        if len(opt) > 1 or 'signed' not in opt:
+            raise PyrtlError('error, only supported kwarg to match_bitwidth is "signed"')
+        signed = bool(opt['signed'])
+
     max_len = max(len(wv) for wv in args)
-    return (wv.zero_extended(max_len) for wv in args)
+    if signed:
+        return (wv.sign_extended(max_len) for wv in args)
+    else:
+        return (wv.zero_extended(max_len) for wv in args)
 
 
 probeIndexer = _NameIndexer('Probe-')
