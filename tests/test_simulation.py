@@ -292,6 +292,15 @@ class SimInputValidationBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             sim.step({i: 5})
 
+    def test_no_named_wires_erro(self):
+        a = pyrtl.Const(-1, bitwidth=8)
+        b = pyrtl.Input(8)
+        c = pyrtl.Output()
+        c <<= a + b
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            sim_trace = pyrtl.SimulationTrace()
+
 
 class TraceWithAdderBase(unittest.TestCase):
     def setUp(self):
@@ -641,6 +650,7 @@ class RomBlockSimBase(unittest.TestCase):
     def test_rom_val_map(self):
         def rom_data_function(add):
             return int((add + 5) / 2)
+        dummy_in = pyrtl.Input(1, "dummy")
         self.bitwidth = 4
         self.addrwidth = 4
         self.rom1 = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
@@ -706,10 +716,8 @@ class TraceErrorBase(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_empty_trace(self):
-        self.sim_trace = pyrtl.SimulationTrace()
-        sim = self.sim(tracer=self.sim_trace)
         with self.assertRaises(pyrtl.PyrtlError):
-            self.sim_trace.print_trace()
+            self.sim_trace = pyrtl.SimulationTrace()
 
     def test_invalid_base(self):
         self.in1 = pyrtl.Input(8, "in1")
