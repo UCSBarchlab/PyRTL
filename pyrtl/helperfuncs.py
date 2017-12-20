@@ -131,6 +131,31 @@ def match_bitwidth(*args, **opt):
         return (wv.zero_extended(max_len) for wv in args)
 
 
+def signed_lessthan(a, b):
+    ''' Return a single bit result of signed less than comparison. '''
+    a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
+    r = a - b
+    return r[-1] ^ (~a[-1])
+
+
+def signed_lessthaneq(a, b):
+    a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
+    r = a - b
+    return (r[-1] ^ (~a[-1])) | (a == b)
+
+
+def signed_greaterthan(a, b):
+    a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
+    r = b - a
+    return r[-1] ^ (~b[-1])
+
+
+def signed_greaterthaneq(a, b):
+    a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
+    r = b - a
+    return (r[-1] ^ (~b[-1])) | (a == b)
+
+
 probeIndexer = _NameIndexer('Probe-')
 
 

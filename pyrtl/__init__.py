@@ -26,6 +26,10 @@ from .helperfuncs import register_list
 from .helperfuncs import wirevector_list
 from .helperfuncs import as_wires
 from .helperfuncs import match_bitwidth
+from .helperfuncs import signed_lessthan
+from .helperfuncs import signed_lessthaneq
+from .helperfuncs import signed_greaterthan
+from .helperfuncs import signed_greaterthaneq
 from .helperfuncs import probe
 from .helperfuncs import rtl_assert
 from .helperfuncs import check_rtl_assertions
