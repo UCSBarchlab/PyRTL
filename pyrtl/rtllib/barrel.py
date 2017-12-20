@@ -3,11 +3,11 @@ import pyrtl
 import math
 
 
-def barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0):
+def barrel_shifter(bits_to_shift, bit_in, direction, shift_dist, wrap_around=0):
     """
     Create a barrel shifter that operates on data based on the wire width
 
-    :param shift_in: the input wire
+    :param bits_to_shift: the input wire
     :param bit_in: the 1-bit wire giving the value to shift in
     :param direction: a one bit WireVector representing shift direction
         (0 = shift down, 1 = shift up)
@@ -17,12 +17,15 @@ def barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0):
     """
     # Implement with logN stages pyrtl.muxing between shifted and un-shifted values
 
-    val = shift_in
+    val = bits_to_shift
     append_val = bit_in
-    log_length = int(math.log(len(shift_in)-1, 2))  # note the one offset
+    log_length = int(math.log(len(bits_to_shift)-1, 2))  # note the one offset
+
+    if wrap_around != 0:
+        raise NotImplementedError
 
     if len(shift_dist) > log_length:
-        print('Warning: for barrel shifter, the shift distance wirevector '
+        raise pyrtl.PyrtlError('the shift distance wirevector '
               'has bits that are not used in the barrel shifter')
 
     for i in range(min(len(shift_dist), log_length)):

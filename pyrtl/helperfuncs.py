@@ -10,12 +10,13 @@ The set of functions includes
 
 from __future__ import print_function, unicode_literals
 
-# import re
 import six
+import math
 
 from .core import working_block, _NameIndexer
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
+from pyrtl.rtllib import barrel
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -154,6 +155,94 @@ def signed_greaterthaneq(a, b):
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = b - a
     return (r[-1] ^ (~b[-1])) | (a == b)
+
+
+def _check_shift_inputs(a,shamt):
+    # TODO: perhaps this should just be implemented directly rather than throwing error
+    if isinstance(shamt, int):
+        raise PyrtlError('shift_amount is an integer, use slice instead')
+    if isinstance(shamt, Const):
+        raise PyrtlError('shift_amount is a constant, use slice instead')
+    a, shamt = as_wires(a), as_wires(shamt)
+    log_length = int(math.log(len(a)-1, 2))  # note the one offset
+    # TODO: perhaps this should just be implemented directly rather than throwing error
+    if len(shamt) > log_length:
+        raise PyrtlError('the shift_amount wirevector is providing bits '
+            'that would shift the value off the end')
+    return a, shamt
+
+
+def shift_left_arith(bits_to_shift, shift_amount):
+    """ Shift left arithmetic operation.
+    
+    :param bits_to_shift: WireVector to shift left
+    :param shift_amount: WireVector specifying amount to shift
+    :return: WireVector of same length as bits_to_shift
+    
+    This function returns a new WireVector of length equal to the length
+    of the input `bits_to_shift` but where the bits have been shifted
+    to the left.  An arithemetic shift is one that treats the value as
+    as signed number, although for left shift arithmetic and logic shift
+    are identical.
+    """
+    # shift left arithmetic and logical are the same thing
+    return shift_left_logical(bits_to_shift, shift_amount)
+
+
+def shift_right_arith(bits_to_shift, shift_amount):
+    """ Shift right arithmetic operation.
+    
+    :param bits_to_shift: WireVector to shift right
+    :param shift_amount: WireVector specifying amount to shift
+    :return: WireVector of same length as bits_to_shift
+    
+    This function returns a new WireVector of length equal to the length
+    of the input `bits_to_shift` but where the bits have been shifted
+    to the right.  An arithemetic shift is one that treats the value as
+    as signed number, meaning the sign bit (the most significant bit of 
+    `bits_to_shift`) is shifted in.
+    """
+    a,shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    bit_in = bits_to_shift[-1]  # shift in sign_bit
+    dir = Const(0)  # shift right
+    return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
+
+
+def shift_left_logical(bits_to_shift, shift_amount):
+    """ Shift left logical operation.
+    
+    :param bits_to_shift: WireVector to shift left
+    :param shift_amount: WireVector specifying amount to shift
+    :return: WireVector of same length as bits_to_shift
+    
+    This function returns a new WireVector of length equal to the length
+    of the input `bits_to_shift` but where the bits have been shifted
+    to the left.  An logical shift is one that treats the value as
+    as unsigned number, meaning the zeros are shifted in.
+    """
+    a,shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    bit_in = Const(0)  # shift in a 0
+    dir = Const(1)  # shift left
+    return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
+
+
+def shift_right_logical(bits_to_shift, shift_amount):
+    """ Shift right logical operation.
+    
+    :param bits_to_shift: WireVector to shift left
+    :param shift_amount: WireVector specifying amount to shift
+    :return: WireVector of same length as bits_to_shift
+    
+    This function returns a new WireVector of length equal to the length
+    of the input `bits_to_shift` but where the bits have been shifted
+    to the right.  An logical shift is one that treats the value as
+    as unsigned number, meaning the zeros are shifted in regardless of
+    the "sign bit".
+    """
+    a,shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    bit_in = Const(0)  # shift in a 0
+    dir = Const(0)  # shift right
+    return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
 
 
 probeIndexer = _NameIndexer('Probe-')
