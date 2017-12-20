@@ -132,26 +132,29 @@ def match_bitwidth(*args, **opt):
         return (wv.zero_extended(max_len) for wv in args)
 
 
-def signed_lessthan(a, b):
-    ''' Return a single bit result of signed less than comparison. '''
+def signed_lt(a, b):
+    """ Return a single bit result of signed less than comparison. """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = a - b
     return r[-1] ^ (~a[-1])
 
 
-def signed_lessthaneq(a, b):
+def signed_le(a, b):
+    """ Return a single bit result of signed less than or equal comparison. """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = a - b
     return (r[-1] ^ (~a[-1])) | (a == b)
 
 
-def signed_greaterthan(a, b):
+def signed_gt(a, b):
+    """ Return a single bit result of signed greater than comparison. """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = b - a
     return r[-1] ^ (~b[-1])
 
 
-def signed_greaterthaneq(a, b):
+def signed_ge(a, b):
+    """ Return a single bit result of signed greater than or equal comparison. """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = b - a
     return (r[-1] ^ (~b[-1])) | (a == b)
@@ -172,7 +175,7 @@ def _check_shift_inputs(a,shamt):
     return a, shamt
 
 
-def shift_left_arith(bits_to_shift, shift_amount):
+def shift_left_arithmetic(bits_to_shift, shift_amount):
     """ Shift left arithmetic operation.
     
     :param bits_to_shift: WireVector to shift left
@@ -189,7 +192,7 @@ def shift_left_arith(bits_to_shift, shift_amount):
     return shift_left_logical(bits_to_shift, shift_amount)
 
 
-def shift_right_arith(bits_to_shift, shift_amount):
+def shift_right_arithmetic(bits_to_shift, shift_amount):
     """ Shift right arithmetic operation.
     
     :param bits_to_shift: WireVector to shift right

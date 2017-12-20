@@ -272,6 +272,27 @@ class TestRtlProbe(unittest.TestCase):
         pyrtl.set_debug_mode(False)
 
 
+class TestShiftSimulation(unittest.TestCase):
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_sll(self, input_width=5, shift_width=2):
+        test_amt = 40
+        inp, inp_vals = utils.an_input_and_vals(input_width, test_vals=test_amt, name='inp')
+        shf, shf_vals = utils.an_input_and_vals(shift_width, test_vals=test_amt, name='shf')
+
+        out = pyrtl.Output(input_width, "out")
+        shf_out = pyrtl.shift_left_logical(inp,shf)
+        self.assertEqual(len(out), len(shf_out))  # output should have width of input
+        out <<= shf_out
+
+        true_result = [0 for i in zip(inp_vals, shf_vals)]
+        shift_result = utils.sim_and_ret_out(out, [inp,shf], [inp_vals,shf_vals])
+        self.assertEqual(shift_result, true_result)
+
+
+
 class TestBasicMult(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

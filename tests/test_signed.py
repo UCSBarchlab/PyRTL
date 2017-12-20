@@ -44,21 +44,21 @@ class TestComparisonBasicOperations(unittest.TestCase):
         self.check_trace('o     0  0  0  0  0  1  1  1  \n')
 
     def test_basic_signed_lt(self):
-        self.o <<= pyrtl.signed_lessthan(self.r, self.c)
+        self.o <<= pyrtl.signed_lt(self.r, self.c)
         #                       0  1  2  3 -4 -3 -2 -1
         self.check_trace('o     0  0  0  0  1  0  0  0  \n')
 
     def test_basic_signed_lte(self):
-        self.o <<= pyrtl.signed_lessthaneq( self.r, self.c)
+        self.o <<= pyrtl.signed_le( self.r, self.c)
         #                       0  1  2  3 -4 -3 -2 -1
         self.check_trace('o     0  0  0  0  1  1  0  0  \n')
 
     def test_basic_signed_gt(self):
-        self.o <<= pyrtl.signed_greaterthan(self.r, self.c)
+        self.o <<= pyrtl.signed_gt(self.r, self.c)
         #                       0  1  2  3 -4 -3 -2 -1
         self.check_trace('o     0  0  0  0  0  0  1  1  \n')
 
     def test_basic_signed_gte(self):
-        self.o <<= pyrtl.signed_greaterthaneq(self.r, self.c)
+        self.o <<= pyrtl.signed_ge(self.r, self.c)
         #                       0  1  2  3 -4 -3 -2 -1
         self.check_trace('o     0  0  0  0  0  1  1  1  \n')
