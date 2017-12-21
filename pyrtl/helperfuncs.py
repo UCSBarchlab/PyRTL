@@ -186,7 +186,7 @@ def shift_left_arithmetic(bits_to_shift, shift_amount):
     of the input `bits_to_shift` but where the bits have been shifted
     to the left.  An arithemetic shift is one that treats the value as
     as signed number, although for left shift arithmetic and logic shift
-    are identical.
+    are identical.  Note that `shift_amount` is treated as unsigned.
     """
     # shift left arithmetic and logical are the same thing
     return shift_left_logical(bits_to_shift, shift_amount)
@@ -203,7 +203,8 @@ def shift_right_arithmetic(bits_to_shift, shift_amount):
     of the input `bits_to_shift` but where the bits have been shifted
     to the right.  An arithemetic shift is one that treats the value as
     as signed number, meaning the sign bit (the most significant bit of 
-    `bits_to_shift`) is shifted in.
+    `bits_to_shift`) is shifted in. Note that `shift_amount` is treated as 
+    unsigned.
     """
     a,shamt = _check_shift_inputs(bits_to_shift, shift_amount)
     bit_in = bits_to_shift[-1]  # shift in sign_bit
@@ -221,7 +222,8 @@ def shift_left_logical(bits_to_shift, shift_amount):
     This function returns a new WireVector of length equal to the length
     of the input `bits_to_shift` but where the bits have been shifted
     to the left.  An logical shift is one that treats the value as
-    as unsigned number, meaning the zeros are shifted in.
+    as unsigned number, meaning the zeros are shifted in.  Note that
+    `shift_amount` is treated as unsigned.
     """
     a,shamt = _check_shift_inputs(bits_to_shift, shift_amount)
     bit_in = Const(0)  # shift in a 0
@@ -240,7 +242,7 @@ def shift_right_logical(bits_to_shift, shift_amount):
     of the input `bits_to_shift` but where the bits have been shifted
     to the right.  An logical shift is one that treats the value as
     as unsigned number, meaning the zeros are shifted in regardless of
-    the "sign bit".
+    the "sign bit".  Note that `shift_amount` is treated as unsigned.
     """
     a,shamt = _check_shift_inputs(bits_to_shift, shift_amount)
     bit_in = Const(0)  # shift in a 0

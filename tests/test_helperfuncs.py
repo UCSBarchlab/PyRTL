@@ -275,22 +275,51 @@ class TestRtlProbe(unittest.TestCase):
 class TestShiftSimulation(unittest.TestCase):
 
     def setUp(self):
+        random.seed(8492049)
         pyrtl.reset_working_block()
 
-    def test_sll(self, input_width=5, shift_width=2):
-        test_amt = 40
+    def shift_checker(self, shift_func, ref_func, input_width, shift_width, test_amt=20):
         inp, inp_vals = utils.an_input_and_vals(input_width, test_vals=test_amt, name='inp')
         shf, shf_vals = utils.an_input_and_vals(shift_width, test_vals=test_amt, name='shf')
-
         out = pyrtl.Output(input_width, "out")
-        shf_out = pyrtl.shift_left_logical(inp,shf)
+        shf_out = shift_func(inp,shf)
         self.assertEqual(len(out), len(shf_out))  # output should have width of input
         out <<= shf_out
-
-        true_result = [0 for i in zip(inp_vals, shf_vals)]
+        true_result = [ref_func(i,s) for i,s in zip(inp_vals, shf_vals)]
         shift_result = utils.sim_and_ret_out(out, [inp,shf], [inp_vals,shf_vals])
         self.assertEqual(shift_result, true_result)
 
+    def sll_checker(self, input_width, shift_width):
+        mask = (1<<input_width)-1
+        ref = lambda i,s: (i<<s) & mask
+        self.shift_checker(pyrtl.shift_left_logical, ref, input_width, shift_width)
+
+    def sla_checker(self, input_width, shift_width):
+        mask = (1<<input_width)-1
+        ref = lambda i,s: (i<<s) & mask
+        self.shift_checker(pyrtl.shift_left_arithmetic, ref, input_width, shift_width)
+
+    def srl_checker(self, input_width, shift_width):
+        mask = (1<<input_width)-1
+        ref = lambda i,s: (i>>s) & mask
+        self.shift_checker(pyrtl.shift_right_logical, ref, input_width, shift_width)
+
+    def sra_checker(self, input_width, shift_width):
+        mask = (1<<input_width)-1
+        ref = lambda i,s: ((~mask|i)>>s) & mask
+        self.shift_checker(pyrtl.shift_right_arithmetic, ref, input_width, shift_width)
+
+    def test_sll(self):
+        self.sll_checker(5,2)
+
+    def test_sla(self):
+        self.sla_checker(5,2)
+
+    def test_srl(self):
+        self.srl_checker(5,2)
+
+    def test_sra(self):
+        self.sra_checker(5,2)
 
 
 class TestBasicMult(unittest.TestCase):
