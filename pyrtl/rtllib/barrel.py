@@ -26,7 +26,7 @@ def barrel_shifter(bits_to_shift, bit_in, direction, shift_dist, wrap_around=0):
 
     if len(shift_dist) > log_length:
         raise pyrtl.PyrtlError('the shift distance wirevector '
-              'has bits that are not used in the barrel shifter')
+                               'has bits that are not used in the barrel shifter')
 
     for i in range(min(len(shift_dist), log_length)):
         shift_amt = pow(2, i)  # stages shift 1,2,4,8,...

@@ -160,7 +160,7 @@ def signed_ge(a, b):
     return (r[-1] ^ (~b[-1])) | (a == b)
 
 
-def _check_shift_inputs(a,shamt):
+def _check_shift_inputs(a, shamt):
     # TODO: perhaps this should just be implemented directly rather than throwing error
     if isinstance(shamt, int):
         raise PyrtlError('shift_amount is an integer, use slice instead')
@@ -171,17 +171,17 @@ def _check_shift_inputs(a,shamt):
     # TODO: perhaps this should just be implemented directly rather than throwing error
     if len(shamt) > log_length:
         raise PyrtlError('the shift_amount wirevector is providing bits '
-            'that would shift the value off the end')
+                         'that would shift the value off the end')
     return a, shamt
 
 
 def shift_left_arithmetic(bits_to_shift, shift_amount):
     """ Shift left arithmetic operation.
-    
+
     :param bits_to_shift: WireVector to shift left
     :param shift_amount: WireVector specifying amount to shift
     :return: WireVector of same length as bits_to_shift
-    
+
     This function returns a new WireVector of length equal to the length
     of the input `bits_to_shift` but where the bits have been shifted
     to the left.  An arithemetic shift is one that treats the value as
@@ -194,19 +194,19 @@ def shift_left_arithmetic(bits_to_shift, shift_amount):
 
 def shift_right_arithmetic(bits_to_shift, shift_amount):
     """ Shift right arithmetic operation.
-    
+
     :param bits_to_shift: WireVector to shift right
     :param shift_amount: WireVector specifying amount to shift
     :return: WireVector of same length as bits_to_shift
-    
+
     This function returns a new WireVector of length equal to the length
     of the input `bits_to_shift` but where the bits have been shifted
     to the right.  An arithemetic shift is one that treats the value as
-    as signed number, meaning the sign bit (the most significant bit of 
-    `bits_to_shift`) is shifted in. Note that `shift_amount` is treated as 
+    as signed number, meaning the sign bit (the most significant bit of
+    `bits_to_shift`) is shifted in. Note that `shift_amount` is treated as
     unsigned.
     """
-    a,shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
     bit_in = bits_to_shift[-1]  # shift in sign_bit
     dir = Const(0)  # shift right
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
@@ -214,18 +214,18 @@ def shift_right_arithmetic(bits_to_shift, shift_amount):
 
 def shift_left_logical(bits_to_shift, shift_amount):
     """ Shift left logical operation.
-    
+
     :param bits_to_shift: WireVector to shift left
     :param shift_amount: WireVector specifying amount to shift
     :return: WireVector of same length as bits_to_shift
-    
+
     This function returns a new WireVector of length equal to the length
     of the input `bits_to_shift` but where the bits have been shifted
     to the left.  An logical shift is one that treats the value as
     as unsigned number, meaning the zeros are shifted in.  Note that
     `shift_amount` is treated as unsigned.
     """
-    a,shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
     bit_in = Const(0)  # shift in a 0
     dir = Const(1)  # shift left
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
@@ -233,18 +233,18 @@ def shift_left_logical(bits_to_shift, shift_amount):
 
 def shift_right_logical(bits_to_shift, shift_amount):
     """ Shift right logical operation.
-    
+
     :param bits_to_shift: WireVector to shift left
     :param shift_amount: WireVector specifying amount to shift
     :return: WireVector of same length as bits_to_shift
-    
+
     This function returns a new WireVector of length equal to the length
     of the input `bits_to_shift` but where the bits have been shifted
     to the right.  An logical shift is one that treats the value as
     as unsigned number, meaning the zeros are shifted in regardless of
     the "sign bit".  Note that `shift_amount` is treated as unsigned.
     """
-    a,shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
     bit_in = Const(0)  # shift in a 0
     dir = Const(0)  # shift right
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
