@@ -57,6 +57,11 @@ def wirevector_list(names, bitwidth=1, wvtype=WireVector):
 
 
 def mult_signed(a, b):
+    # mult_signed is now deprecated, use "signed_mult" instead
+    return signed_mult(a, b)
+
+
+def signed_mult(a, b):
     """ Return a*b where a and b are treated as signed values. """
     a, b = as_wires(a), as_wires(b)
     final_len = len(a) + len(b)
