@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name = 'pyrtl',
     version = '0.8.5', #VERSION
-    packages =  ['pyrtl'],
+    packages =  find_packages(),
     description = 'RTL-level Hardware Design and Simulation Toolkit',
     author =  'Timothy Sherwood, John Clow, and UCSBarchlab',
     author_email =  'sherwood@cs.ucsb.edu',
