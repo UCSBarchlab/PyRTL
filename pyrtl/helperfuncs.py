@@ -56,6 +56,46 @@ def wirevector_list(names, bitwidth=1, wvtype=WireVector):
     return wirelist
 
 
+def val_to_signed_integer(value, bitwidth):
+    """ Return value as intrepreted as a signed integer under twos complement.
+
+    :param vale: a python integer holding the value to convert
+    :param bitwidth: the length of the integer in bits to assume for conversion
+
+    Given an unsigned integer (not a wirevector!) covert that to a signed
+    integer.  This is useful for printing and interpreting values which are
+    negative numbers in twos complement."""
+    if isinstance(value, WireVector) or isinstance(bitwidth, WireVector):
+        raise PyrtlError('inputs must not be wirevectors')
+    if bitwidth < 1:
+        raise PyrtlError('bitwidth must be a positive integer')
+
+    neg_mask = 1 << (bitwidth - 1)
+    neg_part = value & neg_mask
+
+    pos_mask = neg_mask - 1
+    pos_part = value & pos_mask
+
+    return pos_part - neg_part
+
+
+def signed_add(a, b):
+    """ Return wirevector for result of signed addition.
+
+    :param a: a wirevector to serve as first input to addition
+    :param b: a wirevector to serve as second input to addition
+
+    Given a length n and length m wirevector the result of the
+    signed addition is length max(n,m)+1.  The inputs are twos
+    complement sign extended to the same length before adding."""
+    a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
+    result_len = len(a) + 1
+    ext_a = a.sign_extended(result_len)
+    ext_b = b.sign_extended(result_len)
+    # add and truncate to the correct length
+    return (ext_a + ext_b)[0:result_len]
+
+
 def mult_signed(a, b):
     # mult_signed is now deprecated, use "signed_mult" instead
     return signed_mult(a, b)

@@ -11,6 +11,20 @@ from pyrtl.rtllib import testingutils as utils
 
 # ---------------------------------------------------------------
 
+class TestPrettyPrinting(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_val_to_signed_integer(self):
+        self.assertEqual(pyrtl.val_to_signed_integer(0b000,3), 0)
+        self.assertEqual(pyrtl.val_to_signed_integer(0b001,3), 1)
+        self.assertEqual(pyrtl.val_to_signed_integer(0b010,3), 2)
+        self.assertEqual(pyrtl.val_to_signed_integer(0b011,3), 3)
+        self.assertEqual(pyrtl.val_to_signed_integer(0b100,3), -4)
+        self.assertEqual(pyrtl.val_to_signed_integer(0b101,3), -3)
+        self.assertEqual(pyrtl.val_to_signed_integer(0b110,3), -2)
+        self.assertEqual(pyrtl.val_to_signed_integer(0b111,3), -1)
+
 
 class TestAnyAll(unittest.TestCase):
     def setUp(self):
