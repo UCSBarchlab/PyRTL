@@ -61,15 +61,19 @@ class CompiledSimulation(object):
     THIS IS AN EXPERIMENTAL SIMULATION CLASS. NO SUPPORT WILL BE GIVEN
     TO PEOPLE WHO CANNOT GET IT TO RUN. EXPECT THE API TO CHANGE IN THE FUTURE
 
-    This module provides significant speed improvements for people who are looking
-    for high performance simulation. It is not built to be a debugging tool, though
-    it may help with debugging. Generally this will do better than fastsim for
-    simulations requiring over 1000 iterations.
+    This module provides significant speed improvements for people who are
+    looking for high performance simulation. It is not built to be a debugging
+    tool, though it may help with debugging. Generally this will do better than
+    fastsim for simulations requiring over 1000 iterations.
 
     In order to use this, you need:
-        - A 64-bit processor (currently only x86-64 supported for multiplication)
+        - A 64-bit processor
         - GCC (tested on version 4.8.4)
         - A 64-bit build of Python
+    If using the multiplication operand, only some architectures are supported:
+        - x86-64 / amd64
+        - arm64 / aarch64 (untested)
+        - mips64 (untested)
     """
 
     def __init__(
@@ -142,22 +146,17 @@ class CompiledSimulation(object):
             code.append(
                 '#define mul128(t0, t1, pl, ph) __asm__('
                 '"mulq %q3":"=a"(pl),"=d"(ph):"%0"(t0),"r"(t1):"cc")')
+        elif machine in ('aarch64', 'aarch64_be', 'arm64'):
+            code.append(
+                '#define mul128(t0, t1, pl, ph) __asm__ ('
+                '"mul %0, %2, %3\n\tumulh %1, %2, %3":"=&r"(*pl),"=r"(*ph):"r"(t0),"r"(t1):"cc")')
+        elif machine in ('mips64',):
+            code.append(
+                '#define mul128(t0, t1, pl, ph) __asm__ ('
+                '"dmultu %2, %3\n\tmflo %0\n\tmfhi %1":"=r"(*pl),"=r"(*ph):"r"(t0),"r"(t1))')
         # variable declarations
         self.varname = {}
         uid = 0
-        for w in self.block.wirevector_set:
-            self.varname[w] = vn = 'w{}_{}'.format(
-                str(uid), ''.join(c for c in w.name if c.isalnum()))
-            if isinstance(w, Const):
-                code.append('static const uint64_t {name}[{limbs}] = {val};'.format(
-                    limbs=limbs(w), name=vn, val=makeini(w, w.val)))
-            elif isinstance(w, Register) and regmap.get(w, self.default_value):
-                code.append('static uint64_t {name}[{limbs}] = {val};'.format(
-                    limbs=limbs(w), name=vn, val=makeini(w, regmap.get(w, self.default_value))))
-            else:
-                code.append('static uint64_t {name}[{limbs}];'.format(
-                    limbs=limbs(w), name=vn))
-            uid += 1
         mems = {net.op_param[1] for net in self.block.logic_subset('m@')}
         for key in memmap:
             if key not in mems:
@@ -193,6 +192,19 @@ class CompiledSimulation(object):
         # single step
         code.append('static void sim_run_step(uint64_t inputs[], uint64_t outputs[]) {')
         code.append('uint64_t tmp, carry, tmphi, tmplo;')
+        for w in self.block.wirevector_set:
+            self.varname[w] = vn = 'w{}_{}'.format(
+                str(uid), ''.join(c for c in w.name if c.isalnum()))
+            if isinstance(w, Const):
+                code.append('static const uint64_t {name}[{limbs}] = {val};'.format(
+                    limbs=limbs(w), name=vn, val=makeini(w, w.val)))
+            elif isinstance(w, Register) and regmap.get(w, self.default_value):
+                code.append('static uint64_t {name}[{limbs}] = {val};'.format(
+                    limbs=limbs(w), name=vn, val=makeini(w, regmap.get(w, self.default_value))))
+            else:
+                code.append('static uint64_t {name}[{limbs}];'.format(
+                    limbs=limbs(w), name=vn))
+            uid += 1
         # register updates
         regnets = list(self.block.logic_subset('r'))
         for uid, net in enumerate(regnets):
