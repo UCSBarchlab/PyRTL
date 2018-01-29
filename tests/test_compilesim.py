@@ -14,7 +14,8 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.o <<= self.r
 
     def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
+        wtt = pyrtl.working_block().wirevector_subset(pyrtl.Output)
+        sim_trace = pyrtl.SimulationTrace(wires_to_track=wtt)
         sim = self.sim(tracer=sim_trace)
         for i in range(8):
             sim.step({})
@@ -292,7 +293,7 @@ class TraceWithAdderBase(unittest.TestCase):
         self.o <<= self.r
 
     def test_adder_simulation(self):
-        sim_trace = pyrtl.SimulationTrace()
+        sim_trace = pyrtl.SimulationTrace(wires_to_track=[self.o])
         on_reset = {}  # signal states to be set when reset is asserted
         # build the actual simulation environment
         sim = self.sim(register_value_map=on_reset, default_value=0, tracer=sim_trace)
@@ -359,7 +360,7 @@ b110 o
 """
 
     def test_vcd_output(self):
-        sim_trace = pyrtl.SimulationTrace()
+        sim_trace = pyrtl.SimulationTrace(wires_to_track=[self.o])
         on_reset = {}  # signal states to be set when reset is asserted
         # build the actual simulation environment
         sim = self.sim(register_value_map=on_reset, default_value=0, tracer=sim_trace)
@@ -528,6 +529,40 @@ class MemBlockBase(unittest.TestCase):
         self.assertEqual(output.getvalue(), 'o1 000000\n'
                                             'o2 000000\n'
                                             'o3 000000\n')
+
+
+class RegisterDefaultsBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.i = pyrtl.Input(bitwidth=3)
+        self.r1 = pyrtl.Register(name='r1', bitwidth=3)
+        self.r2 = pyrtl.Register(name='r2', bitwidth=3)
+        self.o = pyrtl.Output(name='o', bitwidth=3)
+        self.r1.next <<= self.i
+        self.r2.next <<= self.r1
+        self.o <<= self.r2
+
+    def check_trace(self, correct_string, **kwargs):
+        wtt = pyrtl.working_block().wirevector_subset(pyrtl.Output)
+        sim_trace = pyrtl.SimulationTrace(wires_to_track=wtt)
+        sim = self.sim(tracer=sim_trace, **kwargs)
+        for i in range(8):
+            sim.step({self.i: i})
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_default_value(self):
+        self.check_trace('o 55012345\n', default_value=5)
+
+    def test_register_map(self):
+        self.check_trace('o 36012345\n', register_value_map={self.r1: 6, self.r2: 3})
+
+    def test_partial_map(self):
+        self.check_trace('o 06012345\n', register_value_map={self.r1: 6})
+
+    def test_map_and_default(self):
+        self.check_trace('o 56012345\n', default_value=5, register_value_map={self.r1: 6})
 
 
 class RomBlockSimBase(unittest.TestCase):

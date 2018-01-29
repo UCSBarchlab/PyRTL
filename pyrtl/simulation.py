@@ -151,9 +151,6 @@ class Simulation(object):
         sim.step({'a': 1, 'x': 23}) to simulate a cycle with values 1 and 23
         respectively
         """
-        # To avoid weird loops, we need a copy of the old values which
-        # we can then use to make our updates from
-        prior_value = self.value.copy()
 
         # Check that all Input have a corresponding provided_input
         input_set = self.block.wirevector_subset(Input)
@@ -187,15 +184,10 @@ class Simulation(object):
             for i in input_set.difference(supplied_inputs):
                 raise PyrtlError('Input "%s" has no input value specified' % i.name)
 
-        # Do all of the reg operations based off of the priors at clk edge
-        for net in self.reg_update_nets:
-            argval = prior_value[net.args[0]]
-            self.value[net.dests[0]] = self._sanitize(argval, net.dests[0])
-
         for net in self.ordered_nets:
             self._execute(net)
 
-            # Do all of the mem operations based off the new values changed in _execute()
+        # Do all of the mem operations based off the new values changed in _execute()
         for net in self.mem_update_nets:
             self._mem_update(net)
 
@@ -203,6 +195,12 @@ class Simulation(object):
         # print self.value # Helpful Debug Print
         if self.tracer is not None:
             self.tracer.add_step(self.value)
+
+        # Do all of the reg operations based off of the new values, copying to avoid loops
+        prior_value = self.value.copy()
+        for net in self.reg_update_nets:
+            argval = prior_value[net.args[0]]
+            self.value[net.dests[0]] = self._sanitize(argval, net.dests[0])
 
         # finally, if any of the rtl_assert assertions are failing then we should
         # raise the appropriate exceptions
@@ -420,8 +418,7 @@ class FastSimulation(object):
 
         # for tracer compatibility
         self.context = self.outs.copy()
-        self.context.update(self.regs)
-        self.context.update(ins)
+        self.context.update(ins)  # also gets old register values
         if self.tracer is not None:
             self.tracer.add_fast_step(self)
 
