@@ -1,13 +1,13 @@
 from __future__ import print_function, unicode_literals
 
 import ctypes
-import _ctypes
 import subprocess
 import tempfile
 import shutil
 import collections
 from os import path
 import platform
+import _ctypes
 
 from .core import working_block
 from .wire import Input, Output, Const, WireVector, Register
@@ -99,6 +99,7 @@ class CompiledSimulation(object):
         self.default_value = default_value
         self._regmap, self._memmap = register_value_map, memory_value_map
         self._uid_counter = 0
+        self.varname = {}  # mapping from wires and memories to C variables
 
         self._create_dll()
 
@@ -107,7 +108,18 @@ class CompiledSimulation(object):
         return DllMemInspector(self, mem)
 
     def inspect(self, w):
-        raise PyrtlError('CompiledSimulation does not support inspecting WireVectors')
+        """Get the latest value of the wire given, if possible."""
+        if isinstance(w, WireVector):
+            w = w.name
+        try:
+            vals = self.tracer.trace[w]
+        except KeyError:
+            pass
+        else:
+            if not vals:
+                raise PyrtlError('No context available. Please run a simulation step')
+            return vals[-1]
+        raise PyrtlError('CompiledSimulation does not support inspecting internal WireVectors')
 
     def step(self, inputs):
         """Run one step of the simulation.
@@ -194,7 +206,7 @@ class CompiledSimulation(object):
         Create _probe_mapping for wires only traceable via probes.
         """
         self._probe_mapping = {}
-        wvs = [wv for wv in self.tracer.wires_to_track if self._traceable(wv)]
+        wvs = {wv for wv in self.tracer.wires_to_track if self._traceable(wv)}
         self.tracer.wires_to_track = wvs
         self.tracer._wires = {wv.name: wv for wv in wvs}
         self.tracer.trace.__init__(wvs)
@@ -207,8 +219,8 @@ class CompiledSimulation(object):
         subprocess.check_call([
             'gcc', '-O0', '-march=native', '-std=c99', '-m64',
             '-shared', '-fPIC', '-mcmodel=medium',
-            path.join(self._dir, 'pyrtlsim.c'), '-o', path.join(self._dir, 'pyrtlsim.so')],
-            shell=(platform.system() == 'Windows'))
+            path.join(self._dir, 'pyrtlsim.c'), '-o', path.join(self._dir, 'pyrtlsim.so'),
+            ], shell=(platform.system() == 'Windows'))
         self._dll = ctypes.CDLL(path.join(self._dir, 'pyrtlsim.so'))
         self._crun = self._dll.sim_run_all
         self._crun.restype = None  # argtypes set on use
@@ -478,8 +490,6 @@ class CompiledSimulation(object):
         }
         if machine in mulinstr:
             write('#define mul128(t0, t1, pl, ph) __asm__({})'.format(mulinstr[machine]))
-
-        self.varname = {}  # mapping from wires and memories to C variables
 
         # declare memories
         mems = {net.op_param[1] for net in self.block.logic_subset('m@')}
