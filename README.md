@@ -6,7 +6,7 @@ PyRTL
 [![Code Coverage](https://codecov.io/github/UCSBarchlab/PyRTL/coverage.svg?branch=development)](https://codecov.io/github/UCSBarchlab/PyRTL?branch=development)
 [![Documentation Status](https://readthedocs.org/projects/pyrtl/badge/?version=latest)](http://pyrtl.readthedocs.org/en/latest/?badge=latest)
 
-PyRTL provides a collection of classes for pythonic [register-transfer level] (https://en.wikipedia.org/wiki/Register-transfer_level) design, simulation, tracing, and testing 
+PyRTL provides a collection of classes for pythonic [register-transfer level](https://en.wikipedia.org/wiki/Register-transfer_level) design, simulation, tracing, and testing 
 suitable for teaching and research. Simplicity, usability, clarity, and extensibility rather than
 performance or optimization is the overarching goal.  Features include:
 
@@ -88,5 +88,8 @@ and also what the users needs to do to use the function (this part is optional)
 # it (unless the function was mainly intended to be extended). 
 ```
 
+### Using PyRTL 
+We love to hear from users about their projects, and if there are issues we will try our best to push fixes quickly.  You can read more about how we have been using it in our research at UCSB both in simulation and on FPGAs in [our PyRTL paper at FPL](http://www.cs.ucsb.edu/~sherwood/pubs/FPL-17-pyrtl.pdf).
+
 ### Related Projects
-PyRTL builds on the ideas of several other related projects.  You can read more about those relationships on our [PyRTL project web page](http://ucsbarchlab.github.io/PyRTL/).
+It is always important to point out that PyRTL builds on the ideas of several other related projects as we all share the common goal of  trying to make hardware design a better experience!  You can read more about those relationships on our [PyRTL project web page](http://ucsbarchlab.github.io/PyRTL/).
