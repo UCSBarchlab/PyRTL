@@ -17,6 +17,7 @@ Quick links
 * Read through `Example PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/master/examples>`_
 * See `File a Bug or Issue <https://github.com/UCSBarchlab/PyRTL/issues>`_
 * Contribute to project on `GitHub <https://github.com/UCSBarchlab/PyRTL>`_
+* Academic paper describing `the PyRTL approach and experience on an FPGA <http://www.cs.ucsb.edu/~sherwood/pubs/FPL-17-pyrtl.pdf>`_
 
 Installation
 ------------
