@@ -41,12 +41,13 @@ class Simulation(object):
     }
 
     def __init__(
-            self, tracer=None, register_value_map=None, memory_value_map=None,
+            self, tracer=True, register_value_map=None, memory_value_map=None,
             default_value=0, block=None):
         """ Creates a new circuit simulator
 
         :param tracer: an instance of SimulationTrace used to store execution results.
-            defaults to a SimulationTrace with no params passed to it
+            Defaults to a new SimulationTrace with no params passed to it.  If None is
+            passed, no tracer is instantiated (which is good for long running simulations)
         :param register_value_map: Defines the initial value for
           the roms specified. Format: {Register: value}.
         :param memory_value_map: Defines initial values for many
@@ -74,7 +75,7 @@ class Simulation(object):
         self.memvalue = {}  # map from {memid :{address: value}}
         self.block = block
         self.default_value = default_value
-        if tracer is None:
+        if tracer is True:
             tracer = SimulationTrace()
         self.tracer = tracer
         self._initialize(register_value_map, memory_value_map)
@@ -319,7 +320,7 @@ class FastSimulation(object):
 
     def __init__(
             self, register_value_map=None, memory_value_map=None,
-            default_value=0, tracer=None, block=None, code_file=None):
+            default_value=0, tracer=True, block=None, code_file=None):
         """
         Instantiates a Fast Simulation instance.
 
@@ -338,7 +339,7 @@ class FastSimulation(object):
 
         self.block = block
         self.default_value = default_value
-        if tracer is None:
+        if tracer is True:
             tracer = SimulationTrace()
         self.tracer = tracer
         self.sim_func = None
