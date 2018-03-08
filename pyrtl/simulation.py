@@ -72,6 +72,7 @@ class Simulation(object):
         block.sanity_check()  # check that this is a good hw block
 
         self.value = {}  # map from signal->value
+        self.regvalue = {}  # map from register->value on next tick
         self.memvalue = {}  # map from {memid :{address: value}}
         self.block = block
         self.default_value = default_value
@@ -97,10 +98,7 @@ class Simulation(object):
         reg_set = self.block.wirevector_subset(Register)
         if register_value_map is not None:
             for r in reg_set:
-                if r in register_value_map:
-                    self.value[r] = register_value_map[r]
-                else:
-                    self.value[r] = default_value
+                self.value[r] = self.regvalue[r] = register_value_map.get(r, default_value)
 
         # set constants to their set values
         for w in self.block.wirevector_subset(Const):
@@ -184,6 +182,8 @@ class Simulation(object):
             for i in input_set.difference(supplied_inputs):
                 raise PyrtlError('Input "%s" has no input value specified' % i.name)
 
+        self.value.update(self.regvalue)  # apply register updates from previous step
+
         for net in self.ordered_nets:
             self._execute(net)
 
@@ -196,11 +196,10 @@ class Simulation(object):
         if self.tracer is not None:
             self.tracer.add_step(self.value)
 
-        # Do all of the reg operations based off of the new values, copying to avoid loops
-        prior_value = self.value.copy()
+        # Do all of the reg updates based off of the new values
         for net in self.reg_update_nets:
-            argval = prior_value[net.args[0]]
-            self.value[net.dests[0]] = self._sanitize(argval, net.dests[0])
+            argval = self.value[net.args[0]]
+            self.regvalue[net.dests[0]] = self._sanitize(argval, net.dests[0])
 
         # finally, if any of the rtl_assert assertions are failing then we should
         # raise the appropriate exceptions

@@ -85,13 +85,13 @@ class CompiledSimulation(object):
     """
 
     def __init__(
-            self, tracer=None, register_value_map={}, memory_value_map={},
+            self, tracer=True, register_value_map={}, memory_value_map={},
             default_value=0, block=None):
         self._dll = self._dir = None
         self.block = working_block(block)
         self.block.sanity_check()
 
-        if tracer is None:
+        if tracer is True:
             tracer = SimulationTrace()
         self.tracer = tracer
         self._remove_untraceable()

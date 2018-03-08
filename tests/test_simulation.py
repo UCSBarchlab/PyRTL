@@ -324,6 +324,7 @@ class TraceWithAdderBase(unittest.TestCase):
         sim_trace.print_trace(output, compact=True)
         sim_trace.render_trace()  # want to make sure the code at least runs
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
+        self.assertEqual(sim.inspect(self.r), 6)
 
 
 class SimulationVCDWithAdderBase(unittest.TestCase):
