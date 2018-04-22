@@ -5,23 +5,17 @@ import pyrtl
 from pyrtl.corecircuits import _basic_add
 
 
-def fastsim_only(sim):
-    # Mostly useful for allowing people to search for
-    # where there is not feature parity
-
-    # other ways to figure out feature differences are by searching for Simulation
-    # through this file
-    return sim is pyrtl.FastSimulation
-
-
 class TraceWithBasicOpsBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         self.bitwidth = 3
         self.r = pyrtl.Register(bitwidth=self.bitwidth, name='r')
+        self.o = pyrtl.Output(bitwidth=self.bitwidth, name='o')
+        self.o <<= self.r
 
     def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
+        wtt = pyrtl.working_block().wirevector_subset(pyrtl.Output)
+        sim_trace = pyrtl.SimulationTrace(wires_to_track=wtt)
         sim = self.sim(tracer=sim_trace)
         for i in range(8):
             sim.step({})
@@ -31,33 +25,33 @@ class TraceWithBasicOpsBase(unittest.TestCase):
 
     def test_not_simulation(self):
         self.r.next <<= ~ self.r
-        self.check_trace('r 07070707\n')
+        self.check_trace('o 07070707\n')
 
     def test_and_simulation(self):
         self.r.next <<= (~ self.r) & pyrtl.Const(6, bitwidth=self.bitwidth)
-        self.check_trace('r 06060606\n')
+        self.check_trace('o 06060606\n')
 
     def test_nand_simulation(self):
         self.r.next <<= self.r.nand(pyrtl.Const(6, bitwidth=self.bitwidth))
-        self.check_trace('r 07171717\n')
+        self.check_trace('o 07171717\n')
 
     def test_or_simulation(self):
         result = self.r | pyrtl.Const(4, bitwidth=self.bitwidth)
         self.r.next <<= result
         self.assertEqual(len(result), self.bitwidth)
-        self.check_trace('r 04444444\n')
+        self.check_trace('o 04444444\n')
 
     def test_xor_simulation(self):
         self.r.next <<= self.r ^ pyrtl.Const(4, bitwidth=self.bitwidth)
-        self.check_trace('r 04040404\n')
+        self.check_trace('o 04040404\n')
 
     def test_plus_simulation(self):
         self.r.next <<= self.r + pyrtl.Const(2, bitwidth=self.bitwidth)
-        self.check_trace('r 02460246\n')
+        self.check_trace('o 02460246\n')
 
     def test_minus_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1, bitwidth=self.bitwidth)
-        self.check_trace('r 07654321\n')
+        self.check_trace('o 07654321\n')
 
     def test_minus_sim_overflow(self):
         pyrtl.reset_working_block()
@@ -68,64 +62,65 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         tracer = pyrtl.SimulationTrace()
         sim = self.sim(tracer=tracer)
         sim.step({i: 1})
-        self.assertEqual(sim.inspect(o), 0)
         sim.step({i: 0})
-        self.assertEqual(sim.inspect(o), 0x1ff)
+        self.assertEqual(tracer.trace['o'], [0, 0x1ff])
 
     def test_multiply_simulation(self):
         self.r.next <<= self.r * pyrtl.Const(2, bitwidth=self.bitwidth) + \
             pyrtl.Const(1, bitwidth=self.bitwidth)
-        self.check_trace('r 01377777\n')
+        self.check_trace('o 01377777\n')
 
     def test_const_nobitwidth_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1)
-        self.check_trace('r 07654321\n')
+        self.check_trace('o 07654321\n')
 
     def test_const_rawint_simulation(self):
         self.r.next <<= self.r - 1
-        self.check_trace('r 07654321\n')
+        self.check_trace('o 07654321\n')
 
     def test_const_verilogsmall_simulation(self):
         self.r.next <<= self.r - "1'b1"
-        self.check_trace('r 07654321\n')
+        self.check_trace('o 07654321\n')
 
     def test_const_verilogbig_simulation(self):
         self.r.next <<= self.r - "3'b1"
-        self.check_trace('r 07654321\n')
+        self.check_trace('o 07654321\n')
 
     def test_const_veriloghuge_simulation(self):
         self.r.next <<= self.r - "64'b1"
-        self.check_trace('r 07654321\n')
+        self.check_trace('o 07654321\n')
 
     def test_const_veriloghuge2_simulation(self):
         self.r.next <<= self.r + "64'b1"
-        self.check_trace('r 01234567\n')
+        self.check_trace('o 01234567\n')
 
     def test_const_associativity_string_simulation(self):
         self.r.next <<= "64'b1" + self.r
-        self.check_trace('r 01234567\n')
+        self.check_trace('o 01234567\n')
 
     def test_const_associativity_int_simulation(self):
         self.r.next <<= 1 + self.r
-        self.check_trace('r 01234567\n')
+        self.check_trace('o 01234567\n')
 
     def test_bitslice_and_concat_simulation(self):
         left = self.r[0:-1]
         right = pyrtl.Const(1, bitwidth=1)
         self.r.next <<= pyrtl.concat(left, right)
-        self.check_trace('r 01377777\n')
+        self.check_trace('o 01377777\n')
 
     def test_bitslice2_and_concat_simulation(self):
         left = self.r[:-1]
         right = pyrtl.Const(1, bitwidth=1)
         self.r.next <<= pyrtl.concat(left, right)
-        self.check_trace('r 01377777\n')
+        self.check_trace('o 01377777\n')
 
     def test_reg_to_reg_simulation(self):
         self.r2 = pyrtl.Register(bitwidth=self.bitwidth, name='r2')
         self.r.next <<= self.r2
         self.r2.next <<= self.r + pyrtl.Const(2, bitwidth=self.bitwidth)
-        self.check_trace(' r 00224466\nr2 02244660\n')
+        self.o2 = pyrtl.Output(bitwidth=self.bitwidth, name='o2')
+        self.o2 <<= self.r2
+        self.check_trace(' o 00224466\no2 02244660\n')
 
 
 class PrintTraceBase(unittest.TestCase):
@@ -236,18 +231,12 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         sim = self.sim(tracer=trace)
 
         sim.step({i: 28})
-        self.assertEqual(sim.inspect(o), 28)
-        self.assertEqual(sim.inspect(o.name), 28)
         self.assertEqual(trace.trace[o.name], [28])
-
         sim.step({i: 233})
-        self.assertEqual(sim.inspect(o), 233)
-        self.assertEqual(sim.inspect(o2), 28)
-        self.assertEqual(sim.inspect(o2.name), 28)
         self.assertEqual(trace.trace[o2.name], [0, 28])
 
     def test_fastsim_wire_names(self):
-        """ Testing both Simulation classes' ability to use wire names instead of wires"""
+        """ Testing ability to use wire names instead of wires in input"""
         in1 = pyrtl.Input(8, "in1")
         in2 = pyrtl.Input(8, "in2")
         in3 = pyrtl.Input(8, "in3")
@@ -292,15 +281,6 @@ class SimInputValidationBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             sim.step({i: 5})
 
-    def test_no_named_wires_erro(self):
-        a = pyrtl.Const(-1, bitwidth=8)
-        b = pyrtl.Input(8)
-        c = pyrtl.Output()
-        c <<= a + b
-
-        with self.assertRaises(pyrtl.PyrtlError):
-            sim_trace = pyrtl.SimulationTrace()
-
 
 class TraceWithAdderBase(unittest.TestCase):
     def setUp(self):
@@ -309,9 +289,11 @@ class TraceWithAdderBase(unittest.TestCase):
         self.r = pyrtl.Register(bitwidth=bitwidth, name='r')
         self.result = _basic_add(self.r, pyrtl.Const(1).zero_extended(bitwidth))
         self.r.next <<= self.result
+        self.o = pyrtl.Output(bitwidth=bitwidth, name='o')
+        self.o <<= self.r
 
     def test_adder_simulation(self):
-        sim_trace = pyrtl.SimulationTrace()
+        sim_trace = pyrtl.SimulationTrace(wires_to_track=[self.o])
         on_reset = {}  # signal states to be set when reset is asserted
         # build the actual simulation environment
         sim = self.sim(register_value_map=on_reset, default_value=0, tracer=sim_trace)
@@ -323,8 +305,7 @@ class TraceWithAdderBase(unittest.TestCase):
         output = six.StringIO()
         sim_trace.print_trace(output, compact=True)
         sim_trace.render_trace()  # want to make sure the code at least runs
-        self.assertEqual(output.getvalue(), 'r 012345670123456\n')
-        self.assertEqual(sim.inspect(self.r), 6)
+        self.assertEqual(output.getvalue(), 'o 012345670123456\n')
 
 
 class SimulationVCDWithAdderBase(unittest.TestCase):
@@ -334,50 +315,52 @@ class SimulationVCDWithAdderBase(unittest.TestCase):
         self.r = pyrtl.Register(bitwidth=bitwidth, name='r')
         self.result = _basic_add(self.r, pyrtl.Const(1).zero_extended(bitwidth))
         self.r.next <<= self.result
+        self.o = pyrtl.Output(bitwidth=bitwidth, name='o')
+        self.o <<= self.r
 
     VCD_OUTPUT = """$timescale 1ns $end
 $scope module logic $end
-$var wire 3 r r $end
+$var wire 3 o o $end
 $upscope $end
 $enddefinitions $end
 $dumpvars
-b0 r
+b0 o
 $end
 #0
-b0 r
+b0 o
 #1
-b1 r
+b1 o
 #2
-b10 r
+b10 o
 #3
-b11 r
+b11 o
 #4
-b100 r
+b100 o
 #5
-b101 r
+b101 o
 #6
-b110 r
+b110 o
 #7
-b111 r
+b111 o
 #8
-b0 r
+b0 o
 #9
-b1 r
+b1 o
 #10
-b10 r
+b10 o
 #11
-b11 r
+b11 o
 #12
-b100 r
+b100 o
 #13
-b101 r
+b101 o
 #14
-b110 r
+b110 o
 #15
 """
 
     def test_vcd_output(self):
-        sim_trace = pyrtl.SimulationTrace()
+        sim_trace = pyrtl.SimulationTrace(wires_to_track=[self.o])
         on_reset = {}  # signal states to be set when reset is asserted
         # build the actual simulation environment
         sim = self.sim(register_value_map=on_reset, default_value=0, tracer=sim_trace)
@@ -560,7 +543,8 @@ class RegisterDefaultsBase(unittest.TestCase):
         self.o <<= self.r2
 
     def check_trace(self, correct_string, **kwargs):
-        sim_trace = pyrtl.SimulationTrace()
+        wtt = pyrtl.working_block().wirevector_subset(pyrtl.Output)
+        sim_trace = pyrtl.SimulationTrace(wires_to_track=wtt)
         sim = self.sim(tracer=sim_trace, **kwargs)
         for i in range(8):
             sim.step({self.i: i})
@@ -569,16 +553,16 @@ class RegisterDefaultsBase(unittest.TestCase):
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_default_value(self):
-        self.check_trace(' o 55012345\nr1 50123456\nr2 55012345\n', default_value=5)
+        self.check_trace('o 55012345\n', default_value=5)
 
     def test_register_map(self):
-        self.check_trace(' o 36012345\nr1 60123456\nr2 36012345\n', register_value_map={self.r1: 6, self.r2: 3})
+        self.check_trace('o 36012345\n', register_value_map={self.r1: 6, self.r2: 3})
 
     def test_partial_map(self):
-        self.check_trace(' o 06012345\nr1 60123456\nr2 06012345\n', register_value_map={self.r1: 6})
+        self.check_trace('o 06012345\n', register_value_map={self.r1: 6})
 
     def test_map_and_default(self):
-        self.check_trace(' o 56012345\nr1 60123456\nr2 56012345\n', default_value=5, register_value_map={self.r1: 6})
+        self.check_trace('o 56012345\n', default_value=5, register_value_map={self.r1: 6})
 
 
 class RomBlockSimBase(unittest.TestCase):
@@ -667,6 +651,7 @@ class RomBlockSimBase(unittest.TestCase):
                                                  ("o2", lambda x: rom_data_function(2*x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
+    @unittest.skip
     def test_rom_out_of_range_error(self):
         rom_data_array = [15, 13, 11, 9, 7, 5, 3]
         rom1 = pyrtl.RomBlock(bitwidth=4, addrwidth=3, romdata=rom_data_array)
@@ -700,37 +685,11 @@ class RomBlockSimBase(unittest.TestCase):
 
 class InspectBase(unittest.TestCase):
     """
-    Unittests for both sim.inspect and sim.inspectmem
+    Unittests for sim.inspect_mem
     """
 
     def setUp(self):
         pyrtl.reset_working_block()
-
-    def test_invalid_inspect(self):
-        a = pyrtl.Input(8, 'a')
-        sim_trace = pyrtl.SimulationTrace()
-        sim = self.sim(tracer=sim_trace)
-        sim.step({a: 28})
-        with self.assertRaises(KeyError):
-            sim.inspect('asd')
-
-    def test_inspect(self):
-        a = pyrtl.Input(8, 'b')
-        b = pyrtl.Output(name='a')
-        b <<= a
-        sim_trace = pyrtl.SimulationTrace()
-        sim = self.sim(tracer=sim_trace)
-        if self.sim is pyrtl.Simulation:
-            self.assertEqual(sim.inspect(a), 0)
-            self.assertEqual(sim.inspect(b), 0)
-        else:
-            with self.assertRaises(pyrtl.PyrtlError):
-                sim.inspect(a)
-
-        sim.step({a: 28})
-        self.assertEqual(sim.inspect(a), 28)
-        self.assertEqual(sim.inspect('a'), 28)
-        self.assertEqual(sim.inspect(b), 28)
 
     def test_inspect_mem(self):
         a = pyrtl.Input(8, 'a')
@@ -786,8 +745,7 @@ def make_unittests():
             unittests[unit_name] = type(unit_name, (v,), {'sim': sim})
     g.update(unittests)
 
-# add compiledsim here if you want to unittest that as well
-sims = (pyrtl.Simulation, pyrtl.FastSimulation)
+sims = (pyrtl.CompiledSimulation,)
 make_unittests()
 
 

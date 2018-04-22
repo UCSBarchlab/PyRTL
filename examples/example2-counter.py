@@ -70,9 +70,8 @@ counter.next <<= sum
 # which should always be set for registers.  In this simple example, we take
 # counter next cycle equal to counter this cycle plus one.
 
-# Now let's run the bugger.  No need for inputs, it doesn't have any, but let's
-# throw in an assert to check that it really counts up modulo 8.  Finally we'll
-# print the trace to the screen.
+# Now let's run the bugger.  No need for inputs, as it doesn't have any.
+# Finally we'll print the trace to the screen and check that it counts up correctly.
 
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
