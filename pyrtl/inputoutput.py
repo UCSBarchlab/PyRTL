@@ -492,11 +492,13 @@ class _VerilogSanitizer(_NameSanitizer):
 
     def _extra_checks(self, str):
         return(str not in self._verilog_reserved_set and  # is not a Verilog reserved keyword
+               str != 'clk' and                           # not the clock signal
                len(str) <= 1024)                          # not too long to be a Verilog id
 
 
 def _verilog_vector_size_decl(n):
     return '' if n == 1 else '[%d:0]' % (n - 1)
+
 
 def _verilog_vector_decl(w):
     return _verilog_vector_size_decl(len(w))
