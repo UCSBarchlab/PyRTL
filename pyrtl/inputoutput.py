@@ -14,6 +14,7 @@ from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, _NameSanitizer
 from .wire import WireVector, Input, Output, Const, Register
 from .corecircuits import concat
+from .memory import RomBlock
 
 
 # -----------------------------------------------------------------
@@ -491,15 +492,16 @@ class _VerilogSanitizer(_NameSanitizer):
 
     def _extra_checks(self, str):
         return(str not in self._verilog_reserved_set and  # is not a Verilog reserved keyword
+               str != 'clk' and                           # not the clock signal
                len(str) <= 1024)                          # not too long to be a Verilog id
 
 
+def _verilog_vector_size_decl(n):
+    return '' if n == 1 else '[%d:0]' % (n - 1)
+
+
 def _verilog_vector_decl(w):
-    return '' if len(w) == 1 else '[%d:0]' % (len(w) - 1)
-
-
-def _verilog_vector_pow_decl(w):
-    return '' if len(w) == 1 else '[%d:0]' % (2 ** len(w) - 1)
+    return _verilog_vector_size_decl(len(w))
 
 
 class OutputToVerilog(object):
@@ -540,14 +542,7 @@ class OutputToVerilog(object):
         for net in self.block.logic:
             if net.op == 'm':
                 wire_regs.add(net.dests[0])
-        memory_nets = self.block.logic_subset(('m', '@'))
-        memories = set()
-
-        # Create a set of nets representitive of all memories (eliminating
-        # duplicates caused by multiple ports).
-        for m in memory_nets:
-            if not any(m.op_param[0] == x.op_param[0] for x in memories):
-                memories.add(m)
+        memories = {n.op_param[1] for n in self.block.logic_subset('m@')}
 
         for w in inputs:
             print('    input%s %s;' % (_verilog_vector_decl(w),
@@ -567,30 +562,23 @@ class OutputToVerilog(object):
                                     self._varname(w)), file=self.file)
         print('', file=self.file)
 
-        for w in memories:
-            if w.op == 'm':
-                print('    reg%s mem_%s%s;' % (_verilog_vector_decl(w.dests[0]),
-                                               w.op_param[0],
-                                               _verilog_vector_pow_decl(w.args[0])),
-                      file=self.file)
-            elif w.op == '@':
-                print('    reg%s mem_%s%s;' % (_verilog_vector_decl(w.args[1]),
-                                               w.op_param[0],
-                                               _verilog_vector_pow_decl(w.args[0])),
-                      file=self.file)
+        for m in memories:
+            print('    reg%s mem_%s%s;' % (_verilog_vector_size_decl(m.bitwidth),
+                                           m.id,
+                                           _verilog_vector_size_decl(1 << m.addrwidth)),
+                  file=self.file)
 
         print('', file=self.file)
 
-        # Generate the initial block for those memories that need it (such as ROMs).
-        # FIXME: Right now, the memblock is the only place where those rom values are stored
-        # which is bad form (it means the functionality of tne hardware is not completely
-        # contained in "core".
-        mems_with_initials = [w for w in memories if hasattr(w.op_param[1], 'initialdata')]
-        for w in mems_with_initials:
+        # Write the initial values for read-only memories.
+        # If we ever add support outside of simulation for initial values
+        #  for MemBlocks, that would also go here.
+        roms = {m for m in memories if isinstance(m, RomBlock)}
+        for m in roms:
             print('    initial begin', file=self.file)
-            for i in range(2**len(w.args[0])):
+            for i in range(1 << m.addrwidth):
                 print("        mem_%s[%d]=%d'h%x;" % (
-                    w.op_param[0], i, len(w), w.op_param[1]._get_read_data(i)), file=self.file)
+                    m.id, i, m.bitwidth, m._get_read_data(i)), file=self.file)
             print('    end', file=self.file)
             print('', file=self.file)
 
