@@ -88,6 +88,8 @@ state_machine_blif = """\
 """
 
 
+
+
 class TestInputFromBlif(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -218,6 +220,54 @@ class TestVerilog(unittest.TestCase):
 
     def test_textual_correctness(self):
         pass
+
+
+class TestOutputIPynb(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_one_bit_adder_matches_expected(self):
+        temp1 = pyrtl.WireVector(bitwidth=1, name='temp1')
+        temp2 = pyrtl.WireVector()
+
+        a, b, c = pyrtl.Input(1, 'a'), pyrtl.Input(1, 'b'), pyrtl.Input(1, 'c')
+        sum, carry_out = pyrtl.Output(1, 'sum'), pyrtl.Output(1, 'carry_out')
+
+
+        sum <<= a ^ b ^ c
+
+        temp1 <<= a & b  # connect the result of a & b to the pre-allocated wirevector
+        temp2 <<= a & c
+        temp3 = b & c  # temp3 IS the result of b & c (this is the first mention of temp3)
+        carry_out <<= temp1 | temp2 | temp3
+
+
+        # print('--- One Bit Adder Implementation ---')
+        # print(pyrtl.working_block())
+        # print()
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for cycle in range(15):
+            sim.step({
+                'a': random.choice([0, 1]),
+                'b': random.choice([0, 1]),
+                'c': random.choice([0, 1])
+                })
+
+        # Now all we need to do is print the trace results to the screen. Here we use
+        # "render_trace" with some size information.
+        print('--- One Bit Adder Simulation ---')
+
+        htmlstring = inputoutput.trace_to_html(sim_trace)
+        # sim_trace.render_trace(symbol_len=5, segment_size=5)
+
+        # a_value = sim.inspect(a)
+        # print("The latest value of a was: " + str(a_value))
+
+        expectedOutput = "<script src=\"http://wavedrom.com/skins/default.js\" type=\"text/javascript\"></script>\r\n        <script src=\"http://wavedrom.com/WaveDrom.js\" type=\"text/javascript\"></script>\r\n        <script type=\"WaveDrom\">\r\n        { signal : [\r\n        { name: \"a\",  wave: \"01..01..0...1..\" },\r\n{ name: \"b\",  wave: \"1.01....01.010.\" },\r\n{ name: \"c\",  wave: \"01.....01.01..0\" },\r\n{ name: \"carry_out\",  wave: \"==......===.=.=\", data: [\"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\"] },\r\n{ name: \"sum\",  wave: \"=.====.====..==\", data: [\"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\"] },\r\n{ name: \"temp1\",  wave: \"======..=...==.\", data: [\"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\"] },\r\n        ]}\r\n        </script>"
+        
+        self.assertEquals(htmlstring, expectedOutput)
 
 
 if __name__ == "__main__":
