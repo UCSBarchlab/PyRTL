@@ -225,6 +225,7 @@ class TestVerilog(unittest.TestCase):
 class TestOutputIPynb(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
+        self.maxDiff = None
 
     def test_one_bit_adder_matches_expected(self):
         temp1 = pyrtl.WireVector(bitwidth=1, name='temp1')
