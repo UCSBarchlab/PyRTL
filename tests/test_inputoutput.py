@@ -258,7 +258,7 @@ class TestOutputIPynb(unittest.TestCase):
 
         # Now all we need to do is print the trace results to the screen. Here we use
         # "render_trace" with some size information.
-        print('--- One Bit Adder Simulation ---')
+        # print('--- One Bit Adder Simulation ---')
 
         htmlstring = inputoutput.trace_to_html(sim_trace)
         # sim_trace.render_trace(symbol_len=5, segment_size=5)
@@ -266,8 +266,22 @@ class TestOutputIPynb(unittest.TestCase):
         # a_value = sim.inspect(a)
         # print("The latest value of a was: " + str(a_value))
 
-        expectedOutput = "<script src=\"http://wavedrom.com/skins/default.js\" type=\"text/javascript\"></script>\r\n        <script src=\"http://wavedrom.com/WaveDrom.js\" type=\"text/javascript\"></script>\r\n        <script type=\"WaveDrom\">\r\n        { signal : [\r\n        { name: \"a\",  wave: \"01..01..0...1..\" },\r\n{ name: \"b\",  wave: \"1.01....01.010.\" },\r\n{ name: \"c\",  wave: \"01.....01.01..0\" },\r\n{ name: \"carry_out\",  wave: \"==......===.=.=\", data: [\"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\"] },\r\n{ name: \"sum\",  wave: \"=.====.====..==\", data: [\"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\"] },\r\n{ name: \"temp1\",  wave: \"======..=...==.\", data: [\"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\"] },\r\n        ]}\r\n        </script>"
+        # expectedOutput = "<script src=\"http://wavedrom.com/skins/default.js\" type=\"text/javascript\"></script>\r\n        <script src=\"http://wavedrom.com/WaveDrom.js\" type=\"text/javascript\"></script>\r\n        <script type=\"WaveDrom\">\r\n        { signal : [\r\n        { name: \"a\",  wave: \"01..01..0...1..\" },\r\n{ name: \"b\",  wave: \"1.01....01.010.\" },\r\n{ name: \"c\",  wave: \"01.....01.01..0\" },\r\n{ name: \"carry_out\",  wave: \"==......===.=.=\", data: [\"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\"] },\r\n{ name: \"sum\",  wave: \"=.====.====..==\", data: [\"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\"] },\r\n{ name: \"temp1\",  wave: \"======..=...==.\", data: [\"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\", \"1\", \"0\"] },\r\n        ]}\r\n        </script>"
         
+        expectedOutput = """
+                <script src="http://wavedrom.com/skins/default.js" type="text/javascript"></script>
+        <script src="http://wavedrom.com/WaveDrom.js" type="text/javascript"></script>
+        <script type="WaveDrom">
+        { signal : [
+        { name: "a",  wave: "10.1..010.1010." },
+{ name: "b",  wave: "1.010......1.0." },
+{ name: "c",  wave: "0..1..0...1...0" },
+{ name: "carry_out",  wave: "==.=..=...=..=.", data: ["1", "0", "1", "0", "1", "0"] },
+{ name: "sum",  wave: "=====..==...=.=", data: ["0", "1", "0", "1", "0", "1", "0", "1", "0"] },
+{ name: "temp1",  wave: "==.==.......==.", data: ["1", "0", "1", "0", "1", "0"] },
+        ]}
+        </script>"""
+        	
         self.assertEquals(htmlstring, expectedOutput)
 
 
