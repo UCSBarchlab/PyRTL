@@ -72,7 +72,8 @@ counter.next <<= sum
 
 # Now let's run the bugger.  No need for inputs, as it doesn't have any.
 # Finally we'll print the trace to the screen and check that it counts up correctly.
-
+#print(pyrtl.working_block())
+print(pyrtl.working_block())
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
 for cycle in range(15):
