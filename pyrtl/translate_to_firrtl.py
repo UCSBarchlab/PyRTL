@@ -1,6 +1,9 @@
 import re
 
-global global_index
+def initialize():
+    global global_index
+    global map
+    map = {}
 
 def read_and_parse(fname):
     with open(fname) as f:
@@ -11,11 +14,35 @@ def read_and_parse(fname):
             result.append([matchObj.group(1).strip(), matchObj.group(2).strip(), matchObj.group(3).strip()])
     return result
 
+def scanInOut(fname):
+    inOutStr = []
+    with open(fname) as f:
+        content = f.readlines()
+    for line in content:
+        matchInput = re.match(".* ((.*)/(.*)I).*", line)
+        if (matchInput):
+            map[matchInput.group(1)] = matchInput.group(2)
+            inOutStr.append("    input io_" + matchInput.group(2) + " : UInt<" + matchInput.group(3) + ">")
+        matchOutput = re.match("((.*)/(.*)O).*", line)
+        if (matchOutput):
+            inOutStr.append("    output io_" + matchOutput.group(2) + " : UInt<" + matchOutput.group(3) + ">")
+            map[matchOutput.group(1)] = matchOutput.group(2)
+    return inOutStr
+
+def scanRegs(result):
+    Regs = []
+    for line in result:
+        matchReg = re.match("(.*/.*)R", line[0])
+        if (matchReg):
+            Regs.append(matchReg.group(1))
+            map[line[0]] = line[0].split("/").pop(0)
+    return Regs
+
 def translate_logical_ops(result):
-    global_index = 15
     returnValue = []
     saveForLater = {}
-    map = {}
+    global_index = 15
+
     for item in result:
         if item[1] == '&':
             print("and")
@@ -29,21 +56,13 @@ def translate_logical_ops(result):
             print('flip')
         elif item[1] == '+':
             args = [x.strip() for x in item[2].split(",")]
-            for arg in args:
-                # if argument is register
-                if re.match(".*/.*R", arg):
-                    map[arg] = "_T_" + str(global_index)
-                    returnValue.append("    reg " + map[arg] + " : UInt<" + re.match(".*/(.*)R", arg).group(1) + ">, clock with : \n"
-                        "      reset => (UInt<1>(\"h0\"), " + map[arg] + ")")
-                    global_index += 1
-                    #print(map)
 
             # if the destination is W
             if re.match(".*/.*W", item[0]):
                 map[item[0]] = "_T_" + str(global_index)
                 returnValue.append("    node " + map[item[0]] + " = add(" + map[args[0]] + ", " + map[args[1]] + ")")
                 global_index += 1
-                print(map)
+                #print(map)
 
         elif item[1] == '-':
             print('sub')
@@ -97,7 +116,7 @@ def translate_logical_ops(result):
                 sel_list = [x.strip() for x in const_sel.split(",")]
                 after_sel = [binary_str[int(i)] for i in sel_list]
                 map[item[0]] = after_sel
-                print(map)
+                #print(map)
             else:
                 # TODO
                 matchObj = re.match("(.*) \(\((.*)\)\)", item[2])
@@ -116,29 +135,30 @@ def translate_logical_ops(result):
     return returnValue
 
 
-def scanTopLevl(fname):
-    inOutStr = []
-    with open(fname) as f:
-        content = f.readlines()
-    for line in content:
-        print(line)
-        matchInput = re.match(".* (.*)/(.*)I.*", line)
-        if (matchInput):
-            inOutStr.append("    input io_" + matchInput.group(1) + " : UInt<" + matchInput.group(2) + ">")
-        matchOutput = re.match("(.*)/(.*)O.*", line)
-        if (matchOutput):
-            inOutStr.append("    output io_" + matchOutput.group(1) + " : UInt<" + matchOutput.group(2) + ">")
-    return inOutStr
-
-
+""" main starts here"""
+initialize()
 infname = "/Users/shannon/Desktop/working_block.txt"
 result = read_and_parse(infname)
-#print(translate_logical_ops(result))
+regs = scanRegs(result)
 outfname = "/Users/shannon/Desktop/firrtl_result.txt"
 with open(outfname, "w+") as f:
+
+    # write out all the implicit stuff
     f.write("circuit Example : \n")
     f.write("  module Example : \n")
     f.write("    input clock : Clock\n    input reset : UInt<1>\n")
-    f.write("\n".join(scanTopLevl(infname)))
+
+    # write out input and output defined in PyRTL
+    f.write("\n".join(scanInOut(infname)))
     f.write("\n\n")
+
+    # write out registers
+
+    for reg in regs:
+        regName = reg.split("/").pop(0)
+        regWidth = reg.split("/").pop(1)
+        f.write("    reg " + regName + " : UInt<" + regWidth + ">, clock with : \n"
+                        "      reset => (UInt<1>(\"h0\"), " + regName + ")\n")
+
+    # write all the other logic
     f.write("\n".join(translate_logical_ops(result)))
