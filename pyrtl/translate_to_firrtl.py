@@ -20,23 +20,36 @@ def scanInOut(fname):
         content = f.readlines()
     for line in content:
         matchInput = re.match(".* ((.*)/(.*)I).*", line)
-        if (matchInput):
-            map[matchInput.group(1)] = matchInput.group(2)
+        if matchInput:
+            map[matchInput.group(1)] = "io_" + matchInput.group(2)
             inOutStr.append("    input io_" + matchInput.group(2) + " : UInt<" + matchInput.group(3) + ">")
         matchOutput = re.match("((.*)/(.*)O).*", line)
-        if (matchOutput):
+        if matchOutput:
             inOutStr.append("    output io_" + matchOutput.group(2) + " : UInt<" + matchOutput.group(3) + ">")
-            map[matchOutput.group(1)] = matchOutput.group(2)
+            map[matchOutput.group(1)] = "io_" + matchOutput.group(2)
     return inOutStr
 
 def scanRegs(result):
-    Regs = []
+    regs = []
     for line in result:
         matchReg = re.match("(.*/.*)R", line[0])
         if (matchReg):
-            Regs.append(matchReg.group(1))
+            regs.append(matchReg.group(1))
             map[line[0]] = line[0].split("/").pop(0)
-    return Regs
+    return regs
+
+def convertToBinary(str):
+    matchBin = re.match(".*'b(.*)", str)
+    matchHex = re.match(".*'h(.*)", str)
+    matchDec = re.match("([0-9]+)", str)
+    if matchBin:
+        return matchBin.group(1)
+
+    # TODO: not right for hex and dec
+    elif matchHex:
+        return matchHex.group(1)
+    elif matchDec:
+        return matchDec.group(1)
 
 def translate_logical_ops(result):
     returnValue = []
@@ -45,25 +58,49 @@ def translate_logical_ops(result):
 
     for item in result:
         if item[1] == '&':
-            print("and")
+            args = [x.strip() for x in item[2].split(", ")]
+            for arg in args:
+                matchObj = re.match("const_(.*)_(.*)/([0-9]+)C", arg)
+                if matchObj:
+                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + matchObj.group(2) + ")"
+
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = and(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
+            #print("current map is ", map)
+            #print("current return string is", returnValue)
         elif item[1] == '|':
-            print("or")
+            args = [x.strip() for x in item[2].split(", ")]
+            for arg in args:
+                matchObj = re.match("const_(.*)_(.*)/([0-9]+)C", arg)
+                if matchObj:
+                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + matchObj.group(2) + ")"
+
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = or(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
         elif item[1] == '^':
-            print('xor')
+            args = [x.strip() for x in item[2].split(", ")]
+            for arg in args:
+                matchObj = re.match("const_(.*)_(.*)/([0-9]+)C", arg)
+                if matchObj:
+                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + matchObj.group(2) + ")"
+
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = xor(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
+
+        #TODO
         elif item[1] == 'n':
             print("nand")
         elif item[1] == '~':
             print('flip')
         elif item[1] == '+':
             args = [x.strip() for x in item[2].split(",")]
-
-            # if the destination is W
-            if re.match(".*/.*W", item[0]):
-                map[item[0]] = "_T_" + str(global_index)
-                returnValue.append("    node " + map[item[0]] + " = add(" + map[args[0]] + ", " + map[args[1]] + ")")
-                global_index += 1
-                #print(map)
-
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = add(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
+            #print(map)
         elif item[1] == '-':
             print('sub')
         elif item[1] == '*':
@@ -78,9 +115,6 @@ def translate_logical_ops(result):
             saveForLater[item[0]] = item[2]
         elif item[1] == 'x':
             args = [x.strip() for x in item[2].split(",")]
-            for arg in args:
-                if (re.match(".*/.*I", arg)):
-                    map[arg] = "io_" + re.match("(.*)/.*I", arg).group(1)
 
             # if the destination is W
             if re.match(".*/.*W", item[0]):
@@ -89,19 +123,22 @@ def translate_logical_ops(result):
                 global_index += 1
 
         elif item[1] == 'c':
-            matchObj = re.match("(.*), const_(.*)_(.*)/(.*)C", item[2])
-            if matchObj:
-                node = matchObj.group(1)
-                const_index = matchObj.group(2)
-                const_value = matchObj.group(3)
-                const_width = matchObj.group(4)
-                map[item[0]] = map.get(node)
-                map[item[0]].extend(const_value)
-                result_width = re.match(".*/(.*)W", item[0]).group(1)
-                decimalUint = int("".join(map[item[0]]), 2)
-                map[item[0]] = "UInt<" + result_width + ">(" + str(decimalUint) + ")"
+            args = [x.strip() for x in item[2].split(", ")]
+            for arg in args:
+                matchObj = re.match("const_(.*)_(.*)/([0-9]+)C", arg)
+                if matchObj:
+                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + convertToBinary(matchObj.group(2)) + ")"
+                elif isinstance(map[arg], list):
+                    matchWidth = re.match(".*/([0-9]+)[A-Z]", arg)
+                    if (matchWidth):
+                        map[arg] = "UInt<" + matchWidth.group(1) + ">(" + str(int("".join(map[arg]), 2)) + ")"
 
-                print(map)
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = cat(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
+
+            print("current map is ", map)
+            print("current return string is", returnValue)
 
         elif item[1] == 's':
 
@@ -116,28 +153,32 @@ def translate_logical_ops(result):
                 sel_list = [x.strip() for x in const_sel.split(",")]
                 after_sel = [binary_str[int(i)] for i in sel_list]
                 map[item[0]] = after_sel
-                #print(map)
             else:
                 # TODO
                 matchObj = re.match("(.*) \(\((.*)\)\)", item[2])
                 args = [x.strip() for x in matchObj.group(2).split(",")]
                 map[item[0]] = "_T_" + str(global_index)
-                returnValue.append("    node " + map[item[0]] + " = bits(" + map[matchObj.group(1)] + ", " + args[len(args)-1] + ", " + args[0] + ")")
+                if args[1] == "":
+                    returnValue.append("    node " + map[item[0]] + " = bits(" + map[matchObj.group(1)] + ", " + args[0] + ", " + args[0] + ")")
+                else:
+                    returnValue.append("    node " + map[item[0]] + " = bits(" + map[matchObj.group(1)] + ", " + args[len(args)-1] + ", " + args[0] + ")")
                 global_index += 1
 
+            #print("current map is ", map)
+            #print("current return string is", returnValue)
         elif item[1] == 'r':
             returnValue.append("    " + map[item[0]] + " <= " + map[item[2]])
         else:
             print("illegal")
 
     for key in saveForLater.keys():
-        returnValue.append("    io_" + re.match("(.*)/.*", key).group(1) + " <= " + map[saveForLater[key]])
+        returnValue.append("    " + map[key] + " <= " + map[saveForLater[key]])
     return returnValue
 
 
 """ main starts here"""
 initialize()
-infname = "/Users/shannon/Desktop/working_block.txt"
+infname = "/Users/shannon/Desktop/working_block1.txt"
 result = read_and_parse(infname)
 regs = scanRegs(result)
 outfname = "/Users/shannon/Desktop/firrtl_result.txt"
@@ -162,3 +203,8 @@ with open(outfname, "w+") as f:
 
     # write all the other logic
     f.write("\n".join(translate_logical_ops(result)))
+
+    #for reg in regs:
+    #    regName = reg.split("/").pop(0)
+    #    regWidth = reg.split("/").pop(1)
+    #    f.write("\n    " + regName + " <= mux(reset, UInt<" + regWidth + ">(\"h0\"), " + regName + ")")
