@@ -5,6 +5,7 @@ def initialize():
     global map
     map = {}
 
+
 def read_and_parse(fname):
     with open(fname) as f:
         content = f.readlines()
@@ -14,7 +15,8 @@ def read_and_parse(fname):
             result.append([matchObj.group(1).strip(), matchObj.group(2).strip(), matchObj.group(3).strip()])
     return result
 
-def scanInOut(fname):
+
+def scan_in_out(fname):
     inOutStr = []
     with open(fname) as f:
         content = f.readlines()
@@ -29,7 +31,8 @@ def scanInOut(fname):
             map[matchOutput.group(1)] = "io_" + matchOutput.group(2)
     return inOutStr
 
-def scanRegs(result):
+
+def scan_regs(result):
     regs = []
     for line in result:
         matchReg = re.match("(.*/.*)R", line[0])
@@ -38,18 +41,20 @@ def scanRegs(result):
             map[line[0]] = line[0].split("/").pop(0)
     return regs
 
-def convertToBinary(str):
+
+# TODO: think about this
+def convert_to_binary(str):
     matchBin = re.match(".*'b(.*)", str)
     matchHex = re.match(".*'h(.*)", str)
     matchDec = re.match("([0-9]+)", str)
     if matchBin:
         return matchBin.group(1)
 
-    # TODO: not right for hex and dec
     elif matchHex:
         return matchHex.group(1)
     elif matchDec:
         return matchDec.group(1)
+
 
 def translate_logical_ops(result):
     returnValue = []
@@ -102,9 +107,15 @@ def translate_logical_ops(result):
             global_index += 1
             #print(map)
         elif item[1] == '-':
-            print('sub')
+            args = [x.strip() for x in item[2].split(",")]
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = sub(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
         elif item[1] == '*':
-            print("mul")
+            args = [x.strip() for x in item[2].split(",")]
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = mul(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
         elif item[1] == '=':
             print('eq')
         elif item[1] == '<':
@@ -113,6 +124,8 @@ def translate_logical_ops(result):
             print('gt')
         elif item[1] == 'w':
             saveForLater[item[0]] = item[2]
+
+        # TODO: simplify mux
         elif item[1] == 'x':
             args = [x.strip() for x in item[2].split(",")]
 
@@ -127,7 +140,7 @@ def translate_logical_ops(result):
             for arg in args:
                 matchObj = re.match("const_(.*)_(.*)/([0-9]+)C", arg)
                 if matchObj:
-                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + convertToBinary(matchObj.group(2)) + ")"
+                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + convert_to_binary(matchObj.group(2)) + ")"
                 elif isinstance(map[arg], list):
                     matchWidth = re.match(".*/([0-9]+)[A-Z]", arg)
                     if (matchWidth):
@@ -167,7 +180,8 @@ def translate_logical_ops(result):
             #print("current map is ", map)
             #print("current return string is", returnValue)
         elif item[1] == 'r':
-            returnValue.append("    " + map[item[0]] + " <= " + map[item[2]])
+            width = re.match(".*/([0-9]+).*", item[0]).group(1)
+            returnValue.append("    " + map[item[0]] + " <= " + "mux(reset, UInt<" + width + ">(\"h0\"), " + map[item[2]] + ")")
         else:
             print("illegal")
 
@@ -180,8 +194,8 @@ def translate_logical_ops(result):
 initialize()
 infname = "/Users/shannon/Desktop/working_block1.txt"
 result = read_and_parse(infname)
-regs = scanRegs(result)
-outfname = "/Users/shannon/Desktop/firrtl_result.txt"
+regs = scan_regs(result)
+outfname = "/Users/shannon/Desktop/firrtl_result.fir"
 with open(outfname, "w+") as f:
 
     # write out all the implicit stuff
@@ -190,7 +204,7 @@ with open(outfname, "w+") as f:
     f.write("    input clock : Clock\n    input reset : UInt<1>\n")
 
     # write out input and output defined in PyRTL
-    f.write("\n".join(scanInOut(infname)))
+    f.write("\n".join(scan_in_out(infname)))
     f.write("\n\n")
 
     # write out registers
@@ -203,8 +217,3 @@ with open(outfname, "w+") as f:
 
     # write all the other logic
     f.write("\n".join(translate_logical_ops(result)))
-
-    #for reg in regs:
-    #    regName = reg.split("/").pop(0)
-    #    regWidth = reg.split("/").pop(1)
-    #    f.write("\n    " + regName + " <= mux(reset, UInt<" + regWidth + ">(\"h0\"), " + regName + ")")
