@@ -23,12 +23,14 @@ def scan_in_out(fname):
     for line in content:
         matchInput = re.match(".* ((.*)/(.*)I).*", line)
         if matchInput:
-            map[matchInput.group(1)] = "io_" + matchInput.group(2)
-            inOutStr.append("    input io_" + matchInput.group(2) + " : UInt<" + matchInput.group(3) + ">")
+            if not (matchInput.group(1) in map):
+                map[matchInput.group(1)] = "io_" + matchInput.group(2)
+                inOutStr.append("    input io_" + matchInput.group(2) + " : UInt<" + matchInput.group(3) + ">")
         matchOutput = re.match("((.*)/(.*)O).*", line)
         if matchOutput:
-            inOutStr.append("    output io_" + matchOutput.group(2) + " : UInt<" + matchOutput.group(3) + ">")
-            map[matchOutput.group(1)] = "io_" + matchOutput.group(2)
+            if not (matchOutput.group(1) in map):
+                inOutStr.append("    output io_" + matchOutput.group(2) + " : UInt<" + matchOutput.group(3) + ">")
+                map[matchOutput.group(1)] = "io_" + matchOutput.group(2)
     return inOutStr
 
 
@@ -74,6 +76,7 @@ def translate_logical_ops(result):
             global_index += 1
             #print("current map is ", map)
             #print("current return string is", returnValue)
+
         elif item[1] == '|':
             args = [x.strip() for x in item[2].split(", ")]
             for arg in args:
@@ -84,6 +87,7 @@ def translate_logical_ops(result):
             map[item[0]] = "_T_" + str(global_index)
             returnValue.append("    node " + map[item[0]] + " = or(" + map[args[0]] + ", " + map[args[1]] + ")")
             global_index += 1
+
         elif item[1] == '^':
             args = [x.strip() for x in item[2].split(", ")]
             for arg in args:
@@ -97,42 +101,104 @@ def translate_logical_ops(result):
 
         #TODO
         elif item[1] == 'n':
-            print("nand")
+            args = [x.strip() for x in item[2].split(", ")]
+            for arg in args:
+                matchObj = re.match("const_(.*)_(.*)/([0-9]+)C", arg)
+                if matchObj:
+                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + matchObj.group(2) + ")"
+
+            # first do &
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = and(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
+
+            # and then do ~
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = not(" + "_T_" + str(global_index - 1) + ")")
+            global_index += 1
+
         elif item[1] == '~':
-            print('flip')
+            arg = item[2].strip()
+            map[item[0]] = "_T_" + str(global_index)
+            global_index += 1
+            returnValue.append("    node " + map[item[0]] + " = not(" + map[arg] + ")")
+
         elif item[1] == '+':
             args = [x.strip() for x in item[2].split(",")]
             map[item[0]] = "_T_" + str(global_index)
             returnValue.append("    node " + map[item[0]] + " = add(" + map[args[0]] + ", " + map[args[1]] + ")")
             global_index += 1
             #print(map)
+
         elif item[1] == '-':
             args = [x.strip() for x in item[2].split(",")]
             map[item[0]] = "_T_" + str(global_index)
             returnValue.append("    node " + map[item[0]] + " = sub(" + map[args[0]] + ", " + map[args[1]] + ")")
             global_index += 1
+
         elif item[1] == '*':
             args = [x.strip() for x in item[2].split(",")]
             map[item[0]] = "_T_" + str(global_index)
             returnValue.append("    node " + map[item[0]] + " = mul(" + map[args[0]] + ", " + map[args[1]] + ")")
             global_index += 1
-        elif item[1] == '=':
-            print('eq')
-        elif item[1] == '<':
-            print("lt")
-        elif item[1] == '>':
-            print('gt')
-        elif item[1] == 'w':
-            saveForLater[item[0]] = item[2]
 
-        # TODO: simplify mux
+        elif item[1] == '=':
+            args = [x.strip() for x in item[2].split(", ")]
+            for arg in args:
+                matchObj = re.match("const_(.*)_(.*)/([0-9]+)C", arg)
+                if matchObj:
+                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + matchObj.group(2) + ")"
+
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = eq(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
+
+        elif item[1] == '<':
+            args = [x.strip() for x in item[2].split(", ")]
+            for arg in args:
+                matchObj = re.match("const_(.*)_(.*)/([0-9]+)C", arg)
+                if matchObj:
+                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + matchObj.group(2) + ")"
+
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = lt(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
+
+        elif item[1] == '>':
+            args = [x.strip() for x in item[2].split(", ")]
+            for arg in args:
+                matchObj = re.match("const_(.*)_(.*)/([0-9]+)C", arg)
+                if matchObj:
+                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + matchObj.group(2) + ")"
+
+            map[item[0]] = "_T_" + str(global_index)
+            returnValue.append("    node " + map[item[0]] + " = gt(" + map[args[0]] + ", " + map[args[1]] + ")")
+            global_index += 1
+
+        elif item[1] == 'w':
+            matchReg = re.match("(.*)/[0-9]+R", item[0])
+            matchWire = re.match("(.*)/[0-9]+W", item[0])
+            if matchReg:
+                returnValue.append("    " + map[item[0]] + " <= " + map[item[2]])
+            elif matchWire:
+                if not item[0] in map:
+                    map[item[0]] = "_T_" + str(global_index)
+                    global_index += 1
+                    returnValue.append("    node " + map[item[0]] + " = " + map[item[2]])
+                else:
+                    returnValue.append("    " + map[item[0]] + " = " + map[item[2]])
+
         elif item[1] == 'x':
             args = [x.strip() for x in item[2].split(",")]
+            for arg in args:
+                matchObj = re.match("const_(.*)_(.*)/([0-9]+)C", arg)
+                if matchObj:
+                    map[arg] = "UInt<" + matchObj.group(3) + ">(" + matchObj.group(2) + ")"
 
             # if the destination is W
             if re.match(".*/.*W", item[0]):
                 map[item[0]] = "_T_" + str(global_index)
-                returnValue.append("    node " + map[item[0]] + " = mux(" + map[args[0]] + ", " + map[args[1]] + ", " + map[args[2]] + ")")
+                returnValue.append("    node " + map[item[0]] + " = mux(" + map[args[0]] + ", " + map[args[2]] + ", " + map[args[1]] + ")")
                 global_index += 1
 
         elif item[1] == 'c':
@@ -150,8 +216,8 @@ def translate_logical_ops(result):
             returnValue.append("    node " + map[item[0]] + " = cat(" + map[args[0]] + ", " + map[args[1]] + ")")
             global_index += 1
 
-            print("current map is ", map)
-            print("current return string is", returnValue)
+#            print("current map is ", map)
+#            print("current return string is", returnValue)
 
         elif item[1] == 's':
 
@@ -167,7 +233,6 @@ def translate_logical_ops(result):
                 after_sel = [binary_str[int(i)] for i in sel_list]
                 map[item[0]] = after_sel
             else:
-                # TODO
                 matchObj = re.match("(.*) \(\((.*)\)\)", item[2])
                 args = [x.strip() for x in matchObj.group(2).split(",")]
                 map[item[0]] = "_T_" + str(global_index)
@@ -192,7 +257,7 @@ def translate_logical_ops(result):
 
 """ main starts here"""
 initialize()
-infname = "/Users/shannon/Desktop/working_block1.txt"
+infname = "/Users/shannon/Desktop/working_block.txt"
 result = read_and_parse(infname)
 regs = scan_regs(result)
 outfname = "/Users/shannon/Desktop/firrtl_result.fir"
