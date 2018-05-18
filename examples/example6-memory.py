@@ -90,6 +90,8 @@ memvals = {mem1: mem1_init, mem2: mem2_init}
 
 # now run the simulation like before. Note the adding of the memory
 # value map.
+print("---------memories----------")
+print(pyrtl.working_block())
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=memvals)
 for cycle in range(len(simvals['we'])):
@@ -146,7 +148,8 @@ cmp_out <<= temp1 == temp2
 # also don't want the hassle of typing out a set of values to test. One
 # solution in this case is to seed random and then pulling out 'random'
 # numbers from it.
-
+print("---------roms----------")
+print(pyrtl.working_block())
 random.seed(4839483)
 
 # Now we will create a new set of simulation values. In this case, since we

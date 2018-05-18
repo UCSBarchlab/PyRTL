@@ -1,8 +1,10 @@
 import re
 
+
 def initialize():
     global global_index
     global map
+    global hasMem
     map = {}
 
 
@@ -21,26 +23,42 @@ def scan_in_out(fname):
     with open(fname) as f:
         content = f.readlines()
     for line in content:
-        matchInput = re.match(".* ((.*)/(.*)I).*", line)
-        if matchInput:
-            if not (matchInput.group(1) in map):
-                map[matchInput.group(1)] = "io_" + matchInput.group(2)
-                inOutStr.append("    input io_" + matchInput.group(2) + " : UInt<" + matchInput.group(3) + ">")
-        matchOutput = re.match("((.*)/(.*)O).*", line)
-        if matchOutput:
-            if not (matchOutput.group(1) in map):
-                inOutStr.append("    output io_" + matchOutput.group(2) + " : UInt<" + matchOutput.group(3) + ">")
-                map[matchOutput.group(1)] = "io_" + matchOutput.group(2)
+        if bool(re.search(".*<-- m --/*", line)) | bool(re.search(".*<-- @ --/*", line)):
+            matchInputs = re.findall(r'[a-zA-Z]+/[0-9]+I', line)
+            for str in matchInputs:
+                if bool(matchInputs) & (not str in map):
+                    map[str] = "io_" + str.split("/").pop(0)
+                    inOutStr.append(
+                        "    input " + map[str] + " : UInt<" + re.match(".*/([0-9]+)I", str).group(1) + ">")
+            matchOutputs = re.findall(r'[a-zA-Z]+/[0-9]+O', line)
+            for str in matchOutputs:
+                if bool(matchOutputs) & (not str in map):
+                    map[str] = "io_" + str.split("/").pop(0)
+                    inOutStr.append(
+                        "    output " + map[str] + " : UInt<" + re.match(".*/([0-9]+)O", str).group(1) + ">")
+        else:
+            matchInput = re.match(".* ((.*)/(.*)I).*", line)
+            if matchInput:
+                if not (matchInput.group(1) in map):
+                    map[matchInput.group(1)] = "io_" + matchInput.group(2)
+                    inOutStr.append("    input io_" + matchInput.group(2) + " : UInt<" + matchInput.group(3) + ">")
+            matchOutput = re.match("((.*)/(.*)O).*", line)
+            if matchOutput:
+                if not (matchOutput.group(1) in map):
+                    inOutStr.append("    output io_" + matchOutput.group(2) + " : UInt<" + matchOutput.group(3) + ">")
+                    map[matchOutput.group(1)] = "io_" + matchOutput.group(2)
     return inOutStr
 
 
 def scan_regs(result):
     regs = []
     for line in result:
-        matchReg = re.match("(.*/.*)R", line[0])
+        matchReg = re.match("((.*)/.*)R", line[0])
         if (matchReg):
-            regs.append(matchReg.group(1))
-            map[line[0]] = line[0].split("/").pop(0)
+            if not re.match(".*\[.*", matchReg.group(2)):
+                if not line[0] in map:
+                    regs.append(matchReg.group(1))
+                    map[line[0]] = line[0].split("/").pop(0)
     return regs
 
 
@@ -62,7 +80,7 @@ def translate_logical_ops(result):
     returnValue = []
     saveForLater = {}
     global_index = 15
-
+    hasMem = []
     for item in result:
         if item[1] == '&':
             args = [x.strip() for x in item[2].split(", ")]
@@ -99,7 +117,6 @@ def translate_logical_ops(result):
             returnValue.append("    node " + map[item[0]] + " = xor(" + map[args[0]] + ", " + map[args[1]] + ")")
             global_index += 1
 
-        #TODO
         elif item[1] == 'n':
             args = [x.strip() for x in item[2].split(", ")]
             for arg in args:
@@ -176,7 +193,7 @@ def translate_logical_ops(result):
             global_index += 1
 
         elif item[1] == 'w':
-            matchReg = re.match("(.*)/[0-9]+R", item[0])
+            matchReg = re.match("(.*)/[0-9]+[RO]", item[0])
             matchWire = re.match("(.*)/[0-9]+W", item[0])
             if matchReg:
                 returnValue.append("    " + map[item[0]] + " <= " + map[item[2]])
@@ -230,6 +247,8 @@ def translate_logical_ops(result):
                 const_sel = matchObj.group(4)
                 binary_str = bin(int(const_value)).split("b").pop(1)
                 sel_list = [x.strip() for x in const_sel.split(",")]
+                if sel_list[1] == "":
+                    sel_list.pop(1)
                 after_sel = [binary_str[int(i)] for i in sel_list]
                 map[item[0]] = after_sel
             else:
@@ -246,7 +265,54 @@ def translate_logical_ops(result):
             #print("current return string is", returnValue)
         elif item[1] == 'r':
             width = re.match(".*/([0-9]+).*", item[0]).group(1)
-            returnValue.append("    " + map[item[0]] + " <= " + "mux(reset, UInt<" + width + ">(\"h0\"), " + map[item[2]] + ")")
+            returnValue.append(
+                "    " + map[item[0]] + " <= " + "mux(reset, UInt<" + width + ">(\"h0\"), " + map[item[2]] + ")")
+
+        elif item[1] == 'm':
+            matchMem = re.match("(.*)\[(.*)\]\(memid=(.*)\)", item[2])
+            memName = matchMem.group(1)     # name of the memory
+            memRaddr = matchMem.group(2)    # read address of the memory
+            memId = matchMem.group(3)       # memid of the memory
+
+            matchMemDst = re.match(".*/([0-9]+)[A-Z]", item[0])
+            memWidth = matchMemDst.group(1) # width of data inside memory
+
+            matchAddr = re.match("[A-Za-z0-9]+/([0-9]+)[A-Z]", memRaddr)
+            memAddrLen = matchAddr.group(1) # width of memory address
+            map[item[0]] = "_T_" + str(global_index)
+            global_index += 1
+            if not memId in hasMem:
+                hasMem.append(memId)
+                returnValue.append("    cmem " + memName + "_" + memId + " : UInt<" + memWidth + ">[" + str(
+                    2**int(memAddrLen)) + "]")
+            returnValue.append("    infer mport _T_" + str(global_index) + " = " + memName + "_" + memId + "[" + map[memRaddr] + "], clock")
+            returnValue.append("    node " + map[item[0]] + " = _T_" + str(global_index))
+            global_index += 1
+
+        elif item[1] == '@':
+            matchMem = re.match("(.*) .*=([a-zA-Z0-9]+/.*) \(memid=(.*)\)", item[2])
+            memWdata = matchMem.group(1)
+            memWe = matchMem.group(2)
+            memId = matchMem.group(3)
+
+            matchMemDst = re.match("(.*)\[(.*/([0-9]+)[A-Z])\]", item[0])
+            memName = matchMemDst.group(1)
+            memWaddr = matchMemDst.group(2)
+            memAddrLen = matchMemDst.group(3)
+
+            matchData = re.match(".*/([0-9]+)[A-Z]", memWdata)
+            memWidth = matchData.group(1)
+
+            if not memId in hasMem:
+                hasMem.append(memId)
+                returnValue.append("    cmem " + memName + "_" + memId + " : UInt<" + memWidth + ">[" + str(
+                    2 ** int(memAddrLen)) + "]")
+
+            returnValue.append("    when " + map[memWe] + " :")
+            returnValue.append("      infer mport _T_" + str(global_index) + " = " + memName + "_" + memId + "[" + map[memWaddr] + "], clock")
+            returnValue.append("      _T_" + str(global_index) + " <= " + map[memWdata])
+            returnValue.append("      skip")
+            global_index += 1
         else:
             print("illegal")
 
@@ -260,6 +326,7 @@ initialize()
 infname = "/Users/shannon/Desktop/working_block.txt"
 result = read_and_parse(infname)
 regs = scan_regs(result)
+print(map)
 outfname = "/Users/shannon/Desktop/firrtl_result.fir"
 with open(outfname, "w+") as f:
 

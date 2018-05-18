@@ -82,6 +82,8 @@ refund <<= state == REFUND
 
 # Now let's build and test our state machine.
 
+print(pyrtl.working_block())
+
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
 
