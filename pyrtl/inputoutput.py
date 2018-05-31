@@ -420,6 +420,7 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
 
     wave_template = (
         """\
+
         <script src="http://wavedrom.com/skins/default.js" type="text/javascript"></script>
         <script src="http://wavedrom.com/WaveDrom.js" type="text/javascript"></script>
         <script type="WaveDrom">
@@ -448,15 +449,16 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
         wavestring = ''.join(wavelist)
         datastring = ', '.join(['"%d"' % data for data in datalist])
         if len(w) == 1:
-            return bool_signal_template % (w.name, wavestring)
+            return bool_signal_template % (w, wavestring)
         else:
-            return int_signal_template % (w.name, wavestring, datastring)
+            return int_signal_template % (w, wavestring, datastring)
 
     bool_signal_template = '{ name: "%s",  wave: "%s" },'
     int_signal_template = '{ name: "%s",  wave: "%s", data: [%s] },'
     signals = [extract(w) for w in trace_list]
     all_signals = '\n'.join(signals)
     wave = wave_template % all_signals
+    # print(wave)
     return wave
 
 
