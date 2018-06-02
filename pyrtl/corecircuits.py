@@ -251,7 +251,7 @@ def select(sel, truecase, falsecase):
     :param WireVector falsecase: the WireVector selected if select==0
     :param WireVector truecase: the WireVector selected if select==1
 
-    The hardware this generates is exactly the same as "mux" but by putting the 
+    The hardware this generates is exactly the same as "mux" but by putting the
     true case as the first argument it matches more of the C-style ternary operator
     semantics which can be helpful for readablity.
 
@@ -276,7 +276,7 @@ def concat(*args):
     You can provide multiple arguments and they will be combined with the right-most
     argument being the least significant bits of the result.  Note that if you have
     a list of arguments to concat together you will likely want index 0 to be the least
-    significant bit and so if you unpack the list into the arguements here it will be 
+    significant bit and so if you unpack the list into the arguements here it will be
     backwards.  The function concat_list is provided for that case specifically.
 
     Example using concat to combine two bytes into a 16-bit quantity:
@@ -309,7 +309,7 @@ def concat_list(wire_list):
     vector with the element at index 0 serving as the least significant bits.
     This is useful when you have a variable number of wirevectors to concatenate,
     otherwise "concat" is prefered.
-    
+
     Example using concat to combine two bytes into a 16-bit quantity:
         mylist = [ lsb, msb ]
         concat_list( mylist )
