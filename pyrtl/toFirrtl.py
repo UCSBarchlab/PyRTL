@@ -8,24 +8,22 @@ def initialize():
     map = {}
 
 
-def read_and_parse(fname):
-    with open(fname) as f:
-        content = f.readlines()
-        result = []
-        for x in content:
-            matchObj = re.match('(.*) <-- (.*) -- (.*)', x)
-            result.append([matchObj.group(1).strip(), matchObj.group(2).strip(), matchObj.group(3).strip()])
+def read_and_parse(contents):
+
+    content = contents.split("\n")
+    result = []
+    for x in content:
+        matchObj = re.match('(.*) <-- (.*) -- (.*)', x)
+        result.append([matchObj.group(1).strip(), matchObj.group(2).strip(), matchObj.group(3).strip()])
     return result
 
 
-def scan_in_out(fname):
+def scan_in_out(contents):
     inOutStr = []
-    with open(fname) as f:
-        content = f.readlines()
+    content = contents.split("\n")
     for line in content:
         if bool(re.search(".*<-- m --/*", line)) | bool(re.search(".*<-- @ --/*", line)):
             matchInputs = re.findall(r'[a-zA-Z0-9-_]+/[0-9]+I', line)
-            print(matchInputs)
             for str in matchInputs:
                 if bool(matchInputs) & (not str in map):
                     map[str] = "io_" + str.split("/").pop(0)
@@ -62,20 +60,6 @@ def scan_regs(result):
                     map[line[0]] = line[0].split("/").pop(0)
     return regs
 
-def scan_mem(result):
-    """
-        0 --> rom
-        1 --> mem
-    """
-    for line in result:
-        matchWrite = re.match("@", line[1])
-        matchRead = re.match("m", line[1])
-        if matchWrite & matchRead:
-            return 1
-        else:
-            return 0
-
-
 # TODO: think about this
 def convert_to_binary(str):
     matchBin = re.match(".*'b(.*)", str)
@@ -90,12 +74,11 @@ def convert_to_binary(str):
         return matchDec.group(1)
 
 
-def translate_logical_ops(result):
+def translate_logical_ops(result, romDataList):
     returnValue = []
     saveForLater = {}
     global_index = 15
     hasMem = []
-    memType = scan_mem(result)
 
     for item in result:
         if item[1] == '&':
@@ -284,18 +267,36 @@ def translate_logical_ops(result):
             returnValue.append(
                 "    " + map[item[0]] + " <= " + "mux(reset, UInt<" + width + ">(\"h0\"), " + map[item[2]] + ")")
 
+        # TODO: assumed no read enable for rom now
         elif item[1] == 'm':
-            if memType == 2:
-                matchMem = re.match("(.*)\[(.*)\]\(memid=(.*)\)", item[2])
-                memName = matchMem.group(1)     # name of the memory
-                memRaddr = matchMem.group(2)    # read address of the memory
-                memId = matchMem.group(3)       # memid of the memory
 
-                matchMemDst = re.match(".*/([0-9]+)[A-Z]", item[0])
-                memWidth = matchMemDst.group(1) # width of data inside memory
+            matchMem = re.match("(.*)\[(.*)\]\(memid=(.*)\)", item[2])
+            memName = matchMem.group(1)     # name of the memory
+            memRaddr = matchMem.group(2)    # read address of the memory
+            memId = matchMem.group(3)       # memid of the memory
 
-                matchAddr = re.match("[A-Za-z0-9_-]+/([0-9]+)[A-Z]", memRaddr)
-                memAddrLen = matchAddr.group(1) # width of memory address
+            matchMemDst = re.match(".*/([0-9]+)[A-Z]", item[0])
+            memWidth = matchMemDst.group(1) # width of data inside memory
+
+            matchAddr = re.match("[A-Za-z0-9_-]+/([0-9]+)[A-Z]", memRaddr)
+            memAddrLen = matchAddr.group(1) # width of memory address
+
+            if romDataList != None:
+                if not memId in hasMem:
+                    hasMem.append(memId)
+                    returnValue.append("    wire " + memName + "_" + memId + " : UInt<" + memWidth + ">[" + str(2**int(memAddrLen)) + "]")
+                    romData = romDataList[memName + "_" + memId]
+                    for index in range(len(romData)):
+                        returnValue.append("    " + memName + "_" + memId + "[" + str(index) + "] <= UInt<" + memWidth + ">(\"" + str(romData[index]) + "\")")
+                map[item[0]] = "_T_" + str(global_index)
+                global_index += 1
+                returnValue.append(
+                    "    _T_" + str(global_index) + " = " + memName + "_" + memId + "[" + map[
+                        memRaddr] + "]")
+                returnValue.append("    node " + map[item[0]] + " = _T_" + str(global_index))
+                global_index += 1
+
+            else:
                 map[item[0]] = "_T_" + str(global_index)
                 global_index += 1
                 if not memId in hasMem:
@@ -305,23 +306,6 @@ def translate_logical_ops(result):
                 returnValue.append("    infer mport _T_" + str(global_index) + " = " + memName + "_" + memId + "[" + map[memRaddr] + "], clock")
                 returnValue.append("    node " + map[item[0]] + " = _T_" + str(global_index))
                 global_index += 1
-
-            # if rom, requires more data
-            else:
-                matchMem = re.match("(.*)\[(.*)\]\(memid=(.*)\)", item[2])
-                memName = matchMem.group(1)     # name of the memory
-                memRaddr = matchMem.group(2)    # read address of the memory
-                memId = matchMem.group(3)       # memid of the memory
-
-                matchMemDst = re.match(".*/([0-9]+)[A-Z]", item[0])
-                memWidth = matchMemDst.group(1) # width of data inside memory
-
-                matchAddr = re.match("[A-Za-z0-9_-]+/([0-9]+)[A-Z]", memRaddr)
-                memAddrLen = matchAddr.group(1) # width of memory address
-
-                returnValue.append("    wire " + memName + "_" + memId + " : UInt<" + memWidth + ">[" + str(2**int(memAddrLen)) + "]")
-
-
 
         elif item[1] == '@':
             matchMem = re.match("(.*) .*=([a-zA-Z0-9-_]+/.*) \(memid=(.*)\)", item[2])
@@ -355,30 +339,39 @@ def translate_logical_ops(result):
     return returnValue
 
 
-""" main starts here"""
-initialize()
-infname = "/Users/shannon/Desktop/working_block.txt"
-result = read_and_parse(infname)
-regs = scan_regs(result)
-print(map)
-outfname = "/Users/shannon/Desktop/firrtl_result.fir"
-with open(outfname, "w+") as f:
+def main_translate(content, roms=None):
+    initialize()
+    result = read_and_parse(content)
+    regs = scan_regs(result)
+    outfname = "/Users/shannon/Desktop/firrtl_result.fir"
 
-    # write out all the implicit stuff
-    f.write("circuit Example : \n")
-    f.write("  module Example : \n")
-    f.write("    input clock : Clock\n    input reset : UInt<1>\n")
+    if roms != None:
+        romDataList = {}
+        for rom in roms:
+            list = []
+            for index in range(2**rom.addrwidth):
+                list.append(rom._get_read_data(index))
+            romDataList[rom.name + "_" + str(rom.id)] = list
+        print(romDataList)
 
-    # write out input and output defined in PyRTL
-    f.write("\n".join(scan_in_out(infname)))
-    f.write("\n\n")
-    # write out registers
 
-    for reg in regs:
-        regName = reg.split("/").pop(0)
-        regWidth = reg.split("/").pop(1)
-        f.write("    reg " + regName + " : UInt<" + regWidth + ">, clock with : \n"
-                        "      reset => (UInt<1>(\"h0\"), " + regName + ")\n")
+    with open(outfname, "w+") as f:
 
-    # write all the other logic
-    f.write("\n".join(translate_logical_ops(result)))
+        # write out all the implicit stuff
+        f.write("circuit Example : \n")
+        f.write("  module Example : \n")
+        f.write("    input clock : Clock\n    input reset : UInt<1>\n")
+
+        # write out input and output defined in PyRTL
+        f.write("\n".join(scan_in_out(content)))
+        f.write("\n\n")
+        # write out registers
+
+        for reg in regs:
+            regName = reg.split("/").pop(0)
+            regWidth = reg.split("/").pop(1)
+            f.write("    reg " + regName + " : UInt<" + regWidth + ">, clock with : \n"
+                            "      reset => (UInt<1>(\"h0\"), " + regName + ")\n")
+
+        # write all the other logic
+        f.write("\n".join(translate_logical_ops(result, romDataList)))

@@ -7,6 +7,7 @@
 """
 
 import pyrtl
+import toFirrtl
 
 
 # Let's just dive right in.
@@ -82,5 +83,7 @@ for cycle in range(15):
 sim_trace.render_trace()
 
 # all done.
+
+toFirrtl.main_translate(pyrtl.working_block().__str__())
 
 exit(0)
