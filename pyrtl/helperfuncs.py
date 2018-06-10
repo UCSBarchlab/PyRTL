@@ -209,14 +209,8 @@ def _check_shift_inputs(a, shamt):
     # TODO: perhaps this should just be implemented directly rather than throwing error
     if isinstance(shamt, int):
         raise PyrtlError('shift_amount is an integer, use slice instead')
-    if isinstance(shamt, Const):
-        raise PyrtlError('shift_amount is a constant, use slice instead')
     a, shamt = as_wires(a), as_wires(shamt)
-    log_length = int(math.log(len(a)-1, 2))  # note the one offset
-    # TODO: perhaps this should just be implemented directly rather than throwing error
-    if len(shamt) > log_length:
-        raise PyrtlError('the shift_amount wirevector is providing bits '
-                         'that would shift the value off the end')
+    log_length = int(math.log(len(a), 2))
     return a, shamt
 
 
