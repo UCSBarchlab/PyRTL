@@ -341,6 +341,22 @@ class TestShiftSimulation(unittest.TestCase):
     def test_sra(self):
         self.sra_checker(5,2)
 
+    def test_sll_big(self):
+        raise unittest.SkipTest('bug')
+        self.sll_checker(10,3)
+
+    def test_sla_big(self):
+        raise unittest.SkipTest('bug')
+        self.sla_checker(10,3)
+
+    def test_srl_big(self):
+        raise unittest.SkipTest('bug')
+        self.srl_checker(10,3)
+
+    def test_sra_big(self):
+        raise unittest.SkipTest('bug')
+        self.sra_checker(10,3)
+
 
 class TestBasicMult(unittest.TestCase):
     def setUp(self):
