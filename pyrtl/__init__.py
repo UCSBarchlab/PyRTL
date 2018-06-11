@@ -28,6 +28,8 @@ from .helperfuncs import as_wires
 from .helperfuncs import match_bitwidth
 from .helperfuncs import enum_mux
 from .helperfuncs import val_to_signed_integer
+from .helperfuncs import val_to_formatted_str
+from .helperfuncs import formatted_str_to_val
 from .helperfuncs import signed_add
 from .helperfuncs import signed_mult
 from .helperfuncs import signed_lt
