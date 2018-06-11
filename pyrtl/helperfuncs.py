@@ -181,28 +181,28 @@ def signed_lt(a, b):
     """ Return a single bit result of signed less than comparison. """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = a - b
-    return r[-1] ^ (~a[-1])
+    return r[-1] ^ (~a[-1]) ^ (~b[-1])
 
 
 def signed_le(a, b):
     """ Return a single bit result of signed less than or equal comparison. """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = a - b
-    return (r[-1] ^ (~a[-1])) | (a == b)
+    return (r[-1] ^ (~a[-1]) ^ (~b[-1])) | (a == b)
 
 
 def signed_gt(a, b):
     """ Return a single bit result of signed greater than comparison. """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = b - a
-    return r[-1] ^ (~b[-1])
+    return r[-1] ^ (~a[-1]) ^ (~b[-1])
 
 
 def signed_ge(a, b):
     """ Return a single bit result of signed greater than or equal comparison. """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = b - a
-    return (r[-1] ^ (~b[-1])) | (a == b)
+    return (r[-1] ^ (~a[-1]) ^ (~b[-1])) | (a == b)
 
 
 def _check_shift_inputs(a, shamt):
