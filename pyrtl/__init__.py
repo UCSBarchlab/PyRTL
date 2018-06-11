@@ -26,6 +26,7 @@ from .helperfuncs import register_list
 from .helperfuncs import wirevector_list
 from .helperfuncs import as_wires
 from .helperfuncs import match_bitwidth
+from .helperfuncs import enum_mux
 from .helperfuncs import val_to_signed_integer
 from .helperfuncs import signed_add
 from .helperfuncs import signed_mult

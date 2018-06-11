@@ -17,6 +17,7 @@ from .core import working_block, _NameIndexer
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
 from pyrtl.rtllib import barrel
+from pyrtl.rtllib import muxes
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -77,6 +78,47 @@ def val_to_signed_integer(value, bitwidth):
     pos_part = value & pos_mask
 
     return pos_part - neg_part
+
+
+def enum_mux(cntrl, table, default=None, strict=True):
+    """ Build a mux for the control signals specified by an enum.
+    :param cntrl: is a wirevector and control for the mux.
+    :param table: is a dictionary of the form mapping enum->wirevector.
+    :param default: is a wirevector to use when the key is not present.
+    :param strict: is flag, that when set, will cause enum_mux to check
+        that the dictionary has an entry for every possible value in the enum.
+        Note that if a default is set, then this check is not performed as
+        the default will provide valid values for any underspecified keys.
+    :return: a wirevector which is the result of the mux.
+
+    Examples::
+
+        class Command(Enum):
+            ADD = 1
+            SUB = 2
+        enum_mux(cntrl, {ADD: a+b, SUB: a-b})
+        enum_mux(cntrl, {ADD: a+b}, strict=False)
+    """
+    # check dictionary keys are of the right type
+    keytypeset = set(type(x) for x in table.keys())
+    if len(keytypeset) != 1:
+        raise PyrtlError('table mixes multiple types {} as keys'.format(keytypeset))
+    keytype = list(keytypeset)[0]
+    # check that dictionary is complete for the enum
+    try:
+        enumkeys = list(keytype.__members__.values())
+    except AttributeError:
+        raise PyrtlError('type {} not an Enum and does not support the same interface'
+                         .format(keytype))
+    missingkeys = [e for e in enumkeys if e not in table]
+    if strict and default is None and missingkeys:
+        raise PyrtlError('table provided is incomplete, missing: {}'.format(missingkeys))
+
+    # generate the actual mux
+    vals = {k.value: d for k, d in table.items()}
+    if default is not None:
+        vals['default'] = default
+    return muxes.sparse_mux(cntrl, vals)
 
 
 def signed_add(a, b):
