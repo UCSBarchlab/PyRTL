@@ -16,6 +16,7 @@ import math
 from .core import working_block, _NameIndexer
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
+from .conditional import otherwise
 from pyrtl.rtllib import barrel
 from pyrtl.rtllib import muxes
 
@@ -188,7 +189,9 @@ def enum_mux(cntrl, table, default=None, strict=True):
     """ Build a mux for the control signals specified by an enum.
     :param cntrl: is a wirevector and control for the mux.
     :param table: is a dictionary of the form mapping enum->wirevector.
-    :param default: is a wirevector to use when the key is not present.
+    :param default: is a wirevector to use when the key is not present. In addtion
+        it is possible to use the key 'otherwise' to specify a default value, but
+        it is an error if both are supplied.
     :param strict: is flag, that when set, will cause enum_mux to check
         that the dictionary has an entry for every possible value in the enum.
         Note that if a default is set, then this check is not performed as
@@ -201,10 +204,12 @@ def enum_mux(cntrl, table, default=None, strict=True):
             ADD = 1
             SUB = 2
         enum_mux(cntrl, {ADD: a+b, SUB: a-b})
-        enum_mux(cntrl, {ADD: a+b}, strict=False)
+        enum_mux(cntrl, {ADD: a+b}, strict=False)  # SUB case undefined
+        enum_mux(cntrl, {ADD: a+b, otherwise: a-b})
+        enum_mux(cntrl, {ADD: a+b}, default=a-b)
     """
     # check dictionary keys are of the right type
-    keytypeset = set(type(x) for x in table.keys())
+    keytypeset = set(type(x) for x in table.keys() if x is not otherwise)
     if len(keytypeset) != 1:
         raise PyrtlError('table mixes multiple types {} as keys'.format(keytypeset))
     keytype = list(keytypeset)[0]
@@ -215,11 +220,19 @@ def enum_mux(cntrl, table, default=None, strict=True):
         raise PyrtlError('type {} not an Enum and does not support the same interface'
                          .format(keytype))
     missingkeys = [e for e in enumkeys if e not in table]
+
+    # check for "otherwise" in table and move it to a default
+    if otherwise in table:
+        if default is not None:
+            raise PyrtlError('both "otherwise" and default provided to enum_mux')
+        else:
+            default = table[otherwise]
+
     if strict and default is None and missingkeys:
         raise PyrtlError('table provided is incomplete, missing: {}'.format(missingkeys))
 
     # generate the actual mux
-    vals = {k.value: d for k, d in table.items()}
+    vals = {k.value: d for k, d in table.items() if k is not otherwise}
     if default is not None:
         vals['default'] = default
     return muxes.sparse_mux(cntrl, vals)
