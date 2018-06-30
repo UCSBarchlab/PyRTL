@@ -84,6 +84,6 @@ sim_trace.render_trace()
 
 # all done.
 
-toFirrtl.main_translate(pyrtl.working_block().__str__())
+toFirrtl.main_translate(pyrtl.working_block().__str__(), "/Users/shannon/Desktop/firrtl_result.fir")
 
 exit(0)

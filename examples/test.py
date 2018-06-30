@@ -68,5 +68,7 @@ sim_trace.render_trace()
 
 
 roms = [rom1, rom2]
-toFirrtl.main_translate(pyrtl.working_block().__str__(), roms)
+
+#need to fix out file path
+#toFirrtl.main_translate(pyrtl.working_block().__str__(), roms)
 
