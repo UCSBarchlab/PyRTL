@@ -238,6 +238,61 @@ def enum_mux(cntrl, table, default=None, strict=True):
     return muxes.sparse_mux(cntrl, vals)
 
 
+def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
+    """ Return wirevector w but with some of the bits overwritten by newvalue.
+
+    :param w: a wirevector to use as the starting point for the update
+    :param range_start: the start of the range of bits to be updated
+    :param range_end: the end of the range of bits to be updated
+    :param newvalue: the value to be written in to the start:end range
+    :param truncating: if true, clip the newvalue to be the proper number of bits
+
+    Given a wirevector w, this function returns a new wirevector that
+    is identical to w except in the range of bits specified.  In that
+    specified range, the value newvalue is swapped in.  For example:
+    `bitfield_update(w, 20, 23, 0x7)` will return return a wirevector
+    of the same length as w, and with the same values as w, but with
+    bits 20, 21, and 22 all set to 1.
+
+    Note that range_start and range_end will be inputs to a slice and
+    so standar Python slicing rules apply (e.g. negative values for
+    end-relative indexing and support for None).
+
+    Examples ::
+
+        w = bitfield_update(w, 20, 23, 0x7)  # sets bits 20, 21, 22 to 1
+        w = bitfield_update(w, 20, 23, 0x6)  # sets bit 20 to 0, bits 21 and 22 to 1
+        w = bitfield_update(w, 20, None, 0x7)  # assuming w is 32 bits, sets bits 31..20 = 0x7
+        w = bitfield_update(w, -1, None, 0x1)  # set the LSB (bit) to 1
+    """
+    from .corecircuits import concat_list
+
+    w = as_wires(w)
+    idxs = list(range(len(w)))  # we make a list of integers and slice those up to use as indexes
+    idxs_lower = idxs[0:range_start]
+    idxs_middle = idxs[range_start:range_end]
+    idxs_upper = idxs[range_end:]
+
+    if len(idxs_middle) == 0:
+        raise PyrtlError('Cannot update bitfield of size 0 (i.e. there are no bits to update)')
+    newvalue = as_wires(newvalue, bitwidth=len(idxs_middle), truncating=truncating)
+    if len(idxs_middle) != len(newvalue):
+        raise PyrtlError('Cannot update bitfield of length %d with value of length %d '
+                         'unless truncating=True is specified' % (len(idxs_middle), len(newvalue)))
+
+    result_list = []
+    if idxs_lower:
+        result_list.append(w[idxs_lower[0]:idxs_lower[-1]+1])
+    result_list.append(newvalue)
+    if idxs_upper:
+        result_list.append(w[idxs_upper[0]:idxs_upper[-1]+1])
+    result = concat_list(result_list)
+
+    if len(result) != len(w):
+        raise PyrtlInternalError('len(result)=%d, len(original)=%d' % (len(result), len(w)))
+    return result
+
+
 def signed_add(a, b):
     """ Return wirevector for result of signed addition.
 
