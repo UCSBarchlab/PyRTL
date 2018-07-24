@@ -106,7 +106,7 @@ be hit when constructing designs in the normal ways.  If you hit a confusing `Py
 `PyrtlInternalError` feel free to file an issue.
 
 PyRTL Quick Reference:
---------------
+----------------------
 
 * Helpful RTL constructs
     * mux(index_val, val_1, val_2, ... val_n, default=val_x)
@@ -145,23 +145,19 @@ PyRTL Quick Reference:
     * optimize(update_working_block=True, block=None)
     * synthesize(update_working_block=True, block=None)
 
-PyRTL Modules:
---------------
+PyRTL Functionality:
+--------------------
 .. toctree::
    :maxdepth: 2
-
-   core
-   corecircuits
-   wire
-   memory
-   simulation
-   conditional
-   passes
-   inputoutput
-   helperfuncs
-   rtllib
+   
+   basic
+   helpers
+   simtest
    analysis
-
+   export
+   rtllib
+   advanced
+   
 Indices and tables
 ------------------
 

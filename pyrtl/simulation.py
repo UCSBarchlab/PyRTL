@@ -806,7 +806,7 @@ class SimulationTrace(object):
         if len(self.trace) == 0:
             raise PyrtlError('error, cannot print an empty trace')
         if base not in (2, 8, 10, 16):
-            raise PyrtlError('please choose a valid base')
+            raise PyrtlError('please choose a valid base (2,8,10,16)')
 
         basekey = {2: 'b', 8: 'o', 10: 'd', 16: 'x'}[base]
         ident_len = max(len(w) for w in self.trace)

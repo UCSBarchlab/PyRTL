@@ -5,7 +5,7 @@ import six
 
 import pyrtl
 import pyrtl.corecircuits
-from pyrtl import helperfuncs
+import pyrtl.helperfuncs
 from pyrtl.rtllib import testingutils as utils
 
 
@@ -44,18 +44,18 @@ class TestBitField_Update(unittest.TestCase):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.helperfuncs.bitfield_update(a,1,2,b)
+            o = pyrtl.bitfield_update(a,1,2,b)
 
     def test_field_too_big_truncate(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=3)
-        o = pyrtl.helperfuncs.bitfield_update(a,1,2,b,truncating=True)
+        o = pyrtl.bitfield_update(a,1,2,b,truncating=True)
 
     def test_no_bits_to_update(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.helperfuncs.bitfield_update(a,1,1,b,truncating=True)
+            o = pyrtl.bitfield_update(a,1,1,b,truncating=True)
 
     def bitfield_update_checker(self, input_width, range_start, range_end, update_width, test_amt=20):
         def ref(i,s,e,u):
@@ -66,7 +66,7 @@ class TestBitField_Update(unittest.TestCase):
         #inp_vals = [1,1,0,0]
         #upd_vals = [0x7,0x6,0x7,0x6]
         out = pyrtl.Output(input_width, "out")
-        bfu_out = pyrtl.helperfuncs.bitfield_update(inp, range_start, range_end, upd)
+        bfu_out = pyrtl.bitfield_update(inp, range_start, range_end, upd)
         self.assertEqual(len(out), len(bfu_out))  # output should have width of input
         out <<= bfu_out
         true_result = [ref(i,range_start,range_end,u) for i,u in zip(inp_vals, upd_vals)]
