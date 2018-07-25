@@ -313,14 +313,14 @@ def match_bitwidth(*args, **opt):
     :return: tuple of args in order with extended bits
 
     Example of matching the bitwidths of two WireVectors `a` and `b` with
-    with zero extention ::
+    with zero extention: ::
 
-    a,b = match_bitwidth(a, b)
+        a,b = match_bitwidth(a, b)
 
     Example of matching the bitwidths of three WireVectors `a`,`b`, and `c` with
-    with sign extention ::
+    with sign extention: ::
 
-    a,b = match_bitwidth(a, b, c, signed=True)
+        a,b = match_bitwidth(a, b, c, signed=True)
     """
     # TODO: when we drop 2.7 support, this code should be cleaned up with explicit
     # kwarg support for "signed" rather than the less than helpful "**opt"
@@ -353,10 +353,10 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
     example, operations such as "x+1" where "1" needs to be converted to
     a Const WireVector). An example: ::
 
-    def myhardware(input_a, input_b):
-        a = as_wires(input_a)
-        b = as_wires(input_b)
-    myhardware(3, x)
+        def myhardware(input_a, input_b):
+            a = as_wires(input_a)
+            b = as_wires(input_b)
+        myhardware(3, x)
 
     The function as_wires will covert the 3 to Const but keep `x` unchanged
     assuming it is a WireVector.
