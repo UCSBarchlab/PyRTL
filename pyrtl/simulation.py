@@ -22,7 +22,17 @@ from .inputoutput import _VerilogSanitizer
 
 
 class Simulation(object):
-    """A class for simulating blocks of logic step by step."""
+    """A class for simulating blocks of logic step by step.
+
+    In addition to the functions methods listed below, it is sometimes
+    useful to reach into this class and access internal state directly.
+    Of particular usefulness are:
+
+    * *.tracer*: stores the SimulationTrace in which results are stored
+    * *.value*: a map from every signal in the block to its current simulation value
+    * *.regvalue*: a map from register to its value on the next tick
+    * *.memvalue*: a map from memid to a dictionary of address: value
+    """
 
     simple_func = {  # OPS
         'w': lambda x: x,
@@ -47,7 +57,9 @@ class Simulation(object):
 
         :param tracer: an instance of SimulationTrace used to store execution results.
             Defaults to a new SimulationTrace with no params passed to it.  If None is
-            passed, no tracer is instantiated (which is good for long running simulations)
+            passed, no tracer is instantiated (which is good for long running simulations).
+            If the default (true) is passed, Simulation will create a new tracer automatically
+            which can be referenced by the member variable .tracer
         :param register_value_map: Defines the initial value for
           the roms specified. Format: {Register: value}.
         :param memory_value_map: Defines initial values for many
@@ -300,9 +312,6 @@ class Simulation(object):
 
 class FastSimulation(object):
     """A class for running JIT implementations of blocks.
-
-    As of right now (5/26/2016), the interface is the same as Simulation.
-    They should still be similar in the future
     """
 
     # Dev Notes:
@@ -318,8 +327,10 @@ class FastSimulation(object):
     def __init__(
             self, register_value_map=None, memory_value_map=None,
             default_value=0, tracer=True, block=None, code_file=None):
-        """
-        Instantiates a Fast Simulation instance.
+        """ Instantiates a Fast Simulation instance.
+
+        The interface for FastSimulation and Simulation should be almost identical.
+        In addition to the Simualtion arguments, FastSimulation additional takes:
 
         :param code_file: The file in which to store a copy of the generated
         python code. Defaults to no code being stored.

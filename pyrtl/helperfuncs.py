@@ -17,164 +17,6 @@ from .wire import WireVector, Input, Output, Const, Register
 #
 
 
-def input_list(names, bitwidth=1):
-    """ Allocate and return a list of Inputs. """
-    return wirevector_list(names, bitwidth, wvtype=Input)
-
-
-def output_list(names, bitwidth=1):
-    """ Allocate and return a list of Outputs. """
-    return wirevector_list(names, bitwidth, wvtype=Output)
-
-
-def register_list(names, bitwidth=1):
-    """ Allocate and return a list of Registers. """
-    return wirevector_list(names, bitwidth, wvtype=Register)
-
-
-def wirevector_list(names, bitwidth=1, wvtype=WireVector):
-    """ Allocate and return a list of WireVectors. """
-    if '/' in names and bitwidth != 1:
-        raise PyrtlError('only one of optional "/" or bitwidth parameter allowed')
-    names = names.replace(',', ' ')
-
-    wirelist = []
-    for fullname in names.split():
-        try:
-            name, bw = fullname.split('/')
-        except:
-            name, bw = fullname, bitwidth
-        wirelist.append(wvtype(bitwidth=bw, name=name))
-    return wirelist
-
-
-def val_to_signed_integer(value, bitwidth):
-    """ Return value as intrepreted as a signed integer under twos complement.
-
-    :param value: a python integer holding the value to convert
-    :param bitwidth: the length of the integer in bits to assume for conversion
-
-    Given an unsigned integer (not a wirevector!) covert that to a signed
-    integer.  This is useful for printing and interpreting values which are
-    negative numbers in twos complement.
-
-    Example::
-        val_to_signed_integer(0xff, 8) == -1
-    """
-    if isinstance(value, WireVector) or isinstance(bitwidth, WireVector):
-        raise PyrtlError('inputs must not be wirevectors')
-    if bitwidth < 1:
-        raise PyrtlError('bitwidth must be a positive integer')
-
-    neg_mask = 1 << (bitwidth - 1)
-    neg_part = value & neg_mask
-
-    pos_mask = neg_mask - 1
-    pos_part = value & pos_mask
-
-    return pos_part - neg_part
-
-
-def formatted_str_to_val(data, format, enum_set=None):
-    """ Return an unsigned integer representation of the data given format specified.
-
-    :param data: a string holding the value to convert
-    :param format: a string holding a format which will be used to convert the data string
-    :param enum_set: an iterable of enums which are used as part of the converstion process
-
-    Given a string (not a wirevector!) covert that to an unsigned integer ready for input
-    to the simulation enviornment.  This helps deal with signed/unsigned numbers (simulation
-    assumes the values have been converted via two's complement already), but it also takes
-    hex, binary, and enum types as inputs.  It is easiest to see how it works with some
-    examples.
-
-    Examples ::
-        formatted_str_to_val('2', 's3') == 2  # 0b010
-        formatted_str_to_val('-1', 's3') == 7  # 0b111
-        formatted_str_to_val('101', 'b3') == 5
-        formatted_str_to_val('5', 'u3') == 5
-        formatted_str_to_val('-3', 's3') == 5
-        formatted_str_to_val('a', 'x3') == 10
-        class Ctl(Enum):
-            ADD = 5
-            SUB = 12
-        formatted_str_to_val('ADD', 'e3/Ctl', [Ctl]) == 5
-        formatted_str_to_val('SUB', 'e3/Ctl', [Ctl]) == 12
-    """
-    type = format[0]
-    bitwidth = int(format[1:].split('/')[0])
-    bitmask = (1 << bitwidth)-1
-    if type == 's':
-        rval = int(data) & bitmask
-    elif type == 'x':
-        rval = int(data, 16)
-    elif type == 'b':
-        rval = int(data, 2)
-    elif type == 'u':
-        rval = int(data)
-        if rval < 0:
-            raise PyrtlError('unsigned format requested, but negative value provided')
-    elif type == 'e':
-        enumname = format.split('/')[1]
-        enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
-        if len(enum_inst_list) == 0:
-            raise PyrtlError('enum "{}" not found in passed enum_set "{}"'
-                             .format(enumname, enum_set))
-        rval = getattr(enum_inst_list[0], data).value
-    else:
-        raise PyrtlError('unknown format type {}'.format(format))
-    return rval
-
-
-def val_to_formatted_str(val, format, enum_set=None):
-    """ Return a string representation of the value given format specified.
-
-    :param val: a string holding an unsigned integer to convert
-    :param format: a string holding a format which will be used to convert the data string
-    :param enum_set: an iterable of enums which are used as part of the converstion process
-
-    Given an unsigned integer (not a wirevector!) covert that to a strong ready for output
-    to a human to interpret.  This helps deal with signed/unsigned numbers (simulation
-    operates on values that have been converted via two's complement), but it also generates
-    hex, binary, and enum types as outputs.  It is easiest to see how it works with some
-    examples.
-
-    Examples ::
-        formatted_str_to_val(2, 's3') == '2'
-        formatted_str_to_val(7, 's3') == '-1'
-        formatted_str_to_val(5, 'b3') == '101'
-        formatted_str_to_val(5, 'u3') == '5'
-        formatted_str_to_val(5, 's3') == '-3'
-        formatted_str_to_val(10, 'x3') == 'a'
-        class Ctl(Enum):
-            ADD = 5
-            SUB = 12
-        formatted_str_to_val('ADD', 'e3/Ctl', [Ctl]) == 5
-        formatted_str_to_val('SUB', 'e3/Ctl', [Ctl]) == 12
-    """
-    type = format[0]
-    bitwidth = int(format[1:].split('/')[0])
-    bitmask = (1 << bitwidth)-1
-    if type == 's':
-        rval = str(val_to_signed_integer(val, bitwidth))
-    elif type == 'x':
-        rval = hex(val)[2:]  # cuts off '0x' at the start
-    elif type == 'b':
-        rval = bin(val)[2:]  # cuts off '0b' at the start
-    elif type == 'u':
-        rval = str(int(val))  # nothing fancy
-    elif type == 'e':
-        enumname = format.split('/')[1]
-        enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
-        if len(enum_inst_list) == 0:
-            raise PyrtlError('enum "{}" not found in passed enum_set "{}"'
-                             .format(enumname, enum_set))
-        rval = enum_inst_list[0](val).name
-    else:
-        raise PyrtlError('unknown format type {}'.format(format))
-    return rval
-
-
 probeIndexer = _NameIndexer('Probe-')
 
 
@@ -207,28 +49,6 @@ def probe(w, name=None):
     p = Output(name=name)
     p <<= w  # late assigns len from w automatically
     return w
-
-
-def get_stacks(*wires):
-    call_stack = getattr(wires[0], 'init_call_stack', None)
-    if not call_stack:
-        return '    No call info found for wires: use set_debug_mode() ' \
-               'to provide more information\n'
-    else:
-        return '\n'.join(str(wire) + ":\n" + get_stack(wire) for wire in wires)
-
-
-def get_stack(wire):
-    if not isinstance(wire, WireVector):
-        raise PyrtlError('Only WireVectors can be traced')
-
-    call_stack = getattr(wire, 'init_call_stack', None)
-    if call_stack:
-        frames = ' '.join(frame for frame in call_stack[:-1])
-        return "Wire Traceback, most recent call last \n" + frames + "\n"
-    else:
-        return '    No call info found for wire: use set_debug_mode()'\
-               ' to provide more information'
 
 
 assertIndexer = _NameIndexer('assertion')
@@ -283,6 +103,185 @@ def check_rtl_assertions(sim):
                 raise exp
         except KeyError:
             pass
+
+
+def input_list(names, bitwidth=1):
+    """ Allocate and return a list of Inputs. """
+    return wirevector_list(names, bitwidth, wvtype=Input)
+
+
+def output_list(names, bitwidth=1):
+    """ Allocate and return a list of Outputs. """
+    return wirevector_list(names, bitwidth, wvtype=Output)
+
+
+def register_list(names, bitwidth=1):
+    """ Allocate and return a list of Registers. """
+    return wirevector_list(names, bitwidth, wvtype=Register)
+
+
+def wirevector_list(names, bitwidth=1, wvtype=WireVector):
+    """ Allocate and return a list of WireVectors. """
+    if '/' in names and bitwidth != 1:
+        raise PyrtlError('only one of optional "/" or bitwidth parameter allowed')
+    names = names.replace(',', ' ')
+
+    wirelist = []
+    for fullname in names.split():
+        try:
+            name, bw = fullname.split('/')
+        except:
+            name, bw = fullname, bitwidth
+        wirelist.append(wvtype(bitwidth=bw, name=name))
+    return wirelist
+
+
+def val_to_signed_integer(value, bitwidth):
+    """ Return value as intrepreted as a signed integer under twos complement.
+
+    :param value: a python integer holding the value to convert
+    :param bitwidth: the length of the integer in bits to assume for conversion
+
+    Given an unsigned integer (not a wirevector!) covert that to a signed
+    integer.  This is useful for printing and interpreting values which are
+    negative numbers in twos complement. ::
+
+        val_to_signed_integer(0xff, 8) == -1
+    """
+    if isinstance(value, WireVector) or isinstance(bitwidth, WireVector):
+        raise PyrtlError('inputs must not be wirevectors')
+    if bitwidth < 1:
+        raise PyrtlError('bitwidth must be a positive integer')
+
+    neg_mask = 1 << (bitwidth - 1)
+    neg_part = value & neg_mask
+
+    pos_mask = neg_mask - 1
+    pos_part = value & pos_mask
+
+    return pos_part - neg_part
+
+
+def formatted_str_to_val(data, format, enum_set=None):
+    """ Return an unsigned integer representation of the data given format specified.
+
+    :param data: a string holding the value to convert
+    :param format: a string holding a format which will be used to convert the data string
+    :param enum_set: an iterable of enums which are used as part of the converstion process
+
+    Given a string (not a wirevector!) covert that to an unsigned integer ready for input
+    to the simulation enviornment.  This helps deal with signed/unsigned numbers (simulation
+    assumes the values have been converted via two's complement already), but it also takes
+    hex, binary, and enum types as inputs.  It is easiest to see how it works with some
+    examples. ::
+
+        formatted_str_to_val('2', 's3') == 2  # 0b010
+        formatted_str_to_val('-1', 's3') == 7  # 0b111
+        formatted_str_to_val('101', 'b3') == 5
+        formatted_str_to_val('5', 'u3') == 5
+        formatted_str_to_val('-3', 's3') == 5
+        formatted_str_to_val('a', 'x3') == 10
+        class Ctl(Enum):
+            ADD = 5
+            SUB = 12
+        formatted_str_to_val('ADD', 'e3/Ctl', [Ctl]) == 5
+        formatted_str_to_val('SUB', 'e3/Ctl', [Ctl]) == 12
+
+    """
+    type = format[0]
+    bitwidth = int(format[1:].split('/')[0])
+    bitmask = (1 << bitwidth)-1
+    if type == 's':
+        rval = int(data) & bitmask
+    elif type == 'x':
+        rval = int(data, 16)
+    elif type == 'b':
+        rval = int(data, 2)
+    elif type == 'u':
+        rval = int(data)
+        if rval < 0:
+            raise PyrtlError('unsigned format requested, but negative value provided')
+    elif type == 'e':
+        enumname = format.split('/')[1]
+        enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
+        if len(enum_inst_list) == 0:
+            raise PyrtlError('enum "{}" not found in passed enum_set "{}"'
+                             .format(enumname, enum_set))
+        rval = getattr(enum_inst_list[0], data).value
+    else:
+        raise PyrtlError('unknown format type {}'.format(format))
+    return rval
+
+
+def val_to_formatted_str(val, format, enum_set=None):
+    """ Return a string representation of the value given format specified.
+
+    :param val: a string holding an unsigned integer to convert
+    :param format: a string holding a format which will be used to convert the data string
+    :param enum_set: an iterable of enums which are used as part of the converstion process
+
+    Given an unsigned integer (not a wirevector!) covert that to a strong ready for output
+    to a human to interpret.  This helps deal with signed/unsigned numbers (simulation
+    operates on values that have been converted via two's complement), but it also generates
+    hex, binary, and enum types as outputs.  It is easiest to see how it works with some
+    examples. ::
+
+        formatted_str_to_val(2, 's3') == '2'
+        formatted_str_to_val(7, 's3') == '-1'
+        formatted_str_to_val(5, 'b3') == '101'
+        formatted_str_to_val(5, 'u3') == '5'
+        formatted_str_to_val(5, 's3') == '-3'
+        formatted_str_to_val(10, 'x3') == 'a'
+        class Ctl(Enum):
+            ADD = 5
+            SUB = 12
+        formatted_str_to_val('ADD', 'e3/Ctl', [Ctl]) == 5
+        formatted_str_to_val('SUB', 'e3/Ctl', [Ctl]) == 12
+
+    """
+    type = format[0]
+    bitwidth = int(format[1:].split('/')[0])
+    bitmask = (1 << bitwidth)-1
+    if type == 's':
+        rval = str(val_to_signed_integer(val, bitwidth))
+    elif type == 'x':
+        rval = hex(val)[2:]  # cuts off '0x' at the start
+    elif type == 'b':
+        rval = bin(val)[2:]  # cuts off '0b' at the start
+    elif type == 'u':
+        rval = str(int(val))  # nothing fancy
+    elif type == 'e':
+        enumname = format.split('/')[1]
+        enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
+        if len(enum_inst_list) == 0:
+            raise PyrtlError('enum "{}" not found in passed enum_set "{}"'
+                             .format(enumname, enum_set))
+        rval = enum_inst_list[0](val).name
+    else:
+        raise PyrtlError('unknown format type {}'.format(format))
+    return rval
+
+
+def get_stacks(*wires):
+    call_stack = getattr(wires[0], 'init_call_stack', None)
+    if not call_stack:
+        return '    No call info found for wires: use set_debug_mode() ' \
+               'to provide more information\n'
+    else:
+        return '\n'.join(str(wire) + ":\n" + get_stack(wire) for wire in wires)
+
+
+def get_stack(wire):
+    if not isinstance(wire, WireVector):
+        raise PyrtlError('Only WireVectors can be traced')
+
+    call_stack = getattr(wire, 'init_call_stack', None)
+    if call_stack:
+        frames = ' '.join(frame for frame in call_stack[:-1])
+        return "Wire Traceback, most recent call last \n" + frames + "\n"
+    else:
+        return '    No call info found for wire: use set_debug_mode()'\
+               ' to provide more information'
 
 
 def _check_for_loop(block=None):

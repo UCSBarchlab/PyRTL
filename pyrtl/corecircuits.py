@@ -381,9 +381,7 @@ def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
 
     Note that range_start and range_end will be inputs to a slice and
     so standar Python slicing rules apply (e.g. negative values for
-    end-relative indexing and support for None).
-
-    Examples ::
+    end-relative indexing and support for None). ::
 
         w = bitfield_update(w, 20, 23, 0x7)  # sets bits 20, 21, 22 to 1
         w = bitfield_update(w, 20, 23, 0x6)  # sets bit 20 to 0, bits 21 and 22 to 1
@@ -420,6 +418,7 @@ def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
 
 def enum_mux(cntrl, table, default=None, strict=True):
     """ Build a mux for the control signals specified by an enum.
+
     :param cntrl: is a wirevector and control for the mux.
     :param table: is a dictionary of the form mapping enum->wirevector.
     :param default: is a wirevector to use when the key is not present. In addtion
@@ -430,8 +429,7 @@ def enum_mux(cntrl, table, default=None, strict=True):
         Note that if a default is set, then this check is not performed as
         the default will provide valid values for any underspecified keys.
     :return: a wirevector which is the result of the mux.
-
-    Examples::
+    ::
 
         class Command(Enum):
             ADD = 1
@@ -440,6 +438,7 @@ def enum_mux(cntrl, table, default=None, strict=True):
         enum_mux(cntrl, {ADD: a+b}, strict=False)  # SUB case undefined
         enum_mux(cntrl, {ADD: a+b, otherwise: a-b})
         enum_mux(cntrl, {ADD: a+b}, default=a-b)
+
     """
     # check dictionary keys are of the right type
     keytypeset = set(type(x) for x in table.keys() if x is not otherwise)

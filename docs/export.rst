@@ -1,5 +1,5 @@
-Input and Output
-================
+Exporting and Importing Designs
+===============================
 
 .. automodule:: pyrtl.inputoutput
    :members:
