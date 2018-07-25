@@ -31,15 +31,18 @@ def mux(index, *mux_ins, **kwargs):
     as named arguments because the ordering is different from the classic ternary
     operator of some languages.
 
-    Example of mux as "selector" to pick between a0 and a1:
+    Example of mux as "selector" to pick between a0 and a1: ::
+
         index = WireVector(1)
         mux( index, a0, a1 )
 
-    Example of mux as "selector" to pick between a0 ... a3:
+    Example of mux as "selector" to pick between a0 ... a3: ::
+
         index = WireVector(2)
         mux( index, a0, a1, a2, a3 )
 
-    Example of "default" to specify additional arguments:
+    Example of "default" to specify additional arguments: ::
+
         index = WireVector(3)
         mux( index, a0, a1, a2, a3, a4, a5, default=0 )
     """
@@ -90,7 +93,8 @@ def select(sel, truecase, falsecase):
     true case as the first argument it matches more of the C-style ternary operator
     semantics which can be helpful for readablity.
 
-    Example of mux as "ternary operator" to take the max of 'a' and 5:
+    Example of mux as "ternary operator" to take the max of 'a' and 5: ::
+
         select( a<5, truecase=a, falsecase=5 )
     """
     sel, f, t = (as_wires(w) for w in (sel, falsecase, truecase))
@@ -114,7 +118,8 @@ def concat(*args):
     significant bit and so if you unpack the list into the arguements here it will be
     backwards.  The function concat_list is provided for that case specifically.
 
-    Example using concat to combine two bytes into a 16-bit quantity:
+    Example using concat to combine two bytes into a 16-bit quantity: ::
+
         concat( msb, lsb )
     """
     if len(args) <= 0:
@@ -145,7 +150,8 @@ def concat_list(wire_list):
     This is useful when you have a variable number of wirevectors to concatenate,
     otherwise "concat" is prefered.
 
-    Example using concat to combine two bytes into a 16-bit quantity:
+    Example using concat to combine two bytes into a 16-bit quantity: ::
+
         mylist = [ lsb, msb ]
         concat_list( mylist )
 
@@ -305,6 +311,16 @@ def match_bitwidth(*args, **opt):
     :param args: WireVectors of which to match bitwidths
     :param opt: Optional keyword argument 'signed=True' (defaults to False)
     :return: tuple of args in order with extended bits
+
+    Example of matching the bitwidths of two WireVectors `a` and `b` with
+    with zero extention ::
+
+    a,b = match_bitwidth(a, b)
+
+    Example of matching the bitwidths of three WireVectors `a`,`b`, and `c` with
+    with sign extention ::
+
+    a,b = match_bitwidth(a, b, c, signed=True)
     """
     # TODO: when we drop 2.7 support, this code should be cleaned up with explicit
     # kwarg support for "signed" rather than the less than helpful "**opt"
@@ -335,7 +351,16 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
 
     This function is mainly used to coerce values into WireVectors (for
     example, operations such as "x+1" where "1" needs to be converted to
-    a Const WireVector).
+    a Const WireVector). An example: ::
+
+    def myhardware(input_a, input_b):
+        a = as_wires(input_a)
+        b = as_wires(input_b)
+    myhardware(3, x)
+
+    The function as_wires will covert the 3 to Const but keep `x` unchanged
+    assuming it is a WireVector.
+
     """
     from .memory import _MemIndexed
     block = working_block(block)
@@ -471,17 +496,30 @@ def enum_mux(cntrl, table, default=None, strict=True):
 
 
 def and_all_bits(vector):
-    """ Returns WireVector, the result of "and"ing all items of the argument vector."""
+    """ Returns WireVector, the result of "and"ing all items of the argument vector.
+
+    Takes a single WireVector and returns a 1 bit result, the bitwise and of all of
+    the bits in the vector to a single bit.
+    """
     return tree_reduce(lambda a, b: a & b, vector)
 
 
 def or_all_bits(vector):
-    """ Returns WireVector, the result of "or"ing all items of the argument vector."""
+    """ Returns WireVector, the result of "or"ing all items of the argument vector.
+
+    Takes a single WireVector and returns a 1 bit result, the bitwise or of all of
+    the bits in the vector to a single bit.
+    """
     return tree_reduce(lambda a, b: a | b, vector)
 
 
 def xor_all_bits(vector):
-    """ Returns WireVector, the result of "xor"ing all items of the argument vector."""
+    """ Returns WireVector, the result of "xor"ing all items of the argument vector.
+
+    Takes a single WireVector and returns a 1 bit result, the bitwise xor of all of
+    the bits in the vector to a single bit. This function is also aliased as `parity`
+    and you can call it either way.
+    """
     return tree_reduce(lambda a, b: a ^ b, vector)
 
 
