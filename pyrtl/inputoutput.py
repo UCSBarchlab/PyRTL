@@ -425,6 +425,7 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
         %s
         ]}
         </script>
+
         """
         )
 
