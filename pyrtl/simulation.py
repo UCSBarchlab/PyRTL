@@ -897,7 +897,23 @@ class SimulationTrace(object):
             from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
             from .inputoutput import trace_to_html
             htmlstring = trace_to_html(self, trace_list=trace_list, sortkey=_trace_sort_key)
-            display(HTML(htmlstring))
+            html_elem = HTML(htmlstring)
+            display(html_elem)
+            print(htmlstring)
+
+            #Add WaveDrom scripts to the head of the document to ensure scripts are loaded before WaveDrom rendering is executed
+            load_scripts = """
+                var head = document.getElementsByTagName('head')[0],
+                scriptA = document.createElement('scriptA'),
+                scriptB = document.createElement('scriptB');
+            scriptA.src = 'https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/skins/default.js';
+            scriptB.src = 'https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/wavedrom.min.js';
+            scriptA.type = 'text/javascript';
+            scriptB.type = 'text/javascript';
+            head.appendChild(scriptA);
+            head.appendChild(scriptB);
+            """
+            display(Javascript(load_scripts))
             display(Javascript('WaveDrom.ProcessAll()'))
         else:
             self.render_trace_to_text(

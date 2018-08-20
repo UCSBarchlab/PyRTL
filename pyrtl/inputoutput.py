@@ -420,9 +420,6 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
 
     wave_template = (
         """\
-
-        <script src="http://wavedrom.com/skins/default.js" type="text/javascript"></script>
-        <script src="http://wavedrom.com/WaveDrom.js" type="text/javascript"></script>
         <script type="WaveDrom">
         { signal : [
         %s
