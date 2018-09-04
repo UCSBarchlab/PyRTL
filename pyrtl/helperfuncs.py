@@ -106,22 +106,70 @@ def check_rtl_assertions(sim):
 
 
 def input_list(names, bitwidth=1):
-    """ Allocate and return a list of Inputs. """
+    """ Allocate and return a list of Inputs.
+
+    :param string names: Comma- or space-separated list of names for the Inputs.
+    :param int bitwidth: The desired bitwidth for the resulting Inputs.
+    :return: List of Inputs.
+
+    Equivalent to: ::
+
+        wirevector_list(names, bitwidth, wvtype=pyrtl.wire.Input)
+
+    """
     return wirevector_list(names, bitwidth, wvtype=Input)
 
 
 def output_list(names, bitwidth=1):
-    """ Allocate and return a list of Outputs. """
+    """ Allocate and return a list of Outputs.
+
+    :param string names: Comma- or space-separated list of names for the Outputs.
+    :param int bitwidth: The desired bitwidth for the resulting Outputs.
+    :return: List of Outputs.
+
+    Equivalent to: ::
+
+        wirevector_list(names, bitwidth, wvtype=pyrtl.wire.Output)
+
+    """
     return wirevector_list(names, bitwidth, wvtype=Output)
 
 
 def register_list(names, bitwidth=1):
-    """ Allocate and return a list of Registers. """
+    """ Allocate and return a list of Registers.
+
+    :param string names: Comma- or space-separated list of names for the Registers.
+    :param int bitwidth: The desired bitwidth for the resulting Registers.
+    :return: List of Registers.
+
+    Equivalent to: ::
+
+        wirevector_list(names, bitwidth, wvtype=pyrtl.wire.Register)
+
+    """
     return wirevector_list(names, bitwidth, wvtype=Register)
 
 
 def wirevector_list(names, bitwidth=1, wvtype=WireVector):
-    """ Allocate and return a list of WireVectors. """
+    """ Allocate and return a list of WireVectors.
+
+    :param string names: Comma- or space-separated list of names for the WireVectors.
+    :param int bitwidth: The desired bitwidth for the resulting WireVectors.
+    :param WireVector wvtype: Which WireVector type to create.
+    :return: List of WireVectors.
+
+    Additionally, the ``names`` string can also contain an additional bitwidth specification
+    separated by a ``/`` in the name. This cannot be used in combination with a ``bitwidth``
+    value other than ``1``.
+
+    Examples: ::
+
+        wirevector_list('name1, name2, name3')
+        wirevector_list('input1 input2 input3', bitwidth=8, wvtype=pyrtl.wire.Input)
+        wirevector_list('output1, output2 output3', bitwidth=3, wvtype=pyrtl.wire.Output)
+        wirevector_list('two_bits/2, four_bits/4, eight_bits/8')
+
+    """
     if '/' in names and bitwidth != 1:
         raise PyrtlError('only one of optional "/" or bitwidth parameter allowed')
     names = names.replace(',', ' ')
