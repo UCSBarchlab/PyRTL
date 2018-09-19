@@ -180,7 +180,7 @@ def wirevector_list(names, bitwidth=1, wvtype=WireVector):
             name, bw = fullname.split('/')
         except:
             name, bw = fullname, bitwidth
-        wirelist.append(wvtype(bitwidth=bw, name=name))
+        wirelist.append(wvtype(bitwidth=int(bw), name=name))
     return wirelist
 
 

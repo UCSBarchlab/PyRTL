@@ -11,6 +11,42 @@ from pyrtl.rtllib import testingutils as utils
 
 # ---------------------------------------------------------------
 
+class TestWireVectorList(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_input_list_type(self):
+        inputs = pyrtl.helperfuncs.input_list('one, two, three')
+        self.assertTrue(all(isinstance(inp, pyrtl.Input) for inp in inputs))
+
+    def test_output_list_type(self):
+        outputs = pyrtl.helperfuncs.output_list('one, two, three')
+        self.assertTrue(all(isinstance(outp, pyrtl.Output) for outp in outputs))
+
+    def test_register_list_type(self):
+        registers = pyrtl.helperfuncs.register_list('one, two, three')
+        self.assertTrue(all(isinstance(reg, pyrtl.Register) for reg in registers))
+
+    def test_wirevector_list_type(self):
+        wirevectors = pyrtl.helperfuncs.wirevector_list('one, two, three')
+        self.assertTrue(all(isinstance(wire, pyrtl.WireVector) for wire in wirevectors))
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [1, 1, 1])
+
+    def test_wirevector_list_bitwidth(self):
+        wirevectors = pyrtl.helperfuncs.wirevector_list('one, two, three')
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [1, 1, 1])
+
+        wirevectors = pyrtl.helperfuncs.wirevector_list('one, two, three', 8)
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [8, 8, 8])
+
+    def test_wirevector_list_per_wire_width(self):
+        wirevectors = pyrtl.helperfuncs.wirevector_list('one/2, two/4, three/8')
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [2, 4, 8])
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.helperfuncs.wirevector_list('one/2, two/4, three/8', 16)
+
+
 class TestPrettyPrinting(unittest.TestCase):
     def setUp(self):
         pass
