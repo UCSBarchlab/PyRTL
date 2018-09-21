@@ -28,6 +28,12 @@ class TestWireVectorList(unittest.TestCase):
         self.assertTrue(all(isinstance(reg, pyrtl.Register) for reg in registers))
 
     def test_wirevector_list_type(self):
+        # Single string of names
+        wirevectors = pyrtl.helperfuncs.wirevector_list('one, two, three')
+        self.assertTrue(all(isinstance(wire, pyrtl.WireVector) for wire in wirevectors))
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [1, 1, 1])
+
+        # List of names
         wirevectors = pyrtl.helperfuncs.wirevector_list('one, two, three')
         self.assertTrue(all(isinstance(wire, pyrtl.WireVector) for wire in wirevectors))
         self.assertListEqual([wire.bitwidth for wire in wirevectors], [1, 1, 1])
@@ -43,8 +49,19 @@ class TestWireVectorList(unittest.TestCase):
         wirevectors = pyrtl.helperfuncs.wirevector_list('one/2, two/4, three/8')
         self.assertListEqual([wire.bitwidth for wire in wirevectors], [2, 4, 8])
 
+        wirevectors = pyrtl.helperfuncs.wirevector_list(['one', 'two', 'three'], [2, 4, 8])
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [2, 4, 8])
+
+    def test_wirevector_list_raise_errors(self):
+
+        with self.assertRaises(ValueError):
+            pyrtl.helperfuncs.wirevector_list(['one', 'two', 'three'], [2, 4])
+
         with self.assertRaises(pyrtl.PyrtlError):
             pyrtl.helperfuncs.wirevector_list('one/2, two/4, three/8', 16)
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.helperfuncs.wirevector_list(['one/2', 'two/4', 'three/8'], [8, 4, 2])
 
 
 class TestPrettyPrinting(unittest.TestCase):
@@ -463,7 +480,7 @@ class TestBasicMult(unittest.TestCase):
         product = pyrtl.Output(name="product")
         product <<= pyrtl.corecircuits._basic_mult(a, b)
 
-        self.assertEquals(len(product), len_a + len_b)
+        self.assertEqual(len(product), len_a + len_b)
 
         # creating the testing values and the correct results
         xvals = [int(random.uniform(0, 2**len_a-1)) for i in range(20)]
@@ -550,7 +567,7 @@ class TestRtlAssert(unittest.TestCase):
 
         sim = pyrtl.Simulation()
         sim.step({i: 1})
-        self.assertEquals(sim.inspect(o), 1)
+        self.assertEqual(sim.inspect(o), 1)
 
         with self.assertRaises(self.RTLSampleException):
             sim.step({i: 0})
@@ -561,7 +578,7 @@ class TestRtlAssert(unittest.TestCase):
 
         sim = pyrtl.FastSimulation()
         sim.step({i: 1})
-        self.assertEquals(sim.inspect(o), 1)
+        self.assertEqual(sim.inspect(o), 1)
 
         with self.assertRaises(self.RTLSampleException):
             sim.step({i: 0})
