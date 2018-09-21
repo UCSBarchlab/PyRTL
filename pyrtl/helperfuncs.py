@@ -184,8 +184,8 @@ def wirevector_list(names, bitwidth=None, wvtype=WireVector):
     if isinstance(bitwidth, numbers.Integral):
         bitwidth = [bitwidth]*len(names)
     if len(bitwidth) != len(names):
-        raise ValueError('number of names {n_names} should match len(bitwidths) {n_bws}'.format(n_names=len(names),
-                                                                                                n_bws=len(bitwidth)))
+        raise ValueError('number of names ' + str(len(names))
+                         + ' should match number of bitwidths ' + str(len(bitwidth)))
 
     wirelist = []
     for fullname, bw in zip(names, bitwidth):
