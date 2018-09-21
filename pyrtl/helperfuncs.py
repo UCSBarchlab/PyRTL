@@ -3,6 +3,7 @@
 
 from __future__ import print_function, unicode_literals
 
+import numbers
 import six
 import math
 
@@ -105,11 +106,11 @@ def check_rtl_assertions(sim):
             pass
 
 
-def input_list(names, bitwidth=1):
+def input_list(names, bitwidth=None):
     """ Allocate and return a list of Inputs.
 
-    :param string names: Comma- or space-separated list of names for the Inputs.
-    :param int bitwidth: The desired bitwidth for the resulting Inputs.
+    :param names: Names for the Inputs. Can be a list or single comma/space-separated string
+    :param bitwidth: The desired bitwidth for the resulting Inputs.
     :return: List of Inputs.
 
     Equivalent to: ::
@@ -120,11 +121,11 @@ def input_list(names, bitwidth=1):
     return wirevector_list(names, bitwidth, wvtype=Input)
 
 
-def output_list(names, bitwidth=1):
+def output_list(names, bitwidth=None):
     """ Allocate and return a list of Outputs.
 
-    :param string names: Comma- or space-separated list of names for the Outputs.
-    :param int bitwidth: The desired bitwidth for the resulting Outputs.
+    :param names: Names for the Outputs. Can be a list or single comma/space-separated string
+    :param bitwidth: The desired bitwidth for the resulting Outputs.
     :return: List of Outputs.
 
     Equivalent to: ::
@@ -135,11 +136,11 @@ def output_list(names, bitwidth=1):
     return wirevector_list(names, bitwidth, wvtype=Output)
 
 
-def register_list(names, bitwidth=1):
+def register_list(names, bitwidth=None):
     """ Allocate and return a list of Registers.
 
-    :param string names: Comma- or space-separated list of names for the Registers.
-    :param int bitwidth: The desired bitwidth for the resulting Registers.
+    :param names: Names for the Registers. Can be a list or single comma/space-separated string
+    :param bitwidth: The desired bitwidth for the resulting Registers.
     :return: List of Registers.
 
     Equivalent to: ::
@@ -150,11 +151,11 @@ def register_list(names, bitwidth=1):
     return wirevector_list(names, bitwidth, wvtype=Register)
 
 
-def wirevector_list(names, bitwidth=1, wvtype=WireVector):
+def wirevector_list(names, bitwidth=None, wvtype=WireVector):
     """ Allocate and return a list of WireVectors.
 
-    :param string names: Comma- or space-separated list of names for the WireVectors.
-    :param int bitwidth: The desired bitwidth for the resulting WireVectors.
+    :param names: Names for the WireVectors. Can be a list or single comma/space-separated string
+    :param bitwidth: The desired bitwidth for the resulting WireVectors.
     :param WireVector wvtype: Which WireVector type to create.
     :return: List of WireVectors.
 
@@ -164,22 +165,34 @@ def wirevector_list(names, bitwidth=1, wvtype=WireVector):
 
     Examples: ::
 
+        wirevector_list(['name1', 'name2', 'name3'])
         wirevector_list('name1, name2, name3')
         wirevector_list('input1 input2 input3', bitwidth=8, wvtype=pyrtl.wire.Input)
         wirevector_list('output1, output2 output3', bitwidth=3, wvtype=pyrtl.wire.Output)
         wirevector_list('two_bits/2, four_bits/4, eight_bits/8')
+        wirevector_list(['name1', 'name2', 'name3'], bitwidth=[2, 4, 8])
 
     """
-    if '/' in names and bitwidth != 1:
+    if isinstance(names, str):
+        names = names.replace(',', ' ').split()
+
+    if any('/' in name for name in names) and bitwidth is not None:
         raise PyrtlError('only one of optional "/" or bitwidth parameter allowed')
-    names = names.replace(',', ' ')
+
+    if bitwidth is None:
+        bitwidth = 1
+    if isinstance(bitwidth, numbers.Integral):
+        bitwidth = [bitwidth]*len(names)
+    if len(bitwidth) != len(names):
+        raise ValueError('number of names {n_names} should match len(bitwidths) {n_bws}'.format(n_names=len(names),
+                                                                                                n_bws=len(bitwidth)))
 
     wirelist = []
-    for fullname in names.split():
+    for fullname, bw in zip(names, bitwidth):
         try:
             name, bw = fullname.split('/')
-        except:
-            name, bw = fullname, bitwidth
+        except ValueError:
+            name, bw = fullname, bw
         wirelist.append(wvtype(bitwidth=int(bw), name=name))
     return wirelist
 
