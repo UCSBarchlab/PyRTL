@@ -1,298 +1,21 @@
 """ Helper functions that make constructing hardware easier.
-
-The set of functions includes
-
-* `as_wires`: converts consts to wires if needed (and does nothing to wires)
-* `probe`: a way to check the values of wires during simulation time
-* `rtl_assert`: Simulation time hardware value assertions
-
 """
 
 from __future__ import print_function, unicode_literals
 
+import numbers
 import six
 import math
 
 from .core import working_block, _NameIndexer
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
-from pyrtl.rtllib import barrel
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
 #  |__| |__  |    |__) |__  |__) /__`
 #  |  | |___ |___ |    |___ |  \ .__/
 #
-
-
-def input_list(names, bitwidth=1):
-    """ Allocate and return a list of Inputs. """
-    return wirevector_list(names, bitwidth, wvtype=Input)
-
-
-def output_list(names, bitwidth=1):
-    """ Allocate and return a list of Outputs. """
-    return wirevector_list(names, bitwidth, wvtype=Output)
-
-
-def register_list(names, bitwidth=1):
-    """ Allocate and return a list of Registers. """
-    return wirevector_list(names, bitwidth, wvtype=Register)
-
-
-def wirevector_list(names, bitwidth=1, wvtype=WireVector):
-    """ Allocate and return a list of WireVectors. """
-    if '/' in names and bitwidth != 1:
-        raise PyrtlError('only one of optional "/" or bitwidth parameter allowed')
-    names = names.replace(',', ' ')
-
-    wirelist = []
-    for fullname in names.split():
-        try:
-            name, bw = fullname.split('/')
-        except:
-            name, bw = fullname, bitwidth
-        wirelist.append(wvtype(bitwidth=bw, name=name))
-    return wirelist
-
-
-def val_to_signed_integer(value, bitwidth):
-    """ Return value as intrepreted as a signed integer under twos complement.
-
-    :param vale: a python integer holding the value to convert
-    :param bitwidth: the length of the integer in bits to assume for conversion
-
-    Given an unsigned integer (not a wirevector!) covert that to a signed
-    integer.  This is useful for printing and interpreting values which are
-    negative numbers in twos complement."""
-    if isinstance(value, WireVector) or isinstance(bitwidth, WireVector):
-        raise PyrtlError('inputs must not be wirevectors')
-    if bitwidth < 1:
-        raise PyrtlError('bitwidth must be a positive integer')
-
-    neg_mask = 1 << (bitwidth - 1)
-    neg_part = value & neg_mask
-
-    pos_mask = neg_mask - 1
-    pos_part = value & pos_mask
-
-    return pos_part - neg_part
-
-
-def signed_add(a, b):
-    """ Return wirevector for result of signed addition.
-
-    :param a: a wirevector to serve as first input to addition
-    :param b: a wirevector to serve as second input to addition
-
-    Given a length n and length m wirevector the result of the
-    signed addition is length max(n,m)+1.  The inputs are twos
-    complement sign extended to the same length before adding."""
-    a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
-    result_len = len(a) + 1
-    ext_a = a.sign_extended(result_len)
-    ext_b = b.sign_extended(result_len)
-    # add and truncate to the correct length
-    return (ext_a + ext_b)[0:result_len]
-
-
-def mult_signed(a, b):
-    # mult_signed is now deprecated, use "signed_mult" instead
-    return signed_mult(a, b)
-
-
-def signed_mult(a, b):
-    """ Return a*b where a and b are treated as signed values. """
-    a, b = as_wires(a), as_wires(b)
-    final_len = len(a) + len(b)
-    # sign extend both inputs to the final target length
-    a, b = a.sign_extended(final_len), b.sign_extended(final_len)
-    # the result is the multiplication of both, but truncated
-    # TODO: this may make estimates based on the multiplication overly
-    # pessimistic as half of the multiply result is thrown right away!
-    return (a * b)[0:final_len]
-
-
-def as_wires(val, bitwidth=None, truncating=True, block=None):
-    """ Return wires from val which may be wires, integers, strings, or bools.
-
-    :param val: a wirevector-like object or something that can be converted into
-      a Const
-    :param bitwidth: The bitwidth the resulting wire should be
-    :param bool truncating: determines whether bits will be dropped to achieve
-     the desired bitwidth if it is too long (if true, the most-significant bits
-     will be dropped)
-    :param Block block: block to use for wire
-
-    This function is mainly used to coerce values into WireVectors (for
-    example, operations such as "x+1" where "1" needs to be converted to
-    a Const WireVector).
-    """
-    from .memory import _MemIndexed
-    block = working_block(block)
-
-    if isinstance(val, (int, six.string_types)):
-        # note that this case captures bool as well (as bools are instances of ints)
-        return Const(val, bitwidth=bitwidth, block=block)
-    elif isinstance(val, _MemIndexed):
-        # convert to a memory read when the value is actually used
-        if val.wire is None:
-            val.wire = as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)
-        return val.wire
-    elif not isinstance(val, WireVector):
-        raise PyrtlError('error, expecting a wirevector, int, or verilog-style '
-                         'const string got %s instead' % repr(val))
-    elif bitwidth == '0':
-        raise PyrtlError('error, bitwidth must be >= 1')
-    elif val.bitwidth is None:
-        raise PyrtlError('error, attempting to use wirevector with no defined bitwidth')
-    elif bitwidth and bitwidth > val.bitwidth:
-        return val.zero_extended(bitwidth)
-    elif bitwidth and truncating and bitwidth < val.bitwidth:
-        return val[:bitwidth]  # truncate the upper bits
-    else:
-        return val
-
-
-def match_bitwidth(*args, **opt):
-    """ Matches the bitwidth of all of the input arguments with zero or sign extend
-
-    :param args: WireVectors of which to match bitwidths
-    :param opt: Optional keyword argument 'signed=True' (defaults to False)
-    :return: tuple of args in order with extended bits
-    """
-    # TODO: when we drop 2.7 support, this code should be cleaned up with explicit
-    # kwarg support for "signed" rather than the less than helpful "**opt"
-    if len(opt) == 0:
-        signed = False
-    else:
-        if len(opt) > 1 or 'signed' not in opt:
-            raise PyrtlError('error, only supported kwarg to match_bitwidth is "signed"')
-        signed = bool(opt['signed'])
-
-    max_len = max(len(wv) for wv in args)
-    if signed:
-        return (wv.sign_extended(max_len) for wv in args)
-    else:
-        return (wv.zero_extended(max_len) for wv in args)
-
-
-def signed_lt(a, b):
-    """ Return a single bit result of signed less than comparison. """
-    a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
-    r = a - b
-    return r[-1] ^ (~a[-1])
-
-
-def signed_le(a, b):
-    """ Return a single bit result of signed less than or equal comparison. """
-    a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
-    r = a - b
-    return (r[-1] ^ (~a[-1])) | (a == b)
-
-
-def signed_gt(a, b):
-    """ Return a single bit result of signed greater than comparison. """
-    a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
-    r = b - a
-    return r[-1] ^ (~b[-1])
-
-
-def signed_ge(a, b):
-    """ Return a single bit result of signed greater than or equal comparison. """
-    a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
-    r = b - a
-    return (r[-1] ^ (~b[-1])) | (a == b)
-
-
-def _check_shift_inputs(a, shamt):
-    # TODO: perhaps this should just be implemented directly rather than throwing error
-    if isinstance(shamt, int):
-        raise PyrtlError('shift_amount is an integer, use slice instead')
-    if isinstance(shamt, Const):
-        raise PyrtlError('shift_amount is a constant, use slice instead')
-    a, shamt = as_wires(a), as_wires(shamt)
-    log_length = int(math.log(len(a)-1, 2))  # note the one offset
-    # TODO: perhaps this should just be implemented directly rather than throwing error
-    if len(shamt) > log_length:
-        raise PyrtlError('the shift_amount wirevector is providing bits '
-                         'that would shift the value off the end')
-    return a, shamt
-
-
-def shift_left_arithmetic(bits_to_shift, shift_amount):
-    """ Shift left arithmetic operation.
-
-    :param bits_to_shift: WireVector to shift left
-    :param shift_amount: WireVector specifying amount to shift
-    :return: WireVector of same length as bits_to_shift
-
-    This function returns a new WireVector of length equal to the length
-    of the input `bits_to_shift` but where the bits have been shifted
-    to the left.  An arithemetic shift is one that treats the value as
-    as signed number, although for left shift arithmetic and logic shift
-    are identical.  Note that `shift_amount` is treated as unsigned.
-    """
-    # shift left arithmetic and logical are the same thing
-    return shift_left_logical(bits_to_shift, shift_amount)
-
-
-def shift_right_arithmetic(bits_to_shift, shift_amount):
-    """ Shift right arithmetic operation.
-
-    :param bits_to_shift: WireVector to shift right
-    :param shift_amount: WireVector specifying amount to shift
-    :return: WireVector of same length as bits_to_shift
-
-    This function returns a new WireVector of length equal to the length
-    of the input `bits_to_shift` but where the bits have been shifted
-    to the right.  An arithemetic shift is one that treats the value as
-    as signed number, meaning the sign bit (the most significant bit of
-    `bits_to_shift`) is shifted in. Note that `shift_amount` is treated as
-    unsigned.
-    """
-    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
-    bit_in = bits_to_shift[-1]  # shift in sign_bit
-    dir = Const(0)  # shift right
-    return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
-
-
-def shift_left_logical(bits_to_shift, shift_amount):
-    """ Shift left logical operation.
-
-    :param bits_to_shift: WireVector to shift left
-    :param shift_amount: WireVector specifying amount to shift
-    :return: WireVector of same length as bits_to_shift
-
-    This function returns a new WireVector of length equal to the length
-    of the input `bits_to_shift` but where the bits have been shifted
-    to the left.  An logical shift is one that treats the value as
-    as unsigned number, meaning the zeros are shifted in.  Note that
-    `shift_amount` is treated as unsigned.
-    """
-    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
-    bit_in = Const(0)  # shift in a 0
-    dir = Const(1)  # shift left
-    return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
-
-
-def shift_right_logical(bits_to_shift, shift_amount):
-    """ Shift right logical operation.
-
-    :param bits_to_shift: WireVector to shift left
-    :param shift_amount: WireVector specifying amount to shift
-    :return: WireVector of same length as bits_to_shift
-
-    This function returns a new WireVector of length equal to the length
-    of the input `bits_to_shift` but where the bits have been shifted
-    to the right.  An logical shift is one that treats the value as
-    as unsigned number, meaning the zeros are shifted in regardless of
-    the "sign bit".  Note that `shift_amount` is treated as unsigned.
-    """
-    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
-    bit_in = Const(0)  # shift in a 0
-    dir = Const(0)  # shift right
-    return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
 
 
 probeIndexer = _NameIndexer('Probe-')
@@ -327,28 +50,6 @@ def probe(w, name=None):
     p = Output(name=name)
     p <<= w  # late assigns len from w automatically
     return w
-
-
-def get_stacks(*wires):
-    call_stack = getattr(wires[0], 'init_call_stack', None)
-    if not call_stack:
-        return '    No call info found for wires: use set_debug_mode() ' \
-               'to provide more information\n'
-    else:
-        return '\n'.join(str(wire) + ":\n" + get_stack(wire) for wire in wires)
-
-
-def get_stack(wire):
-    if not isinstance(wire, WireVector):
-        raise PyrtlError('Only WireVectors can be traced')
-
-    call_stack = getattr(wire, 'init_call_stack', None)
-    if call_stack:
-        frames = ' '.join(frame for frame in call_stack[:-1])
-        return "Wire Traceback, most recent call last \n" + frames + "\n"
-    else:
-        return '    No call info found for wire: use set_debug_mode()'\
-               ' to provide more information'
 
 
 assertIndexer = _NameIndexer('assertion')
@@ -403,6 +104,245 @@ def check_rtl_assertions(sim):
                 raise exp
         except KeyError:
             pass
+
+
+def input_list(names, bitwidth=None):
+    """ Allocate and return a list of Inputs.
+
+    :param names: Names for the Inputs. Can be a list or single comma/space-separated string
+    :param bitwidth: The desired bitwidth for the resulting Inputs.
+    :return: List of Inputs.
+
+    Equivalent to: ::
+
+        wirevector_list(names, bitwidth, wvtype=pyrtl.wire.Input)
+
+    """
+    return wirevector_list(names, bitwidth, wvtype=Input)
+
+
+def output_list(names, bitwidth=None):
+    """ Allocate and return a list of Outputs.
+
+    :param names: Names for the Outputs. Can be a list or single comma/space-separated string
+    :param bitwidth: The desired bitwidth for the resulting Outputs.
+    :return: List of Outputs.
+
+    Equivalent to: ::
+
+        wirevector_list(names, bitwidth, wvtype=pyrtl.wire.Output)
+
+    """
+    return wirevector_list(names, bitwidth, wvtype=Output)
+
+
+def register_list(names, bitwidth=None):
+    """ Allocate and return a list of Registers.
+
+    :param names: Names for the Registers. Can be a list or single comma/space-separated string
+    :param bitwidth: The desired bitwidth for the resulting Registers.
+    :return: List of Registers.
+
+    Equivalent to: ::
+
+        wirevector_list(names, bitwidth, wvtype=pyrtl.wire.Register)
+
+    """
+    return wirevector_list(names, bitwidth, wvtype=Register)
+
+
+def wirevector_list(names, bitwidth=None, wvtype=WireVector):
+    """ Allocate and return a list of WireVectors.
+
+    :param names: Names for the WireVectors. Can be a list or single comma/space-separated string
+    :param bitwidth: The desired bitwidth for the resulting WireVectors.
+    :param WireVector wvtype: Which WireVector type to create.
+    :return: List of WireVectors.
+
+    Additionally, the ``names`` string can also contain an additional bitwidth specification
+    separated by a ``/`` in the name. This cannot be used in combination with a ``bitwidth``
+    value other than ``1``.
+
+    Examples: ::
+
+        wirevector_list(['name1', 'name2', 'name3'])
+        wirevector_list('name1, name2, name3')
+        wirevector_list('input1 input2 input3', bitwidth=8, wvtype=pyrtl.wire.Input)
+        wirevector_list('output1, output2 output3', bitwidth=3, wvtype=pyrtl.wire.Output)
+        wirevector_list('two_bits/2, four_bits/4, eight_bits/8')
+        wirevector_list(['name1', 'name2', 'name3'], bitwidth=[2, 4, 8])
+
+    """
+    if isinstance(names, str):
+        names = names.replace(',', ' ').split()
+
+    if any('/' in name for name in names) and bitwidth is not None:
+        raise PyrtlError('only one of optional "/" or bitwidth parameter allowed')
+
+    if bitwidth is None:
+        bitwidth = 1
+    if isinstance(bitwidth, numbers.Integral):
+        bitwidth = [bitwidth]*len(names)
+    if len(bitwidth) != len(names):
+        raise ValueError('number of names ' + str(len(names))
+                         + ' should match number of bitwidths ' + str(len(bitwidth)))
+
+    wirelist = []
+    for fullname, bw in zip(names, bitwidth):
+        try:
+            name, bw = fullname.split('/')
+        except ValueError:
+            name, bw = fullname, bw
+        wirelist.append(wvtype(bitwidth=int(bw), name=name))
+    return wirelist
+
+
+def val_to_signed_integer(value, bitwidth):
+    """ Return value as intrepreted as a signed integer under twos complement.
+
+    :param value: a python integer holding the value to convert
+    :param bitwidth: the length of the integer in bits to assume for conversion
+
+    Given an unsigned integer (not a wirevector!) covert that to a signed
+    integer.  This is useful for printing and interpreting values which are
+    negative numbers in twos complement. ::
+
+        val_to_signed_integer(0xff, 8) == -1
+    """
+    if isinstance(value, WireVector) or isinstance(bitwidth, WireVector):
+        raise PyrtlError('inputs must not be wirevectors')
+    if bitwidth < 1:
+        raise PyrtlError('bitwidth must be a positive integer')
+
+    neg_mask = 1 << (bitwidth - 1)
+    neg_part = value & neg_mask
+
+    pos_mask = neg_mask - 1
+    pos_part = value & pos_mask
+
+    return pos_part - neg_part
+
+
+def formatted_str_to_val(data, format, enum_set=None):
+    """ Return an unsigned integer representation of the data given format specified.
+
+    :param data: a string holding the value to convert
+    :param format: a string holding a format which will be used to convert the data string
+    :param enum_set: an iterable of enums which are used as part of the converstion process
+
+    Given a string (not a wirevector!) covert that to an unsigned integer ready for input
+    to the simulation enviornment.  This helps deal with signed/unsigned numbers (simulation
+    assumes the values have been converted via two's complement already), but it also takes
+    hex, binary, and enum types as inputs.  It is easiest to see how it works with some
+    examples. ::
+
+        formatted_str_to_val('2', 's3') == 2  # 0b010
+        formatted_str_to_val('-1', 's3') == 7  # 0b111
+        formatted_str_to_val('101', 'b3') == 5
+        formatted_str_to_val('5', 'u3') == 5
+        formatted_str_to_val('-3', 's3') == 5
+        formatted_str_to_val('a', 'x3') == 10
+        class Ctl(Enum):
+            ADD = 5
+            SUB = 12
+        formatted_str_to_val('ADD', 'e3/Ctl', [Ctl]) == 5
+        formatted_str_to_val('SUB', 'e3/Ctl', [Ctl]) == 12
+
+    """
+    type = format[0]
+    bitwidth = int(format[1:].split('/')[0])
+    bitmask = (1 << bitwidth)-1
+    if type == 's':
+        rval = int(data) & bitmask
+    elif type == 'x':
+        rval = int(data, 16)
+    elif type == 'b':
+        rval = int(data, 2)
+    elif type == 'u':
+        rval = int(data)
+        if rval < 0:
+            raise PyrtlError('unsigned format requested, but negative value provided')
+    elif type == 'e':
+        enumname = format.split('/')[1]
+        enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
+        if len(enum_inst_list) == 0:
+            raise PyrtlError('enum "{}" not found in passed enum_set "{}"'
+                             .format(enumname, enum_set))
+        rval = getattr(enum_inst_list[0], data).value
+    else:
+        raise PyrtlError('unknown format type {}'.format(format))
+    return rval
+
+
+def val_to_formatted_str(val, format, enum_set=None):
+    """ Return a string representation of the value given format specified.
+
+    :param val: a string holding an unsigned integer to convert
+    :param format: a string holding a format which will be used to convert the data string
+    :param enum_set: an iterable of enums which are used as part of the converstion process
+
+    Given an unsigned integer (not a wirevector!) covert that to a strong ready for output
+    to a human to interpret.  This helps deal with signed/unsigned numbers (simulation
+    operates on values that have been converted via two's complement), but it also generates
+    hex, binary, and enum types as outputs.  It is easiest to see how it works with some
+    examples. ::
+
+        formatted_str_to_val(2, 's3') == '2'
+        formatted_str_to_val(7, 's3') == '-1'
+        formatted_str_to_val(5, 'b3') == '101'
+        formatted_str_to_val(5, 'u3') == '5'
+        formatted_str_to_val(5, 's3') == '-3'
+        formatted_str_to_val(10, 'x3') == 'a'
+        class Ctl(Enum):
+            ADD = 5
+            SUB = 12
+        formatted_str_to_val('ADD', 'e3/Ctl', [Ctl]) == 5
+        formatted_str_to_val('SUB', 'e3/Ctl', [Ctl]) == 12
+
+    """
+    type = format[0]
+    bitwidth = int(format[1:].split('/')[0])
+    bitmask = (1 << bitwidth)-1
+    if type == 's':
+        rval = str(val_to_signed_integer(val, bitwidth))
+    elif type == 'x':
+        rval = hex(val)[2:]  # cuts off '0x' at the start
+    elif type == 'b':
+        rval = bin(val)[2:]  # cuts off '0b' at the start
+    elif type == 'u':
+        rval = str(int(val))  # nothing fancy
+    elif type == 'e':
+        enumname = format.split('/')[1]
+        enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
+        if len(enum_inst_list) == 0:
+            raise PyrtlError('enum "{}" not found in passed enum_set "{}"'
+                             .format(enumname, enum_set))
+        rval = enum_inst_list[0](val).name
+    else:
+        raise PyrtlError('unknown format type {}'.format(format))
+    return rval
+
+
+def get_stacks(*wires):
+    call_stack = getattr(wires[0], 'init_call_stack', None)
+    if not call_stack:
+        return '    No call info found for wires: use set_debug_mode() ' \
+               'to provide more information\n'
+    else:
+        return '\n'.join(str(wire) + ":\n" + get_stack(wire) for wire in wires)
+
+
+def get_stack(wire):
+    if not isinstance(wire, WireVector):
+        raise PyrtlError('Only WireVectors can be traced')
+
+    call_stack = getattr(wire, 'init_call_stack', None)
+    if call_stack:
+        frames = ' '.join(frame for frame in call_stack[:-1])
+        return "Wire Traceback, most recent call last \n" + frames + "\n"
+    else:
+        return '    No call info found for wire: use set_debug_mode()'\
+               ' to provide more information'
 
 
 def _check_for_loop(block=None):

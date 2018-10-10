@@ -4,8 +4,7 @@ import math
 
 
 def barrel_shifter(bits_to_shift, bit_in, direction, shift_dist, wrap_around=0):
-    """
-    Create a barrel shifter that operates on data based on the wire width
+    """ Create a barrel shifter that operates on data based on the wire width.
 
     :param bits_to_shift: the input wire
     :param bit_in: the 1-bit wire giving the value to shift in
@@ -15,26 +14,31 @@ def barrel_shifter(bits_to_shift, bit_in, direction, shift_dist, wrap_around=0):
     :param wrap_around: ****currently not implemented****
     :return: shifted WireVector
     """
-    # Implement with logN stages pyrtl.muxing between shifted and un-shifted values
-
-    val = bits_to_shift
-    append_val = bit_in
-    log_length = int(math.log(len(bits_to_shift)-1, 2))  # note the one offset
+    from pyrtl import concat, select  # just for readability
 
     if wrap_around != 0:
         raise NotImplementedError
 
-    if len(shift_dist) > log_length:
-        raise pyrtl.PyrtlError('the shift distance wirevector '
-                               'has bits that are not used in the barrel shifter')
+    # Implement with logN stages pyrtl.muxing between shifted and un-shifted values
+    final_width = len(bits_to_shift)
+    val = bits_to_shift
+    append_val = bit_in
 
-    for i in range(min(len(shift_dist), log_length)):
+    for i in range(len(shift_dist)):
         shift_amt = pow(2, i)  # stages shift 1,2,4,8,...
-        newval = pyrtl.select(direction, truecase=val[:-shift_amt], falsecase=val[shift_amt:])
-        newval = pyrtl.select(direction, truecase=pyrtl.concat(newval, append_val),
-                              falsecase=pyrtl.concat(append_val, newval))  # Build shifted value
-        # pyrtl.mux shifted vs. unshifted by using i-th bit of shift amount signal
-        val = pyrtl.select(shift_dist[i], truecase=newval, falsecase=val)
-        append_val = pyrtl.concat(append_val, bit_in)
+        if shift_amt < final_width:
+            newval = select(direction,
+                            concat(val[:-shift_amt], append_val),  # shift up
+                            concat(append_val, val[shift_amt:]))  # shift down
+            val = select(shift_dist[i],
+                         truecase=newval,  # if bit of shift is 1, do the shift
+                         falsecase=val)  # otherwise, don't
+            # the value to append grows exponentially, but is capped at full width
+            append_val = concat(append_val, append_val)[:final_width]
+        else:
+            # if we are shifting this much, all the data is gone
+            val = select(shift_dist[i],
+                         truecase=append_val,  # if bit of shift is 1, do the shift
+                         falsecase=val)  # otherwise, don't
 
     return val

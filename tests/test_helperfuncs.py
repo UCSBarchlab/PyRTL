@@ -5,11 +5,64 @@ import six
 
 import pyrtl
 import pyrtl.corecircuits
-from pyrtl import helperfuncs
+import pyrtl.helperfuncs
 from pyrtl.rtllib import testingutils as utils
 
 
 # ---------------------------------------------------------------
+
+class TestWireVectorList(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_input_list_type(self):
+        inputs = pyrtl.helperfuncs.input_list('one, two, three')
+        self.assertTrue(all(isinstance(inp, pyrtl.Input) for inp in inputs))
+
+    def test_output_list_type(self):
+        outputs = pyrtl.helperfuncs.output_list('one, two, three')
+        self.assertTrue(all(isinstance(outp, pyrtl.Output) for outp in outputs))
+
+    def test_register_list_type(self):
+        registers = pyrtl.helperfuncs.register_list('one, two, three')
+        self.assertTrue(all(isinstance(reg, pyrtl.Register) for reg in registers))
+
+    def test_wirevector_list_type(self):
+        # Single string of names
+        wirevectors = pyrtl.helperfuncs.wirevector_list('one, two, three')
+        self.assertTrue(all(isinstance(wire, pyrtl.WireVector) for wire in wirevectors))
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [1, 1, 1])
+
+        # List of names
+        wirevectors = pyrtl.helperfuncs.wirevector_list('one, two, three')
+        self.assertTrue(all(isinstance(wire, pyrtl.WireVector) for wire in wirevectors))
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [1, 1, 1])
+
+    def test_wirevector_list_bitwidth(self):
+        wirevectors = pyrtl.helperfuncs.wirevector_list('one, two, three')
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [1, 1, 1])
+
+        wirevectors = pyrtl.helperfuncs.wirevector_list('one, two, three', 8)
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [8, 8, 8])
+
+    def test_wirevector_list_per_wire_width(self):
+        wirevectors = pyrtl.helperfuncs.wirevector_list('one/2, two/4, three/8')
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [2, 4, 8])
+
+        wirevectors = pyrtl.helperfuncs.wirevector_list(['one', 'two', 'three'], [2, 4, 8])
+        self.assertListEqual([wire.bitwidth for wire in wirevectors], [2, 4, 8])
+
+    def test_wirevector_list_raise_errors(self):
+
+        with self.assertRaises(ValueError):
+            pyrtl.helperfuncs.wirevector_list(['one', 'two', 'three'], [2, 4])
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.helperfuncs.wirevector_list('one/2, two/4, three/8', 16)
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.helperfuncs.wirevector_list(['one/2', 'two/4', 'three/8'], [8, 4, 2])
+
 
 class TestPrettyPrinting(unittest.TestCase):
     def setUp(self):
@@ -24,6 +77,57 @@ class TestPrettyPrinting(unittest.TestCase):
         self.assertEqual(pyrtl.val_to_signed_integer(0b101,3), -3)
         self.assertEqual(pyrtl.val_to_signed_integer(0b110,3), -2)
         self.assertEqual(pyrtl.val_to_signed_integer(0b111,3), -1)
+
+
+class TestBitField_Update(unittest.TestCase):
+    def setUp(self):
+        random.seed(8492049)
+        pyrtl.reset_working_block()
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(8):
+            sim.step({})
+        output = io.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_field_too_big(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update(a,1,2,b)
+
+    def test_field_too_big_truncate(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=3)
+        o = pyrtl.bitfield_update(a,1,2,b,truncating=True)
+
+    def test_no_bits_to_update(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update(a,1,1,b,truncating=True)
+
+    def bitfield_update_checker(self, input_width, range_start, range_end, update_width, test_amt=20):
+        def ref(i,s,e,u):
+            mask = ((1<<(e))-1) - ((1<<s)-1)
+            return (i&~mask) | ((u<<s)&mask)
+        inp, inp_vals = utils.an_input_and_vals(input_width, test_vals=test_amt, name='inp')
+        upd, upd_vals = utils.an_input_and_vals(update_width, test_vals=test_amt, name='upd')
+        #inp_vals = [1,1,0,0]
+        #upd_vals = [0x7,0x6,0x7,0x6]
+        out = pyrtl.Output(input_width, "out")
+        bfu_out = pyrtl.bitfield_update(inp, range_start, range_end, upd)
+        self.assertEqual(len(out), len(bfu_out))  # output should have width of input
+        out <<= bfu_out
+        true_result = [ref(i,range_start,range_end,u) for i,u in zip(inp_vals, upd_vals)]
+        upd_result = utils.sim_and_ret_out(out, [inp,upd], [inp_vals,upd_vals])
+        self.assertEqual(upd_result, true_result)
+
+    def test_bitfield(self):
+        self.bitfield_update_checker(10,3,6,3)
 
 
 class TestAnyAll(unittest.TestCase):
@@ -341,6 +445,30 @@ class TestShiftSimulation(unittest.TestCase):
     def test_sra(self):
         self.sra_checker(5,2)
 
+    def test_sll_big(self):
+        self.sll_checker(10,3)
+
+    def test_sla_big(self):
+        self.sla_checker(10,3)
+
+    def test_srl_big(self):
+        self.srl_checker(10,3)
+
+    def test_sra_big(self):
+        self.sra_checker(10,3)
+
+    def test_sll_over(self):
+        self.sll_checker(4,4)
+
+    def test_sla_over(self):
+        self.sla_checker(4,4)
+
+    def test_srl_over(self):
+        self.srl_checker(4,4)
+
+    def test_sra_over(self):
+        self.sra_checker(4,4)
+
 
 class TestBasicMult(unittest.TestCase):
     def setUp(self):
@@ -352,7 +480,7 @@ class TestBasicMult(unittest.TestCase):
         product = pyrtl.Output(name="product")
         product <<= pyrtl.corecircuits._basic_mult(a, b)
 
-        self.assertEquals(len(product), len_a + len_b)
+        self.assertEqual(len(product), len_a + len_b)
 
         # creating the testing values and the correct results
         xvals = [int(random.uniform(0, 2**len_a-1)) for i in range(20)]
@@ -439,7 +567,7 @@ class TestRtlAssert(unittest.TestCase):
 
         sim = pyrtl.Simulation()
         sim.step({i: 1})
-        self.assertEquals(sim.inspect(o), 1)
+        self.assertEqual(sim.inspect(o), 1)
 
         with self.assertRaises(self.RTLSampleException):
             sim.step({i: 0})
@@ -450,7 +578,7 @@ class TestRtlAssert(unittest.TestCase):
 
         sim = pyrtl.FastSimulation()
         sim.step({i: 1})
-        self.assertEquals(sim.inspect(o), 1)
+        self.assertEqual(sim.inspect(o), 1)
 
         with self.assertRaises(self.RTLSampleException):
             sim.step({i: 0})

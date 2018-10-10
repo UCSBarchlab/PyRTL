@@ -4,6 +4,18 @@ import six
 import pyrtl
 from pyrtl.corecircuits import _basic_add
 
+# the code below disables testing of CompiledSim on systems where there does
+# not appear to be the right version of gcc.  This is a not an ideal way to check
+# and more work is required to more elegantly check compiledsim across multiple
+# architectures.
+import subprocess
+try:
+    version = subprocess.check_output(['gcc', '--version'])
+    if 'LLVM' in str(version):
+        raise unittest.SkipTest('CompiledSimulation testing currently requires non-clang gcc')
+except OSError:
+    raise unittest.SkipTest('CompiledSimulation testing requires gcc')
+    
 
 class TraceWithBasicOpsBase(unittest.TestCase):
     def setUp(self):

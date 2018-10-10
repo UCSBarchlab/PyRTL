@@ -169,6 +169,16 @@ class TestSmartMux(unittest.TestCase):
         expected_out = [e2 if sel else e1 for sel, e1, e2 in zip(sel_vals, a1_vals, a2_vals)]
         self.assertEqual(out_res, expected_out)
 
+    def test_multiple_bitwidths(self):
+        sel = pyrtl.Input(3)
+        a1, a1_vals = gen_in(3)
+        a2, a2_vals = gen_in(8)
+        a3, a3_vals = gen_in(5)
+        res = pyrtl.Output(name="output")
+
+        m = muxes.sparse_mux(sel, {2: a1, 3: a2, 6: a3})
+        self.assertEqual(len(m), 8)  # the biggest one 
+
     def test_two_big_close(self):
         sel = pyrtl.Input(3)
         a1, a1_vals = gen_in(3)
