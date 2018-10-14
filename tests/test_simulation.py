@@ -322,6 +322,9 @@ class TraceWithAdderBase(unittest.TestCase):
 
         output = six.StringIO()
         sim_trace.print_trace(output, compact=True)
+        __IPYTHON__ = True
+        sim_trace.render_trace()  # want to make sure the code at least runs
+        __IPYTHON__ = False
         sim_trace.render_trace()  # want to make sure the code at least runs
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
         self.assertEqual(sim.inspect(self.r), 6)

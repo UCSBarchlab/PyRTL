@@ -897,8 +897,19 @@ class SimulationTrace(object):
             from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
             from .inputoutput import trace_to_html
             htmlstring = trace_to_html(self, trace_list=trace_list, sortkey=_trace_sort_key)
-            display(HTML(htmlstring))
-            display(Javascript('WaveDrom.ProcessAll()'))
+            html_elem = HTML(htmlstring)
+            display(html_elem)
+            # print(htmlstring)
+            js_stuff = """
+            $.when(
+            $.getScript("https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/skins/default.js"),
+            $.getScript("https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/wavedrom.min.js"),
+            $.Deferred(function( deferred ){
+                $( deferred.resolve );
+            })).done(function(){
+                WaveDrom.ProcessAll();
+            });"""
+            display(Javascript(js_stuff))
         else:
             self.render_trace_to_text(
                 trace_list=trace_list, file=file, render_cls=render_cls,
