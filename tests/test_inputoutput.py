@@ -88,6 +88,8 @@ state_machine_blif = """\
 """
 
 
+
+
 class TestInputFromBlif(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -218,6 +220,38 @@ class TestVerilog(unittest.TestCase):
 
     def test_textual_correctness(self):
         pass
+
+
+class TestOutputIPynb(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.maxDiff = None
+
+    def test_one_bit_adder_matches_expected(self):
+        temp1 = pyrtl.WireVector(bitwidth=1, name='temp1')
+        temp2 = pyrtl.WireVector()
+
+        a, b, c = pyrtl.Input(1, 'a'), pyrtl.Input(1, 'b'), pyrtl.Input(1, 'c')
+        sum, carry_out = pyrtl.Output(1, 'sum'), pyrtl.Output(1, 'carry_out')
+
+
+        sum <<= a ^ b ^ c
+
+        temp1 <<= a & b  # connect the result of a & b to the pre-allocated wirevector
+        temp2 <<= a & c
+        temp3 = b & c  # temp3 IS the result of b & c (this is the first mention of temp3)
+        carry_out <<= temp1 | temp2 | temp3
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for cycle in range(15):
+            sim.step({
+                'a': random.choice([0, 1]),
+                'b': random.choice([0, 1]),
+                'c': random.choice([0, 1])
+                })
+
+        htmlstring = inputoutput.trace_to_html(sim_trace) # tests if it compiles or not
 
 
 if __name__ == "__main__":

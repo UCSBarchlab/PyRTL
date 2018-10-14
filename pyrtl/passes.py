@@ -7,9 +7,10 @@ ways to change a block.
 from __future__ import print_function, unicode_literals
 
 from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
-from .helperfuncs import as_wires, _NetCount
+from .helperfuncs import _NetCount
 from .corecircuits import (_basic_mult, _basic_add, _basic_sub, _basic_eq,
-                           _basic_lt, _basic_gt, _basic_select, concat_list)
+                           _basic_lt, _basic_gt, _basic_select, concat_list,
+                           as_wires)
 from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register

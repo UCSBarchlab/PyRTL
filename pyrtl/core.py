@@ -46,13 +46,15 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         ('^', None, (a1, a2), (out)) => XOR two wires together, put result into out
         ('n', None, (a1, a2), (out)) => NAND two wires together, put result into out
         ('~', None, (a1), (out)) => invert one wire, put result into out
-        ('+', None, (a1, a2), (out)) => add a1 & a2, put result into out
+        ('+', None, (a1, a2), (out)) => add a1 and a2, put result into out
                                         len(out) = max(len(a1), len(a2)) + 1
+                                        works with both unsigned and two's complement
         ('-', None, (a1, a2), (out)) => subtract a2 from a1, put result into out
                                         len(out) = max(len(a1), len(a2)) + 1
-        ('*', None, (a1, a2), (out) => multiply a1 & a2, put result into out
-                                       len(out) = len(a1) + len(a2)
-            ('+', '-', '*' are compatible w/ twos-compliment numbers)
+                                        works with both unsigned and two's complement
+        ('*', None, (a1, a2), (out)) => multiply a1 & a2, put result into out
+                                        len(out) = len(a1) + len(a2)
+                                        assumes unsigned, but "signed_mult" provides wrapper
         ('=', None, (a1, a2), (out)) => check a1 & a2 equal, put result into out (0 | 1)
         ('<', None, (a1, a2), (out)) => check a2 greater than a1, put result into out (0 | 1)
         ('>', None, (a1, a2), (out)) => check a1 greater than a2, put result into out (0 | 1)

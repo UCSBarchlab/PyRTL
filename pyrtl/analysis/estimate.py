@@ -17,6 +17,7 @@ from ..core import working_block
 from ..wire import Input, Const, Register
 from ..pyrtlexceptions import PyrtlError, PyrtlInternalError
 from ..inputoutput import OutputToVerilog
+from ..memory import RomBlock
 
 
 # --------------------------------------------------------------------
@@ -38,10 +39,12 @@ def area_estimation(tech_in_nm=130, block=None):
     publication.
     """
 
-    def mem_area_estimate(tech_in_nm, bits, ports):
+    def mem_area_estimate(tech_in_nm, bits, ports, is_rom):
         # http://www.cs.ucsb.edu/~sherwood/pubs/ICCD-srammodel.pdf
+        # ROM is assumed to be 1/10th of area of SRAM
         tech_in_um = tech_in_nm / 1000.0
-        return 0.001 * tech_in_um**2.07 * bits**0.9 * ports**0.7 + 0.0048
+        area_estimate = 0.001 * tech_in_um**2.07 * bits**0.9 * ports**0.7 + 0.0048
+        return area_estimate if not is_rom else area_estimate / 10.0
 
     # Subset of the raw data gathered from yosys, mapping to vsclib 130nm library
     # Width   Adder_Area  Mult_Area  (area in "tracks" as discussed below)
@@ -107,22 +110,27 @@ def area_estimation(tech_in_nm=130, block=None):
     # now sum up the area of the memories
     mem_area = 0
     for mem in set(net.op_param[1] for net in block.logic_subset('@m')):
-        bits, ports = _bits_and_ports_from_memory(mem)
-        mem_area += mem_area_estimate(tech_in_nm, bits, ports)
+        bits, ports, is_rom = _bits_ports_and_isrom_from_memory(mem)
+        mem_area += mem_area_estimate(tech_in_nm, bits, ports, is_rom)
 
     return logic_area, mem_area
 
 
-def _bits_and_ports_from_memory(mem):
+def _bits_ports_and_isrom_from_memory(mem):
     """ Helper to extract mem bits and ports for estimation. """
+    is_rom = False
     bits = 2**mem.addrwidth * mem.bitwidth
     read_ports = len(mem.readport_nets)
     try:
         write_ports = len(mem.writeport_nets)
     except AttributeError:  # dealing with ROMs
+        if not isinstance(mem, RomBlock):
+            raise PyrtlInternalError('Mem with no writeport_nets attribute'
+                                     ' but not a ROM? Thats an error')
         write_ports = 0
+        is_rom = True
     ports = max(read_ports, write_ports)
-    return bits, ports
+    return bits, ports, is_rom
 
 
 # --------------------------------------------------------------------
@@ -218,7 +226,8 @@ class TimingAnalysis(object):
     @staticmethod
     def _memory_read_estimate(mem):
         # http://www.cs.ucsb.edu/~sherwood/pubs/ICCD-srammodel.pdf
-        bits, ports = _bits_and_ports_from_memory(mem)
+        # ROM is assumed to be same delay as SRAM (perhaps optimistic?)
+        bits, ports, is_rom = _bits_ports_and_isrom_from_memory(mem)
         tech_in_um = 0.130
         return 270 * tech_in_um**1.38 * bits**0.25 * ports**1.30 + 1.05
 

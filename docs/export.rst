@@ -1,7 +1,7 @@
-Helper Functions
-================
+Exporting and Importing Designs
+===============================
 
-.. automodule:: pyrtl.helperfuncs
+.. automodule:: pyrtl.inputoutput
    :members:
    :show-inheritance:
    :special-members:

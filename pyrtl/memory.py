@@ -7,6 +7,7 @@ MemBlocks supports any number of the following operations:
 * read: `d = mem[address]`
 * write: `mem[address] = d`
 * write with an enable: `mem[address] = MemBlock.EnabledWrite(d,enable=we)`
+
 Based on the number of reads and writes a memory will be inferred
 with the correct number of ports to support that
 """
@@ -17,7 +18,7 @@ import collections
 from .pyrtlexceptions import PyrtlError
 from .core import working_block, LogicNet, _NameIndexer
 from .wire import WireVector, Const, next_tempvar_name
-from .helperfuncs import as_wires
+from .corecircuits import as_wires
 # ------------------------------------------------------------------------
 #
 #         ___        __   __          __        __   __
@@ -107,7 +108,6 @@ class _MemReadBase(object):
 
     def __getitem__(self, item):
         """ Builds circuitry to retrieve an item from the memory """
-        from .helperfuncs import as_wires
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
         if len(item) > self.addrwidth:
             raise PyrtlError('memory index bitwidth > addrwidth')
@@ -141,7 +141,10 @@ class _MemReadBase(object):
 
 
 class MemBlock(_MemReadBase):
-    """ An object for specifying read and write enabled block memories
+    """ MemBlock is the object for specifying block memories.  In can be
+    indexed like an array for both reading and writing.  Writes under a conditional
+    are automatically converted to enabled writes.   For example, consider the following
+    examples where `addr`, `data`, and `we` are all WireVectors.
 
     Usage::
 
@@ -149,20 +152,19 @@ class MemBlock(_MemReadBase):
         memory[addr] <<= data  (infer write port)
         mem[address] = MemBlock.EnabledWrite(data,enable=we)
 
-    `addr`, `data`, and `we` are wires
-
     When the address of a memory is assigned to using a EnableWrite object
     items will only be written to the memory when the enable WireVector is
     set to high (1)
     """
     # FIXME: write ports assume that only one port is under control of the conditional
     EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
-    """ Allows for an enable bit for each write port """
+    """ Allows for an enable bit for each write port, where data (the first field in
+        the tuple) is the normal data address, and enable (the second field) is a one
+        bit signal specifying that the write should happen (i.e. active high)."""
 
     def __init__(self, bitwidth, addrwidth, name='', max_read_ports=2, max_write_ports=1,
                  asynchronous=False, block=None):
-        """
-        Create a PyRTL read-write memory.
+        """ Create a PyRTL read-write memory.
 
         :param int bitwidth: Defines the bitwidth of each element in the memory
         :param int addrwidth: The number of bits used to address an element of the
@@ -178,10 +180,20 @@ class MemBlock(_MemReadBase):
         :param block: The block to add it to, defaults to the working block
 
         It is best practice to make sure your block memory/fifos read/write
-        operations start on a clock edge.  MemBlocks will enforce this by making sure that
+        operations start on a clock edge if you want them to synthesize into efficient hardware.
+        MemBlocks will enforce this by making sure that
         you only address them with a register or input, unless you explicitly declare
-        the memory as asynchronous with that flag.  Note that asynchronous mems are
-        harder to synthesize (and can't be mapped to block rams in FPGAs).
+        the memory as asynchronous with `asynchronous=True` flag.  Note that asynchronous mems
+        are, while sometimes very convenient and tempting, rarely a good idea.
+        They can't be mapped to block rams in FPGAs and will be converted to registers by most
+        design tools even though PyRTL can handle them with no problem.  For any memory beyond
+        a few hundred entries it is not a realistic option.
+
+        Each read or write to the memory will create a new `port` (either a read port or write
+        port respectively).  By default memories are limited to 2-read and 1-write port, but
+        to keep designs efficient by default, but those values can be set as options.  Note
+        that memories with high numbers of ports may not be possible to map to physical memories
+        such as block rams or existing memory hardware macros.
         """
         super(MemBlock, self).__init__(bitwidth, addrwidth, name, max_read_ports,
                                        asynchronous, block)
@@ -197,7 +209,6 @@ class MemBlock(_MemReadBase):
             raise PyrtlError('error, assigment to memories should use "<<=" not "=" operator')
 
     def _assignment(self, item, val, is_conditional):
-        from .helperfuncs import as_wires
         from .conditional import _build
 
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
@@ -251,12 +262,14 @@ class MemBlock(_MemReadBase):
 class RomBlock(_MemReadBase):
     """ PyRTL Read Only Memory.
 
-    RomBlocks are the read only memory format in PyRTL
+    RomBlocks are the read only memory block for PyRTL.  They support the same read interface
+    and normal memories, but they are cannot be written to (i.e. there are no write ports).
+    The ROM must be initialized with some values and construction through the use of the
+    `romdata` which is the memory for the system.
     """
     def __init__(self, bitwidth, addrwidth, romdata, name='', max_read_ports=2,
                  build_new_roms=False, asynchronous=False, block=None):
-        """
-        Create a Python Read Only Memory
+        """Create a Python Read Only Memory.
 
         :param int bitwidth: The bitwidth of each item stored in the ROM
         :param int addrwidth: The bitwidth of the address bus (determines number of addresses)
@@ -271,12 +284,6 @@ class RomBlock(_MemReadBase):
             using values straight from a register. (aka make sure that reads
             are synchronous)
         :param block: The block to add to, defaults to the working block
-
-        It is best practice to make sure your block memory/fifos read/write
-        operations start on a clock edge.  MemBlocks will enforce this by making sure that
-        you only address them with a register or input, unless you explicitly declare
-        the memory as asynchronous with that flag.  Note that asynchronous mems are
-        harder to synthesize (and can't be mapped to block rams in FPGAs).
         """
 
         super(RomBlock, self).__init__(bitwidth, addrwidth, name, max_read_ports,
