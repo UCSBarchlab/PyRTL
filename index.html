@@ -28,6 +28,7 @@
       <a href="https://github.com/UCSBarchlab/PyRTL" class="btn">View on GitHub</a>
       <a href="http://pyrtl.readthedocs.org/" class="btn">Read the Docs</a>
       <a href="https://github.com/UCSBarchlab/PyRTL/tree/master/examples" class="btn">See Examples</a>
+      <a href="https://mybinder.org/v2/gh/UCSBarchlab/PyRTL/development?filepath=%2Fipynb-examples%2F">Run Notebook</a>
       <!-- <a href="https://github.com/UCSBarchlab/PyRTL/tarball/master" class="btn">Download .tar.gz</a> -->
     </section>
 
@@ -77,8 +78,10 @@ most-significant-bit.  Of course you can add, subtract, and multiply these WireV
 bit-vectors end-to-end as well.  You can then even make normal python collections of those WireVectors and 
 do operations on them in bulk. For example, if you have a list of <em>n</em> different k-bit WireVectors (called "x") and you 
 want to multiply each of them by 2 and put the sum of the result in a WireVector "y", it looks like
-the following:  <code>y = sum([elem * 2 for elem in x])</code>. 
-Hardware comprehensions are surprisingly useful.</p>
+the following:  <code>y = sum([elem * 2 for elem in x])</code>. Hardware comprehensions are surprisingly useful.  Below we get into
+an example in more detail, but if you just want to play around with PyRTL
+<a href="https://mybinder.org/v2/gh/UCSBarchlab/PyRTL/development?filepath=%2Fipynb-examples%2F"> try Jupyter Notebooks on any
+  of our examples on MyBinder</a>.</p>
 
 <h3>
 <a id="hello-n-bit-ripple-carry-adder" class="anchor" href="#hello-n-bit-ripple-carry-adder" aria-hidden="true"><span class="octicon octicon-link"></span></a>Hello N-bit Ripple-Carry Adder!</h3>
