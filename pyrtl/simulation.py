@@ -886,10 +886,10 @@ class SimulationTrace(object):
             print(''.join(['#', str(timestamp*10)]), file=file)
             print_trace_strs(timestamp)
             if include_clock:
-                print('1 clk', file=file)
+                print('b1 clk', file=file)
                 print('', file=file)
                 print(''.join(['#', str(timestamp*10+5)]), file=file)
-                print('0 clk', file=file)
+                print('b0 clk', file=file)
             print('', file=file)
         print(''.join(['#', str(endtime*10)]), file=file)
         file.flush()
