@@ -54,4 +54,4 @@ docs/_build
 .v
 
 # ipynb
-.ipynb_checkpoints
+ipynb_examples/.ipynb_checkpoints
