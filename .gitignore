@@ -52,3 +52,6 @@ docs/_build
 # Verilog files
 # There must be a very good reason for someone to add a verilog file to the repo
 .v
+
+# ipynb
+.ipynb_checkpoints
