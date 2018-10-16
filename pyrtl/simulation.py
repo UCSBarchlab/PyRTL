@@ -836,8 +836,20 @@ class SimulationTrace(object):
 
         file.flush()
 
-    def print_vcd(self, file=sys.stdout):
-        """ Print the trace out as a VCD File for use in other tools. """
+    def print_vcd(self, file=sys.stdout, include_clock=False):
+        """ Print the trace out as a VCD File for use in other tools.
+
+        :param file: file to open and output vcd dump to.
+        :param include_clock: boolean specifying if the implicit clk should be included.
+
+        Dumps the current trace to file as a "value change dump" file.  The file parameter
+        defaults to _stdout_ and the include_clock defaults to True.
+
+        Examples ::
+
+            sim_trace.print_vcd()
+            sim_trace.print_vcd("my_waveform.vcd", include_clock=False)
+        """
         # dump header info
         # file_timestamp = time.strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", time.gmtime())
         # print >>file, " ".join(["$date", file_timestamp, "$end"])
@@ -857,6 +869,8 @@ class SimulationTrace(object):
                 print(' '.join([str(bin(self.trace[wn][time]))[1:], _varname(wn)]), file=file)
 
         # dump variables
+        if include_clock:
+            print(' '.join(['$var', 'wire', '1', 'clk', 'clk', '$end']), file=file)
         for wn in sorted(self.trace, key=_trace_sort_key):
             print(' '.join(['$var', 'wire', str(self._wires[wn].bitwidth),
                             _varname(wn), _varname(wn), '$end']), file=file)
@@ -869,9 +883,15 @@ class SimulationTrace(object):
         # dump values
         endtime = max([len(self.trace[w]) for w in self.trace])
         for timestamp in range(endtime):
-            print(''.join(['#', str(timestamp)]), file=file)
+            print(''.join(['#', str(timestamp*10)]), file=file)
             print_trace_strs(timestamp)
-        print(''.join(['#', str(endtime)]), file=file)
+            if include_clock:
+                print('b1 clk', file=file)
+                print('', file=file)
+                print(''.join(['#', str(timestamp*10+5)]), file=file)
+                print('b0 clk', file=file)
+            print('', file=file)
+        print(''.join(['#', str(endtime*10)]), file=file)
         file.flush()
 
     def render_trace(
