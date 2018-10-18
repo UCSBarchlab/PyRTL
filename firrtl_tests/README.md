@@ -14,9 +14,16 @@ Required tools:
 
 ## To run the tests in firrtl-interpreter
 
-`sbt testOnly firrtl-interpreter.<testname>`  					  # run a single test
+need to modify some path name
+
+- in function `wrap_firrtl_test`, substitute the path with your own firrtl-interpreter path
+
+To run a single test
+
+- `sbt testOnly firrtl-interpreter.<testname>`
 
 ## Compile some firrtl codes to lofirrtl form
 
 in firrtl directory
-`./utils/bin/firrtl -tn ~/Desktop/mem.fir -X low`  	    # compile to lofirrtl
+
+- `./utils/bin/firrtl -tn ~/Desktop/mem.fir -X low`
