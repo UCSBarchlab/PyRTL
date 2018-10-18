@@ -1,6 +1,8 @@
 import pyrtl
+from pyrtl import Input, Output
 
-def translate_to_FIRRTL(block,firrtl_file):
+
+def translate_to_firrtl(block, firrtl_file, rom_blocks=None):
     f = open(firrtl_file, "w+")
     # write out all the implicit stuff
     f.write("circuit Example : \n")
@@ -73,12 +75,34 @@ def translate_to_FIRRTL(block,firrtl_file):
         elif log_net.op == 'r':
             f.write("    %s <= mux(reset, UInt<%s>(0), %s)\n" % (log_net.dests[0].name, log_net.dests[0].bitwidth, log_net.args[0].name))
         elif log_net.op == 'm':
-            if not log_net.op_param[0] in initializedMem:
-                initializedMem.append(log_net.op_param[0])
-                f.write("    cmem %s_%s : UInt<%s>[%s]\n" % (log_net.op_param[1].name, log_net.op_param[0], log_net.op_param[1].bitwidth, 2**log_net.op_param[1].addrwidth))
-            f.write("    infer mport T_%d  = %s_%s[%s], clock\n" % (node_cntr, log_net.op_param[1].name, log_net.op_param[0], log_net.args[0].name))
-            f.write("    %s <= T_%d\n" % (log_net.dests[0].name, node_cntr))
-            node_cntr += 1
+            # if there are rom blocks, need to be initialized
+            if rom_blocks != None:
+                if not log_net.op_param[0] in initializedMem:
+                    initializedMem.append(log_net.op_param[0])
+
+                    # find corresponding rom block according to memid
+                    curr_rom = next((x for x in rom_blocks if x.id == log_net.op_param[0]), None)
+                    f.write("    wire %s : UInt<%s>[%s]\n" % (log_net.op_param[1].name, log_net.op_param[1].bitwidth, 2**log_net.op_param[1].addrwidth))
+
+                    # if rom data is a function, calculate the data first
+                    if callable(curr_rom.data):
+                        romdata = [curr_rom.data(i) for i in range(2**curr_rom.addrwidth)]
+                        curr_rom.data = romdata
+
+                    # write rom block initialization data
+                    for i in range(len(curr_rom.data)):
+                        f.write("    %s[%s] <= UInt<%s>(%s)\n" % (log_net.op_param[1].name, i, log_net.op_param[1].bitwidth, curr_rom.data[i]))
+
+                # write the connection
+                f.write("    %s <= %s[%s]\n" % (log_net.dests[0].name, log_net.op_param[1].name, log_net.args[0].name))
+
+            else:
+                if not log_net.op_param[0] in initializedMem:
+                    initializedMem.append(log_net.op_param[0])
+                    f.write("    cmem %s_%s : UInt<%s>[%s]\n" % (log_net.op_param[1].name, log_net.op_param[0], log_net.op_param[1].bitwidth, 2**log_net.op_param[1].addrwidth))
+                f.write("    infer mport T_%d  = %s_%s[%s], clock\n" % (node_cntr, log_net.op_param[1].name, log_net.op_param[0], log_net.args[0].name))
+                f.write("    %s <= T_%d\n" % (log_net.dests[0].name, node_cntr))
+                node_cntr += 1
         elif log_net.op == '@':
             if not log_net.op_param[0] in initializedMem:
                 initializedMem.append(log_net.op_param[0])
@@ -93,6 +117,48 @@ def translate_to_FIRRTL(block,firrtl_file):
 
     f.close()
     return 0
-    
+
+
+def generate_firrtl_test(sim_trace, working_block):
+    inputs = working_block.wirevector_subset(Input)
+    outputs = working_block.wirevector_subset(Output)
+
+    test_str = "\t\tval tester = new InterpretiveTester(firrtlStr)\n"
+    test_str += "\t\ttester.poke(\"reset\", 1)\n"
+    test_str += "\t\ttester.step(1)\n"
+    test_str += "\t\ttester.poke(\"reset\", 0)\n"
+    for v in inputs.union(outputs):
+        test_str += "\t\tvar " + v.name + " = List(" + ",".join([str(sim_trace.trace[v.name][i]) for i in range(len(sim_trace))]) + ")\n"
+
+    test_str += "\t\tfor (i <- 0 to " + str(len(sim_trace)) + " - 1) {\n"
+    test_str += "\t\t\tprint(\"round \" + i + \"\\n\")\n"
+
+    for i in inputs:
+        test_str += "\t\t\ttester.poke(\"" + i.name + "\", " + i.name + "(i))\n"
+
+    for o in outputs:
+        test_str += "\t\t\ttester.expect(\"" + o.name + "\", " + o.name + "(i))\n"
+
+    test_str += "\t\t\ttester.step(1)\n"
+    test_str += "\t\t}\n"
+
+    return test_str
+
+
+def wrap_firrtl_test(sim_trace, working_block, firrtl_str, test_name):
+    wrapper_str = "package firrtl_interpreter\n"
+    wrapper_str += "import org.scalatest.{FlatSpec, Matchers}\n"
+    wrapper_str += "class " + test_name + " extends FlatSpec with Matchers {\n"
+    wrapper_str += "\tval firrtlStr: String =\n"
+    wrapper_str += "\"\"\"\n"
+    wrapper_str += firrtl_str
+    wrapper_str += "\"\"\".stripMargin\n"
+    wrapper_str += "\tit should \"run with InterpretedTester\" in {\n"
+    wrapper_str += generate_firrtl_test(sim_trace, working_block)
+    wrapper_str += "\t}\n"
+    wrapper_str += "}\n"
+
+    with open("/Users/shannon/Desktop/firrtl-interpreter/src/test/scala/firrtl_interpreter/" + test_name + ".scala", "w") as f:
+        f.write(wrapper_str)
 
 
