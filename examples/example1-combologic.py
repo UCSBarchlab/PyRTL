@@ -1,5 +1,4 @@
 """ Example 1:  A simple combination logic block example.
-
     This example declares a block of hardware with three one-bit inputs,
     (a,b,c) and two one-bit outputs (sum, cout).  The logic declared is a
     simple one-bit adder and the definition uses some of the most common
@@ -11,7 +10,6 @@
 
 import random
 import pyrtl
-import toFirrtl
 
 # The basic idea of PyRTL is to specify the component of a some hardware block
 # through the declaration of wires and operations on those wires.  The current
@@ -63,8 +61,6 @@ carry_out <<= temp1 | temp2 | temp3
 print('--- One Bit Adder Implementation ---')
 print(pyrtl.working_block())
 print()
-
-toFirrtl.main_translate(pyrtl.working_block().__str__(), "/Users/shannon/Desktop/firrtl_result.fir")
 
 # --- Step 2: Simulate Design  -----------------------------------------------
 
