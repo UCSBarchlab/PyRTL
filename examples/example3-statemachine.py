@@ -1,5 +1,4 @@
 """ Example 3:  A State Machine built with conditional_assignment
-
     In this example we describe how conditional_assignment works in the context of
     a vending machine that will dispense an item when it has received 4 tokens.
     If a refund is requested, it returns the tokens.
@@ -81,8 +80,6 @@ refund <<= state == REFUND
 #     r.next |= 0        <-- when a is not true and b & c is true
 
 # Now let's build and test our state machine.
-
-print(pyrtl.working_block())
 
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)

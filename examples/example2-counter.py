@@ -1,5 +1,4 @@
 """ Example 2:  A Counter with Ripple Carry Adder.
-
     This next example shows how you make stateful things with registers
     and more complex hardware structures with functions.  We generate
     a 3-bit ripple carry adder building off of the 1-bit adder from
@@ -7,7 +6,6 @@
 """
 
 import pyrtl
-import toFirrtl
 
 
 # Let's just dive right in.
@@ -73,8 +71,7 @@ counter.next <<= sum
 
 # Now let's run the bugger.  No need for inputs, as it doesn't have any.
 # Finally we'll print the trace to the screen and check that it counts up correctly.
-#print(pyrtl.working_block())
-print(pyrtl.working_block())
+
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
 for cycle in range(15):
@@ -83,7 +80,5 @@ for cycle in range(15):
 sim_trace.render_trace()
 
 # all done.
-
-toFirrtl.main_translate(pyrtl.working_block().__str__(), "/Users/shannon/Desktop/firrtl_result.fir")
 
 exit(0)
