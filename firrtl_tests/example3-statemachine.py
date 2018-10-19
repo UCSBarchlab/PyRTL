@@ -108,4 +108,4 @@ sim_trace.render_trace(trace_list=['token_in', 'req_refund', 'state', 'dispense'
 with open('./firrtl_result.fir', 'r') as myfile:
     firrtl_str = myfile.read()
 
-toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example3tester")
+toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example3tester", "/Users/shannon/Desktop/firrtl-interpreter/src/test/scala/firrtl_interpreter/")

@@ -8,7 +8,7 @@
 
 import pyrtl
 from firrtl_tests import toFirrtl_new
-
+from pyrtl import Register
 
 # Let's just dive right in.
 
@@ -85,9 +85,9 @@ sim_trace.render_trace()
 
 # all done.
 
-toFirrtl_new.translate_to_firrtl(pyrtl.working_block(), "/Users/shannon/Desktop/firrtl_result.fir")
+toFirrtl_new.translate_to_firrtl(pyrtl.working_block(), "./firrtl_result.fir")
 with open('./firrtl_result.fir', 'r') as myfile:
     firrtl_str = myfile.read()
 
-toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example2tester")
+toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example2tester", "/Users/shannon/Desktop/firrtl-interpreter/src/test/scala/firrtl_interpreter/")
 exit(0)

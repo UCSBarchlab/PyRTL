@@ -103,7 +103,7 @@ toFirrtl_new.translate_to_firrtl(pyrtl.working_block(), "./firrtl_result.fir")
 with open('./firrtl_result.fir', 'r') as myfile:
     firrtl_str = myfile.read()
 
-toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example6tester")
+toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example6tester", "/Users/shannon/Desktop/firrtl-interpreter/src/test/scala/firrtl_interpreter/")
 
 # cleanup in preparation for the rom example
 pyrtl.reset_working_block()
@@ -183,4 +183,4 @@ toFirrtl_new.translate_to_firrtl(pyrtl.working_block(), "./firrtl_result.fir", [
 with open('./firrtl_result.fir', 'r') as myfile:
     firrtl_str = myfile.read()
 
-toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example6ROMtester")
+toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example6ROMtester", "/Users/shannon/Desktop/firrtl-interpreter/src/test/scala/firrtl_interpreter/")

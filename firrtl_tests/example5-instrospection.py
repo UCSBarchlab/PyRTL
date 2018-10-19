@@ -83,4 +83,4 @@ toFirrtl_new.translate_to_firrtl(pyrtl.working_block(), "./firrtl_result.fir")
 with open('./firrtl_result.fir', 'r') as myfile:
     firrtl_str = myfile.read()
 
-toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example5tester")
+toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example5tester", "/Users/shannon/Desktop/firrtl-interpreter/src/test/scala/firrtl_interpreter/")

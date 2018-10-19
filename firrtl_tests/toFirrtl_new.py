@@ -1,9 +1,9 @@
 import pyrtl
-from pyrtl import Input, Output
+from pyrtl import Input, Output, Register
 
 
-def translate_to_firrtl(block, firrtl_file, rom_blocks=None):
-    f = open(firrtl_file, "w+")
+def translate_to_firrtl(block, output_file, rom_blocks=None):
+    f = open(output_file, "w+")
     # write out all the implicit stuff
     f.write("circuit Example : \n")
     f.write("  module Example : \n")
@@ -122,12 +122,13 @@ def translate_to_firrtl(block, firrtl_file, rom_blocks=None):
 def generate_firrtl_test(sim_trace, working_block):
     inputs = working_block.wirevector_subset(Input)
     outputs = working_block.wirevector_subset(Output)
+    registers = working_block.wirevector_subset(Register)
 
     test_str = "\t\tval tester = new InterpretiveTester(firrtlStr)\n"
     test_str += "\t\ttester.poke(\"reset\", 1)\n"
     test_str += "\t\ttester.step(1)\n"
     test_str += "\t\ttester.poke(\"reset\", 0)\n"
-    for v in inputs.union(outputs):
+    for v in inputs.union(outputs).union(registers):
         test_str += "\t\tvar " + v.name + " = List(" + ",".join([str(sim_trace.trace[v.name][i]) for i in range(len(sim_trace))]) + ")\n"
 
     test_str += "\t\tfor (i <- 0 to " + str(len(sim_trace)) + " - 1) {\n"
@@ -139,13 +140,16 @@ def generate_firrtl_test(sim_trace, working_block):
     for o in outputs:
         test_str += "\t\t\ttester.expect(\"" + o.name + "\", " + o.name + "(i))\n"
 
+    for r in registers:
+        test_str += "\t\t\ttester.expect(\"" + r.name + "\", " + r.name + "(i))\n"
+
     test_str += "\t\t\ttester.step(1)\n"
     test_str += "\t\t}\n"
 
     return test_str
 
 
-def wrap_firrtl_test(sim_trace, working_block, firrtl_str, test_name):
+def wrap_firrtl_test(sim_trace, working_block, firrtl_str, test_name, firrtl_test_path):
     wrapper_str = "package firrtl_interpreter\n"
     wrapper_str += "import org.scalatest.{FlatSpec, Matchers}\n"
     wrapper_str += "class " + test_name + " extends FlatSpec with Matchers {\n"
@@ -158,7 +162,7 @@ def wrap_firrtl_test(sim_trace, working_block, firrtl_str, test_name):
     wrapper_str += "\t}\n"
     wrapper_str += "}\n"
 
-    with open("/Users/shannon/Desktop/firrtl-interpreter/src/test/scala/firrtl_interpreter/" + test_name + ".scala", "w") as f:
+    with open(firrtl_test_path + test_name + ".scala", "w") as f:
         f.write(wrapper_str)
 
 

@@ -89,7 +89,7 @@ print(sim_trace.print_trace())
 with open('./firrtl_result.fir', 'r') as myfile:
     firrtl_str = myfile.read()
 
-toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example1tester")
+toFirrtl_new.wrap_firrtl_test(sim_trace, pyrtl.working_block(), firrtl_str, "example1tester", "/Users/shannon/Desktop/firrtl-interpreter/src/test/scala/firrtl_interpreter/")
 
 # --- Verification of Simulated Design ---------------------------------------
 
