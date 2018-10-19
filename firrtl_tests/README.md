@@ -1,8 +1,18 @@
 All FIRRTL related codes are in this `firrtl_tests` dir.
 
-## Functions explanation
+## Functions explanation in file `toFirrtl_new.py`
 
-In file `toFirrtl_new.py`, function `translate_to_firrtl(block, firrtl_file, rom_blocks=None)` will take args: a PyRTL working_block, an output file destination, and rom_blocks (if any), and generate FIRRTL codes into the output file. Functions `generate_firrtl_test` and `wrap_firrtl_test` will generate a test file that can be tested in [firrtl-interpreter](https://github.com/freechipsproject/firrtl-interpreter). The test file should be written into `firrtl-interpreter/src/test/scala/firrtl_interpreter/`
+`translate_to_firrtl(working_block, output_file, rom_blocks=None)` 
+
+will take args: a PyRTL working_block, an output file destination, and rom_blocks (if any), and generate FIRRTL codes into the output file. 
+
+`generate_firrtl_test(sim_trace, working_block)` 
+
+will generate test statements in scala. Each PyRTL simulation input and output will be mapped to a statement in scala, for example, an input named "a" that has simulation value 0,1,0,1 will generate the scala statement "val a = List(0,1,0,1)". Then each input and output will be tested using methods "poke" and "expect"
+
+`wrap_firrtl_test(sim_trace, working_block, firrtl_str, test_name)` 
+
+will wrap around the test statements. Combing with the translated `firrtl_string`, will generate a test file that can be tested in [firrtl-interpreter](https://github.com/freechipsproject/firrtl-interpreter). The test file should be written into `firrtl-interpreter/src/test/scala/firrtl_interpreter/`
 
 ## Environment set up
 
@@ -14,15 +24,23 @@ Required tools:
 
 ## To run the tests in firrtl-interpreter
 
-need to modify some path name
+- To translate PyRTL working block into FIRRTL code, call:
 
-- in function `wrap_firrtl_test`, substitute the path with your own firrtl-interpreter path
+`translate_to_firrtl(working_block, output_file, rom_blocks=None)` 
 
-To run a single test
+- To generate test for the FIRRTL code and run in firrtl-interpreter, call:
 
-- `sbt testOnly firrtl-interpreter.<testname>`
+`wrap_firrtl_test(sim_trace, working_block, firrtl_str, test_name, firrtl_test_path)`
 
-## Compile some firrtl codes to lofirrtl form
+and substitute the path with your own firrtl-interpreter path
+
+- To run a single test
+
+`sbt testOnly firrtl-interpreter.<testname>`
+
+## Other useful tools
+
+### Compile some firrtl codes to lofirrtl form
 
 in firrtl directory
 
