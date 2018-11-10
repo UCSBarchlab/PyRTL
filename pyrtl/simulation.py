@@ -747,6 +747,10 @@ class TraceStorage(collections.Mapping):
                 'Access to trace by WireVector instead of name is deprecated.',
                 DeprecationWarning)
             key = key.name
+        if key not in self.__data:
+            raise PyrtlError('cannot find "%s" in trace -- if using CompiledSim you make be '
+                             'attempting to access internal states but only inputs/output are '
+                             'available.' % key)
         return self.__data[key]
 
 
