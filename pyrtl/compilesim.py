@@ -216,9 +216,13 @@ class CompiledSimulation(object):
         self._dir = tempfile.mkdtemp()
         with open(path.join(self._dir, 'pyrtlsim.c'), 'w') as f:
             self._create_code(lambda s: f.write(s+'\n'))
+        if platform.system() == 'Darwin':
+            shared = '-dynamiclib'
+        else:
+            shared = '-shared'
         subprocess.check_call([
             'gcc', '-O0', '-march=native', '-std=c99', '-m64',
-            '-shared', '-fPIC', '-mcmodel=medium',
+            shared, '-fPIC',
             path.join(self._dir, 'pyrtlsim.c'), '-o', path.join(self._dir, 'pyrtlsim.so'),
             ], shell=(platform.system() == 'Windows'))
         self._dll = ctypes.CDLL(path.join(self._dir, 'pyrtlsim.so'))
