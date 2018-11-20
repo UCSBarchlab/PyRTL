@@ -504,9 +504,14 @@ def _verilog_vector_decl(w):
     return _verilog_vector_size_decl(len(w))
 
 
+def output_to_verilog(dest_file, block=None):
+    """ A function to walk the block and output it in verilog format to the open file """
+    OutputToVerilog(dest_file, block)
+
+
 class OutputToVerilog(object):
     def __init__(self, dest_file, block=None):
-        """ A class to walk the block and output it in verilog format to the open file """
+        """ A class implementing the output of a block in verilog format to an open file """
 
         self.block = working_block(block)
         self.file = dest_file
@@ -529,13 +534,21 @@ class OutputToVerilog(object):
         print('//   yosys -p "synth_xilinx -top toplevel" thisfile.v\n', file=self.file)
 
     def _to_verilog_header(self):
-        io_list = [self._varname(w) for w in self.block.wirevector_subset((Input, Output))]
-        io_list.append('clk')
-        io_list_str = ', '.join(io_list)
-        print('module toplevel(%s);' % io_list_str, file=self.file)
+        def name_sorted(wires):
+            return sorted(wires, key=lambda w: self._varname(w))
+
+        def name_list(wires):
+            return [self._varname(w) for w in wires]
 
         inputs = self.block.wirevector_subset(Input)
         outputs = self.block.wirevector_subset(Output)
+
+        io_list = ['clk'] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
+        if any(w.startswith('tmp') for w in io_list):
+            raise PyrtlError('input or output with name starting with "tmp" indicates unnamed IO')
+        io_list_str = ', '.join(io_list)
+        print('module toplevel(%s);' % io_list_str, file=self.file)
+
         registers = self.block.wirevector_subset(Register)
         wires = self.block.wirevector_subset() - (inputs | outputs | registers)
         wire_regs = set()
@@ -544,11 +557,12 @@ class OutputToVerilog(object):
                 wire_regs.add(net.dests[0])
         memories = {n.op_param[1] for n in self.block.logic_subset('m@')}
 
-        for w in inputs:
+        print('    input clk;', file=self.file)
+        for w in name_sorted(inputs):
             print('    input%s %s;' % (_verilog_vector_decl(w),
                                        self._varname(w)), file=self.file)
-        print('    input clk;', file=self.file)
-        for w in outputs:
+
+        for w in name_sorted(outputs):
             print('    output%s %s;' % (_verilog_vector_decl(w),
                                         self._varname(w)), file=self.file)
         print('', file=self.file)

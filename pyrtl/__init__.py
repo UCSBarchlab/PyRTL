@@ -79,6 +79,7 @@ from .compilesim import CompiledSimulation
 from .inputoutput import input_from_blif
 from .inputoutput import output_to_trivialgraph
 from .inputoutput import output_to_graphviz
+from .inputoutput import output_to_verilog
 from .inputoutput import OutputToVerilog
 from .inputoutput import output_verilog_testbench
 from .inputoutput import block_to_graphviz_string
