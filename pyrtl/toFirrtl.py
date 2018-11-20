@@ -1,14 +1,21 @@
 import pyrtl
 from pyrtl import Input, Output, Register
 
+"""
+Usage: toFirrtl_new.translate_to_firrtl(pyrtl_working_block, file_path, rom_blocks)
 
+This function will take a pyrtl working block and generate a corresponding firrtl file specified by file_path
+
+If rom is intialized in pyrtl code, you can pass in the rom_blocks as a list [rom1, rom2, ...]
+
+"""
 def translate_to_firrtl(block, output_file, rom_blocks=None):
     f = open(output_file, "w+")
     # write out all the implicit stuff
     f.write("circuit Example : \n")
     f.write("  module Example : \n")
     f.write("    input clock : Clock\n    input reset : UInt<1>\n")
-    # write out IO signals
+    # write out IO signals, wires and registers
     wireRegDefs = ""
     for wire in list(block.wirevector_subset()):
         if type(wire) == pyrtl.wire.Input:
@@ -17,10 +24,8 @@ def translate_to_firrtl(block, output_file, rom_blocks=None):
             f.write("    output %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
         elif type(wire) == pyrtl.wire.WireVector:
             wireRegDefs += "    wire {} : UInt<{}>\n".format(wire.name, wire.bitwidth)
-            # f.write("    wire %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
         elif type(wire) == pyrtl.wire.Register:
             wireRegDefs += "    reg {} : UInt<{}>, clock\n".format(wire.name, wire.bitwidth);
-            # f.write("    reg %s : UInt<%d>, clock\n" % (wire.name, wire.bitwidth))
         elif type(wire) == pyrtl.wire.Const:
 
             # some const is in the form like const_0_1'b1, is this legal operation?
@@ -117,52 +122,4 @@ def translate_to_firrtl(block, output_file, rom_blocks=None):
 
     f.close()
     return 0
-
-
-def generate_firrtl_test(sim_trace, working_block):
-    inputs = working_block.wirevector_subset(Input)
-    outputs = working_block.wirevector_subset(Output)
-    registers = working_block.wirevector_subset(Register)
-
-    test_str = "\t\tval tester = new InterpretiveTester(firrtlStr)\n"
-    test_str += "\t\ttester.poke(\"reset\", 1)\n"
-    test_str += "\t\ttester.step(1)\n"
-    test_str += "\t\ttester.poke(\"reset\", 0)\n"
-    for v in inputs.union(outputs).union(registers):
-        test_str += "\t\tvar " + v.name + " = List(" + ",".join([str(sim_trace.trace[v.name][i]) for i in range(len(sim_trace))]) + ")\n"
-
-    test_str += "\t\tfor (i <- 0 to " + str(len(sim_trace)) + " - 1) {\n"
-    test_str += "\t\t\tprint(\"round \" + i + \"\\n\")\n"
-
-    for i in inputs:
-        test_str += "\t\t\ttester.poke(\"" + i.name + "\", " + i.name + "(i))\n"
-
-    for o in outputs:
-        test_str += "\t\t\ttester.expect(\"" + o.name + "\", " + o.name + "(i))\n"
-
-    for r in registers:
-        test_str += "\t\t\ttester.expect(\"" + r.name + "\", " + r.name + "(i))\n"
-
-    test_str += "\t\t\ttester.step(1)\n"
-    test_str += "\t\t}\n"
-
-    return test_str
-
-
-def wrap_firrtl_test(sim_trace, working_block, firrtl_str, test_name, firrtl_test_path):
-    wrapper_str = "package firrtl_interpreter\n"
-    wrapper_str += "import org.scalatest.{FlatSpec, Matchers}\n"
-    wrapper_str += "class " + test_name + " extends FlatSpec with Matchers {\n"
-    wrapper_str += "\tval firrtlStr: String =\n"
-    wrapper_str += "\"\"\"\n"
-    wrapper_str += firrtl_str
-    wrapper_str += "\"\"\".stripMargin\n"
-    wrapper_str += "\tit should \"run with InterpretedTester\" in {\n"
-    wrapper_str += generate_firrtl_test(sim_trace, working_block)
-    wrapper_str += "\t}\n"
-    wrapper_str += "}\n"
-
-    with open(firrtl_test_path + test_name + ".scala", "w") as f:
-        f.write(wrapper_str)
-
 
