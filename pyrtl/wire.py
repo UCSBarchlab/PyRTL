@@ -74,7 +74,6 @@ class WireVector(object):
     Greater or Eq.   a >= b            Greater or Equal to, return 1-bit WireVector
     Equality         a == b            Hardware to check equality, return 1-bit WireVector
     Not Equal        a != b            Inverted equality check, return 1-bit WireVector
-    Not Equal        a != b            Inverted equality check, return 1-bit WireVector
     Bitwidth         len(a)            Return bitwidth of the wirevector
     Assignment       a <<= b           Connect from b to a (see note below)
     Bit Slice        a[3:6]            Selects bits from wirevector, in this case bits 3,4,5

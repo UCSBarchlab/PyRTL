@@ -11,8 +11,6 @@ from pyrtl.corecircuits import _basic_add
 import subprocess
 try:
     version = subprocess.check_output(['gcc', '--version'])
-    if 'LLVM' in str(version):
-        raise unittest.SkipTest('CompiledSimulation testing currently requires non-clang gcc')
 except OSError:
     raise unittest.SkipTest('CompiledSimulation testing requires gcc')
     
