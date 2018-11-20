@@ -1,4 +1,5 @@
 """ Example 2:  A Counter with Ripple Carry Adder.
+
     This next example shows how you make stateful things with registers
     and more complex hardware structures with functions.  We generate
     a 3-bit ripple carry adder building off of the 1-bit adder from

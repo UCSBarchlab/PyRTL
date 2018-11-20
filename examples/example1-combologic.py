@@ -1,4 +1,5 @@
 """ Example 1:  A simple combination logic block example.
+
     This example declares a block of hardware with three one-bit inputs,
     (a,b,c) and two one-bit outputs (sum, cout).  The logic declared is a
     simple one-bit adder and the definition uses some of the most common

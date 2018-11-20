@@ -1,4 +1,5 @@
 """ Example 3:  A State Machine built with conditional_assignment
+
     In this example we describe how conditional_assignment works in the context of
     a vending machine that will dispense an item when it has received 4 tokens.
     If a refund is requested, it returns the tokens.
