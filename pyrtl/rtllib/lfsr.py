@@ -51,7 +51,7 @@ def galois_lfsr(seed, bitwidth, reset, enable=1):
 
     The Galois LFSR uses internal exor gates to generate a pseudo random sequence 
     of 2^n-1 terms before repeating. The Galois LFSR is faster than the Fibonacci LFSR.
-    It has the same sequence as the Fibonacci LFSR but a time offset exists. 
+    It has the same msb output stream as the Fibonacci LFSR but a time offset exists. 
 
     Note: the LFSR must be seeded using reset to start the sequence 
     """
