@@ -51,14 +51,14 @@ class TestLFSR(unittest.TestCase):
                              [sim_trace.trace[lfsr_out][disable_cycle]]
                              * (19 - disable_cycle))
 
-            true_val = TestLFSR.sw_fibonacci_lfsr(seed_vals[0], bitwidth)
-            sim.step({'seed': seed_vals[0], 'reset': 1, 'enable': 1})
+            true_val = TestLFSR.sw_fibonacci_lfsr(seed_vals[1], bitwidth)
+            sim.step({'seed': seed_vals[1], 'reset': 1, 'enable': 1})
             for cycle in range(1000 if bitwidth > 10 else 2**bitwidth - 1):
                 sim.step({'seed': seed_vals[1], 'reset': 0, 'enable': 1})
                 self.assertEqual(sim.value[lfsr_out], next(true_val))
 
-            true_val = TestLFSR.sw_fibonacci_lfsr(seed_vals[1], bitwidth)
-            sim.step({'seed': seed_vals[1], 'reset': 1, 'enable': 1})
+            true_val = TestLFSR.sw_fibonacci_lfsr(seed_vals[2], bitwidth)
+            sim.step({'seed': seed_vals[2], 'reset': 1, 'enable': 1})
             for cycle in range(1000 if bitwidth > 10 else 2**bitwidth - 1):
                 sim.step({'seed': seed_vals[2], 'reset': 0, 'enable': 1})
                 self.assertEqual(sim.value[lfsr_out], next(true_val))
@@ -84,14 +84,14 @@ class TestLFSR(unittest.TestCase):
                              [sim_trace.trace[lfsr_out][disable_cycle]]
                              * (19 - disable_cycle))
 
-            true_val = TestLFSR.sw_galois_lfsr(seed_vals[0], bitwidth)
-            sim.step({'seed': seed_vals[0], 'reset': 1, 'enable': 1})
+            true_val = TestLFSR.sw_galois_lfsr(seed_vals[1], bitwidth)
+            sim.step({'seed': seed_vals[1], 'reset': 1, 'enable': 1})
             for cycle in range(1000 if bitwidth > 10 else 2**bitwidth - 1):
                 sim.step({'seed': seed_vals[1], 'reset': 0, 'enable': 1})
                 self.assertEqual(sim.value[lfsr_out], next(true_val))
 
-            true_val = TestLFSR.sw_galois_lfsr(seed_vals[1], bitwidth)
-            sim.step({'seed': seed_vals[1], 'reset': 1, 'enable': 1})
+            true_val = TestLFSR.sw_galois_lfsr(seed_vals[2], bitwidth)
+            sim.step({'seed': seed_vals[2], 'reset': 1, 'enable': 1})
             for cycle in range(1000 if bitwidth > 10 else 2**bitwidth - 1):
                 sim.step({'seed': seed_vals[2], 'reset': 0, 'enable': 1})
                 self.assertEqual(sim.value[lfsr_out], next(true_val))
