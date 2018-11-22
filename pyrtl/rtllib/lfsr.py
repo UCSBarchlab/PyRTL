@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import pyrtl
 
 
-def fibonacci_lfsr(seed, bitwidth, reset, enable=1):
+def fibonacci_lfsr(seed, bitwidth, reset, enable=pyrtl.Const(1)):
     """ 
     Creates a Fibonacci linear feedback shift register given the seed and bitwidth.
 
@@ -10,15 +10,12 @@ def fibonacci_lfsr(seed, bitwidth, reset, enable=1):
     :param bitwidth: the bitwidth of LFSR
     :param reset: one bit WireVector to set the LFSR to its seed state
     :param enable: one bit WireVector to enable/disable the LFSR  
-    :return: register storing the current value of the LFSR
+    :return: register storing the random value produced by the LFSR
 
-    The Fibonacci LFSR uses external exor gates to generate a pseudo random sequence 
-    of 2^n-1 terms before repeating. It has a longer critical path delay than the 
-    Galois LFSR. 
-
-    Note: the LFSR must be seeded using reset to start the sequence  
+    The Fibonacci LFSR uses cascaded external xor gates to generate a 2^n - 1 cycles 
+    pseudo random number sequence without repeating. It has a longer critical path 
+    delay than the Galois LFSR.  
     """
-    enable = pyrtl.as_wires(enable)
     assert len(reset) == len(enable) == 1
     if bitwidth not in tap_table:
         raise pyrtl.PyrtlError(
@@ -29,6 +26,7 @@ def fibonacci_lfsr(seed, bitwidth, reset, enable=1):
     lfsr = pyrtl.Register(bitwidth, 'lfsr')
     feedback = lfsr[bitwidth - tap_table[bitwidth][0]]
     for tap in tap_table[bitwidth][1:]:
+        # tap numbering is reversed for Fibonacci LFSRs
         feedback = feedback ^ lfsr[bitwidth - tap]
     with pyrtl.conditional_assignment:
         with enable:
@@ -39,7 +37,7 @@ def fibonacci_lfsr(seed, bitwidth, reset, enable=1):
     return lfsr
 
 
-def galois_lfsr(seed, bitwidth, reset, enable=1):
+def galois_lfsr(seed, bitwidth, reset, enable=pyrtl.Const(1)):
     """ 
     Creates a Galois linear feedback shift register given the seed and bitwidth.
 
@@ -47,15 +45,13 @@ def galois_lfsr(seed, bitwidth, reset, enable=1):
     :param bitwidth: the bitwidth of LFSR
     :param reset: one bit WireVector to set the LFSR to its seed state
     :param enable: one bit WireVector to enable/disable the LFSR  
-    :return: register storing the current value of the LFSR
+    :return: register storing the random value produced by the LFSR
 
-    The Galois LFSR uses internal exor gates to generate a pseudo random sequence 
-    of 2^n-1 terms before repeating. The Galois LFSR is faster than the Fibonacci LFSR.
-    It has the same msb output stream as the Fibonacci LFSR but a time offset exists. 
-
-    Note: the LFSR must be seeded using reset to start the sequence 
+    The Galois LFSR uses parallel internal xor gates to generate a 2^n - 1 cycles 
+    pseudo random number sequence without repeating. The Galois LFSR is faster than 
+    the Fibonacci LFSR. It produces the same msb stream as the Fibonacci LFSR but a 
+    different random number sequence. 
     """
-    enable = pyrtl.as_wires(enable)
     assert len(reset) == len(enable) == 1
     if bitwidth not in tap_table:
         raise pyrtl.PyrtlError(
@@ -79,9 +75,9 @@ def galois_lfsr(seed, bitwidth, reset, enable=1):
     return lfsr
 
 
-# The LFSRs support bitwidth 2-32, 64, 128, 256, 1024, 2048, 4096
-# maximal-cycle LFSR taps from
-# https://web.archive.org/web/20161007061934/http://courses.cse.tamu.edu/csce680/walker/lfsr_table.pdf
+# maximal-cycle taps taken from table by Roy Ward, Tim Molteno
+# http://www.physics.otago.ac.nz/reports/electronics/ETR2012-1.pdf
+# taps for other numbers of bitwidth can be added in the same fashion
 tap_table = {
     2: (2, 1),
     3: (3, 2),
