@@ -3,18 +3,18 @@ import pyrtl
 
 
 def fibonacci_lfsr(seed, bitwidth, reset, enable=pyrtl.Const(1)):
-    """ 
+    """
     Creates a Fibonacci linear feedback shift register given the seed and bitwidth.
 
     :param seed: the initial value of the LFSR
     :param bitwidth: the bitwidth of LFSR
     :param reset: one bit WireVector to set the LFSR to its seed state
-    :param enable: one bit WireVector to enable/disable the LFSR  
+    :param enable: one bit WireVector to enable/disable the LFSR
     :return: register storing the random value produced by the LFSR
 
-    The Fibonacci LFSR uses cascaded external xor gates to generate a 2^n - 1 cycles 
-    pseudo random number sequence without repeating. It has a longer critical path 
-    delay than the Galois LFSR.  
+    The Fibonacci LFSR uses cascaded external xor gates to generate a 2^n - 1 cycles
+    pseudo random number sequence without repeating. It has a longer critical path
+    delay than the Galois LFSR.
     """
     assert len(reset) == len(enable) == 1
     if bitwidth not in tap_table:
@@ -38,19 +38,19 @@ def fibonacci_lfsr(seed, bitwidth, reset, enable=pyrtl.Const(1)):
 
 
 def galois_lfsr(seed, bitwidth, reset, enable=pyrtl.Const(1)):
-    """ 
+    """
     Creates a Galois linear feedback shift register given the seed and bitwidth.
 
     :param seed: initial value of the LFSR
     :param bitwidth: the bitwidth of LFSR
     :param reset: one bit WireVector to set the LFSR to its seed state
-    :param enable: one bit WireVector to enable/disable the LFSR  
+    :param enable: one bit WireVector to enable/disable the LFSR
     :return: register storing the random value produced by the LFSR
 
-    The Galois LFSR uses parallel internal xor gates to generate a 2^n - 1 cycles 
-    pseudo random number sequence without repeating. The Galois LFSR is faster than 
-    the Fibonacci LFSR. It produces the same msb stream as the Fibonacci LFSR but a 
-    different random number sequence. 
+    The Galois LFSR uses parallel internal xor gates to generate a 2^n - 1 cycles
+    pseudo random number sequence without repeating. The Galois LFSR is faster than
+    the Fibonacci LFSR. It produces the same msb stream as the Fibonacci LFSR but a
+    different random number sequence.
     """
     assert len(reset) == len(enable) == 1
     if bitwidth not in tap_table:
