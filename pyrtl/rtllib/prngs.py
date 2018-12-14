@@ -6,11 +6,11 @@ Example::
     ready <<= ready_out
     sim_trace = pyrtl.SimulationTrace()
     sim = pyrtl.Simulation(tracer=sim_trace)
- 
+
     sim.step({'load': 1, 'req': 0})
     while sim.value[ready] == 0:
         sim.step({'load': 0, 'req': 0})
-    
+
     sim.step({'load': 0, 'req': 1})
     while sim.value[ready] == 0:
         sim.step({'load': 0, 'req': 0})
