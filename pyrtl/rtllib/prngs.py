@@ -116,6 +116,9 @@ def csprng(bitwidth, req, load, seed=None):
     csprng takes advantage of Trivium's small gate area, superior speed and statistical
     performance compared to other stream ciphers. Can be used to generate random
     encryption keys or IVs.
+    
+    Trivium specifications retrived from
+    http://www.ecrypt.eu.org/stream/ciphers/trivium/trivium.pdf
     """
     from math import ceil, log
     # csprng will seed itself if no seed signal is given
