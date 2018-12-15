@@ -90,10 +90,7 @@ def prng(bitwidth, req, load, seed=None):
         with state == GEN:
             with ~gen_done:
                 counter.next |= counter + 1
-                if bitwidth == 1:
-                    rand.next |= lfsr[0]
-                else:
-                    rand.next |= pyrtl.concat(lfsr[0], rand[1:])
+                rand.next |= pyrtl.concat(rand, lfsr[-1])
 
     shift <<= (state == INIT) & ~init_done | (state == GEN) & ~gen_done
     ready = ~load & ~req & ((state == INIT) & init_done | (
@@ -124,7 +121,7 @@ def csprng(bitwidth, req, load, seed=None):
     # csprng will seed itself if no seed signal is given
     try:
         seed = pyrtl.as_wires(seed, 160)
-        key, iv = libutils.partition_wire(seed, 80)
+        iv, key = libutils.partition_wire(seed, 80)
     except pyrtl.PyrtlError:
         import os
         key, iv = (int(os.urandom(10).hex(), 16) for i in range(2))
@@ -133,12 +130,12 @@ def csprng(bitwidth, req, load, seed=None):
     a = pyrtl.Register(93, 'a')
     b = pyrtl.Register(84, 'b')
     c = pyrtl.Register(111, 'c')
-    feedforward_a = a[0] ^ a[1] & a[2] ^ a[27]
-    feedback_b = feedforward_a ^ b[6]
-    feedforward_b = b[0] ^ b[1] & b[2] ^ b[15]
-    feedback_c = feedforward_b ^ c[24]
-    feedforward_c = c[0] ^ c[1] & c[2] ^ c[45]
-    feedback_a = feedforward_c ^ a[24]
+    feedforward_a = a[65] ^ a[90] & a[91] ^ a[92]
+    feedback_b = feedforward_a ^ b[77]
+    feedforward_b = b[68] ^ b[81] & b[82] ^ b[83]
+    feedback_c = feedforward_b ^ c[86]
+    feedforward_c = c[65] ^ c[108] & c[109] ^ c[110]
+    feedback_a = feedforward_c ^ a[68]
     bit_out = feedforward_a ^ feedforward_b ^ feedforward_c
 
     rand = pyrtl.Register(bitwidth, 'rand')
@@ -152,8 +149,8 @@ def csprng(bitwidth, req, load, seed=None):
     with pyrtl.conditional_assignment:
         with load:
             counter.next |= 0
-            a.next |= pyrtl.concat(key, pyrtl.Const(0, 13))
-            b.next |= pyrtl.concat(iv, pyrtl.Const(0, 4))
+            a.next |= key
+            b.next |= iv
             c.next |= pyrtl.concat(pyrtl.Const("3'b111"), pyrtl.Const(0, 108))
             state.next |= INIT
         with req:
@@ -163,19 +160,16 @@ def csprng(bitwidth, req, load, seed=None):
         with state == INIT:
             with ~init_done:
                 counter.next |= counter + 1
-                a.next |= pyrtl.concat(feedback_a, a[1:])
-                b.next |= pyrtl.concat(feedback_b, b[1:])
-                c.next |= pyrtl.concat(feedback_c, c[1:])
+                a.next |= pyrtl.concat(a, feedback_a)
+                b.next |= pyrtl.concat(b, feedback_b)
+                c.next |= pyrtl.concat(c, feedback_c)
         with state == GEN:
             with ~gen_done:
                 counter.next |= counter + 1
-                a.next |= pyrtl.concat(feedback_a, a[1:])
-                b.next |= pyrtl.concat(feedback_b, b[1:])
-                c.next |= pyrtl.concat(feedback_c, c[1:])
-                if bitwidth == 1:
-                    rand.next |= bit_out
-                else:
-                    rand.next |= pyrtl.concat(bit_out, rand[1:])
+                a.next |= pyrtl.concat(a, feedback_a)
+                b.next |= pyrtl.concat(b, feedback_b)
+                c.next |= pyrtl.concat(c, feedback_c)
+                rand.next |= pyrtl.concat(rand, bit_out)
 
     ready = ~load & ~req & ((state == INIT) & init_done | (
         state == GEN) & gen_done)
@@ -191,7 +185,7 @@ def fibonacci_lfsr(bitwidth, req, load, seed):
     :param load: one bit signal to load the seed into LFSR
     :param seed: the initial state of the LFSR
     :return: register containing the internal state of the LFSR. Entire state
-      returned for flexibility. Take msb only for maximum randomness.
+      returned for flexibility. Take lsb only for maximum randomness.
 
     Fibonacci LFSR uses cascaded external xor gates to generate a peudorandom bit
     per cycle with a period of 2^n - 1.
@@ -205,16 +199,15 @@ def fibonacci_lfsr(bitwidth, req, load, seed):
         'LFSR must start in non-zero seed state'))
 
     lfsr = pyrtl.Register(bitwidth, 'lfsr')
-    feedback = lfsr[bitwidth - lfsr_tap_table[bitwidth][0]]
+    feedback = lfsr[lfsr_tap_table[bitwidth][0] - 1]
     for tap in lfsr_tap_table[bitwidth][1:]:
-        # tap numbering is reversed for Fibonacci LFSRs
-        feedback = feedback ^ lfsr[bitwidth - tap]
+        feedback = feedback ^ lfsr[tap - 1]
 
     with pyrtl.conditional_assignment:
         with load:
             lfsr.next |= seed
         with req:
-            lfsr.next |= pyrtl.concat(feedback, lfsr[1:])
+            lfsr.next |= pyrtl.concat(lfsr, feedback)
     return lfsr
 
 
@@ -227,7 +220,7 @@ def galois_lfsr(bitwidth, req, load, seed):
     :param load: one bit signal to load the seed into LFSR
     :param seed: the initial state of the LFSR
     :return: register containing the internal state of the LFSR. Entire state
-      returned for flexibility. Take lsb only for maximum randomness.
+      returned for flexibility. Take msb only for maximum randomness.
 
     Galois LFSR uses parallel internal xor gates to generate a peudorandom bit
     per cycle with a period of 2^n - 1. Faster than a Fibonacci LFSR.
@@ -241,12 +234,14 @@ def galois_lfsr(bitwidth, req, load, seed):
         'LFSR must start in non-zero seed state'))
 
     lfsr = pyrtl.Register(bitwidth, 'lfsr')
-    shifted_lfsr = lfsr[0]
+    shifted_lfsr = lfsr[-1]
     for i in reversed(range(1, bitwidth)):
         if i in lfsr_tap_table[bitwidth]:
-            shifted_lfsr = pyrtl.concat(shifted_lfsr, lfsr[0] ^ lfsr[i])
+            # tap numbering is reversed for Galois LFSRs
+            shifted_lfsr = pyrtl.concat(
+                lfsr[-1] ^ lfsr[bitwidth - i - 1], shifted_lfsr)
         else:
-            shifted_lfsr = pyrtl.concat(shifted_lfsr, lfsr[i])
+            shifted_lfsr = pyrtl.concat(lfsr[bitwidth - i - 1], shifted_lfsr)
 
     with pyrtl.conditional_assignment:
         with load:
