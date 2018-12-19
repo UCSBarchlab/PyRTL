@@ -81,8 +81,8 @@ def prng(bitwidth, load, req, seed=None):
         seed = cryptogen.randrange(1, 2**89)
 
     lfsr = pyrtl.Register(89 if bitwidth < 89 else bitwidth)
-    leap_ahead = lfsr
     # leap ahead by shifting the LFSR bitwidth times
+    leap_ahead = lfsr
     for i in range(bitwidth):
         leap_ahead = pyrtl.concat(leap_ahead, leap_ahead[50] ^ leap_ahead[88])
 
@@ -104,7 +104,7 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
     :param seed: 160 bits WireVector
     :param bits_per_cycle: the number of output bits to generate in parallel each cycle
       Up to 64 bits each cycle. Needs to be a common divisor of 1152 and the bitwidth.
-    :return rand, ready: ready is a one bit signal showing either the random number has
+    :return ready, rand: ready is a one bit signal showing either the random number has
       been produced or the seed has been initialized
 
     csprng has a seed initialization stage that discards the first weak 1152 bits.
