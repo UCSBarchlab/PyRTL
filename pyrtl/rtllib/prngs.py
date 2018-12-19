@@ -168,12 +168,12 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
             with ~gen_done:
                 counter.next |= counter + 1
                 a.next |= pyrtl.concat(a, *feedback_a)
-                b.next |= pyrtl.concat(b, *feedback_b)‰
+                b.next |= pyrtl.concat(b, *feedback_b)
                 c.next |= pyrtl.concat(c, *feedback_c)
                 rand.next |= pyrtl.concat(rand, *output)
 
-    ready = ~load & ~req & (state == INIT) & init_done |
-        (state == GEN) & gen_done
+    ready = ~load & ~req & (state == INIT) & init_done | (
+        state == GEN) & gen_done
     return ready, rand
 
 
