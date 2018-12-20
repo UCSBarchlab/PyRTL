@@ -1,5 +1,6 @@
 """
-Example::
+``Example``::
+
     # csprng
     load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
     ready, rand = pyrtl.Output(1, 'ready'), pyrtl.Output(128, 'rand')
@@ -19,7 +20,7 @@ Example::
         sim.step({'load': 0, 'req': 0})
 
     print(sim.inspect(rand))
-    sim_trace.render_trace(symbol_len=40, segment_size=5)
+    sim_trace.render_trace(symbol_len=45, segment_size=5)
 
     # prng
     load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
@@ -32,12 +33,12 @@ Example::
     sim.step({'load': 0, 'req': 1})
     sim.step({'load': 0, 'req': 0})
     print(sim.inspect(rand))
-    sim_trace.render_trace(symbol_len=15, segment_size=5)
+    sim_trace.render_trace(symbol_len=30, segment_size=1)
 
     # explicit seeding
     seed =  pyrtl.Input(89, 'seed')
     load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
-    rand = pyrtl.Output(1, 'rand')
+    rand = pyrtl.Output(32, 'rand')
     rand <<= prngs.prng(32, load, req, seed)
     sim_trace = pyrtl.SimulationTrace()
     sim = pyrtl.Simulation(tracer=sim_trace)
@@ -46,7 +47,8 @@ Example::
     sim.step({'load': 0, 'req': 1, 'seed': 0x102030405060708090a0b0c})
     sim.step({'load': 0, 'req': 0, 'seed': 0x102030405060708090a0b0c})
     print(sim.inspect(rand))
-    sim_trace.render_trace(symbol_len=15, segment_size=5)
+    sim_trace.render_trace(symbol_len=30, segment_size=1)
+
 """
 
 
@@ -65,20 +67,18 @@ def prng(bitwidth, load, req, seed=None):
     :param seed: 89 bits WireVector
     :return: register containing the random number with the given bitwidth
 
-    A fast PRNG that generates a random number using only one clock cycle. Large
-    bitwidth may require very big area, because a LFSR outputs one bit per cycle,
-    unrolling the loop adds extra gates. Not cryptographically strong, but can be
-    used as a test pattern generator or anything that requires random patterns.
+    A fast PRNG that generates a random number using only one clock cycle.
+    Large bitwidth may require very big area, because a LFSR outputs only one bit
+    per cycle, unrolling the loop adds extra gates. Not cryptographically strong,
+    but can be used as a test pattern generator or anything that requires random
+    patterns.
     """
     # Note: 89 bits is chosen because 89 is a mersenne prime, which makes the period
     # of the LFSR maximized at 2^89 - 1 for any bitwidth of random numbers
-    try:
-        seed = pyrtl.as_wires(seed, 89)
-    except pyrtl.PyrtlError:
-        # seeds itself if no seed signal is given
+    if seed is None:
         import random
         cryptogen = random.SystemRandom()
-        seed = cryptogen.randrange(1, 2**89)
+        seed = cryptogen.randrange(1, 2**89) # seeds itself if no seed signal is given
 
     lfsr = pyrtl.Register(89 if bitwidth < 89 else bitwidth)
     # leap ahead by shifting the LFSR bitwidth times
@@ -118,14 +118,15 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
         raise pyrtl.PyrtlError('bits_per_cycle should not exceed 64')
     if bitwidth % bits_per_cycle != 0 or 1152 % bits_per_cycle != 0:
         raise pyrtl.PyrtlError('bits_per_cycle is invalid')
-    try:
-        seed = pyrtl.as_wires(seed, 160)
-        iv, key = libutils.partition_wire(seed, 80)
-    except pyrtl.PyrtlError:
+    if seed is None:
         # seeds itself if no seed signal is given
         import random
         cryptogen = random.SystemRandom()
         key, iv = (cryptogen.randrange(2**80) for i in range(2))
+    else:
+        seed = pyrtl.as_wires(seed, 160)
+        iv, key = libutils.partition_wire(seed, 80)
+    # To use csprng as a stream cipher, put key in MSBs and IV in LSBs
 
     a = pyrtl.Register(93)
     b = pyrtl.Register(84)
@@ -179,17 +180,18 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
 
 def fibonacci_lfsr(bitwidth, load, shift, seed):
     """
-    Builds a generic LFSR configured in fibonacci setting.
+    Builds a generic LFSR configured in Fibonacci setting.
 
     :param bitwidth: the bitwidth of the LFSR
     :param load: one bit signal to load the seed into LFSR
     :param shift: one bit signal to shift the LFSR
     :param seed: bitwidth bits WireVector
     :return: register containing the internal state of the LFSR. Entire state
-      returned for flexibility. Take lsb only for maximum randomness.
+      returned for flexibility. Take LSB only for maximum randomness.
 
-    Uses cascaded external xor gates to generate a peudorandom bit each cycle
-    with a period of 2^bitwidth - 1.
+    A LFSR where the outputs of several bits are XORed to provide the input bit
+    to be shifted in. Generates a peudorandom bit (LSB) each cycle with a period
+    of 2^bitwidth - 1.
     """
     if bitwidth not in lfsr_tap_table:
         raise pyrtl.PyrtlError('Bitwidth {} is either illegal or not supported'
@@ -210,18 +212,19 @@ def fibonacci_lfsr(bitwidth, load, shift, seed):
 
 def galois_lfsr(bitwidth, load, shift, seed):
     """
-    Builds a generic LFSR configured in galois setting.
+    Builds a generic LFSR configured in Galois setting.
 
     :param bitwidth: the bitwidth of the LFSR
     :param load: one bit signal to load the seed into LFSR
     :param shift: one bit signal to shift the LFSR
-    :param seed: bitwidth bits WireVector
+    :param seed: bitwidth bits WireVector or integer
     :return: register containing the internal state of the LFSR. Entire state
-      returned for flexibility. Take msb only for maximum randomness.
+      returned for flexibility. Take MSB only for maximum randomness.
 
-    Uses parallel internal xor gates to generate a peudorandom bit each cycle
-    with a period of 2^bitwidth - 1. Faster than a Fibonacci LFSR. Outputs the
-    same bit stream as a Fibonacci LFSR with a time offset.
+    A LFSR where the bit shifted out is XORed to the inputs of several bits.
+    Generates a peudorandom bit (MSB) each cycle with a period of 2^bitwidth - 1.
+    Faster than a Fibonacci LFSR. Outputs the same bit stream as a Fibonacci
+    LFSR with a time offset.
     """
     if bitwidth not in lfsr_tap_table:
         raise pyrtl.PyrtlError('Bitwidth {} is either illegal or not supported'
