@@ -1,4 +1,5 @@
 """
+
 ``Example``::
 
     # csprng
@@ -68,10 +69,9 @@ def prng(bitwidth, load, req, seed=None):
     :return: register containing the random number with the given bitwidth
 
     A fast PRNG that generates a random number using only one clock cycle.
-    Large bitwidth may require very big area, because a LFSR outputs only one bit
-    per cycle, unrolling the loop adds extra gates. Not cryptographically strong,
-    but can be used as a test pattern generator or anything that requires random
-    patterns.
+    Large bitwidth may require very big area, because a regular LFSR outputs only
+    one bit per cycle, unrolling the loop adds extra gates. Not cryptographically strong,
+    but can be used as a test pattern generator or anything that requires random patterns.
     """
     # Note: 89 bits is chosen because 89 is a mersenne prime, which makes the period
     # of the LFSR maximized at 2^89 - 1 for any bitwidth of random numbers
@@ -108,8 +108,9 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
       been produced or the seed has been initialized
 
     csprng has a seed initialization stage that discards the first weak 1152 bits.
-    Has small gate area, superior speed and good statistical performance compared to
-    AES and other stream ciphers. Can be used to generate random encryption keys or IVs.
+    Generation stage can take multiple cycles as well depending on the given bitwidth
+    and bits_per_cycle. Has small gate area, superior speed and good statistical performance
+    compared to AES and other stream ciphers. Can be used to generate encryption keys or IVs.
     """
     # Trivium specifications and performace referenced from:
     # http://www.ecrypt.eu.org/stream/ciphers/trivium/trivium.pdf
@@ -118,8 +119,7 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
         raise pyrtl.PyrtlError('bits_per_cycle should not exceed 64')
     if bitwidth % bits_per_cycle != 0 or 1152 % bits_per_cycle != 0:
         raise pyrtl.PyrtlError('bits_per_cycle is invalid')
-    if seed is None:
-        # seeds itself if no seed signal is given
+    if seed is None:  # seeds itself if no seed signal is given
         import random
         cryptogen = random.SystemRandom()
         key, iv = (cryptogen.randrange(2**80) for i in range(2))
@@ -143,8 +143,8 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
 
     rand = pyrtl.Register(bitwidth)
     state = pyrtl.Register(1)
-    counter_bw = int(ceil(log(max(bitwidth, 1152) // bits_per_cycle + 1, 2)))
-    counter = pyrtl.Register(counter_bw, 'counter')
+    counter_bitwidth = int(ceil(log(max(bitwidth, 1152) // bits_per_cycle + 1, 2)))
+    counter = pyrtl.Register(counter_bitwidth, 'counter')
     init_done = counter == 1152 // bits_per_cycle
     gen_done = counter == bitwidth // bits_per_cycle
     INIT, GEN = (pyrtl.Const(x) for x in range(2))
@@ -173,8 +173,7 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
                 c.next |= pyrtl.concat(c, *feedback_c)
                 rand.next |= pyrtl.concat(rand, *output)
 
-    ready = ~load & ~req & (state == INIT) & init_done | (
-        state == GEN) & gen_done
+    ready = ~load & ~req & (state == INIT) & init_done | (state == GEN) & gen_done
     return ready, rand
 
 
@@ -186,16 +185,14 @@ def fibonacci_lfsr(bitwidth, load, shift, seed):
     :param load: one bit signal to load the seed into LFSR
     :param shift: one bit signal to shift the LFSR
     :param seed: bitwidth bits WireVector
-    :return: register containing the internal state of the LFSR. Entire state
-      returned for flexibility. Take LSB only for maximum randomness.
+    :return: register containing the internal state of the LFSR
+      Entire state returned for flexibility. Take LSB only for maximum randomness.
 
-    A LFSR where the outputs of several bits are XORed to provide the input bit
-    to be shifted in. Generates a peudorandom bit (LSB) each cycle with a period
-    of 2^bitwidth - 1.
+    A LFSR where the outputs of several bits are XORed to provide the input bit to be shifted in.
+    Generates a peudorandom bit (LSB) each cycle with a period of 2^bitwidth - 1.
     """
     if bitwidth not in lfsr_tap_table:
-        raise pyrtl.PyrtlError('Bitwidth {} is either illegal or not supported'
-                               .format(bitwidth))
+        raise pyrtl.PyrtlError('Bitwidth {} is either illegal or not supported'.format(bitwidth))
 
     lfsr = pyrtl.Register(bitwidth)
     feedback = lfsr[lfsr_tap_table[bitwidth][0] - 1]
@@ -218,27 +215,25 @@ def galois_lfsr(bitwidth, load, shift, seed):
     :param load: one bit signal to load the seed into LFSR
     :param shift: one bit signal to shift the LFSR
     :param seed: bitwidth bits WireVector or integer
-    :return: register containing the internal state of the LFSR. Entire state
-      returned for flexibility. Take MSB only for maximum randomness.
+    :return: register containing the internal state of the LFSR
+      Entire state returned for flexibility. Take MSB only for maximum randomness.
 
     A LFSR where the bit shifted out is XORed to the inputs of several bits.
     Generates a peudorandom bit (MSB) each cycle with a period of 2^bitwidth - 1.
-    Faster than a Fibonacci LFSR. Outputs the same bit stream as a Fibonacci
-    LFSR with a time offset.
+    Faster than a Fibonacci LFSR. Outputs the same bit stream as a Fibonacci LFSR
+    with a time offset.
     """
     if bitwidth not in lfsr_tap_table:
-        raise pyrtl.PyrtlError('Bitwidth {} is either illegal or not supported'
-                               .format(bitwidth))
+        raise pyrtl.PyrtlError('Bitwidth {} is either illegal or not supported'.format(bitwidth))
 
     lfsr = pyrtl.Register(bitwidth)
     shifted_lfsr = lfsr[-1]
-    for i in reversed(range(1, bitwidth)):
-        if i in lfsr_tap_table[bitwidth]:
-            # tap numbering is reversed for Galois LFSRs
-            shifted_lfsr = pyrtl.concat(lfsr[-1] ^ lfsr[bitwidth - i - 1],
-                                        shifted_lfsr)
+    for tap in reversed(range(1, bitwidth)):
+        if tap in lfsr_tap_table[bitwidth]:
+        	# tap numbering is reversed for Galois LFSRs
+            shifted_lfsr = pyrtl.concat(lfsr[-1] ^ lfsr[bitwidth - tap - 1], shifted_lfsr)
         else:
-            shifted_lfsr = pyrtl.concat(lfsr[bitwidth - i - 1], shifted_lfsr)
+            shifted_lfsr = pyrtl.concat(lfsr[bitwidth - tap - 1], shifted_lfsr)
 
     with pyrtl.conditional_assignment:
         with load:
