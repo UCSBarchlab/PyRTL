@@ -230,7 +230,7 @@ def galois_lfsr(bitwidth, load, shift, seed):
     shifted_lfsr = lfsr[-1]
     for tap in reversed(range(1, bitwidth)):
         if tap in lfsr_tap_table[bitwidth]:
-        	# tap numbering is reversed for Galois LFSRs
+            # tap numbering is reversed for Galois LFSRs
             shifted_lfsr = pyrtl.concat(lfsr[-1] ^ lfsr[bitwidth - tap - 1], shifted_lfsr)
         else:
             shifted_lfsr = pyrtl.concat(lfsr[bitwidth - tap - 1], shifted_lfsr)
