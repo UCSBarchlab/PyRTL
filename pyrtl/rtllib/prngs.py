@@ -78,7 +78,7 @@ def prng(bitwidth, load, req, seed=None):
     if seed is None:
         import random
         cryptogen = random.SystemRandom()
-        seed = cryptogen.randrange(1, 2**89) # seeds itself if no seed signal is given
+        seed = cryptogen.randrange(1, 2**89)  # seeds itself if no seed signal is given
 
     lfsr = pyrtl.Register(89 if bitwidth < 89 else bitwidth)
     # leap ahead by shifting the LFSR bitwidth times
@@ -126,7 +126,7 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
     else:
         seed = pyrtl.as_wires(seed, 160)
         iv, key = libutils.partition_wire(seed, 80)
-    # To use csprng as a stream cipher, put key in MSBs and IV in LSBs
+        # To use csprng as a stream cipher, put key in MSBs and IV in LSBs
 
     a = pyrtl.Register(93)
     b = pyrtl.Register(84)
