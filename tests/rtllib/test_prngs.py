@@ -63,7 +63,7 @@ class TestPrngs(unittest.TestCase):
         in_vector = pyrtl.Input(160, 'in_vector')
         load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
         ready = pyrtl.Output(1, 'ready')
-        out_vector = pyrtl.Output(128, 'rand')
+        out_vector = pyrtl.Output(128, 'out_vector')
         ready_out, rand_out = prngs.csprng(128, load, req, in_vector)
         ready <<= ready_out
         out_vector <<= rand_out

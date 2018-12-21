@@ -55,7 +55,6 @@
 
 from __future__ import absolute_import
 import pyrtl
-from pyrtl.rtllib import libutils
 
 
 def prng(bitwidth, load, req, seed=None):
@@ -65,7 +64,7 @@ def prng(bitwidth, load, req, seed=None):
     :param bitwidth: the desired bitwidth of the random number
     :param load: one bit signal to load the seed into prng
     :param req: one bit signal to request a random number
-    :param seed: 89 bits WireVector
+    :param seed: 89 bits WireVector, defaults to None (self-seeding)
     :return: register containing the random number with the given bitwidth
 
     A fast PRNG that generates a random number using only one clock cycle.
@@ -101,15 +100,16 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
     :param bitwidth: the desired bitwidth of the random number
     :param load: one bit signal to load the seed into csprng
     :param req: one bit signal to request a random number
-    :param seed: 160 bits WireVector
+    :param seed: 160 bits WireVector, defaults to None (self-seeding)
     :param bits_per_cycle: the number of output bits to generate in parallel each cycle
       Up to 64 bits each cycle. Needs to be a common divisor of 1152 and the bitwidth.
     :return ready, rand: ready is a one bit signal showing either the random number has
-      been produced or the seed has been initialized
+      been produced or the seed has been initialized, rand is a register containing the
+      random number
 
     csprng has a seed initialization stage that discards the first weak 1152 bits.
     Generation stage can take multiple cycles as well depending on the given bitwidth
-    and bits_per_cycle. Has small gate area, superior speed and good statistical performance
+    and bits_per_cycle. Has small gate area, superior speed, and good statistical performance
     compared to AES and other stream ciphers. Can be used to generate encryption keys or IVs.
     """
     # Trivium specifications and performace referenced from:
@@ -124,6 +124,7 @@ def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
         cryptogen = random.SystemRandom()
         key, iv = (cryptogen.randrange(2**80) for i in range(2))
     else:
+        from pyrtl.rtllib import libutils
         seed = pyrtl.as_wires(seed, 160)
         iv, key = libutils.partition_wire(seed, 80)
         # To use csprng as a stream cipher, put key in MSBs and IV in LSBs
@@ -192,7 +193,7 @@ def fibonacci_lfsr(bitwidth, load, shift, seed):
     Generates a peudorandom bit (LSB) each cycle with a period of 2^bitwidth - 1.
     """
     if bitwidth not in lfsr_tap_table:
-        raise pyrtl.PyrtlError('Bitwidth {} is either illegal or not supported'.format(bitwidth))
+        raise pyrtl.PyrtlError('Bitwidth {} is either invalid or not supported'.format(bitwidth))
 
     lfsr = pyrtl.Register(bitwidth)
     feedback = lfsr[lfsr_tap_table[bitwidth][0] - 1]
@@ -224,7 +225,7 @@ def galois_lfsr(bitwidth, load, shift, seed):
     with a time offset.
     """
     if bitwidth not in lfsr_tap_table:
-        raise pyrtl.PyrtlError('Bitwidth {} is either illegal or not supported'.format(bitwidth))
+        raise pyrtl.PyrtlError('Bitwidth {} is either invalid or not supported'.format(bitwidth))
 
     lfsr = pyrtl.Register(bitwidth)
     shifted_lfsr = lfsr[-1]
