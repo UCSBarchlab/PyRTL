@@ -33,11 +33,11 @@ class TestPrngs(unittest.TestCase):
                     gal_lfsr ^= 1 << bitwidth - tap
             yield msb
 
-    def test_prng(self):
+    def test_prng_lfsr(self):
         seed = pyrtl.Input(89, 'seed')
         load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
         rand = pyrtl.Output(128, 'rand')
-        rand <<= prngs.prng(128, load, req, seed)
+        rand <<= prngs.prng_lfsr(128, load, req, seed)
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         seed_vals = [random.randrange(1, 2**89) for i in range(5)]
@@ -55,7 +55,7 @@ class TestPrngs(unittest.TestCase):
                              "\nAssertion failed on trial: {} Expected value: {} Gotten value: {}"
                              .format(trial, hex(true_val), hex(circuit_out)))
 
-    def test_csprng(self):
+    def test_prng_trivium(self):
         """
         Trivium test vectors retrived from:
         https://www.sheffield.ac.uk/polopoly_fs/1.12164!/file/eSCARGOt_full_datasheet_v1.3.pdf
@@ -64,7 +64,7 @@ class TestPrngs(unittest.TestCase):
         load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
         ready = pyrtl.Output(1, 'ready')
         out_vector = pyrtl.Output(128, 'out_vector')
-        ready_out, rand_out = prngs.csprng(128, load, req, in_vector)
+        ready_out, rand_out = prngs.prng_trivium(128, load, req, in_vector)
         ready <<= ready_out
         out_vector <<= rand_out
         sim_trace = pyrtl.SimulationTrace()

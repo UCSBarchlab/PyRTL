@@ -2,10 +2,10 @@
 
 ``Example``::
 
-    # csprng
+    # prng_trivium
     load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
     ready, rand = pyrtl.Output(1, 'ready'), pyrtl.Output(128, 'rand')
-    ready_out, rand_out = prngs.csprng(128, load, req)
+    ready_out, rand_out = prngs.prng_trivium(128, load, req)
     ready <<= ready_out
     rand <<= rand_out
     sim_trace = pyrtl.SimulationTrace()
@@ -23,10 +23,10 @@
     print(sim.inspect(rand))
     sim_trace.render_trace(symbol_len=45, segment_size=5)
 
-    # prng
+    # prng_lfsr
     load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
     rand = pyrtl.Output(32, 'rand')
-    rand <<= prngs.prng(32, load, req)
+    rand <<= prngs.prng_lfsr(32, load, req)
     sim_trace = pyrtl.SimulationTrace()
     sim = pyrtl.Simulation(tracer=sim_trace)
 
@@ -40,7 +40,7 @@
     seed =  pyrtl.Input(89, 'seed')
     load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
     rand = pyrtl.Output(32, 'rand')
-    rand <<= prngs.prng(32, load, req, seed)
+    rand <<= prngs.prng_lfsr(32, load, req, seed)
     sim_trace = pyrtl.SimulationTrace()
     sim = pyrtl.Simulation(tracer=sim_trace)
 
@@ -57,7 +57,7 @@ from __future__ import absolute_import
 import pyrtl
 
 
-def prng(bitwidth, load, req, seed=None):
+def prng_lfsr(bitwidth, load, req, seed=None):
     """
     Builds a single-cycle PRNG using a 89 bits Fibonacci LFSR.
 
@@ -73,7 +73,7 @@ def prng(bitwidth, load, req, seed=None):
     but can be used as a test pattern generator or anything that requires random patterns.
     """
     # Note: 89 bits is chosen because 89 is a mersenne prime, which makes the period
-    # of the LFSR maximized at 2^89 - 1 for any bitwidth of random numbers
+    # of the LFSR maximized at 2**89 - 1 for any bitwidth of random numbers
     if seed is None:
         import random
         cryptogen = random.SystemRandom()
@@ -93,27 +93,30 @@ def prng(bitwidth, load, req, seed=None):
     return lfsr[:bitwidth]
 
 
-def csprng(bitwidth, load, req, seed=None, bits_per_cycle=64):
+def prng_trivium(bitwidth, load, req, seed=None, bits_per_cycle=64):
     """
     Builds a cyptographically secure PRNG using the Trivium stream cipher.
 
     :param bitwidth: the desired bitwidth of the random number
     :param load: one bit signal to load the seed into csprng
     :param req: one bit signal to request a random number
-    :param seed: 160 bits WireVector, defaults to None (self-seeding)
+    :param seed: 160 bits WireVector (80 bits key + 80 bits IV), defaults to None (self-seeding)
     :param bits_per_cycle: the number of output bits to generate in parallel each cycle
-      Up to 64 bits each cycle. Needs to be a common divisor of 1152 and the bitwidth.
+      Up to 64 bits each cycle. Must be a common divisor of 1152 and the bitwidth.
     :return ready, rand: ready is a one bit signal showing either the random number has
       been produced or the seed has been initialized, rand is a register containing the
       random number
 
-    csprng has a seed initialization stage that discards the first weak 1152 bits.
-    Generation stage can take multiple cycles as well depending on the given bitwidth
-    and bits_per_cycle. Has small gate area, superior speed, and good statistical performance
-    compared to AES and other stream ciphers. Can be used to generate encryption keys or IVs.
+    Trivium has a seed initialization stage that discards the first weak 1152 bits after
+    each loading. Generation stage can take multiple cycles as well depending on the given
+    bitwidth and bits_per_cycle.
+    Has small gate area and superior speed compared to AES and other stream ciphers.
+    Passes all known statistical tests. Can be used to generate encryption keys or IVs.
     """
     # Trivium specifications and performace referenced from:
     # http://www.ecrypt.eu.org/stream/ciphers/trivium/trivium.pdf
+    # See also the eSTREAM portfolio page for Trivium:
+    # http://www.ecrypt.eu.org/stream/e2-trivium.html
     from math import ceil, log
     if bits_per_cycle > 64:
         raise pyrtl.PyrtlError('bits_per_cycle should not exceed 64')
@@ -190,7 +193,7 @@ def fibonacci_lfsr(bitwidth, load, shift, seed):
       Entire state returned for flexibility. Take LSB only for maximum randomness.
 
     A LFSR where the outputs of several bits are XORed to provide the input bit to be shifted in.
-    Generates a peudorandom bit (LSB) each cycle with a period of 2^bitwidth - 1.
+    Generates a peudorandom bit (LSB) each cycle with a period of 2**bitwidth - 1.
     """
     if bitwidth not in lfsr_tap_table:
         raise pyrtl.PyrtlError('Bitwidth {} is either invalid or not supported'.format(bitwidth))
@@ -220,7 +223,7 @@ def galois_lfsr(bitwidth, load, shift, seed):
       Entire state returned for flexibility. Take MSB only for maximum randomness.
 
     A LFSR where the bit shifted out is XORed to the inputs of several bits.
-    Generates a peudorandom bit (MSB) each cycle with a period of 2^bitwidth - 1.
+    Generates a peudorandom bit (MSB) each cycle with a period of 2**bitwidth - 1.
     Faster than a Fibonacci LFSR. Outputs the same bit stream as a Fibonacci LFSR
     with a time offset.
     """
@@ -279,15 +282,12 @@ lfsr_tap_table = {
     30: (30, 29, 26, 24),
     31: (31, 28),
     32: (32, 30, 26, 25),
-    37: (37, 36, 33, 31),
-    39: (39, 35),
     64: (64, 63, 61, 60),
-    71: (71, 65),
-    83: (83, 81, 79, 76),
-    84: (84, 71),
     89: (89, 51),
+    127: (127, 126),
     128: (128, 127, 126, 121),
     256: (256, 254, 251, 246),
+    521: (521, 489),
     1024: (1024, 1015, 1002, 1001),
     2048: (2048, 2035, 2034, 2029),
     4096: (4096, 4095, 4081, 4069),
