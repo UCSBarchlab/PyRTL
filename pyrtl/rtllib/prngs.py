@@ -147,8 +147,8 @@ def prng_xoroshiro128(bitwidth, load, req, seed=None):
     s1_next = shift(_s1, 'l', 36) | shift(_s1, 'r', 28)
     output <<= adders.kogge_stone(s0, s1)
 
-    gen_cycles = ceil(bitwidth / 64)
-    counter_bitwidth = ceil(log(gen_cycles, 2)) if gen_cycles > 1 else 1  # make sure it is nonzero
+    gen_cycles = int(ceil(bitwidth / 64))
+    counter_bitwidth = int(ceil(log(gen_cycles, 2))) if gen_cycles > 1 else 1  # make sure it is nonzero
     rand = pyrtl.Register(gen_cycles * 64)
     counter = pyrtl.Register(counter_bitwidth, 'counter')
     gen_done = counter == gen_cycles - 1
@@ -235,8 +235,8 @@ def prng_trivium(bitwidth, load, req, seed=None, bits_per_cycle=64):
     c_next = pyrtl.concat(c, *feedback_c)
 
     init_cycles = 1152 // bits_per_cycle
-    gen_cycles = ceil(bitwidth / bits_per_cycle)
-    counter_bitwidth = ceil(log(max(init_cycles + 1, gen_cycles), 2))
+    gen_cycles = int(ceil(bitwidth / bits_per_cycle))
+    counter_bitwidth = int(ceil(log(max(init_cycles + 1, gen_cycles), 2)))
     rand = pyrtl.Register(bitwidth)
     counter = pyrtl.Register(counter_bitwidth, 'counter')
     init_done = counter == init_cycles
