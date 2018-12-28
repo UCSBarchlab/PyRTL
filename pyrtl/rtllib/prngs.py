@@ -148,7 +148,7 @@ def prng_xoroshiro128(bitwidth, load, req, seed=None):
     output <<= adders.kogge_stone(s0, s1)
 
     gen_cycles = int(ceil(bitwidth / 64))
-    counter_bitwidth = int(ceil(log(gen_cycles, 2))) if gen_cycles > 1 else 1  # make sure it is nonzero
+    counter_bitwidth = int(ceil(log(gen_cycles, 2))) if gen_cycles > 1 else 1
     rand = pyrtl.Register(gen_cycles * 64)
     counter = pyrtl.Register(counter_bitwidth, 'counter')
     gen_done = counter == gen_cycles - 1
