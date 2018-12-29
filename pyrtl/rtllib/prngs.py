@@ -114,7 +114,7 @@ def prng_xoroshiro128(bitwidth, load, req, seed=None):
     """
     Builds a PRNG using the Xoroshiro128+ algorithm in hardware.
 
-    :param bitwidth: the desired bitwidth of the random numberf
+    :param bitwidth: the desired bitwidth of the random number
     :param load: one bit signal to load the seed into the prng
     :param req: one bit signal to request a random number
     :param seed: 128 bits WireVector, defaults to None (self-seeding),
