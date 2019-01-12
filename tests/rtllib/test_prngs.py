@@ -83,7 +83,7 @@ class TestPrngs(unittest.TestCase):
         self.assertEqual(sim_trace.trace['ready'][3], 1)
         self.assertEqual(sim_trace.trace['ready'][4], 0)
 
-    def test_prng_trivium(self):
+    def test_csprng_trivium(self):
         """
         Trivium test vectors retrived from:
         https://www.sheffield.ac.uk/polopoly_fs/1.12164!/file/eSCARGOt_full_datasheet_v1.3.pdf
@@ -92,8 +92,8 @@ class TestPrngs(unittest.TestCase):
         in_vector = pyrtl.Input(160, 'in_vector')
         load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
         ready = pyrtl.Output(1, 'ready')
-        out_vector = pyrtl.Output(128, 'rand')
-        ready_out, rand_out = prngs.prng_trivium(128, load, req, in_vector)
+        out_vector = pyrtl.Output(128, 'out_vector')
+        ready_out, rand_out = prngs.csprng_trivium(128, load, req, in_vector)
         ready <<= ready_out
         out_vector <<= rand_out
         sim_trace = pyrtl.SimulationTrace()

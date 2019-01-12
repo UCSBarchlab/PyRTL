@@ -2,10 +2,10 @@
 
 ``Example``::
 
-    # prng_trivium
+    ``csprng_trivium``
     load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
     ready, rand = pyrtl.Output(1, 'ready'), pyrtl.Output(128, 'rand')
-    ready_out, rand_out = prngs.prng_trivium(128, load, req)
+    ready_out, rand_out = prngs.csprng_trivium(128, load, req)
     ready <<= ready_out
     rand <<= rand_out
     sim_trace = pyrtl.SimulationTrace()
@@ -23,7 +23,7 @@
     print(sim.inspect(rand))
     sim_trace.render_trace(symbol_len=45, segment_size=5)
 
-    # prng_xoroshiro128
+    ``prng_xoroshiro128``
     load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
     ready, rand = pyrtl.Output(1, 'ready'), pyrtl.Output(128, 'rand')
     ready_out, rand_out = prngs.prng_xoroshiro128(128, load, req)
@@ -40,7 +40,7 @@
     print(sim.inspect(rand))
     sim_trace.render_trace(symbol_len=40, segment_size=1)
 
-    # prng_lfsr
+    ``prng_lfsr``
     load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
     rand = pyrtl.Output(64, 'rand')
     rand <<= prngs.prng_lfsr(64, load, req)
@@ -53,7 +53,7 @@
     print(sim.inspect(rand))
     sim_trace.render_trace(symbol_len=40, segment_size=1)
 
-    # explicit seeding
+    ``explicit seeding``
     seed =  pyrtl.Input(127, 'seed')
     load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
     rand = pyrtl.Output(32, 'rand')
@@ -86,8 +86,8 @@ def prng_lfsr(bitwidth, load, req, seed=None):
     :return: register containing the random number with the given bitwidth
 
     A very fast and compact PRNG that generates a random number using only one clock cycle.
-    Has a period of 2**127 - 1. Its linearity makes it statistically weak, but should be
-    good enough for noncryptographic purposes like test pattern generation or simulation.
+    Has a period of 2**127 - 1. Its linearity makes it a bit statistically weak, but should be
+    good enough for any noncryptographic purpose like test pattern generation.
     """
     # 127 bits is chosen because 127 is a mersenne prime, which makes the period of the
     # LFSR maximized at 2**127 - 1 for any requested bitwidth
@@ -176,7 +176,7 @@ def prng_xoroshiro128(bitwidth, load, req, seed=None):
     return ready, rand[-bitwidth:]  # return MSBs because LSBs are less random
 
 
-def prng_trivium(bitwidth, load, req, seed=None, bits_per_cycle=64):
+def csprng_trivium(bitwidth, load, req, seed=None, bits_per_cycle=64):
     """
     Builds a cyptographically secure PRNG using the Trivium stream cipher.
 
