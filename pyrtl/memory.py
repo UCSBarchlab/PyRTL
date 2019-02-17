@@ -122,7 +122,7 @@ class _MemReadBase(object):
             self.read_ports += 1
             if self.read_ports > self.max_read_ports:
                 raise PyrtlError('maximum number of read ports (%d) exceeded' % self.max_read_ports)
-        data = WireVector(bitwidth=self.bitwidth)
+        data = WireVector(bitwidth=self.bitwidth, clock=getattr(addr, 'clock', None))
         readport_net = LogicNet(
             op='m',
             op_param=(self.id, self),

@@ -6,6 +6,7 @@ import sys
 import re
 import numbers
 import collections
+import six
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -13,6 +14,7 @@ from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock
 from .helperfuncs import check_rtl_assertions, _currently_in_ipython
 from .inputoutput import _VerilogSanitizer
+from .clock import Clock, Unclocked
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -36,6 +38,7 @@ class Simulation(object):
 
     simple_func = {  # OPS
         'w': lambda x: x,
+        'd': lambda x: x,
         '~': lambda x: ~x,
         '&': lambda l, r: l & r,
         '|': lambda l, r: l | r,
@@ -149,21 +152,30 @@ class Simulation(object):
         self.reg_update_nets = tuple((self.block.logic_subset('r')))
         self.mem_update_nets = tuple((self.block.logic_subset('@')))
 
-    def step(self, provided_inputs):
+    def step(self, provided_inputs, clock='clk'):
         """ Take the simulation forward one cycle
 
         :param provided_inputs: a dictionary mapping wirevectors to their values for this step
+        :param clock: which clock to trigger during this step
 
-        All input wires must be in the provided_inputs in order for the simulation
-        to accept these values
+        All input wires for the given clock domain must be in the provided_inputs in order for the
+        simulation to accept these values
 
-        Example: if we have inputs named 'a' and 'x', we can call:
-        sim.step({'a': 1, 'x': 23}) to simulate a cycle with values 1 and 23
+        The clock may be Unclocked(), to trigger no clock edge
+
+        Example: if we have inputs named 'a' and 'x' in clock domain Clock('c'), we can call:
+        sim.step({'a': 1, 'x': 23}, clock='c') to simulate a cycle with values 1 and 23
         respectively
         """
 
-        # Check that all Input have a corresponding provided_input
-        input_set = self.block.wirevector_subset(Input)
+        # establish clock domain
+        if isinstance(clock, six.string_types) and clock in self.block.clocks:
+            clock = self.block.clocks[clock]
+        elif not isinstance(clock, Clock) or clock._block is not self.block:
+            raise PyrtlError('Invalid clock {}'.format(clock))
+
+        # Check that all Input in domain have a corresponding provided_input
+        input_set = {x for x in self.block.wirevector_subset(Input) if x.clock == clock}
         supplied_inputs = set()
         for i in provided_inputs:
             if isinstance(i, WireVector):
@@ -174,7 +186,7 @@ class Simulation(object):
             if sim_wire not in input_set:
                 raise PyrtlError(
                     'step provided a value for input for "%s" which is '
-                    'not a known input ' % name)
+                    'not a known input for the given clock domain ' % name)
             if not isinstance(provided_inputs[i], numbers.Integral) or provided_inputs[i] < 0:
                 raise PyrtlError(
                     'step provided an input "%s" which is not a valid '
@@ -201,17 +213,20 @@ class Simulation(object):
 
         # Do all of the mem operations based off the new values changed in _execute()
         for net in self.mem_update_nets:
-            self._mem_update(net)
+            if net.args[0].clock == clock:
+                self._mem_update(net)
 
         # at the end of the step, record the values to the trace
         # print self.value # Helpful Debug Print
         if self.tracer is not None:
             self.tracer.add_step(self.value)
+            self.tracer.clocks.append(clock)
 
         # Do all of the reg updates based off of the new values
         for net in self.reg_update_nets:
-            argval = self.value[net.args[0]]
-            self.regvalue[net.dests[0]] = self._sanitize(argval, net.dests[0])
+            if net.dests[0].clock == clock:
+                argval = self.value[net.args[0]]
+                self.regvalue[net.dests[0]] = self._sanitize(argval, net.dests[0])
 
         # finally, if any of the rtl_assert assertions are failing then we should
         # raise the appropriate exceptions
@@ -781,6 +796,7 @@ class SimulationTrace(object):
                              "for simulation to be useful")
         self.wires_to_track = wires_to_track
         self.trace = TraceStorage(wires_to_track)
+        self.clocks = []
         self._wires = {wv.name: wv for wv in wires_to_track}
 
     def __len__(self):

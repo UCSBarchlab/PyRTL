@@ -47,7 +47,7 @@ def probe(w, name=None):
         name = '(%s: %s)' % (probeIndexer.make_valid_string(), w.name)
     print("Probe: " + name + ' ' + get_stack(w))
 
-    p = Output(name=name)
+    p = Output(name=name, block=w._block, clock=w.clock)
     p <<= w  # late assigns len from w automatically
     return w
 
@@ -84,7 +84,8 @@ def rtl_assert(w, exp, block=None):
     if w in block.rtl_assert_dict:
         raise PyrtlInternalError('assertion conflicts with existing registered assertion')
 
-    assert_wire = Output(bitwidth=1, name=assertIndexer.make_valid_string(), block=block)
+    name = assertIndexer.make_valid_string()
+    assert_wire = Output(bitwidth=1, name=name, block=block, clock=w.clock)
     assert_wire <<= w
     block.rtl_assert_dict[assert_wire] = exp
     return assert_wire

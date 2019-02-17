@@ -99,7 +99,7 @@ def select(sel, truecase, falsecase):
     """
     sel, f, t = (as_wires(w) for w in (sel, falsecase, truecase))
     f, t = match_bitwidth(f, t)
-    outwire = WireVector(bitwidth=len(f))
+    outwire = WireVector(bitwidth=len(f), block=sel._block, clock=sel.clock)
 
     net = LogicNet(op='x', op_param=None, args=(sel, f, t), dests=(outwire,))
     working_block().add_net(net)  # this includes sanity check on the mux
@@ -129,7 +129,7 @@ def concat(*args):
 
     arg_wirevectors = tuple(as_wires(arg) for arg in args)
     final_width = sum(len(arg) for arg in arg_wirevectors)
-    outwire = WireVector(bitwidth=final_width)
+    outwire = WireVector(bitwidth=final_width, block=args[0]._block, clock=args[0].clock)
     net = LogicNet(
         op='c',
         op_param=None,

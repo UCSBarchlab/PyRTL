@@ -23,6 +23,7 @@ from .memory import RomBlock
 #    | | \| |    \__/  |
 
 
+# TODO: multiclock blif input
 def input_from_blif(blif, block=None, merge_io_vectors=True):
     """ Read an open blif file or string as input, updating the block appropriately
 
@@ -492,7 +493,6 @@ class _VerilogSanitizer(_NameSanitizer):
 
     def _extra_checks(self, str):
         return(str not in self._verilog_reserved_set and  # is not a Verilog reserved keyword
-               str != 'clk' and                           # not the clock signal
                len(str) <= 1024)                          # not too long to be a Verilog id
 
 
@@ -513,6 +513,8 @@ class OutputToVerilog(object):
         self.internal_names = _VerilogSanitizer('_verout_tmp_')
         for wire in self.block.wirevector_set:
             self.internal_names.make_valid_string(wire.name)
+        for clk in self.block.clocks:
+            self.internal_names.make_valid_string(clk)
         self._to_verilog_comment()
         self._to_verilog_header()
         self._to_verilog_combinational()
@@ -530,8 +532,9 @@ class OutputToVerilog(object):
 
     def _to_verilog_header(self):
         io_list = [self._varname(w) for w in self.block.wirevector_subset((Input, Output))]
-        io_list.append('clk')
-        io_list_str = ', '.join(io_list)
+        clk_list = [self._varname(c) for c in self.block.clocks.values()]
+        io_list_str = ', '.join(io_list+clk_list)
+
         print('module toplevel(%s);' % io_list_str, file=self.file)
 
         inputs = self.block.wirevector_subset(Input)
@@ -547,7 +550,8 @@ class OutputToVerilog(object):
         for w in inputs:
             print('    input%s %s;' % (_verilog_vector_decl(w),
                                        self._varname(w)), file=self.file)
-        print('    input clk;', file=self.file)
+        for c in self.block.clocks.values():
+            print('    input %s;' % self._varname(c), file=self.file)
         for w in outputs:
             print('    output%s %s;' % (_verilog_vector_decl(w),
                                         self._varname(w)), file=self.file)
@@ -587,8 +591,8 @@ class OutputToVerilog(object):
                 print('    assign %s = %d;' % (self._varname(const), const.val), file=self.file)
 
         for net in self.block.logic:
-            if net.op in set('w~'):  # unary ops
-                opstr = '' if net.op == 'w' else net.op
+            if net.op in 'wd~':  # unary ops
+                opstr = '' if net.op in 'wd' else net.op
                 t = (self._varname(net.dests[0]), opstr, self._varname(net.args[0]))
                 print('    assign %s = %s%s;' % t, file=self.file)
             elif net.op in '&|^+-*<>':  # binary ops
@@ -630,24 +634,28 @@ class OutputToVerilog(object):
         print('', file=self.file)
 
     def _to_verilog_sequential(self):
-        print('    always @( posedge clk )', file=self.file)
-        print('    begin', file=self.file)
-        for net in self.block.logic:
-            if net.op == 'r':
-                t = (self._varname(net.dests[0]), self._varname(net.args[0]))
-                print('        %s <= %s;' % t, file=self.file)
-            elif net.op == '@':
-                t = (self._varname(net.args[2]), net.op_param[0],
-                     self._varname(net.args[0]), self._varname(net.args[1]))
-                print(('        if (%s) begin\n'
-                       '                mem_%s[%s] <= %s;\n'
-                       '        end') % t, file=self.file)
-        print('    end', file=self.file)
+        for ck in self.block.clocks.values():
+            print('    always @( posedge %s )' % self._varname(ck), file=self.file)
+            print('    begin', file=self.file)
+            for net in self.block.logic:
+                if net.dests[0].clock is not ck:
+                    continue
+                if net.op == 'r':
+                    t = (self._varname(net.dests[0]), self._varname(net.args[0]))
+                    print('        %s <= %s;' % t, file=self.file)
+                elif net.op == '@':
+                    t = (self._varname(net.args[2]), net.op_param[0],
+                         self._varname(net.args[0]), self._varname(net.args[1]))
+                    print(('        if (%s) begin\n'
+                           '                mem_%s[%s] <= %s;\n'
+                           '        end') % t, file=self.file)
+            print('    end', file=self.file)
 
     def _to_verilog_footer(self):
         print('endmodule\n', file=self.file)
 
 
+# TODO multiclock testbench
 def output_verilog_testbench(dest_file, simulation_trace=None, block=None):
     """Output a verilog testbanch for the block/inputs used in the simulation trace."""
     block = working_block(block)

@@ -76,7 +76,7 @@ class CompiledSimulation(object):
         - A 64-bit processor
         - GCC (tested on version 4.8.4)
         - A 64-bit build of Python
-    If using the multiplication operand, only some architectures are supported:
+    If using the multiplication operator, only some architectures are supported:
         - x86-64 / amd64
         - arm64 / aarch64 (untested)
         - mips64 (untested)

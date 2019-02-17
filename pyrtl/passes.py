@@ -11,6 +11,7 @@ from .helperfuncs import _NetCount
 from .corecircuits import (_basic_mult, _basic_add, _basic_sub, _basic_eq,
                            _basic_lt, _basic_gt, _basic_select, concat_list,
                            as_wires)
+from .clockxing import unsafe_domain_crossing
 from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
@@ -235,15 +236,15 @@ ops_where_arg_order_matters = 'm@xc<>-'
 
 
 def _find_common_subexps(block):
-    net_table = {}  # {net (without dest) : [net, ...]
-    t = tuple()  # just a placeholder
+    net_table = {}  # {(net without dest, clock name) : [net, ...]
     const_dict = {}
     for net in block.logic:
         if net.op in ops_where_arg_order_matters:
             new_args = tuple(_const_to_int(w, const_dict) for w in net.args)
         else:
             new_args = tuple(sorted((_const_to_int(w, const_dict) for w in net.args), key=hash))
-        net_sub = LogicNet(net[0], net[1], new_args, t)  # don't care about dests
+        net_base = (net[0], net[1], new_args)
+        net_sub = (net_base, (net.dests or net.args)[0].clock.name)
         if net_sub in net_table:
             net_table[net_sub].append(net)
         else:
@@ -278,12 +279,12 @@ def _replace_subexps(block, net_table):
 
 
 def _has_normal_dest_wire(net):
-    return not isinstance(net.dests[0], (Register, Output))
+    return net.dests and not isinstance(net.dests[0], (Register, Output))
 
 
 def _process_nets_to_discard(nets, wire_map, unnecessary_nets):
     if len(nets) == 1:
-        return  # also deals with nets with no dest wires
+        return
     nets_to_consider = list(filter(_has_normal_dest_wire, nets))
 
     if len(nets_to_consider) > 1:  # needed to handle cases with only special wires
@@ -368,8 +369,8 @@ def synthesize(update_working_block=True, block=None):
     we can keep the same interface) which are immediately broken down into
     the individual bits and memories.  Memories (read and write ports) which
     require the reassembly and disassembly of the wirevectors immediately
-    before and after.  There arethe only two places where 'c' and 's' ops
-    should exist.
+    before and after. These are the only two places where 'c' and 's' ops
+    should exist. Clock domain crossings 'd' must be single-bit as well.
 
     The block that results from synthesis is actually of type
     "PostSynthesisBlock" which contains a mapping from the original inputs
@@ -385,8 +386,12 @@ def synthesize(update_working_block=True, block=None):
 
     block_out = PostSynthBlock()
     # resulting block should only have one of a restricted set of net ops
-    block_out.legal_ops = set('~&|^nrwcsm@')
+    block_out.legal_ops = set('~&|^nrwdcsm@')
     wirevector_map = {}  # map from (vector,index) -> new_wire
+
+    for ck in block_in.clocks:
+        if ck not in block_out.clocks:
+            block_out.clocks[ck] = Clock(ck, block_out)
 
     with set_working_block(block_out, no_sanity_check=True):
         # First, replace advanced operators with simpler ones
@@ -410,19 +415,26 @@ def synthesize(update_working_block=True, block=None):
                     new_val = (wirevector.val >> i) & 0x1
                     new_wirevector = Const(bitwidth=1, val=new_val)
                 elif isinstance(wirevector, (Input, Output)):
-                    new_wirevector = WireVector(name="tmp_" + new_name, bitwidth=1)
+                    new_wirevector = WireVector(
+                        name="tmp_" + new_name, bitwidth=1,
+                        clock=block_out.clocks[wirevector.clock.name])
                 else:
-                    new_wirevector = wirevector.__class__(name=new_name, bitwidth=1)
+                    new_wirevector = wirevector.__class__(
+                        name=new_name, bitwidth=1,
+                        clock=block_out.clocks[wirevector.clock.name])
                 wirevector_map[(wirevector, i)] = new_wirevector
 
         # Now connect up the inputs and outputs to maintain the interface
         for wirevector in block_in.wirevector_subset(Input):
-            input_vector = Input(name=wirevector.name, bitwidth=len(wirevector))
+            input_vector = Input(
+                name=wirevector.name, bitwidth=len(wirevector),
+                clock=block_out.clocks[wirevector.clock.name])
             for i in range(len(wirevector)):
                 wirevector_map[(wirevector, i)] <<= input_vector[i]
         for wirevector in block_in.wirevector_subset(Output):
-            output_vector = Output(name=wirevector.name, bitwidth=len(wirevector))
-            # the "reversed" is needed because most significant bit comes first in concat
+            output_vector = Output(
+                name=wirevector.name, bitwidth=len(wirevector),
+                clock=block_out.clocks[wirevector.clock.name])
             output_bits = [wirevector_map[(wirevector, i)]
                            for i in range(len(output_vector))]
             output_vector <<= concat_list(output_bits)
@@ -513,6 +525,9 @@ def _decompose(net, wv_map, mems, block_out):
         enable = arg(2, 0)
         new_mem = _get_new_block_mem_instance(net.op_param, mems, block_out)[1]
         new_mem[addr] <<= MemBlock.EnabledWrite(data=data, enable=enable)
+    elif net.op == 'd':
+        for i in destlen():
+            unsafe_domain_crossing(arg(0, i), wv_map[(net.dests[0], i)])
     else:
         raise PyrtlInternalError('Unable to synthesize the following net '
                                  'due to unimplemented op :\n%s' % str(net))
@@ -525,7 +540,7 @@ def nand_synth(net):
     Synthesizes an Post-Synthesis block into one consisting of nands and inverters in place
     :param block: The block to synthesize.
     """
-    if net.op in '~nrwcsm@':
+    if net.op in '~nrwdcsm@':
         return True
 
     def arg(num):
@@ -549,7 +564,7 @@ def and_inverter_synth(net):
     Transforms a decomposed block into one consisting of ands and inverters in place
     :param block: The block to synthesize
     """
-    if net.op in '~&rwcsm@':
+    if net.op in '~&rwdcsm@':
         return True
 
     def arg(num):

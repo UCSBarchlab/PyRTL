@@ -14,13 +14,14 @@ import re
 import keyword
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-
+from .clock import Clock
 
 # -----------------------------------------------------------------
 #    __        __   __
 #   |__) |    /  \ /  ` |__/
 #   |__) |___ \__/ \__, |  \
 #
+
 
 class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
     """ The basic immutable datatype for storing a "net" in a netlist.
@@ -70,15 +71,21 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
                                                put it into data
         ('@', (memid, mem), (addr, data, wr_en), ()) => write data to mem (w/ id memid) at
                                                         address addr; req. write enable (wr_en)
+        ('d', None, (a1), (out)) => clock domain crossing -- behaves like wire
 
     """
+
+    __slots__ = ()
+
+    def __init__(self, op, op_param, args, dests):
+        self._check_clocks()
 
     def __str__(self):
         rhs = ', '.join(str(x) for x in self.args)
         lhs = ', '.join(str(x) for x in self.dests)
         options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
 
-        if self.op in 'w~&|^n+-*<>=xcsr':
+        if self.op in 'w~&|^n+-*<>=xcsrd':
             return "{} <-- {} -- {} {}".format(lhs, self.op, rhs, options)
         elif self.op in 'm@':
             memid, memblock = self.op_param
@@ -126,6 +133,12 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
     __gt__ = _compare_error
     __le__ = _compare_error
     __ge__ = _compare_error
+
+    def _check_clocks(self):
+        if self.op != 'd':
+            clocks = ({x.clock for x in self.args} | {x.clock for x in self.dests}) - {None}
+            if len(clocks) > 1:
+                raise PyrtlError('Clock domain crossing between {}'.format(clocks))
 
 
 class Block(object):
@@ -197,9 +210,16 @@ class Block(object):
       If multiple writes happen to the same address in the same cycle the behavior is currently
       undefined.
 
+    * The 'd' (domain crossing) operator behaves exactly like 'w' (wire), except that its argument
+      and destination may be in different clock domains. It does not perform any implicit
+      synchronization; it merely disables warnings about clock domain crossing.
+
     The connecting elements (args and dests) should be WireVectors or derived
     from WireVector, and should be registered with the block using
     the method add_wirevector.  Nets should be registered using add_net.
+
+    With the exception of the 'd' operator, all arguments and destinations must be in the same
+    clock domain.
 
     In addition, there is a member legal_ops which defines the set of operations
     that can be legally added to the block.  By default it is set to all of the above
@@ -214,8 +234,10 @@ class Block(object):
         self.wirevector_set = set()  # set of all wirevectors
         self.wirevector_by_name = {}  # map from name->wirevector, used for performance
         # pre-synthesis wirevectors to post-synthesis vectors
-        self.legal_ops = set('w~&|^n+-*<>=xcsrm@')  # set of legal OPS
+        self.legal_ops = set('w~&|^n+-*<>=xcsrm@d')  # set of legal OPS
         self.rtl_assert_dict = {}   # map from wirevectors -> exceptions, used by rtl_assert
+        self.clocks = {}
+        self.default_clock = Clock(name='clk', block=self)
 
     def __str__(self):
         """String form has one LogicNet per line."""
@@ -388,6 +410,12 @@ class Block(object):
             if w.bitwidth is None:
                 raise PyrtlError(
                     'error, missing bitwidth for WireVector "%s" \n\n %s' % (w.name, get_stack(w)))
+            if isinstance(w, Const):
+                if w.clock is not None:
+                    raise PyrtlError('Const with clock specified')
+            else:
+                if w.clock not in self.clocks.values():
+                    raise PyrtlError('Invalid clock')
 
         # check for unique names
         wirevector_names_set = set(x.name for x in self.wirevector_set)
@@ -515,8 +543,10 @@ class Block(object):
             raise PyrtlInternalError('error, net op "%s" not from acceptable set %s' %
                                      (net.op, self.legal_ops))
 
+        net._check_clocks()
+
         # operation specific checks on arguments
-        if net.op in 'w~rsm' and len(net.args) != 1:
+        if net.op in 'w~rsmd' and len(net.args) != 1:
             raise PyrtlInternalError('error, op only allowed 1 argument')
         if net.op in '&|^n+-*<>=' and len(net.args) != 2:
             raise PyrtlInternalError('error, op only allowed 2 arguments')
@@ -539,7 +569,7 @@ class Block(object):
             raise PyrtlInternalError('error, mem write enable must be 1 bit')
 
         # operation specific checks on op_params
-        if net.op in 'w~&|^n+-*<>=xcr' and net.op_param is not None:
+        if net.op in 'w~&|^n+-*<>=xcrd' and net.op_param is not None:
             raise PyrtlInternalError('error, op_param should be None')
         if net.op == 's':
             if not isinstance(net.op_param, tuple):
@@ -560,7 +590,7 @@ class Block(object):
                 raise PyrtlInternalError('error, mem op requires second operand of a memory type')
 
         # check destination validity
-        if net.op in 'w~&|^nr' and net.dests[0].bitwidth > net.args[0].bitwidth:
+        if net.op in 'w~&|^nrd' and net.dests[0].bitwidth > net.args[0].bitwidth:
             raise PyrtlInternalError('error, upper bits of destination unassigned')
         if net.op in '<>=' and net.dests[0].bitwidth != 1:
             raise PyrtlInternalError('error, destination should be of bitwidth=1')
@@ -596,11 +626,6 @@ class PostSynthBlock(Block):
 #    |  | /  \ |__) |__/ | |\ | / _`    |__) |    /  \ /  ` |__/
 #    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \
 #
-
-# Right now we use singleton_block to store the one global
-# block, but in the future we should support multiple Blocks.
-# The argument "singleton_block" should never be passed.
-_singleton_block = Block()
 
 # settings help tweak the behavior of pyrtl as needed, especially
 # when there is a trade off between speed and debugability.  These
@@ -694,6 +719,12 @@ class set_working_block(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._set_working_block(self.old_block, no_sanity_check=True)
+
+
+# Right now we use singleton_block to store the one global
+# block, but in the future we should support multiple Blocks.
+# The argument "singleton_block" should never be passed.
+_singleton_block = Block()
 
 
 def set_debug_mode(debug=True):

@@ -19,7 +19,6 @@ from .wire import Const
 from .wire import Register
 
 # helper functions
-
 from .helperfuncs import input_list
 from .helperfuncs import output_list
 from .helperfuncs import register_list
@@ -33,6 +32,7 @@ from .helperfuncs import check_rtl_assertions
 from .helperfuncs import find_loop
 from .helperfuncs import find_and_print_loop
 
+# basic logic circuits
 from .corecircuits import and_all_bits
 from .corecircuits import or_all_bits
 from .corecircuits import xor_all_bits
@@ -58,7 +58,6 @@ from .corecircuits import shift_left_arithmetic
 from .corecircuits import shift_right_arithmetic
 from .corecircuits import shift_left_logical
 from .corecircuits import shift_right_logical
-
 
 # memory blocks
 from .memory import MemBlock
@@ -93,5 +92,14 @@ from .passes import nand_synth
 from .passes import and_inverter_synth
 from .passes import optimize
 
-
+# block-level net and wire transformations
 from .transform import net_transform, wire_transform, replace_wire, copy_block, clone_wire
+
+# multiple clock domain support
+from .clock import Clock
+from .clock import Unclocked
+from .clockxing import unsafe_domain_crossing
+from .clockxing import xing_simple
+from .clockxing import xing_event
+from .clockxing import xing_task
+from .clockxing import xing_bus

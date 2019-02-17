@@ -20,6 +20,7 @@ from . import core  # needed for _setting_keep_wirevector_call_stack
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, LogicNet, _NameIndexer
+from .clock import Clock, Unclocked
 
 # ----------------------------------------------------------------
 #        ___  __  ___  __   __
@@ -42,8 +43,6 @@ def next_tempvar_name(name=""):
             wire_name += '_%s_line%d' % (safename, lineno)
         return wire_name
     else:
-        if name.lower() in ['clk', 'clock']:
-            raise PyrtlError('Clock signals should never be explicit')
         return name
 
 
@@ -90,7 +89,7 @@ class WireVector(object):
     # Each class inheriting from WireVector should overload accordingly
     _code = 'W'
 
-    def __init__(self, bitwidth=None, name='', block=None):
+    def __init__(self, bitwidth=None, name='', block=None, clock=None):
         """ Construct a generic WireVector
 
         :param int bitwidth: If no bitwidth is provided, it will be set to the
@@ -107,6 +106,12 @@ class WireVector(object):
         self._block = working_block(block)
         self.name = next_tempvar_name(name)
         self._validate_bitwidth(bitwidth)
+        if clock is None:
+            self.clock = self._block.default_clock
+        elif isinstance(clock, Clock) and clock._block == self._block:
+            self.clock = clock
+        else:
+            raise PyrtlError('Invalid clock for this block')
 
         if core._setting_keep_wirevector_call_stack:
             import traceback
@@ -122,6 +127,10 @@ class WireVector(object):
     def name(self, value):
         if not isinstance(value, six.string_types):
             raise PyrtlError('WireVector names must be strings')
+        if value in self._block.wirevector_by_name:
+            raise PyrtlError('Cannot create wire with duplicate name')
+        if value in self._block.clocks:
+            raise PyrtlError('Cannot create wire with same name as clock')
         self._block.wirevector_by_name.pop(self._name, None)
         self._name = value
         self._block.add_wirevector(self)
@@ -192,7 +201,7 @@ class WireVector(object):
         elif op in '<>=':
             resultlen = 1
 
-        s = WireVector(bitwidth=resultlen)
+        s = WireVector(bitwidth=resultlen, clock=self.clock)
         net = LogicNet(
             op=op,
             op_param=None,
@@ -341,7 +350,7 @@ class WireVector(object):
         """ Creates LogicNets that inverts a wire
         :return Wirevector: a result wire for the operation
         """
-        outwire = WireVector(bitwidth=len(self))
+        outwire = WireVector(bitwidth=len(self), clock=self.clock)
         net = LogicNet(
             op='~',
             op_param=None,
@@ -363,7 +372,7 @@ class WireVector(object):
             selectednums = tuple(allindex[item])
         if not selectednums:
             raise PyrtlError('selection %s must have at least select one wire' % str(item))
-        outwire = WireVector(bitwidth=len(selectednums))
+        outwire = WireVector(bitwidth=len(selectednums), clock=self.clock)
         net = LogicNet(
             op='s',
             op_param=selectednums,
@@ -471,7 +480,7 @@ class WireVector(object):
             from .corecircuits import concat
             if isinstance(extbit, int):
                 extbit = Const(extbit, bitwidth=1)
-            extvector = WireVector(bitwidth=numext)
+            extvector = WireVector(bitwidth=numext, clock=self.clock)
             net = LogicNet(
                 op='s',
                 op_param=(0,)*numext,
@@ -491,8 +500,8 @@ class Input(WireVector):
     """ A WireVector type denoting inputs to a block (no writers) """
     _code = 'I'
 
-    def __init__(self, bitwidth=None, name='', block=None):
-        super(Input, self).__init__(bitwidth=bitwidth, name=name, block=block)
+    def __init__(self, bitwidth=None, name='', block=None, clock=None):
+        super(Input, self).__init__(bitwidth=bitwidth, name=name, block=block, clock=clock)
 
     def __ilshift__(self, _):
         """ This is an illegal op for Inputs. They cannot be assigned to in this way """
@@ -518,8 +527,8 @@ class Output(WireVector):
     """
     _code = 'O'
 
-    def __init__(self, bitwidth=None, name='', block=None):
-        super(Output, self).__init__(bitwidth, name, block)
+    def __init__(self, bitwidth=None, name='', block=None, clock=None):
+        super(Output, self).__init__(bitwidth=bitwidth, name=name, block=block, clock=clock)
 
 
 class Const(WireVector):
@@ -557,6 +566,7 @@ class Const(WireVector):
         name = _constIndexer.make_valid_string() + '_' + str(val)
 
         super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)
+        self.clock = None  # no associated clock for constants
         # add the member "val" to track the value of the constant
         self.val = num
 
@@ -697,8 +707,10 @@ class Register(WireVector):
             self.rhs = rhs
             self.is_conditional = is_conditional
 
-    def __init__(self, bitwidth, name='', block=None):
-        super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block)
+    def __init__(self, bitwidth, name='', block=None, clock=None):
+        if isinstance(clock, Unclocked):
+            raise PyrtlError('Registers must be clocked')
+        super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block, clock=clock)
         self.reg_in = None  # wire vector setting self.next
 
     @property

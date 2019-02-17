@@ -22,6 +22,7 @@ import functools
 
 from .core import set_working_block, LogicNet, working_block
 from .wire import Const, Input, Output, WireVector, Register
+from .clock import Clock
 
 
 def net_transform(transform_func, block=None, **kwargs):
@@ -168,7 +169,7 @@ def clone_wire(old_wire, name=None):
     Makes a copy of any existing wire
 
     :param old_wire: The wire to clone
-    :param name: a name fo rhte new wire
+    :param name: a name for the new wire
 
     Note that this function is mainly intended to be used when the
     two wires are from different blocks. Making two wires with the
@@ -178,8 +179,10 @@ def clone_wire(old_wire, name=None):
         return Const(old_wire.val, old_wire.bitwidth)
     else:
         if name is None:
-            return old_wire.__class__(old_wire.bitwidth, name=old_wire.name)
-        return old_wire.__class__(old_wire.bitwidth, name=name)
+            name = old_wire.name
+        w = old_wire.__class__(old_wire.bitwidth, name=name)
+        w.clock = w._block.clocks[old_wire.clock.name]
+        return w
 
 
 def copy_block(block=None, update_working_block=True):
@@ -212,6 +215,9 @@ def _clone_block_and_wires(block_in):
     """
     block_in.sanity_check()  # make sure that everything is valid
     block_out = block_in.__class__()
+    for ck in block_in.clocks:
+        if ck not in block_out.clocks:
+            block_out.clocks[ck] = Clock(ck, block_out)
     temp_wv_map = {}
     with set_working_block(block_out, no_sanity_check=True):
         for wirevector in block_in.wirevector_subset():
