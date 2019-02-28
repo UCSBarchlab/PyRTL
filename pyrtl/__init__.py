@@ -73,6 +73,8 @@ from .simulation import Simulation
 from .simulation import FastSimulation
 from .simulation import SimulationTrace
 from .compilesim import CompiledSimulation
+from .compilesim import OutputToC
+from .compilesim import compile_c_to_library
 
 # input and output to file format routines
 from .inputoutput import input_from_blif
