@@ -8,12 +8,14 @@ import collections
 from os import path
 import platform
 import _ctypes
+import six
 
 from .core import working_block
 from .wire import Input, Output, Const, WireVector, Register
 from .memory import RomBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .simulation import SimulationTrace
+from .clock import Clock, Unclocked
 
 
 __all__ = ['CompiledSimulation', 'OutputToC', 'compile_c_to_library']
@@ -85,9 +87,9 @@ class OutputToC(object):
 
     The generated C code is suitable for compilation as a static or shared library.
     It exposes a function with the signature
-        void sim_run_all(uint64_t stepcount, uint64_t inputs[], uint64_t outputs[]);
+    void sim_run_all(uint64_t stepcount, uint64_t inputs[], uint64_t outputs[], uint64_t clks[]);
     which runs the simulation for `stepcount` steps, taking values from `inputs`
-    and storing values in `outputs`.
+    and storing values in `outputs`, triggering the clock specified in `clks`.
 
     Both `inputs` and `outputs` are flattened multidimensional arrays.
     The offset for step `n` is `n * self.input_size` for `inputs`
@@ -96,6 +98,11 @@ class OutputToC(object):
     If a wire has a bitwidth no greater than 64, it takes a single index in `inputs` or
     `outputs`, while a larger wire takes a number of indices given in `self.input_pos[w][1]` or
     `self.output_pos[w][1]`. These larger wires are stored in little-endian order.
+    The clock for each step is specified in the (one-dimensional) array of integers `clks`.
+    The mapping from clocks to integers is given by `self.clocks`. Note that an update which
+    does not trigger any clocks (i.e. `Unclocked()`) is specified by 0.
+    The clock for the step is only used to determine register and memory updates: all inputs must
+    still be specified, and all outputs will be written.
 
     Writeable memories are declared as arrays of the form
         <type> <varname>[<size>][<limbs>];
@@ -108,6 +115,7 @@ class OutputToC(object):
         uint8_t m0_example[512][1];
     and a memory `m1_example` with bitwidth of 160 and address width of 10 would be declared as
         uint64_t m1_example[1024][3];
+    Read-only memories are not publically accessible.
     """
     def __init__(
             self, dest_file, register_value_map={}, memory_value_map={},
@@ -368,6 +376,33 @@ class OutputToC(object):
             write('{dest}[{n}] = {bits};'.format(
                 dest=self.varname[dest], n=n, bits='|'.join(bits)))
 
+    def _clock_update(self, write, clk):
+        # memory writes
+        memnets = [n for n in self.block.logic_subset('@') if n.args[0].clock == clk]
+        for net in memnets:
+            mem = net.op_param[1]
+            write('if ({enable}[0]) {{'.format(enable=self.varname[net.args[2]]))
+            for n in range(_limbs(mem)):
+                write('{mem}[{addr}[0]][{n}] = {vn}[{n}];'.format(
+                    mem=self.varname[mem],
+                    addr=self.varname[net.args[0]],
+                    vn=self.varname[net.args[1]],
+                    n=n))
+            write('}')
+
+        # register updates
+        regnets = [n for n in self.block.logic_subset('r') if n.args[0].clock == clk]
+        for x, net in enumerate(regnets):
+            rin = net.args[0]
+            write('uint64_t regtmp{x}[{limbs}];'.format(x=x, limbs=_limbs(rin)))
+            for n in range(_limbs(rin)):
+                write('regtmp{x}[{n}] = {vn}[{n}];'.format(x=x, vn=self.varname[rin], n=n))
+        # double loop to ensure register-to-register chains update correctly
+        for x, net in enumerate(regnets):
+            rout = net.dests[0]
+            for n in range(_limbs(rout)):
+                write('{vn}[{n}] = regtmp{x}[{n}];'.format(vn=self.varname[rout], x=x, n=n))
+
     def _create_code(self):
         write = self._write
 
@@ -406,7 +441,7 @@ class OutputToC(object):
             self._declare_mem(write, mem)
 
         # single step function
-        write('static void sim_run_step(uint64_t inputs[], uint64_t outputs[]) {')
+        write('static void sim_run_step(uint64_t inputs[], uint64_t outputs[], uint64_t clk) {')
         write('uint64_t tmp, carry, tmphi, tmplo;')  # temporary variables
 
         # declare wire vectors
@@ -453,30 +488,17 @@ class OutputToC(object):
                 op=op, args=', '.join(self.varname[x] for x in args), dest=self.varname[dest]))
             op_builders[op](write, op, param, args, dest)
 
-        # memory writes
-        for net in self.block.logic_subset('@'):
-            mem = net.op_param[1]
-            write('if ({enable}[0]) {{'.format(enable=self.varname[net.args[2]]))
-            for n in range(_limbs(mem)):
-                write('{mem}[{addr}[0]][{n}] = {vn}[{n}];'.format(
-                    mem=self.varname[mem],
-                    addr=self.varname[net.args[0]],
-                    vn=self.varname[net.args[1]],
-                    n=n))
-            write('}')
+        # clock ids
+        clklist = list(self.block.clocks.values())
+        self.clocks = {x: n for n, x in enumerate(clklist, 1)}
+        self.clocks[Unclocked(block=self.block)] = 0
 
-        # register updates
-        regnets = list(self.block.logic_subset('r'))
-        for x, net in enumerate(regnets):
-            rin = net.args[0]
-            write('uint64_t regtmp{x}[{limbs}];'.format(x=x, limbs=_limbs(rin)))
-            for n in range(_limbs(rin)):
-                write('regtmp{x}[{n}] = {vn}[{n}];'.format(x=x, vn=self.varname[rin], n=n))
-        # double loop to ensure register-to-register chains update correctly
-        for x, net in enumerate(regnets):
-            rout = net.dests[0]
-            for n in range(_limbs(rout)):
-                write('{vn}[{n}] = regtmp{x}[{n}];'.format(vn=self.varname[rout], x=x, n=n))
+        write('switch (clk) {')
+        for clk in clklist:
+            write('case {}: {{'.format(self.clocks[clk]))
+            self._clock_update(write, clk)
+            write('break; }')
+        write('default: {break;}}')  # unclocked
 
         # output copied out
         outputs = list(self.block.wirevector_subset(Output))
@@ -492,10 +514,11 @@ class OutputToC(object):
 
         # entry point
         write('EXPORT')
-        write('void sim_run_all(uint64_t stepcount, uint64_t inputs[], uint64_t outputs[]) {')
+        write('void sim_run_all(uint64_t stepcount,')
+        write('uint64_t inputs[], uint64_t outputs[], uint64_t clks[]) {')
         write('uint64_t input_pos = 0, output_pos = 0;')
         write('for (uint64_t stepnum = 0; stepnum < stepcount; stepnum++) {')
-        write('sim_run_step(inputs+input_pos, outputs+output_pos);')
+        write('sim_run_step(inputs+input_pos, outputs+output_pos, clks[stepnum]);')
         write('input_pos += {};'.format(self.input_size))
         write('output_pos += {};'.format(self.output_size))
         write('}}')
@@ -522,7 +545,7 @@ class CompiledSimulation(object):
         - arm64 / aarch64 (untested)
         - mips64 (untested)
 
-    default_value is currently only implemented for registers, not memories.
+    default_value is currently only implemented for registers and inputs, not memories.
     """
 
     def __init__(
@@ -540,8 +563,11 @@ class CompiledSimulation(object):
             o = OutputToC(f, register_value_map, memory_value_map, default_value, block)
         (
             self.varname, self._inputpos, self._inputbw, self._ibufsz,
-            self._outputpos, self._obufsz
-        ) = (o.varname, o.input_pos, o.input_bw, o.input_size, o.output_pos, o.output_size)
+            self._outputpos, self._obufsz, self._clocks
+        ) = (
+            o.varname, o.input_pos, o.input_bw, o.input_size,
+            o.output_pos, o.output_size, o.clocks
+        )
         compile_c_to_library(cfile, libfile)
 
         self._dll = ctypes.CDLL(libfile)
@@ -552,6 +578,8 @@ class CompiledSimulation(object):
             tracer = SimulationTrace()
         self.tracer = tracer
         self._remove_untraceable()
+
+        self._input_prev = {x.name: default_value for x in self.block.wirevector_subset(Input)}
 
     def inspect_mem(self, mem):
         """Get a view into the contents of a MemBlock."""
@@ -571,38 +599,49 @@ class CompiledSimulation(object):
             return vals[-1]
         raise PyrtlError('CompiledSimulation does not support inspecting internal WireVectors')
 
-    def step(self, inputs):
+    def step(self, inputs, clock='clk'):
         """Run one step of the simulation.
 
-        The argument is a mapping from input names to the values for the step.
+        The argument `inputs` is a mapping from input names to the values for the step.
+        Any unspecified inputs will use their previous values.
+        The argument `clock` specifies which clock to trigger this step.
+        It may be Unclocked(), to run combinational logic without any clock triggering.
         """
-        self.run([inputs])
+        self.run([inputs], [clock])
 
-    def run(self, inputs):
+    def run(self, inputs, clocks=()):
         """Run many steps of the simulation.
 
-        The argument is a list of input mappings for each step,
+        The argument `inputs` is a list of input mappings for each step,
         and its length is the number of steps to be executed.
+        Any unspecified inputs will use their previous values.
+        The argument `clocks` is a list of clocks specifying which to trigger on each step.
+        If shorter than `inputs`, remaining steps will use the default clock.
         """
         steps = len(inputs)
         # create i/o arrays of the appropriate length
         ibuf_type = ctypes.c_uint64*(steps*self._ibufsz)
         obuf_type = ctypes.c_uint64*(steps*self._obufsz)
+        cbuf_type = ctypes.c_uint64*steps
         ibuf = ibuf_type()
         obuf = obuf_type()
+        cbuf = cbuf_type()
         # these array will be passed to _crun
-        self._crun.argtypes = [ctypes.c_uint64, ibuf_type, obuf_type]
+        self._crun.argtypes = [ctypes.c_uint64, ibuf_type, obuf_type, cbuf_type]
 
         # build the input array
+        ins = self._input_prev
         for n, inmap in enumerate(inputs):
             for w in inmap:
                 if isinstance(w, WireVector):
                     name = w.name
                 else:
                     name = w
+                ins[name] = inmap[w]
+            for name in ins:
                 start, count = self._inputpos[name]
                 start += n*self._ibufsz
-                val = inmap[w]
+                val = ins[name]
                 if val >= 1 << self._inputbw[name]:
                     raise PyrtlError(
                         'Wire {} has value {} which cannot be represented '
@@ -612,8 +651,22 @@ class CompiledSimulation(object):
                     ibuf[pos] = val & ((1 << 64)-1)
                     val >>= 64
 
+        # build the clock array
+        allclocks = []
+        for n in range(steps):
+            if len(clocks) > n:
+                clock = clocks[n]
+            else:
+                clock = 'clk'
+            if isinstance(clock, six.string_types) and clock in self.block.clocks:
+                clock = self.block.clocks[clock]
+            elif not isinstance(clock, Clock) or clock._block is not self.block:
+                raise PyrtlError('Invalid clock {}'.format(clock))
+            cbuf[n] = self._clocks[clock]
+            allclocks.append(clock)
+
         # run the simulation
-        self._crun(steps, ibuf, obuf)
+        self._crun(steps, ibuf, obuf, cbuf)
 
         # save traced wires
         for name in self.tracer.trace:
@@ -636,6 +689,7 @@ class CompiledSimulation(object):
                 res.append(val)
                 start += sz
             self.tracer.trace[name].extend(res)
+        self.tracer.clocks.extend(allclocks)
 
     def _traceable(self, wv):
         """Check if wv is able to be traced
