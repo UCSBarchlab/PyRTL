@@ -6,12 +6,12 @@
     PyRTL allows specifying any number of clocks, each of which can tick independently of the
     others. Every register is associated with one of these clocks, and the register will only
     update its contents when that clock ticks.
-    
+
     Every signal is considered to belong to a single clock domain, based on the clock used by any
     registers driving that signal. Operations are not allowed to cross clock domains, because
     the setup and hold timings needed by registers could no longer be guaranteed without knowing
     the exact phase and frequency relationships between the different clocks.
-    
+
     When information does need to cross clock domains, special crossing functions are available
     that will generate appropriate logic to synchronize the signals to the new domain.
 """

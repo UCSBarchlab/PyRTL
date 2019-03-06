@@ -244,7 +244,8 @@ def _find_common_subexps(block):
         else:
             new_args = tuple(sorted((_const_to_int(w, const_dict) for w in net.args), key=hash))
         net_base = (net[0], net[1], new_args)
-        net_sub = (net_base, (net.dests or net.args)[0].clock.name)
+        clk = (net.dests or net.args)[0].clock
+        net_sub = (net_base, clk and clk.name)
         if net_sub in net_table:
             net_table[net_sub].append(net)
         else:
@@ -417,24 +418,24 @@ def synthesize(update_working_block=True, block=None):
                 elif isinstance(wirevector, (Input, Output)):
                     new_wirevector = WireVector(
                         name="tmp_" + new_name, bitwidth=1,
-                        clock=block_out.clocks[wirevector.clock.name])
+                        clock=wirevector.clock and block_out.clocks[wirevector.clock.name])
                 else:
                     new_wirevector = wirevector.__class__(
                         name=new_name, bitwidth=1,
-                        clock=block_out.clocks[wirevector.clock.name])
+                        clock=wirevector.clock and block_out.clocks[wirevector.clock.name])
                 wirevector_map[(wirevector, i)] = new_wirevector
 
         # Now connect up the inputs and outputs to maintain the interface
         for wirevector in block_in.wirevector_subset(Input):
             input_vector = Input(
                 name=wirevector.name, bitwidth=len(wirevector),
-                clock=block_out.clocks[wirevector.clock.name])
+                clock=wirevector.clock and block_out.clocks[wirevector.clock.name])
             for i in range(len(wirevector)):
                 wirevector_map[(wirevector, i)] <<= input_vector[i]
         for wirevector in block_in.wirevector_subset(Output):
             output_vector = Output(
                 name=wirevector.name, bitwidth=len(wirevector),
-                clock=block_out.clocks[wirevector.clock.name])
+                clock=wirevector.clock and block_out.clocks[wirevector.clock.name])
             output_bits = [wirevector_map[(wirevector, i)]
                            for i in range(len(output_vector))]
             output_vector <<= concat_list(output_bits)

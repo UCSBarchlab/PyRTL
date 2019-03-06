@@ -136,7 +136,7 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
 
     def _check_clocks(self):
         if self.op != 'd':
-            clocks = ({x.clock for x in self.args} | {x.clock for x in self.dests}) - {None}
+            clocks = ({x.clock for x in self.args} | {x.clock for x in self.dests}) - {False}
             if len(clocks) > 1:
                 raise PyrtlError('Clock domain crossing between {}'.format(clocks))
 
@@ -411,11 +411,11 @@ class Block(object):
                 raise PyrtlError(
                     'error, missing bitwidth for WireVector "%s" \n\n %s' % (w.name, get_stack(w)))
             if isinstance(w, Const):
-                if w.clock is not None:
+                if w.clock is not False:
                     raise PyrtlError('Const with clock specified')
             else:
-                if w.clock not in self.clocks.values():
-                    raise PyrtlError('Invalid clock')
+                if w.clock is not False and w.clock not in self.clocks.values():
+                    raise PyrtlError('Invalid clock {}'.format(w.clock))
 
         # check for unique names
         wirevector_names_set = set(x.name for x in self.wirevector_set)

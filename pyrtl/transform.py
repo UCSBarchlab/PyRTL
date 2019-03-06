@@ -181,7 +181,7 @@ def clone_wire(old_wire, name=None):
         if name is None:
             name = old_wire.name
         w = old_wire.__class__(old_wire.bitwidth, name=name)
-        w.clock = w._block.clocks[old_wire.clock.name]
+        w.clock = old_wire.clock and w._block.clocks[old_wire.clock.name]
         return w
 
 

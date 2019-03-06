@@ -46,8 +46,6 @@ def next_tempvar_name(name=""):
         return name
 
 
-_use_default_clock = object()
-
 class WireVector(object):
     """ The main class for describing the connections between operators.
 
@@ -91,7 +89,7 @@ class WireVector(object):
     # Each class inheriting from WireVector should overload accordingly
     _code = 'W'
 
-    def __init__(self, bitwidth=None, name='', block=None, clock=_use_default_clock):
+    def __init__(self, bitwidth=None, name='', block=None, clock=None):
         """ Construct a generic WireVector
 
         :param int bitwidth: If no bitwidth is provided, it will be set to the
@@ -110,9 +108,9 @@ class WireVector(object):
         self._block = working_block(block)
         self.name = next_tempvar_name(name)
         self._validate_bitwidth(bitwidth)
-        if clock is _use_default_clock:
+        if clock is None:
             self.clock = self._block.default_clock
-        elif isinstance(clock, Clock) and clock._block == self._block or clock is None:
+        elif isinstance(clock, Clock) and clock._block == self._block or clock is False:
             self.clock = clock
         else:
             raise PyrtlError('Invalid clock for this block')
@@ -504,7 +502,7 @@ class Input(WireVector):
     """ A WireVector type denoting inputs to a block (no writers) """
     _code = 'I'
 
-    def __init__(self, bitwidth=None, name='', block=None, clock=_use_default_clock):
+    def __init__(self, bitwidth=None, name='', block=None, clock=None):
         super(Input, self).__init__(bitwidth=bitwidth, name=name, block=block, clock=clock)
 
     def __ilshift__(self, _):
@@ -531,7 +529,7 @@ class Output(WireVector):
     """
     _code = 'O'
 
-    def __init__(self, bitwidth=None, name='', block=None, clock=_use_default_clock):
+    def __init__(self, bitwidth=None, name='', block=None, clock=None):
         super(Output, self).__init__(bitwidth=bitwidth, name=name, block=block, clock=clock)
 
 
@@ -570,7 +568,7 @@ class Const(WireVector):
         name = _constIndexer.make_valid_string() + '_' + str(val)
 
         super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)
-        self.clock = None  # no associated clock for constants
+        self.clock = False  # no associated clock for constants
         # add the member "val" to track the value of the constant
         self.val = num
 
@@ -711,7 +709,7 @@ class Register(WireVector):
             self.rhs = rhs
             self.is_conditional = is_conditional
 
-    def __init__(self, bitwidth, name='', block=None, clock=_use_default_clock):
+    def __init__(self, bitwidth, name='', block=None, clock=None):
         if isinstance(clock, Unclocked):
             raise PyrtlError('Registers must be clocked')
         super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block, clock=clock)
