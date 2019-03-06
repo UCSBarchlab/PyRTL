@@ -101,6 +101,8 @@ from .transform import net_transform, wire_transform, replace_wire, copy_block, 
 from .clock import Clock
 from .clock import Unclocked
 from .clockxing import unsafe_domain_crossing
+from .clockxing import sync_signal
+from .clockxing import desync_signal
 from .clockxing import xing_simple
 from .clockxing import xing_event
 from .clockxing import xing_task

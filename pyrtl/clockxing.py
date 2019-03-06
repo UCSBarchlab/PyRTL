@@ -4,11 +4,42 @@ from .pyrtlexceptions import PyrtlError
 from .core import LogicNet, working_block
 from .wire import WireVector, Register
 from .corecircuits import select
+from .clock import Unclocked
 
 
 def unsafe_domain_crossing(win, wout):
     net = LogicNet(op='d', op_param=None, args=(win,), dests=(wout,))
     working_block().add_net(net)
+
+
+def sync_signal(w, clk, stages=2):
+    """Synchronize an unclocked signal `w` to the clock `clk`.
+
+    Returns the synchronized signal.
+    Most designs require stages=2 to avoid metastability,
+    but some high-speed designs may require stages=3.
+    """
+    if w.clock.name is not None:
+        raise PyrtlError('Signal to be synchronized must be unclocked')
+    x = WireVector(bitwidth=len(w), clock=clk)
+    unsafe_domain_crossing(w, x)
+    for n in range(stages):
+        y = x
+        x = Register(bitwidth=len(w), clock=clk)
+        x.next <<= y
+    return x
+
+
+def desync_signal(w):
+    """Desynchronize a clocked signal `w`.
+
+    Returns a signal that copies `w` but is unclocked.
+    """
+    if w.clock.name is None:
+        raise PyrtlError('Signal is already unclocked')
+    x = WireVector(bitwidth=len(w), clock=Unclocked())
+    unsafe_domain_crossing(w, x)
+    return x
 
 
 def xing_simple(win, wout, stages=2, align=True):
@@ -73,12 +104,12 @@ def xing_task(start, busy, req, done, stages=2):
         raise PyrtlError('Signals start and busy must be in same clock domain')
     if req.clock != done.clock:
         raise PyrtlError('Signals req and done must be in same clock domain')
-    xing_event(start & ~busy, req, stages=stages)
+    r = Register(bitwidth=1, clock=start.clock)
+    busy <<= r
+    xing_event(start & ~r, req, stages=stages)
     fin = WireVector(bitwidth=1, clock=start.clock)
     xing_event(done, fin, stages=stages)
-    r = Register(bitwidth=1, clock=start.clock)
-    r.next <<= start | (busy & ~fin)
-    busy <<= r
+    r.next <<= start | (r & ~fin)
 
 
 def xing_bus(din, send, dout, stages=2):
@@ -97,6 +128,8 @@ def xing_bus(din, send, dout, stages=2):
     mid.next <<= select(send, din, mid)
     x = WireVector(bitwidth=1, clock=dout.clock)
     xing_event(send, x, stages=stages)
+    y = WireVector(bitwidth=len(dout), clock=dout.clock)
+    unsafe_domain_crossing(mid, y)
     r = Register(bitwidth=len(dout), clock=dout.clock)
-    r.next <<= select(x, mid, dout)
+    r.next <<= select(x, y, r)
     dout <<= r
