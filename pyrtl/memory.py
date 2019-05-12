@@ -268,7 +268,7 @@ class RomBlock(_MemReadBase):
     `romdata` which is the memory for the system.
     """
     def __init__(self, bitwidth, addrwidth, romdata, name='', max_read_ports=2,
-                 build_new_roms=False, asynchronous=False, block=None):
+                 build_new_roms=False, asynchronous=False, pad_with_zeros=False, block=None):
         """Create a Python Read Only Memory.
 
         :param int bitwidth: The bitwidth of each item stored in the ROM
@@ -283,6 +283,12 @@ class RomBlock(_MemReadBase):
         :param bool asynchronous: If false make sure that memory reads are only done
             using values straight from a register. (aka make sure that reads
             are synchronous)
+        :param bool pad_with_zeros: If true, extend any missing romdata with zeros out until the
+            size of the romblock so that any access to the rom is well defined.  Otherwise, the
+            simulation should throw an error on access of unintialized data.  If you are generating
+            verilog from the rom, you will need to specify a value for every address (in which case
+            setting this to True will help), however for testing and simulation it useful to know if
+            you are off the end of explicitly specified values (which is wy it is False by default)
         :param block: The block to add to, defaults to the working block
         """
 
@@ -291,6 +297,7 @@ class RomBlock(_MemReadBase):
         self.data = romdata
         self.build_new_roms = build_new_roms
         self.current_copy = self
+        self.pad_with_zeros = pad_with_zeros
 
     def __getitem__(self, item):
         import numbers
@@ -316,9 +323,17 @@ class RomBlock(_MemReadBase):
             try:
                 value = self.data[address]
             except KeyError:
-                value = 0
+                if self.pad_with_zeros:
+                    value = 0
+                else:
+                    raise PyrtlError("""RomBlock key is invalid,
+                                      consider using pad_with_zeros=True for defaults""")
             except IndexError:
-                raise PyrtlError("RomBlock index is invalid")
+                if self.pad_with_zeros:
+                    value = 0
+                else:
+                    raise PyrtlError("""RomBlock index is invalid,
+                                     consider using pad_with_zeros=True for defaults""")
             except:
                 raise PyrtlError("invalid type for RomBlock data object")
 
@@ -340,4 +355,5 @@ class RomBlock(_MemReadBase):
         block = working_block(block)
         return RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
                         romdata=self.data, name=self.name, max_read_ports=self.max_read_ports,
-                        asynchronous=self.asynchronous, block=block)
+                        asynchronous=self.asynchronous, pad_with_zeros=self.pad_with_zeros,
+                        block=block)
