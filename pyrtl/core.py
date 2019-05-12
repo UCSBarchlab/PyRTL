@@ -396,7 +396,9 @@ class Block(object):
             for w in wirevector_names_set:
                 wirevector_names_list.remove(w)
             raise PyrtlError('Duplicate wire names found for the following '
-                             'different signals: %s' % repr(wirevector_names_list))
+                             'different signals: %s (make sure you are not using "tmp"'
+                             'or "const_" as a signal name because those are reserved for'
+                             'internal use)' % repr(wirevector_names_list))
 
         # check for dead input wires (not connected to anything)
         all_input_and_consts = self.wirevector_subset((Input, Const))
