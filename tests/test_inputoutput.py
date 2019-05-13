@@ -213,7 +213,7 @@ class TestVerilog(unittest.TestCase):
         o = pyrtl.Output(bitwidth=3, name='o')
         res = _basic_add(a,b)
         rdat = {0: 1, 1: 2, 2: 5, 5: 0}
-        mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, romdata=rdat)
+        mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, pad_with_zeros=True, romdata=rdat)
         o <<= mixtable[res[:-1]]
         with io.StringIO() as testbuffer:
             pyrtl.OutputToVerilog(testbuffer)

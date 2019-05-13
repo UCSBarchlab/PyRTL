@@ -12,7 +12,7 @@ from __future__ import print_function, unicode_literals
 import collections
 import re
 import keyword
-
+# from .helperfuncs import _currently_in_ipython
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .clock import Clock
 
@@ -85,19 +85,66 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         lhs = ', '.join(str(x) for x in self.dests)
         options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
 
-        if self.op in 'w~&|^n+-*<>=xcsrd':
-            return "{} <-- {} -- {} {}".format(lhs, self.op, rhs, options)
-        elif self.op in 'm@':
-            memid, memblock = self.op_param
-            extrainfo = 'memid=' + str(memid)
-            if self.op == 'm':
-                return "{} <-- m --  {}[{}]({})".format(lhs, memblock.name, rhs, extrainfo)
+        in_ipython = False
+        try:
+            from IPython.display import display, Markdown, Latex, Math
+            in_ipython = True
+        except ImportError:
+            pass
+
+        if in_ipython:
+            # Output the working block as a Latex table
+            # Escape all Underscores
+            rhs = rhs.replace('_', "\\_")
+            lhs = lhs.replace('_', "\\_")
+            options = options.replace('_', "\\_")
+            if self.op in '~&|':
+                return "{} & \\leftarrow \\{} \\, - & {} {} \\\\".format(
+                       lhs, self.op, rhs, options)
+            elif self.op in "wn+-*<>xcsrd":
+                return "{} & \\leftarrow {} \\, - & {} {} \\\\".format(
+                       lhs, self.op, rhs, options)
+            elif self.op in "=":
+                return "{} & \\leftarrow \\, {} \\, - & {} {} \\\\".format(
+                       lhs, self.op, rhs, options)
+            elif self.op in "^":
+                return "{} & \\leftarrow \\oplus \\, - & {} {} \\\\".format(
+                       lhs, rhs, options)
+
+            elif self.op in 'm@':
+                memid, memblock = self.op_param
+                extrainfo = 'memid=' + str(memid)
+                extrainfo = extrainfo.replace("_", "\\_")
+                name = memblock.name
+                name = name.replace("_", "\\_")
+                if self.op == 'm':
+                    return "{} & \\leftarrow m \\, - &  {}[{}]({}) \\\\".format(
+                           lhs, name, rhs, extrainfo)
+                else:
+                    addr, data, we = (str(x) for x in self.args)
+                    addr = addr.replace("_", "\\_")
+                    data = data.replace("_", "\\_")
+                    we = we.replace("_", "\\_")
+                    return "{}[{}] & \\leftarrow @ \\, - & {} we={} ({}) \\\\".format(
+                        name, addr, data, we, extrainfo)
             else:
-                addr, data, we = (str(x) for x in self.args)
-                return "{}[{}] <-- @ -- {} we={} ({})".format(
-                    memblock.name, addr, data, we, extrainfo)
-        else:
-            raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
+                raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
+
+        else:  # not in ipython
+            if self.op in 'w~&|^n+-*<>=xcsrd':
+                return "{} <-- {} -- {} {}".format(lhs, self.op, rhs, options)
+            elif self.op in 'm@':
+                memid, memblock = self.op_param
+                extrainfo = 'memid=' + str(memid)
+                if self.op == 'm':
+                    return "{} <-- m --  {}[{}]({})".format(lhs, memblock.name, rhs, extrainfo)
+                else:
+                    addr, data, we = (str(x) for x in self.args)
+                    return "{}[{}] <-- @ -- {} we={} ({})".format(
+                        memblock.name, addr, data, we, extrainfo)
+            else:
+                raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
+
 
     def __hash__(self):
         # it seems that namedtuple is not always hashable
@@ -241,7 +288,16 @@ class Block(object):
 
     def __str__(self):
         """String form has one LogicNet per line."""
-        return '\n'.join(str(l) for l in self)
+        try:
+            from IPython.display import display, Markdown, Latex, Math
+            out = '\n\begin{array}{ \| c \| c \| l \| }\n'
+            out += '\n\hline\n'
+            out += '\\hline\n'.join(str(l) for l in self)
+            out += '\hline\n\end{array}\n'
+            display(Latex(out))
+            return ' '
+        except ImportError:
+            return '\n'.join(str(l) for l in self)
 
     def add_wirevector(self, wirevector):
         """ Add a wirevector object to the block."""
@@ -424,7 +480,9 @@ class Block(object):
             for w in wirevector_names_set:
                 wirevector_names_list.remove(w)
             raise PyrtlError('Duplicate wire names found for the following '
-                             'different signals: %s' % repr(wirevector_names_list))
+                             'different signals: %s (make sure you are not using "tmp"'
+                             'or "const_" as a signal name because those are reserved for'
+                             'internal use)' % repr(wirevector_names_list))
 
         # check for dead input wires (not connected to anything)
         all_input_and_consts = self.wirevector_subset((Input, Const))
@@ -690,6 +748,15 @@ def reset_working_block():
     """ Reset the working block to be empty. """
     global _singleton_block
     _singleton_block = Block()
+
+
+def _currently_in_ipython():
+    """ Return true if running under ipython, otherwise return False. """
+    try:
+        __IPYTHON__  # pylint: disable=undefined-variable
+        return True
+    except NameError:
+        return False
 
 
 class set_working_block(object):

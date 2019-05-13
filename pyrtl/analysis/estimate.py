@@ -254,7 +254,13 @@ class TimingAnalysis(object):
         return 1e6 * 1.0/clock_period_in_ps
 
     def max_length(self):
-        """Returns the max timing delay of the circuit """
+        """Returns the max timing delay of the circuit.
+
+        The result assumes that the circuit is implemented in a 130nm process, and that there is no
+        setup or hold time associated with the circuit.  The resulting value is in picoseconds.  If
+        an proper estimation of timing is required it is recommended to us "max_freq" to determine
+        the clock period as it more accurately consideres scaling and setup/hold.
+        """
         return max(self.timing_map.values())
 
     def print_max_length(self):

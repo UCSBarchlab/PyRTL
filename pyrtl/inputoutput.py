@@ -213,6 +213,153 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
 #   \__/ \__/  |  |    \__/  |
 #
 
+def output_to_firrtl(open_file, rom_blocks=None, block=None):
+    """ Output the block as firrtl code to the output file.
+
+    Output_to_firrtl(open_file, rom_block, block)
+    If rom is intialized in pyrtl code, you can pass in the rom_blocks as a list [rom1, rom2, ...]
+    """
+    block = working_block(block)
+    f = open_file
+    # write out all the implicit stuff
+    f.write("circuit Example : \n")
+    f.write("  module Example : \n")
+    f.write("    input clock : Clock\n    input reset : UInt<1>\n")
+    # write out IO signals, wires and registers
+    wireRegDefs = ""
+    for wire in list(block.wirevector_subset()):
+        if type(wire) == Input:
+            f.write("    input %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+        elif type(wire) == Output:
+            f.write("    output %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+        elif type(wire) == WireVector:
+            wireRegDefs += "    wire {} : UInt<{}>\n".format(wire.name, wire.bitwidth)
+        elif type(wire) == Register:
+            wireRegDefs += "    reg {} : UInt<{}>, clock\n".format(wire.name, wire.bitwidth)
+        elif type(wire) == Const:
+            # some const is in the form like const_0_1'b1, is this legal operation?
+            wire.name = wire.name.split("'").pop(0)
+            wireRegDefs += "    node {} = UInt<{}>({})\n".format(wire.name, wire.bitwidth, wire.val)
+        else:
+            return 1
+    f.write(wireRegDefs)
+    f.write("\n")
+
+    # write "Main"
+    node_cntr = 0
+    initializedMem = []
+    for log_net in list(block.logic_subset()):
+        if log_net.op == '&':
+            f.write("    %s <= and(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                 log_net.args[1].name))
+        elif log_net.op == '|':
+            f.write("    %s <= or(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                log_net.args[1].name))
+        elif log_net.op == '^':
+            f.write("    %s <= xor(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                 log_net.args[1].name))
+        elif log_net.op == 'n':
+            f.write("    node T_%d = and(%s, %s)\n" % (node_cntr, log_net.args[0].name,
+                                                       log_net.args[1].name))
+            f.write("    %s <= not(T_%d)\n" % (log_net.dests[0].name, node_cntr))
+            node_cntr += 1
+        elif log_net.op == '~':
+            f.write("    %s <= not(%s)\n" % (log_net.dests[0].name, log_net.args[0].name))
+        elif log_net.op == '+':
+            f.write("    %s <= add(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                 log_net.args[1].name))
+        elif log_net.op == '-':
+            f.write("    %s <= sub(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                 log_net.args[1].name))
+        elif log_net.op == '*':
+            f.write("    %s <= mul(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                 log_net.args[1].name))
+        elif log_net.op == '=':
+            f.write("    %s <= eq(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                log_net.args[1].name))
+        elif log_net.op == '<':
+            f.write("    %s <= lt(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                log_net.args[1].name))
+        elif log_net.op == '>':
+            f.write("    %s <= gt(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                log_net.args[1].name))
+        elif log_net.op == 'w':
+            f.write("    %s <= %s\n" % (log_net.dests[0].name, log_net.args[0].name))
+        elif log_net.op == 'x':
+            f.write("    %s <= mux(%s, %s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                     log_net.args[2].name, log_net.args[1].name))
+        elif log_net.op == 'c':
+            f.write("    %s <= cat(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                 log_net.args[1].name))
+        elif log_net.op == 's':
+            selEnd = log_net.op_param[0]
+            if len(log_net.op_param) < 2:
+                selBegin = selEnd
+            else:
+                selBegin = log_net.op_param[len(log_net.op_param)-1]
+            f.write("    %s <= bits(%s, %s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
+                                                      selBegin, selEnd))
+        elif log_net.op == 'r':
+            f.write("    %s <= mux(reset, UInt<%s>(0), %s)\n" %
+                    (log_net.dests[0].name, log_net.dests[0].bitwidth, log_net.args[0].name))
+        elif log_net.op == 'm':
+            # if there are rom blocks, need to be initialized
+            if rom_blocks is not None:
+                if not log_net.op_param[0] in initializedMem:
+                    initializedMem.append(log_net.op_param[0])
+
+                    # find corresponding rom block according to memid
+                    curr_rom = next((x for x in rom_blocks if x.id == log_net.op_param[0]), None)
+                    f.write("    wire %s : UInt<%s>[%s]\n" %
+                            (log_net.op_param[1].name, log_net.op_param[1].bitwidth,
+                             2**log_net.op_param[1].addrwidth))
+
+                    # if rom data is a function, calculate the data first
+                    if callable(curr_rom.data):
+                        romdata = [curr_rom.data(i) for i in range(2**curr_rom.addrwidth)]
+                        curr_rom.data = romdata
+
+                    # write rom block initialization data
+                    for i in range(len(curr_rom.data)):
+                        f.write("    %s[%s] <= UInt<%s>(%s)\n" %
+                                (log_net.op_param[1].name, i, log_net.op_param[1].bitwidth,
+                                 curr_rom.data[i]))
+
+                # write the connection
+                f.write("    %s <= %s[%s]\n" % (log_net.dests[0].name, log_net.op_param[1].name,
+                                                log_net.args[0].name))
+
+            else:
+                if not log_net.op_param[0] in initializedMem:
+                    initializedMem.append(log_net.op_param[0])
+                    f.write("    cmem %s_%s : UInt<%s>[%s]\n" %
+                            (log_net.op_param[1].name, log_net.op_param[0],
+                             log_net.op_param[1].bitwidth, 2**log_net.op_param[1].addrwidth))
+                f.write("    infer mport T_%d  = %s_%s[%s], clock\n" %
+                        (node_cntr, log_net.op_param[1].name, log_net.op_param[0],
+                         log_net.args[0].name))
+                f.write("    %s <= T_%d\n" % (log_net.dests[0].name, node_cntr))
+                node_cntr += 1
+        elif log_net.op == '@':
+            if not log_net.op_param[0] in initializedMem:
+                initializedMem.append(log_net.op_param[0])
+                f.write("    cmem %s_%s : UInt<%s>[%s]\n" %
+                        (log_net.op_param[1].name, log_net.op_param[0],
+                         log_net.op_param[1].bitwidth, 2**log_net.op_param[1].addrwidth))
+            f.write("    when %s :\n" % log_net.args[2].name)
+            f.write("      infer mport T_%d  = %s_%s[%s], clock\n" %
+                    (node_cntr, log_net.op_param[1].name, log_net.op_param[0],
+                     log_net.args[0].name))
+            f.write("      T_%d <= %s\n" % (node_cntr, log_net.args[1].name))
+            f.write("      skip\n")
+            node_cntr += 1
+        else:
+            pass
+
+    f.close()
+    return 0
+
+
 def _trivialgraph_default_namer(thing, is_edge=True):
     """ Returns a "good" string for thing in printed graphs. """
     if is_edge:
@@ -504,9 +651,14 @@ def _verilog_vector_decl(w):
     return _verilog_vector_size_decl(len(w))
 
 
+def output_to_verilog(dest_file, block=None):
+    """ A function to walk the block and output it in verilog format to the open file """
+    OutputToVerilog(dest_file, block)
+
+
 class OutputToVerilog(object):
     def __init__(self, dest_file, block=None):
-        """ A class to walk the block and output it in verilog format to the open file """
+        """ A class implementing the output of a block in verilog format to an open file """
 
         self.block = working_block(block)
         self.file = dest_file
@@ -531,6 +683,12 @@ class OutputToVerilog(object):
         print('//   yosys -p "synth_xilinx -top toplevel" thisfile.v\n', file=self.file)
 
     def _to_verilog_header(self):
+        def name_sorted(wires):
+            return sorted(wires, key=lambda w: self._varname(w))
+
+        def name_list(wires):
+            return [self._varname(w) for w in wires]
+
         io_list = [self._varname(w) for w in self.block.wirevector_subset((Input, Output))]
         clk_list = [self._varname(c) for c in self.block.clocks.values()]
         io_list_str = ', '.join(io_list+clk_list)
@@ -539,6 +697,13 @@ class OutputToVerilog(object):
 
         inputs = self.block.wirevector_subset(Input)
         outputs = self.block.wirevector_subset(Output)
+
+        io_list = ['clk'] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
+        if any(w.startswith('tmp') for w in io_list):
+            raise PyrtlError('input or output with name starting with "tmp" indicates unnamed IO')
+        io_list_str = ', '.join(io_list)
+        print('module toplevel(%s);' % io_list_str, file=self.file)
+
         registers = self.block.wirevector_subset(Register)
         wires = self.block.wirevector_subset() - (inputs | outputs | registers)
         wire_regs = set()
@@ -547,12 +712,14 @@ class OutputToVerilog(object):
                 wire_regs.add(net.dests[0])
         memories = {n.op_param[1] for n in self.block.logic_subset('m@')}
 
-        for w in inputs:
+        print('    input clk;', file=self.file)
+        for w in name_sorted(inputs):
             print('    input%s %s;' % (_verilog_vector_decl(w),
                                        self._varname(w)), file=self.file)
+
         for c in self.block.clocks.values():
             print('    input %s;' % self._varname(c), file=self.file)
-        for w in outputs:
+        for w in name_sorted(outputs):
             print('    output%s %s;' % (_verilog_vector_decl(w),
                                         self._varname(w)), file=self.file)
         print('', file=self.file)
