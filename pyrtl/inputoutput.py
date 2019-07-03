@@ -809,11 +809,14 @@ class OutputToVerilog(object):
         print('endmodule\n', file=self.file)
 
 
-def output_verilog_testbench(dest_file, simulation_trace=None, block=None):
+def output_verilog_testbench(dest_file, simulation_trace=None, vcd_output_name="waveform.vcd",
+                             cmd_on_tick=None, block=None):
     """Output a verilog testbanch for the block/inputs used in the simulation trace."""
     block = working_block(block)
     inputs = block.wirevector_subset(Input)
     outputs = block.wirevector_subset(Output)
+    registers = block.wirevector_subset(Register)
+    memories = {n.op_param[1] for n in block.logic_subset('m@')}
     ver_name = _VerilogSanitizer('_ver_out_tmp_')
     for wire in block.wirevector_set:
         ver_name.make_valid_string(wire.name)
@@ -833,6 +836,9 @@ def output_verilog_testbench(dest_file, simulation_trace=None, block=None):
               file=dest_file)
     print('', file=dest_file)
 
+    # Declare an integer used for init of memories
+    print('    integer tb_iter;', file=dest_file)
+
     # Instantiate logic block
     io_list = [ver_name[w.name] for w in block.wirevector_subset((Input, Output))]
     io_list.append('clk')
@@ -841,21 +847,34 @@ def output_verilog_testbench(dest_file, simulation_trace=None, block=None):
 
     # Generate clock signal
     print('    always', file=dest_file)
-    print('        #0.5 clk = ~clk;\n', file=dest_file)
+    print('        #5 clk = ~clk;\n', file=dest_file)
 
     # Move through all steps of trace, writing out input assignments per cycle
     print('    initial begin', file=dest_file)
-    print('        $dumpfile ("waveform.vcd");', file=dest_file)
-    print('        $dumpvars;\n', file=dest_file)
-    print('        clk = 0;', file=dest_file)
 
-    for i in range(len(simulation_trace)):
+    # If a VCD output is requested, set that up
+    if vcd_output_name:
+        print('        $dumpfile ("%s");' % vcd_output_name, file=dest_file)
+        print('        $dumpvars;\n', file=dest_file)
+
+    # Initialize clk, and all the registers and memories
+    print('        clk = 0;', file=dest_file)
+    for r in registers:
+        print('        block.%s = 0;' % ver_name[r.name], file=dest_file)
+    for m in memories:
+        print('        for(tb_iter=0;tb_iter<%d;tb_iter++) begin block.mem_%s[tb_iter] = 0; end' %
+              (1 << m.addrwidth, m.id), file=dest_file)
+
+    tracelen = max(len(t) for t in simulation_trace.values())
+    for i in range(tracelen):
         for w in inputs:
             print('        {:s} = {:s}{:d};'.format(
                 ver_name[w.name],
                 "{:d}'d".format(len(w)),
                 simulation_trace.trace[w][i]), file=dest_file)
-        print('\n        #2', file=dest_file)
+        if cmd_on_tick:
+            print('        %s' % cmd_on_tick, file=dest_file)
+        print('\n        #10', file=dest_file)
 
     # Footer
     print('        $finish;', file=dest_file)
