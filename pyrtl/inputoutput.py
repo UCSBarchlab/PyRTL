@@ -699,9 +699,10 @@ class OutputToVerilog(object):
         registers = self.block.wirevector_subset(Register)
         wires = self.block.wirevector_subset() - (inputs | outputs | registers)
         wire_regs = set()
-        for net in self.block.logic:
-            if net.op == 'm':
-                wire_regs.add(net.dests[0])
+        # --- for syncronous memories, might need to add this back in
+        # for net in self.block.logic:
+        #     if net.op == 'm':
+        #         wire_regs.add(net.dests[0])
         memories = {n.op_param[1] for n in self.block.logic_subset('m@')}
 
         print('    input clk;', file=self.file)
@@ -779,11 +780,17 @@ class OutputToVerilog(object):
             elif net.op == 'r':
                 pass  # do nothing for registers
             elif net.op == 'm':  # use always block and assign as Verilog register
-                print('    always @( posedge clk )', file=self.file)
-                print('    begin', file=self.file)
-                t = (self._varname(net.dests[0]), net.op_param[0], self._varname(net.args[0]))
-                print('        %s <= mem_%s[%s];' % t, file=self.file)
-                print('    end', file=self.file)
+                # --- for syncronous memories (not currently handled)
+                # print('    always @( posedge clk )', file=self.file)
+                # print('    begin', file=self.file)
+                # t = (self._varname(net.dests[0]), net.op_param[0], self._varname(net.args[0]))
+                # print('        %s <= mem_%s[%s];' % t, file=self.file)
+                # print('    end', file=self.file)
+                # --- for asyncronous memories, do the read as an assign
+                dest = self._varname(net.dests[0])
+                m_id = net.op_param[0]
+                index = self._varname(net.args[0])
+                print('    assign %s = mem_%s[%s];' % (dest, m_id, index), file=self.file)
             elif net.op == '@':
                 pass
             else:
@@ -809,8 +816,8 @@ class OutputToVerilog(object):
         print('endmodule\n', file=self.file)
 
 
-def output_verilog_testbench(dest_file, simulation_trace=None, vcd_output_name="waveform.vcd",
-                             cmd_on_tick=None, block=None):
+def output_verilog_testbench(dest_file, simulation_trace=None, vcd="waveform.vcd",
+                             cmd=None, block=None):
     """Output a verilog testbanch for the block/inputs used in the simulation trace."""
     block = working_block(block)
     inputs = block.wirevector_subset(Input)
@@ -853,8 +860,8 @@ def output_verilog_testbench(dest_file, simulation_trace=None, vcd_output_name="
     print('    initial begin', file=dest_file)
 
     # If a VCD output is requested, set that up
-    if vcd_output_name:
-        print('        $dumpfile ("%s");' % vcd_output_name, file=dest_file)
+    if vcd:
+        print('        $dumpfile ("%s");' % vcd, file=dest_file)
         print('        $dumpvars;\n', file=dest_file)
 
     # Initialize clk, and all the registers and memories
@@ -872,8 +879,8 @@ def output_verilog_testbench(dest_file, simulation_trace=None, vcd_output_name="
                 ver_name[w.name],
                 "{:d}'d".format(len(w)),
                 simulation_trace.trace[w][i]), file=dest_file)
-        if cmd_on_tick:
-            print('        %s' % cmd_on_tick, file=dest_file)
+        if cmd:
+            print('        %s' % cmd, file=dest_file)
         print('\n        #10', file=dest_file)
 
     # Footer
