@@ -790,7 +790,7 @@ class OutputToVerilog(object):
                 dest = self._varname(net.dests[0])
                 m_id = net.op_param[0]
                 index = self._varname(net.args[0])
-                print('    assign %s = mem_%s[%s];' % (dest, m_id, index), file=self.file)
+                print('    assign %s = mem_%s[%s]; //async' % (dest, m_id, index), file=self.file)
             elif net.op == '@':
                 pass
             else:
@@ -818,7 +818,36 @@ class OutputToVerilog(object):
 
 def output_verilog_testbench(dest_file, simulation_trace=None, vcd="waveform.vcd",
                              cmd=None, block=None):
-    """Output a verilog testbanch for the block/inputs used in the simulation trace."""
+    """Output a verilog testbanch for the block/inputs used in the simulation trace.
+
+    :param dest_file: an open file to which the test bench will be printed.
+    :param simulation_trace: a simulation trace from which the inputs will be extracted
+        for inclusion in the test bench.  The test bench generated will just replay the
+        inputs played to the simulation cycle by cycle.
+    :param vcd: By default the testbench generator will include a command in the testbench
+        to write the output of the testbench execution to a .vcd file (via $dumpfile), and
+        this parameter is the string of the name of the file to use.  If None is specified
+        instead, then no dumpfile will be used.
+    :param cmd: The string passed as cmd will be copied verbatim into the testbench at the
+        just before the end of each cycle. This is useful for doing things like printing
+        specific values out during testbench evaluation (e.g. cmd='$display("%d", out);'
+        will instruct the testbench to print the value of 'out' every cycle which can then
+        be compared easy with a reference.
+
+    The test bench does not return any values.
+
+    Example 1 (writing testbench to a string)::
+
+        with io.StringIO() as tbfile:
+            pyrtl.output_verilog_testbench(dest_file=tbfile, simulation_trace=sim_trace)
+
+    Example 2 (testbench in same file as verilog)::
+
+        with open('hardware.v', 'w') as fp:
+            output_to_verilog(fp)
+            output_verilog_testbench(fp, sim.tracer, vcd=None, cmd='$display("%d", out);')
+
+    """
     block = working_block(block)
     inputs = block.wirevector_subset(Input)
     outputs = block.wirevector_subset(Output)
@@ -872,16 +901,17 @@ def output_verilog_testbench(dest_file, simulation_trace=None, vcd="waveform.vcd
         print('        for(tb_iter=0;tb_iter<%d;tb_iter++) begin block.mem_%s[tb_iter] = 0; end' %
               (1 << m.addrwidth, m.id), file=dest_file)
 
-    tracelen = max(len(t) for t in simulation_trace.values())
-    for i in range(tracelen):
-        for w in inputs:
-            print('        {:s} = {:s}{:d};'.format(
-                ver_name[w.name],
-                "{:d}'d".format(len(w)),
-                simulation_trace.trace[w][i]), file=dest_file)
-        if cmd:
-            print('        %s' % cmd, file=dest_file)
-        print('\n        #10', file=dest_file)
+    if simulation_trace:
+        tracelen = max(len(t) for t in simulation_trace.trace.values())
+        for i in range(tracelen):
+            for w in inputs:
+                print('        {:s} = {:s}{:d};'.format(
+                    ver_name[w.name],
+                    "{:d}'d".format(len(w)),
+                    simulation_trace.trace[w][i]), file=dest_file)
+            if cmd:
+                print('        %s' % cmd, file=dest_file)
+            print('\n        #10', file=dest_file)
 
     # Footer
     print('        $finish;', file=dest_file)
