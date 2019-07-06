@@ -669,6 +669,7 @@ class OutputToVerilog(object):
         self._to_verilog_header()
         self._to_verilog_combinational()
         self._to_verilog_sequential()
+        self._to_verilog_memories()
         self._to_verilog_footer()
 
     def _varname(self, wire):
@@ -745,6 +746,7 @@ class OutputToVerilog(object):
             print('', file=self.file)
 
     def _to_verilog_combinational(self):
+        print('    // Combinational', file=self.file)
         for const in self.block.wirevector_subset(Const):
                 print('    assign %s = %d;' % (self._varname(const), const.val), file=self.file)
 
@@ -777,40 +779,45 @@ class OutputToVerilog(object):
                                      for i in reversed(net.op_param)])
                 t = (self._varname(net.dests[0]), catlist)
                 print('    assign %s = {%s};' % t, file=self.file)
-            elif net.op == 'r':
-                pass  # do nothing for registers
-            elif net.op == 'm':  # use always block and assign as Verilog register
-                # --- for syncronous memories (not currently handled)
-                # print('    always @( posedge clk )', file=self.file)
-                # print('    begin', file=self.file)
-                # t = (self._varname(net.dests[0]), net.op_param[0], self._varname(net.args[0]))
-                # print('        %s <= mem_%s[%s];' % t, file=self.file)
-                # print('    end', file=self.file)
-                # --- for asyncronous memories, do the read as an assign
-                dest = self._varname(net.dests[0])
-                m_id = net.op_param[0]
-                index = self._varname(net.args[0])
-                print('    assign %s = mem_%s[%s]; //async' % (dest, m_id, index), file=self.file)
-            elif net.op == '@':
-                pass
+            elif net.op in 'rm@':
+                pass  # do nothing for registers and memories
             else:
                 raise PyrtlInternalError("nets with op '{}' not supported".format(net.op))
         print('', file=self.file)
 
     def _to_verilog_sequential(self):
+        print('    // Registers', file=self.file)
         print('    always @( posedge clk )', file=self.file)
         print('    begin', file=self.file)
         for net in self.block.logic:
             if net.op == 'r':
                 t = (self._varname(net.dests[0]), self._varname(net.args[0]))
                 print('        %s <= %s;' % t, file=self.file)
-            elif net.op == '@':
+        print('    end', file=self.file)
+        print('', file=self.file)
+
+    def _to_verilog_memories(self):
+        print('    // Memories', file=self.file)
+        print('    always @( posedge clk )', file=self.file)
+        print('    begin', file=self.file)
+
+        for net in self.block.logic:
+            if net.op == '@':
                 t = (self._varname(net.args[2]), net.op_param[0],
                      self._varname(net.args[0]), self._varname(net.args[1]))
                 print(('        if (%s) begin\n'
                        '                mem_%s[%s] <= %s;\n'
                        '        end') % t, file=self.file)
         print('    end', file=self.file)
+
+        for net in self.block.logic:
+            if net.op == 'm':
+                dest = self._varname(net.dests[0])
+                m_id = net.op_param[0]
+                index = self._varname(net.args[0])
+                print('    assign %s = mem_%s[%s];' % (dest, m_id, index), file=self.file)
+
+        print('', file=self.file)
 
     def _to_verilog_footer(self):
         print('endmodule\n', file=self.file)
