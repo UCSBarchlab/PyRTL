@@ -3,6 +3,7 @@ import random
 import io
 import pyrtl
 from pyrtl import inputoutput
+from pyrtl import verilog
 
 
 full_adder_blif = """\
@@ -173,7 +174,7 @@ class TestNetGraph(unittest.TestCase):
 class TestVerilogNames(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        self.vnames = inputoutput._VerilogSanitizer("_sani_test")
+        self.vnames = verilog._VerilogSanitizer("_sani_test")
 
     def checkname(self, name):
         self.assertEqual(self.vnames.make_valid_string(name), name)
@@ -216,7 +217,7 @@ class TestVerilog(unittest.TestCase):
         mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, pad_with_zeros=True, romdata=rdat)
         o <<= mixtable[res[:-1]]
         with io.StringIO() as testbuffer:
-            pyrtl.OutputToVerilog(testbuffer)
+            pyrtl.output_to_verilog(testbuffer)
 
     def test_textual_correctness(self):
         pass

@@ -12,7 +12,7 @@ from .core import working_block, PostSynthBlock, _PythonSanitizer
 from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock
 from .helperfuncs import check_rtl_assertions, _currently_in_ipython
-from .inputoutput import _VerilogSanitizer
+from .verilog import _VerilogSanitizer
 
 # ----------------------------------------------------------------
 #    __                         ___    __

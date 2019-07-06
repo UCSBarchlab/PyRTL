@@ -80,12 +80,14 @@ from .inputoutput import input_from_blif
 from .inputoutput import output_to_trivialgraph
 from .inputoutput import output_to_graphviz
 from .inputoutput import output_to_firrtl
-from .inputoutput import output_to_verilog
-from .inputoutput import OutputToVerilog
-from .inputoutput import output_verilog_testbench
 from .inputoutput import block_to_graphviz_string
 from .inputoutput import block_to_svg
 from .inputoutput import trace_to_html
+
+# extraction to verilog and verilog testbench
+from .verilog import output_to_verilog
+from .verilog import OutputToVerilog
+from .verilog import output_verilog_testbench
 
 # different analysis and transform passes
 from .passes import common_subexp_elimination
