@@ -64,9 +64,25 @@ class TestWireVectorList(unittest.TestCase):
             pyrtl.helperfuncs.wirevector_list(['one/2', 'two/4', 'three/8'], [8, 4, 2])
 
 
-class TestPrettyPrinting(unittest.TestCase):
+class TestNonCoreHelpers(unittest.TestCase):
     def setUp(self):
         pass
+
+    def test_log2(self):
+        self.assertEqual(pyrtl.log2(1),0)
+        self.assertEqual(pyrtl.log2(2),1)
+        self.assertEqual(pyrtl.log2(8),3)
+        self.assertEqual(pyrtl.log2(16),4)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.log2(-1)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.log2(1.5)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.log2(0)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.log2(7)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.log2(9)
 
     def test_val_to_signed_integer(self):
         self.assertEqual(pyrtl.val_to_signed_integer(0b000,3), 0)

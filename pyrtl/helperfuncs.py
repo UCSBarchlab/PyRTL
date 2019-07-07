@@ -106,6 +106,26 @@ def check_rtl_assertions(sim):
             pass
 
 
+def log2(integer_val):
+    """ Return the log base 2 of the integer provided.
+
+    :param integer_val: The integer to take the log base 2 of.
+    :return: The log base 2 of integer_val, or throw PyRTL error if not power of 2
+
+    This function is useful when checking that powers of 2 are provided on inputs to functions.
+    It throws an error if a negative value is provided or if the value provided is not an even
+    power of two.
+    """
+    i = integer_val
+    if not isinstance(i, int):
+        raise PyrtlError('this function can only take integers')
+    if i <= 0:
+        raise PyrtlError('this function can only take positive numbers 1 or greater')
+    if i & (i-1) != 0:
+        raise PyrtlError('this function can only take even powers of 2')
+    return i.bit_length() - 1
+
+
 def input_list(names, bitwidth=None):
     """ Allocate and return a list of Inputs.
 
