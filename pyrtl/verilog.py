@@ -76,7 +76,7 @@ class _VerilogSanitizer(_NameSanitizer):
 
 
 def _verilog_vector_size_decl(n):
-    return '' if n == 1 else '[%d:0]' % (n - 1)
+    return '' if n == 1 else '[{:d}:0]'.format(n - 1)
 
 
 def _verilog_vector_decl(w):
@@ -112,28 +112,29 @@ def _to_verilog_header(file, block, varname):
     if any(w.startswith('tmp') for w in io_list):
         raise PyrtlError('input or output with name starting with "tmp" indicates unnamed IO')
     io_list_str = ', '.join(io_list)
-    print('module toplevel({});'.format(io_list_str), file=file)
+    print('module toplevel({:s});'.format(io_list_str), file=file)
 
     # inputs and outputs
     print('    input clk;', file=file)
     for w in name_sorted(inputs):
-        print('    input{} {};'.format(_verilog_vector_decl(w), varname(w)), file=file)
+        print('    input{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
     for w in name_sorted(outputs):
-        print('    output{} {};'.format(_verilog_vector_decl(w), varname(w)), file=file)
+        print('    output{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
     print('', file=file)
 
-    # registers and wires
-    for w in registers:
-        print('    reg{} {};'.format(_verilog_vector_decl(w), varname(w)), file=file)
-    for w in wires:
-        print('    wire{} {};'.format(_verilog_vector_decl(w), varname(w)), file=file)
-    print('', file=file)
-
-    # memories
+    # memories and registers
     for m in memories:
         memwidth_str = _verilog_vector_size_decl(m.bitwidth)
         memsize_str = _verilog_vector_size_decl(1 << m.addrwidth)
-        print('    reg{} mem_{}{};'.format(memwidth_str, m.id, memsize_str), file=file)
+        print('    reg{:s} mem_{}{:s}; //{}'.format(memwidth_str, m.id,
+                                                    memsize_str, m.name), file=file)
+    for w in registers:
+        print('    reg{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
+    print('', file=file)
+
+    # wires
+    for w in wires:
+        print('    wire{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
     print('', file=file)
 
     # Write the initial values for read-only memories.
@@ -143,9 +144,9 @@ def _to_verilog_header(file, block, varname):
     for m in roms:
         print('    initial begin', file=file)
         for i in range(1 << m.addrwidth):
-            mem_elem_str = 'mem_%s[%d]' % (m.id, i)
-            mem_data_str = "%d'h%x" % (m.bitwidth, m._get_read_data(i))
-            print('        {}={};'.format(mem_elem_str, mem_data_str), file=file)
+            mem_elem_str = 'mem_{}[{:d}]'.format(m.id, i)
+            mem_data_str = "{:d}'h{:x}".format(m.bitwidth, m._get_read_data(i))
+            print('        {:s}={:s};'.format(mem_elem_str, mem_data_str), file=file)
         print('    end', file=file)
         print('', file=file)
 
@@ -156,7 +157,7 @@ def _to_verilog_combinational(file, block, varname):
 
     # assign constants (these could be folded for readability later)
     for const in block.wirevector_subset(Const):
-        print('    assign %s = %d;' % (varname(const), const.val), file=file)
+        print('    assign {:s} = {:d};'.format(varname(const), const.val), file=file)
 
     # walk the block and output combination logic
     for net in block.logic:
@@ -203,34 +204,33 @@ def _to_verilog_sequential(file, block, varname):
     for net in block.logic:
         if net.op == 'r':
             dest, src = (varname(net.dests[0]), varname(net.args[0]))
-            print('        {} <= {};'.format(dest, src), file=file)
+            print('        {:s} <= {:s};'.format(dest, src), file=file)
     print('    end', file=file)
     print('', file=file)
 
 
 def _to_verilog_memories(file, block, varname):
     """ Print the memories of the verilog implementation. """
-    print('    // Memories', file=file)
-    print('    always @( posedge clk )', file=file)
-    print('    begin', file=file)
-
-    for net in block.logic:
-        if net.op == '@':
-            t = (varname(net.args[2]), net.op_param[0],
-                 varname(net.args[0]), varname(net.args[1]))
-            print(('        if (%s) begin\n'
-                   '                mem_%s[%s] <= %s;\n'
-                   '        end') % t, file=file)
-    print('    end', file=file)
-
-    for net in block.logic:
-        if net.op == 'm':
-            dest = varname(net.dests[0])
-            m_id = net.op_param[0]
-            index = varname(net.args[0])
-            print('    assign {} = mem_{}[{}];'.format(dest, m_id, index), file=file)
-
-    print('', file=file)
+    memories = {n.op_param[1] for n in block.logic_subset('m@')}
+    for m in memories:
+        print('    // Memory mem_{}: {}'.format(m.id, m.name), file=file)
+        print('    always @( posedge clk )', file=file)
+        print('    begin', file=file)
+        for net in block.logic_subset('@'):
+            if net.op_param[1] == m:
+                t = (varname(net.args[2]), net.op_param[0],
+                     varname(net.args[0]), varname(net.args[1]))
+                print(('        if (%s) begin\n'
+                       '                mem_%s[%s] <= %s;\n'
+                       '        end') % t, file=file)
+        print('    end', file=file)
+        for net in block.logic_subset('m'):
+            if net.op_param[1] == m:
+                dest = varname(net.dests[0])
+                m_id = net.op_param[0]
+                index = varname(net.args[0])
+                print('    assign {:s} = mem_{}[{:s}];'.format(dest, m_id, index), file=file)
+        print('', file=file)
 
 
 def _to_verilog_footer(file):
