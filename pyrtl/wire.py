@@ -373,12 +373,14 @@ class WireVector(object):
         return outwire
 
     def __lshift__(self, other):
-        raise PyrtlError("Shifting using the << and >> operators are not supported"
-                         "in PyRTL."
-                         "Instead if you are trying to select bits in a wire, use"
-                         "the indexing operator (wire[indexes]) instead.\n\n"
-                         "For example: wire[2:9] selects the wires from index 2 to "
-                         "index 8 to make a new length 7 wire.")
+        raise PyrtlError('Shifting using the << and >> operators are not supported'
+                         'in PyRTL.'
+                         'If you are trying to select bits in a wire, use'
+                         'the indexing operator (wire[indexes]) instead.\n\n'
+                         'For example: wire[2:9] selects the wires from index 2 to '
+                         'index 8 to make a new length 7 wire. \n\n If you are really '
+                         'trying to *execution time* shift you can use "shift_left_arithmetic", '
+                         '"shift_right_arithmetic", "shift_left_logical", "shift_right_logical"')
 
     __rshift__ = __lshift__
 
