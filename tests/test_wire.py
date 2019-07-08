@@ -105,6 +105,17 @@ class TestWireVectorFail(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             x.zero_extended(2)
 
+    def test_truncate_only_reduces_bitwidth(self):
+        x = pyrtl.WireVector(bitwidth=3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            x.truncate(5)
+
+    def test_truncate_only_takes_integers(self):
+        x = pyrtl.WireVector(bitwidth=3)
+        y = pyrtl.WireVector(bitwidth=3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            x.truncate(y)
+
 
 class TestWirevectorSlicing(unittest.TestCase):
     def setUp(self):

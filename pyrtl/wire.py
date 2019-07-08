@@ -442,6 +442,21 @@ class WireVector(object):
             self._bitmask = (1 << len(self)) - 1
         return self._bitmask
 
+    def truncate(self, bitwidth):
+        """ Generate a new truncated wirevector derived from self.
+
+        :return WireVector: Returns a new WireVector equal to
+           the original WireVector but truncated to the specified bitwidth.
+
+        If the bitwidth specified is larger than the bitwidth of self,
+        then PyrtlError is thrown.
+        """
+        if not isinstance(bitwidth, int):
+            raise PyrtlError('Can only truncate to an integer number of bits')
+        if bitwidth > self.bitwidth:
+            raise PyrtlError('Cannot truncate a wirevector to have more bits than it started with')
+        return self[:bitwidth]
+
     def sign_extended(self, bitwidth):
         """ Generate a new sign extended wirevector derived from self.
 
