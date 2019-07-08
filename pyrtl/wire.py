@@ -168,12 +168,15 @@ class WireVector(object):
 
     def __ior__(self, other):
         """ Conditional assignment operator (only valid under Conditional Update). """
-        from .conditional import _build
+        from .conditional import _build, currently_under_condition
         if not self.bitwidth:
             raise PyrtlError('Conditional assignment only defined on '
                              'WireVectors with pre-defined bitwidths')
         other = self._prepare_for_assignment(other)
-        _build(self, other)
+        if currently_under_condition():
+            _build(self, other)
+        else:
+            self._build(other)
         return self
 
     def _two_var_op(self, other, op):
