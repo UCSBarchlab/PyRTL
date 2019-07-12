@@ -138,7 +138,9 @@ class WireVector(object):
             if not isinstance(bitwidth, numbers.Integral):
                 raise PyrtlError('bitwidth must be from type int or unspecified, instead "%s"'
                                  ' was passed of type %s' % (str(bitwidth), type(bitwidth)))
-            elif bitwidth <= 0:
+            elif bitwidth == 0:
+                raise PyrtlError('bitwidth must be greater than or equal to 1')
+            elif bitwidth < 0:
                 raise PyrtlError('you are trying a negative bitwidth? awesome but wrong')
         self.bitwidth = bitwidth
 
