@@ -75,8 +75,7 @@ import pyrtl
 
 
 def prng_lfsr(bitwidth, load, req, seed=None):
-    """
-    Builds a single-cycle PRNG using a 127 bits Fibonacci LFSR.
+    """ Builds a single-cycle PRNG using a 127 bits Fibonacci LFSR.
 
     :param bitwidth: the desired bitwidth of the random number
     :param load: one bit signal to load the seed into the prng
@@ -111,8 +110,7 @@ def prng_lfsr(bitwidth, load, req, seed=None):
 
 
 def prng_xoroshiro128(bitwidth, load, req, seed=None):
-    """
-    Builds a PRNG using the Xoroshiro128+ algorithm in hardware.
+    """ Builds a PRNG using the Xoroshiro128+ algorithm in hardware.
 
     :param bitwidth: the desired bitwidth of the random number
     :param load: one bit signal to load the seed into the prng
@@ -177,8 +175,7 @@ def prng_xoroshiro128(bitwidth, load, req, seed=None):
 
 
 def csprng_trivium(bitwidth, load, req, seed=None, bits_per_cycle=64):
-    """
-    Builds a cyptographically secure PRNG using the Trivium stream cipher.
+    """ Builds a cyptographically secure PRNG using the Trivium stream cipher.
 
     :param bitwidth: the desired bitwidth of the random number
     :param load: one bit signal to load the seed into the prng
