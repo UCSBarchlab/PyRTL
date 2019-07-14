@@ -84,6 +84,15 @@ class TestNonCoreHelpers(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             pyrtl.log2(9)
 
+    def test_truncate_function(self):
+        self.assertEqual(pyrtl.truncate(5,3),5)
+        self.assertEqual(pyrtl.truncate(9,3),1)
+        self.assertEqual(pyrtl.truncate(-1,3),7)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.truncate(5,-1)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.truncate(29,0)
+
     def test_val_to_signed_integer(self):
         self.assertEqual(pyrtl.val_to_signed_integer(0b000,3), 0)
         self.assertEqual(pyrtl.val_to_signed_integer(0b001,3), 1)

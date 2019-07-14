@@ -115,6 +115,12 @@ def log2(integer_val):
     This function is useful when checking that powers of 2 are provided on inputs to functions.
     It throws an error if a negative value is provided or if the value provided is not an even
     power of two.
+
+    Examples: ::
+
+        log2(2)  # returns 1
+        log2(256)  # returns 8
+        addrwidth = log2(size_of_memory)  # will fail if size_of_memory is not a power of two
     """
     i = integer_val
     if not isinstance(i, int):
@@ -124,6 +130,34 @@ def log2(integer_val):
     if i & (i-1) != 0:
         raise PyrtlError('this function can only take even powers of 2')
     return i.bit_length() - 1
+
+
+def truncate(wirevector_or_integer, bitwidth):
+    """ Returns a wirevector or integer truncated to the specified bitwidth
+
+    :param wirevector_or_integer: Either a wirevector or and integer to be truncated
+    :param bitwidth: The length to which the first argument should be truncated.
+    :return: Returns a tuncated wirevector or integer as appropriate
+
+    This function truncates the most significant bits of the input, leaving a result
+    that is only "bitwidth" bits wide.  For integers this is performed with a simple
+    bitmask of size "bitwidth".  For wirevectors the function calls WireVector.truncate
+    and returns a wirevector of the specified bitwidth.
+
+    Examples: ::
+
+        truncate(9,3)  # returns 3  (0b101 truncates to 0b101)
+        truncate(5,3)  # returns 3  (0b1001 truncates to 0b001)
+        truncate(-1,3)  # returns 7  (-0b1 truncates to 0b111)
+        y = truncate(x+1, x.bitwidth)  # y.bitwdith will equal x.bitwidth
+    """
+    if bitwidth < 1:
+        raise PyrtlError('bitwidth must be a positive integer')
+    x = wirevector_or_integer
+    try:
+        return x.truncate(bitwidth)
+    except AttributeError:
+        return x & ((1 << bitwidth)-1)
 
 
 def input_list(names, bitwidth=None):
