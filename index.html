@@ -174,40 +174,66 @@ consistency, although it does make writing signed arithmetic operations more tex
   <button class="tablinks" onclick="openCode(event, 'Adder')">Adder</button>
 </div>
 
-<!-- Tab content -->
 <div id="GCD" class="tabcontent">
-<pre><code class="lang-python"><span class="hljs-built_in">from</span> pyrtl import *
+<pre><code class="has-line-data" data-line-start="2" data-line-end="18" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
 
-def gcd(<span class="hljs-keyword">a</span>, b, e):
-    <span class="hljs-keyword">a</span>, b = match_bitwidth(<span class="hljs-keyword">a</span>, b)
-    x = Register(<span class="hljs-built_in">len</span>(<span class="hljs-keyword">a</span>))
-    y = Register(<span class="hljs-built_in">len</span>(<span class="hljs-keyword">a</span>))
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">gcd</span><span class="hljs-params">(a, b, e)</span>:</span>
+    a, b = match_bitwidth(a, b)
+    x = Register(len(a))
+    y = Register(len(a))
     <span class="hljs-keyword">with</span> conditional_assignment:
         <span class="hljs-keyword">with</span> e:
-            x.next |= <span class="hljs-keyword">a</span>
+            x.next |= a
             y.next |= b
         <span class="hljs-keyword">with</span> x &gt; y:
             x.next |= x - y
         <span class="hljs-keyword">with</span> otherwise:
             y.next |= y - x
-    <span class="hljs-literal">return</span> x, y == <span class="hljs-number">0</span>
+    <span class="hljs-keyword">return</span> x, y == <span class="hljs-number">0</span>
 </code></pre>
-
 </div>
 
 <div id="MaxN" class="tabcontent">
-  <h3>MaxN</h3>
-  <p>TBA.</p> 
+<pre><code class="has-line-data" data-line-start="2" data-line-end="9" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
+<span class="hljs-keyword">from</span> functools <span class="hljs-keyword">import</span> reduce
+
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">max_n</span><span class="hljs-params">(*inputs)</span>:</span>
+    max_2 = <span class="hljs-keyword">lambda</span> x,y: select(x&gt;y, x, y)
+    <span class="hljs-keyword">return</span> reduce(max2, inputs)
+</code></pre>
 </div>
 
 <div id="Mul" class="tabcontent">
-  <h3>Mul</h3>
-  <p>TBA.</p>
+<pre><code class="has-line-data" data-line-start="2" data-line-end="10" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
+
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">mul</span><span class="hljs-params">(x, y)</span>:</span>
+    <span class="hljs-keyword">assert</span>(len(x) == <span class="hljs-number">4</span> <span class="hljs-keyword">and</span> len(y) == <span class="hljs-number">4</span>)
+    romdata = <span class="hljs-keyword">lambda</span> addr: (addr &gt;&gt; <span class="hljs-number">4</span>) * (addr &amp; <span class="hljs-number">0xf</span>)
+    tbl = RomBlock(<span class="hljs-number">8</span>, <span class="hljs-number">8</span>, romdata)
+    <span class="hljs-keyword">return</span> tbl[concat(x,y)]
+</code></pre>
 </div>
 
 <div id="Adder" class="tabcontent">
-  <h3>Adder</h3>
-  <p>TBA.</p>
+<pre><code class="has-line-data" data-line-start="2" data-line-end="21" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
+
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">fa</span><span class="hljs-params">(x, y, cin)</span>:</span>
+    sum = x ^ y ^ cin
+    cout = x&amp;y | y&amp;cin | x&amp;cin
+    <span class="hljs-keyword">return</span> sum, cout
+
+<span class="hljs-comment"># An n-bit ripple carry adder with carry in and carry out</span>
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">adder</span><span class="hljs-params">(a, b, cin)</span>:</span>
+    a, b = match_bitwidth(a, b)
+    n = len(a)
+
+    sum = {}
+    <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> range(n):
+        sum[i], cout = fa(a[i], b[i], cin)
+        cin = cout
+    full_sum = concat_list([sum[i] <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> range(n)])
+    <span class="hljs-keyword">return</span> full_sum, cout
+</code></pre>
 </div>
 
 <script>
