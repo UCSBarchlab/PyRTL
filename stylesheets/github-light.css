@@ -38,7 +38,7 @@
   color: #63a35c;
 }
 
-.hljs-keyword
+.hljs-keyword,
 .pl-k /* keyword, storage, storage.type */ {
   color: #a71d5d;
 }
