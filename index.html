@@ -74,8 +74,9 @@ performance or optimization is the overarching goal.  Features include:</p>
   <button class="tablinks" onclick="openCode(event, 'Adder')">Adder</button>
 </div>
 
+<!-- Code example formatted with https://dillinger.io/ -->
 <div id="GCD" class="tabcontent">
-  <p>An interative greatest common demoninator calculator -- this function generates a sequential curcuit that grabs inputs a and b when e goes high, 
+  <p>A greatest common demoninator calculator -- this function generates a sequential curcuit that grabs inputs a and b when e goes high, 
   and then, while e is low, calculates the GCD through iterative subtraction.  The function returns two "wires", one which will hold the value 
   when it is ready, and the other is a boolean ready signal.</p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="18" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
@@ -97,9 +98,9 @@ performance or optimization is the overarching goal.  Features include:</p>
 </div>
 
 <div id="MaxN" class="tabcontent">
-  <p>MaxN generates hardware that take N inputs and generates hardware calculating the max of them.  This example makes use of python's nice notation
-  for multiple input functions which packs them nicely into a list for you.  It also is a nice demonstration that the full power of 
-  python is available to you in building your hardware including functional tools like lambdas (here making a small 2-input max logic function)
+  <p>MaxN generates hardware that take N inputs and calculates the max of them.  This example makes use of python's notation
+  for handling multiple inputs which packs them nicely into a list for you.  It is also a nice demonstration that the full power of 
+  python is available to you in PyRTL including functional tools like lambdas (here making a small 2-input max logic function)
   and map/reduce (here chaining together multiple max2 elements into a bigger maxN).</p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="9" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
 <span class="hljs-keyword">from</span> functools <span class="hljs-keyword">import</span> reduce
@@ -111,8 +112,8 @@ performance or optimization is the overarching goal.  Features include:</p>
 </div>
 
 <div id="Mul" class="tabcontent">
-  <p>Mul generates a small 4 x 4 multiplier that is encoded as a ROM.  The first line simple checks that the inputs are each 4-bits wide,
-  then we create a python function that gives us the values we want the ROM to have.  The ROM can be automatically initialized with that
+  <p>Mul generates a small 4 x 4 multiplier with a simple table lookup.  The first line simple checks that the inputs are each 4-bits wide.
+  The next is a python function that gives us the values we want the ROM as a function of the address.  The ROM is automatically initialized with that
   function.  The final hardware generated simply concatenates the two 4-bit inputs in to an single 8-bit address and returns the value at
   that ROM address.</p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="10" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
@@ -127,7 +128,7 @@ performance or optimization is the overarching goal.  Features include:</p>
 
 <div id="Adder" class="tabcontent">
   <p>The classic ripple-carry adder -- this function generates a ripple carry adder of abitrary length including both carry in and carry out.
-    The full adder ("fa") take 1-bit inputs and produces 1-bit outputs.  We iteratively generated full adders and link the carry in of each
+    The full adder ("fa") takes 1-bit inputs and produces 1-bit outputs.  We iteratively generate full adders and link the carry in of each
     new adder to the carry out of the prior.  A python dictory keeps track of the wires carrying the sum bits as we iterate through.  The final
     sum is then just the concatination of the wires in that dictionary.</p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="21" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
