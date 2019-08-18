@@ -175,6 +175,10 @@ consistency, although it does make writing signed arithmetic operations more tex
 </div>
 
 <div id="GCD" class="tabcontent">
+  <p>Simple example of an interative greatest common demoninator calculator.  It is a sequential curcuit grabs inputs a and b when e goes high, 
+  and then while e is low calculates the GCD through iterative subtraction.  The function returns two "wires", one which will hold the value 
+  when it is ready and a ready signal.  These four examples come right from the great <a href="https://chisel.eecs.berkeley.edu/">Chisel examples</a>,
+  and offer an nice comparison of styles. </p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="18" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
 
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">gcd</span><span class="hljs-params">(a, b, e)</span>:</span>
