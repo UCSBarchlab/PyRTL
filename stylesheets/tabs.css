@@ -33,3 +33,12 @@
   border: 1px solid #ccc;
   border-top: none;
 }
+
+.tabcontent {
+  animation: fadeEffect 0.5s; 
+}
+
+@keyframes fadeEffect {
+  from {opacity: 0;}
+  to {opacity: 1;}
+}
