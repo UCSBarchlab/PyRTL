@@ -32,7 +32,11 @@ function openCode(evt, codeName) {
   document.getElementById(cityName).style.display = "block";
   evt.currentTarget.className += " active";
 }
+// Get the element with id="defaultOpen" and click on it
+document.getElementById("defaultOpen").click();
 </script>
+
+<button class="tablinks" onclick="openCity(event, 'London')" id="defaultOpen">London</button>
 
 <html lang="en-us">
   <head>
