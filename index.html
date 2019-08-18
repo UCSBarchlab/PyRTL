@@ -62,112 +62,9 @@ performance or optimization is the overarching goal.  Features include:</p>
     significantly), convenience functions for integer log2 and truncate, and
     even more examples in the documentation.</p>
   
-<script src="https://asciinema.org/a/157266.js" id="asciicast-157266" data-autoplay="true" data-size="medium" async></script>
-
-<h3>
-<a id="the-10000-foot-overview" class="anchor" href="#the-10000-foot-overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>The 10,000 Foot Overview</h3>
-
-<p>At a high level PyRTL builds the hardware structure that you <em>explicitly define</em>.  If you are looking for a 
-tool to take your random python code and turn it into hardware, you will have to look elsewhere 
--- this is <b>not</b> <a href="https://en.wikipedia.org/wiki/High-level_synthesis">HLS</a>.
-Instead PyRTL is designed to help you concisely and precisely describe a digitial hardware structure (that you already have 
-worked out in detail) in python.  PyRTL restricts you to a set of resonable digital designs practices -- the clock and resets
-are implicit, block memories are synchronous by default, there are no "undriven" states, and no weird un-registered feedbacks are
-allowed.  Instead, of worrying about these "analog-ish" tricks that are horrible ideas in modern processes anyways, PyRTL let's
-you treat hardware design like a software problem -- build recursive hardware, write instrospective containers,
-and have fun building digital designs again!</p>
-
-<p>To the user it provides a set of python classes that allow you to express their 
-hardware designs reasonably pythonically.  For example, with WireVector you get a structure that acts very 
-much like a python list of 1-bit wires, so that <code>mywire[0:-1]</code> selects everything except the 
-most-significant-bit.  Of course you can add, subtract, and multiply these WireVectors or concat multiple
-bit-vectors end-to-end as well.  You can then even make normal python collections of those WireVectors and 
-do operations on them in bulk. For example, if you have a list of <em>n</em> different k-bit WireVectors (called "x") and you 
-want to multiply each of them by 2 and put the sum of the result in a WireVector "y", it looks like
-the following:  <code>y = sum([elem * 2 for elem in x])</code>. Hardware comprehensions are surprisingly useful.  Below we get into
-an example in more detail, but if you just want to play around with PyRTL
-<a href="https://mybinder.org/v2/gh/UCSBarchlab/PyRTL/development?filepath=%2Fipynb-examples%2F"> try Jupyter Notebooks on any
-  of our examples on MyBinder</a>.</p>
-
-<h3>
-<a id="hello-n-bit-ripple-carry-adder" class="anchor" href="#hello-n-bit-ripple-carry-adder" aria-hidden="true"><span class="octicon octicon-link"></span></a>Hello N-bit Ripple-Carry Adder!</h3>
-
-<p>While adders are a builtin primitive for PyRTL, most people doing RTL are familiar with the idea of a 
-<a href="https://en.wikipedia.org/wiki/Adder_(electronics)">Ripple-Carry Adder</a> and so it is useful to see how you 
-might express one in PyRTL if you had to.  Rather than the typical <a href="https://www.youtube.com/watch?v=bL3ihMA8_Gs">Verilog introduction to fixed 4-bit 
-adders</a>, let's go ahead and build an <em>arbitrary</em> bitwidth 
-adder.</p>
-
-<div class="highlight highlight-source-python"><pre><span class="pl-k">def</span> <span class="pl-en">one_bit_add</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>, <span class="pl-smi">carry_in</span>):
-    <span class="pl-k">assert</span> <span class="pl-c1">len</span>(a) <span class="pl-k">==</span> <span class="pl-c1">len</span>(b) <span class="pl-k">==</span> <span class="pl-c1">1</span>  <span class="pl-c"># len returns the bitwidth</span>
-    <span class="pl-c1">sum</span> <span class="pl-k">=</span> a <span class="pl-k">^</span> b <span class="pl-k">^</span> carry_in  <span class="pl-c"># operators on WireVectors build the hardware</span>
-    carry_out <span class="pl-k">=</span> a <span class="pl-k">&amp;</span> b <span class="pl-k">|</span> a <span class="pl-k">&amp;</span> carry_in <span class="pl-k">|</span> b <span class="pl-k">&amp;</span> carry_in
-    <span class="pl-k">return</span> <span class="pl-c1">sum</span>, carry_out
-
-<span class="pl-k">def</span> <span class="pl-en">ripple_add</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>, <span class="pl-smi">carry_in</span><span class="pl-k">=</span><span class="pl-c1">0</span>):
-    a, b <span class="pl-k">=</span> pyrtl.match_bitwidth(a, b)
-    <span class="pl-k">if</span> <span class="pl-c1">len</span>(a) <span class="pl-k">==</span> <span class="pl-c1">1</span>:
-        sumbits, carry_out <span class="pl-k">=</span> one_bit_add(a, b, carry_in)
-    <span class="pl-k">else</span>:
-        lsbit, ripplecarry <span class="pl-k">=</span> one_bit_add(a[<span class="pl-c1">0</span>], b[<span class="pl-c1">0</span>], carry_in)
-        msbits, carry_out <span class="pl-k">=</span> ripple_add(a[<span class="pl-c1">1</span>:], b[<span class="pl-c1">1</span>:], ripplecarry)
-        sumbits <span class="pl-k">=</span> pyrtl.concat(msbits, lsbit)
-    <span class="pl-k">return</span> sumbits, carry_out
-
-<span class="pl-c"># instantiate an adder into a 3-bit counter</span>
-counter <span class="pl-k">=</span> pyrtl.Register(<span class="pl-smi">bitwidth</span><span class="pl-k">=</span><span class="pl-c1">3</span>, <span class="pl-smi">name</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">'</span>counter<span class="pl-pds">'</span></span>)
-<span class="pl-c1">sum</span>, carry_out <span class="pl-k">=</span> ripple_add(counter, pyrtl.Const(<span class="pl-s"><span class="pl-pds">"</span>1'b1<span class="pl-pds">"</span></span>))
-counter.next <span class="pl-k">&lt;&lt;=</span> <span class="pl-c1">sum</span>
-
-<span class="pl-c"># simulate the instantiated design for 15 cycles</span>
-sim_trace <span class="pl-k">=</span> pyrtl.SimulationTrace()
-sim <span class="pl-k">=</span> pyrtl.Simulation(<span class="pl-smi">tracer</span><span class="pl-k">=</span>sim_trace)
-<span class="pl-k">for</span> cycle <span class="pl-k">in</span> <span class="pl-c1">range</span>(<span class="pl-c1">15</span>):
-    sim.step({})
-sim_trace.render_trace()</pre></div>
-
-<p>The code above includes an adder generator with python-style slices on wires (ripple_add), an instantiation 
-of a register (used as a counter with the generated adder), and all the code needed to simulate the design, 
-generate a waveform, and render it to the terminal. The way this particular code works is described more in 
-the examples directory.  When you run it, it should look like this (you can see the counter going from 0 to 7 and repeating):</p>
-
-<p><img src="https://raw.githubusercontent.com/UCSBarchlab/PyRTL/master/docs/screenshots/pyrtl-counter.png?raw=true" alt="Command-line waveform for PyRTL counter" title="PyRTL Counter Screenshot"></p>
-
-<h3>
-<a id="a-few-gotchas" class="anchor" href="#a-few-gotchas" aria-hidden="true"><span class="octicon octicon-link"></span></a>A Few Gotchas</h3>
-
-<p>While python is an amazing language, DSLs in python are always forced to make a few compromises which can sometime catch
-users in some unexpected ways.  Watch out for these couple of "somewhat surprising features"</p>
-
-<ul>
-<li><p>PyRTL never uses any of the "in-place arithmetic assignments" such as <code>+=</code> or <code>&amp;=</code> in the traditional ways.
-Instead only <code>&lt;&lt;=</code> and <code>|=</code> are defined and they are used for wire-assignment and conditional-wire-assignment
-respectively (more on both of these in the examples).   If you declare a <code>x = WireVector(bitwidth=3)</code> and 
-<code>y = WireVector(bitwidth=5)</code>, how do you assign <code>x</code> the value of <code>y + 1</code>?  If you do <code>x = y + 1</code> 
-that will replace the old definition of <code>x</code> entirely?  Instead you need to write <code>x &lt;&lt;= y + 1</code> which you 
-can read as "x gets its value from y + 1".</p></li>
-<li><p>The example above also shows off another aspect of PyRTL.  The bitwidth of <code>y</code> is 5.  The bitwidth of <code>y + 1</code>
-is actually 6 (PyRTL infers this automatically).  But then when you assign <code>x &lt;&lt;= y + 1</code> you are taking
-a 6-bit value and assigning it to 3-bit value.  This is completely legal and only the least significant bits 
-will be assigned.  Mind your bitwidths.</p></li>
-<li><p>PyRTL provides some handy functions on WireVectors, including <code>==</code> and <code>&lt;</code> which evaluate to a new WireVector
-a single bit long to hold the result of the comparison.  The bitwise operators <code>&amp;</code>, <code>|</code>, <code>~</code> and <code>^</code>
-are also defined (however logic operations such as "and" and "not" are not).  A really tricky gotcha happens
-when you start combining the two together.  Consider: <code>doit = ready &amp; state==3</code>.  In python, the bitwise
-<code>&amp;</code> operator has <em>higher precedence</em> than <code>==</code>, thus python parses this as <code>doit = (ready &amp; state)==3</code>
-instead of what you might have guessed at first!  Make sure to use parenthesis when using comparisons with
-logic operations to be clear: <code>doit = ready &amp; (state==3)</code>.</p></li>
-<li><p>PyRTL right now assumes that all WireVectors are unsigned integers.  When you do comparisons
-such as "&lt;" it will do unsigned comparison.  If you pass a WireVector to a function that requires more bits 
-that you have provided, it will do zero extension by default.  You can always explicitly do sign extension
-with .sign_extend() but it is not the default behavior for WireVector.  This is right now for clarity and
-consistency, although it does make writing signed arithmetic operations more text heavy.</p></li>
-</ul>
-
-<p><img src="https://raw.githubusercontent.com/UCSBarchlab/PyRTL/master/docs/screenshots/pyrtl-statemachine.png?raw=true" alt="Command-line waveform for PyRTL state machine" title="PyRTL State Machine Screenshot"></p>
-
-<p>These four examples come right from the great <a href="https://chisel.eecs.berkeley.edu/">Chisel examples</a>,
-  and offer an nice comparison of styles.</p>
+<p>Here are some simple examples of PyRTL in action.  These examples implement the same functionality as those highlighted in the
+  wonderful related work <a href="https://chisel.eecs.berkeley.edu/">Chisel</a>, which in turn allows us to see the stylistic differences
+  between the approaches.</p>
   
 <!-- Tab links -->
 <div class="tab">
@@ -277,6 +174,113 @@ function openCode(evt, codeName) {
 // Get the element with id="defaultOpen" and click on it
 document.getElementById("defaultOpen").click();
 </script>
+
+<p> The examples below show how you can have hardware, tests, and output to the terminal all in the same small python script which gives
+    developing hardare a very similar feel to writing any other python.</p>  
+<script src="https://asciinema.org/a/157266.js" id="asciicast-157266" data-autoplay="true" data-size="medium" async></script>
+
+<h3>
+<a id="the-10000-foot-overview" class="anchor" href="#the-10000-foot-overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>The 10,000 Foot Overview</h3>
+
+<p>At a high level PyRTL builds the hardware structure that you <em>explicitly define</em>.  If you are looking for a 
+tool to take your random python code and turn it into hardware, you will have to look elsewhere 
+-- this is <b>not</b> <a href="https://en.wikipedia.org/wiki/High-level_synthesis">HLS</a>.
+Instead PyRTL is designed to help you concisely and precisely describe a digitial hardware structure (that you already have 
+worked out in detail) in python.  PyRTL restricts you to a set of resonable digital designs practices -- the clock and resets
+are implicit, block memories are synchronous by default, there are no "undriven" states, and no weird un-registered feedbacks are
+allowed.  Instead, of worrying about these "analog-ish" tricks that are horrible ideas in modern processes anyways, PyRTL let's
+you treat hardware design like a software problem -- build recursive hardware, write instrospective containers,
+and have fun building digital designs again!</p>
+
+<p>To the user it provides a set of python classes that allow you to express their 
+hardware designs reasonably pythonically.  For example, with WireVector you get a structure that acts very 
+much like a python list of 1-bit wires, so that <code>mywire[0:-1]</code> selects everything except the 
+most-significant-bit.  Of course you can add, subtract, and multiply these WireVectors or concat multiple
+bit-vectors end-to-end as well.  You can then even make normal python collections of those WireVectors and 
+do operations on them in bulk. For example, if you have a list of <em>n</em> different k-bit WireVectors (called "x") and you 
+want to multiply each of them by 2 and put the sum of the result in a WireVector "y", it looks like
+the following:  <code>y = sum([elem * 2 for elem in x])</code>. Hardware comprehensions are surprisingly useful.  Below we get into
+an example in more detail, but if you just want to play around with PyRTL
+<a href="https://mybinder.org/v2/gh/UCSBarchlab/PyRTL/development?filepath=%2Fipynb-examples%2F"> try Jupyter Notebooks on any
+  of our examples on MyBinder</a>.</p>
+
+<h3>
+<a id="hello-n-bit-ripple-carry-adder" class="anchor" href="#hello-n-bit-ripple-carry-adder" aria-hidden="true"><span class="octicon octicon-link"></span></a>Hello N-bit Ripple-Carry Adder!</h3>
+
+<p>While adders are a builtin primitive for PyRTL, most people doing RTL are familiar with the idea of a 
+<a href="https://en.wikipedia.org/wiki/Adder_(electronics)">Ripple-Carry Adder</a> and so it is useful to see how you 
+might express one in PyRTL if you had to.  Rather than the typical <a href="https://www.youtube.com/watch?v=bL3ihMA8_Gs">Verilog introduction to fixed 4-bit 
+adders</a>, let's go ahead and build an <em>arbitrary</em> bitwidth 
+adder.</p>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-k">def</span> <span class="pl-en">one_bit_add</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>, <span class="pl-smi">carry_in</span>):
+    <span class="pl-k">assert</span> <span class="pl-c1">len</span>(a) <span class="pl-k">==</span> <span class="pl-c1">len</span>(b) <span class="pl-k">==</span> <span class="pl-c1">1</span>  <span class="pl-c"># len returns the bitwidth</span>
+    <span class="pl-c1">sum</span> <span class="pl-k">=</span> a <span class="pl-k">^</span> b <span class="pl-k">^</span> carry_in  <span class="pl-c"># operators on WireVectors build the hardware</span>
+    carry_out <span class="pl-k">=</span> a <span class="pl-k">&amp;</span> b <span class="pl-k">|</span> a <span class="pl-k">&amp;</span> carry_in <span class="pl-k">|</span> b <span class="pl-k">&amp;</span> carry_in
+    <span class="pl-k">return</span> <span class="pl-c1">sum</span>, carry_out
+
+<span class="pl-k">def</span> <span class="pl-en">ripple_add</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>, <span class="pl-smi">carry_in</span><span class="pl-k">=</span><span class="pl-c1">0</span>):
+    a, b <span class="pl-k">=</span> pyrtl.match_bitwidth(a, b)
+    <span class="pl-k">if</span> <span class="pl-c1">len</span>(a) <span class="pl-k">==</span> <span class="pl-c1">1</span>:
+        sumbits, carry_out <span class="pl-k">=</span> one_bit_add(a, b, carry_in)
+    <span class="pl-k">else</span>:
+        lsbit, ripplecarry <span class="pl-k">=</span> one_bit_add(a[<span class="pl-c1">0</span>], b[<span class="pl-c1">0</span>], carry_in)
+        msbits, carry_out <span class="pl-k">=</span> ripple_add(a[<span class="pl-c1">1</span>:], b[<span class="pl-c1">1</span>:], ripplecarry)
+        sumbits <span class="pl-k">=</span> pyrtl.concat(msbits, lsbit)
+    <span class="pl-k">return</span> sumbits, carry_out
+
+<span class="pl-c"># instantiate an adder into a 3-bit counter</span>
+counter <span class="pl-k">=</span> pyrtl.Register(<span class="pl-smi">bitwidth</span><span class="pl-k">=</span><span class="pl-c1">3</span>, <span class="pl-smi">name</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">'</span>counter<span class="pl-pds">'</span></span>)
+<span class="pl-c1">sum</span>, carry_out <span class="pl-k">=</span> ripple_add(counter, pyrtl.Const(<span class="pl-s"><span class="pl-pds">"</span>1'b1<span class="pl-pds">"</span></span>))
+counter.next <span class="pl-k">&lt;&lt;=</span> <span class="pl-c1">sum</span>
+
+<span class="pl-c"># simulate the instantiated design for 15 cycles</span>
+sim_trace <span class="pl-k">=</span> pyrtl.SimulationTrace()
+sim <span class="pl-k">=</span> pyrtl.Simulation(<span class="pl-smi">tracer</span><span class="pl-k">=</span>sim_trace)
+<span class="pl-k">for</span> cycle <span class="pl-k">in</span> <span class="pl-c1">range</span>(<span class="pl-c1">15</span>):
+    sim.step({})
+sim_trace.render_trace()</pre></div>
+
+<p>The code above includes an adder generator with python-style slices on wires (ripple_add), an instantiation 
+of a register (used as a counter with the generated adder), and all the code needed to simulate the design, 
+generate a waveform, and render it to the terminal. The way this particular code works is described more in 
+the examples directory.  When you run it, it should look like this (you can see the counter going from 0 to 7 and repeating):</p>
+
+<p><img src="https://raw.githubusercontent.com/UCSBarchlab/PyRTL/master/docs/screenshots/pyrtl-counter.png?raw=true" alt="Command-line waveform for PyRTL counter" title="PyRTL Counter Screenshot"></p>
+
+<h3>
+<a id="a-few-gotchas" class="anchor" href="#a-few-gotchas" aria-hidden="true"><span class="octicon octicon-link"></span></a>A Few Gotchas</h3>
+
+<p>While python is an amazing language, DSLs in python are always forced to make a few compromises which can sometime catch
+users in some unexpected ways.  Watch out for these couple of "somewhat surprising features"</p>
+
+<ul>
+<li><p>PyRTL never uses any of the "in-place arithmetic assignments" such as <code>+=</code> or <code>&amp;=</code> in the traditional ways.
+Instead only <code>&lt;&lt;=</code> and <code>|=</code> are defined and they are used for wire-assignment and conditional-wire-assignment
+respectively (more on both of these in the examples).   If you declare a <code>x = WireVector(bitwidth=3)</code> and 
+<code>y = WireVector(bitwidth=5)</code>, how do you assign <code>x</code> the value of <code>y + 1</code>?  If you do <code>x = y + 1</code> 
+that will replace the old definition of <code>x</code> entirely?  Instead you need to write <code>x &lt;&lt;= y + 1</code> which you 
+can read as "x gets its value from y + 1".</p></li>
+<li><p>The example above also shows off another aspect of PyRTL.  The bitwidth of <code>y</code> is 5.  The bitwidth of <code>y + 1</code>
+is actually 6 (PyRTL infers this automatically).  But then when you assign <code>x &lt;&lt;= y + 1</code> you are taking
+a 6-bit value and assigning it to 3-bit value.  This is completely legal and only the least significant bits 
+will be assigned.  Mind your bitwidths.</p></li>
+<li><p>PyRTL provides some handy functions on WireVectors, including <code>==</code> and <code>&lt;</code> which evaluate to a new WireVector
+a single bit long to hold the result of the comparison.  The bitwise operators <code>&amp;</code>, <code>|</code>, <code>~</code> and <code>^</code>
+are also defined (however logic operations such as "and" and "not" are not).  A really tricky gotcha happens
+when you start combining the two together.  Consider: <code>doit = ready &amp; state==3</code>.  In python, the bitwise
+<code>&amp;</code> operator has <em>higher precedence</em> than <code>==</code>, thus python parses this as <code>doit = (ready &amp; state)==3</code>
+instead of what you might have guessed at first!  Make sure to use parenthesis when using comparisons with
+logic operations to be clear: <code>doit = ready &amp; (state==3)</code>.</p></li>
+<li><p>PyRTL right now assumes that all WireVectors are unsigned integers.  When you do comparisons
+such as "&lt;" it will do unsigned comparison.  If you pass a WireVector to a function that requires more bits 
+that you have provided, it will do zero extension by default.  You can always explicitly do sign extension
+with .sign_extend() but it is not the default behavior for WireVector.  This is right now for clarity and
+consistency, although it does make writing signed arithmetic operations more text heavy.</p></li>
+</ul>
+
+<p><img src="https://raw.githubusercontent.com/UCSBarchlab/PyRTL/master/docs/screenshots/pyrtl-statemachine.png?raw=true" alt="Command-line waveform for PyRTL state machine" title="PyRTL State Machine Screenshot"></p>
+
   
 <h3>
 <a id="related-projects" class="anchor" href="#related-projects" aria-hidden="true"><span class="octicon octicon-link"></span></a>Related Projects</h3>
