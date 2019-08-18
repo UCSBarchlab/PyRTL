@@ -198,6 +198,10 @@ consistency, although it does make writing signed arithmetic operations more tex
 </div>
 
 <div id="MaxN" class="tabcontent">
+  <p>MaxN is a function that generates hardware that take N inputs and returns the max of them.  This example makes use of python's nice notation
+  for multiple input functions which, when * is used, packs them nicely into a list for you.  It also shows that you can use all of the power of 
+  python for hardware development including functional tools like lambdas (here making the 2-input max logic) and map/reduce (here chaining together
+  all of the max2 elements into a bigger maxN).</p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="9" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
 <span class="hljs-keyword">from</span> functools <span class="hljs-keyword">import</span> reduce
 
