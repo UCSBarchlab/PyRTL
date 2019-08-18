@@ -168,9 +168,9 @@ consistency, although it does make writing signed arithmetic operations more tex
 
 <!-- Tab links -->
 <div class="tab">
-  <button class="tablinks" onclick="openCity(event, 'London')" id="defaultOpen"> London </button>
-  <button class="tablinks" onclick="openCity(event, 'Paris')">Paris</button>
-  <button class="tablinks" onclick="openCity(event, 'Tokyo')">Tokyo</button>
+  <button class="tablinks" onclick="openCode(event, 'London')" id="defaultOpen"> London </button>
+  <button class="tablinks" onclick="openCode(event, 'Paris')">Paris</button>
+  <button class="tablinks" onclick="openCode(event, 'Tokyo')">Tokyo</button>
 </div>
 
 <!-- Tab content -->
@@ -190,7 +190,7 @@ consistency, although it does make writing signed arithmetic operations more tex
 </div>
 
 <script>
-function openCity(evt, cityName) {
+function openCode(evt, codeName) {
   // Declare all variables
   var i, tabcontent, tablinks;
 
@@ -207,7 +207,7 @@ function openCity(evt, cityName) {
   }
 
   // Show the current tab, and add an "active" class to the button that opened the tab
-  document.getElementById(cityName).style.display = "block";
+  document.getElementById(codeName).style.display = "block";
   evt.currentTarget.className += " active";
 }
 // Get the element with id="defaultOpen" and click on it
