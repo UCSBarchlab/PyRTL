@@ -176,8 +176,23 @@ consistency, although it does make writing signed arithmetic operations more tex
 
 <!-- Tab content -->
 <div id="GCD" class="tabcontent">
-  <h3>GCD</h3>
-  <p>TBA.</p>
+<pre><code class="lang-python"><span class="hljs-built_in">from</span> pyrtl import *
+
+def gcd(<span class="hljs-keyword">a</span>, b, e):
+    <span class="hljs-keyword">a</span>, b = match_bitwidth(<span class="hljs-keyword">a</span>, b)
+    x = Register(<span class="hljs-built_in">len</span>(<span class="hljs-keyword">a</span>))
+    y = Register(<span class="hljs-built_in">len</span>(<span class="hljs-keyword">a</span>))
+    <span class="hljs-keyword">with</span> conditional_assignment:
+        <span class="hljs-keyword">with</span> e:
+            x.next |= <span class="hljs-keyword">a</span>
+            y.next |= b
+        <span class="hljs-keyword">with</span> x &gt; y:
+            x.next |= x - y
+        <span class="hljs-keyword">with</span> otherwise:
+            y.next |= y - x
+    <span class="hljs-literal">return</span> x, y == <span class="hljs-number">0</span>
+</code></pre>
+
 </div>
 
 <div id="MaxN" class="tabcontent">
