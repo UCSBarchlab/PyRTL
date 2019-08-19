@@ -10,6 +10,7 @@ from .core import PostSynthBlock
 from .core import working_block
 from .core import reset_working_block
 from .core import set_working_block
+from .core import temp_working_block
 from .core import set_debug_mode
 
 # convenience classes for building hardware

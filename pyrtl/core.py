@@ -762,6 +762,14 @@ class set_working_block(object):
         self._set_working_block(self.old_block, no_sanity_check=True)
 
 
+def temp_working_block():
+    """ Set the working block to be new temporary block.
+        If used with the 'with' statement the block will be reset to the
+        original value (at the time of call) at exit of the context.
+    """
+    return set_working_block(Block())
+
+
 def set_debug_mode(debug=True):
     """ Set the global debug mode. """
     global debug_mode
