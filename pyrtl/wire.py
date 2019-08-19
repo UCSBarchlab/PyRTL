@@ -636,10 +636,8 @@ def _validate_const_int(val, bitwidth=None):
 
 def _convert_verilog_str(val, bitwidth=None):
     bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16, 'x': 16}
-    if bitwidth is not None:
-        raise PyrtlError('error, bitwidth parameter of const should be'
-                         ' unspecified when the const is created from a string'
-                         ' (instead use verilog style specification)')
+    passed_bitwidth = bitwidth
+
     neg = False
     if val.startswith('-'):
         neg = True
@@ -664,6 +662,13 @@ def _convert_verilog_str(val, bitwidth=None):
         if (num >> bitwidth-1):
             raise PyrtlError('insufficient bits for negative number')
         num = (1 << bitwidth) - num
+
+    if passed_bitwidth and passed_bitwidth != bitwidth:
+        raise PyrtlError('error, bitwidth parameter of const does not match'
+                         ' the bitwidth infered from the verilog style specification'
+                         ' (if bitwidth=None is used, pyrtl will determine the bitwidth from the'
+                         ' verilog-style constant specification)')
+
     return num, bitwidth
 
 

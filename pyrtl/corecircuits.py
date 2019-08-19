@@ -395,7 +395,8 @@ def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
     :param range_start: the start of the range of bits to be updated
     :param range_end: the end of the range of bits to be updated
     :param newvalue: the value to be written in to the start:end range
-    :param truncating: if true, clip the newvalue to be the proper number of bits
+    :param truncating: if true, silently clip newvalue to the proper bitwidth rather than
+          throw an error if the value provided is too large
 
     Given a wirevector w, this function returns a new wirevector that
     is identical to w except in the range of bits specified.  In that
@@ -405,7 +406,7 @@ def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
     bits 20, 21, and 22 all set to 1.
 
     Note that range_start and range_end will be inputs to a slice and
-    so standar Python slicing rules apply (e.g. negative values for
+    so standard Python slicing rules apply (e.g. negative values for
     end-relative indexing and support for None). ::
 
         w = bitfield_update(w, 20, 23, 0x7)  # sets bits 20, 21, 22 to 1
