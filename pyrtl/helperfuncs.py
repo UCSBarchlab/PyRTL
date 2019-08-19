@@ -3,9 +3,10 @@
 
 from __future__ import print_function, unicode_literals
 
+import collections
+import math
 import numbers
 import six
-import math
 
 from .core import working_block, _NameIndexer
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
@@ -335,23 +336,23 @@ def val_to_formatted_str(val, format, enum_set=None):
     :param format: a string holding a format which will be used to convert the data string
     :param enum_set: an iterable of enums which are used as part of the converstion process
 
-    Given an unsigned integer (not a wirevector!) covert that to a strong ready for output
+    Given an unsigned integer (not a wirevector!) covert that to a string ready for output
     to a human to interpret.  This helps deal with signed/unsigned numbers (simulation
     operates on values that have been converted via two's complement), but it also generates
     hex, binary, and enum types as outputs.  It is easiest to see how it works with some
     examples. ::
 
-        formatted_str_to_val(2, 's3') == '2'
-        formatted_str_to_val(7, 's3') == '-1'
-        formatted_str_to_val(5, 'b3') == '101'
-        formatted_str_to_val(5, 'u3') == '5'
-        formatted_str_to_val(5, 's3') == '-3'
-        formatted_str_to_val(10, 'x3') == 'a'
+        val_to_formatted_str(2, 's3') == '2'
+        val_to_formatted_str(7, 's3') == '-1'
+        val_to_formatted_str(5, 'b3') == '101'
+        val_to_formatted_str(5, 'u3') == '5'
+        val_to_formatted_str(5, 's3') == '-3'
+        val_to_formatted_str(10, 'x3') == 'a'
         class Ctl(Enum):
             ADD = 5
             SUB = 12
-        formatted_str_to_val('ADD', 'e3/Ctl', [Ctl]) == 5
-        formatted_str_to_val('SUB', 'e3/Ctl', [Ctl]) == 12
+        val_to_formatted_str(5, 'e3/Ctl', [Ctl]) == 'ADD'
+        val_to_formatted_str(12, 'e3/Ctl', [Ctl]) == 'SUB'
 
     """
     type = format[0]
@@ -375,6 +376,107 @@ def val_to_formatted_str(val, format, enum_set=None):
     else:
         raise PyrtlError('unknown format type {}'.format(format))
     return rval
+
+
+# this is the return type of value_bitwidth_tuple
+ValueBitwidthTuple = collections.namedtuple('ValueBitwidthTuple', 'value bitwidth')
+
+
+def infer_val_and_bitwidth(rawinput, bitwidth=None):
+    """ Return a tuple (value, bitwidth) infered from the specified input.
+
+    :param rawinput: a bool, int, or verilog-style string constant
+    :param bitwidth: an integer bitwidth or (by default) None
+    :returns tuple of integers (value, bitwidth)
+
+    Given a boolean, integer, or verilog-style string constant, this function returns a
+    tuple of two integers (value, bitwidth) which are infered from the specified rawinput.
+    The tuple returned is, in fact, a named tuple with names .value and .bitwidth for feilds
+    0 and 1 respectively.  Error checks are performed that determine if the bitwidths specified
+    are sufficient and appropriate for the values specified. Examples can be found below ::
+
+        infer_val_and_bitwidth(2, bitwidth=5) == (2, 5)
+        infer_val_and_bitwidth(3) == (3, 2)  # bitwidth infered from value
+        infer_val_and_bitwidth(True) == (1, 1)
+        infer_val_and_bitwidth(False) == (0, 1)
+        infer_val_and_bitwidth("5'd12") == (12, 5)
+        infer_val_and_bitwidth("5'b10") == (2, 5)
+        infer_val_and_bitwidth("5'b10") == (2, 5)
+        infer_val_and_bitwidth("8'B 0110_1100") == (108, 8)
+    """
+
+    if isinstance(rawinput, bool):
+        return _convert_bool(rawinput, bitwidth)
+    elif isinstance(rawinput, numbers.Integral):
+        return _convert_int(rawinput, bitwidth)
+    elif isinstance(rawinput, six.string_types):
+        return _convert_verilog_str(rawinput, bitwidth)
+    else:
+        raise PyrtlError('error, the value provided is of an improper type, "%s"'
+                         'proper types are bool, int, and string' % type(rawinput))
+
+
+def _convert_bool(bool_val, bitwidth=None):
+    num = int(bool_val)
+    if bitwidth is None:
+        bitwidth = 1
+    if bitwidth != 1:
+        raise PyrtlError('error, boolean has bitwidth not equal to 1')
+    return ValueBitwidthTuple(num, bitwidth)
+
+
+def _convert_int(val, bitwidth=None):
+    if val >= 0:
+        num = val
+        # infer bitwidth if it is not specified explicitly
+        if bitwidth is None:
+            bitwidth = len(bin(num)) - 2  # the -2 for the "0b" at the start of the string
+    else:  # val is negative
+        if bitwidth is None:
+            raise PyrtlError(
+                'negative Const values must have bitwidth declared explicitly')
+        if (val >> bitwidth-1) != -1:
+            raise PyrtlError('insufficient bits for negative number')
+        num = val & ((1 << bitwidth) - 1)  # result is a twos complement value
+    return ValueBitwidthTuple(num, bitwidth)
+
+
+def _convert_verilog_str(val, bitwidth=None):
+    bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16, 'x': 16}
+    passed_bitwidth = bitwidth
+
+    neg = False
+    if val.startswith('-'):
+        neg = True
+        val = val[1:]
+    split_string = val.lower().split("'")
+    if len(split_string) != 2:
+        raise PyrtlError('error, string not in verilog style format')
+    try:
+        bitwidth = int(split_string[0])
+        sval = split_string[1]
+        if sval[0] == 's':
+            raise PyrtlError('error, signed integers are not supported in verilog-style constants')
+        base = 10
+        if sval[0] in bases:
+            base = bases[sval[0]]
+            sval = sval[1:]
+        sval = sval.replace('_', '')
+        num = int(sval, base)
+    except (IndexError, ValueError):
+        raise PyrtlError('error, string not in verilog style format')
+    if neg and num:
+        if (num >> bitwidth-1):
+            raise PyrtlError('error, insufficient bits for negative number')
+        num = (1 << bitwidth) - num
+
+    if passed_bitwidth and passed_bitwidth != bitwidth:
+        raise PyrtlError('error, bitwidth parameter of constant does not match'
+                         ' the bitwidth infered from the verilog style specification'
+                         ' (if bitwidth=None is used, pyrtl will determine the bitwidth from the'
+                         ' verilog-style constant specification)')
+
+    return ValueBitwidthTuple(num, bitwidth)
 
 
 def get_stacks(*wires):

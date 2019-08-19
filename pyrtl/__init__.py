@@ -30,6 +30,7 @@ from .helperfuncs import truncate
 from .helperfuncs import val_to_signed_integer
 from .helperfuncs import val_to_formatted_str
 from .helperfuncs import formatted_str_to_val
+from .helperfuncs import infer_val_and_bitwidth
 from .helperfuncs import probe
 from .helperfuncs import rtl_assert
 from .helperfuncs import check_rtl_assertions

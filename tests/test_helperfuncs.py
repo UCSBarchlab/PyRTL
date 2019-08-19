@@ -103,6 +103,15 @@ class TestNonCoreHelpers(unittest.TestCase):
         self.assertEqual(pyrtl.val_to_signed_integer(0b110,3), -2)
         self.assertEqual(pyrtl.val_to_signed_integer(0b111,3), -1)
 
+    def test_infer_val_and_bitwidth(self):
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(2, bitwidth=5), (2, 5))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(3), (3, 2))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(True), (1, 1))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(False), (0, 1))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth("5'd12"), (12, 5))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth("5'b10"), (2, 5))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth("5'b10"), (2, 5))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth("8'B 0110_1100"), (108, 8))
 
 class TestBitField_Update(unittest.TestCase):
     def setUp(self):

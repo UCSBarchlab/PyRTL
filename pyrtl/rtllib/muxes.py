@@ -153,7 +153,7 @@ class MultiSelector(object):
 
     def option(self, select_val, *data_signals):
         self._check_finalized()
-        instr, ib = pyrtl.wire._gen_val_and_bitwidth(select_val, self.signal_wire.bitwidth)
+        instr, ib = pyrtl.infer_val_and_bitwidth(select_val, self.signal_wire.bitwidth)
         if instr in self.instructions:
             raise pyrtl.PyrtlError("instruction %s already exists" % str(select_val))
         self.instructions.append(instr)

@@ -566,7 +566,8 @@ class Const(WireVector):
         py:method:: WireVector.__init__()
         """
         self._validate_bitwidth(bitwidth)
-        num, bitwidth = _gen_val_and_bitwidth(val, bitwidth)
+        from .helperfuncs import infer_val_and_bitwidth
+        num, bitwidth = infer_val_and_bitwidth(val, bitwidth)
 
         if num < 0:
             raise PyrtlInternalError(
@@ -595,81 +596,6 @@ class Const(WireVector):
             'ConstWires, such as "%s", cannot have values generated internally. '
             "aka they cannot have other wires driving it"
             % str(self.name))
-
-
-def _gen_val_and_bitwidth(val, bitwidth=None):
-    if isinstance(val, bool):
-        return _convert_bool(val, bitwidth)
-    elif isinstance(val, numbers.Integral):
-        return _validate_const_int(val, bitwidth)
-    elif isinstance(val, six.string_types):
-        return _convert_verilog_str(val, bitwidth)
-    else:
-        raise PyrtlError('error, the value of Const is of an improper type, "%s"'
-                         'proper types are bool, int, and string' % type(val))
-
-
-def _convert_bool(bool_val, bitwidth=None):
-    num = int(bool_val)
-    if bitwidth is None:
-        bitwidth = 1
-    if bitwidth != 1:
-        raise PyrtlError('error, boolean has bitwidth not equal to 1')
-    return num, bitwidth
-
-
-def _validate_const_int(val, bitwidth=None):
-    if val >= 0:
-        num = val
-        # infer bitwidth if it is not specified explicitly
-        if bitwidth is None:
-            bitwidth = len(bin(num)) - 2  # the -2 for the "0b" at the start of the string
-    else:  # val is negative
-        if bitwidth is None:
-            raise PyrtlError(
-                'negative Const values must have bitwidth declared explicitly')
-        if (val >> bitwidth-1) != -1:
-            raise PyrtlError('insufficient bits for negative number')
-        num = val & ((1 << bitwidth) - 1)  # result is a twos complement value
-    return num, bitwidth
-
-
-def _convert_verilog_str(val, bitwidth=None):
-    bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16, 'x': 16}
-    passed_bitwidth = bitwidth
-
-    neg = False
-    if val.startswith('-'):
-        neg = True
-        val = val[1:]
-    split_string = val.lower().split("'")
-    if len(split_string) != 2:
-        raise PyrtlError('error, string for Const not in verilog style format')
-    try:
-        bitwidth = int(split_string[0])
-        sval = split_string[1]
-        if sval[0] == 's':
-            raise PyrtlError('signed integers are not supported in verilog-style Const')
-        base = 10
-        if sval[0] in bases:
-            base = bases[sval[0]]
-            sval = sval[1:]
-        sval = sval.replace('_', '')
-        num = int(sval, base)
-    except (IndexError, ValueError):
-        raise PyrtlError('error, string for Const not in verilog style format')
-    if neg and num:
-        if (num >> bitwidth-1):
-            raise PyrtlError('insufficient bits for negative number')
-        num = (1 << bitwidth) - num
-
-    if passed_bitwidth and passed_bitwidth != bitwidth:
-        raise PyrtlError('error, bitwidth parameter of const does not match'
-                         ' the bitwidth infered from the verilog style specification'
-                         ' (if bitwidth=None is used, pyrtl will determine the bitwidth from the'
-                         ' verilog-style constant specification)')
-
-    return num, bitwidth
 
 
 class Register(WireVector):
