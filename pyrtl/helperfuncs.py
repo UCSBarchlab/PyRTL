@@ -332,7 +332,7 @@ def formatted_str_to_val(data, format, enum_set=None):
 def val_to_formatted_str(val, format, enum_set=None):
     """ Return a string representation of the value given format specified.
 
-    :param val: a string holding an unsigned integer to convert
+    :param val: an unsigned integer to convert
     :param format: a string holding a format which will be used to convert the data string
     :param enum_set: an iterable of enums which are used as part of the converstion process
 
@@ -401,7 +401,8 @@ def infer_val_and_bitwidth(rawinput, bitwidth=None):
         infer_val_and_bitwidth(False) == (0, 1)
         infer_val_and_bitwidth("5'd12") == (12, 5)
         infer_val_and_bitwidth("5'b10") == (2, 5)
-        infer_val_and_bitwidth("5'b10") == (2, 5)
+        infer_val_and_bitwidth("5'b10").bitwidth == 5
+        infer_val_and_bitwidth("5'b10").value == 2
         infer_val_and_bitwidth("8'B 0110_1100") == (108, 8)
     """
 

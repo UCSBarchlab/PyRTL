@@ -225,6 +225,9 @@ class Simulation(object):
         :return: value of w in the current step of simulation
 
         Will throw KeyError if w does not exist in the simulation.
+
+        Examples ::
+            sim.inspect('a') == 10  # returns value of wire 'a' at current step
         """
         wire = self.block.wirevector_by_name.get(w, w)
         return self.value[wire]
