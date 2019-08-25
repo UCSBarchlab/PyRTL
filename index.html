@@ -102,7 +102,8 @@ performance or optimization is the overarching goal.  Features include:</p>
   for handling multiple inputs which packs them nicely into a list for you.  It is also a nice demonstration that the full power of 
   python is available to you in PyRTL including functional tools like reduce (here chaining together multiple max2 elements into a
   bigger maxN), map, recursion, lambdas, etc.</p>
-<pre><code class="has-line-data" data-line-start="1" data-line-end="8" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
+<pre><code class="has-line-data" data-line-start="1" data-line-end="9" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
+<span class="hljs-keyword">from</span> functools <span class="hljs-keyword">import</span> reduce
 
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">max_n</span><span class="hljs-params">(*inputs)</span>:</span>
     <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">max_2</span><span class="hljs-params">(x,y)</span>:</span>
