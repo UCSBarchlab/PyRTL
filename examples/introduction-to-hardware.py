@@ -33,7 +33,7 @@ def attempt1_hardware_fibonacci(n, bitwidth):
         a, b = b, a + b
     return a
 
-# The above looks really nice does not really represent a hardware implementation
+# The above looks really nice but does not really represent a hardware implementation
 # of fibonacci. Let's reason through the code, line by line, to figure out what
 # it would actually build.
 # a = pyrtl.Const(0)       -- This makes a wirevector of bitwidth=1 that is driven by
