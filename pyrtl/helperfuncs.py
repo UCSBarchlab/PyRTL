@@ -161,6 +161,47 @@ def truncate(wirevector_or_integer, bitwidth):
         return x & ((1 << bitwidth)-1)
 
 
+def chop(w, *segment_widths):
+    """ Returns a list of wirevectors each a slice of the original 'w'
+
+    :param w: The wirevector to be chopped up into segments
+    :param segment_widths: Additional arguments are integers which are bitwidths
+    :return: A list of wirevectors each with a proper segment width
+
+    This function chops a wirevector into a set of smaller wirevectors of different
+    lengths.  It is most useful when multiple "fields" are contained with a single
+    wirevector, for example when breaking apart and instruction.  For example, if
+    you wish to break apart a 32-bit MIPS I-type (Immediate) instruction you know
+    it has an 6-bit opcode, 2 5-bit operands, and 16-bit offset.  You could take
+    each of those slices in absolute terms: offset=instr[0:16], rt=instr[16:21]
+    and so on, but then you have to do the arithmetic yourself.  With this function
+    you can do all the fields at once which can be seen in the examples below.
+
+    As a check, chop will throw an error if the sum of the lengths of the fields
+    given is not the same as the length of the wirevector to chop.  Not also that
+    chop assumes that the "rightmost" arguments are the least signficant bits
+    (just like pyrtl concat) which is normal for hardware functions but makes the
+    list order a little counter intuitive.
+
+    Examples: ::
+
+        opcode, rs, rt, offset = chop(instr, 6, 5, 5, 16)  # MIPS I-type instruction
+        opcode, instr_index = chop(instr, 6, 26)  # MIPS J-type instruction
+        opcode, rs, rt, rd, sa, function = chop(instr, 6, 5, 5, 5, 5, 6)  # MIPS R-type
+        msb, middle, lsb = chop(data, 1, 30, 1) # breaking out the most and least sig bit
+    """
+    for seg in segment_widths:
+        if not isinstance(seg, int):
+            raise PyrtlError('segment widths must be integers')
+    if sum(segment_widths) != len(w)
+        raise PyrtlError('sum of segment widths must equal length of wirevetor')
+
+    n_segments = len(segment_widths)
+    starts = [sum(width[i+1:]) for i in range(n_segments)]
+    ends = [sum(width[i:]) for i in range(n_segments)]
+    return [w[s:e] for s,e in zip(starts,ends)]
+
+
 def input_list(names, bitwidth=None):
     """ Allocate and return a list of Inputs.
 
