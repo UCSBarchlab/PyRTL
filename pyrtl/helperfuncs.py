@@ -193,13 +193,13 @@ def chop(w, *segment_widths):
     for seg in segment_widths:
         if not isinstance(seg, int):
             raise PyrtlError('segment widths must be integers')
-    if sum(segment_widths) != len(w)
+    if sum(segment_widths) != len(w):
         raise PyrtlError('sum of segment widths must equal length of wirevetor')
 
     n_segments = len(segment_widths)
-    starts = [sum(width[i+1:]) for i in range(n_segments)]
-    ends = [sum(width[i:]) for i in range(n_segments)]
-    return [w[s:e] for s,e in zip(starts,ends)]
+    starts = [sum(segment_widths[i+1:]) for i in range(n_segments)]
+    ends = [sum(segment_widths[i:]) for i in range(n_segments)]
+    return [w[s:e] for s, e in zip(starts, ends)]
 
 
 def input_list(names, bitwidth=None):
