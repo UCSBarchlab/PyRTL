@@ -11,6 +11,7 @@ import six
 from .core import working_block, _NameIndexer
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
+from .corecircuits import as_wires
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -190,6 +191,7 @@ def chop(w, *segment_widths):
         opcode, rs, rt, rd, sa, function = chop(instr, 6, 5, 5, 5, 5, 6)  # MIPS R-type
         msb, middle, lsb = chop(data, 1, 30, 1) # breaking out the most and least sig bit
     """
+    w = as_wires(w)
     for seg in segment_widths:
         if not isinstance(seg, int):
             raise PyrtlError('segment widths must be integers')

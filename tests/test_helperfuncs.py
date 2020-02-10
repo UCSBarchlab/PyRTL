@@ -113,6 +113,51 @@ class TestNonCoreHelpers(unittest.TestCase):
         self.assertEqual(pyrtl.infer_val_and_bitwidth("5'b10"), (2, 5))
         self.assertEqual(pyrtl.infer_val_and_bitwidth("8'B 0110_1100"), (108, 8))
 
+
+class TestChop(unittest.TestCase):
+    def setUp(self):
+        random.seed(8492049)
+        pyrtl.reset_working_block()
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(8):
+            sim.step({})
+        output = io.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_fields_mismatch(self):
+        instr = pyrtl.WireVector(name='instr', bitwidth=32)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.chop(instr,10,10,10)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.chop(instr,10,10,14)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.chop(instr,33)
+
+    def test_wrong_input_types_fail(self):
+        instr = pyrtl.WireVector(name='instr', bitwidth=32)
+        x = pyrtl.WireVector(name='x', bitwidth=10)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.chop(instr,x,10,12)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.chop(instr,10,x,12)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.chop(instr,x)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.chop(10,5,5)
+
+    def test_chop_does_simulation_correct(self):
+        r = pyrtl.Register(5, 'r')
+        r.next <<= r + 1
+        a, b, c = pyrtl.helperfuncs.chop(r, 2, 2, 1)
+        o = pyrtl.Output(name='o')
+        o <<= c
+        self.check_trace('o 01010101\nr 01234567\n')
+
+
 class TestBitField_Update(unittest.TestCase):
     def setUp(self):
         random.seed(8492049)
