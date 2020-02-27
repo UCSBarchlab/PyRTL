@@ -123,7 +123,7 @@ def attempt3_hardware_fibonacci(n, bitwidth):
 
     return a, i == n
 
-# This is very similliar to the example before, except that now we have a register "i"
+# This is very similar to the example before, except that now we have a register "i"
 # which keeps track of the iteration that we are on (i.next <<= i + 1).  The function
 # now returns two values, a reference to the register "a" and a reference to a single
 # bit that tells us if we are done.  That bit is calculated by comparing "i" to the
@@ -150,3 +150,33 @@ def attempt4_hardware_fibonacci(n, req, bitwidth):
             b.next |= a + b
     done <<= i == local_n
     return a, done
+
+# Now we will simulate our latest fibonacci attempt.
+# We begin by connecting our input and output wires to the implementation,
+# stepping once with the 'req' signal high to signify we're beginning a
+# a new request for a value, and then continuing to step until 'done' is emitted.
+# Note that although the fibonacci implementation only uses the value of 'n'
+# when 'req' is high, we must still provide a value for 'n' (and all other inputs
+# tracked by the simulator) for each step.
+
+BITWIDTH = 8
+
+n_in = pyrtl.Input(BITWIDTH, 'n_in')
+req_in = pyrtl.Input(1, 'req_in')
+fib_out = pyrtl.Output(BITWIDTH, 'fib_out')
+done_out = pyrtl.Output(1, 'done_out')
+
+output = attempt4_hardware_fibonacci(n_in, req_in, len(n_in))
+fib_out <<= output[0]
+done_out <<= output[1]
+
+sim_trace = pyrtl.SimulationTrace()
+sim = pyrtl.Simulation(tracer=sim_trace)
+
+sim.step({'n_in': 5, 'req_in': 1})
+
+sim.step({'n_in': 5, 'req_in': 0})
+while not sim.inspect('done_out'):
+    sim.step({'n_in': 5, 'req_in': 0})
+
+sim_trace.render_trace(trace_list=['n_in', 'req_in', 'fib_out', 'done_out'])
