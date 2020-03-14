@@ -216,6 +216,49 @@ class Simulation(object):
         # finally, if any of the rtl_assert assertions are failing then we should
         # raise the appropriate exceptions
         check_rtl_assertions(self)
+    
+    def step_multiple(self, provided_inputs, expected_outputs=None):
+        """ Take the simulation forward N cycles, where N is the number of values for each provided input.
+
+        :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
+        :param expected_outputs: a dictionary mapping wirevectors to their expected values for N steps
+
+        All input wires must be in the provided_inputs in order for the simulation
+        to accept these values. Additionally, the length of the array of provided values for each input
+        must be the same.
+
+        Example: if we have inputs named 'a' and 'b' and output 'o', we can call:
+        sim.step_multiple({'a': [0,1], 'b': [23,32]}, {'o': [42, 43]}) to simulate 2 cycles,
+        where in the first cycle 'a' and 'b' take on 0 and 23, respectively, and 'o' is expected to have
+        the value 42, and in the second cycle 'a' and 'b' take on 1 and 32, respectively, and 'o' is expected
+        to have the value 43.
+
+        If your values are all single digit, you can also specify them in a single string, e.g.
+        sim.step_multiple({'a': '01', 'b': '01'}) will simulate 2 cycles, with 'a' and 'b' taking on 0 and 0,
+        respectively, on the first cycle and '1' and '1', respectively, on the second cycle.
+        """
+        if len(provided_inputs) == 0:
+            return
+        
+        if len(list(provided_inputs.items())[0]) < 2:
+            raise PyrtlError('no input values supplied for wire "%s"' % (provided_inputs.items()[0][0]))
+
+        nsteps = len(list(provided_inputs.items())[0][1])
+
+        if list(filter(lambda l: len(l) != nsteps, provided_inputs.values())):
+            raise PyrtlError("must supply a value for each provided wire for each step of simulation")
+
+        if expected_outputs and list(filter(lambda l: len(l) != nsteps, expected_outputs.values())):
+            raise PyrtlError("any expected outputs must have a supplied value each step of simulation")
+
+        for i in range(nsteps):
+            self.step({w: int(v[i]) for w, v in provided_inputs.items()})
+
+            if expected_outputs is not None:
+                for expvar in expected_outputs.keys():
+                    assert(int(expected_outputs[expvar][i] == self.inspect(expvar)),
+                        "%s: expected %d != actual %d" % (expvar, int(expected_outputs[expvar][i]), self.inspect(expvar)))
+
 
     def inspect(self, w):
         """ Get the value of a wirevector in the last simulation cycle.
