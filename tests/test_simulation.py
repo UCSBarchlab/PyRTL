@@ -302,6 +302,113 @@ class SimInputValidationBase(unittest.TestCase):
             sim_trace = pyrtl.SimulationTrace()
 
 
+class SimStepMultipleBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        in1 = pyrtl.Input(4, "in1")
+        in2 = pyrtl.Input(4, "in2")
+        out1 = pyrtl.Output(4, "out1")
+        out1 <<= (in1 ^ in2) + pyrtl.Const(1)
+        out2 = pyrtl.Output(4, "out2")
+        out2 <<= in1 | in2
+        self.inputs = {
+            'in1': [0, 1, 3, 15, 14],
+            'in2': [6, 6, 6, 6, 6],
+        }
+
+    def test_step_multiple_no_expected_check(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        sim.step_multiple(self.inputs)
+
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1   0  1  3 15 14\n"
+                          "in2   6  6  6  6  6\n"
+                          "out1  7  8  6 10  9\n"
+                          "out2  6  7  7 15 14\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_no_errors(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        expected = {
+            'out1': [7, 8, 6, 10, 9],
+            'out2': [6, 7, 7, 15, 14],
+        }
+        sim.step_multiple(self.inputs, expected)
+
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1   0  1  3 15 14\n"
+                          "in2   6  6  6  6  6\n"
+                          "out1  7  8  6 10  9\n"
+                          "out2  6  7  7 15 14\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_many_errors_report_only_first(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        expected = {
+            'out1': [7, 9, 4, 10, 9],
+            'out2': [6, 2, 7, 8, 14],
+        }
+        output = six.StringIO()
+        sim.step_multiple(self.inputs, expected, file=output, stop_after_first_error=True)
+
+        # Test the output about unexpected values
+        correct_output = ("Unexpected output (stopped after step with first error):\n"
+                          " step       name expected   actual\n"
+                          "    1       out1        9        8\n"
+                          "    1       out2        2        7\n")
+        self.assertEqual(output.getvalue(), correct_output)
+
+        # Test that the trace stopped after the step with the first error
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1  0 1\n"
+                          "in2  6 6\n"
+                          "out1 7 8\n"
+                          "out2 6 7\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_many_errors_report_all(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        expected = {
+            'out1': [7, 9, 4, 10, 9],
+            'out2': [6, 2, 7, 8, 14],
+        }
+        output = six.StringIO()
+        sim.step_multiple(self.inputs, expected, file=output)
+
+        # Test the output about unexpected values
+        correct_output = ("Unexpected output on one or more steps:\n"
+                          " step       name expected   actual\n"
+                          "    1       out1        9        8\n"
+                          "    1       out2        2        7\n"
+                          "    2       out1        4        6\n"
+                          "    3       out2        8       15\n")
+        self.assertEqual(output.getvalue(), correct_output)
+
+        # Test that the trace still produced all the steps
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1   0  1  3 15 14\n"
+                          "in2   6  6  6  6  6\n"
+                          "out1  7  8  6 10  9\n"
+                          "out2  6  7  7 15 14\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+
 class TraceWithAdderBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
