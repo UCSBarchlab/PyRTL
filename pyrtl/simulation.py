@@ -272,7 +272,10 @@ class Simulation(object):
             raise PyrtlError('need to supply either input values or a number of steps to simulate')
 
         if len(provided_inputs) > 0:
-            msteps = len(list(provided_inputs.items())[0][1])
+            longest = sorted(list(provided_inputs.items()),
+                             key=lambda t: len(t[1]),
+                             reverse=True)[0]
+            msteps = len(longest[1])
             if nsteps:
                 if (nsteps > msteps):
                     raise PyrtlError('nsteps is specified but is greater than the '
@@ -601,7 +604,10 @@ class FastSimulation(object):
             raise PyrtlError('need to supply either input values or a number of steps to simulate')
 
         if len(provided_inputs) > 0:
-            msteps = len(list(provided_inputs.items())[0][1])
+            longest = sorted(list(provided_inputs.items()),
+                             key=lambda t: len(t[1]),
+                             reverse=True)[0]
+            msteps = len(longest[1])
             if nsteps:
                 if (nsteps > msteps):
                     raise PyrtlError('nsteps is specified but is greater than the '
