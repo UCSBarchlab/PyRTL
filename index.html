@@ -130,7 +130,7 @@ performance or optimization is the overarching goal.  Features include:</p>
 <div id="Adder" class="tabcontent">
   <p>The classic ripple-carry adder -- this function generates a ripple carry adder of abitrary length including both carry in and carry out.
     The full adder ("fa") takes 1-bit inputs and produces 1-bit outputs.  We iteratively generate full adders and link the carry in of each
-    new adder to the carry out of the prior.  A python dictory keeps track of the wires carrying the sum bits as we iterate through.  The final
+    new adder to the carry out of the prior.  A python dictionary keeps track of the wires carrying the sum bits as we iterate through.  The final
     sum is then just the concatination of the wires in that dictionary.</p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="21" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">fa</span><span class="hljs-params">(x, y, cin)</span>:</span>
