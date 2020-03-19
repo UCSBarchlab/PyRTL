@@ -216,49 +216,117 @@ class Simulation(object):
         # finally, if any of the rtl_assert assertions are failing then we should
         # raise the appropriate exceptions
         check_rtl_assertions(self)
-    
-    def step_multiple(self, provided_inputs, expected_outputs=None):
-        """ Take the simulation forward N cycles, where N is the number of values for each provided input.
+
+    def step_multiple(self, provided_inputs, expected_outputs=None, nsteps=None,
+                      file=sys.stdout, stop_after_first_error=False):
+        """ Take the simulation forward N cycles, where N is the number of values
+         for each provided input.
 
         :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
-        :param expected_outputs: a dictionary mapping wirevectors to their expected values for N steps
+        :param expected_outputs: a dictionary mapping wirevectors to their expected values
+            for N steps
+        :param nsteps: number of steps to take (defaults to None, meaning step for each
+            supplied input value)
+        :param file: where to write the output (if there are unexpected outputs detected)
+        :param stop_after_first_error: a boolean flag indicating whether to stop the simulation
+            after the step where the first errors are encountered (defaults to False)
 
         All input wires must be in the provided_inputs in order for the simulation
-        to accept these values. Additionally, the length of the array of provided values for each input
-        must be the same.
+        to accept these values. Additionally, the length of the array of provided values for each
+        input must be the same.
+
+        When 'nsteps' is specified, then it must be *less than or equal* to the number of values
+        supplied for each input when 'provided_inputs' is non-empty. When 'provided_inputs' is
+        empty (which may be a legitimate case for a design that takes no inputs), then 'nsteps'
+        will be used.  When 'nsteps' is not specified, then the simulation will take the number
+        of steps equal to the number of values supplied for each input.
 
         Example: if we have inputs named 'a' and 'b' and output 'o', we can call:
         sim.step_multiple({'a': [0,1], 'b': [23,32]}, {'o': [42, 43]}) to simulate 2 cycles,
-        where in the first cycle 'a' and 'b' take on 0 and 23, respectively, and 'o' is expected to have
-        the value 42, and in the second cycle 'a' and 'b' take on 1 and 32, respectively, and 'o' is expected
-        to have the value 43.
+        where in the first cycle 'a' and 'b' take on 0 and 23, respectively, and 'o' is expected to
+        have the value 42, and in the second cycle 'a' and 'b' take on 1 and 32, respectively, and
+        'o' is expected to have the value 43.
 
         If your values are all single digit, you can also specify them in a single string, e.g.
-        sim.step_multiple({'a': '01', 'b': '01'}) will simulate 2 cycles, with 'a' and 'b' taking on 0 and 0,
-        respectively, on the first cycle and '1' and '1', respectively, on the second cycle.
+        sim.step_multiple({'a': '01', 'b': '01'}) will simulate 2 cycles, with 'a' and 'b' taking on
+        0 and 0, respectively, on the first cycle and '1' and '1', respectively, on the second
+        cycle.
+
+        Example: if the design had no inputs, like so:
+
+            a = pyrtl.Register(8)
+            b = pyrtl.Output(8, 'b')
+
+            a.next <<= a + 1
+            b <<= a
+
+            sim = pyrtl.Simulation()
+            sim.step_multiple({}, steps=3)
+
+        Using sim.step_multiple(3) simulates 3 cycles, after which we would expect the value of 'b'
+        to be 2.
+
         """
-        if len(provided_inputs) == 0:
-            return
-        
-        if len(list(provided_inputs.items())[0]) < 2:
-            raise PyrtlError('no input values supplied for wire "%s"' % (provided_inputs.items()[0][0]))
 
-        nsteps = len(list(provided_inputs.items())[0][1])
+        if not nsteps and len(provided_inputs) == 0:
+            raise PyrtlError('need to supply either input values or a number of steps to simulate')
 
-        if list(filter(lambda l: len(l) != nsteps, provided_inputs.values())):
-            raise PyrtlError("must supply a value for each provided wire for each step of simulation")
+        if len(provided_inputs) > 0:
+            longest = sorted(list(provided_inputs.items()),
+                             key=lambda t: len(t[1]),
+                             reverse=True)[0]
+            msteps = len(longest[1])
+            if nsteps:
+                if (nsteps > msteps):
+                    raise PyrtlError('nsteps is specified but is greater than the '
+                                     'number of values supplied for each input')
+            else:
+                nsteps = msteps
 
-        if expected_outputs and list(filter(lambda l: len(l) != nsteps, expected_outputs.values())):
-            raise PyrtlError("any expected outputs must have a supplied value each step of simulation")
+        if nsteps < 1:
+            raise PyrtlError("must simulate at least one step")
 
+        if list(filter(lambda l: len(l) < nsteps, provided_inputs.values())):
+            raise PyrtlError(
+                "must supply a value for each provided wire "
+                "for each step of simulation")
+
+        if expected_outputs and list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
+            raise PyrtlError(
+                "any expected outputs must have a supplied value "
+                "each step of simulation")
+
+        failed = []
         for i in range(nsteps):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
             if expected_outputs is not None:
                 for expvar in expected_outputs.keys():
-                    assert(int(expected_outputs[expvar][i] == self.inspect(expvar)),
-                        "%s: expected %d != actual %d" % (expvar, int(expected_outputs[expvar][i]), self.inspect(expvar)))
+                    expected = int(expected_outputs[expvar][i])
+                    actual = self.inspect(expvar)
+                    if expected != actual:
+                        failed.append((i, expvar, expected, actual))
 
+            if failed and stop_after_first_error:
+                break
+
+        if failed:
+            if stop_after_first_error:
+                s = "(stopped after step with first error):"
+            else:
+                s = "on one or more steps:"
+            file.write("Unexpected output " + s + "\n")
+            file.write("{0:>5} {1:>10} {2:>8} {3:>8}\n"
+                       .format("step", "name", "expected", "actual"))
+
+            def _sort_tuple(t):
+                # Sort by step and then wire name
+                return (t[0], _trace_sort_key(t[1]))
+
+            failed_sorted = sorted(failed, key=_sort_tuple)
+            for (step, name, expected, actual) in failed_sorted:
+                file.write("{0:>5} {1:>10} {2:>8} {3:>8}\n".format(step, name, expected, actual))
+            file.flush()
 
     def inspect(self, w):
         """ Get the value of a wirevector in the last simulation cycle.
@@ -480,6 +548,117 @@ class FastSimulation(object):
 
         # check the rtl assertions
         check_rtl_assertions(self)
+
+    def step_multiple(self, provided_inputs, expected_outputs=None, nsteps=None,
+                      file=sys.stdout, stop_after_first_error=False):
+        """ Take the simulation forward N cycles, where N is the number of values
+         for each provided input.
+
+        :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
+        :param expected_outputs: a dictionary mapping wirevectors to their expected values
+            for N steps
+        :param nsteps: number of steps to take (defaults to None, meaning step for each
+            supplied input value)
+        :param file: where to write the output (if there are unexpected outputs detected)
+        :param stop_after_first_error: a boolean flag indicating whether to stop the simulation
+            after the step where the first errors are encountered (defaults to False)
+
+        All input wires must be in the provided_inputs in order for the simulation
+        to accept these values. Additionally, the length of the array of provided values for each
+        input must be the same.
+
+        When 'nsteps' is specified, then it must be *less than or equal* to the number of values
+        supplied for each input when 'provided_inputs' is non-empty. When 'provided_inputs' is
+        empty (which may be a legitimate case for a design that takes no inputs), then 'nsteps'
+        will be used.  When 'nsteps' is not specified, then the simulation will take the number
+        of steps equal to the number of values supplied for each input.
+
+        Example: if we have inputs named 'a' and 'b' and output 'o', we can call:
+        sim.step_multiple({'a': [0,1], 'b': [23,32]}, {'o': [42, 43]}) to simulate 2 cycles,
+        where in the first cycle 'a' and 'b' take on 0 and 23, respectively, and 'o' is expected to
+        have the value 42, and in the second cycle 'a' and 'b' take on 1 and 32, respectively, and
+        'o' is expected to have the value 43.
+
+        If your values are all single digit, you can also specify them in a single string, e.g.
+        sim.step_multiple({'a': '01', 'b': '01'}) will simulate 2 cycles, with 'a' and 'b' taking on
+        0 and 0, respectively, on the first cycle and '1' and '1', respectively, on the second
+        cycle.
+
+        Example: if the design had no inputs, like so:
+
+            a = pyrtl.Register(8)
+            b = pyrtl.Output(8, 'b')
+
+            a.next <<= a + 1
+            b <<= a
+
+            sim = pyrtl.Simulation()
+            sim.step_multiple({}, steps=3)
+
+        Using sim.step_multiple(3) simulates 3 cycles, after which we would expect the value of 'b'
+        to be 2.
+
+        """
+
+        if not nsteps and len(provided_inputs) == 0:
+            raise PyrtlError('need to supply either input values or a number of steps to simulate')
+
+        if len(provided_inputs) > 0:
+            longest = sorted(list(provided_inputs.items()),
+                             key=lambda t: len(t[1]),
+                             reverse=True)[0]
+            msteps = len(longest[1])
+            if nsteps:
+                if (nsteps > msteps):
+                    raise PyrtlError('nsteps is specified but is greater than the '
+                                     'number of values supplied for each input')
+            else:
+                nsteps = msteps
+
+        if nsteps < 1:
+            raise PyrtlError("must simulate at least one step")
+
+        if list(filter(lambda l: len(l) < nsteps, provided_inputs.values())):
+            raise PyrtlError(
+                "must supply a value for each provided wire "
+                "for each step of simulation")
+
+        if expected_outputs and list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
+            raise PyrtlError(
+                "any expected outputs must have a supplied value "
+                "each step of simulation")
+
+        failed = []
+        for i in range(nsteps):
+            self.step({w: int(v[i]) for w, v in provided_inputs.items()})
+
+            if expected_outputs is not None:
+                for expvar in expected_outputs.keys():
+                    expected = int(expected_outputs[expvar][i])
+                    actual = self.inspect(expvar)
+                    if expected != actual:
+                        failed.append((i, expvar, expected, actual))
+
+            if failed and stop_after_first_error:
+                break
+
+        if failed:
+            if stop_after_first_error:
+                s = "(stopped after step with first error):"
+            else:
+                s = "on one or more steps:"
+            file.write("Unexpected output " + s + "\n")
+            file.write("{0:>5} {1:>10} {2:>8} {3:>8}\n"
+                       .format("step", "name", "expected", "actual"))
+
+            def _sort_tuple(t):
+                # Sort by step and then wire name
+                return (t[0], _trace_sort_key(t[1]))
+
+            failed_sorted = sorted(failed, key=_sort_tuple)
+            for (step, name, expected, actual) in failed_sorted:
+                file.write("{0:>5} {1:>10} {2:>8} {3:>8}\n".format(step, name, expected, actual))
+            file.flush()
 
     def inspect(self, w):
         """ Get the value of a wirevector in the last simulation cycle.
