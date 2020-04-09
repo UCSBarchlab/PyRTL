@@ -302,6 +302,57 @@ class SimInputValidationBase(unittest.TestCase):
             sim_trace = pyrtl.SimulationTrace()
 
 
+class SimStepExternal(unittest.TestCase):
+
+    """ Function for testing with """
+    @staticmethod
+    @pyrtl.simulation.external('mem')
+    def special_memory(read_addr, write_addr, data, wen):
+        mem = pyrtl.MemBlock(bitwidth=32, addrwidth=5)
+        mem[write_addr] <<= pyrtl.MemBlock.EnabledWrite(data, wen & (write_addr > 0))
+        return mem[read_addr]
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_step_with_externalized_mem(self):
+        read_addr = pyrtl.Input(5, 'read_addr')
+        write_addr = pyrtl.Input(5, 'write_addr')
+        data = pyrtl.Input(32, 'data')
+        wen = pyrtl.Input(1, 'wen')
+        res = pyrtl.Output(32, 'res')
+
+        res <<= SimStepExternal.special_memory(read_addr, write_addr, data, wen)
+        sim = pyrtl.Simulation(memory_value_map={
+            SimStepExternal.special_memory.mem: {
+                0: 5,
+                1: 6,
+                2: 7,
+                3: 8,
+            }
+        })
+
+        inputs = {
+            'read_addr':  '012012',
+            'write_addr': '012012',
+            'data':       '890333',
+            'wen':        '111000',
+        }
+        expected = {
+            'res': '567590',
+        }
+
+        # This should not fail
+        sim.step_multiple(inputs, expected)
+
+        # Let's check the memory contents too
+        mem_map = sim.inspect_mem(SimStepExternal.special_memory)
+        self.assertEqual(mem_map[0], 5)
+        self.assertEqual(mem_map[1], 9)
+        self.assertEqual(mem_map[2], 0)
+        self.assertEqual(mem_map[3], 8)
+
+
 class SimStepMultipleBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

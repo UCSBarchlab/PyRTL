@@ -1213,3 +1213,93 @@ class SimulationTrace(object):
             print(formatted_trace_line(w, self.trace[w]), file=file)
         if extra_line:
             print(file=file)
+
+def _call_function_get_frame(func, *args, **kwargs):
+    """
+    Calls the function *func* with the specified arguments and keyword
+    arguments and snatches its local frame before it actually executes.
+
+    Based off of https://stackoverflow.com/a/52358426/850935.
+    """
+
+    frame = None
+    trace = sys.gettrace()
+
+    def snatch_locals(_frame, name, *_unused_arg):
+        nonlocal frame
+        if frame is None and name == 'call':
+            frame = _frame
+        sys.settrace(trace)
+        return trace
+
+    sys.settrace(snatch_locals)
+    try:
+        result = func(*args, **kwargs)
+    finally:
+        sys.settrace(trace)
+    return frame, result
+
+def external(*args):
+    """ Function decorator to allow certain local variables (normally memories) to be externalized
+        for easy access. Prefix a function definition with `@external('var1', 'var2', ...)``.
+
+        The motivation for this was when a block defines its own internal memory
+        block, and during simulation you want to instantiate that memory with certain values
+        for testing. Since the Simulation constructor requires a reference to the
+        memory object itself, but the block your testing defines the memory internally,
+        it's not possible get it without making that local variable an attribute of
+        the function. This decorator does this automagically for you.
+
+        Example:
+            import pyrtl
+            from pyrtl.simulation import external
+
+            @external('mem')
+            def special_memory(read_addr, write_addr, data, wen):
+                mem = pyrtl.MemBlock(bitwidth=32, addrwidth=5)
+                mem[write_addr] <<= pyrtl.MemBlock.EnabledWrite(data, wen & (write_addr > 0))
+                return mem[read_addr]
+
+            read_addr = pyrtl.Input(5, 'read_addr')
+            write_addr = pyrtl.Input(5, 'write_addr')
+            data = pyrtl.Input(32, 'data')
+            wen = pyrtl.Input(1, 'wen')
+            res = pyrtl.Output(32, 'res')
+
+            res <<= special_memory(read_addr, write_addr, data, wen)
+            sim = pyrtl.Simulation(memory_value_map={
+                special_memory.mem: {
+                    0: 5,
+                    1: 6,
+                    2: 7,
+                }
+            })
+
+            inputs = {
+                'read_addr':  '012012',
+                'write_addr': '012012',
+                'data':       '890333',
+                'wen':        '111000',
+            }
+            expected = {
+                'res': '567590',
+            }
+            sim.step_multiple(inputs, expected)
+    """
+    def namespace_decorator(func):
+        def wrapper(*fargs, **fkwargs):
+            frame, result = _call_function_get_frame(func, *fargs, *fkwargs)
+            try:
+                if args:
+                    # Only save specified
+                    for var in args:
+                        if var in frame.f_locals:
+                            setattr(wrapper, var, frame.f_locals[var])
+                else:
+                    # Save them all
+                    wrapper.__dict__.update(frame.f_locals)
+                return result
+            finally:
+                del frame
+        return wrapper
+    return namespace_decorator
