@@ -94,7 +94,7 @@ class TestBlock(unittest.TestCase):
         pyrtl.reset_working_block()
         block = pyrtl.working_block()
         with self.assertRaises(KeyError):
-            _ = block.get_mem_block_by_name['bad_mem']
+            _ = block.get_mem_block_by_name('bad_mem')
 
 
 class TestSanityCheckNet(unittest.TestCase):

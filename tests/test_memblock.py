@@ -94,7 +94,7 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         mem_name = 'small_memory'
         small_memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
                                       name=mem_name, max_read_ports=2, max_write_ports=1)
-        self.assertIs(pyrtl.working_block().get_mem_block_by_name[mem_name], small_memory)
+        self.assertIs(pyrtl.working_block().get_mem_block_by_name(mem_name), small_memory)
 
 
 class MemIndexedTests(unittest.TestCase):
