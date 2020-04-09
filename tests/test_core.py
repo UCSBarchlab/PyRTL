@@ -85,6 +85,17 @@ class TestBlock(unittest.TestCase):
         for net in block.logic:
             print(net)
 
+    def test_no_mem_blocks(self):
+        pyrtl.reset_working_block()
+        block = pyrtl.working_block()
+        self.assertFalse(block.mem_blocks)
+
+    def test_bad_mem_block_name(self):
+        pyrtl.reset_working_block()
+        block = pyrtl.working_block()
+        with self.assertRaises(KeyError):
+            _ = block.get_mem_block_by_name['bad_mem']
+
 
 class TestSanityCheckNet(unittest.TestCase):
     def setUp(self):

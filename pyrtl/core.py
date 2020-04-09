@@ -262,6 +262,7 @@ class Block(object):
         # pre-synthesis wirevectors to post-synthesis vectors
         self.legal_ops = set('w~&|^n+-*<>=xcsrm@')  # set of legal OPS
         self.rtl_assert_dict = {}   # map from wirevectors -> exceptions, used by rtl_assert
+        self.mem_blocks = {}
 
     def __str__(self):
         """String form has one LogicNet per line."""
@@ -296,6 +297,65 @@ class Block(object):
 
         self.sanity_check_net(net)
         self.logic.add(net)
+
+    def _add_mem_block(self, mem):
+        """ Registers a memory to the block (done automatically when a memory block is created).
+
+        This is so non-local memories can be accessed later on
+        (e.g. for instantiating during a simulation).
+        """
+        self.mem_blocks[mem.name] = mem
+
+    def get_mem_block_by_name(self, name):
+        """ Get a reference to a memory stored in this block by name.
+
+        This useful for when a block defines its own internal memory block, and
+        during simulation you want to instantiate that memory with certain values
+        for testing. Since the Simulation constructor requires a reference to the
+        memory object itself, but the block your testing defines the memory internally,
+        this allows you to get the object reference.
+
+        Note that this requires you know the name of the memory block, meaning that
+        you most likely need to have named it yourself.
+
+        For example:
+
+            def special_memory(read_addr, write_addr, data, wen):
+                mem = pyrtl.MemBlock(bitwidth=32, addrwidth=5, name='special_mem')
+                mem[write_addr] <<= pyrtl.MemBlock.EnabledWrite(data, wen & (write_addr > 0))
+                return mem[read_addr]
+
+            read_addr = pyrtl.Input(5, 'read_addr')
+            write_addr = pyrtl.Input(5, 'write_addr')
+            data = pyrtl.Input(32, 'data')
+            wen = pyrtl.Input(1, 'wen')
+            res = pyrtl.Output(32, 'res')
+
+            res <<= special_memory(read_addr, write_addr, data, wen)
+
+            # Can only access it after the `special_memory` block has been instantiated/called
+            special_mem = pyrtl.working_block().get_mem_block_by_name('special_mem')
+
+            sim = pyrtl.Simulation(memory_value_map={
+                special_mem: {
+                    0: 5,
+                    1: 6,
+                    2: 7,
+                }
+            })
+
+            inputs = {
+                'read_addr':  '012012',
+                'write_addr': '012012',
+                'data':       '890333',
+                'wen':        '111000',
+            }
+            expected = {
+                'res': '567590',
+            }
+            sim.step_multiple(inputs, expected)
+        """
+        return self.mem_blocks[name]
 
     def wirevector_subset(self, cls=None, exclude=tuple()):
         """Return set of wirevectors, filtered by the type or tuple of types provided as cls.
