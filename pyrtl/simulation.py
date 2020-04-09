@@ -1214,6 +1214,7 @@ class SimulationTrace(object):
         if extra_line:
             print(file=file)
 
+
 def _call_function_get_frame(func, *args, **kwargs):
     """
     Calls the function *func* with the specified arguments and keyword
@@ -1222,13 +1223,23 @@ def _call_function_get_frame(func, *args, **kwargs):
     Based off of https://stackoverflow.com/a/52358426/850935.
     """
 
-    frame = None
+    # Python 2 can't rebind non-locals, so instead of using the better form
+    #
+    #   frame = None
+    #
+    # here and then
+    #
+    #   nonlocal frame
+    #
+    # in `snatch_locals` below, you need to put it in a dictionary
+    # (since you __can__ mutate the objects nonlocal vars refer to)
+
+    d = {'frame': None}
     trace = sys.gettrace()
 
     def snatch_locals(_frame, name, *_unused_arg):
-        nonlocal frame
-        if frame is None and name == 'call':
-            frame = _frame
+        if d['frame'] is None and name == 'call':
+            d['frame'] = _frame
         sys.settrace(trace)
         return trace
 
@@ -1237,7 +1248,8 @@ def _call_function_get_frame(func, *args, **kwargs):
         result = func(*args, **kwargs)
     finally:
         sys.settrace(trace)
-    return frame, result
+    return d['frame'], result
+
 
 def external(*args):
     """ Function decorator to allow certain local variables (normally memories) to be externalized
@@ -1288,7 +1300,7 @@ def external(*args):
     """
     def namespace_decorator(func):
         def wrapper(*fargs, **fkwargs):
-            frame, result = _call_function_get_frame(func, *fargs, *fkwargs)
+            frame, result = _call_function_get_frame(func, *fargs, **fkwargs)
             try:
                 if args:
                     # Only save specified
