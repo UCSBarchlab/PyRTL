@@ -597,14 +597,6 @@ class Const(WireVector):
             "aka they cannot have other wires driving it"
             % str(self.name))
 
-class Bit(WireVector):
-    """ A WireVector of length 1
-
-    A convenience class that is equivalent to doing WireVector(bitwidth=1).
-    """
-
-    def __init__(self, name='', block=None):
-        super(Bit, self).__init__(1, name, block)
 
 class Register(WireVector):
     """ A WireVector with a register state element embedded.
