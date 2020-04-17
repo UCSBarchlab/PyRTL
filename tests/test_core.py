@@ -87,7 +87,7 @@ class TestBlock(unittest.TestCase):
 
     def test_no_memblocks(self):
         block = pyrtl.working_block()
-        self.assertFalse(block.memblocks_by_name)
+        self.assertFalse(block.memblock_by_name)
 
     def test_bad_memblock_name_strict(self):
         block = pyrtl.working_block()
