@@ -262,7 +262,7 @@ class Block(object):
         # pre-synthesis wirevectors to post-synthesis vectors
         self.legal_ops = set('w~&|^n+-*<>=xcsrm@')  # set of legal OPS
         self.rtl_assert_dict = {}   # map from wirevectors -> exceptions, used by rtl_assert
-        self.mem_blocks = {}
+        self.memblocks_by_name = {}  # map from name->memblock, for easy access to memblock objs
 
     def __str__(self):
         """String form has one LogicNet per line."""
@@ -298,16 +298,23 @@ class Block(object):
         self.sanity_check_net(net)
         self.logic.add(net)
 
-    def _add_mem_block(self, mem):
-        """ Registers a memory to the block (done automatically when a memory block is created).
+    def _add_memblock(self, mem):
+        """ Registers a memory to the block.
 
+        Note that this is done automatically when a memory block is
+        created and isn't intended for use by PyRTL end users.
         This is so non-local memories can be accessed later on
         (e.g. for instantiating during a simulation).
         """
-        self.mem_blocks[mem.name] = mem
+        self.sanity_check_memblock(mem)
+        self.memblocks_by_name[mem.name] = mem
 
-    def get_mem_block_by_name(self, name):
+    def get_memblock_by_name(self, name, strict=False):
         """ Get a reference to a memory stored in this block by name.
+
+        By fallthrough, if a matching memblock cannot be found the value None is
+        returned.  However, if the argument strict is set to True, then this will
+        instead throw a PyrtlError when no match is found.
 
         This useful for when a block defines its own internal memory block, and
         during simulation you want to instantiate that memory with certain values
@@ -334,7 +341,7 @@ class Block(object):
             res <<= special_memory(read_addr, write_addr, data, wen)
 
             # Can only access it after the `special_memory` block has been instantiated/called
-            special_mem = pyrtl.working_block().get_mem_block_by_name('special_mem')
+            special_mem = pyrtl.working_block().get_memblock_by_name('special_mem')
 
             sim = pyrtl.Simulation(memory_value_map={
                 special_mem: {
@@ -355,7 +362,12 @@ class Block(object):
             }
             sim.step_multiple(inputs, expected)
         """
-        return self.mem_blocks[name]
+        if name in self.memblocks_by_name:
+            return self.memblocks_by_name[name]
+        elif strict:
+            raise PyrtlError('error, block does not have a memblock named %s' % name)
+        else:
+            return None
 
     def wirevector_subset(self, cls=None, exclude=tuple()):
         """Return set of wirevectors, filtered by the type or tuple of types provided as cls.
@@ -600,6 +612,14 @@ class Block(object):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
                 'instead of WireVector' % type(w))
+
+    def sanity_check_memblock(self, m):
+        """ Check that m is a valid memblock type. """
+        from .memory import _MemReadBase
+        if not isinstance(m, _MemReadBase):
+            raise PyrtlError(
+                'error attempting to pass an input of type "%s" '
+                'instead of _MemReadBase' % type(m))
 
     def sanity_check_net(self, net):
         """ Check that net is a valid LogicNet. """
