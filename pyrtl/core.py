@@ -262,7 +262,7 @@ class Block(object):
         # pre-synthesis wirevectors to post-synthesis vectors
         self.legal_ops = set('w~&|^n+-*<>=xcsrm@')  # set of legal OPS
         self.rtl_assert_dict = {}   # map from wirevectors -> exceptions, used by rtl_assert
-        self.memblocks_by_name = {}  # map from name->memblock, for easy access to memblock objs
+        self.memblock_by_name = {}  # map from name->memblock, for easy access to memblock objs
 
     def __str__(self):
         """String form has one LogicNet per line."""
@@ -307,7 +307,7 @@ class Block(object):
         (e.g. for instantiating during a simulation).
         """
         self.sanity_check_memblock(mem)
-        self.memblocks_by_name[mem.name] = mem
+        self.memblock_by_name[mem.name] = mem
 
     def get_memblock_by_name(self, name, strict=False):
         """ Get a reference to a memory stored in this block by name.
@@ -362,8 +362,8 @@ class Block(object):
             }
             sim.step_multiple(inputs, expected)
         """
-        if name in self.memblocks_by_name:
-            return self.memblocks_by_name[name]
+        if name in self.memblock_by_name:
+            return self.memblock_by_name[name]
         elif strict:
             raise PyrtlError('error, block does not have a memblock named %s' % name)
         else:
