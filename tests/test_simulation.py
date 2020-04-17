@@ -322,7 +322,7 @@ class SimStepAccessInternalMemoryBase(unittest.TestCase):
         res <<= special_memory(read_addr, write_addr, data, wen)
 
         # Can only access it after the `special_memory` block has been instantiated/called
-        special_mem = pyrtl.working_block().get_mem_block_by_name('special_mem')
+        special_mem = pyrtl.working_block().get_memblock_by_name('special_mem')
 
         sim = self.sim(memory_value_map={
             special_mem: {

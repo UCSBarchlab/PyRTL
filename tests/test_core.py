@@ -89,10 +89,15 @@ class TestBlock(unittest.TestCase):
         block = pyrtl.working_block()
         self.assertFalse(block.memblocks_by_name)
 
-    def test_bad_memblock_name(self):
+    def test_bad_memblock_name_strict(self):
         block = pyrtl.working_block()
-        with self.assertRaises(KeyError):
-            _ = block.get_mem_block_by_name('bad_mem')
+        with self.assertRaises(pyrtl.PyrtlError):
+            _ = block.get_memblock_by_name('bad_mem', strict=True)
+
+    def test_bad_memblock_name_none(self):
+        block = pyrtl.working_block()
+        mem = block.get_memblock_by_name('bad_mem')
+        self.assertIsNone(mem)
 
     def test_same_memblock_referenced_across_multiple_operators(self):
         mem_name = 'mem'
