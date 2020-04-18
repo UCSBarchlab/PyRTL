@@ -105,6 +105,7 @@ class _MemReadBase(object):
         self.readport_nets = []
         self.id = _memIndex.next_index()
         self.asynchronous = asynchronous
+        self.block._add_memblock(self)
 
     def __getitem__(self, item):
         """ Builds circuitry to retrieve an item from the memory """

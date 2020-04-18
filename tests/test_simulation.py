@@ -301,6 +301,57 @@ class SimInputValidationBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             sim_trace = pyrtl.SimulationTrace()
 
+class SimStepAccessInternalMemoryBase(unittest.TestCase):
+
+     def setUp(self):
+        pyrtl.reset_working_block()
+
+     def test_step_with_internal_memory(self):
+
+        def special_memory(read_addr, write_addr, data, wen):
+            mem = pyrtl.MemBlock(bitwidth=32, addrwidth=5, name='special_mem')
+            mem[write_addr] <<= pyrtl.MemBlock.EnabledWrite(data, wen & (write_addr > 0))
+            return mem[read_addr]
+
+        read_addr = pyrtl.Input(5, 'read_addr')
+        write_addr = pyrtl.Input(5, 'write_addr')
+        data = pyrtl.Input(32, 'data')
+        wen = pyrtl.Input(1, 'wen')
+        res = pyrtl.Output(32, 'res')
+
+        res <<= special_memory(read_addr, write_addr, data, wen)
+
+        # Can only access it after the `special_memory` block has been instantiated/called
+        special_mem = pyrtl.working_block().get_memblock_by_name('special_mem')
+
+        sim = self.sim(memory_value_map={
+            special_mem: {
+                0: 5,
+                1: 6,
+                2: 7,
+                3: 8,
+            }
+        })
+
+        inputs = {
+            'read_addr':  '012012',
+            'write_addr': '012012',
+            'data':       '890333',
+            'wen':        '111000',
+        }
+        expected = {
+            'res': '567590',
+        }
+        # This should not fail
+        sim.step_multiple(inputs, expected)
+
+         # Let's check the memory contents too
+        mem_map = sim.inspect_mem(special_mem)
+        self.assertEqual(mem_map[0], 5)
+        self.assertEqual(mem_map[1], 9)
+        self.assertEqual(mem_map[2], 0)
+        self.assertEqual(mem_map[3], 8)
+
 
 class SimStepMultipleBase(unittest.TestCase):
     def setUp(self):

@@ -90,6 +90,16 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             lim_memory[self.mem_write_address] <<= pyrtl.Const(6)
 
+    def test_memblock_added_user_named(self):
+        mem_name = 'small_memory'
+        small_memory = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
+                                      name=mem_name, max_read_ports=2, max_write_ports=1)
+        self.assertIs(pyrtl.working_block().get_memblock_by_name(mem_name), small_memory)
+
+    def test_memblock_added_default_named(self):
+        mem = pyrtl.MemBlock(32, 8)
+        self.assertIs(pyrtl.working_block().get_memblock_by_name(mem.name), mem)
+
 
 class MemIndexedTests(unittest.TestCase):
     def setUp(self):
