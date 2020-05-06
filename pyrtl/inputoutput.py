@@ -13,7 +13,7 @@ import collections
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, _NameSanitizer
 from .wire import WireVector, Input, Output, Const, Register
-from .corecircuits import concat
+from .corecircuits import concat_list
 from .memory import RomBlock
 
 
@@ -131,7 +131,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
                     bit_name = output_name + '[' + str(i) + ']'
                     bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_list.append(bit_wire)
-                wire_out <<= concat(*bit_list)
+                wire_out <<= concat_list(bit_list)
 
     def extract_commands(model):
         # for each "command" (dff or net) in the model
