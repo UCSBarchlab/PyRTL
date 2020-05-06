@@ -2,6 +2,7 @@ import unittest
 import random
 import io
 import pyrtl
+import six
 from pyrtl import inputoutput
 from pyrtl import verilog
 
@@ -222,6 +223,14 @@ class TestInputFromBlif(unittest.TestCase):
             'count': [0] + list(range(0, 16)) + list(range(0, 4))
         }
         sim.step_multiple(inputs, expected)
+
+        correct_output = ("  --- Values in base 10 ---\n"
+                          "count  0  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15  0  1  2  3\n"
+                          "en     1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1\n"
+                          "rst    1  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
 
 
 class TestOutputGraphs(unittest.TestCase):
