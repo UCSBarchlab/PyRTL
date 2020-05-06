@@ -26,7 +26,7 @@ def output_to_verilog(dest_file, block=None):
 
     block = working_block(block)
     file = dest_file
-    internal_names = _VerilogSanitizer('_verout_tmp_')
+    internal_names = _VerilogSanitizer('_ver_out_tmp_')
 
     for wire in block.wirevector_set:
         internal_names.make_valid_string(wire.name)
@@ -243,14 +243,16 @@ def _to_verilog_footer(file):
 #    |  |___ .__/  |  |__) |___ | \| \__, |  |
 #
 
-def output_verilog_testbench(dest_file, simulation_trace=None, vcd="waveform.vcd",
-                             cmd=None, block=None):
-    """Output a verilog testbanch for the block/inputs used in the simulation trace.
+def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=None,
+                             vcd="waveform.vcd", cmd=None, block=None):
+    """Output a Verilog testbench for the block/inputs used in the simulation trace.
 
     :param dest_file: an open file to which the test bench will be printed.
     :param simulation_trace: a simulation trace from which the inputs will be extracted
         for inclusion in the test bench.  The test bench generated will just replay the
         inputs played to the simulation cycle by cycle.
+    :param toplevel_include: name of the file containing the toplevel module this testbench
+        is testing.  If not None, an '`include' directive will be added to the top.
     :param vcd: By default the testbench generator will include a command in the testbench
         to write the output of the testbench execution to a .vcd file (via $dumpfile), and
         this parameter is the string of the name of the file to use.  If None is specified
@@ -282,6 +284,11 @@ def output_verilog_testbench(dest_file, simulation_trace=None, vcd="waveform.vcd
     ver_name = _VerilogSanitizer('_ver_out_tmp_')
     for wire in block.wirevector_set:
         ver_name.make_valid_string(wire.name)
+
+    # Output an include, if given
+    if toplevel_include:
+        print('`include "{:s}"'.format(toplevel_include), file=dest_file)
+        print('', file=dest_file)
 
     # Output header
     print('module tb();', file=dest_file)
