@@ -34,7 +34,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
     import pyparsing
     import six
     from pyparsing import (Word, Literal, OneOrMore, ZeroOrMore,
-                           Suppress, Group, Keyword)
+                           Suppress, Group, Keyword, Optional, oneOf)
 
     block = working_block(block)
 
@@ -81,11 +81,14 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
     dffas_def = Group(SKeyword('.subckt') + dffas_keyword + dffas_formal)('dffas_def')
 
     # synchronous Flip-flop
+    dffs_init_val = Optional(oneOf("0 1 2 3"), default=Literal("0"))
+    # TODO I think <type> and <control> ('re' and 'C') below are technically optional too
     dffs_def = Group(SKeyword('.latch') +
                      signal_id('D') +
                      signal_id('Q') +
                      SLiteral('re') +
-                     signal_id('C'))('dffs_def')
+                     signal_id('C') +
+                     dffs_init_val('I'))('dffs_def')
     command_def = name_def | dffas_def | dffs_def
     command_list = Group(OneOrMore(command_def))('command_list')
 
@@ -198,6 +201,13 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         flop = Register(bitwidth=1, name=regname)
         flop.next <<= twire(command['D'])
         flop_output = twire(command['Q'])
+        init_val = command['I']
+        if init_val == "1":
+            # e.g. in Verilog: `initial reg <= 1;`
+            raise PyrtlError("Initializing latches to 1 is not supported. "
+                              "Acceptable values are: 0, 2 (don't care), and 3 (unknown); in any case, "
+                              "PyRTL will ensure all stateful elements come up 0. "
+                              "For finer control over the initial value, use specialized reset logic.")
         flop_output <<= flop
 
     for model in result:
