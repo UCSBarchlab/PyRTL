@@ -155,7 +155,10 @@ class TestInputFromBlif(unittest.TestCase):
 
     def test_combo_blif_input_has_correct_io_interface(self):
         pyrtl.input_from_blif(full_adder_blif)
-        x, y, cin, sumw, cout, bad = [pyrtl.working_block().get_wirevector_by_name(s) for s in ['x', 'y', 'cin', 'sum', 'cout', 'bad']]
+        x, y, cin, sumw, cout, bad = [
+            pyrtl.working_block().get_wirevector_by_name(s)
+            for s in ['x', 'y', 'cin', 'sum', 'cout', 'bad']
+        ]
         self.assertIsNotNone(x)
         self.assertIsNotNone(y)
         self.assertIsNotNone(cin)
@@ -177,7 +180,10 @@ class TestInputFromBlif(unittest.TestCase):
 
     def test_sequential_blif_input_has_correct_io_interface(self):
         pyrtl.input_from_blif(state_machine_blif)
-        inw, reset, out = [pyrtl.working_block().get_wirevector_by_name(s) for s in ['in', 'reset', 'out']]
+        inw, reset, out = [
+            pyrtl.working_block().get_wirevector_by_name(s)
+            for s in ['in', 'reset', 'out']
+        ]
         self.assertIsNotNone(inw)
         self.assertIsNotNone(reset)
         self.assertIsNotNone(out)
@@ -189,10 +195,13 @@ class TestInputFromBlif(unittest.TestCase):
         self.assertIn(reset, io_input)
         io_output = pyrtl.working_block().wirevector_subset(pyrtl.Output)
         self.assertIn(out, io_output)
-    
+
     def test_sequential_blif_input_has_correct_io_interface_counter(self):
         pyrtl.input_from_blif(counter4bit_blif)
-        rst, en, count = [pyrtl.working_block().get_wirevector_by_name(s) for s in ['rst', 'en', 'count']]
+        rst, en, count = [
+            pyrtl.working_block().get_wirevector_by_name(s)
+            for s in ['rst', 'en', 'count']
+        ]
         self.assertIsNotNone(rst)
         self.assertIsNotNone(en)
         self.assertIsNotNone(count)
@@ -204,13 +213,14 @@ class TestInputFromBlif(unittest.TestCase):
         self.assertIn(en, io_input)
         io_output = pyrtl.working_block().wirevector_subset(pyrtl.Output)
         self.assertIn(count, io_output)
-    
+
     def test_blif_input_simulates_correctly_with_merged_outputs(self):
-        # The 'counter_blif' string contains a model of a standard 4-bit synchronous-reset counter with enable.
-        # In particular, the model has 4 1-bit outputs named "count[0]", "count[1]", "count[2]", and "count[3]".
-        # The internal PyRTL representation will by default convert these related 1-bit wires into a single
-        # 4-bit wire called "count". This test simulates the design and, among other things, ensures that
-        # this output wire conversion occurred correctly.
+        # The 'counter_blif' string contains a model of a standard 4-bit synchronous-reset
+        # counter with enable. In particular, the model has 4 1-bit outputs named "count[0]",
+        # "count[1]", "count[2]", and "count[3]". The internal PyRTL representation will by
+        # default convert these related 1-bit wires into a single 4-bit wire called "count".
+        # This test simulates the design and, among other things, ensures that this output
+        # wire conversion occurred correctly.
         pyrtl.input_from_blif(counter4bit_blif)
         io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
         sim_trace = pyrtl.SimulationTrace(wires_to_track=io_vectors)
@@ -340,7 +350,7 @@ class TestVerilog(unittest.TestCase):
         a = pyrtl.Input(bitwidth=3, name='a')
         b = pyrtl.Input(bitwidth=3, name='b')
         o = pyrtl.Output(bitwidth=3, name='o')
-        res = _basic_add(a,b)
+        res = _basic_add(a, b)
         rdat = {0: 1, 1: 2, 2: 5, 5: 0}
         mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, pad_with_zeros=True, romdata=rdat)
         o <<= mixtable[res[:-1]]
@@ -363,7 +373,6 @@ class TestOutputIPynb(unittest.TestCase):
         a, b, c = pyrtl.Input(1, 'a'), pyrtl.Input(1, 'b'), pyrtl.Input(1, 'c')
         sum, carry_out = pyrtl.Output(1, 'sum'), pyrtl.Output(1, 'carry_out')
 
-
         sum <<= a ^ b ^ c
 
         temp1 <<= a & b  # connect the result of a & b to the pre-allocated wirevector
@@ -380,7 +389,7 @@ class TestOutputIPynb(unittest.TestCase):
                 'c': random.choice([0, 1])
                 })
 
-        htmlstring = inputoutput.trace_to_html(sim_trace) # tests if it compiles or not
+        htmlstring = inputoutput.trace_to_html(sim_trace)  # tests if it compiles or not
 
 
 if __name__ == "__main__":
