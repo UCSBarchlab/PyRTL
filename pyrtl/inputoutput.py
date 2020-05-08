@@ -23,7 +23,7 @@ from .memory import RomBlock
 #    | | \| |    \__/  |
 
 
-def input_from_blif(blif, block=None, merge_io_vectors=True):
+def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
     """ Read an open blif file or string as input, updating the block appropriately
 
     Assumes the blif has been flattened and their is only a single module.
@@ -109,7 +109,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         name_counts = collections.Counter(start_names)
         for input_name in name_counts:
             bitwidth = name_counts[input_name]
-            if input_name == 'clk':
+            if input_name == clock_name:
                 clk_set.add(input_name)
             elif not merge_io_vectors or bitwidth == 1:
                 block.add_wirevector(Input(bitwidth=1, name=input_name))
