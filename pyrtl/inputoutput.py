@@ -416,7 +416,7 @@ def net_graph(block=None, split_state=False):
             graph[w] = {}
 
     # add all of the edges
-    for w in (dest_set & arg_set):
+    for w in (dest_set | arg_set):
         try:
             _from = wire_src_dict[w]
         except Exception:
@@ -471,12 +471,14 @@ def _graphviz_default_namer(thing, is_edge=True, is_to_splitmerge=False):
 
     elif isinstance(thing, Const):
         return '[label="%d", shape=circle, fillcolor=lightgrey]' % thing.val
-    elif isinstance(thing, (Input, Output)):
-        return '[label="%s", shape=circle, fillcolor=none]' % thing.name
+    elif isinstance(thing, Input):
+        return '[label="%s", shape=invhouse, fillcolor=coral]' % thing.name
+    elif isinstance(thing, Output):
+        return '[label="%s", shape=house, fillcolor=lawngreen]' % thing.name
     elif isinstance(thing, Register):
         return '[label="%s", shape=square, fillcolor=gold]' % thing.name
     elif isinstance(thing, WireVector):
-        return '[label="", shape=circle, fillcolor=none]'
+        return '[label="%s", shape=circle, fillcolor=none]' % thing.name
     else:
         try:
             if thing.op == '&':
@@ -486,16 +488,23 @@ def _graphviz_default_namer(thing, is_edge=True, is_to_splitmerge=False):
             elif thing.op == '^':
                 return '[label="xor"]'
             elif thing.op == '~':
-                return '[label="not"]'
+                return '[label="not", shape=invtriangle]'
             elif thing.op == 'x':
-                return '[label="mux"]'
-            elif thing.op in 'sc':
-                return '[label="", height=.1, width=.1]'
+                return '[label="mux", shape=invtrapezium]'
+            elif thing.op == 's':
+                selEnd = thing.op_param[0]
+                if len(thing.op_param) < 2:
+                    selBegin = selEnd
+                else:
+                    selBegin = thing.op_param[len(thing.op_param)-1]
+                return '[label="bits(%s,%s)", height=.1, width=.1]' % (selBegin, selEnd)
+            elif thing.op in 'c':
+                return '[label="concat", height=.1, width=.1]'
             elif thing.op == 'r':
                 name = thing.dests[0].name or ''
                 return '[label="%s.next", shape=square, fillcolor=gold]' % name
             elif thing.op == 'w':
-                return '[label="buf"]'
+                return '[label="", height=.1, width=.1]'
             else:
                 return '[label="%s"]' % (thing.op + str(thing.op_param or ''))
         except AttributeError:
@@ -516,7 +525,7 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer):
               digraph g {\n
               graph [splines="spline"];
               node [shape=circle, style=filled, fillcolor=lightblue1,
-                    fontcolor=grey, fontname=helvetica, penwidth=0,
+                    fontcolor=black, fontname=helvetica, penwidth=0,
                     fixedsize=true];
               edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
               """
