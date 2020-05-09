@@ -60,8 +60,8 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
         return s
 
     # Begin BLIF language definition
-    signal_start = pyparsing.alphas + '$:[]_<>\\\/'
-    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\\/.'
+    signal_start = pyparsing.alphas + '$:[]_<>\\\/?'
+    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\\/.?'
     signal_id = Word(signal_start, signal_middle)
     header = SKeyword('.model') + signal_id('model_name')
     input_list = Group(SKeyword('.inputs') + OneOrMore(signal_id))('input_list')
