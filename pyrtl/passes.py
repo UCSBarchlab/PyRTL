@@ -158,7 +158,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
 
         num_constants = sum((isinstance(arg, Const) for arg in net_checking.args))
 
-        if num_constants is 0 or net_checking.op in no_optimization_ops:
+        if num_constants == 0 or net_checking.op in no_optimization_ops:
             return  # assuming wire nets are already optimized
 
         if (net_checking.op in two_var_ops) and num_constants == 1:
