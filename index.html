@@ -43,7 +43,7 @@
 <h3>
 <a id="pyrtl-features" class="anchor" href="#pyrtl-features" aria-hidden="true"><span class="octicon octicon-link"></span></a>PyRTL Features</h3>
 
-<p>PyRTL provides a collection of classes for pythonic <a href="https://en.wikipedia.org/wiki/Register-transfer_level">register-transfer level</a> design, simulation, tracing, and testing 
+<p>PyRTL provides a collection of classes for Pythonic <a href="https://en.wikipedia.org/wiki/Register-transfer_level">register-transfer level</a> design, simulation, tracing, and testing 
 suitable for teaching and research. Simplicity, usability, clarity, and extensibility rather than
 performance or optimization is the overarching goal.  Features include:</p>
 
@@ -58,7 +58,7 @@ performance or optimization is the overarching goal.  Features include:</p>
 </ul>
 
   <p><b>New in 0.8.7:</b> (July 2019) SimCompiled provides seamless JIT to C for simulation performance, new hardware
-    modules for PRNG, fixed lots of issues with verilog generation (support for memory and testbench generation both improved
+    modules for PRNG, fixes for lots of issues with Verilog generation (support for memory and testbench generation both improved
     significantly), convenience functions for integer log2 and truncate, and
     even more examples in the documentation.</p>
   
@@ -76,9 +76,9 @@ performance or optimization is the overarching goal.  Features include:</p>
 
 <!-- Code example formatted with https://dillinger.io/ -->
 <div id="GCD" class="tabcontent">
-  <p>A greatest common demoninator calculator -- this function generates a sequential curcuit that grabs inputs a and b when e goes high, 
-  and then, while e is low, calculates the GCD through iterative subtraction.  The function returns two "wires", one which will hold the value 
-  when it is ready, and the other is a boolean ready signal.</p>
+  <p>A greatest common demoninator calculator -- this function generates a sequential curcuit that grabs inputs <code>a</code> and <code>b</code> when <code>e</code> goes high, 
+  and then, while <code>e</code> is low, calculates the GCD through iterative subtraction.  The function returns two "wires", one which will hold the value 
+  when it is ready, and the other which is a boolean ready signal.</p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="18" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
 
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">gcd</span><span class="hljs-params">(a, b, e)</span>:</span>
@@ -98,9 +98,9 @@ performance or optimization is the overarching goal.  Features include:</p>
 </div>
 
 <div id="MaxN" class="tabcontent">
-  <p>MaxN generates hardware that take N inputs and calculates the max of them.  This example makes use of python's notation
+  <p>MaxN generates hardware that take N inputs and calculates the max of them.  This example makes use of Python's notation
   for handling multiple inputs which packs them nicely into a list for you.  It is also a nice demonstration that the full power of 
-  python is available to you in PyRTL including functional tools like reduce (here chaining together multiple max2 elements into a
+  Python is available to you in PyRTL including functional tools like reduce (here chaining together multiple <code>max2</code> elements into a
   bigger maxN), map, recursion, lambdas, etc.</p>
 <pre><code class="has-line-data" data-line-start="1" data-line-end="9" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
 <span class="hljs-keyword">from</span> functools <span class="hljs-keyword">import</span> reduce
@@ -114,8 +114,8 @@ performance or optimization is the overarching goal.  Features include:</p>
 
 <div id="Mul" class="tabcontent">
   <p>Mul generates a small 4 x 4 multiplier with a simple table lookup.  The first line simple checks that the inputs are each 4-bits wide.
-  The next is a python function that gives us the values we want the ROM as a function of the address.  The ROM is automatically initialized with that
-  function.  The final hardware generated simply concatenates the two 4-bit inputs in to an single 8-bit address and returns the value at
+  The next is a Python function that gives us the values we want stored in the ROM as a function of the address.  The ROM is automatically initialized with that
+  function.  The final hardware generated simply concatenates the two 4-bit inputs into an single 8-bit address and returns the value at
   that ROM address.</p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="10" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
 
@@ -130,8 +130,8 @@ performance or optimization is the overarching goal.  Features include:</p>
 <div id="Adder" class="tabcontent">
   <p>The classic ripple-carry adder -- this function generates a ripple carry adder of abitrary length including both carry in and carry out.
     The full adder ("fa") takes 1-bit inputs and produces 1-bit outputs.  We iteratively generate full adders and link the carry in of each
-    new adder to the carry out of the prior.  A python dictionary keeps track of the wires carrying the sum bits as we iterate through.  The final
-    sum is then just the concatination of the wires in that dictionary.</p>
+    new adder to the carry out of the prior.  A Python dictionary keeps track of the wires carrying the sum bits as we iterate through.  The final
+    sum is then just the concatenation of the wires in that dictionary.</p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="21" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">fa</span><span class="hljs-params">(x, y, cin)</span>:</span>
     sum = x ^ y ^ cin
@@ -177,28 +177,28 @@ function openCode(evt, codeName) {
 document.getElementById("defaultOpen").click();
 </script>
 
-<p> The examples below show how you can have hardware, tests, and output to the terminal all in the same small python script which gives
-    developing hardare a very similar feel to writing any other python.</p>  
+<p> The examples below show how you can have hardware, tests, and output to the terminal all in the same small Python script which gives
+    developing hardware a very similar feel to writing any other Python.</p>  
 <script src="https://asciinema.org/a/157266.js" id="asciicast-157266" data-autoplay="true" data-size="medium" async></script>
 
 <h3>
 <a id="the-10000-foot-overview" class="anchor" href="#the-10000-foot-overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>The 10,000 Foot Overview</h3>
 
 <p>At a high level PyRTL builds the hardware structure that you <em>explicitly define</em>.  If you are looking for a 
-tool to take your random python code and turn it into hardware, you will have to look elsewhere 
+tool to take your random Python code and turn it into hardware, you will have to look elsewhere 
 -- this is <b>not</b> <a href="https://en.wikipedia.org/wiki/High-level_synthesis">HLS</a>.
-Instead PyRTL is designed to help you concisely and precisely describe a digitial hardware structure (that you already have 
-worked out in detail) in python.  PyRTL restricts you to a set of resonable digital designs practices -- the clock and resets
+Instead PyRTL is designed to help you concisely and precisely describe a digital hardware structure (that you already have 
+worked out in detail) in Python.  PyRTL restricts you to a set of reasonable digital designs practices -- the clock and resets
 are implicit, block memories are synchronous by default, there are no "undriven" states, and no weird un-registered feedbacks are
-allowed.  Instead, of worrying about these "analog-ish" tricks that are horrible ideas in modern processes anyways, PyRTL let's
+allowed.  Instead, of worrying about these "analog-ish" tricks that are horrible ideas in modern processes anyways, PyRTL lets
 you treat hardware design like a software problem -- build recursive hardware, write instrospective containers,
 and have fun building digital designs again!</p>
 
-<p>To the user it provides a set of python classes that allow you to express their 
-hardware designs reasonably pythonically.  For example, with WireVector you get a structure that acts very 
-much like a python list of 1-bit wires, so that <code>mywire[0:-1]</code> selects everything except the 
+<p>To the user it provides a set of Python classes that allow them to express their 
+hardware designs reasonably Pythonically.  For example, with WireVector you get a structure that acts very 
+much like a Python list of 1-bit wires, so that <code>mywire[0:-1]</code> selects everything except the 
 most-significant-bit.  Of course you can add, subtract, and multiply these WireVectors or concat multiple
-bit-vectors end-to-end as well.  You can then even make normal python collections of those WireVectors and 
+bit-vectors end-to-end as well.  You can then even make normal Python collections of those WireVectors and 
 do operations on them in bulk. For example, if you have a list of <em>n</em> different k-bit WireVectors (called "x") and you 
 want to multiply each of them by 2 and put the sum of the result in a WireVector "y", it looks like
 the following:  <code>y = sum([elem * 2 for elem in x])</code>. Hardware comprehensions are surprisingly useful.  Below we get into
@@ -243,7 +243,7 @@ sim <span class="pl-k">=</span> pyrtl.Simulation(<span class="pl-smi">tracer</sp
     sim.step({})
 sim_trace.render_trace()</pre></div>
 
-<p>The code above includes an adder generator with python-style slices on wires (ripple_add), an instantiation 
+<p>The code above includes an adder generator with Python-style slices on wires (ripple_add), an instantiation 
 of a register (used as a counter with the generated adder), and all the code needed to simulate the design, 
 generate a waveform, and render it to the terminal. The way this particular code works is described more in 
 the examples directory.  When you run it, it should look like this (you can see the counter going from 0 to 7 and repeating):</p>
@@ -253,15 +253,15 @@ the examples directory.  When you run it, it should look like this (you can see 
 <h3>
 <a id="a-few-gotchas" class="anchor" href="#a-few-gotchas" aria-hidden="true"><span class="octicon octicon-link"></span></a>A Few Gotchas</h3>
 
-<p>While python is an amazing language, DSLs in python are always forced to make a few compromises which can sometime catch
-users in some unexpected ways.  Watch out for these couple of "somewhat surprising features"</p>
+<p>While Python is an amazing language, DSLs in Python are always forced to make a few compromises which can sometimes catch
+users in some unexpected ways.  Watch out for these couple of "somewhat surprising features":</p>
 
 <ul>
 <li><p>PyRTL never uses any of the "in-place arithmetic assignments" such as <code>+=</code> or <code>&amp;=</code> in the traditional ways.
 Instead only <code>&lt;&lt;=</code> and <code>|=</code> are defined and they are used for wire-assignment and conditional-wire-assignment
 respectively (more on both of these in the examples).   If you declare a <code>x = WireVector(bitwidth=3)</code> and 
 <code>y = WireVector(bitwidth=5)</code>, how do you assign <code>x</code> the value of <code>y + 1</code>?  If you do <code>x = y + 1</code> 
-that will replace the old definition of <code>x</code> entirely?  Instead you need to write <code>x &lt;&lt;= y + 1</code> which you 
+that will replace the old definition of <code>x</code> entirely.  Instead you need to write <code>x &lt;&lt;= y + 1</code> which you 
 can read as "x gets its value from y + 1".</p></li>
 <li><p>The example above also shows off another aspect of PyRTL.  The bitwidth of <code>y</code> is 5.  The bitwidth of <code>y + 1</code>
 is actually 6 (PyRTL infers this automatically).  But then when you assign <code>x &lt;&lt;= y + 1</code> you are taking
@@ -270,14 +270,14 @@ will be assigned.  Mind your bitwidths.</p></li>
 <li><p>PyRTL provides some handy functions on WireVectors, including <code>==</code> and <code>&lt;</code> which evaluate to a new WireVector
 a single bit long to hold the result of the comparison.  The bitwise operators <code>&amp;</code>, <code>|</code>, <code>~</code> and <code>^</code>
 are also defined (however logic operations such as "and" and "not" are not).  A really tricky gotcha happens
-when you start combining the two together.  Consider: <code>doit = ready &amp; state==3</code>.  In python, the bitwise
-<code>&amp;</code> operator has <em>higher precedence</em> than <code>==</code>, thus python parses this as <code>doit = (ready &amp; state)==3</code>
-instead of what you might have guessed at first!  Make sure to use parenthesis when using comparisons with
+when you start combining the two together.  Consider: <code>doit = ready &amp; state==3</code>.  In Python, the bitwise
+<code>&amp;</code> operator has <em>higher precedence</em> than <code>==</code>, thus Python parses this as <code>doit = (ready &amp; state)==3</code>
+instead of what you might have guessed at first!  Make sure to use parentheses when using comparisons with
 logic operations to be clear: <code>doit = ready &amp; (state==3)</code>.</p></li>
 <li><p>PyRTL right now assumes that all WireVectors are unsigned integers.  When you do comparisons
 such as "&lt;" it will do unsigned comparison.  If you pass a WireVector to a function that requires more bits 
 that you have provided, it will do zero extension by default.  You can always explicitly do sign extension
-with .sign_extend() but it is not the default behavior for WireVector.  This is right now for clarity and
+with .sign_extended() but it is not the default behavior for WireVector.  For now, this is for clarity and
 consistency, although it does make writing signed arithmetic operations more text heavy.</p></li>
 </ul>
 
@@ -290,29 +290,29 @@ consistency, although it does make writing signed arithmetic operations more tex
 <p><a href="http://www.myhdl.org/">MyHDL</a> is a neat Python hardware project built around generators and decorators.  The semantics of this embedded language
 are close to Verilog and unlike PyRTL, MyHDL allows asynchronous logic and higher level modeling.  Much like Verilog, only a structural
 "convertible subset" of the language can be automatically synthesized into real hardware.  PyRTL requires all logic to be both synchronous
-and synthesizable which avoids a common trap for beginners, it elaborates the design during execution allowing the full power of python
-in describing recursive or complex hardware structures, and allows for hardware synthesis, simulation, test bench creation, and optimization
+and synthesizable which avoids a common trap for beginners, it elaborates the design during execution allowing the full power of Python
+in describing recursive or complex hardware structures, and it allows for hardware synthesis, simulation, test bench creation, and optimization
 all in the same framework.</p>
 
 <p><a href="https://chisel.eecs.berkeley.edu/">Chisel</a> is a project with similar goals to PyRTL but is based instead in Scala.  Scala
 provides some very helpful embedded language features and a rich type system. Chisel is (like PyRTL) a elaborate-through-execution hardware design language.  With support
 for signed types, named hierarchies of wires useful for hardware protocols, and a neat control structure call "when" that inspired our
 conditional contexts, Chisel is a powerful tool used in some great research projects including OpenRISC.  Unlike Chisel, PyRTL has
-concentrated on a complete tool chain which is useful for instructional projects, and provides a clearly defined and relatively easy to
-manipulate intermediate structure in the class Block (often times call pyrtl.core) which allows rapid prototyping of hardware analysis
+concentrated on a complete tool chain which is useful for instructional projects, and provides a clearly defined and relatively easy-to-manipulate
+intermediate structure in the class Block (often times call pyrtl.core) which allows rapid prototyping of hardware analysis
 routines which can then be codesigned with the architecture.</p>
 
 <p><a href="http://www.clifford.at/yosys/">Yosys</a> is an open source tool for Verilog RTL synthesis. It supports a huge subset of the Verilog-2005
-semantics and provides a basic set of synthesis algorithms.  The goals of this this tool are quite different from PyRTL, but the two
+semantics and provides a basic set of synthesis algorithms.  The goals of this tool are quite different from PyRTL, but the two
 play very nicely together in that PyRTL can output Verilog that can then be synthesized through Yosys.  Likewise Yosys can take
 Verilog designs and synthesize them to a very simple library of gates and output them as a "blif" file which can then be read in by
 PyRTL.</p>
 
-<p><a href="https://github.com/cornell-brg/pymtl">PyMTL</a> is an alpha stage "open-source Python-based framework for multi-level hardware modeling".
+<p><a href="https://github.com/cornell-brg/pymtl">PyMTL</a> is an alpha stage "open-source Python-based framework for multi-level hardware modeling."
 One of the neat things about this project is that they are trying to allow simulation and modeling at multiple different levels of the
 design from the functional level, the cycle-close level, and down to the register-transfer level (where PyRTL really is built to play).
 Like MyHDL they do some meta-programming tricks like parsing the Python AST to allow executable software descriptions to be (under
-certain restrictions -- sort of like verilog) automatically converted into implementable hardware.  PyRTL, on the other hand, is about
+certain restrictions -- sort of like Verilog) automatically converted into implementable hardware.  PyRTL, on the other hand, is about
 providing a limited and composable set of data structures to be used to specify an RTL implementation, thus avoiding the distinction between
 synthesizable and non-synthesizable code (the execution is the elaboration step).</p>
 
@@ -320,7 +320,7 @@ synthesizable and non-synthesizable code (the execution is the elaboration step)
 approach suitable for both combinational and synchronous sequential circuits and allows the transform
 of these high-level descriptions to low-level synthesizable Verilog HDL.  Unlike PyRTL, designs are statically
 typed (like VHDL), yet with a very high degree of type inference, enabling both safe and fast prototying using concise
-descriptions.  If you like functional programing and hardware I would also checkout out 
+descriptions.  If you like functional programming and hardware also check out 
 <a href="http://blog.raintown.org/p/lava.html">Lava</a>.</p>
 
       <footer class="site-footer">
