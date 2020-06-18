@@ -559,7 +559,7 @@ def detailed_edge_namer(extra_edge_info=None):
             name = ''
         else:
             name = '/'.join([edge.name, str(len(edge))])
-            if extra_edge_info:
+            if extra_edge_info and edge in extra_edge_info:
                 name = name + " (" +  str(extra_edge_info[edge]) + ")"
 
         penwidth = 2 if len(edge) == 1 else 6
