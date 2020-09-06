@@ -19,8 +19,17 @@ from .wire import Input, Output
 from .wire import Const
 from .wire import Register
 
-# helper functions
+# matrix functions
 
+from .matrix import Matrix
+from .matrix import multiply
+from .matrix import summation
+from .matrix import maximum
+from .matrix import minimum
+from .matrix import argmax
+from .matrix import dot
+
+# helper functions
 from .helperfuncs import input_list
 from .helperfuncs import output_list
 from .helperfuncs import register_list
