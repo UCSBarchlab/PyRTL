@@ -20,7 +20,6 @@ from .wire import Const
 from .wire import Register
 
 # matrix functions
-
 from .matrix import Matrix
 from .matrix import multiply
 from .matrix import summation
