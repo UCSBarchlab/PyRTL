@@ -556,6 +556,130 @@ class SimStepMultipleBase(unittest.TestCase):
         self.assertEqual(output.getvalue(), correct_output)
 
 
+class TestStepBundleBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_step_with_bundle_from_tuples(self):
+        rformat = [
+            ("funct7", 7),
+            ("rs2", 5),
+            ("rs1", 5),
+            ("funct3", 3),
+            ("rd", 5),
+            ("opcode", 7),
+        ]
+        self.step_with_bundle(rformat)
+
+    def test_step_with_bundle_from_dict(self):
+        rformat = {
+            "funct7": 7,
+            "rs2": 5,
+            "rs1": 5,
+            "funct3": 3,
+            "rd": 5,
+            "opcode": 7
+        }
+        self.step_with_bundle(rformat)
+
+    def test_step_with_bundle_from_class(self):
+        class RFormat:
+            funct7 = 7
+            rs2 = 5
+            rs1 = 5
+            funct3 = 3
+            rd = 5
+            opcode = 7
+        self.step_with_bundle(RFormat)
+
+    def step_with_bundle(self, obj):
+        w = pyrtl.Bundle(obj, "inst")
+        #     funct7   rs2   rs1 funct3    rd  opcode
+        # 0b 0000010 01100 01010    000 01011 0010011
+        w <<= 0b00000100110001010000010110010011
+        r = pyrtl.Register(len(w))
+        f7 = r.as_bundle(obj).funct7
+        r.next <<= w
+        y = r.as_bundle(obj)
+
+        sim = pyrtl.Simulation()
+        sim.step({})
+        assert sim.inspect(w.funct7) == 0b0000010
+        assert sim.inspect(w.rs2) == 0b01100
+        assert sim.inspect(w.rs1) == 0b01010
+        assert sim.inspect(w.funct3) == 0b000
+        assert sim.inspect(w.rd) == 0b01011
+        assert sim.inspect(w.opcode) == 0b0010011
+        assert sim.inspect(r) == 0
+
+        sim.step({})
+        assert sim.inspect(r) == 0b00000100110001010000010110010011
+        assert sim.inspect(f7) == 0b0000010
+        assert sim.inspect(y.funct7) == 0b0000010
+        assert sim.inspect(y.rs2) == 0b01100
+        assert sim.inspect(y.rs1) == 0b01010
+        assert sim.inspect(y.funct3) == 0b000
+        assert sim.inspect(y.rd) == 0b01011
+        assert sim.inspect(y.opcode) == 0b0010011
+    
+    def test_bad_write_to_bundle(self):
+        w = pyrtl.WireVector(8, 'w')
+        x = w.as_bundle({'a': 2, 'b': 3, 'c': 3})
+        with self.assertRaises(pyrtl.PyrtlError):
+            x <<= 0b10101110
+            _sim = pyrtl.Simulation()
+
+    # Highly experimental, but seems to work right now
+    def test_good_write_to_bundle(self):
+        x = pyrtl.Input(1, 'x')
+
+        def t1():
+            w = pyrtl.WireVector(8)
+            with pyrtl.conditional_assignment:
+                with x:
+                    w |= 0b00101100
+                with pyrtl.otherwise:
+                    w |= 0b10010011
+            return w
+        
+        def t3():
+            w = pyrtl.WireVector(8)
+            with pyrtl.conditional_assignment:
+                with x:
+                    w |= 0b11111111
+                with pyrtl.otherwise:
+                    w |= 0b00000000
+            return w
+
+        class Array:
+            # Returning a function which returns a WireVector
+            thread1 = (8, t1)
+            # Returning a function with returns a Const with explicit size
+            thread2 = (8, lambda: pyrtl.Const(0b01100110, 8))
+            # Returning a WireVector
+            thread3 = (8, t3())
+            # Returning a Const without an explicit size
+            thread4 = (8, pyrtl.Const(0b00000011))
+            # Returning a literal
+            thread5 = (8, 0b01000011)
+        
+        w = pyrtl.Bundle(Array, 'w')
+        sim = pyrtl.Simulation()
+        sim.step({'x': 1})
+        assert sim.inspect(w.thread1) == 0b00101100
+        assert sim.inspect(w.thread2) == 0b01100110
+        assert sim.inspect(w.thread3) == 0b11111111
+        assert sim.inspect(w.thread4) == 0b00000011
+        assert sim.inspect(w.thread5) == 0b01000011
+
+        sim.step({'x': 0})
+        assert sim.inspect(w.thread1) == 0b10010011
+        assert sim.inspect(w.thread2) == 0b01100110
+        assert sim.inspect(w.thread3) == 0b00000000
+        assert sim.inspect(w.thread4) == 0b00000011
+        assert sim.inspect(w.thread5) == 0b01000011
+
+
 class TraceWithAdderBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
