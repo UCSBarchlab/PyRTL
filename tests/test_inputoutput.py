@@ -5,6 +5,7 @@ import pyrtl
 import six
 from pyrtl import inputoutput
 from pyrtl import verilog
+from pyrtl import analysis
 
 
 full_adder_blif = """\
@@ -321,6 +322,17 @@ class TestOutputGraphs(unittest.TestCase):
         with io.StringIO() as vfile:
             pyrtl.input_from_blif(full_adder_blif)
             pyrtl.output_to_graphviz(vfile)
+
+    def test_output_to_graphviz_with_custom_edge_namer_does_not_throw_error(self):
+        with io.StringIO() as vfile:
+            pyrtl.input_from_blif(full_adder_blif)
+            timing = analysis.TimingAnalysis()
+
+            def graph_namer(t, i, j):
+                edge_namer = pyrtl.inputoutput.detailed_edge_namer(timing.timing_map)
+                return pyrtl.inputoutput.graphviz_default_namer(t, i, j, edge_namer=edge_namer)
+
+            pyrtl.output_to_graphviz(vfile, namer=graph_namer)
 
 
 class TestOutputTestbench(unittest.TestCase):
