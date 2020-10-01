@@ -169,6 +169,76 @@ class TestWirevectorSlicing(unittest.TestCase):
         self.invalid_empty_slice(8, slice(-1, 1, 2))
 
 
+class TestWireAsBundle(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_create_bundle_from_tuples(self):
+        rformat = [
+            ("funct7", 7),
+            ("rs2", 5),
+            ("rs1", 5),
+            ("funct3", 3),
+            ("rd", 5),
+            ("opcode", 7),
+        ]
+        self.create_and_test_bundle(rformat)
+
+    def test_create_bundle_from_dict(self):
+        rformat = {
+            "funct7": 7,
+            "rs2": 5,
+            "rs1": 5,
+            "funct3": 3,
+            "rd": 5,
+            "opcode": 7
+        }
+        self.create_and_test_bundle(rformat)
+
+    def test_create_bundle_from_class(self):
+        class RFormat:
+            funct7 = 7
+            rs2 = 5
+            rs1 = 5
+            funct3 = 3
+            rd = 5
+            opcode = 7
+        self.create_and_test_bundle(RFormat)
+
+    def create_and_test_bundle(self, bundler):
+        w = pyrtl.Bundle(bundler)
+        assert isinstance(w, pyrtl.WireVector)
+        assert hasattr(w, 'funct7')
+        assert hasattr(w, 'rs2')
+        assert hasattr(w, 'rs1')
+        assert hasattr(w, 'funct3')
+        assert hasattr(w, 'rd')
+        assert hasattr(w, 'opcode')
+        assert len(w) == 32
+        assert len(w.funct7) == 7
+        assert len(w.rs2) == 5
+        assert len(w.rs1) == 5
+        assert len(w.funct3) == 3
+        assert len(w.rd) == 5
+        assert len(w.opcode) == 7
+
+        r = pyrtl.Register(len(w))
+        r.next <<= w
+        y = r.as_bundle(bundler)
+        assert hasattr(y, 'funct7')
+        assert hasattr(y, 'rs2')
+        assert hasattr(y, 'rs1')
+        assert hasattr(y, 'funct3')
+        assert hasattr(y, 'rd')
+        assert hasattr(y, 'opcode')
+        assert len(y) == 32
+        assert len(y.funct7) == 7
+        assert len(y.rs2) == 5
+        assert len(y.rs1) == 5
+        assert len(y.funct3) == 3
+        assert len(y.rd) == 5
+        assert len(y.opcode) == 7
+
 class TestInput(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -355,3 +425,6 @@ class TestKeepingCallStack(unittest.TestCase):
         wire = pyrtl.WireVector()
         call_stack = wire.init_call_stack
         self.assertIsInstance(call_stack, list)
+
+if __name__ == "__main__":
+    unittest.main()
