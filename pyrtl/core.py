@@ -747,6 +747,8 @@ debug_mode = False
 _setting_keep_wirevector_call_stack = False
 _setting_slower_but_more_descriptive_tmps = False
 
+def _get_debug_mode():
+    return debug_mode
 
 def _get_useful_callpoint_name():
     """ Attempts to find the lowest user-level call into the pyrtl module

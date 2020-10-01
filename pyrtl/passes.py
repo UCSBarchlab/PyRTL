@@ -6,7 +6,7 @@ ways to change a block.
 
 from __future__ import print_function, unicode_literals
 
-from .core import working_block, set_working_block, debug_mode, LogicNet, PostSynthBlock
+from .core import working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock
 from .helperfuncs import _NetCount
 from .corecircuits import (_basic_mult, _basic_add, _basic_sub, _basic_eq,
                            _basic_lt, _basic_gt, _basic_select, concat_list,
@@ -41,13 +41,13 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
         block = copy_block(block)
 
     with set_working_block(block, no_sanity_check=True):
-        if (not skip_sanity_check) or debug_mode:
+        if (not skip_sanity_check) or _get_debug_mode():
             block.sanity_check()
         _remove_wire_nets(block)
         constant_propagation(block, True)
         _remove_unlistened_nets(block)
         common_subexp_elimination(block)
-        if (not skip_sanity_check) or debug_mode:
+        if (not skip_sanity_check) or _get_debug_mode():
             block.sanity_check()
     return block
 
@@ -158,7 +158,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
 
         num_constants = sum((isinstance(arg, Const) for arg in net_checking.args))
 
-        if num_constants is 0 or net_checking.op in no_optimization_ops:
+        if num_constants == 0 or net_checking.op in no_optimization_ops:
             return  # assuming wire nets are already optimized
 
         if (net_checking.op in two_var_ops) and num_constants == 1:
