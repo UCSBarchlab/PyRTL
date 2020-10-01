@@ -799,7 +799,7 @@ class FastSimulation(object):
             elif net.op == 'c':
                 expr = ''
                 for i in range(len(net.args)):
-                    if expr is not '':
+                    if expr != '':
                         expr += ' | '
                     shiftby = sum(len(j) for j in net.args[i+1:])
                     expr += shift(self._arg_varname(net.args[i]), '<<', shiftby)
@@ -1135,12 +1135,11 @@ class SimulationTrace(object):
         :param symbol_len: The "length" of each rendered cycle in characters.
         :param segment_size: Traces are broken in the segments of this number of cycles.
         :param segment_delim: The character to be output between segments.
-        :param extra_line: A Boolean to determin if we should print a blank line between signals.
+        :param extra_line: A Boolean to determine if we should print a blank line between signals.
 
         The resulting output can be viewed directly on the terminal or looked
         at with "more" or "less -R" which both should handle the ASCII escape
-        sequences used in rendering. render_trace takes the following optional
-        arguments.
+        sequences used in rendering.
         """
         if _currently_in_ipython():
             from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
@@ -1197,7 +1196,7 @@ class SimulationTrace(object):
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map
 
-        maxnamelen = max(len(w) for w in self.trace)
+        maxnamelen = max(len(w) for w in trace_list)
         maxtracelen = max(len(v) for v in self.trace.values())
         if segment_size is None:
             segment_size = maxtracelen
