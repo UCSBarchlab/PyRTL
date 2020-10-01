@@ -641,12 +641,14 @@ class Block(object):
                 raise PyrtlInternalError('error, net with unknown source "%s"' % w.name)
 
         # checks that input and output wirevectors are not misused
-        for w in net.dests:
-            if isinstance(w, (Input, Const)):
-                raise PyrtlInternalError('error, Inputs, Consts cannot be destinations to a net')
-        for w in net.args:
-            if isinstance(w, Output):
-                raise PyrtlInternalError('error, Outputs cannot be arguments for a net')
+        bad_dests = set(filter(lambda w: isinstance(w, (Input, Const)), net.dests))
+        if bad_dests:
+            raise PyrtlInternalError('error, Inputs, Consts cannot be destinations to a net (%s)' %
+                                     ','.join(map(str, bad_dests)))
+        bad_args = set(filter(lambda w: isinstance(w, (Output)), net.args))
+        if bad_args:
+            raise PyrtlInternalError('error, Outputs cannot be arguments for a net (%s)' %
+                                     ','.join(map(str, bad_args)))
 
         if net.op not in self.legal_ops:
             raise PyrtlInternalError('error, net op "%s" not from acceptable set %s' %
