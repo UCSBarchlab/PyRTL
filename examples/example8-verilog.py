@@ -4,7 +4,7 @@
     might ask you to do something with your code other than have it print
     pretty things out to the terminal.  We provide import from and export to
     Verilog of designs, export of waveforms to VCD, and a set of transforms
-    that make doing netlist-level transforms and analyis directly in pyrtl easy.
+    that make doing netlist-level transforms and analysis directly in PyRTL easy.
 """
 
 import random
@@ -18,10 +18,10 @@ import pyrtl
 # the PyRTL core.   One standard format supported by PyRTL is "blif" format:
 # https://www.ece.cmu.edu/~ee760/760docs/blif.pdf
 
-# Many tools supoprt outputing hardware designs to this format, including the
+# Many tools supoprt outputting hardware designs to this format, including the
 # free open source project "Yosys".   Blif files can then be imported either
 # as a string or directly from a file name by the function input_from_blif.
-# Here is a simple example of a 1 bit full adder imported and then simulated
+# Here is a simple example of a 1-bit full adder imported and then simulated
 # from this blif format.
 
 full_adder_blif = """
@@ -65,13 +65,13 @@ full_adder_blif = """
 """
 
 pyrtl.input_from_blif(full_adder_blif)
-# have to find the actual wire vectors generated from the names in the blif file
+# Have to find the actual wire vectors generated from the names in the blif file
 x, y, cin = [pyrtl.working_block().get_wirevector_by_name(s) for s in ['x', 'y', 'cin']]
 io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
 
-# we are only going to trace the input and output vectors for clarity
+# We are only going to trace the input and output vectors for clarity
 sim_trace = pyrtl.SimulationTrace(wires_to_track=io_vectors)
-# now simulate the logic with some random inputs
+# Now simulate the logic with some random inputs
 sim = pyrtl.Simulation(tracer=sim_trace)
 for i in range(15):
     # here we actually generate random booleans for the inputs
@@ -101,8 +101,8 @@ counter_output <<= counter
 # The counter gets 0 in the next cycle if the "zero" signal goes high, otherwise just
 # counter + 1.  Note that both "0" and "1" are bit extended to the proper length and
 # here we are making use of that native add operation.  Let's dump this bad boy out
-# to a verilog file and see what is looks like (here we are using StringIO just to
-# print it to a string for demo purposes, most likely you will want to pass a normal
+# to a Verilog file and see what is looks like (here we are using StringIO just to
+# print it to a string for demo purposes; most likely you will want to pass a normal
 # open file).
 
 print("--- PyRTL Representation ---")
@@ -121,8 +121,8 @@ for cycle in range(15):
     sim.step({'zero': random.choice([0, 0, 0, 1])})
 sim_trace.render_trace()
 
-# We already did the "hard" work of generating a test input for this simulation so
-# we might want to reuse that work when we take this design through a verilog toolchain.
+# We already did the "hard" work of generating a test input for this simulation, so
+# we might want to reuse that work when we take this design through a Verilog toolchain.
 # The class OutputVerilogTestbench grabs the inputs used in the simulation trace
 # and sets them up in a standard verilog testbench.
 
@@ -132,13 +132,13 @@ with io.StringIO() as tbfile:
     print(tbfile.getvalue())
 
 
-# Not let's talk about transformations of the hardware block.  Many times when you are
+# Now let's talk about transformations of the hardware block.  Many times when you are
 # doing some hardware-level analysis you might wish to ignore higher level things like
-# multi-bit wirevectors, adds, concatination, etc. and just thing about wires and basic
+# multi-bit wirevectors, adds, concatenation, etc. and just think about wires and basic
 # gates.  PyRTL supports "lowering" of designs into this more restricted set of functionality
 # though the function "synthesize".  Once we lower a design to this form we can then apply
-# basic optimizations like constant propgation and dead wire elimination as well.  By
-# printing it out to verilog we can see exactly how the design changed.
+# basic optimizations like constant propagation and dead wire elimination as well.  By
+# printing it out to Verilog we can see exactly how the design changed.
 
 print("--- Optimized Single-bit Verilog for the Counter ---")
 pyrtl.synthesize()

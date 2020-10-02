@@ -2,7 +2,7 @@
 
 Debugging is half the coding process in software, and in PyRTL, it's no
 different. PyRTL provides some additional challenges when it comes to
-debugging as a problem may surface long after the error was made. Fortunately,
+debugging, as a problem may surface long after the error was made. Fortunately,
 PyRTL comes with various features to help you find mistakes.
 """
 
@@ -14,10 +14,10 @@ import pyrtl
 random.seed(93729473)  # used to make random calls deterministic for this example
 
 
-# This example covers debugging strategies for PyRTL.  For general python debugging
+# This example covers debugging strategies for PyRTL.  For general Python debugging,
 # we recommend healthy use of the "assert" statement, and use of "pdb" for
 # tracking down bugs.  However, PyRTL introduces some new complexities because
-# the place where  functionality is defined (when you construct and operate
+# the place where functionality is defined (when you construct and operate
 # on PyRTL classes) is separate in time from where that functionality is executed
 # (i.e. during simulation).  Thus, sometimes it hard to track down where a wire
 # might have come from, or what exactly it is doing.
@@ -27,7 +27,7 @@ random.seed(93729473)  # used to make random calls deterministic for this exampl
 # built-in "+" function in PyRTL, we will instead use the Kogge-Stone adders
 # in RtlLib, the standard library for PyRTL.
 
-# building three inputs
+# Building three inputs
 in1, in2, in3 = (pyrtl.Input(8, "in" + str(x)) for x in range(1, 4))
 out = pyrtl.Output(10, "out")
 
@@ -45,7 +45,7 @@ out <<= add2_out
 debug_out = pyrtl.Output(9, "debug_out")
 debug_out <<= add1_out
 
-# now simulate the circuit.  Let's create some random inputs to feed our adder.
+# Now simulate the circuit.  Let's create some random inputs to feed our adder.
 
 vals1 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
 vals2 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
@@ -53,13 +53,13 @@ vals3 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
 
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
-for cycle in range(len(vals1)):
-    sim.step({
-        'in1': vals1[cycle],
-        'in2': vals2[cycle],
-        'in3': vals3[cycle]})
+sim.step_multiple({
+    'in1': vals1,
+    'in2': vals2,
+    'in3': vals3
+})
 
-# in order to get the result data, you do not need to print a waveform of the trace
+# In order to get the result data, you do not need to print a waveform of the trace.
 # You always have the option to just pull the data out of the tracer directly
 print("---- Inputs and debug_out ----")
 print("in1:       ", str(sim_trace.trace['in1']))
@@ -107,10 +107,10 @@ pyrtl.probe(multout + 32, 'adder_probe')
 pyrtl.probe(multout[2:7], 'select_probe')
 
 # or, similarly:
-# (this will create a probe of multout while passing multout[2:16] to out)
+# (this will create a probe of multout while passing multout[2:16] to out2)
 out2 <<= pyrtl.probe(multout)[2:16]  # notice probe names are not absolutely necessary
 
-# as one can see, probe can be used on any wire any time,
+# As one can see, probe can be used on any wire any time,
 # such as before or during its operation, assignment, etc.
 
 # Now on to the simulation...
@@ -120,10 +120,10 @@ vals2 = [int(2**random.uniform(1, 8) - 2) for _ in range(10)]
 
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
-for cycle in range(len(vals1)):
-    sim.step({
-        'in1': vals1[cycle],
-        'in2': vals2[cycle]})
+sim.step_multiple({
+    'in1': vals1,
+    'in2': vals2,
+})
 
 # Now we will show the values of the inputs and probes
 # and look at that, we didn't need to make any outputs!
@@ -136,7 +136,7 @@ print("--- Probe w/ debugging: ---")
 # one of those probes above at declaration.
 # We could have used pyrtl.set_debug_mode() before their creation, like so:
 pyrtl.set_debug_mode()
-pyrtl.probe(multout - 16, 'debugsubtr_probe)')
+pyrtl.probe(multout - 16, 'debugsubtr_probe')
 pyrtl.set_debug_mode(debug=False)
 
 
@@ -201,7 +201,7 @@ pyrtl.working_block().remove_wirevector(dummy_wv)
 # ---- Trivial Graph Format ----
 
 # Finally, there is a handy way to view your hardware creations as a graph.
-# The function output_to_trivialgraph will render your hardware a formal that
+# The function output_to_trivialgraph will render your hardware in a format that
 # you can then open with the free software "yEd"
 # (http://en.wikipedia.org/wiki/YEd). There are options under the
 # "hierarchical" rendering to draw something that looks quite like a circuit.
