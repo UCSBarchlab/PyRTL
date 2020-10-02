@@ -142,7 +142,7 @@ def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=Non
     # src and dst in this function are all relative to wires
     block = working_block(block)
     if new_src is not orig_wire and orig_wire in src_nets:
-        # don't need to add the new_src and new_dst because they were made added at creation
+        # don't need to add the new_src and new_dst because they were made at creation
         net = src_nets[orig_wire]
         new_net = LogicNet(
             op=net.op, op_param=net.op_param, args=net.args,
@@ -168,7 +168,7 @@ def clone_wire(old_wire, name=None):
     Makes a copy of any existing wire
 
     :param old_wire: The wire to clone
-    :param name: a name fo rhte new wire
+    :param name: a name for the new wire
 
     Note that this function is mainly intended to be used when the
     two wires are from different blocks. Making two wires with the

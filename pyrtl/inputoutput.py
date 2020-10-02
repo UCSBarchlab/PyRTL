@@ -149,6 +149,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
                 raise PyrtlError('unknown command type')
 
     def extract_cover(command):
+        # pylint: disable=invalid-unary-operand-type
         netio = command['namesignal_list']
         if len(command['cover_list']) == 0:
             output_wire = twire(netio[0])
@@ -205,9 +206,10 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
         if init_val == "1":
             # e.g. in Verilog: `initial reg <= 1;`
             raise PyrtlError("Initializing latches to 1 is not supported. "
-                              "Acceptable values are: 0, 2 (don't care), and 3 (unknown); in any case, "
-                              "PyRTL will ensure all stateful elements come up 0. "
-                              "For finer control over the initial value, use specialized reset logic.")
+                             "Acceptable values are: 0, 2 (don't care), and 3 (unknown); "
+                             "in any case, PyRTL will ensure all stateful elements come up 0. "
+                             "For finer control over the initial value, use specialized reset "
+                             "logic.")
         flop_output <<= flop
 
     for model in result:
@@ -544,6 +546,7 @@ def graphviz_default_namer(
     else:
         return node_namer(thing)
 
+
 def detailed_edge_namer(extra_edge_info=None):
     """
     A function for naming an edge for use in the graphviz graph.
@@ -560,7 +563,7 @@ def detailed_edge_namer(extra_edge_info=None):
         else:
             name = '/'.join([edge.name, str(len(edge))])
             if extra_edge_info and edge in extra_edge_info:
-                name = name + " (" +  str(extra_edge_info[edge]) + ")"
+                name = name + " (" + str(extra_edge_info[edge]) + ")"
 
         penwidth = 2 if len(edge) == 1 else 6
         arrowhead = 'none' if is_to_splitmerge else 'normal'

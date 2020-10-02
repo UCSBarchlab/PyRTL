@@ -15,7 +15,7 @@ from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
 from .transform import net_transform, _get_new_block_mem_instance, copy_block, replace_wires
-from . import transform  # transform.all_nets loos better than all_nets
+from . import transform  # transform.all_nets looks better than all_nets
 
 
 # --------------------------------------------------------------------

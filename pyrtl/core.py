@@ -12,6 +12,7 @@ from __future__ import print_function, unicode_literals
 import collections
 import re
 import keyword
+
 # from .helperfuncs import _currently_in_ipython
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 
@@ -63,7 +64,7 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
                                            x must be one bit; len(a1) = len(a2)
         ('c', None, (*args), (out)) => concatenates *args (wires) into single WireVector;
                                        puts first arg at MSB, last arg at LSB
-        ('s', (sel), (wire), (out)) => selects bits frm wire based on sel (std slicing syntax),
+        ('s', (sel), (wire), (out)) => selects bits from wire based on sel (std slicing syntax),
                                        puts into out
         ('r', None, (next), (r1)) => on positive clock edge: copies next to r1
         ('m', (memid, mem), (addr), (data)) => read address addr of mem (w/ id memid),
@@ -466,7 +467,7 @@ class Block(object):
     def __iter__(self):
         """ BlockIterator iterates over the block passed on init in topographic order.
         The input is a Block, and when a LogicNet is returned it is always the case
-        that all of it's "parents" have already been returned earlier in the iteration.
+        that all of its "parents" have already been returned earlier in the iteration.
 
         Note: this method will throw an error if there are loops in the
         logic that do not involve registers
@@ -523,8 +524,8 @@ class Block(object):
             for w in wirevector_names_set:
                 wirevector_names_list.remove(w)
             raise PyrtlError('Duplicate wire names found for the following '
-                             'different signals: %s (make sure you are not using "tmp"'
-                             'or "const_" as a signal name because those are reserved for'
+                             'different signals: %s (make sure you are not using "tmp" '
+                             'or "const_" as a signal name because those are reserved for '
                              'internal use)' % repr(wirevector_names_list))
 
         # check for dead input wires (not connected to anything)
@@ -749,8 +750,10 @@ debug_mode = False
 _setting_keep_wirevector_call_stack = False
 _setting_slower_but_more_descriptive_tmps = False
 
+
 def _get_debug_mode():
     return debug_mode
+
 
 def _get_useful_callpoint_name():
     """ Attempts to find the lowest user-level call into the pyrtl module

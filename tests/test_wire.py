@@ -182,7 +182,7 @@ class TestWireAsBundle(unittest.TestCase):
             ("rd", 5),
             ("opcode", 7),
         ]
-        self.create_and_test_bundle(rformat)
+        self.create_and_check_bundle(rformat)
 
     def test_create_bundle_from_dict(self):
         rformat = {
@@ -193,7 +193,15 @@ class TestWireAsBundle(unittest.TestCase):
             "rd": 5,
             "opcode": 7
         }
-        self.create_and_test_bundle(rformat)
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                self.create_and_check_bundle(rformat)
+            self.assertEqual(str(ex.exception),
+                "For Python versions < 3.7, the dictionary used to instantiate "
+                "a Bundle must be explicitly ordered (i.e. OrderedDict)"
+            )
+        else:
+            self.create_and_check_bundle(rformat)
 
     def test_create_bundle_from_class(self):
         class RFormat:
@@ -203,9 +211,17 @@ class TestWireAsBundle(unittest.TestCase):
             funct3 = 3
             rd = 5
             opcode = 7
-        self.create_and_test_bundle(RFormat)
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                self.create_and_check_bundle(RFormat)
+            self.assertEqual(str(ex.exception),
+                "Passing a class as an argument to Bundle() is only "
+                "allowed for Python versions >= 3.7"
+            )
+        else:
+            self.create_and_check_bundle(RFormat)
 
-    def create_and_test_bundle(self, bundler):
+    def create_and_check_bundle(self, bundler):
         w = pyrtl.Bundle(bundler)
         assert isinstance(w, pyrtl.WireVector)
         assert hasattr(w, 'funct7')

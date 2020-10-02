@@ -26,7 +26,7 @@ def prioritized_mux(selects, vals):
                             falsecase=prioritized_mux(selects[half:], vals[half:]))
 
 
-def _is_equivelent(w1, w2):
+def _is_equivalent(w1, w2):
     if isinstance(w1, pyrtl.Const) & isinstance(w2, pyrtl.Const):
         return (w1.val == w2.val) & (w1.bitwidth == w2.bitwidth)
     return w1 is w2
@@ -103,7 +103,7 @@ def _sparse_mux(sel, vals):
 
         false_result = sparse_mux(sel[:-1], first_dict)
         true_result = sparse_mux(sel[:-1], second_dict)
-    if _is_equivelent(false_result, true_result):
+    if _is_equivalent(false_result, true_result):
         return true_result
     return pyrtl.select(sel[-1], falsecase=false_result, truecase=true_result)
 

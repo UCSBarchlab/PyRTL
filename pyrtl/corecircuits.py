@@ -86,14 +86,14 @@ def select(sel, truecase, falsecase):
     """ Multiplexer returning falsecase for select==0, otherwise truecase.
 
     :param WireVector sel: used as the select input to the multiplexer
-    :param WireVector falsecase: the WireVector selected if select==0
     :param WireVector truecase: the WireVector selected if select==1
+    :param WireVector falsecase: the WireVector selected if select==0
 
     The hardware this generates is exactly the same as "mux" but by putting the
     true case as the first argument it matches more of the C-style ternary operator
     semantics which can be helpful for readablity.
 
-    Example of mux as "ternary operator" to take the max of 'a' and 5: ::
+    Example of mux as "ternary operator" to take the min of 'a' and 5: ::
 
         select( a<5, truecase=a, falsecase=5 )
     """
@@ -115,7 +115,7 @@ def concat(*args):
     You can provide multiple arguments and they will be combined with the right-most
     argument being the least significant bits of the result.  Note that if you have
     a list of arguments to concat together you will likely want index 0 to be the least
-    significant bit and so if you unpack the list into the arguements here it will be
+    significant bit and so if you unpack the list into the arguments here it will be
     backwards.  The function concat_list is provided for that case specifically.
 
     Example using concat to combine two bytes into a 16-bit quantity: ::
@@ -339,7 +339,7 @@ def match_bitwidth(*args, **opt):
 
 
 def as_wires(val, bitwidth=None, truncating=True, block=None):
-    """ Return wires from val which may be wires, integers, strings, or bools.
+    """ Return wires from val which may be wires, integers (including IntEnums), strings, or bools.
 
     :param val: a wirevector-like object or something that can be converted into
       a Const
@@ -457,13 +457,15 @@ def enum_mux(cntrl, table, default=None, strict=True):
     :return: a wirevector which is the result of the mux.
     ::
 
-        class Command(Enum):
+        from enum import IntEnum
+
+        class Command(IntEnum):
             ADD = 1
             SUB = 2
-        enum_mux(cntrl, {ADD: a+b, SUB: a-b})
-        enum_mux(cntrl, {ADD: a+b}, strict=False)  # SUB case undefined
-        enum_mux(cntrl, {ADD: a+b, otherwise: a-b})
-        enum_mux(cntrl, {ADD: a+b}, default=a-b)
+        enum_mux(cntrl, {Command.ADD: a+b, Command.SUB: a-b})
+        enum_mux(cntrl, {Command.ADD: a+b}, strict=False)  # SUB case undefined
+        enum_mux(cntrl, {Command.ADD: a+b, otherwise: a-b})
+        enum_mux(cntrl, {Command.ADD: a+b}, default=a-b)
 
     """
     # check dictionary keys are of the right type

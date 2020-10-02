@@ -137,7 +137,7 @@ def log2(integer_val):
 def truncate(wirevector_or_integer, bitwidth):
     """ Returns a wirevector or integer truncated to the specified bitwidth
 
-    :param wirevector_or_integer: Either a wirevector or and integer to be truncated
+    :param wirevector_or_integer: Either a wirevector or an integer to be truncated
     :param bitwidth: The length to which the first argument should be truncated.
     :return: Returns a tuncated wirevector or integer as appropriate
 
@@ -148,8 +148,8 @@ def truncate(wirevector_or_integer, bitwidth):
 
     Examples: ::
 
-        truncate(9,3)  # returns 3  (0b101 truncates to 0b101)
-        truncate(5,3)  # returns 3  (0b1001 truncates to 0b001)
+        truncate(9,3)  # returns 1  (0b1001 truncates to 0b001)
+        truncate(5,3)  # returns 5  (0b101 truncates to 0b101)
         truncate(-1,3)  # returns 7  (-0b1 truncates to 0b111)
         y = truncate(x+1, x.bitwidth)  # y.bitwdith will equal x.bitwidth
     """
@@ -171,7 +171,7 @@ def chop(w, *segment_widths):
 
     This function chops a wirevector into a set of smaller wirevectors of different
     lengths.  It is most useful when multiple "fields" are contained with a single
-    wirevector, for example when breaking apart and instruction.  For example, if
+    wirevector, for example when breaking apart an instruction.  For example, if
     you wish to break apart a 32-bit MIPS I-type (Immediate) instruction you know
     it has an 6-bit opcode, 2 5-bit operands, and 16-bit offset.  You could take
     each of those slices in absolute terms: offset=instr[0:16], rt=instr[16:21]

@@ -254,7 +254,7 @@ class TimingAnalysis(object):
         return 1e6 * 1.0/clock_period_in_ps
 
     def max_length(self):
-        """Returns the max timing delay of the circuit.
+        """Returns the max timing delay of the circuit in ps.
 
         The result assumes that the circuit is implemented in a 130nm process, and that there is no
         setup or hold time associated with the circuit.  The resulting value is in picoseconds.  If
@@ -348,7 +348,7 @@ def yosys_area_delay(library, abc_cmd=None, block=None):
     http://www.vlsitechnology.org/html/vsc_description.html
 
     May raise `PyrtlError` if yosys is not configured correctly, and
-    `PyrtlInternalError` if the call to yosys was not able successfully
+    `PyrtlInternalError` if the call to yosys was not successful
     """
 
     if abc_cmd is None:

@@ -652,7 +652,7 @@ class Register(WireVector):
 
         def __bool__(self):
             """ Use of a _next in a statement like "a or b" is forbidden."""
-            raise PyrtlError('cannot covert Register.next to compile-time boolean.  This error '
+            raise PyrtlError('cannot convert Register.next to compile-time boolean.  This error '
                              'often happens when you attempt to use a Register.next with "==" or '
                              'something that calls "__eq__", such as when you test if a '
                              'Register.next is "in" something')
@@ -804,7 +804,7 @@ class Bundle(WireVector):
                                  "a Bundle must be explicitly ordered (i.e. OrderedDict)")
             # Assume dictionary stores (field, width) pairs
             fields = list(obj.items())
-        elif isinstance(obj, type):
+        elif isinstance(obj, six.class_types):
             if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7):
                 raise PyrtlError("Passing a class as an argument to Bundle() "
                                  "is only allowed for Python versions >= 3.7")
@@ -821,6 +821,7 @@ class Bundle(WireVector):
     @staticmethod
     def get_bundle_bitwidth(obj):
         fields = Bundle._get_fields(obj)
+
         def aux(acc, t):
             if isinstance(t[1], tuple):
                 width = t[1][0]
@@ -847,7 +848,7 @@ class Bundle(WireVector):
                 args.append(val)
             setattr(self, field, self[start:start+length])
             start += length
-        
+
         if args:
             from .corecircuits import concat_list
             self <<= concat_list(args)

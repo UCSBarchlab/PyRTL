@@ -127,7 +127,7 @@ def attempt3_hardware_fibonacci(n, bitwidth):
 # which keeps track of the iteration that we are on (i.next <<= i + 1).  The function
 # now returns two values, a reference to the register "a" and a reference to a single
 # bit that tells us if we are done.  That bit is calculated by comparing "i" to the
-# to a wirevector "n" that is passed in to see if they are the same. 
+# to a wirevector "n" that is passed in to see if they are the same.
 
 
 # Finally, we need a way to indicate that we want a new Fibonacci number.
