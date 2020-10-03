@@ -70,26 +70,26 @@ class TestPrioritizedMuxSim(unittest.TestCase):
         self.assertEqual(actual, expected)
 
 
-class TestIsEquivelent(unittest.TestCase):
+class TestIsEquivalent(unittest.TestCase):
     def test_equivalent_const(self):
         a = pyrtl.Const(1)
         b = pyrtl.Const(1)
         c = pyrtl.Const(1, 2)
         d = pyrtl.Const(3)
-        self.assertTrue(muxes._is_equivelent(a, a))
-        self.assertTrue(muxes._is_equivelent(a, b))
-        self.assertFalse(muxes._is_equivelent(a, c))
-        self.assertFalse(muxes._is_equivelent(a, d))
+        self.assertTrue(muxes._is_equivalent(a, a))
+        self.assertTrue(muxes._is_equivalent(a, b))
+        self.assertFalse(muxes._is_equivalent(a, c))
+        self.assertFalse(muxes._is_equivalent(a, d))
 
     def test_equivalent(self):
         a = pyrtl.WireVector(2)
         b = pyrtl.Const(2, 2)
         c = pyrtl.Output()
 
-        self.assertTrue(muxes._is_equivelent(a, a))
-        self.assertTrue(muxes._is_equivelent(c, c))
-        self.assertFalse(muxes._is_equivelent(a, b))
-        self.assertFalse(muxes._is_equivelent(a, c))
+        self.assertTrue(muxes._is_equivalent(a, a))
+        self.assertTrue(muxes._is_equivalent(c, c))
+        self.assertFalse(muxes._is_equivalent(a, b))
+        self.assertFalse(muxes._is_equivalent(a, c))
 
 
 class TestSmartMuxTrivial(unittest.TestCase):

@@ -580,7 +580,15 @@ class TestStepBundleBase(unittest.TestCase):
             "rd": 5,
             "opcode": 7
         }
-        self.step_with_bundle(rformat)
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                self.step_with_bundle(rformat)
+            self.assertEqual(str(ex.exception),
+                "For Python versions < 3.7, the dictionary used to instantiate "
+                "a Bundle must be explicitly ordered (i.e. OrderedDict)"
+            )
+        else:
+            self.step_with_bundle(rformat)
 
     def test_step_with_bundle_from_class(self):
         class RFormat:
@@ -590,7 +598,15 @@ class TestStepBundleBase(unittest.TestCase):
             funct3 = 3
             rd = 5
             opcode = 7
-        self.step_with_bundle(RFormat)
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                self.step_with_bundle(RFormat)
+            self.assertEqual(str(ex.exception),
+                "Passing a class as an argument to Bundle() is only "
+                "allowed for Python versions >= 3.7"
+            )
+        else:
+            self.step_with_bundle(RFormat)
 
     def step_with_bundle(self, obj):
         w = pyrtl.Bundle(obj, "inst")
@@ -624,7 +640,7 @@ class TestStepBundleBase(unittest.TestCase):
     
     def test_bad_write_to_bundle(self):
         w = pyrtl.WireVector(8, 'w')
-        x = w.as_bundle({'a': 2, 'b': 3, 'c': 3})
+        x = w.as_bundle([('a', 2), ('b', 3), ('c', 3)])
         with self.assertRaises(pyrtl.PyrtlError):
             x <<= 0b10101110
             _sim = pyrtl.Simulation()
@@ -663,21 +679,22 @@ class TestStepBundleBase(unittest.TestCase):
             # Returning a literal
             thread5 = (8, 0b01000011)
         
-        w = pyrtl.Bundle(Array, 'w')
-        sim = pyrtl.Simulation()
-        sim.step({'x': 1})
-        assert sim.inspect(w.thread1) == 0b00101100
-        assert sim.inspect(w.thread2) == 0b01100110
-        assert sim.inspect(w.thread3) == 0b11111111
-        assert sim.inspect(w.thread4) == 0b00000011
-        assert sim.inspect(w.thread5) == 0b01000011
+        if six.PY3:
+            w = pyrtl.Bundle(Array, 'w')
+            sim = pyrtl.Simulation()
+            sim.step({'x': 1})
+            assert sim.inspect(w.thread1) == 0b00101100
+            assert sim.inspect(w.thread2) == 0b01100110
+            assert sim.inspect(w.thread3) == 0b11111111
+            assert sim.inspect(w.thread4) == 0b00000011
+            assert sim.inspect(w.thread5) == 0b01000011
 
-        sim.step({'x': 0})
-        assert sim.inspect(w.thread1) == 0b10010011
-        assert sim.inspect(w.thread2) == 0b01100110
-        assert sim.inspect(w.thread3) == 0b00000000
-        assert sim.inspect(w.thread4) == 0b00000011
-        assert sim.inspect(w.thread5) == 0b01000011
+            sim.step({'x': 0})
+            assert sim.inspect(w.thread1) == 0b10010011
+            assert sim.inspect(w.thread2) == 0b01100110
+            assert sim.inspect(w.thread3) == 0b00000000
+            assert sim.inspect(w.thread4) == 0b00000011
+            assert sim.inspect(w.thread5) == 0b01000011
 
 
 class TraceWithAdderBase(unittest.TestCase):

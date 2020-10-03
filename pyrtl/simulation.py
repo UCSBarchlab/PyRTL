@@ -61,7 +61,7 @@ class Simulation(object):
             If the default (true) is passed, Simulation will create a new tracer automatically
             which can be referenced by the member variable .tracer
         :param register_value_map: Defines the initial value for
-          the roms specified. Format: {Register: value}.
+          the registers specified. Format: {Register: value}.
         :param memory_value_map: Defines initial values for many
           addresses in a single or multiple memory. Format: {Memory: {address: Value}}.
           Memory is a memory block, address is the address of a value
@@ -229,7 +229,7 @@ class Simulation(object):
             supplied input value)
         :param file: where to write the output (if there are unexpected outputs detected)
         :param stop_after_first_error: a boolean flag indicating whether to stop the simulation
-            after the step where the first errors are encountered (defaults to False)
+            after encountering the first error (defaults to False)
 
         All input wires must be in the provided_inputs in order for the simulation
         to accept these values. Additionally, the length of the array of provided values for each
@@ -263,8 +263,8 @@ class Simulation(object):
             sim = pyrtl.Simulation()
             sim.step_multiple({}, steps=3)
 
-        Using sim.step_multiple(3) simulates 3 cycles, after which we would expect the value of 'b'
-        to be 2.
+        Using sim.step_multiple({}, 3) simulates 3 cycles, after which we would expect the value
+        of 'b' to be 2.
 
         """
 
@@ -595,8 +595,8 @@ class FastSimulation(object):
             sim = pyrtl.Simulation()
             sim.step_multiple({}, steps=3)
 
-        Using sim.step_multiple(3) simulates 3 cycles, after which we would expect the value of 'b'
-        to be 2.
+        Using sim.step_multiple({}, 3) simulates 3 cycles, after which we would expect the value
+        of 'b' to be 2.
 
         """
 
@@ -1072,12 +1072,12 @@ class SimulationTrace(object):
         :param include_clock: boolean specifying if the implicit clk should be included.
 
         Dumps the current trace to file as a "value change dump" file.  The file parameter
-        defaults to _stdout_ and the include_clock defaults to True.
+        defaults to _stdout_ and the include_clock defaults to False.
 
         Examples ::
 
             sim_trace.print_vcd()
-            sim_trace.print_vcd("my_waveform.vcd", include_clock=False)
+            sim_trace.print_vcd("my_waveform.vcd", include_clock=True)
         """
         # dump header info
         # file_timestamp = time.strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", time.gmtime())
