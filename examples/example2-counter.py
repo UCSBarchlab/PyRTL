@@ -55,6 +55,7 @@ def ripple_add(a, b, carry_in=0):
 # is a WireVector at other times.  Python supports polymorphism throughout
 # and PyRTL will cast integers and some other types to WireVectors when it can.
 
+
 # Now let's build a 3-bit counter from our N-bit ripple carry adder.
 
 counter = pyrtl.Register(bitwidth=3, name='counter')

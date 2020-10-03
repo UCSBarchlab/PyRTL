@@ -250,6 +250,7 @@ def _sparse_adder(wire_array_2, adder):
     adder_result = adder(pyrtl.concat_list(add_wires[0]), pyrtl.concat_list(add_wires[1]))
     return pyrtl.concat(adder_result, *reversed(result))
 
+
 """
 Some adders that utilize these tree reducers
 """

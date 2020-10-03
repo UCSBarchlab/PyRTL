@@ -550,8 +550,8 @@ class CompiledSimulation(object):
     def _build_concat(self, write, op, param, args, dest):
         cattotal = sum(x.bitwidth for x in args)
         pieces = (
-            (self.varname[a], l, 0, min(64, a.bitwidth-64*l))
-            for a in reversed(args) for l in range(self._limbs(a)))
+            (self.varname[a], lx, 0, min(64, a.bitwidth-64*lx))
+            for a in reversed(args) for lx in range(self._limbs(a)))
         curr = next(pieces)
         for n in range(self._limbs(dest)):
             res = []

@@ -155,6 +155,7 @@ def attempt4_hardware_fibonacci(n, req, bitwidth):
     done <<= i == local_n
     return a, done
 
+
 # This is now far enough along that we can simulate the design and see what happens.
 # We begin by connecting our input and output wires to the implementation,
 # stepping once with the 'req' signal high to signify we're beginning a

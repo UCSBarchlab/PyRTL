@@ -1,7 +1,7 @@
 language: python
 python: 3.7
 env:
-  - TOXENV="py{37,27}-{test}-{travis}, pep8"
+  - TOXENV="py{37,27}-{test}-{travis}, pycodestyle"
 # don't test branches that might not build
 branches:
   only:
