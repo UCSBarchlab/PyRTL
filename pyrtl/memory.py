@@ -105,6 +105,7 @@ class _MemReadBase(object):
         self.readport_nets = []
         self.id = _memIndex.next_index()
         self.asynchronous = asynchronous
+        self.block._add_memblock(self)
 
     def __getitem__(self, item):
         """ Builds circuitry to retrieve an item from the memory """
@@ -150,7 +151,7 @@ class MemBlock(_MemReadBase):
 
         data <<= memory[addr]  (infer read port)
         memory[addr] <<= data  (infer write port)
-        mem[address] = MemBlock.EnabledWrite(data,enable=we)
+        mem[address] <<= MemBlock.EnabledWrite(data,enable=we)
 
     When the address of a memory is assigned to using a EnableWrite object
     items will only be written to the memory when the enable WireVector is
@@ -288,7 +289,7 @@ class RomBlock(_MemReadBase):
             simulation should throw an error on access of unintialized data.  If you are generating
             verilog from the rom, you will need to specify a value for every address (in which case
             setting this to True will help), however for testing and simulation it useful to know if
-            you are off the end of explicitly specified values (which is wy it is False by default)
+            you are off the end of explicitly specified values (which is why it is False by default)
         :param block: The block to add to, defaults to the working block
         """
 
@@ -302,7 +303,7 @@ class RomBlock(_MemReadBase):
     def __getitem__(self, item):
         import numbers
         if isinstance(item, numbers.Number):
-            raise PyrtlError("There is no point in indexing into a RomBlock with an int "
+            raise PyrtlError("There is no point in indexing into a RomBlock with an int. "
                              "Instead, get the value from the source data for this Rom")
             # If you really know what you are doing, use a Const WireVector instead.
         return super(RomBlock, self).__getitem__(item)

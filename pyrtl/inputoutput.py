@@ -13,7 +13,7 @@ import collections
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, _NameSanitizer
 from .wire import WireVector, Input, Output, Const, Register
-from .corecircuits import concat
+from .corecircuits import concat_list
 from .memory import RomBlock
 
 
@@ -23,7 +23,7 @@ from .memory import RomBlock
 #    | | \| |    \__/  |
 
 
-def input_from_blif(blif, block=None, merge_io_vectors=True):
+def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
     """ Read an open blif file or string as input, updating the block appropriately
 
     Assumes the blif has been flattened and their is only a single module.
@@ -34,7 +34,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
     import pyparsing
     import six
     from pyparsing import (Word, Literal, OneOrMore, ZeroOrMore,
-                           Suppress, Group, Keyword)
+                           Suppress, Group, Keyword, Optional, oneOf)
 
     block = working_block(block)
 
@@ -60,8 +60,8 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         return s
 
     # Begin BLIF language definition
-    signal_start = pyparsing.alphas + '$:[]_<>\\\/'
-    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\\/.'
+    signal_start = pyparsing.alphas + '$:[]_<>\\\/?'
+    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\\/.?'
     signal_id = Word(signal_start, signal_middle)
     header = SKeyword('.model') + signal_id('model_name')
     input_list = Group(SKeyword('.inputs') + OneOrMore(signal_id))('input_list')
@@ -81,11 +81,14 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
     dffas_def = Group(SKeyword('.subckt') + dffas_keyword + dffas_formal)('dffas_def')
 
     # synchronous Flip-flop
+    dffs_init_val = Optional(oneOf("0 1 2 3"), default=Literal("0"))
+    # TODO I think <type> and <control> ('re' and 'C') below are technically optional too
     dffs_def = Group(SKeyword('.latch') +
                      signal_id('D') +
                      signal_id('Q') +
                      SLiteral('re') +
-                     signal_id('C'))('dffs_def')
+                     signal_id('C') +
+                     dffs_init_val('I'))('dffs_def')
     command_def = name_def | dffas_def | dffs_def
     command_list = Group(OneOrMore(command_def))('command_list')
 
@@ -106,7 +109,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         name_counts = collections.Counter(start_names)
         for input_name in name_counts:
             bitwidth = name_counts[input_name]
-            if input_name == 'clk':
+            if input_name == clock_name:
                 clk_set.add(input_name)
             elif not merge_io_vectors or bitwidth == 1:
                 block.add_wirevector(Input(bitwidth=1, name=input_name))
@@ -131,7 +134,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
                     bit_name = output_name + '[' + str(i) + ']'
                     bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_list.append(bit_wire)
-                wire_out <<= concat(*bit_list)
+                wire_out <<= concat_list(bit_list)
 
     def extract_commands(model):
         # for each "command" (dff or net) in the model
@@ -146,6 +149,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
                 raise PyrtlError('unknown command type')
 
     def extract_cover(command):
+        # pylint: disable=invalid-unary-operand-type
         netio = command['namesignal_list']
         if len(command['cover_list']) == 0:
             output_wire = twire(netio[0])
@@ -198,6 +202,14 @@ def input_from_blif(blif, block=None, merge_io_vectors=True):
         flop = Register(bitwidth=1, name=regname)
         flop.next <<= twire(command['D'])
         flop_output = twire(command['Q'])
+        init_val = command['I']
+        if init_val == "1":
+            # e.g. in Verilog: `initial reg <= 1;`
+            raise PyrtlError("Initializing latches to 1 is not supported. "
+                             "Acceptable values are: 0, 2 (don't care), and 3 (unknown); "
+                             "in any case, PyRTL will ensure all stateful elements come up 0. "
+                             "For finer control over the initial value, use specialized reset "
+                             "logic.")
         flop_output <<= flop
 
     for model in result:
@@ -416,7 +428,7 @@ def net_graph(block=None, split_state=False):
             graph[w] = {}
 
     # add all of the edges
-    for w in (dest_set & arg_set):
+    for w in (dest_set | arg_set):
         try:
             _from = wire_src_dict[w]
         except Exception:
@@ -456,58 +468,115 @@ def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None):
             print('%d %d %s' % (from_index, to_index, namer(edge)), file=file)
 
 
-def _graphviz_default_namer(thing, is_edge=True, is_to_splitmerge=False):
-    """ Returns a "good" graphviz label for thing. """
-    if is_edge:
-        if (thing.name is None or
-                thing.name.startswith('tmp') or
-                isinstance(thing, (Input, Output, Const, Register))):
-            name = ''
-        else:
-            name = '/'.join([thing.name, str(len(thing))])
-        penwidth = 2 if len(thing) == 1 else 6
-        arrowhead = 'none' if is_to_splitmerge else 'normal'
-        return '[label="%s", penwidth="%d", arrowhead="%s"]' % (name, penwidth, arrowhead)
+def _default_edge_namer(edge, is_to_splitmerge=False):
+    """
+    A function for naming an edge for use in the graphviz graph.
 
-    elif isinstance(thing, Const):
-        return '[label="%d", shape=circle, fillcolor=lightgrey]' % thing.val
-    elif isinstance(thing, (Input, Output)):
-        return '[label="%s", shape=circle, fillcolor=none]' % thing.name
-    elif isinstance(thing, Register):
-        return '[label="%s", shape=square, fillcolor=gold]' % thing.name
-    elif isinstance(thing, WireVector):
-        return '[label="", shape=circle, fillcolor=none]'
+    :param edge: the edge (i.e. WireVector or deriving class)
+    :param is_to_splitmerge: if the node from to which the edge points
+                             is a select or concat operation
+    :return: a function that can be called by graph namer function you pass
+             in to block_to_graphviz_string
+    """
+
+    if (edge.name is None or
+            edge.name.startswith('tmp') or
+            isinstance(edge, (Input, Output, Const, Register))):
+        name = ''
+    else:
+        name = '/'.join([edge.name, str(len(edge))])
+
+    penwidth = 2 if len(edge) == 1 else 6
+    arrowhead = 'none' if is_to_splitmerge else 'normal'
+    return '[label="%s", penwidth="%d", arrowhead="%s"]' % (name, penwidth, arrowhead)
+
+
+def _default_node_namer(node):
+    if isinstance(node, Const):
+        return '[label="%d", shape=circle, fillcolor=lightgrey]' % node.val
+    elif isinstance(node, Input):
+        return '[label="%s", shape=invhouse, fillcolor=coral]' % node.name
+    elif isinstance(node, Output):
+        return '[label="%s", shape=house, fillcolor=lawngreen]' % node.name
+    elif isinstance(node, Register):
+        return '[label="%s", shape=square, fillcolor=gold]' % node.name
+    elif isinstance(node, WireVector):
+        return '[label="%s", shape=circle, fillcolor=none]' % node.name
     else:
         try:
-            if thing.op == '&':
+            if node.op == '&':
                 return '[label="and"]'
-            elif thing.op == '|':
+            elif node.op == '|':
                 return '[label="or"]'
-            elif thing.op == '^':
+            elif node.op == '^':
                 return '[label="xor"]'
-            elif thing.op == '~':
-                return '[label="not"]'
-            elif thing.op == 'x':
-                return '[label="mux"]'
-            elif thing.op in 'sc':
-                return '[label="", height=.1, width=.1]'
-            elif thing.op == 'r':
-                name = thing.dests[0].name or ''
+            elif node.op == '~':
+                return '[label="not", shape=invtriangle]'
+            elif node.op == 'x':
+                return '[label="mux", shape=invtrapezium]'
+            elif node.op == 's':
+                selEnd = node.op_param[0]
+                if len(node.op_param) < 2:
+                    selBegin = selEnd
+                else:
+                    selBegin = node.op_param[len(node.op_param)-1]
+                return '[label="bits(%s,%s)", height=.1, width=.1]' % (selBegin, selEnd)
+            elif node.op in 'c':
+                return '[label="concat", height=.1, width=.1]'
+            elif node.op == 'r':
+                name = node.dests[0].name or ''
                 return '[label="%s.next", shape=square, fillcolor=gold]' % name
-            elif thing.op == 'w':
-                return '[label="buf"]'
+            elif node.op == 'w':
+                return '[label="", height=.1, width=.1]'
             else:
-                return '[label="%s"]' % (thing.op + str(thing.op_param or ''))
+                return '[label="%s"]' % (node.op + str(node.op_param or ''))
         except AttributeError:
-            raise PyrtlError('no naming rule for "%s"' % str(thing))
+            raise PyrtlError('no naming rule for "%s"' % str(node))
 
 
-def output_to_graphviz(file, namer=_graphviz_default_namer, block=None):
+def graphviz_default_namer(
+        thing,
+        is_edge,
+        is_to_splitmerge,
+        node_namer=_default_node_namer,
+        edge_namer=_default_edge_namer):
+    """ Returns a "good" graphviz label for thing. """
+    if is_edge:
+        return edge_namer(thing, is_to_splitmerge=is_to_splitmerge)
+    else:
+        return node_namer(thing)
+
+
+def detailed_edge_namer(extra_edge_info=None):
+    """
+    A function for naming an edge for use in the graphviz graph.
+
+    :param extra_edge_info: a map from edge to any additional data you want
+                            to print associated with it (e.g. timing data)
+    :return: a function that can be called by graph namer function you pass
+             in to block_to_graphviz_string
+    """
+    def edge_namer(edge, is_to_splitmerge):
+        if (edge.name is None or
+                isinstance(edge, (Input, Output, Const, Register))):
+            name = ''
+        else:
+            name = '/'.join([edge.name, str(len(edge))])
+            if extra_edge_info and edge in extra_edge_info:
+                name = name + " (" + str(extra_edge_info[edge]) + ")"
+
+        penwidth = 2 if len(edge) == 1 else 6
+        arrowhead = 'none' if is_to_splitmerge else 'normal'
+        return '[label="%s", penwidth="%d", arrowhead="%s"]' % (name, penwidth, arrowhead)
+    return edge_namer
+
+
+def output_to_graphviz(file, namer=graphviz_default_namer, block=None):
     """ Walk the block and output it in graphviz format to the open file. """
     print(block_to_graphviz_string(block, namer), file=file)
 
 
-def block_to_graphviz_string(block=None, namer=_graphviz_default_namer):
+def block_to_graphviz_string(block=None, namer=graphviz_default_namer):
     """ Return a graphviz string for the block. """
     graph = net_graph(block, split_state=True)
     node_index_map = {}  # map node -> index
@@ -516,14 +585,14 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer):
               digraph g {\n
               graph [splines="spline"];
               node [shape=circle, style=filled, fillcolor=lightblue1,
-                    fontcolor=grey, fontname=helvetica, penwidth=0,
+                    fontcolor=black, fontname=helvetica, penwidth=0,
                     fixedsize=true];
               edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
               """
 
     # print the list of nodes
     for index, node in enumerate(graph):
-        label = namer(node, is_edge=False)
+        label = namer(node, False, False)
         rstring += '    n%s %s;\n' % (index, label)
         node_index_map[node] = index
 
@@ -534,7 +603,7 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer):
             to_index = node_index_map[_to]
             edge = graph[_from][_to]
             is_to_splitmerge = True if hasattr(_to, 'op') and _to.op in 'cs' else False
-            label = namer(edge, is_to_splitmerge=is_to_splitmerge)
+            label = namer(edge, True, is_to_splitmerge)
             rstring += '   n%d -> n%d %s;\n' % (from_index, to_index, label)
 
     rstring += '}\n'

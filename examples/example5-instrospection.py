@@ -3,8 +3,8 @@
 import pyrtl
 
 
-# The following example shows how pyrtl can be used to make some interesting
-# hardware structures using python introspection.  In particular, this example
+# The following example shows how PyRTL can be used to make some interesting
+# hardware structures using Python introspection.  In particular, this example
 # makes a N-stage pipeline structure.  Any specific pipeline is then a derived
 # class of SimplePipeline where methods with names starting with "stage" are
 # stages, and new members with names not starting with "_" are to be registered
@@ -73,6 +73,5 @@ print(pyrtl.working_block())
 # Simulation of the core
 sim_trace = pyrtl.SimulationTrace()
 sim = pyrtl.Simulation(tracer=sim_trace)
-for cycle in range(15):
-    sim.step({})
+sim.step_multiple({}, nsteps=15)
 sim_trace.render_trace()

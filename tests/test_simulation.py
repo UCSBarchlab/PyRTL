@@ -301,6 +301,401 @@ class SimInputValidationBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             sim_trace = pyrtl.SimulationTrace()
 
+class SimStepAccessInternalMemoryBase(unittest.TestCase):
+
+     def setUp(self):
+        pyrtl.reset_working_block()
+
+     def test_step_with_internal_memory(self):
+
+        def special_memory(read_addr, write_addr, data, wen):
+            mem = pyrtl.MemBlock(bitwidth=32, addrwidth=5, name='special_mem')
+            mem[write_addr] <<= pyrtl.MemBlock.EnabledWrite(data, wen & (write_addr > 0))
+            return mem[read_addr]
+
+        read_addr = pyrtl.Input(5, 'read_addr')
+        write_addr = pyrtl.Input(5, 'write_addr')
+        data = pyrtl.Input(32, 'data')
+        wen = pyrtl.Input(1, 'wen')
+        res = pyrtl.Output(32, 'res')
+
+        res <<= special_memory(read_addr, write_addr, data, wen)
+
+        # Can only access it after the `special_memory` block has been instantiated/called
+        special_mem = pyrtl.working_block().get_memblock_by_name('special_mem')
+
+        sim = self.sim(memory_value_map={
+            special_mem: {
+                0: 5,
+                1: 6,
+                2: 7,
+                3: 8,
+            }
+        })
+
+        inputs = {
+            'read_addr':  '012012',
+            'write_addr': '012012',
+            'data':       '890333',
+            'wen':        '111000',
+        }
+        expected = {
+            'res': '567590',
+        }
+        # This should not fail
+        sim.step_multiple(inputs, expected)
+
+         # Let's check the memory contents too
+        mem_map = sim.inspect_mem(special_mem)
+        self.assertEqual(mem_map[0], 5)
+        self.assertEqual(mem_map[1], 9)
+        self.assertEqual(mem_map[2], 0)
+        self.assertEqual(mem_map[3], 8)
+
+
+class SimStepMultipleBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        in1 = pyrtl.Input(4, "in1")
+        in2 = pyrtl.Input(4, "in2")
+        out1 = pyrtl.Output(4, "out1")
+        out1 <<= (in1 ^ in2) + pyrtl.Const(1)
+        out2 = pyrtl.Output(4, "out2")
+        out2 <<= in1 | in2
+        self.inputs = {
+            'in1': [0, 1, 3, 15, 14],
+            'in2': [6, 6, 6, 6, 6],
+        }
+
+    def test_step_multiple_nsteps_no_inputs(self):
+        pyrtl.reset_working_block()
+        a = pyrtl.Register(8)
+        b = pyrtl.Output(8, 'b')
+        a.next <<= a + 1
+        b <<= a
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        sim.step_multiple({}, nsteps=5)
+
+        correct_output = ("--- Values in base 10 ---\n"
+                          "b 0 1 2 3 4\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_nsteps_gt_ninputs(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        with self.assertRaises(pyrtl.PyrtlError) as error:
+            sim.step_multiple(self.inputs, nsteps=6)
+        self.assertEqual(str(error.exception),
+                        'nsteps is specified but is greater than the '
+                        'number of values supplied for each input')
+
+    def test_step_multiple_no_inputs(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        with self.assertRaises(pyrtl.PyrtlError) as error:
+            sim.step_multiple({})
+        self.assertEqual(str(error.exception),
+                         'need to supply either input values '
+                         'or a number of steps to simulate')
+
+    def test_step_multiple_bad_nsteps1(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        with self.assertRaises(pyrtl.PyrtlError) as error:
+            sim.step_multiple({'in1': [], 'in2': []})
+        self.assertEqual(str(error.exception),
+                         'must simulate at least one step')
+
+    def test_step_multiple_bad_nsteps2(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        with self.assertRaises(pyrtl.PyrtlError) as error:
+            sim.step_multiple(self.inputs, nsteps=-1)
+        self.assertEqual(str(error.exception),
+                         'must simulate at least one step')
+
+    def test_step_multiple_no_values_for_each_step_of_input(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        with self.assertRaises(pyrtl.PyrtlError) as error:
+            sim.step_multiple({'in1': [0, 1, 3], 'in2': [1]})
+        self.assertEqual(str(error.exception),
+                         'must supply a value for each provided wire '
+                         'for each step of simulation')
+
+    def test_step_multiple_no_values_for_each_step_of_given_outputs(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        with self.assertRaises(pyrtl.PyrtlError) as error:
+            sim.step_multiple(self.inputs,
+                              {'out1': [7, 8, 6, 10, 9],
+                               'out2': [6, 7, 7, 15]})
+        self.assertEqual(str(error.exception),
+                         'any expected outputs must have a supplied value '
+                         'each step of simulation')
+
+    def test_step_multiple_no_expected_check(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        sim.step_multiple(self.inputs)
+
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1   0  1  3 15 14\n"
+                          "in2   6  6  6  6  6\n"
+                          "out1  7  8  6 10  9\n"
+                          "out2  6  7  7 15 14\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_no_errors(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        expected = {
+            'out1': [7, 8, 6, 10, 9],
+            'out2': [6, 7, 7, 15, 14],
+        }
+        sim.step_multiple(self.inputs, expected)
+
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1   0  1  3 15 14\n"
+                          "in2   6  6  6  6  6\n"
+                          "out1  7  8  6 10  9\n"
+                          "out2  6  7  7 15 14\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_no_errors_nsteps_specified(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        expected = {
+            'out1': [7, 8, 6, 10, 9],
+            'out2': [6, 7, 7, 15, 14],
+        }
+        sim.step_multiple(self.inputs, expected, nsteps=3)
+
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1  0 1 3\n"
+                          "in2  6 6 6\n"
+                          "out1 7 8 6\n"
+                          "out2 6 7 7\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_many_errors_report_only_first(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        expected = {
+            'out1': [7, 9, 4, 10, 9],
+            'out2': [6, 2, 7, 8, 14],
+        }
+        output = six.StringIO()
+        sim.step_multiple(self.inputs, expected, file=output, stop_after_first_error=True)
+
+        # Test the output about unexpected values
+        correct_output = ("Unexpected output (stopped after step with first error):\n"
+                          " step       name expected   actual\n"
+                          "    1       out1        9        8\n"
+                          "    1       out2        2        7\n")
+        self.assertEqual(output.getvalue(), correct_output)
+
+        # Test that the trace stopped after the step with the first error
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1  0 1\n"
+                          "in2  6 6\n"
+                          "out1 7 8\n"
+                          "out2 6 7\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_many_errors_report_all(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        expected = {
+            'out1': [7, 9, 4, 10, 9],
+            'out2': [6, 2, 7, 8, 14],
+        }
+        output = six.StringIO()
+        sim.step_multiple(self.inputs, expected, file=output)
+
+        # Test the output about unexpected values
+        correct_output = ("Unexpected output on one or more steps:\n"
+                          " step       name expected   actual\n"
+                          "    1       out1        9        8\n"
+                          "    1       out2        2        7\n"
+                          "    2       out1        4        6\n"
+                          "    3       out2        8       15\n")
+        self.assertEqual(output.getvalue(), correct_output)
+
+        # Test that the trace still produced all the steps
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1   0  1  3 15 14\n"
+                          "in2   6  6  6  6  6\n"
+                          "out1  7  8  6 10  9\n"
+                          "out2  6  7  7 15 14\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+
+class TestStepBundleBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_step_with_bundle_from_tuples(self):
+        rformat = [
+            ("funct7", 7),
+            ("rs2", 5),
+            ("rs1", 5),
+            ("funct3", 3),
+            ("rd", 5),
+            ("opcode", 7),
+        ]
+        self.step_with_bundle(rformat)
+
+    def test_step_with_bundle_from_dict(self):
+        rformat = {
+            "funct7": 7,
+            "rs2": 5,
+            "rs1": 5,
+            "funct3": 3,
+            "rd": 5,
+            "opcode": 7
+        }
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                self.step_with_bundle(rformat)
+            self.assertEqual(str(ex.exception),
+                "For Python versions < 3.7, the dictionary used to instantiate "
+                "a Bundle must be explicitly ordered (i.e. OrderedDict)"
+            )
+        else:
+            self.step_with_bundle(rformat)
+
+    def test_step_with_bundle_from_class(self):
+        class RFormat:
+            funct7 = 7
+            rs2 = 5
+            rs1 = 5
+            funct3 = 3
+            rd = 5
+            opcode = 7
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                self.step_with_bundle(RFormat)
+            self.assertEqual(str(ex.exception),
+                "Passing a class as an argument to Bundle() is only "
+                "allowed for Python versions >= 3.7"
+            )
+        else:
+            self.step_with_bundle(RFormat)
+
+    def step_with_bundle(self, obj):
+        w = pyrtl.Bundle(obj, "inst")
+        #     funct7   rs2   rs1 funct3    rd  opcode
+        # 0b 0000010 01100 01010    000 01011 0010011
+        w <<= 0b00000100110001010000010110010011
+        r = pyrtl.Register(len(w))
+        f7 = r.as_bundle(obj).funct7
+        r.next <<= w
+        y = r.as_bundle(obj)
+
+        sim = pyrtl.Simulation()
+        sim.step({})
+        assert sim.inspect(w.funct7) == 0b0000010
+        assert sim.inspect(w.rs2) == 0b01100
+        assert sim.inspect(w.rs1) == 0b01010
+        assert sim.inspect(w.funct3) == 0b000
+        assert sim.inspect(w.rd) == 0b01011
+        assert sim.inspect(w.opcode) == 0b0010011
+        assert sim.inspect(r) == 0
+
+        sim.step({})
+        assert sim.inspect(r) == 0b00000100110001010000010110010011
+        assert sim.inspect(f7) == 0b0000010
+        assert sim.inspect(y.funct7) == 0b0000010
+        assert sim.inspect(y.rs2) == 0b01100
+        assert sim.inspect(y.rs1) == 0b01010
+        assert sim.inspect(y.funct3) == 0b000
+        assert sim.inspect(y.rd) == 0b01011
+        assert sim.inspect(y.opcode) == 0b0010011
+    
+    def test_bad_write_to_bundle(self):
+        w = pyrtl.WireVector(8, 'w')
+        x = w.as_bundle([('a', 2), ('b', 3), ('c', 3)])
+        with self.assertRaises(pyrtl.PyrtlError):
+            x <<= 0b10101110
+            _sim = pyrtl.Simulation()
+
+    # Highly experimental, but seems to work right now
+    def test_good_write_to_bundle(self):
+        x = pyrtl.Input(1, 'x')
+
+        def t1():
+            w = pyrtl.WireVector(8)
+            with pyrtl.conditional_assignment:
+                with x:
+                    w |= 0b00101100
+                with pyrtl.otherwise:
+                    w |= 0b10010011
+            return w
+        
+        def t3():
+            w = pyrtl.WireVector(8)
+            with pyrtl.conditional_assignment:
+                with x:
+                    w |= 0b11111111
+                with pyrtl.otherwise:
+                    w |= 0b00000000
+            return w
+
+        class Array:
+            # Returning a function which returns a WireVector
+            thread1 = (8, t1)
+            # Returning a function with returns a Const with explicit size
+            thread2 = (8, lambda: pyrtl.Const(0b01100110, 8))
+            # Returning a WireVector
+            thread3 = (8, t3())
+            # Returning a Const without an explicit size
+            thread4 = (8, pyrtl.Const(0b00000011))
+            # Returning a literal
+            thread5 = (8, 0b01000011)
+        
+        if six.PY3:
+            w = pyrtl.Bundle(Array, 'w')
+            sim = pyrtl.Simulation()
+            sim.step({'x': 1})
+            assert sim.inspect(w.thread1) == 0b00101100
+            assert sim.inspect(w.thread2) == 0b01100110
+            assert sim.inspect(w.thread3) == 0b11111111
+            assert sim.inspect(w.thread4) == 0b00000011
+            assert sim.inspect(w.thread5) == 0b01000011
+
+            sim.step({'x': 0})
+            assert sim.inspect(w.thread1) == 0b10010011
+            assert sim.inspect(w.thread2) == 0b01100110
+            assert sim.inspect(w.thread3) == 0b00000000
+            assert sim.inspect(w.thread4) == 0b00000011
+            assert sim.inspect(w.thread5) == 0b01000011
+
 
 class TraceWithAdderBase(unittest.TestCase):
     def setUp(self):

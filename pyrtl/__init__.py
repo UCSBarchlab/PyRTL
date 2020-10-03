@@ -18,6 +18,7 @@ from .wire import WireVector
 from .wire import Input, Output
 from .wire import Const
 from .wire import Register
+from .wire import Bundle
 
 # helper functions
 

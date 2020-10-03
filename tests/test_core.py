@@ -85,6 +85,32 @@ class TestBlock(unittest.TestCase):
         for net in block.logic:
             print(net)
 
+    def test_no_memblocks(self):
+        block = pyrtl.working_block()
+        self.assertFalse(block.memblock_by_name)
+
+    def test_bad_memblock_name_strict(self):
+        block = pyrtl.working_block()
+        with self.assertRaises(pyrtl.PyrtlError):
+            _ = block.get_memblock_by_name('bad_mem', strict=True)
+
+    def test_bad_memblock_name_none(self):
+        block = pyrtl.working_block()
+        mem = block.get_memblock_by_name('bad_mem')
+        self.assertIsNone(mem)
+
+    def test_same_memblock_referenced_across_multiple_operators(self):
+        mem_name = 'mem'
+        mem = pyrtl.MemBlock(32, 5, mem_name)
+        x = mem[0]
+        mem[1] <<= 42
+        mem = pyrtl.working_block().get_memblock_by_name(mem_name)
+        for net in pyrtl.working_block().logic:
+            if net.op == 'm':
+                self.assertIs(net.op_param[1], mem)
+            if net.op == '@':
+                self.assertIs(net.op_param[1], mem)
+
 
 class TestSanityCheckNet(unittest.TestCase):
     def setUp(self):
