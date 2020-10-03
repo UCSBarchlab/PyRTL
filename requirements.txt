@@ -1,7 +1,8 @@
-pep8==1.5.7
-pylint==1.5.1
-astroid==1.4.1
+pep8
+pylint
+astroid
 sphinx
-nose==1.3.4
+nose
 pyparsing
 six
+coverage
