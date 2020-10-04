@@ -20,14 +20,7 @@ from .wire import Const
 from .wire import Register
 
 # matrix functions
-
 from .matrix import Matrix
-from .matrix import multiply
-from .matrix import summation
-from .matrix import maximum
-from .matrix import minimum
-from .matrix import argmax
-from .matrix import dot
 
 # helper functions
 from .helperfuncs import input_list
