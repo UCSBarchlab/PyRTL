@@ -1421,7 +1421,7 @@ class TestMatrixMatrixMultiply(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             first_matrix = pyrtl.Matrix(
                 3, 2, 3)
-            result = first_matrix @ 1
+            result = first_matrix.__matmul__(1)
 
     def test_mat_mul_fail_3_by_3_multiply_2_by_2(self):
         with self.assertRaises(pyrtl.PyrtlError):
@@ -1439,7 +1439,7 @@ class TestMatrixMatrixMultiply(unittest.TestCase):
                 3, 2, 3)
             second_matrix = pyrtl.Matrix(
                 3, 2, 3)
-            result = first_matrix @ second_matrix
+            result = first_matrix.__matmul__(second_matrix)
 
     def test_mat_mul_random_case(self):
         rows, columns1, columns2, bits1, bits2 = random.randint(
@@ -1469,7 +1469,7 @@ class TestMatrixMatrixMultiply(unittest.TestCase):
         second_matrix = pyrtl.Matrix(
             rows2, columns2, bits2, value=second_int_matrix)
 
-        result_matrix = first_matrix @ second_matrix
+        result_matrix = first_matrix.__matmul__(second_matrix)
 
         self.assertEqual(result_matrix.rows, rows1)
         self.assertEqual(result_matrix.columns, columns2)
@@ -1550,7 +1550,7 @@ class TestMatrixInplaceMatrixMultiply(unittest.TestCase):
         second_matrix = pyrtl.Matrix(
             rows2, columns2, bits2, value=second_int_matrix)
 
-        first_matrix @= second_matrix
+        first_matrix.__imatmul__(second_matrix)
 
         self.assertEqual(first_matrix.rows, rows1)
         self.assertEqual(first_matrix.columns, columns2)
