@@ -1,4 +1,3 @@
-import builtins
 from functools import reduce
 
 from pyrtl.rtllib import multipliers as mult
@@ -57,7 +56,8 @@ class Matrix():
                 'instead "%s" was passed' % str(bits))
 
         if max_bits is not None:
-            bits = builtins.min(bits, max_bits)
+            if bits > max_bits:
+                bits = max_bits
 
         self._matrix = [[0 for _ in range(columns)]
                         for _ in range(rows)]
