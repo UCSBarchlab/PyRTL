@@ -618,7 +618,7 @@ class Matrix():
             inputs = [result] * power
 
             def pow_2(first, second):
-                return first@second
+                return first.__matmul__(second)
             return reduce(pow_2, inputs)
 
         raise PyrtlError('Power must be greater than or equal to 0')
