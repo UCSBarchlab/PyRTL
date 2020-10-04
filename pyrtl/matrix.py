@@ -536,7 +536,7 @@ class Matrix():
 
         Is used with a @= b
         '''
-        new_value = self @ other
+        new_value = self.__matmul__(other)
         self.columns = new_value.columns
         self.rows = new_value.rows
         self._matrix = new_value._matrix
