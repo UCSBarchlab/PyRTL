@@ -422,7 +422,7 @@ class Matrix():
                              (str(self.rows), str(other.rows)))
 
         result = Matrix(self.rows, self.columns,
-                        builtins.max(self.bits, other.bits) + 1,
+                        max(self.bits, other.bits) + 1,
                         max_bits=self.max_bits)
 
         for i in range(result.rows):
@@ -468,7 +468,7 @@ class Matrix():
                              (str(self.rows), str(other.rows)))
 
         result = Matrix(self.rows, self.columns,
-                        builtins.max(self.bits, other.bits),
+                        max(self.bits, other.bits),
                         max_bits=self.max_bits)
         for i in range(result.rows):
             for j in range(result.columns):
