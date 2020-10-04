@@ -19,9 +19,6 @@ from .wire import Input, Output
 from .wire import Const
 from .wire import Register
 
-# matrix functions
-from .matrix import Matrix
-
 # helper functions
 from .helperfuncs import input_list
 from .helperfuncs import output_list
