@@ -1,10 +1,9 @@
-import inspect
-import os
-import sys
 import unittest
-import math
 import random
 import numpy as np
+
+import pyrtl
+import pyrtl.rtllib.matrixfuncs as funcs
 
 
 class TestMultiply(unittest.TestCase):
@@ -883,13 +882,6 @@ def matrix_result(start_value, rows, columns, bits):
 
 
 if __name__ == '__main__':
-    currentdir = os.path.dirname(os.path.abspath(
-        inspect.getfile(inspect.currentframe())))
-    parentdir = os.path.dirname(currentdir)
-    sys.path.insert(0, parentdir)
-
-    import pyrtl
-    import pyrtl.rtllib.matrixfuncs as funcs
     # unittest.main(
     #    defaultTest='TestDot', verbosity=2)
     unittest.main(verbosity=2)
