@@ -642,13 +642,34 @@ def print_loop(loop_data):
         print("")
 
 
-def _currently_in_ipython():
-    """ Return true if running under ipython, otherwise return False. """
+def _currently_in_jupyter_notebook():
+    """
+    Return true if running under Jupyter notebook, otherwise return False.
+
+    We want to check for more than just the presence of __IPYTHON__ because
+    that is present in both Jupyter notebooks and IPython terminals.
+    """
     try:
-        __IPYTHON__  # pylint: disable=undefined-variable
-        return True
+        # get_ipython() is in the global namespace when ipython is started
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type
     except NameError:
-        return False
+        return False      # Probably standard Python interpreter
+
+
+def _print_netlist_latex(netlist):
+    """ Print each net in netlist in a Latex array """
+    from IPython.display import display, Latex  # pylint: disable=import-error
+    out = '\n\\begin{array}{ \| c \| c \| l \| }\n'
+    out += '\n\hline\n'
+    out += '\\hline\n'.join(str(n) for n in netlist)
+    out += '\hline\n\\end{array}\n'
+    display(Latex(out))
 
 
 class _NetCount(object):
