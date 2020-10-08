@@ -13,7 +13,6 @@ import collections
 import re
 import keyword
 
-# from .helperfuncs import _currently_in_ipython
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 
 
@@ -79,20 +78,15 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         lhs = ', '.join(str(x) for x in self.dests)
         options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
 
-        in_ipython = False
-        try:
-            from IPython.display import display, Markdown, Latex, Math
-            in_ipython = True
-        except ImportError:
-            pass
+        from .helperfuncs import _currently_in_jupyter_notebook
 
-        if in_ipython:
+        if _currently_in_jupyter_notebook():
             # Output the working block as a Latex table
             # Escape all Underscores
             rhs = rhs.replace('_', "\\_")
             lhs = lhs.replace('_', "\\_")
             options = options.replace('_', "\\_")
-            if self.op in '~&|':
+            if self.op in '&|':
                 return "{} & \\leftarrow \\{} \\, - & {} {} \\\\".format(
                        lhs, self.op, rhs, options)
             elif self.op in "wn+-*<>xcsr":
@@ -103,6 +97,9 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
                        lhs, self.op, rhs, options)
             elif self.op in "^":
                 return "{} & \\leftarrow \\oplus \\, - & {} {} \\\\".format(
+                       lhs, rhs, options)
+            elif self.op in "~":
+                return "{} & \\leftarrow \\sim \\, - & {} {} \\\\".format(
                        lhs, rhs, options)
 
             elif self.op in 'm@':
@@ -267,15 +264,12 @@ class Block(object):
 
     def __str__(self):
         """String form has one LogicNet per line."""
-        try:
-            from IPython.display import display, Markdown, Latex, Math
-            out = '\n\begin{array}{ \| c \| c \| l \| }\n'
-            out += '\n\hline\n'
-            out += '\\hline\n'.join(str(l) for l in self)
-            out += '\hline\n\end{array}\n'
-            display(Latex(out))
+        from .helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
+
+        if _currently_in_jupyter_notebook():
+            _print_netlist_latex(list(self))
             return ' '
-        except ImportError:
+        else:
             return '\n'.join(str(l) for l in self)
 
     def add_wirevector(self, wirevector):
@@ -809,15 +803,6 @@ def reset_working_block():
     """ Reset the working block to be empty. """
     global _singleton_block
     _singleton_block = Block()
-
-
-def _currently_in_ipython():
-    """ Return true if running under ipython, otherwise return False. """
-    try:
-        __IPYTHON__  # pylint: disable=undefined-variable
-        return True
-    except NameError:
-        return False
 
 
 class set_working_block(object):

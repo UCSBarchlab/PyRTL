@@ -18,6 +18,7 @@ from ..wire import Input, Const, Register
 from ..pyrtlexceptions import PyrtlError, PyrtlInternalError
 from ..verilog import output_to_verilog
 from ..memory import RomBlock
+from ..helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
 
 
 # --------------------------------------------------------------------
@@ -321,8 +322,11 @@ class TimingAnalysis(object):
         for cp_with_num in enumerate(critical_paths):
             print("Critical path", cp_with_num[0], ":")
             print(line_indent, "The first wire is:", cp_with_num[1][0])
-            for net in cp_with_num[1][1]:
-                print(line_indent, (net))
+            if _currently_in_jupyter_notebook():
+                _print_netlist_latex(list(net for net in cp_with_num[1][1]))
+            else:
+                for net in cp_with_num[1][1]:
+                    print(line_indent, (net))
             print()
 
 
