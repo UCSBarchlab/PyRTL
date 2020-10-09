@@ -4,7 +4,6 @@ import io
 import pyrtl
 import six
 from pyrtl import inputoutput
-from pyrtl import verilog
 from pyrtl import analysis
 
 
@@ -335,24 +334,6 @@ class TestOutputGraphs(unittest.TestCase):
             pyrtl.output_to_graphviz(vfile, namer=graph_namer)
 
 
-class TestOutputTestbench(unittest.TestCase):
-    def setUp(self):
-        pyrtl.reset_working_block()
-
-    def test_verilog_testbench_does_not_throw_error(self):
-        zero = pyrtl.Input(1, 'zero')
-        counter_output = pyrtl.Output(3, 'counter_output')
-        counter = pyrtl.Register(3, 'counter')
-        counter.next <<= pyrtl.mux(zero, counter + 1, 0)
-        counter_output <<= counter
-        sim_trace = pyrtl.SimulationTrace([counter_output, zero])
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for cycle in range(15):
-            sim.step({zero: random.choice([0, 0, 0, 1])})
-        with io.StringIO() as tbfile:
-            pyrtl.output_verilog_testbench(tbfile, sim_trace)
-
-
 class TestNetGraph(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -384,58 +365,6 @@ class TestNetGraph(unittest.TestCase):
         reg = pyrtl.Register(8, "reg")
         g = inputoutput.net_graph()
         self.assertEquals(len(g), 0)
-
-
-class TestVerilogNames(unittest.TestCase):
-    def setUp(self):
-        pyrtl.reset_working_block()
-        self.vnames = verilog._VerilogSanitizer("_sani_test")
-
-    def checkname(self, name):
-        self.assertEqual(self.vnames.make_valid_string(name), name)
-
-    def assert_invalid_name(self, name):
-        self.assertNotEqual(self.vnames.make_valid_string(name), name)
-
-    def test_verilog_check_valid_name_good(self):
-        self.checkname('abc')
-        self.checkname('a')
-        self.checkname('BC')
-        self.checkname('Kabc')
-        self.checkname('B_ac')
-        self.checkname('_asdvqa')
-        self.checkname('_Bs_')
-        self.checkname('fd$oeoe')
-        self.checkname('_B$$s')
-        self.checkname('B')
-
-    def test_verilog_check_valid_name_bad(self):
-        self.assert_invalid_name('carne asda')
-        self.assert_invalid_name('')
-        self.assert_invalid_name('asd%kask')
-        self.assert_invalid_name("flipin'")
-        self.assert_invalid_name(' jklol')
-        self.assert_invalid_name('a' * 2000)
-
-
-class TestVerilog(unittest.TestCase):
-    def setUp(self):
-        pyrtl.reset_working_block()
-
-    def test_romblock_does_not_throw_error(self):
-        from pyrtl.corecircuits import _basic_add
-        a = pyrtl.Input(bitwidth=3, name='a')
-        b = pyrtl.Input(bitwidth=3, name='b')
-        o = pyrtl.Output(bitwidth=3, name='o')
-        res = _basic_add(a, b)
-        rdat = {0: 1, 1: 2, 2: 5, 5: 0}
-        mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, pad_with_zeros=True, romdata=rdat)
-        o <<= mixtable[res[:-1]]
-        with io.StringIO() as testbuffer:
-            pyrtl.output_to_verilog(testbuffer)
-
-    def test_textual_correctness(self):
-        pass
 
 
 class TestOutputIPynb(unittest.TestCase):
