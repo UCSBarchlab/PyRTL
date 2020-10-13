@@ -35,6 +35,12 @@ _wvIndexer = _NameIndexer("tmp")
 _constIndexer = _NameIndexer("const_")
 
 
+def _reset_wire_indexers():
+    global _wvIndexer, _constIndexer
+    _wvIndexer = _NameIndexer("tmp")
+    _constIndexer = _NameIndexer("const_")
+
+
 def next_tempvar_name(name=""):
     if name == '':  # sadly regex checks are sometimes too slow
         wire_name = _wvIndexer.make_valid_string()

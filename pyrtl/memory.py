@@ -33,6 +33,11 @@ _MemAssignment = collections.namedtuple('_MemAssignment', 'rhs, is_conditional')
 """_MemAssignment is the type returned from assignment by |= or <<="""
 
 
+def _reset_memory_indexer():
+    global _memIndex
+    _memIndex = _NameIndexer()
+
+
 class _MemIndexed(WireVector):
     """ Object used internally to route memory assigns correctly.
 

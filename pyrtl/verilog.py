@@ -7,6 +7,7 @@ accordingly, or write information from the Block out to the file.
 """
 
 from __future__ import print_function, unicode_literals
+import re
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, _NameSanitizer
@@ -92,11 +93,20 @@ def _verilog_block_parts(block):
     return inputs, outputs, registers, wires, memories
 
 
+def _natural_sort_key(key):
+    """ Convert the key into a form such that it will be sorted naturally,
+        e.g. such that "tmp4" appears before "tmp18".
+    """
+    def convert(text):
+        return int(text) if text.isdigit() else text
+    return [convert(c) for c in re.split('(\d+)', key)]
+
+
 def _to_verilog_header(file, block, varname):
     """ Print the header of the verilog implementation. """
 
     def name_sorted(wires):
-        return sorted(wires, key=lambda w: varname(w))
+        return sorted(wires, key=lambda w: _natural_sort_key(varname(w)))
 
     def name_list(wires):
         return [varname(w) for w in wires]
@@ -123,17 +133,17 @@ def _to_verilog_header(file, block, varname):
     print('', file=file)
 
     # memories and registers
-    for m in memories:
+    for m in sorted(memories, key=lambda m: _natural_sort_key(m.name)):
         memwidth_str = _verilog_vector_size_decl(m.bitwidth)
         memsize_str = _verilog_vector_size_decl(1 << m.addrwidth)
         print('    reg{:s} mem_{}{:s}; //{}'.format(memwidth_str, m.id,
                                                     memsize_str, m.name), file=file)
-    for w in registers:
+    for w in name_sorted(registers):
         print('    reg{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
     print('', file=file)
 
     # wires
-    for w in wires:
+    for w in name_sorted(wires):
         print('    wire{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
     print('', file=file)
 
@@ -141,7 +151,7 @@ def _to_verilog_header(file, block, varname):
     # If we ever add support outside of simulation for initial values
     #  for MemBlocks, that would also go here.
     roms = {m for m in memories if isinstance(m, RomBlock)}
-    for m in roms:
+    for m in sorted(roms, key=lambda m: _natural_sort_key(m.name)):
         print('    initial begin', file=file)
         for i in range(1 << m.addrwidth):
             mem_elem_str = 'mem_{}[{:d}]'.format(m.id, i)
@@ -151,16 +161,33 @@ def _to_verilog_header(file, block, varname):
         print('', file=file)
 
 
+def _net_sorted(logic, varname):
+    def natural_keys(n):
+        if n.op == '@':
+            # Sort based on the name of the wr_en wire, since
+            # this particular net is used within 'always begin ... end'
+            # blocks for memory update logic.
+            key = str(n.args[2])
+        else:
+            key = varname(n.dests[0])
+        return _natural_sort_key(key)
+    return sorted(logic, key=natural_keys)
+
+
 def _to_verilog_combinational(file, block, varname):
     """ Print the combinational logic of the verilog implementation. """
+
+    def name_sorted(wires):
+        return sorted(wires, key=lambda w: _natural_sort_key(varname(w)))
+
     print('    // Combinational', file=file)
 
     # assign constants (these could be folded for readability later)
-    for const in block.wirevector_subset(Const):
+    for const in name_sorted(block.wirevector_subset(Const)):
         print('    assign {:s} = {:d};'.format(varname(const), const.val), file=file)
 
     # walk the block and output combination logic
-    for net in block.logic:
+    for net in _net_sorted(block.logic, varname):
         if net.op in 'w~':  # unary ops
             opstr = '' if net.op == 'w' else net.op
             t = (varname(net.dests[0]), opstr, varname(net.args[0]))
@@ -201,7 +228,7 @@ def _to_verilog_sequential(file, block, varname):
     print('    // Registers', file=file)
     print('    always @( posedge clk )', file=file)
     print('    begin', file=file)
-    for net in block.logic:
+    for net in _net_sorted(block.logic, varname):
         if net.op == 'r':
             dest, src = (varname(net.dests[0]), varname(net.args[0]))
             print('        {:s} <= {:s};'.format(dest, src), file=file)
@@ -212,11 +239,11 @@ def _to_verilog_sequential(file, block, varname):
 def _to_verilog_memories(file, block, varname):
     """ Print the memories of the verilog implementation. """
     memories = {n.op_param[1] for n in block.logic_subset('m@')}
-    for m in memories:
+    for m in sorted(memories, key=lambda m: _natural_sort_key(m.name)):
         print('    // Memory mem_{}: {}'.format(m.id, m.name), file=file)
         print('    always @( posedge clk )', file=file)
         print('    begin', file=file)
-        for net in block.logic_subset('@'):
+        for net in _net_sorted(block.logic_subset('@'), varname):
             if net.op_param[1] == m:
                 t = (varname(net.args[2]), net.op_param[0],
                      varname(net.args[0]), varname(net.args[1]))
@@ -224,7 +251,7 @@ def _to_verilog_memories(file, block, varname):
                        '                mem_%s[%s] <= %s;\n'
                        '        end') % t, file=file)
         print('    end', file=file)
-        for net in block.logic_subset('m'):
+        for net in _net_sorted(block.logic_subset('m'), varname):
             if net.op_param[1] == m:
                 dest = varname(net.dests[0])
                 m_id = net.op_param[0]
