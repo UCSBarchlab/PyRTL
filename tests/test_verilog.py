@@ -15,18 +15,19 @@ module toplevel(clk, a, o);
     input[3:0] a;
     output[5:0] o;
 
-    reg[3:0] mem_0[3:0]; //tmp2
-    reg[3:0] mem_1[3:0]; //tmp3
-    reg[3:0] mem_2[3:0]; //tmp4
-    reg[3:0] mem_3[3:0]; //tmp5
-    reg[3:0] mem_4[3:0]; //tmp6
-    reg[3:0] mem_5[3:0]; //tmp7
-    reg[3:0] mem_6[3:0]; //tmp8
-    reg[3:0] mem_7[3:0]; //tmp9
-    reg[3:0] mem_8[3:0]; //tmp10
-    reg[3:0] mem_9[3:0]; //tmp11
-    reg[3:0] mem_10[3:0]; //tmp12
-    reg[3:0] mem_11[3:0]; //tmp13
+    reg[3:0] mem_0[3:0]; //z
+    reg[3:0] mem_1[3:0]; //tmp2
+    reg[3:0] mem_2[3:0]; //tmp3
+    reg[3:0] mem_3[3:0]; //tmp4
+    reg[3:0] mem_4[3:0]; //tmp5
+    reg[3:0] mem_5[3:0]; //tmp6
+    reg[3:0] mem_6[3:0]; //tmp7
+    reg[3:0] mem_7[3:0]; //tmp8
+    reg[3:0] mem_8[3:0]; //tmp9
+    reg[3:0] mem_9[3:0]; //tmp10
+    reg[3:0] mem_10[3:0]; //tmp11
+    reg[3:0] mem_11[3:0]; //tmp12
+    reg[3:0] mem_12[3:0]; //tmp13
     reg[3:0] tmp0;
     reg[3:0] tmp1;
 
@@ -132,9 +133,13 @@ module toplevel(clk, a, o);
     wire const_99_1;
     wire const_100_0;
     wire[1:0] const_101_0;
-    wire const_102_0;
-    wire[1:0] const_103_0;
-    wire const_104_0;
+    wire[1:0] const_102_0;
+    wire const_103_1;
+    wire[3:0] const_104_9;
+    wire[1:0] const_105_0;
+    wire const_106_0;
+    wire[1:0] const_107_0;
+    wire const_108_0;
     wire[2:0] tmp14;
     wire[3:0] tmp15;
     wire[4:0] tmp16;
@@ -309,8 +314,12 @@ module toplevel(clk, a, o);
     assign const_100_0 = 0;
     assign const_101_0 = 0;
     assign const_102_0 = 0;
-    assign const_103_0 = 0;
-    assign const_104_0 = 0;
+    assign const_103_1 = 1;
+    assign const_104_9 = 9;
+    assign const_105_0 = 0;
+    assign const_106_0 = 0;
+    assign const_107_0 = 0;
+    assign const_108_0 = 0;
     assign o = tmp82;
     assign tmp14 = {const_5_0, const_5_0, const_5_0};
     assign tmp15 = {tmp14, const_4_1};
@@ -372,10 +381,10 @@ module toplevel(clk, a, o);
     assign tmp71 = {tmp70, const_99_1};
     assign tmp72 = a - tmp71;
     assign tmp73 = {tmp72[3], tmp72[2], tmp72[1], tmp72[0]};
-    assign tmp75 = {const_102_0};
+    assign tmp75 = {const_106_0};
     assign tmp76 = {tmp75, tmp74};
     assign tmp77 = tmp62 + tmp76;
-    assign tmp79 = {const_104_0, const_104_0};
+    assign tmp79 = {const_108_0, const_108_0};
     assign tmp80 = {tmp79, tmp78};
     assign tmp81 = tmp77 + tmp80;
     assign tmp82 = {tmp81[5], tmp81[4], tmp81[3], tmp81[2], tmp81[1], tmp81[0]};
@@ -387,137 +396,145 @@ module toplevel(clk, a, o);
         tmp1 <= tmp73;
     end
 
-    // Memory mem_0: tmp2
+    // Memory mem_0: z
+    always @( posedge clk )
+    begin
+        if (const_103_1) begin
+                mem_0[const_102_0] <= const_104_9;
+        end
+    end
+
+    // Memory mem_1: tmp2
     always @( posedge clk )
     begin
         if (const_2_1) begin
-                mem_0[const_1_0] <= a;
+                mem_1[const_1_0] <= a;
         end
         if (const_7_1) begin
-                mem_0[const_6_1] <= tmp17;
+                mem_1[const_6_1] <= tmp17;
         end
     end
-    assign tmp74 = mem_0[const_101_0];
+    assign tmp74 = mem_1[const_105_0];
 
-    // Memory mem_1: tmp3
+    // Memory mem_2: tmp3
     always @( posedge clk )
     begin
         if (const_10_1) begin
-                mem_1[const_9_0] <= a;
+                mem_2[const_9_0] <= a;
         end
         if (const_15_1) begin
-                mem_1[const_14_1] <= tmp21;
+                mem_2[const_14_1] <= tmp21;
         end
     end
-    assign tmp78 = mem_1[const_103_0];
+    assign tmp78 = mem_2[const_107_0];
 
-    // Memory mem_2: tmp4
+    // Memory mem_3: tmp4
     always @( posedge clk )
     begin
         if (const_18_1) begin
-                mem_2[const_17_0] <= a;
+                mem_3[const_17_0] <= a;
         end
         if (const_23_1) begin
-                mem_2[const_22_1] <= tmp25;
+                mem_3[const_22_1] <= tmp25;
         end
     end
 
-    // Memory mem_3: tmp5
+    // Memory mem_4: tmp5
     always @( posedge clk )
     begin
         if (const_26_1) begin
-                mem_3[const_25_0] <= a;
+                mem_4[const_25_0] <= a;
         end
         if (const_31_1) begin
-                mem_3[const_30_1] <= tmp29;
+                mem_4[const_30_1] <= tmp29;
         end
     end
 
-    // Memory mem_4: tmp6
+    // Memory mem_5: tmp6
     always @( posedge clk )
     begin
         if (const_34_1) begin
-                mem_4[const_33_0] <= a;
+                mem_5[const_33_0] <= a;
         end
         if (const_39_1) begin
-                mem_4[const_38_1] <= tmp33;
+                mem_5[const_38_1] <= tmp33;
         end
     end
 
-    // Memory mem_5: tmp7
+    // Memory mem_6: tmp7
     always @( posedge clk )
     begin
         if (const_42_1) begin
-                mem_5[const_41_0] <= a;
+                mem_6[const_41_0] <= a;
         end
         if (const_47_1) begin
-                mem_5[const_46_1] <= tmp37;
+                mem_6[const_46_1] <= tmp37;
         end
     end
 
-    // Memory mem_6: tmp8
+    // Memory mem_7: tmp8
     always @( posedge clk )
     begin
         if (const_50_1) begin
-                mem_6[const_49_0] <= a;
+                mem_7[const_49_0] <= a;
         end
         if (const_55_1) begin
-                mem_6[const_54_1] <= tmp41;
+                mem_7[const_54_1] <= tmp41;
         end
     end
 
-    // Memory mem_7: tmp9
+    // Memory mem_8: tmp9
     always @( posedge clk )
     begin
         if (const_58_1) begin
-                mem_7[const_57_0] <= a;
+                mem_8[const_57_0] <= a;
         end
         if (const_63_1) begin
-                mem_7[const_62_1] <= tmp45;
+                mem_8[const_62_1] <= tmp45;
         end
     end
 
-    // Memory mem_8: tmp10
+    // Memory mem_9: tmp10
     always @( posedge clk )
     begin
         if (const_66_1) begin
-                mem_8[const_65_0] <= a;
+                mem_9[const_65_0] <= a;
         end
         if (const_71_1) begin
-                mem_8[const_70_1] <= tmp49;
+                mem_9[const_70_1] <= tmp49;
         end
     end
 
-    // Memory mem_9: tmp11
+    // Memory mem_10: tmp11
     always @( posedge clk )
     begin
         if (const_74_1) begin
-                mem_9[const_73_0] <= a;
+                mem_10[const_73_0] <= a;
         end
         if (const_79_1) begin
-                mem_9[const_78_1] <= tmp53;
+                mem_10[const_78_1] <= tmp53;
         end
     end
 
-    // Memory mem_10: tmp12
+    // Memory mem_11: tmp12
     always @( posedge clk )
     begin
         if (const_82_1) begin
-                mem_10[const_81_0] <= a;
+                mem_11[const_81_0] <= a;
         end
         if (const_87_1) begin
-                mem_10[const_86_1] <= tmp57;
+                mem_11[const_86_1] <= tmp57;
         end
     end
 
-    // Memory mem_11: tmp13
+    // Memory mem_12: tmp13
     always @( posedge clk )
     begin
         if (const_90_1) begin
-                mem_11[const_89_0] <= a;
+                mem_12[const_89_0] <= a;
         end
         if (const_95_1) begin
-                mem_11[const_94_1] <= tmp61;
+                mem_12[const_94_1] <= tmp61;
         end
     end
 
@@ -591,7 +608,7 @@ class TestVerilog(unittest.TestCase):
         with io.StringIO() as testbuffer:
             pyrtl.output_to_verilog(testbuffer)
 
-    def test_textual_correctness(self):
+    def test_textual_consistency(self):
         from pyrtl.wire import _reset_wire_indexers
         from pyrtl.memory import _reset_memory_indexer
 
@@ -612,6 +629,8 @@ class TestVerilog(unittest.TestCase):
         a = pyrtl.Input(4, 'a')
         r = pyrtl.Register(4)
         s = pyrtl.Register(4)
+        # This will have mem id 0, so prints first despite actual name
+        mt = pyrtl.MemBlock(4, 2, name='z')
         m = [pyrtl.MemBlock(4, 2, max_write_ports=2) for _ in range(12)]
         for mem in m:
             mem[0] <<= a
@@ -619,6 +638,7 @@ class TestVerilog(unittest.TestCase):
         b = a + r
         r.next <<= b + 1 - s
         s.next <<= a - 1
+        mt[0] <<= 9
         o = pyrtl.Output(6, 'o')
         o <<= b + m[0][0] + m[1][0]
 
