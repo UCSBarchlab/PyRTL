@@ -1,11 +1,13 @@
 from __future__ import print_function, unicode_literals, absolute_import
 
 import unittest
-import io
+import six
 import operator
+import os
+import sys
 
 import pyrtl
-from pyrtl.wire import Const,  Output
+from pyrtl.wire import Const, Output
 from pyrtl.analysis import estimate
 
 from .test_transform import NetWireNumTestCases
@@ -25,7 +27,7 @@ class TestSynthesis(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = io.StringIO()
+        output = six.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -62,7 +64,7 @@ class TestSynthesis(unittest.TestCase):
     def test_const_nobitwidth_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1)
         self.check_trace('r 07654321\n')
-    
+
     def test_mux_simulation(self):
         self.r.next <<= pyrtl.mux(self.r, 4, 3, 1, 7, 2, 6, 0, 5)
         self.check_trace('r 04213756\n')
@@ -83,7 +85,7 @@ class TestMultiplierSynthesis(unittest.TestCase):
             for b in range(16):
                 sim.step({'a': a, 'b': b})
         result = sim_trace.trace['r']
-        self.assertEqual(result, [a*b for a in range(16) for b in range(16)])
+        self.assertEqual(result, [a * b for a in range(16) for b in range(16)])
 
     def test_chained_mul(self):
         ina, inb, inc = (
@@ -99,7 +101,7 @@ class TestMultiplierSynthesis(unittest.TestCase):
                 for c in range(4):
                     sim.step({'a': a, 'b': b, 'c': c})
         result = sim_trace.trace['r']
-        self.assertEqual(result, [a*b*c for a in range(4) for b in range(4) for c in range(4)])
+        self.assertEqual(result, [a * b * c for a in range(4) for b in range(4) for c in range(4)])
 
     def test_singlebit_mul(self):
         ina, inb = pyrtl.Input(bitwidth=1, name='a'), pyrtl.Input(bitwidth=3, name='b')
@@ -111,14 +113,14 @@ class TestMultiplierSynthesis(unittest.TestCase):
             for b in range(8):
                 sim.step({'a': a, 'b': b})
         result = sim_trace.trace['r']
-        self.assertEqual(result, [a*b for a in range(2) for b in range(8)])
+        self.assertEqual(result, [a * b for a in range(2) for b in range(8)])
 
 
 class TestComparisonSynthesis(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         self.output = pyrtl.Output(name='r')
-    
+
     def check_op(self, op):
         ina, inb = pyrtl.Input(bitwidth=4, name='a'), pyrtl.Input(bitwidth=4, name='b')
         self.output <<= op(ina, inb)
@@ -174,6 +176,16 @@ class TestOptimization(NetWireNumTestCases):
 
 
 class TestConstFolding(NetWireNumTestCases):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        # Redirect stdout because we don't care to see the specific messages about
+        # wires being deemed useless by optimization sent to stdout.
+        f = open(os.devnull, 'w')
+        sys.stdout = f
+
+    def tearDown(self):
+        sys.stdout.close()
+        sys.stdout = sys.__stdout__
 
     def test_basic_one_var_op_1(self):
         constwire = pyrtl.Const(0, 1)
@@ -503,7 +515,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         timing_max_length = timing.max_length()
         if timing_val is not None:
             self.assertEqual(timing_max_length, timing_val)
-        critical_path = timing.critical_path()
+        critical_path = timing.critical_path(print_cp=False)
 
         pyrtl.synthesize()
         pyrtl.optimize()
@@ -513,7 +525,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         timing_max_length = timing.max_length()
         if opt_timing_val is not None:
             self.assertEqual(timing_max_length, opt_timing_val)
-        critical_path = timing.critical_path()
+        critical_path = timing.critical_path(print_cp=False)
 
         pyrtl.and_inverter_synth()
         pyrtl.optimize()
@@ -521,7 +533,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         block = pyrtl.working_block()
         timing = estimate.TimingAnalysis(block)
         timing_max_length = timing.max_length()
-        critical_path = timing.critical_path()
+        critical_path = timing.critical_path(print_cp=False)
         block = pyrtl.working_block()
         self.num_net_of_type('|', 0, block)
         self.num_net_of_type('^', 0, block)
@@ -532,7 +544,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         block = pyrtl.working_block()
         timing = estimate.TimingAnalysis(block)
         timing_max_length = timing.max_length()
-        critical_path = timing.critical_path()
+        critical_path = timing.critical_path(print_cp=False)
         block.sanity_check()
         self.num_net_of_type('|', 0, block)
         self.num_net_of_type('^', 0, block)
@@ -567,12 +579,15 @@ class TestSynthOptTiming(NetWireNumTestCases):
         tempwire2 <<= ~(inwire2 & tempwire)
         outwire <<= tempwire
 
+        output = six.StringIO()
+        sys.stdout = output
         with self.assertRaises(pyrtl.PyrtlError):
             pyrtl.synthesize()
             pyrtl.optimize()
             block = pyrtl.working_block()
-            timing = estimate.TimingAnalysis(block)
-            timing_max_length = timing.max_length()
+            _timing = estimate.TimingAnalysis(block)
+        sys.stdout = sys.__stdout__
+        self.assertTrue(output.getvalue().startswith("Loop found:"))
 
     def test_wirevector_1(self):
         inwire = pyrtl.Input(bitwidth=1)

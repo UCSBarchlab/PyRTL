@@ -1,5 +1,6 @@
 from __future__ import print_function
 import unittest
+import six
 import pyrtl
 
 
@@ -76,14 +77,15 @@ class TestBlock(unittest.TestCase):
 
         block = pyrtl.working_block()
 
+        output = six.StringIO()
         i = 0
         for net in block:
             self.assertFalse(i > 100, "Too many iterations happened")
             i += 1
-            print(str(net))
+            print(str(net), file=output)
 
         for net in block.logic:
-            print(net)
+            print(net, file=output)
 
     def test_no_memblocks(self):
         block = pyrtl.working_block()
@@ -581,41 +583,36 @@ class TestMemAsyncCheck(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_async_check_should_pass(self):
-        memory = pyrtl.MemBlock(
-                    bitwidth=self.bitwidth, 
-                    addrwidth=self.addrwidth,
-                    name='memory')
+        memory = pyrtl.MemBlock(bitwidth=self.bitwidth,
+                                addrwidth=self.addrwidth,
+                                name='memory')
         self.output1 <<= memory[self.mem_read_address1]
         memory[self.mem_write_address] <<= self.mem_write_data
         pyrtl.working_block().sanity_check()
 
     def test_async_check_should_pass_with_select(self):
-        memory = pyrtl.MemBlock(
-                    bitwidth=self.bitwidth, 
-                    addrwidth=self.addrwidth-1,
-                    name='memory')
+        memory = pyrtl.MemBlock(bitwidth=self.bitwidth,
+                                addrwidth=self.addrwidth - 1,
+                                name='memory')
         self.output1 <<= memory[self.mem_read_address1[0:-1]]
         pyrtl.working_block().sanity_check()
 
     def test_async_check_should_pass_with_cat(self):
-        memory = pyrtl.MemBlock(
-                    bitwidth=self.bitwidth, 
-                    addrwidth=self.addrwidth,
-                    name='memory')
+        memory = pyrtl.MemBlock(bitwidth=self.bitwidth,
+                                addrwidth=self.addrwidth,
+                                name='memory')
         addr = pyrtl.concat(self.mem_read_address1[0], self.mem_read_address2[0:-1])
         self.output1 <<= memory[addr]
         memory[self.mem_write_address] <<= self.mem_write_data
         pyrtl.working_block().sanity_check()
 
     def test_async_check_should_notpass_with_add(self):
-        memory = pyrtl.MemBlock(
-                    bitwidth=self.bitwidth, 
-                    addrwidth=self.addrwidth,
-                    name='memory')
+        memory = pyrtl.MemBlock(bitwidth=self.bitwidth,
+                                addrwidth=self.addrwidth,
+                                name='memory')
         addr = pyrtl.WireVector(self.bitwidth)
         addr <<= self.mem_read_address1 + self.mem_read_address2
         self.output1 <<= memory[addr]
-        print(pyrtl.working_block())
         with self.assertRaises(pyrtl.PyrtlError):
             pyrtl.working_block().sanity_check()
 

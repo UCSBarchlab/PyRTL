@@ -72,11 +72,11 @@ def area_estimation(tech_in_nm=130, block=None):
         if net.op in 'w~sc':
             return 0
         elif net.op in '&|n':
-            return 40/8.0 * len(net.args[0])   # 40 lambda
+            return 40 / 8.0 * len(net.args[0])   # 40 lambda
         elif net.op in '^=<>x':
-            return 80/8.0 * len(net.args[0])   # 80 lambda
+            return 80 / 8.0 * len(net.args[0])   # 80 lambda
         elif net.op == 'r':
-            return 144/8.0 * len(net.args[0])  # 144 lambda
+            return 144 / 8.0 * len(net.args[0])  # 144 lambda
         elif net.op in '+-':
             return adder_stdcell_estimate(len(net.args[0]))
         elif net.op == '*':
@@ -106,7 +106,7 @@ def area_estimation(tech_in_nm=130, block=None):
     area_in_mm2_for_130nm = (total_length_in_nm * (72 * 55)) / 1e12
 
     # scaling from 130nm to the target tech
-    logic_area = area_in_mm2_for_130nm / (130.0/tech_in_nm)**2
+    logic_area = area_in_mm2_for_130nm / (130.0 / tech_in_nm) ** 2
 
     # now sum up the area of the memories
     mem_area = 0
@@ -252,7 +252,7 @@ class TimingAnalysis(object):
             clock_period_in_ps = scale_factor * (cp_length + 189 + 194)
         else:
             clock_period_in_ps = (scale_factor * cp_length) + ffoverhead
-        return 1e6 * 1.0/clock_period_in_ps
+        return 1e6 * 1.0 / clock_period_in_ps
 
     def max_length(self):
         """Returns the max timing delay of the circuit in ps.
@@ -365,8 +365,8 @@ def yosys_area_delay(library, abc_cmd=None, block=None):
 
     def extract_area_delay_from_yosys_output(yosys_output):
         report_lines = [line for line in yosys_output.split('\n') if 'ABC: netlist' in line]
-        area = re.match('.*area\s*=\s*([0-9\.]*)', report_lines[0]).group(1)
-        delay = re.match('.*delay\s*=\s*([0-9\.]*)', report_lines[0]).group(1)
+        area = re.match(r'.*area\s*=\s*([0-9\.]*)', report_lines[0]).group(1)
+        delay = re.match(r'.*delay\s*=\s*([0-9\.]*)', report_lines[0]).group(1)
         return float(area), float(delay)
 
     yosys_arg_template = """-p

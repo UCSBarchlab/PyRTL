@@ -71,13 +71,13 @@ class TestStringConversion(unittest.TestCase):
 class TestTwosComp(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        self.in1, self.in2 = (pyrtl.Input(8, "in"+str(i)) for i in range(1, 3))
+        self.in1, self.in2 = (pyrtl.Input(8, "in" + str(i)) for i in range(1, 3))
         self.out = pyrtl.Output(9, "out")
 
     def test_inverse_functionality(self):
         for i in range(20):
-            self.assertEquals(i*3, libutils.rev_twos_comp_repr(
-                libutils.twos_comp_repr(i*3, 16), 16))
+            self.assertEquals(i * 3, libutils.rev_twos_comp_repr(
+                libutils.twos_comp_repr(i * 3, 16), 16))
 
     def test_low_bw_error(self):
         with self.assertRaises(pyrtl.PyrtlError):
@@ -94,6 +94,6 @@ class TestTwosComp(unittest.TestCase):
         for i in range(10):
             sim.step({
                 'in1': i,
-                'in2': libutils.twos_comp_repr(-2*i, 8)
+                'in2': libutils.twos_comp_repr(-2 * i, 8)
             })
             self.assertEquals(-i, libutils.rev_twos_comp_repr(sim.inspect('out'), 8))

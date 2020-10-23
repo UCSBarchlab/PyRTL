@@ -93,7 +93,7 @@ class _MemReadBase(object):
 
     # FIXME: right now read port is built unconditionally (no read enable)
 
-    def __init__(self,  bitwidth, addrwidth, name, max_read_ports, asynchronous, block):
+    def __init__(self, bitwidth, addrwidth, name, max_read_ports, asynchronous, block):
         self.max_read_ports = max_read_ports
         self.read_ports = 0
         self.block = working_block(block)
@@ -332,15 +332,19 @@ class RomBlock(_MemReadBase):
                 if self.pad_with_zeros:
                     value = 0
                 else:
-                    raise PyrtlError("""RomBlock key is invalid,
-                                      consider using pad_with_zeros=True for defaults""")
+                    raise PyrtlError(
+                        "RomBlock key is invalid, "
+                        "consider using pad_with_zeros=True for defaults"
+                    )
             except IndexError:
                 if self.pad_with_zeros:
                     value = 0
                 else:
-                    raise PyrtlError("""RomBlock index is invalid,
-                                     consider using pad_with_zeros=True for defaults""")
-            except:
+                    raise PyrtlError(
+                        "RomBlock index is invalid, "
+                        "consider using pad_with_zeros=True for defaults"
+                    )
+            except Exception:
                 raise PyrtlError("invalid type for RomBlock data object")
 
         try:

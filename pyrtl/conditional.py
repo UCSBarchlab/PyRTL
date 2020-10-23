@@ -237,7 +237,7 @@ def _current_select():
         if lastother is None:
             return predlist[:-1]
         else:
-            return predlist[lastother+1:-1]
+            return predlist[lastother + 1:-1]
 
     select = None
     pred_set = set()

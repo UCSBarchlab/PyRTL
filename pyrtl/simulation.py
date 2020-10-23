@@ -179,12 +179,12 @@ class Simulation(object):
                 raise PyrtlError(
                     'step provided an input "%s" which is not a valid '
                     'positive integer' % provided_inputs[i])
-            if len(bin(provided_inputs[i]))-2 > sim_wire.bitwidth:
+            if len(bin(provided_inputs[i])) - 2 > sim_wire.bitwidth:
                 raise PyrtlError(
                     'the bitwidth for "%s" is %d, but the provided input '
                     '%d requires %d bits to represent'
                     % (name, sim_wire.bitwidth,
-                       provided_inputs[i], len(bin(provided_inputs[i]))-2))
+                       provided_inputs[i], len(bin(provided_inputs[i])) - 2))
 
             self.value[sim_wire] = provided_inputs[i]
             supplied_inputs.add(sim_wire)
@@ -801,7 +801,7 @@ class FastSimulation(object):
                 for i in range(len(net.args)):
                     if expr != '':
                         expr += ' | '
-                    shiftby = sum(len(j) for j in net.args[i+1:])
+                    shiftby = sum(len(j) for j in net.args[i + 1:])
                     expr += shift(self._arg_varname(net.args[i]), '<<', shiftby)
             elif net.op == 's':
                 source = self._arg_varname(net.args[0])
@@ -898,7 +898,7 @@ class _WaveRendererBase(object):
         representation of current_val.  The input prior_val is used to
         render transitions.
         """
-        sl = symbol_len-1
+        sl = symbol_len - 1
         if len(w) > 1:
             out = self._revstart
             if current_val != self.prior_val:
@@ -906,7 +906,7 @@ class _WaveRendererBase(object):
             elif n == 0:
                 out += hex(current_val).rstrip('L').ljust(symbol_len)[:symbol_len]
             else:
-                out += ' '*symbol_len
+                out += ' ' * symbol_len
             out += self._revstop
         else:
             pretty_map = {
@@ -992,9 +992,9 @@ class SimulationTrace(object):
         self.block = working_block(block)
 
         def is_internal_name(name):
-            return (name.startswith('tmp') or name.startswith('const') or
+            return (name.startswith('tmp') or name.startswith('const')
                     # or name.startswith('synth_')
-                    name.endswith("'"))
+                    or name.endswith("'"))
 
         if wires_to_track is None:
             wires_to_track = [w for w in self.block.wirevector_set if not is_internal_name(w.name)]
@@ -1112,15 +1112,15 @@ class SimulationTrace(object):
         # dump values
         endtime = max([len(self.trace[w]) for w in self.trace])
         for timestamp in range(endtime):
-            print(''.join(['#', str(timestamp*10)]), file=file)
+            print(''.join(['#', str(timestamp * 10)]), file=file)
             print_trace_strs(timestamp)
             if include_clock:
                 print('b1 clk', file=file)
                 print('', file=file)
-                print(''.join(['#', str(timestamp*10+5)]), file=file)
+                print(''.join(['#', str(timestamp * 10 + 5)]), file=file)
                 print('b0 clk', file=file)
             print('', file=file)
-        print(''.join(['#', str(endtime*10)]), file=file)
+        print(''.join(['#', str(endtime * 10)]), file=file)
         file.flush()
 
     def render_trace(
@@ -1200,7 +1200,7 @@ class SimulationTrace(object):
         maxtracelen = max(len(v) for v in self.trace.values())
         if segment_size is None:
             segment_size = maxtracelen
-        spaces = ' '*(maxnamelen+1)
+        spaces = ' ' * (maxnamelen + 1)
         ticks = [renderer.tick_segment(n, symbol_len, segment_size)
                  for n in range(0, maxtracelen, segment_size)]
         print(spaces + segment_delim.join(ticks), file=file)

@@ -36,14 +36,14 @@ class DllMemInspector(collections.Mapping):
             scalar = ctypes.c_uint32
         else:
             scalar = ctypes.c_uint64
-        array_type = scalar*(len(self)*limbs)
+        array_type = scalar * (len(self) * limbs)
         self._buf = array_type.in_dll(sim._dll, vn)
         self._sim = sim  # keep reference to avoid freeing dll
 
     def __getitem__(self, ind):
         val = 0
         limbs = self._limbs
-        for n in reversed(range(ind*limbs, (ind+1)*limbs)):
+        for n in reversed(range(ind * limbs, (ind + 1) * limbs)):
             val <<= 64
             val |= self._buf[n]
         return val
@@ -248,8 +248,8 @@ class CompiledSimulation(object):
         """
         steps = len(inputs)
         # create i/o arrays of the appropriate length
-        ibuf_type = ctypes.c_uint64*(steps*self._ibufsz)
-        obuf_type = ctypes.c_uint64*(steps*self._obufsz)
+        ibuf_type = ctypes.c_uint64 * (steps * self._ibufsz)
+        obuf_type = ctypes.c_uint64 * (steps * self._obufsz)
         ibuf = ibuf_type()
         obuf = obuf_type()
         # these array will be passed to _crun
@@ -263,15 +263,15 @@ class CompiledSimulation(object):
                 else:
                     name = w
                 start, count = self._inputpos[name]
-                start += n*self._ibufsz
+                start += n * self._ibufsz
                 val = inmap[w]
                 if val >= 1 << self._inputbw[name]:
                     raise PyrtlError(
                         'Wire {} has value {} which cannot be represented '
                         'using its bitwidth'.format(name, val))
                 # pack input
-                for pos in range(start, start+count):
-                    ibuf[pos] = val & ((1 << 64)-1)
+                for pos in range(start, start + count):
+                    ibuf[pos] = val & ((1 << 64) - 1)
                     val >>= 64
 
         # run the simulation
@@ -292,7 +292,7 @@ class CompiledSimulation(object):
             for n in range(steps):
                 val = 0
                 # unpack output
-                for pos in reversed(range(start, start+count)):
+                for pos in reversed(range(start, start + count)):
                     val <<= 64
                     val |= buf[pos]
                 res.append(val)
@@ -327,29 +327,29 @@ class CompiledSimulation(object):
         """Create a dynamically-linked library implementing the simulation logic."""
         self._dir = tempfile.mkdtemp()
         with open(path.join(self._dir, 'pyrtlsim.c'), 'w') as f:
-            self._create_code(lambda s: f.write(s+'\n'))
+            self._create_code(lambda s: f.write(s + '\n'))
         if platform.system() == 'Darwin':
             shared = '-dynamiclib'
         else:
             shared = '-shared'
-        subprocess.check_call([
-            'gcc', '-O0', '-march=native', '-std=c99', '-m64',
-            shared, '-fPIC',
-            path.join(self._dir, 'pyrtlsim.c'), '-o', path.join(self._dir, 'pyrtlsim.so'),
-            ], shell=(platform.system() == 'Windows'))
+        subprocess.check_call(['gcc', '-O0', '-march=native', '-std=c99', '-m64',
+                               shared, '-fPIC',
+                               path.join(self._dir, 'pyrtlsim.c'),
+                               '-o', path.join(self._dir, 'pyrtlsim.so'), ],
+                              shell=(platform.system() == 'Windows'))
         self._dll = ctypes.CDLL(path.join(self._dir, 'pyrtlsim.so'))
         self._crun = self._dll.sim_run_all
         self._crun.restype = None  # argtypes set on use
 
     def _limbs(self, w):
         """Number of 64-bit words needed to store value of wire."""
-        return (w.bitwidth+63)//64
+        return (w.bitwidth + 63) // 64
 
     def _makeini(self, w, v):
         """C initializer string for a wire with a given value."""
         pieces = []
         for n in range(self._limbs(w)):
-            pieces.append(hex(v & ((1 << 64)-1)))
+            pieces.append(hex(v & ((1 << 64) - 1)))
             v >>= 64
         return ','.join(pieces).join('{}')
 
@@ -372,8 +372,8 @@ class CompiledSimulation(object):
         The value being masked is of width `res`.
         Limb number `pos` of `dest` is being assigned to.
         """
-        if (res is None or dest.bitwidth < res) and 0 < (dest.bitwidth - 64*pos) < 64:
-            return '&0x{:X}'.format((1 << (dest.bitwidth % 64))-1)
+        if (res is None or dest.bitwidth < res) and 0 < (dest.bitwidth - 64 * pos) < 64:
+            return '&0x{:X}'.format((1 << (dest.bitwidth % 64)) - 1)
         return ''
 
     def _getarglimb(self, arg, n):
@@ -381,7 +381,7 @@ class CompiledSimulation(object):
 
         Returns '0' when the wire does not have sufficient limbs.
         """
-        return '{vn}[{n}]'.format(vn=self.varname[arg], n=n) if arg.bitwidth > 64*n else '0'
+        return '{vn}[{n}]'.format(vn=self.varname[arg], n=n) if arg.bitwidth > 64 * n else '0'
 
     def _clean_name(self, prefix, obj):
         """Create a C variable name with the given prefix based on the name of obj."""
@@ -401,18 +401,18 @@ class CompiledSimulation(object):
             write('static const uint{width}_t {name}[][{limbs}] = {{'.format(
                 name=vn, width=self._memwidth(mem), limbs=self._limbs(mem)))
             for rv in romval:
-                write(self._makeini(mem, rv)+',')
+                write(self._makeini(mem, rv) + ',')
             write('};')
         else:
             write('EXPORT')
             if mem in self._memmap:
-                highest = min(1 << mem.addrwidth, max(self._memmap[mem])+1)
+                highest = min(1 << mem.addrwidth, max(self._memmap[mem]) + 1)
                 memval = [self._memmap[mem].get(n, 0) for n in range(highest)]
                 write('uint{width}_t {name}[{size}][{limbs}] = {{'.format(
                     name=vn, width=self._memwidth(mem),
                     size=1 << mem.addrwidth, limbs=self._limbs(mem)))
                 for mv in memval:
-                    write(self._makeini(mem, mv)+',')
+                    write(self._makeini(mem, mv) + ',')
                 write('};')
             else:
                 # initialize to zero by default
@@ -509,7 +509,7 @@ class CompiledSimulation(object):
             write('tmp = {arg0}+{arg1};'.format(arg0=arg0, arg1=arg1))
             write('{dest}[{n}] = (tmp + carry){mask};'.format(
                 dest=self.varname[dest], n=n,
-                mask=self._makemask(dest, max(args[0].bitwidth, args[1].bitwidth)+1, n)))
+                mask=self._makemask(dest, max(args[0].bitwidth, args[1].bitwidth) + 1, n)))
             write('carry = (tmp < {arg0})|({dest}[{n}] < tmp);'.format(
                 arg0=arg0, dest=self.varname[dest], n=n))
 
@@ -531,26 +531,26 @@ class CompiledSimulation(object):
             write('carry = 0;')
             arg0 = self._getarglimb(args[0], p0)
             for p1 in range(self._limbs(args[1])):
-                if self._limbs(dest) <= p0+p1:
+                if self._limbs(dest) <= p0 + p1:
                     break
                 arg1 = self._getarglimb(args[1], p1)
                 write('mul128({arg0}, {arg1}, tmplo, tmphi);'.format(arg0=arg0, arg1=arg1))
-                write('tmp = {dest}[{p}];'.format(dest=self.varname[dest], p=p0+p1))
+                write('tmp = {dest}[{p}];'.format(dest=self.varname[dest], p=p0 + p1))
                 write('tmplo += carry; carry = tmplo < carry; tmplo += tmp;')
                 write('tmphi += carry + (tmplo < tmp); carry = tmphi;')
                 write('{dest}[{p}] = tmplo{mask};'.format(
-                    dest=self.varname[dest], p=p0+p1,
-                    mask=self._makemask(dest, args[0].bitwidth+args[1].bitwidth, p0+p1)))
-            if self._limbs(dest) > p0+self._limbs(args[1]):
+                    dest=self.varname[dest], p=p0 + p1,
+                    mask=self._makemask(dest, args[0].bitwidth + args[1].bitwidth, p0 + p1)))
+            if self._limbs(dest) > p0 + self._limbs(args[1]):
                 write('{dest}[{p}] = carry{mask};'.format(
-                    dest=self.varname[dest], p=p0+self._limbs(args[1]),
+                    dest=self.varname[dest], p=p0 + self._limbs(args[1]),
                     mask=self._makemask(
-                        dest, args[0].bitwidth+args[1].bitwidth, p0+self._limbs(args[1]))))
+                        dest, args[0].bitwidth + args[1].bitwidth, p0 + self._limbs(args[1]))))
 
     def _build_concat(self, write, op, param, args, dest):
         cattotal = sum(x.bitwidth for x in args)
         pieces = (
-            (self.varname[a], lx, 0, min(64, a.bitwidth-64*lx))
+            (self.varname[a], lx, 0, min(64, a.bitwidth - 64 * lx))
             for a in reversed(args) for lx in range(self._limbs(a)))
         curr = next(pieces)
         for n in range(self._limbs(dest)):
@@ -561,10 +561,10 @@ class CompiledSimulation(object):
                 res.append('(({arg}[{limb}]>>{start})<<{pos})'.format(
                     arg=arg, limb=alimb, start=astart, pos=dpos))
                 dpos += asize
-                if dpos >= dest.bitwidth-64*n:
+                if dpos >= dest.bitwidth - 64 * n:
                     break
                 if dpos > 64:
-                    curr = (arg, alimb, 64-(dpos-asize), dpos-64)
+                    curr = (arg, alimb, 64 - (dpos - asize), dpos - 64)
                     break
                 curr = next(pieces)
                 if dpos == 64:
@@ -577,8 +577,8 @@ class CompiledSimulation(object):
         for n in range(self._limbs(dest)):
             bits = [
                 '((1&({src}[{limb}]>>{sb}))<<{db})'.format(
-                    src=self.varname[args[0]], sb=(b % 64), limb=(b//64), db=en)
-                for en, b in enumerate(param[64*n:min(dest.bitwidth, 64*(n+1))])]
+                    src=self.varname[args[0]], sb=(b % 64), limb=(b // 64), db=en)
+                for en, b in enumerate(param[64 * n:min(dest.bitwidth, 64 * (n + 1))])]
             write('{dest}[{n}] = {bits};'.format(
                 dest=self.varname[dest], n=n, bits='|'.join(bits)))
 

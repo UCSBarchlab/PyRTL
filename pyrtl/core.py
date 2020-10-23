@@ -146,12 +146,12 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         # very much not what people would expect to happen.  Instead we define equality
         # as the immutable fields as being equal and the list of args and dests as being
         # references to the same objects.
-        return (self.op == other.op and
-                self.op_param == other.op_param and
-                len(self.args) == len(other.args) and
-                len(self.dests) == len(other.dests) and
-                all(self.args[i] is other.args[i] for i in range(len(self.args))) and
-                all(self.dests[i] is other.dests[i] for i in range(len(self.dests))))
+        return (self.op == other.op
+                and self.op_param == other.op_param
+                and len(self.args) == len(other.args)
+                and len(self.dests) == len(other.dests)
+                and all(self.args[i] is other.args[i] for i in range(len(self.args)))
+                and all(self.dests[i] is other.dests[i] for i in range(len(self.dests))))
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -270,7 +270,7 @@ class Block(object):
             _print_netlist_latex(list(self))
             return ' '
         else:
-            return '\n'.join(str(l) for l in self)
+            return '\n'.join(str(net) for net in self)
 
     def add_wirevector(self, wirevector):
         """ Add a wirevector object to the block."""
@@ -775,7 +775,7 @@ def _get_useful_callpoint_name():
                 lineno = frame[0].f_lineno
                 loc = (filename, lineno)
                 break
-    except:
+    except Exception:
         loc = None
     finally:
         del frame_stack
@@ -852,7 +852,7 @@ def set_debug_mode(debug=True):
     _setting_slower_but_more_descriptive_tmps = debug
 
 
-_py_regex = '^[^\d\W]\w*\Z'
+_py_regex = r'^[^\d\W]\w*\Z'
 
 
 class _NameIndexer(object):

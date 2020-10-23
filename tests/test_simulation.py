@@ -143,7 +143,7 @@ class PrintTraceBase(unittest.TestCase):
         for i in range(5):
             sim.step({
                 self.in1: i,
-                self.in2: 5-i
+                self.in2: 5 - i
             })
         correct_outp = ("      --- Values in base 10 ---\n"
                         "in1       0 1 2 3 4\n"
@@ -160,8 +160,8 @@ class PrintTraceBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
         for i in range(5):
             sim.step({
-                self.in1: 4*i,
-                self.in2: 4*(5 - i)
+                self.in1: 4 * i,
+                self.in2: 4 * (5 - i)
             })
         correct_outp = ("      --- Values in base 2 ---\n"
                         "in1           0   100  1000  1100 10000\n"
@@ -178,8 +178,8 @@ class PrintTraceBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
         for i in range(5):
             sim.step({
-                self.in1: 6*i,
-                self.in2: 6*(5 - i)
+                self.in1: 6 * i,
+                self.in2: 6 * (5 - i)
             })
         correct_outp = ("      --- Values in base 8 ---\n"
                         "in1        0  6 14 22 30\n"
@@ -196,8 +196,8 @@ class PrintTraceBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
         for i in range(5):
             sim.step({
-                self.in1: 9*i,
-                self.in2: 9*(5 - i)
+                self.in1: 9 * i,
+                self.in2: 9 * (5 - i)
             })
         correct_outp = ("      --- Values in base 16 ---\n"
                         "in1         0   9  12  1b  24\n"
@@ -260,9 +260,9 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
         for i in range(10):
             sim.step({
-                'in1': 2*i,
-                'in2': 3*i,
-                'in3': 40 - 2*i
+                'in1': 2 * i,
+                'in2': 3 * i,
+                'in3': 40 - 2 * i
             })
         correct_outp = (" --- Values in base 10 ---\n"
                         "in1   0  2  4  6  8 10 12 14 16 18\n"
@@ -273,7 +273,6 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         output = six.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_outp)
-
 
 
 class SimInputValidationBase(unittest.TestCase):
@@ -301,12 +300,13 @@ class SimInputValidationBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             sim_trace = pyrtl.SimulationTrace()
 
+
 class SimStepAccessInternalMemoryBase(unittest.TestCase):
 
-     def setUp(self):
+    def setUp(self):
         pyrtl.reset_working_block()
 
-     def test_step_with_internal_memory(self):
+    def test_step_with_internal_memory(self):
 
         def special_memory(read_addr, write_addr, data, wen):
             mem = pyrtl.MemBlock(bitwidth=32, addrwidth=5, name='special_mem')
@@ -334,10 +334,10 @@ class SimStepAccessInternalMemoryBase(unittest.TestCase):
         })
 
         inputs = {
-            'read_addr':  '012012',
+            'read_addr': '012012',
             'write_addr': '012012',
-            'data':       '890333',
-            'wen':        '111000',
+            'data': '890333',
+            'wen': '111000',
         }
         expected = {
             'res': '567590',
@@ -345,7 +345,7 @@ class SimStepAccessInternalMemoryBase(unittest.TestCase):
         # This should not fail
         sim.step_multiple(inputs, expected)
 
-         # Let's check the memory contents too
+        # Let's check the memory contents too
         mem_map = sim.inspect_mem(special_mem)
         self.assertEqual(mem_map[0], 5)
         self.assertEqual(mem_map[1], 9)
@@ -390,9 +390,11 @@ class SimStepMultipleBase(unittest.TestCase):
 
         with self.assertRaises(pyrtl.PyrtlError) as error:
             sim.step_multiple(self.inputs, nsteps=6)
-        self.assertEqual(str(error.exception),
-                        'nsteps is specified but is greater than the '
-                        'number of values supplied for each input')
+        self.assertEqual(
+            str(error.exception),
+            'nsteps is specified but is greater than the '
+            'number of values supplied for each input'
+        )
 
     def test_step_multiple_no_inputs(self):
         sim_trace = pyrtl.SimulationTrace()
@@ -583,7 +585,8 @@ class TestStepBundleBase(unittest.TestCase):
         if six.PY2:
             with self.assertRaises(pyrtl.PyrtlError) as ex:
                 self.step_with_bundle(rformat)
-            self.assertEqual(str(ex.exception),
+            self.assertEqual(
+                str(ex.exception),
                 "For Python versions < 3.7, the dictionary used to instantiate "
                 "a Bundle must be explicitly ordered (i.e. OrderedDict)"
             )
@@ -601,7 +604,8 @@ class TestStepBundleBase(unittest.TestCase):
         if six.PY2:
             with self.assertRaises(pyrtl.PyrtlError) as ex:
                 self.step_with_bundle(RFormat)
-            self.assertEqual(str(ex.exception),
+            self.assertEqual(
+                str(ex.exception),
                 "Passing a class as an argument to Bundle() is only "
                 "allowed for Python versions >= 3.7"
             )
@@ -637,7 +641,7 @@ class TestStepBundleBase(unittest.TestCase):
         assert sim.inspect(y.funct3) == 0b000
         assert sim.inspect(y.rd) == 0b01011
         assert sim.inspect(y.opcode) == 0b0010011
-    
+
     def test_bad_write_to_bundle(self):
         w = pyrtl.WireVector(8, 'w')
         x = w.as_bundle([('a', 2), ('b', 3), ('c', 3)])
@@ -657,7 +661,7 @@ class TestStepBundleBase(unittest.TestCase):
                 with pyrtl.otherwise:
                     w |= 0b10010011
             return w
-        
+
         def t3():
             w = pyrtl.WireVector(8)
             with pyrtl.conditional_assignment:
@@ -678,7 +682,7 @@ class TestStepBundleBase(unittest.TestCase):
             thread4 = (8, pyrtl.Const(0b00000011))
             # Returning a literal
             thread5 = (8, 0b01000011)
-        
+
         if six.PY3:
             w = pyrtl.Bundle(Array, 'w')
             sim = pyrtl.Simulation()
@@ -717,10 +721,8 @@ class TraceWithAdderBase(unittest.TestCase):
 
         output = six.StringIO()
         sim_trace.print_trace(output, compact=True)
-        __IPYTHON__ = True
-        sim_trace.render_trace()  # want to make sure the code at least runs
-        __IPYTHON__ = False
-        sim_trace.render_trace()  # want to make sure the code at least runs
+        file = six.StringIO()
+        sim_trace.render_trace(file=file)  # want to make sure the code at least runs
         self.assertEqual(output.getvalue(), 'r 012345670123456\n')
         self.assertEqual(sim.inspect(self.r), 6)
 
@@ -864,7 +866,7 @@ class MemBlockBase(unittest.TestCase):
                          [6, 0, 6, 7]]
         for signals in input_signals:
             sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
-                           self.write_addr: signals[2], self.write_data: signals[3]})
+                      self.write_addr: signals[2], self.write_data: signals[3]})
 
         output = six.StringIO()
         self.sim_trace.print_trace(output, compact=True)
@@ -949,7 +951,7 @@ class MemBlockBase(unittest.TestCase):
         for i in range(2, 8):
             sim.step({
                 self.read_addr1: i,
-                self.read_addr2: 8-i+1,
+                self.read_addr2: 8 - i + 1,
                 read_addr3: i,
                 self.write_addr: 0,
                 self.write_data: 0
@@ -985,13 +987,16 @@ class RegisterDefaultsBase(unittest.TestCase):
         self.check_trace(' o 55012345\nr1 50123456\nr2 55012345\n', default_value=5)
 
     def test_register_map(self):
-        self.check_trace(' o 36012345\nr1 60123456\nr2 36012345\n', register_value_map={self.r1: 6, self.r2: 3})
+        self.check_trace(' o 36012345\nr1 60123456\nr2 36012345\n',
+                         register_value_map={self.r1: 6, self.r2: 3})
 
     def test_partial_map(self):
-        self.check_trace(' o 06012345\nr1 60123456\nr2 06012345\n', register_value_map={self.r1: 6})
+        self.check_trace(' o 06012345\nr1 60123456\nr2 06012345\n',
+                         register_value_map={self.r1: 6})
 
     def test_map_and_default(self):
-        self.check_trace(' o 56012345\nr1 60123456\nr2 56012345\n', default_value=5, register_value_map={self.r1: 6})
+        self.check_trace(' o 56012345\nr1 60123456\nr2 56012345\n', default_value=5,
+                         register_value_map={self.r1: 6})
 
 
 class RomBlockSimBase(unittest.TestCase):
@@ -1019,7 +1024,7 @@ class RomBlockSimBase(unittest.TestCase):
     def test_function_RomBlock(self):
 
         def rom_data_function(add):
-            return int((add + 5)/2)
+            return int((add + 5) / 2)
 
         pyrtl.reset_working_block()
         self.bitwidth = 4
@@ -1038,17 +1043,17 @@ class RomBlockSimBase(unittest.TestCase):
 
         input_signals = {}
         for i in range(0, 5):
-            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2*i}
+            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2 * i}
             self.sim.step(input_signals[i])
 
         exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x)),
-                                                 ("o2", lambda x: rom_data_function(2*x))), 6)
+                                                 ("o2", lambda x: rom_data_function(2 * x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
     def test_function_RomBlock_with_optimization(self):
 
         def rom_data_function(add):
-            return int((add + 5)/2)
+            return int((add + 5) / 2)
 
         pyrtl.reset_working_block()
         self.bitwidth = 4
@@ -1071,13 +1076,13 @@ class RomBlockSimBase(unittest.TestCase):
 
         input_signals = {}
         for i in range(0, 5):
-            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2*i}
-            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2*i}
+            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2 * i}
+            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2 * i}
             self.sim.step(input_signals[i])
 
         # exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x) - 1),
         exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x)),
-                                                 ("o2", lambda x: rom_data_function(2*x))), 6)
+                                                 ("o2", lambda x: rom_data_function(2 * x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
     def test_rom_out_of_range_error(self):
@@ -1198,6 +1203,7 @@ def make_unittests():
             unit_name = "Test" + name + sim.__name__
             unittests[unit_name] = type(unit_name, (v,), {'sim': sim})
     g.update(unittests)
+
 
 # add compiledsim here if you want to unittest that as well
 sims = (pyrtl.Simulation, pyrtl.FastSimulation)
