@@ -95,7 +95,7 @@ def _sparse_mux(sel, vals):
         half = 2**(len(sel) - 1)
 
         first_dict = {indx: wire for indx, wire in vals.items() if indx < half}
-        second_dict = {indx-half: wire for indx, wire in vals.items() if indx >= half}
+        second_dict = {indx - half: wire for indx, wire in vals.items() if indx >= half}
         if not len(first_dict):
             return sparse_mux(sel[:-1], second_dict)
         if not len(second_dict):
@@ -127,7 +127,7 @@ class MultiSelector(object):
     the results will have the values in the coresponding data wires
     (all ints are converted to wires)
     """
-    def __init__(self, signal_wire,  *dest_wires):
+    def __init__(self, signal_wire, *dest_wires):
         self._final = False
         self.dest_wires = dest_wires
         self.signal_wire = signal_wire

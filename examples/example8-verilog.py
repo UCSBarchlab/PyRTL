@@ -79,7 +79,7 @@ for i in range(15):
         'x': random.choice([0, 1]),
         'y': random.choice([0, 1]),
         'cin': random.choice([0, 1])
-        })
+    })
 sim_trace.render_trace(symbol_len=5, segment_size=5)
 
 

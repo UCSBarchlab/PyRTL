@@ -542,6 +542,7 @@ endmodule
 
 """
 
+
 class TestOutputTestbench(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -644,7 +645,7 @@ class TestVerilog(unittest.TestCase):
 
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer)
-        
+
         self.assertEqual(buffer.getvalue(), verilog_output)
 
 

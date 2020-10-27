@@ -132,7 +132,7 @@ def _cla_adder_unit(a, b, cin):
         cur_gen = gen[i] | (prop[i] & cur_gen)
         cur_prop = cur_prop & prop[i]
         sum_bit = pyrtl.concat(prop[i] ^ carry[i - 1], sum_bit)
-        carry.append(gen[i] | (prop[i] & carry[i-1]))
+        carry.append(gen[i] | (prop[i] & carry[i - 1]))
     cout = cur_gen | (cur_prop & cin)
     return sum_bit, cout
 
@@ -206,7 +206,7 @@ def dada_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
     max_width = max(len(i) for i in wire_array_2)
     reduction_schedule = [2]
     while reduction_schedule[-1] <= max_width:
-        reduction_schedule.append(int(reduction_schedule[-1]*3/2))
+        reduction_schedule.append(int(reduction_schedule[-1] * 3 / 2))
 
     for reduction_target in reversed(reduction_schedule[:-1]):
         deferred = [[] for weight in range(result_bitwidth + 1)]

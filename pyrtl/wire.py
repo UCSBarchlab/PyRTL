@@ -47,7 +47,7 @@ def next_tempvar_name(name=""):
         callpoint = core._get_useful_callpoint_name()
         if callpoint:  # returns none if debug mode is false
             filename, lineno = callpoint
-            safename = re.sub('[\W]+', '', filename)  # strip out non alphanumeric characters
+            safename = re.sub(r'[\W]+', '', filename)  # strip out non alphanumeric characters
             wire_name += '_%s_line%d' % (safename, lineno)
         return wire_name
     else:
@@ -505,7 +505,7 @@ class WireVector(object):
             extvector = WireVector(bitwidth=numext)
             net = LogicNet(
                 op='s',
-                op_param=(0,)*numext,
+                op_param=(0,) * numext,
                 args=(extbit,),
                 dests=(extvector,))
             working_block().add_net(net)
@@ -804,8 +804,8 @@ class Bundle(WireVector):
             fields = obj
         elif isinstance(obj, dict):
             from collections import OrderedDict
-            if (not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7) and
-               (not isinstance(obj, OrderedDict))):
+            if (not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7)
+               and (not isinstance(obj, OrderedDict))):
                 raise PyrtlError("For Python versions < 3.7, the dictionary used to instantiate "
                                  "a Bundle must be explicitly ordered (i.e. OrderedDict)")
             # Assume dictionary stores (field, width) pairs
@@ -852,7 +852,7 @@ class Bundle(WireVector):
                     val = val()
                 val = as_wires(val, bitwidth=length)
                 args.append(val)
-            setattr(self, field, self[start:start+length])
+            setattr(self, field, self[start:start + length])
             start += length
 
         if args:

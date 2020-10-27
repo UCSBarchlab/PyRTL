@@ -28,7 +28,7 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         pyrtl.working_block().sanity_check()
 
     def test_memblock_assign_with_extention(self):
-        big_output = pyrtl.Output(self.bitwidth+1, "big_output")
+        big_output = pyrtl.Output(self.bitwidth + 1, "big_output")
         big_output <<= self.memory[self.mem_read_address1]
         self.output1 <<= 1
         self.output2 <<= 2
@@ -127,8 +127,8 @@ class MemIndexedTests(unittest.TestCase):
             sim.step({
                 a: i
             })
-            self.assertEqual(sim.inspect(y), 5-i)
-            self.assertEqual(sim.inspect(z), 5-i)
+            self.assertEqual(sim.inspect(y), 5 - i)
+            self.assertEqual(sim.inspect(z), 5 - i)
         self.assertEqual(self.mem.read_ports, 1)
 
     def test_write_memindexed_ilshift(self):
@@ -147,10 +147,10 @@ class MemIndexedTests(unittest.TestCase):
         for i in range(5):
             sim.step({
                 addr1: i,
-                addr2: 0 if i == 0 else i-1,  # one behind addr1
-                inp: 5-i
+                addr2: 0 if i == 0 else i - 1,  # one behind addr1
+                inp: 5 - i
             })
-            self.assertEqual(sim.inspect(out), 0 if i ==0 else 5-(i-1))
+            self.assertEqual(sim.inspect(out), 0 if i == 0 else 5 - (i - 1))
         self.assertEqual(self.mem1.read_ports, 1)  # 2 b/c of the output read
         self.assertEqual(self.mem2.write_ports, 1)
 
@@ -176,7 +176,7 @@ class MemIndexedTests(unittest.TestCase):
                 decide: i % 2,
                 ind: i
             })
-            if i ==0:
+            if i == 0:
                 y_exp, z_exp, w_exp = 0, 0, 5
             elif i == 1:
                 y_exp, z_exp, w_exp = 4, 4, 0
@@ -215,8 +215,8 @@ class MemIndexedTests(unittest.TestCase):
             sim.step({
                 decide: i % 2,
                 addr1: i,
-                addr2: 0 if i == 0 else i-1,  # one behind addr1
-                inp: 5-i
+                addr2: 0 if i == 0 else i - 1,  # one behind addr1
+                inp: 5 - i
             })
             if (i == 0) | (i == 1) | (i == 3):
                 out_exp = 0
@@ -332,7 +332,7 @@ class RTLRomGetReadData(unittest.TestCase):
 
     def test_value_out_of_range(self):
         def rom_func(address):
-            return 2 * (8-address) + 1
+            return 2 * (8 - address) + 1
 
         rom1 = pyrtl.RomBlock(3, 3, [15, 8, 7, 1])
         romf1 = pyrtl.RomBlock(3, 3, rom_func)

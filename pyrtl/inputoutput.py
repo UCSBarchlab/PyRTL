@@ -60,8 +60,8 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
         return s
 
     # Begin BLIF language definition
-    signal_start = pyparsing.alphas + '$:[]_<>\\\/?'
-    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\\/.?'
+    signal_start = pyparsing.alphas + r'$:[]_<>\\\/?'
+    signal_middle = pyparsing.alphas + pyparsing.nums + r'$:[]_<>\\\/.?'
     signal_id = Word(signal_start, signal_middle)
     header = SKeyword('.model') + signal_id('model_name')
     input_list = Group(SKeyword('.inputs') + OneOrMore(signal_id))('input_list')
@@ -73,22 +73,22 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
     name_def = Group(SKeyword('.names') + namesignal_list + cover_list)('name_def')
 
     # asynchronous Flip-flop
-    dffas_formal = (SLiteral('C=') + signal_id('C') +
-                    SLiteral('R=') + signal_id('R') +
-                    SLiteral('D=') + signal_id('D') +
-                    SLiteral('Q=') + signal_id('Q'))
+    dffas_formal = (SLiteral('C=') + signal_id('C')
+                    + SLiteral('R=') + signal_id('R')
+                    + SLiteral('D=') + signal_id('D')
+                    + SLiteral('Q=') + signal_id('Q'))
     dffas_keyword = SKeyword('$_DFF_PN0_') | SKeyword('$_DFF_PP0_')
     dffas_def = Group(SKeyword('.subckt') + dffas_keyword + dffas_formal)('dffas_def')
 
     # synchronous Flip-flop
     dffs_init_val = Optional(oneOf("0 1 2 3"), default=Literal("0"))
     # TODO I think <type> and <control> ('re' and 'C') below are technically optional too
-    dffs_def = Group(SKeyword('.latch') +
-                     signal_id('D') +
-                     signal_id('Q') +
-                     SLiteral('re') +
-                     signal_id('C') +
-                     dffs_init_val('I'))('dffs_def')
+    dffs_def = Group(SKeyword('.latch')
+                     + signal_id('D')
+                     + signal_id('Q')
+                     + SLiteral('re')
+                     + signal_id('C')
+                     + dffs_init_val('I'))('dffs_def')
     command_def = name_def | dffas_def | dffs_def
     command_list = Group(OneOrMore(command_def))('command_list')
 
@@ -307,7 +307,7 @@ def output_to_firrtl(open_file, rom_blocks=None, block=None):
             if len(log_net.op_param) < 2:
                 selBegin = selEnd
             else:
-                selBegin = log_net.op_param[len(log_net.op_param)-1]
+                selBegin = log_net.op_param[len(log_net.op_param) - 1]
             f.write("    %s <= bits(%s, %s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
                                                       selBegin, selEnd))
         elif log_net.op == 'r':
@@ -479,9 +479,9 @@ def _default_edge_namer(edge, is_to_splitmerge=False):
              in to block_to_graphviz_string
     """
 
-    if (edge.name is None or
-            edge.name.startswith('tmp') or
-            isinstance(edge, (Input, Output, Const, Register))):
+    if (edge.name is None
+            or edge.name.startswith('tmp')
+            or isinstance(edge, (Input, Output, Const, Register))):
         name = ''
     else:
         name = '/'.join([edge.name, str(len(edge))])
@@ -519,7 +519,7 @@ def _default_node_namer(node):
                 if len(node.op_param) < 2:
                     selBegin = selEnd
                 else:
-                    selBegin = node.op_param[len(node.op_param)-1]
+                    selBegin = node.op_param[len(node.op_param) - 1]
                 return '[label="bits(%s,%s)", height=.1, width=.1]' % (selBegin, selEnd)
             elif node.op in 'c':
                 return '[label="concat", height=.1, width=.1]'
@@ -557,8 +557,8 @@ def detailed_edge_namer(extra_edge_info=None):
              in to block_to_graphviz_string
     """
     def edge_namer(edge, is_to_splitmerge):
-        if (edge.name is None or
-                isinstance(edge, (Input, Output, Const, Register))):
+        if (edge.name is None
+                or isinstance(edge, (Input, Output, Const, Register))):
             name = ''
         else:
             name = '/'.join([edge.name, str(len(edge))])
@@ -643,7 +643,7 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
         </script>
 
         """
-        )
+    )
 
     def extract(w):
         wavelist = []

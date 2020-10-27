@@ -90,9 +90,9 @@ sim = pyrtl.Simulation(tracer=sim_trace)
 # which takes in a dictionary mapping each input to its value on each step.
 
 sim_inputs = {
-    'token_in':   '0010100111010000',
+    'token_in': '0010100111010000',
     'req_refund': '1100010000000000'
-    }
+}
 
 sim.step_multiple(sim_inputs)
 
@@ -108,7 +108,7 @@ sim_trace.render_trace(trace_list=['token_in', 'req_refund', 'state', 'dispense'
 
 sim_outputs = {
     'dispense': '0000000000001000',
-    'refund':   '0111001000000000'
+    'refund': '0111001000000000'
 }
 
 # Note that you don't need to explicitly supply a tracer to Simulation(); it

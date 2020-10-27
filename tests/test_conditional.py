@@ -14,7 +14,6 @@ class TestConditional(unittest.TestCase):
             sim.step({})
         output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
-        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_basic_true_condition(self):
@@ -139,13 +138,15 @@ class TestConditional(unittest.TestCase):
         r = pyrtl.Register(bitwidth=2, name='r')
         with self.assertRaises(pyrtl.PyrtlError):
             with pyrtl.conditional_assignment:
-                with c: pass
+                with c:
+                    pass
 
     def test_error_on_non_boolean_with_register(self):
         r = pyrtl.Register(bitwidth=4, name='r')
         with self.assertRaises(pyrtl.PyrtlError):
             with pyrtl.conditional_assignment:
-                with r: pass
+                with r:
+                    pass
 
 
 # ---------------------------------------------------------------
@@ -162,7 +163,6 @@ class TestMemConditionalBlock(unittest.TestCase):
             sim.step({})
         output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
-        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_basic_true_condition_memwrite(self):
@@ -182,7 +182,7 @@ class TestMemConditionalBlock(unittest.TestCase):
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
         with pyrtl.conditional_assignment:
-            with m[i]!=0:
+            with m[i] != 0:
                 m[i] <<= i
         o <<= m[i]
         self.check_trace('i 01230123\no 00000123\n')
@@ -235,7 +235,6 @@ class TestWireConditionalBlock(unittest.TestCase):
             sim.step({})
         output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
-        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_basic_condition_wire(self):
@@ -254,7 +253,7 @@ class TestWireConditionalBlock(unittest.TestCase):
         o = pyrtl.WireVector(bitwidth=2, name='o')
         i.next <<= i + 1
         with pyrtl.conditional_assignment:
-            with i[0] == True:
+            with i[0]:
                 o |= 1
             with pyrtl.otherwise:
                 o |= 0
@@ -354,7 +353,6 @@ class TestNonExclusiveBlocks(unittest.TestCase):
             sim.step({})
         output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
-        print(output.getvalue())
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_basic_nested_non_exclusive_condition(self):
@@ -365,7 +363,8 @@ class TestNonExclusiveBlocks(unittest.TestCase):
         with pyrtl.conditional_assignment:
             with r1 < 3:
                 r1.next |= r1 + 1
-            with pyrtl.otherwise: pass
+            with pyrtl.otherwise:
+                pass
             with r2 < 3:
                 r2.next |= r2 + 1
         self.check_trace(' i 01230123\nr1 01233333\nr2 01233333\n')
@@ -379,7 +378,8 @@ class TestNonExclusiveBlocks(unittest.TestCase):
             with (i == 2) | (i == 3):
                 with r1 < 3:
                     r1.next |= r1 + 2
-                with pyrtl.otherwise: pass
+                with pyrtl.otherwise:
+                    pass
                 with r2 < 3:
                     r2.next |= r2 + 2
         self.check_trace(' i 01230123\nr1 00024444\nr2 00024444\n')
@@ -392,7 +392,8 @@ class TestNonExclusiveBlocks(unittest.TestCase):
         with pyrtl.conditional_assignment:
             with r1 < 3:
                 r1.next |= r1 + 1
-            with pyrtl.otherwise: pass
+            with pyrtl.otherwise:
+                pass
             with r2 < 3:
                 with self.assertRaises(pyrtl.PyrtlError):
                     r1.next |= r2 + 1
@@ -405,9 +406,10 @@ class TestNonExclusiveBlocks(unittest.TestCase):
         with pyrtl.conditional_assignment:
             with r1 < 3:
                 r1.next |= r1 + 1
-            with pyrtl.otherwise: pass
+            with pyrtl.otherwise:
+                pass
             with r2 < 3:
-                with i!=0:
+                with i != 0:
                     with self.assertRaises(pyrtl.PyrtlError):
                         r1.next |= r2 + 1
 
@@ -424,7 +426,7 @@ class TestSuperWireConditionalBlock(unittest.TestCase):
         allout = [pyrtl.Output(4, 'var' + str(index)) for index in range(5)]
         var0, var1, var2, var3, var4 = allout
 
-        """ 
+        """
          1  with a:  # a
          2  with b:  # not(a) and b
          3      with x:  # not(a) and b and x
@@ -436,7 +438,7 @@ class TestSuperWireConditionalBlock(unittest.TestCase):
          9          with k:  # not(a) and b and y and k;  check(3,4,6,7,8)
          8          with otherwise:  # not(a) and b and y and not(k):  check(?)
         10          with m:  # not(a) and b and y and m;  check(?)
-        11  with otherwise:  #not(a) and not(b)     
+        11  with otherwise:  #not(a) and not(b)
         12      with z: #not(a) and not(b) and z
         13  with c:  #c;  check(1,2,3,4,5,6,7,8,9,10,11,12)
         14  with d:  #not(c) and d;  check(1,2,3,4,5,6,7,8,9,10,11,12)
@@ -520,6 +522,7 @@ class TestSuperWireConditionalBlock(unittest.TestCase):
             self.assertEqual(v(var2), t2)
             self.assertEqual(v(var3), t3)
             self.assertEqual(v(var4), t4)
+
 
 if __name__ == "__main__":
     unittest.main()

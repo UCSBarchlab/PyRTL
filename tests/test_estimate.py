@@ -21,8 +21,8 @@ class TestAreaEstimate(unittest.TestCase):
         mem = pyrtl.MemBlock(8, 8)
         out = pyrtl.Output(8)
         nota, aLSB, athenb, aORb, aANDb, aNANDb, \
-        aXORb, aequalsb, altb, agtb, aselectb, \
-        aplusb, bminusa, atimesb, memread = [pyrtl.Output() for i in range(15)]
+            aXORb, aequalsb, altb, agtb, aselectb, \
+            aplusb, bminusa, atimesb, memread = [pyrtl.Output() for i in range(15)]
         out <<= zero
         nota <<= ~a
         aLSB <<= a[0]
@@ -31,14 +31,14 @@ class TestAreaEstimate(unittest.TestCase):
         aANDb <<= a & b
         aNANDb <<= a.nand(b)
         aXORb <<= a ^ b
-        aequalsb <<= a==b
+        aequalsb <<= a == b
         altb <<= a < b
         agtb <<= a > b
         aselectb <<= pyrtl.select(zero, a, b)
         reg.next <<= a
         aplusb <<= a + b
         bminusa <<= a - b
-        atimesb <<= a*b
+        atimesb <<= a * b
         memread <<= mem[0]
         mem[1] <<= a
         self.assertEquals(estimate.area_estimation(), (0.00734386752, 0.01879779717361501))
@@ -48,11 +48,11 @@ class TestAreaEstimate(unittest.TestCase):
         b = pyrtl.Const(85, 8)
         zero = pyrtl.Const(0, 1)
         reg = pyrtl.Register(8)
-        mem = pyrtl.RomBlock(8, 8, romdata=list(range(0,256)))
+        mem = pyrtl.RomBlock(8, 8, romdata=list(range(0, 256)))
         out = pyrtl.Output(8)
         nota, aLSB, athenb, aORb, aANDb, aNANDb, \
-        aXORb, aequalsb, altb, agtb, aselectb, \
-        aplusb, bminusa, atimesb, memread = [pyrtl.Output() for i in range(15)]
+            aXORb, aequalsb, altb, agtb, aselectb, \
+            aplusb, bminusa, atimesb, memread = [pyrtl.Output() for i in range(15)]
         out <<= zero
         nota <<= ~a
         aLSB <<= a[0]
@@ -61,14 +61,14 @@ class TestAreaEstimate(unittest.TestCase):
         aANDb <<= a & b
         aNANDb <<= a.nand(b)
         aXORb <<= a ^ b
-        aequalsb <<= a==b
+        aequalsb <<= a == b
         altb <<= a < b
         agtb <<= a > b
         aselectb <<= pyrtl.select(zero, a, b)
         reg.next <<= a
         aplusb <<= a + b
         bminusa <<= a - b
-        atimesb <<= a*b
+        atimesb <<= a * b
         memread <<= mem[reg]
         self.assertEquals(estimate.area_estimation(), (0.00734386752, 0.001879779717361501))
 
@@ -86,8 +86,8 @@ class TestTimingEstimate(unittest.TestCase):
         mem = pyrtl.MemBlock(8, 8)
         out = pyrtl.Output(8)
         nota, aLSB, athenb, aORb, aANDb, aNANDb, \
-        aXORb, aequalsb, altb, agtb, aselectb, \
-        aplusb, bminusa, atimesb, memread = [pyrtl.Output() for i in range(15)]
+            aXORb, aequalsb, altb, agtb, aselectb, \
+            aplusb, bminusa, atimesb, memread = [pyrtl.Output() for i in range(15)]
         out <<= zero
         nota <<= ~a
         aLSB <<= a[0]
@@ -110,8 +110,8 @@ class TestTimingEstimate(unittest.TestCase):
         self.assertEqual(timing.max_freq(), 610.2770657878676)
         self.assertEquals(timing.max_length(), 1255.6000000000001)
 
+
 class TestYosysInterface(unittest.TestCase):
 
     def setUp(self):
         pyrtl.reset_working_block()
-

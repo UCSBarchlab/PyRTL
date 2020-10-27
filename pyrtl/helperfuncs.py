@@ -130,7 +130,7 @@ def log2(integer_val):
         raise PyrtlError('this function can only take integers')
     if i <= 0:
         raise PyrtlError('this function can only take positive numbers 1 or greater')
-    if i & (i-1) != 0:
+    if i & (i - 1) != 0:
         raise PyrtlError('this function can only take even powers of 2')
     return i.bit_length() - 1
 
@@ -160,7 +160,7 @@ def truncate(wirevector_or_integer, bitwidth):
     try:
         return x.truncate(bitwidth)
     except AttributeError:
-        return x & ((1 << bitwidth)-1)
+        return x & ((1 << bitwidth) - 1)
 
 
 def chop(w, *segment_widths):
@@ -200,7 +200,7 @@ def chop(w, *segment_widths):
         raise PyrtlError('sum of segment widths must equal length of wirevetor')
 
     n_segments = len(segment_widths)
-    starts = [sum(segment_widths[i+1:]) for i in range(n_segments)]
+    starts = [sum(segment_widths[i + 1:]) for i in range(n_segments)]
     ends = [sum(segment_widths[i:]) for i in range(n_segments)]
     return [w[s:e] for s, e in zip(starts, ends)]
 
@@ -281,10 +281,10 @@ def wirevector_list(names, bitwidth=None, wvtype=WireVector):
     if bitwidth is None:
         bitwidth = 1
     if isinstance(bitwidth, numbers.Integral):
-        bitwidth = [bitwidth]*len(names)
+        bitwidth = [bitwidth] * len(names)
     if len(bitwidth) != len(names):
-        raise ValueError('number of names ' + str(len(names)) +
-                         ' should match number of bitwidths ' + str(len(bitwidth)))
+        raise ValueError('number of names ' + str(len(names))
+                         + ' should match number of bitwidths ' + str(len(bitwidth)))
 
     wirelist = []
     for fullname, bw in zip(names, bitwidth):
@@ -350,7 +350,7 @@ def formatted_str_to_val(data, format, enum_set=None):
     """
     type = format[0]
     bitwidth = int(format[1:].split('/')[0])
-    bitmask = (1 << bitwidth)-1
+    bitmask = (1 << bitwidth) - 1
     if type == 's':
         rval = int(data) & bitmask
     elif type == 'x':
@@ -401,7 +401,7 @@ def val_to_formatted_str(val, format, enum_set=None):
     """
     type = format[0]
     bitwidth = int(format[1:].split('/')[0])
-    bitmask = (1 << bitwidth)-1
+    bitmask = (1 << bitwidth) - 1
     if type == 's':
         rval = str(val_to_signed_integer(val, bitwidth))
     elif type == 'x':
@@ -480,7 +480,7 @@ def _convert_int(val, bitwidth=None):
         if bitwidth is None:
             raise PyrtlError(
                 'negative Const values must have bitwidth declared explicitly')
-        if (val >> bitwidth-1) != -1:
+        if (val >> bitwidth - 1) != -1:
             raise PyrtlError('insufficient bits for negative number')
         num = val & ((1 << bitwidth) - 1)  # result is a twos complement value
     return ValueBitwidthTuple(num, bitwidth)
@@ -511,7 +511,7 @@ def _convert_verilog_str(val, bitwidth=None):
     except (IndexError, ValueError):
         raise PyrtlError('error, string not in verilog style format')
     if neg and num:
-        if (num >> bitwidth-1):
+        if (num >> bitwidth - 1):
             raise PyrtlError('error, insufficient bits for negative number')
         num = (1 << bitwidth) - num
 
@@ -665,10 +665,10 @@ def _currently_in_jupyter_notebook():
 def _print_netlist_latex(netlist):
     """ Print each net in netlist in a Latex array """
     from IPython.display import display, Latex  # pylint: disable=import-error
-    out = '\n\\begin{array}{ \| c \| c \| l \| }\n'
-    out += '\n\hline\n'
-    out += '\\hline\n'.join(str(n) for n in netlist)
-    out += '\hline\n\\end{array}\n'
+    out = r'\n\\begin{array}{ \| c \| c \| l \| }\n'
+    out += r'\n\hline\n'
+    out += r'\\hline\n'.join(str(n) for n in netlist)
+    out += r'\hline\n\\end{array}\n'
     display(Latex(out))
 
 

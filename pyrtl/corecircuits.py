@@ -431,10 +431,10 @@ def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
 
     result_list = []
     if idxs_lower:
-        result_list.append(w[idxs_lower[0]:idxs_lower[-1]+1])
+        result_list.append(w[idxs_lower[0]:idxs_lower[-1] + 1])
     result_list.append(newvalue)
     if idxs_upper:
-        result_list.append(w[idxs_upper[0]:idxs_upper[-1]+1])
+        result_list.append(w[idxs_upper[0]:idxs_upper[-1] + 1])
     result = concat_list(result_list)
 
     if len(result) != len(w):
@@ -665,6 +665,6 @@ def _basic_gt(a, b):
 def _basic_select(s, a, b):
     assert len(a) == len(b)
     assert len(s) == 1
-    sa = concat(*[~s]*len(a))
-    sb = concat(*[s]*len(b))
+    sa = concat(*[~s] * len(a))
+    sb = concat(*[s] * len(b))
     return (a & sa) | (b & sb)

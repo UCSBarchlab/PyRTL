@@ -139,15 +139,15 @@ class TestFastWireReplace(unittest.TestCase):
         x, y, z = pyrtl.WireVector(8), pyrtl.WireVector(8), pyrtl.WireVector(8)
 
         o <<= j
-        l = ~ j
-        h = o & l
+        p = ~ j
+        h = o & p
         n <<= h
         block = pyrtl.working_block()
         src_nets, dst_nets = block.net_connections()
         transform.replace_wire_fast(o, x, x, src_nets, dst_nets)
-        transform.replace_wire_fast(l, z, z, src_nets, dst_nets)
+        transform.replace_wire_fast(p, z, z, src_nets, dst_nets)
         transform.replace_wire_fast(h, y, y, src_nets, dst_nets)
-        for old_wire in (o, h, l):
+        for old_wire in (o, h, p):
             self.assertNotIn(old_wire, src_nets)
             self.assertNotIn(old_wire, dst_nets)
             self.assertNotIn(old_wire, block.wirevector_set)
@@ -173,7 +173,6 @@ class TestFastWireReplace(unittest.TestCase):
         block.sanity_check()
 
 
-
 # this code needs mocking from python 3's unittests to work
 """
 @mock.patch('transform_examples.pyrtl.probe')
@@ -192,4 +191,3 @@ def test_probe(self, probe):
     transform_examples.probe_wire_if(probe_cond)
     probe.assert_called_once_with(test_wire)
 """
-

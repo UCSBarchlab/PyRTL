@@ -72,10 +72,10 @@ validate <<= waddr == count
 # for all of the inputs.
 # Write 1 through 8 into the eight registers, then read back out
 simvals = {
-    'we':        "00111111110000000000000000",
-    'waddr':     "00012345670000000000000000",
-    'wdata':     "00123456789990000000000000",
-    'raddr':     "00000000000000000123456777"
+    'we': "00111111110000000000000000",
+    'waddr': "00012345670000000000000000",
+    'wdata': "00123456789990000000000000",
+    'raddr': "00000000000000000123456777"
 }
 
 # For simulation purposes, we can give the spots in memory an initial value.

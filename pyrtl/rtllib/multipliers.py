@@ -110,15 +110,15 @@ def _one_cycle_mult(areg, breg, rem_bits, sum_sf=0, curr_bit=0):
     else:
         a_curr_val = areg[curr_bit].sign_extended(len(breg))
         if curr_bit == 0:  # if no shift
-            return(_one_cycle_mult(areg, breg, rem_bits-1,  # areg, breg, rem_bits
+            return(_one_cycle_mult(areg, breg, rem_bits - 1,  # areg, breg, rem_bits
                                    sum_sf + (a_curr_val & breg),  # sum_sf
-                                   curr_bit+1))  # curr_bit
+                                   curr_bit + 1))  # curr_bit
         else:
             return _one_cycle_mult(
-                areg, breg, rem_bits-1,  # areg, breg, rem_bits
-                sum_sf + (a_curr_val &
-                          pyrtl.concat(breg, pyrtl.Const(0, curr_bit))),  # sum_sf
-                curr_bit+1  # curr_bit
+                areg, breg, rem_bits - 1,  # areg, breg, rem_bits
+                sum_sf + (a_curr_val
+                          & pyrtl.concat(breg, pyrtl.Const(0, curr_bit))),  # sum_sf
+                curr_bit + 1  # curr_bit
             )
 
 
@@ -253,6 +253,6 @@ def generalized_fma(mult_pairs, add_wires, signed=False, reducer=adders.wallace_
             bits[bit_loc].append(bit)
 
     import math
-    result_bitwidth = (longest_wire_len +
-                       int(math.ceil(math.log(len(add_wires) + len(mult_pairs), 2))))
+    result_bitwidth = (longest_wire_len
+                       + int(math.ceil(math.log(len(add_wires) + len(mult_pairs), 2))))
     return reducer(bits, result_bitwidth, adder_func)

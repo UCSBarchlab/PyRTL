@@ -244,10 +244,10 @@ class AES(object):
     @staticmethod
     def _inv_shift_rows(in_vector):
         a = libutils.partition_wire(in_vector, 8)
-        return pyrtl.concat_list((a[12], a[9],  a[6],  a[3],
-                                  a[0],  a[13], a[10], a[7],
-                                  a[4],  a[1],  a[14], a[11],
-                                  a[8],  a[5],  a[2],  a[15]))
+        return pyrtl.concat_list((a[12], a[9], a[6], a[3],
+                                  a[0], a[13], a[10], a[7],
+                                  a[4], a[1], a[14], a[11],
+                                  a[8], a[5], a[2], a[15]))
 
     @staticmethod
     def _shift_rows(in_vector):

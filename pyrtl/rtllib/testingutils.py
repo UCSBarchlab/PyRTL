@@ -23,7 +23,7 @@ def calcuate_max_and_min_bitwidths(max_bitwidth=None, exact_bitwidth=None):
 
 def inverse_power_dist(bitwidth):
     # Note that this is not uniformly distributed
-    return int(2**random.uniform(0, bitwidth)-1)
+    return int(2**random.uniform(0, bitwidth) - 1)
 
 
 def uniform_dist(bitwidth):

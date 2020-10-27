@@ -13,7 +13,7 @@ try:
     version = subprocess.check_output(['gcc', '--version'])
 except OSError:
     raise unittest.SkipTest('CompiledSimulation testing requires gcc')
-    
+
 
 class TraceWithBasicOpsBase(unittest.TestCase):
     def setUp(self):
@@ -148,7 +148,7 @@ class PrintTraceBase(unittest.TestCase):
         for i in range(5):
             sim.step({
                 self.in1: i,
-                self.in2: 5-i
+                self.in2: 5 - i
             })
         correct_outp = ("      --- Values in base 10 ---\n"
                         "in1       0 1 2 3 4\n"
@@ -165,8 +165,8 @@ class PrintTraceBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
         for i in range(5):
             sim.step({
-                self.in1: 4*i,
-                self.in2: 4*(5 - i)
+                self.in1: 4 * i,
+                self.in2: 4 * (5 - i)
             })
         correct_outp = ("      --- Values in base 2 ---\n"
                         "in1           0   100  1000  1100 10000\n"
@@ -183,8 +183,8 @@ class PrintTraceBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
         for i in range(5):
             sim.step({
-                self.in1: 6*i,
-                self.in2: 6*(5 - i)
+                self.in1: 6 * i,
+                self.in2: 6 * (5 - i)
             })
         correct_outp = ("      --- Values in base 8 ---\n"
                         "in1        0  6 14 22 30\n"
@@ -201,8 +201,8 @@ class PrintTraceBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
         for i in range(5):
             sim.step({
-                self.in1: 9*i,
-                self.in2: 9*(5 - i)
+                self.in1: 9 * i,
+                self.in2: 9 * (5 - i)
             })
         correct_outp = ("      --- Values in base 16 ---\n"
                         "in1         0   9  12  1b  24\n"
@@ -259,9 +259,9 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
         for i in range(10):
             sim.step({
-                'in1': 2*i,
-                'in2': 3*i,
-                'in3': 40 - 2*i
+                'in1': 2 * i,
+                'in2': 3 * i,
+                'in3': 40 - 2 * i
             })
         correct_outp = (" --- Values in base 10 ---\n"
                         "in1   0  2  4  6  8 10 12 14 16 18\n"
@@ -272,7 +272,6 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         output = six.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_outp)
-
 
 
 class SimInputValidationBase(unittest.TestCase):
@@ -330,8 +329,8 @@ class SimStepMultipleBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError) as error:
             sim.step_multiple(self.inputs, nsteps=6)
         self.assertEqual(str(error.exception),
-                        'nsteps is specified but is greater than the '
-                        'number of values supplied for each input')
+                         'nsteps is specified but is greater than the '
+                         'number of values supplied for each input')
 
     def test_step_multiple_no_inputs(self):
         sim_trace = pyrtl.SimulationTrace()
@@ -517,7 +516,8 @@ class TraceWithAdderBase(unittest.TestCase):
 
         output = six.StringIO()
         sim_trace.print_trace(output, compact=True)
-        sim_trace.render_trace()  # want to make sure the code at least runs
+        file = six.StringIO()
+        sim_trace.render_trace(file=file)  # want to make sure the code at least runs
         self.assertEqual(output.getvalue(), 'o 012345670123456\n')
 
 
@@ -662,7 +662,7 @@ class MemBlockBase(unittest.TestCase):
                          [6, 0, 6, 7]]
         for signals in input_signals:
             sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
-                           self.write_addr: signals[2], self.write_data: signals[3]})
+                      self.write_addr: signals[2], self.write_data: signals[3]})
 
         output = six.StringIO()
         self.sim_trace.print_trace(output, compact=True)
@@ -747,7 +747,7 @@ class MemBlockBase(unittest.TestCase):
         for i in range(2, 8):
             sim.step({
                 self.read_addr1: i,
-                self.read_addr2: 8-i+1,
+                self.read_addr2: 8 - i + 1,
                 read_addr3: i,
                 self.write_addr: 0,
                 self.write_data: 0
@@ -818,7 +818,7 @@ class RomBlockSimBase(unittest.TestCase):
     def test_function_RomBlock(self):
 
         def rom_data_function(add):
-            return int((add + 5)/2)
+            return int((add + 5) / 2)
 
         pyrtl.reset_working_block()
         self.bitwidth = 4
@@ -837,17 +837,17 @@ class RomBlockSimBase(unittest.TestCase):
 
         input_signals = {}
         for i in range(0, 5):
-            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2*i}
+            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2 * i}
             self.sim.step(input_signals[i])
 
         exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x)),
-                                                 ("o2", lambda x: rom_data_function(2*x))), 6)
+                                                 ("o2", lambda x: rom_data_function(2 * x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
     def test_function_RomBlock_with_optimization(self):
 
         def rom_data_function(add):
-            return int((add + 5)/2)
+            return int((add + 5) / 2)
 
         pyrtl.reset_working_block()
         self.bitwidth = 4
@@ -870,16 +870,15 @@ class RomBlockSimBase(unittest.TestCase):
 
         input_signals = {}
         for i in range(0, 5):
-            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2*i}
-            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2*i}
+            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2 * i}
+            input_signals[i] = {self.read_addr1: i, self.read_addr2: 2 * i}
             self.sim.step(input_signals[i])
 
         # exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x) - 1),
         exp_out = self.generate_expected_output((("o1", lambda x: rom_data_function(x)),
-                                                 ("o2", lambda x: rom_data_function(2*x))), 6)
+                                                 ("o2", lambda x: rom_data_function(2 * x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
-    @unittest.skip
     def test_rom_out_of_range_error(self):
         rom_data_array = [15, 13, 11, 9, 7, 5, 3]
         rom1 = pyrtl.RomBlock(bitwidth=4, addrwidth=3, romdata=rom_data_array)
@@ -888,10 +887,12 @@ class RomBlockSimBase(unittest.TestCase):
         rom_out_1 <<= rom1[rom_add_1]
 
         sim_trace = pyrtl.SimulationTrace()
-        sim = self.sim(tracer=sim_trace)
-        sim.step({rom_add_1: 3})
-        with self.assertRaises(pyrtl.PyrtlError):
-            sim.step({rom_add_1: 7})
+        with self.assertRaises(pyrtl.PyrtlError) as ex:
+            self.sim(tracer=sim_trace)
+        self.assertEqual(
+            str(ex.exception),
+            "RomBlock index is invalid, consider using pad_with_zeros=True for defaults"
+        )
 
     def test_rom_val_map(self):
         def rom_data_function(add):
@@ -972,6 +973,7 @@ def make_unittests():
             unit_name = "Test" + name + sim.__name__
             unittests[unit_name] = type(unit_name, (v,), {'sim': sim})
     g.update(unittests)
+
 
 sims = (pyrtl.CompiledSimulation,)
 make_unittests()

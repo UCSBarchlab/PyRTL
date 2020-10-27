@@ -120,14 +120,14 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
     valid_net_ops = '~&|^nrwcsm@'
     no_optimization_ops = 'wcsm@'
     one_var_ops = {
-        '~': lambda x: 1-x,
+        '~': lambda x: 1 - x,
         'r': lambda x: x   # This is only valid for constant folding purposes
     }
     two_var_ops = {
         '&': lambda l, r: l & r,
         '|': lambda l, r: l | r,
         '^': lambda l, r: l ^ r,
-        'n': lambda l, r: 1-(l & r),
+        'n': lambda l, r: 1 - (l & r),
     }
 
     def _constant_prop_error(net, error_str):

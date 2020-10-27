@@ -34,7 +34,7 @@ class TestPrioritizedMuxTrivial(unittest.TestCase):
         self.assertIs(b, x)
 
 
-def pri_mux_actual(sels , vals):
+def pri_mux_actual(sels, vals):
     # python version of the pri mux hardware
     assert(len(sels) == len(vals))
     for index, s in enumerate(sels):
@@ -177,7 +177,7 @@ class TestSmartMux(unittest.TestCase):
         res = pyrtl.Output(name="output")
 
         m = muxes.sparse_mux(sel, {2: a1, 3: a2, 6: a3})
-        self.assertEqual(len(m), 8)  # the biggest one 
+        self.assertEqual(len(m), 8)  # the biggest one
 
     def test_two_big_close(self):
         sel = pyrtl.Input(3)
@@ -268,10 +268,11 @@ class TestMultiSelectorSim(unittest.TestCase):
             mul_sel.option(0, i1_0, i2_0)
             mul_sel.option(1, i1_1, i2_1)
 
-        actual_outputs = utils.sim_and_ret_outws([sel, i1_0, i1_1, i2_0, i2_1],
-                                                 [sel_vals, i1_0_vals, i1_1_vals, i2_0_vals, i2_1_vals])
-        expected_i1_out = [v1 if s else v0 for s, v0, v1 in zip(sel_vals, i1_0_vals, i1_1_vals )]
-        expected_i2_out = [v1 if s else v0 for s, v0, v1 in zip(sel_vals, i2_0_vals, i2_1_vals )]
+        actual_outputs =\
+            utils.sim_and_ret_outws([sel, i1_0, i1_1, i2_0, i2_1],
+                                    [sel_vals, i1_0_vals, i1_1_vals, i2_0_vals, i2_1_vals])
+        expected_i1_out = [v1 if s else v0 for s, v0, v1 in zip(sel_vals, i1_0_vals, i1_1_vals)]
+        expected_i2_out = [v1 if s else v0 for s, v0, v1 in zip(sel_vals, i2_0_vals, i2_1_vals)]
 
         self.assertEqual(actual_outputs[i1_out], expected_i1_out)
         self.assertEqual(actual_outputs[i2_out], expected_i2_out)

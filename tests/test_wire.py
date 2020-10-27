@@ -196,7 +196,8 @@ class TestWireAsBundle(unittest.TestCase):
         if six.PY2:
             with self.assertRaises(pyrtl.PyrtlError) as ex:
                 self.create_and_check_bundle(rformat)
-            self.assertEqual(str(ex.exception),
+            self.assertEqual(
+                str(ex.exception),
                 "For Python versions < 3.7, the dictionary used to instantiate "
                 "a Bundle must be explicitly ordered (i.e. OrderedDict)"
             )
@@ -214,7 +215,8 @@ class TestWireAsBundle(unittest.TestCase):
         if six.PY2:
             with self.assertRaises(pyrtl.PyrtlError) as ex:
                 self.create_and_check_bundle(RFormat)
-            self.assertEqual(str(ex.exception),
+            self.assertEqual(
+                str(ex.exception),
                 "Passing a class as an argument to Bundle() is only "
                 "allowed for Python versions >= 3.7"
             )
@@ -254,6 +256,7 @@ class TestWireAsBundle(unittest.TestCase):
         assert len(y.funct3) == 3
         assert len(y.rd) == 5
         assert len(y.opcode) == 7
+
 
 class TestInput(unittest.TestCase):
     def setUp(self):
@@ -441,6 +444,7 @@ class TestKeepingCallStack(unittest.TestCase):
         wire = pyrtl.WireVector()
         call_stack = wire.init_call_stack
         self.assertIsInstance(call_stack, list)
+
 
 if __name__ == "__main__":
     unittest.main()

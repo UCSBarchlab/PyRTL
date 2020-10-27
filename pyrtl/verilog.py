@@ -48,7 +48,7 @@ def OutputToVerilog(dest_file, block=None):
 
 
 class _VerilogSanitizer(_NameSanitizer):
-    _ver_regex = '[_A-Za-z][_a-zA-Z0-9\$]*$'
+    _ver_regex = r'[_A-Za-z][_a-zA-Z0-9\$]*$'
 
     _verilog_reserved = \
         """always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos
@@ -71,9 +71,9 @@ class _VerilogSanitizer(_NameSanitizer):
                                                 map_valid_vals, self._extra_checks)
 
     def _extra_checks(self, str):
-        return(str not in self._verilog_reserved_set and  # is not a Verilog reserved keyword
-               str != 'clk' and                           # not the clock signal
-               len(str) <= 1024)                          # not too long to be a Verilog id
+        return(str not in self._verilog_reserved_set  # is not a Verilog reserved keyword
+               and str != 'clk'                       # not the clock signal
+               and len(str) <= 1024)                  # not too long to be a Verilog id
 
 
 def _verilog_vector_size_decl(n):
@@ -99,7 +99,7 @@ def _natural_sort_key(key):
     """
     def convert(text):
         return int(text) if text.isdigit() else text
-    return [convert(c) for c in re.split('(\d+)', key)]
+    return [convert(c) for c in re.split(r'(\d+)', key)]
 
 
 def _to_verilog_header(file, block, varname):
