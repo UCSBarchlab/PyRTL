@@ -133,7 +133,7 @@ def _to_verilog_header(file, block, varname):
     print('', file=file)
 
     # memories and registers
-    for m in sorted(memories, key=lambda m: _natural_sort_key(m.name)):
+    for m in sorted(memories, key=lambda m: m.id):
         memwidth_str = _verilog_vector_size_decl(m.bitwidth)
         memsize_str = _verilog_vector_size_decl(1 << m.addrwidth)
         print('    reg{:s} mem_{}{:s}; //{}'.format(memwidth_str, m.id,
@@ -151,7 +151,7 @@ def _to_verilog_header(file, block, varname):
     # If we ever add support outside of simulation for initial values
     #  for MemBlocks, that would also go here.
     roms = {m for m in memories if isinstance(m, RomBlock)}
-    for m in sorted(roms, key=lambda m: _natural_sort_key(m.name)):
+    for m in sorted(roms, key=lambda m: m.id):
         print('    initial begin', file=file)
         for i in range(1 << m.addrwidth):
             mem_elem_str = 'mem_{}[{:d}]'.format(m.id, i)
@@ -239,7 +239,7 @@ def _to_verilog_sequential(file, block, varname):
 def _to_verilog_memories(file, block, varname):
     """ Print the memories of the verilog implementation. """
     memories = {n.op_param[1] for n in block.logic_subset('m@')}
-    for m in sorted(memories, key=lambda m: _natural_sort_key(m.name)):
+    for m in sorted(memories, key=lambda m: m.id):
         print('    // Memory mem_{}: {}'.format(m.id, m.name), file=file)
         print('    always @( posedge clk )', file=file)
         print('    begin', file=file)
