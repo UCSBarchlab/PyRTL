@@ -758,6 +758,28 @@ class MemBlockBase(unittest.TestCase):
                                             'o2 000000\n'
                                             'o3 000000\n')
 
+    def test_mem_val_map_empty_mapping(self):
+        read_addr3 = pyrtl.Input(self.addrwidth)
+        self.output3 = pyrtl.Output(self.bitwidth, "o3")
+        self.output3 <<= self.mem2[read_addr3]
+        mem_val_map = {self.mem1: {0: 0, 1: 1},
+                       self.mem2: {}}
+        self.sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=self.sim_trace, memory_value_map=mem_val_map)
+        for i in range(2, 8):
+            sim.step({
+                self.read_addr1: i,
+                self.read_addr2: 8 - i + 1,
+                read_addr3: i,
+                self.write_addr: 0,
+                self.write_data: 0
+            })
+        output = six.StringIO()
+        self.sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), 'o1 000000\n'
+                                            'o2 000000\n'
+                                            'o3 000000\n')
+
 
 class RegisterDefaultsBase(unittest.TestCase):
     def setUp(self):
