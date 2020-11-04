@@ -405,7 +405,7 @@ class CompiledSimulation(object):
             write('};')
         else:
             write('EXPORT')
-            if mem in self._memmap:
+            if mem in self._memmap and len(self._memmap[mem]) != 0:
                 highest = min(1 << mem.addrwidth, max(self._memmap[mem]) + 1)
                 memval = [self._memmap[mem].get(n, 0) for n in range(highest)]
                 write('uint{width}_t {name}[{size}][{limbs}] = {{'.format(
