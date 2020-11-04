@@ -57,6 +57,11 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
         s = block.get_wirevector_by_name(x)
         if s is None:
             s = WireVector(bitwidth=1, name=x)
+        if isinstance(s, Output) and (merge_io_vectors or len(x) == 1):
+            # To allow an output wire to be used as an argument (legal in BLIF),
+            # use the intermediate wire that was created in its place. extract_outputs()
+            # creates this intermediate wire.
+            s = block.get_wirevector_by_name(x + '[0]')
         return s
 
     # Begin BLIF language definition
@@ -126,7 +131,12 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
         for output_name in name_counts:
             bitwidth = name_counts[output_name]
             if not merge_io_vectors or bitwidth == 1:
-                block.add_wirevector(Output(bitwidth=1, name=output_name))
+                # To allow an output wire to be used as an argument (legal in BLIF),
+                # create an intermediate wire that will be used in its place. twire()
+                # checks for this and uses the intermediate wire when needed
+                w = WireVector(bitwidth=1, name=output_name + '[0]')
+                out = Output(bitwidth=1, name=output_name)
+                out <<= w
             else:
                 wire_out = Output(bitwidth=bitwidth, name=output_name, block=block)
                 bit_list = []
