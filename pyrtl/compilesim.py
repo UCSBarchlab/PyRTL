@@ -12,7 +12,7 @@ import _ctypes
 
 from .core import working_block
 from .wire import Input, Output, Const, WireVector, Register
-from .memory import RomBlock
+from .memory import MemBlock, RomBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .simulation import SimulationTrace, _trace_sort_key
 
@@ -21,31 +21,21 @@ __all__ = ['CompiledSimulation']
 
 
 class DllMemInspector(collections.Mapping):
-    """Dictionary-like access to a memory array in a CompiledSimulation."""
+    """Dictionary-like access to a hashmap in a CompiledSimulation."""
 
     def __init__(self, sim, mem):
         self._aw = mem.addrwidth
-        bw = mem.bitwidth
-        self._limbs = limbs = sim._limbs(mem)
+        self._limbs = sim._limbs(mem)
         self._vn = vn = sim.varname[mem]
-        if bw <= 8:
-            scalar = ctypes.c_uint8
-        elif bw <= 16:
-            scalar = ctypes.c_uint16
-        elif bw <= 32:
-            scalar = ctypes.c_uint32
-        else:
-            scalar = ctypes.c_uint64
-        array_type = scalar * (len(self) * limbs)
-        self._buf = array_type.in_dll(sim._dll, vn)
+        self._mem = ctypes.c_void_p.in_dll(sim._dll, vn)
         self._sim = sim  # keep reference to avoid freeing dll
 
     def __getitem__(self, ind):
+        arr = self._sim._mem_lookup(self._mem, ind)
         val = 0
-        limbs = self._limbs
-        for n in reversed(range(ind * limbs, (ind + 1) * limbs)):
+        for n in reversed(range(self._limbs)):
             val <<= 64
-            val |= self._buf[n]
+            val |= arr[n]
         return val
 
     def __iter__(self):
@@ -103,6 +93,7 @@ class CompiledSimulation(object):
         self.varname = {}  # mapping from wires and memories to C variables
 
         self._create_dll()
+        self._initialize_mems()
 
     def inspect_mem(self, mem):
         """Get a view into the contents of a MemBlock."""
@@ -340,6 +331,10 @@ class CompiledSimulation(object):
         self._dll = ctypes.CDLL(path.join(self._dir, 'pyrtlsim.so'))
         self._crun = self._dll.sim_run_all
         self._crun.restype = None  # argtypes set on use
+        self._initialize_mems = self._dll.initialize_mems
+        self._initialize_mems.restype = None
+        self._mem_lookup = self._dll.lookup
+        self._mem_lookup.restype = ctypes.POINTER(ctypes.c_uint64)
 
     def _limbs(self, w):
         """Number of 64-bit words needed to store value of wire."""
@@ -348,13 +343,13 @@ class CompiledSimulation(object):
     def _makeini(self, w, v):
         """C initializer string for a wire with a given value."""
         pieces = []
-        for n in range(self._limbs(w)):
+        for _ in range(self._limbs(w)):
             pieces.append(hex(v & ((1 << 64) - 1)))
             v >>= 64
         return ','.join(pieces).join('{}')
 
-    def _memwidth(self, m):
-        """Bitwidth of integer type sufficient to hold memory entry.
+    def _romwidth(self, m):
+        """Bitwidth of integer type sufficient to hold rom entry.
 
         On large memories, returns 64; an array will be needed.
         """
@@ -393,32 +388,41 @@ class CompiledSimulation(object):
         self._uid_counter += 1
         return x
 
-    def _declare_mem(self, write, mem):
-        self.varname[mem] = vn = self._clean_name('m', mem)
-        if isinstance(mem, RomBlock):
+    def _declare_roms(self, write, roms):
+        for mem in roms:
+            self.varname[mem] = vn = self._clean_name('m', mem)
             # extract data from mem
             romval = [mem._get_read_data(n) for n in range(1 << mem.addrwidth)]
             write('static const uint{width}_t {name}[][{limbs}] = {{'.format(
-                name=vn, width=self._memwidth(mem), limbs=self._limbs(mem)))
+                name=vn, width=self._romwidth(mem), limbs=self._limbs(mem)))
             for rv in romval:
                 write(self._makeini(mem, rv) + ',')
             write('};')
-        else:
+
+    def _declare_mems(self, write, mems):
+        for mem in mems:
+            self.varname[mem] = vn = self._clean_name('m', mem)
             write('EXPORT')
-            if mem in self._memmap and len(self._memmap[mem]) != 0:
-                highest = min(1 << mem.addrwidth, max(self._memmap[mem]) + 1)
-                memval = [self._memmap[mem].get(n, 0) for n in range(highest)]
-                write('uint{width}_t {name}[{size}][{limbs}] = {{'.format(
-                    name=vn, width=self._memwidth(mem),
-                    size=1 << mem.addrwidth, limbs=self._limbs(mem)))
-                for mv in memval:
-                    write(self._makeini(mem, mv) + ',')
-                write('};')
-            else:
-                # initialize to zero by default
-                write('uint{width}_t {name}[{size}][{limbs}] = {{{{0}}}};'.format(
-                    name=vn, width=self._memwidth(mem),
-                    size=1 << mem.addrwidth, limbs=self._limbs(mem)))
+            write('hashmap_t *{name};'.format(name=vn))
+
+        next_tmp = 0
+        write('EXPORT')
+        write('void initialize_mems() {')
+        for mem in mems:
+            # Create hashmap
+            write('{name} = create_hash_map(256, {limbs});'.format(
+                name=self.varname[mem], limbs=self._limbs(mem)
+            ))
+            if mem in self._memmap:
+                # Insert default values
+                for k, v in self._memmap[mem].items():
+                    write('val_t t{n}[] = {val};'.format(
+                        n=next_tmp, val=self._makeini(mem, v)))
+                    write('insert({name}, {key}, t{n});'.format(
+                        name=self.varname[mem], key=k, n=next_tmp
+                    ))
+                    next_tmp += 1
+        write('}')
 
     def _declare_wv(self, write, w):
         self.varname[w] = vn = self._clean_name('w', w)
@@ -435,9 +439,14 @@ class CompiledSimulation(object):
     def _build_memread(self, write, op, param, args, dest):
         mem = param[1]
         for n in range(self._limbs(dest)):
-            write('{dest}[{n}] = {mem}[{addr}[0]][{n}]{mask};'.format(
-                dest=self.varname[dest], n=n, mem=self.varname[mem],
-                addr=self.varname[args[0]], mask=self._makemask(dest, mem.bitwidth, n)))
+            if isinstance(mem, RomBlock):
+                write('{dest}[{n}] = {mem}[{addr}[0]][{n}]{mask};'.format(
+                    dest=self.varname[dest], n=n, mem=self.varname[mem],
+                    addr=self.varname[args[0]], mask=self._makemask(dest, mem.bitwidth, n)))
+            else:
+                write('{dest}[{n}] = lookup({mem}, {addr}[0])[{n}]{mask};'.format(
+                    dest=self.varname[dest], n=n, mem=self.varname[mem],
+                    addr=self.varname[args[0]], mask=self._makemask(dest, mem.bitwidth, n)))
 
     def _build_wire(self, write, op, param, args, dest):
         for n in range(self._limbs(dest)):
@@ -582,8 +591,90 @@ class CompiledSimulation(object):
             write('{dest}[{n}] = {bits};'.format(
                 dest=self.varname[dest], n=n, bits='|'.join(bits)))
 
+    def _declare_mem_helpers(self, write):
+        helpers = '''
+            typedef uint64_t val_t;
+
+            typedef struct node
+            {
+                uint64_t key;
+                val_t *val;
+                struct node *next;
+            } node_t;
+
+            typedef struct hashmap
+            {
+                int size;
+                int val_limbs;
+                val_t *default_value;
+                node_t **list;
+            } hashmap_t;
+
+            hashmap_t *create_hash_map(int size, int val_limbs)
+            {
+                int i;
+                hashmap_t *h = (hashmap_t *) malloc(sizeof(hashmap_t));
+                h->size = size;
+                h->val_limbs = val_limbs;
+                h->list = (node_t **) malloc(sizeof(node_t *) * size);
+                h->default_value = (val_t *) malloc(sizeof(val_t) * val_limbs);
+                for (i = 0; i < val_limbs; i++)
+                    h->default_value[i] = 0;
+                for (i = 0; i < size; i++)
+                    h->list[i] = NULL;
+                return h;
+            }
+
+            int hash_code(hashmap_t *h, uint64_t key)
+            {
+                return key % h->size;
+            }
+
+            void insert(hashmap_t *h, uint64_t key, val_t val[])
+            {
+                int pos = hash_code(h, key);
+                struct node *list = h->list[pos];
+                struct node *new_node = (node_t *) malloc(sizeof(node_t));
+                struct node *temp = list;
+                while (temp)
+                {
+                    if (temp->key == key)
+                    {
+                        memcpy(temp->val, val, sizeof(val_t) * h->val_limbs);
+                        return;
+                    }
+                    temp = temp->next;
+                }
+                new_node->key = key;
+                new_node->val = (val_t *) malloc(sizeof(val_t) * h->val_limbs);
+                memcpy(new_node->val, val, sizeof(val_t) * h->val_limbs);
+                new_node->next = list;
+                h->list[pos] = new_node;
+            }
+
+            EXPORT
+            val_t* lookup(hashmap_t *h, uint64_t key)
+            {
+                int pos = hash_code(h, key);
+                node_t *list = h->list[pos];
+                node_t *temp = list;
+                while (temp)
+                {
+                    if (temp->key == key)
+                    {
+                        return temp->val;
+                    }
+                    temp = temp->next;
+                }
+                return h->default_value;
+            }
+        '''
+        write(helpers)
+
     def _create_code(self, write):
         write('#include <stdint.h>')
+        write('#include <stdlib.h>')
+        write('#include <string.h>')
 
         # windows dllexport needed to make symbols visible
         if platform.system() == 'Windows':
@@ -614,8 +705,11 @@ class CompiledSimulation(object):
                 raise PyrtlError('unrecognized MemBlock in memory_value_map')
             if isinstance(key, RomBlock):
                 raise PyrtlError('RomBlock in memory_value_map')
-        for mem in mems:
-            self._declare_mem(write, mem)
+        self._declare_mem_helpers(write)
+        roms = {mem for mem in mems if isinstance(mem, RomBlock)}
+        self._declare_roms(write, roms)
+        mems = {mem for mem in mems if isinstance(mem, MemBlock)}
+        self._declare_mems(write, mems)
 
         # single step function
         write('static void sim_run_step(uint64_t inputs[], uint64_t outputs[]) {')
@@ -669,12 +763,11 @@ class CompiledSimulation(object):
         for net in self.block.logic_subset('@'):
             mem = net.op_param[1]
             write('if ({enable}[0]) {{'.format(enable=self.varname[net.args[2]]))
-            for n in range(self._limbs(mem)):
-                write('{mem}[{addr}[0]][{n}] = {vn}[{n}];'.format(
-                    mem=self.varname[mem],
-                    addr=self.varname[net.args[0]],
-                    vn=self.varname[net.args[1]],
-                    n=n))
+            write('insert({mem}, {addr}[0], {vn});'.format(
+                mem=self.varname[mem],
+                addr=self.varname[net.args[0]],
+                vn=self.varname[net.args[1]]
+            ))
             write('}')
 
         # register updates

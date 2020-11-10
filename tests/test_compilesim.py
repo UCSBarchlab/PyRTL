@@ -781,6 +781,49 @@ class MemBlockBase(unittest.TestCase):
                                             'o3 000000\n')
 
 
+class MemBlockLargeBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.bitwidth = 68
+        self.addrwidth = 32
+        self.output1 = pyrtl.Output(self.bitwidth, "o1")
+        self.output2 = pyrtl.Output(self.bitwidth, "o2")
+        self.read_addr1 = pyrtl.Input(self.addrwidth)
+        self.read_addr2 = pyrtl.Input(self.addrwidth)
+        self.write_addr = pyrtl.Input(self.addrwidth)
+        self.write_data = pyrtl.Input(self.bitwidth)
+        self.mem = pyrtl.MemBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth, name='mem')
+        self.output1 <<= self.mem[self.read_addr1]
+        self.output2 <<= self.mem[self.read_addr2]
+        self.mem[self.write_addr] <<= self.write_data
+
+        # build the actual simulation environment
+        self.sim_trace = pyrtl.SimulationTrace()
+
+    def test_mem_blocks_very_large(self):
+        ''' Tests support of very large memories (i.e. address width > 30 bits),
+            and that limbs are handled appropriately for bitwidths > 64 '''
+        sim = self.sim(tracer=self.sim_trace)
+
+        write_data = 0x20000000040000012  # 68 bits
+        input_signals = [[0, 1, 0xffffffff, write_data],
+                         [0xffffffff, 1, 0, write_data],
+                         [0, 0xffffffff, 0xf0000001, 6],
+                         [0xf0000001, 0xf0000001, 0, 0],
+                         [6, 0, 6, 7]]
+        for signals in input_signals:
+            sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
+                      self.write_addr: signals[2], self.write_data: signals[3]})
+
+        output = six.StringIO()
+        correct_outp = ("--- Values in base 10 ---\n"
+                        "o1                    0 %d %d                    6                    0\n"
+                        "o2                    0                    0 %d                    6                    0\n"  # noqa
+                        % (write_data, write_data, write_data))
+        self.sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_outp)
+
+
 class RegisterDefaultsBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
