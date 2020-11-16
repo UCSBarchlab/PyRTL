@@ -78,7 +78,7 @@ refund <<= state == REFUND
 #     with otherwise:
 #         r2.next |= 3   <-- when a is true and d is false
 # with b == c:
-#     r.next |= 0        <-- when a is not true and b & c is true
+#     r.next |= 0        <-- when a is not true and b==c is true
 
 # Now let's build and test our state machine.
 
