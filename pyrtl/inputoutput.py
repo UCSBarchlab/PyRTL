@@ -400,7 +400,13 @@ def _trivialgraph_default_namer(thing, is_edge=True):
 
 
 def net_graph(block=None, split_state=False):
-    """ Return a graph representation of the current block.
+    """ Return a graph representation of the given block.
+
+    :param block: block to use (defaults to current working block)
+    :param split_state: if True, split connections to/from a register update net; this
+        means that registers will be appear as source nodes of the network, and
+        'r' nets (i.e. the logic for setting a register's next value) will
+        be treated as sink nodes of the network
 
     Graph has the following form:
         { node1: { nodeA: edge1A, nodeB: edge1B},
@@ -457,9 +463,9 @@ def net_graph(block=None, split_state=False):
     return graph
 
 
-def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None):
+def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None, split_state=False):
     """ Walk the block and output it in trivial graph format to the open file. """
-    graph = net_graph(block)
+    graph = net_graph(block, split_state)
     node_index_map = {}  # map node -> index
 
     # print the list of nodes
@@ -478,68 +484,79 @@ def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None):
             print('%d %d %s' % (from_index, to_index, namer(edge)), file=file)
 
 
-def _default_edge_namer(edge, is_to_splitmerge=False):
+def _default_edge_namer(edge, is_to_splitmerge=False, extra_edge_info=None):
     """
     A function for naming an edge for use in the graphviz graph.
 
     :param edge: the edge (i.e. WireVector or deriving class)
-    :param is_to_splitmerge: if the node from to which the edge points
+    :param is_to_splitmerge: if the node to which the edge points
                              is a select or concat operation
+    :param extra_edge_info: a map from edge to any additional data you want
+                            to print associated with it (e.g. timing data).
     :return: a function that can be called by graph namer function you pass
              in to block_to_graphviz_string
     """
 
     if (edge.name is None
-            or edge.name.startswith('tmp')
+            or (edge.name.startswith('tmp') and not extra_edge_info)
             or isinstance(edge, (Input, Output, Const, Register))):
         name = ''
     else:
         name = '/'.join([edge.name, str(len(edge))])
+        if extra_edge_info and edge in extra_edge_info:
+            name = name + " (" + str(extra_edge_info[edge]) + ")"
 
     penwidth = 2 if len(edge) == 1 else 6
     arrowhead = 'none' if is_to_splitmerge else 'normal'
     return '[label="%s", penwidth="%d", arrowhead="%s"]' % (name, penwidth, arrowhead)
 
 
-def _default_node_namer(node):
+def _default_node_namer(node, split_state=False, extra_node_info=None):
+    def label(v):
+        if extra_node_info and node in extra_node_info:
+            v = v + "(" + str(extra_node_info[node]) + ")"
+        return v
+
     if isinstance(node, Const):
-        return '[label="%d", shape=circle, fillcolor=lightgrey]' % node.val
+        return '[label="%d", shape=circle, fillcolor=lightgrey]' % label(node.val)
     elif isinstance(node, Input):
-        return '[label="%s", shape=invhouse, fillcolor=coral]' % node.name
+        return '[label="%s", shape=invhouse, fillcolor=coral]' % label(node.name)
     elif isinstance(node, Output):
-        return '[label="%s", shape=house, fillcolor=lawngreen]' % node.name
+        return '[label="%s", shape=house, fillcolor=lawngreen]' % label(node.name)
     elif isinstance(node, Register):
-        return '[label="%s", shape=square, fillcolor=gold]' % node.name
+        return '[label="%s", shape=square, fillcolor=gold]' % label(node.name)
     elif isinstance(node, WireVector):
-        return '[label="%s", shape=circle, fillcolor=none]' % node.name
+        return '[label="%s", shape=circle, fillcolor=none]' % label(node.name)
     else:
         try:
             if node.op == '&':
-                return '[label="and"]'
+                return '[label="%s"]' % label("and")
             elif node.op == '|':
-                return '[label="or"]'
+                return '[label="%s"]' % label("or")
             elif node.op == '^':
-                return '[label="xor"]'
+                return '[label="%s"]' % label("xor")
             elif node.op == '~':
-                return '[label="not", shape=invtriangle]'
+                return '[label="%s", shape=invtriangle]' % label("not")
             elif node.op == 'x':
-                return '[label="mux", shape=invtrapezium]'
+                return '[label="%s", shape=invtrapezium]' % label("mux")
             elif node.op == 's':
                 selEnd = node.op_param[0]
                 if len(node.op_param) < 2:
                     selBegin = selEnd
                 else:
                     selBegin = node.op_param[len(node.op_param) - 1]
-                return '[label="bits(%s,%s)", height=.1, width=.1]' % (selBegin, selEnd)
+                return '[label="%s", height=.1, width=.1]' % \
+                    (label("bits(%s,%s)" % (selBegin, selEnd)))
             elif node.op in 'c':
-                return '[label="concat", height=.1, width=.1]'
+                return '[label="%s", height=.1, width=.1]' % label("concat")
             elif node.op == 'r':
                 name = node.dests[0].name or ''
-                return '[label="%s.next", shape=square, fillcolor=gold]' % name
+                name = ("%s.next" % name) if split_state else name
+                return '[label="%s", shape=square, fillcolor=gold]' % label(name)
             elif node.op == 'w':
-                return '[label="", height=.1, width=.1]'
+                return '[label="%s", height=.1, width=.1]' % label("")
             else:
-                return '[label="%s"]' % (node.op + str(node.op_param or ''))
+                return '[label="%s"]' % label(node.op + str(node.op_param or ''))
         except AttributeError:
             raise PyrtlError('no naming rule for "%s"' % str(node))
 
@@ -548,47 +565,49 @@ def graphviz_default_namer(
         thing,
         is_edge,
         is_to_splitmerge,
+        split_state,
         node_namer=_default_node_namer,
         edge_namer=_default_edge_namer):
     """ Returns a "good" graphviz label for thing. """
     if is_edge:
         return edge_namer(thing, is_to_splitmerge=is_to_splitmerge)
     else:
-        return node_namer(thing)
+        return node_namer(thing, split_state=split_state)
 
 
-def detailed_edge_namer(extra_edge_info=None):
+def graphviz_detailed_namer(
+        extra_node_info=None,
+        extra_edge_info=None):
+    """ Returns a detailed namer that prints extra information about nodes/edges in the given maps
+
+        :param extra_node_info: A map from node to some object about that node
+                                (its string representation will be printed next to the node's label)
+        :param extra_edge_info: A map from edge to some object about that edge
+                                (its string representation will be printed next to the edge's label)
+        :return: a function that can be used as the namer function for block_to_graphviz_string
     """
-    A function for naming an edge for use in the graphviz graph.
 
-    :param extra_edge_info: a map from edge to any additional data you want
-                            to print associated with it (e.g. timing data)
-    :return: a function that can be called by graph namer function you pass
-             in to block_to_graphviz_string
-    """
+    def node_namer(node, split_state):
+        return _default_node_namer(node, split_state, extra_node_info)
+
     def edge_namer(edge, is_to_splitmerge):
-        if (edge.name is None
-                or isinstance(edge, (Input, Output, Const, Register))):
-            name = ''
-        else:
-            name = '/'.join([edge.name, str(len(edge))])
-            if extra_edge_info and edge in extra_edge_info:
-                name = name + " (" + str(extra_edge_info[edge]) + ")"
+        return _default_edge_namer(edge, is_to_splitmerge, extra_edge_info)
 
-        penwidth = 2 if len(edge) == 1 else 6
-        arrowhead = 'none' if is_to_splitmerge else 'normal'
-        return '[label="%s", penwidth="%d", arrowhead="%s"]' % (name, penwidth, arrowhead)
-    return edge_namer
+    def namer(thing, is_edge, is_to_splitmerge, split_state):
+        return graphviz_default_namer(
+            thing, is_edge, is_to_splitmerge, split_state,
+            node_namer=node_namer, edge_namer=edge_namer)
+    return namer
 
 
-def output_to_graphviz(file, namer=graphviz_default_namer, block=None):
+def output_to_graphviz(file, namer=graphviz_default_namer, block=None, split_state=True):
     """ Walk the block and output it in graphviz format to the open file. """
-    print(block_to_graphviz_string(block, namer), file=file)
+    print(block_to_graphviz_string(block, namer, split_state), file=file)
 
 
-def block_to_graphviz_string(block=None, namer=graphviz_default_namer):
+def block_to_graphviz_string(block=None, namer=graphviz_default_namer, split_state=True):
     """ Return a graphviz string for the block. """
-    graph = net_graph(block, split_state=True)
+    graph = net_graph(block, split_state)
     node_index_map = {}  # map node -> index
 
     rstring = """\
@@ -602,7 +621,7 @@ def block_to_graphviz_string(block=None, namer=graphviz_default_namer):
 
     # print the list of nodes
     for index, node in enumerate(graph):
-        label = namer(node, False, False)
+        label = namer(node, False, False, split_state)
         rstring += '    n%s %s;\n' % (index, label)
         node_index_map[node] = index
 
@@ -613,11 +632,16 @@ def block_to_graphviz_string(block=None, namer=graphviz_default_namer):
             to_index = node_index_map[_to]
             edge = graph[_from][_to]
             is_to_splitmerge = True if hasattr(_to, 'op') and _to.op in 'cs' else False
-            label = namer(edge, True, is_to_splitmerge)
+            label = namer(edge, True, is_to_splitmerge, False)
             rstring += '   n%d -> n%d %s;\n' % (from_index, to_index, label)
 
     rstring += '}\n'
     return rstring
+
+
+def output_to_svg(file, block=None):
+    """ Output the block as an SVG to the open file. """
+    print(block_to_svg(block), file=file)
 
 
 def block_to_svg(block=None):

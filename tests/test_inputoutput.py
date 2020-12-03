@@ -366,15 +366,15 @@ class TestOutputGraphs(unittest.TestCase):
             pyrtl.input_from_blif(full_adder_blif)
             pyrtl.output_to_graphviz(vfile)
 
-    def test_output_to_graphviz_with_custom_edge_namer_does_not_throw_error(self):
+    def test_output_to_graphviz_with_custom_namer_does_not_throw_error(self):
         with io.StringIO() as vfile:
             pyrtl.input_from_blif(full_adder_blif)
             timing = analysis.TimingAnalysis()
-
-            def graph_namer(t, i, j):
-                edge_namer = pyrtl.inputoutput.detailed_edge_namer(timing.timing_map)
-                return pyrtl.inputoutput.graphviz_default_namer(t, i, j, edge_namer=edge_namer)
-
+            node_fan_in = {net: len(net.args) for net in pyrtl.working_block()}
+            graph_namer = pyrtl.inputoutput.graphviz_detailed_namer(
+                extra_node_info=node_fan_in,
+                extra_edge_info=timing.timing_map
+            )
             pyrtl.output_to_graphviz(vfile, namer=graph_namer)
 
 
