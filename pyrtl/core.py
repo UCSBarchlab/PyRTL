@@ -144,7 +144,7 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
         # We can't be going and calling __eq__ recursively on the logic nets for all of
         # the args and dests because that will actually *create* new logic nets which is
         # very much not what people would expect to happen.  Instead we define equality
-        # as the immutable fields as being equal and the list of args and dests as being
+        # as the immutable fields being equal and the list of args and dests being
         # references to the same objects.
         return (self.op == other.op
                 and self.op_param == other.op_param
@@ -186,20 +186,20 @@ class Block(object):
 
     1) the op (a single character describing the operation such as '+' or 'r'),
     2) a set of hard parameters to that primitives (such as the constants to
-       select from the "selection" op.
+       select from the "selection" op).
     3) the tuple "args" which list the wirevectors hooked up as inputs to
        this particular net.
     4) the tuple "dests" which list the wirevectors hooked up as output for
        this particular net.
 
     Below is a list of the basic operations.  These properties (more formally
-    specified) should all be checked by the class method sanity_check.
+    specified) should all be checked by the class method 'sanity_check'.
 
-    * Most logical and arithmetic ops are pretty self explanatory, each takes
-      exactly two arguments and they should perform the arithmetic or logical
+    * Most logical and arithmetic ops are pretty self explanatory. Each takes
+      exactly two arguments, and they should perform the arithmetic or logical
       operation specified. OPS: ('&','|','^','n','~','+','-','*').  All inputs must
       be the same bitwidth.  Logical operations produce as many bits as are in
-      the input, while '+' and '-' produce n+1 bits, and '*' produced 2n bits.
+      the input, while '+' and '-' produce n+1 bits, and '*' produces 2n bits.
 
     * In addition there are some operations for performing comparisons
       that should perform the operation specified.  The '=' op is checking
@@ -210,29 +210,29 @@ class Block(object):
     * The 'w' operator is simply a directional wire and has no logic function.
 
     * The 'x' operator is a mux which takes a select bit and two signals.
-      If the value of the select bit is 0 it selects the second argument, if
+      If the value of the select bit is 0 it selects the second argument; if
       it is 1 it selects the third argument.  Select must be a single bit, while
       the other two arguments must be the same length.
 
-    * The 'c' operator is the concatiation operator and combines any number of
+    * The 'c' operator is the concatenation operator and combines any number of
       wirevectors (a,b,...,z) into a single new wirevector with "a" in the MSB
       and "z" (or whatever is last) in the LSB position.
 
     * The 's' operator is the selection operator and chooses, based on the
-      op_param specificied, a subset of the logic bits from a WireVector to
+      op_param specified, a subset of the logic bits from a WireVector to
       select.  Repeats are accepted.
 
     * The 'r' operator is a register and on posedge, simply copies the value
-      from the input to the output of the register
+      from the input to the output of the register.
 
     * The 'm' operator is a memory block read port, which supports async reads (acting
-      like combonational logic). Multiple read (and write) ports are possible to
+      like combinational logic). Multiple read (and write) ports are possible to
       the same memory but each 'm' defines only one of those. The op_param
       is a tuple containing two references: the mem id, and a reference to the
       MemBlock containing this port. The MemBlock should only be used for debug and
       sanity checks. Each read port has one addr (an arg) and one data (a dest).
 
-    * The '@' (update) operator is a memory block write port, which supports syncronous writes
+    * The '@' (update) operator is a memory block write port, which supports synchronous writes
       (writes are "latched" at posedge).  Multiple write (and read) ports are possible
       to the same memory but each '@' defines only one of those. The op_param
       is a tuple containing two references: the mem id, and a reference to the MemoryBlock.
@@ -243,13 +243,13 @@ class Block(object):
 
     The connecting elements (args and dests) should be WireVectors or derived
     from WireVector, and should be registered with the block using
-    the method add_wirevector.  Nets should be registered using add_net.
+    the method 'add_wirevector'.  Nets should be registered using 'add_net'.
 
-    In addition, there is a member legal_ops which defines the set of operations
+    In addition, there is a member 'legal_ops' which defines the set of operations
     that can be legally added to the block.  By default it is set to all of the above
     defined operations, but it can be useful in certain cases to only allow a
     subset of operations (such as when transforms are being done that are "lowering"
-    the blocks to more primitive ops.
+    the blocks to more primitive ops).
     """
 
     def __init__(self):
@@ -314,7 +314,7 @@ class Block(object):
         This useful for when a block defines its own internal memory block, and
         during simulation you want to instantiate that memory with certain values
         for testing. Since the Simulation constructor requires a reference to the
-        memory object itself, but the block your testing defines the memory internally,
+        memory object itself, but the block you're testing defines the memory internally,
         this allows you to get the object reference.
 
         Note that this requires you know the name of the memory block, meaning that
@@ -410,16 +410,16 @@ class Block(object):
           signal an external source or sink (such as the source for an Input net).
           If disabled, these nodes will be excluded from the adjacency dictionaries
         :return wire_src_dict, wire_sink_dict
-          Returns two dictionaries: one that map WireVectors to the logic
-          nets that creates their signal and one that maps WireVectors to
+          Returns two dictionaries: one that maps WireVectors to the logic
+          net that creates their signal and one that maps WireVectors to
           a list of logic nets that use the signal
 
         These dictionaries make the creation of a graph much easier, as
         well as facilitate other places in which one would need wire source
-        and wire sink information
+        and wire sink information.
 
         Look at inputoutput.net_graph for one such graph that uses the information
-        from this function
+        from this function.
         """
         src_list = {}
         dst_list = {}
@@ -466,8 +466,8 @@ class Block(object):
         that all of its "parents" have already been returned earlier in the iteration.
 
         Note: this method will throw an error if there are loops in the
-        logic that do not involve registers
-        Also, the order of the nets is not guaranteed to be the the same
+        logic that do not involve registers.
+        Also, the order of the nets is not guaranteed to be the same
         over multiple iterations"""
         from .wire import Input, Const, Register
         src_dict, dest_dict = self.net_connections()

@@ -76,7 +76,7 @@ class _ConditionalAssignment(object):
             _finalize()
         finally:
             # even if the above finalization throws an error we need to
-            # return reset the state to prevent errors from bleeding over
+            # reset the state to prevent errors from bleeding over
             _reset_conditional_state()  # sets _depth back to 0
 
 

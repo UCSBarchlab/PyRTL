@@ -329,7 +329,7 @@ def formatted_str_to_val(data, format, enum_set=None):
 
     :param data: a string holding the value to convert
     :param format: a string holding a format which will be used to convert the data string
-    :param enum_set: an iterable of enums which are used as part of the converstion process
+    :param enum_set: an iterable of enums which are used as part of the conversion process
 
     Given a string (not a wirevector!) covert that to an unsigned integer ready for input
     to the simulation enviornment.  This helps deal with signed/unsigned numbers (simulation
@@ -717,7 +717,7 @@ class _NetCount(object):
 
     def shrank(self, block=None, percent_diff=0, abs_diff=1):
         """
-        Returns whether a block has less nets than before
+        Returns whether a block has fewer nets than before
 
         :param Block block: block to check (if changed)
         :param Number percent_diff: percentage difference threshold

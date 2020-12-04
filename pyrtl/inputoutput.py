@@ -456,7 +456,7 @@ def net_graph(block=None, split_state=False):
 
     aka: edge = graph[source][dest]
 
-    Each node can be either a logic net or a WireVector (e.g. an Input, and Output, a
+    Each node can be either a logic net or a WireVector (e.g. an Input, an Output, a
     Const or even an undriven WireVector (which acts as a source or sink in the network)
     Each edge is a WireVector or derived type (Input, Output, Register, etc.)
     Note that inputs, consts, and outputs will be both "node" and "edge".
@@ -488,14 +488,14 @@ def net_graph(block=None, split_state=False):
         try:
             _from = wire_src_dict[w]
         except Exception:
-            _from = w
+            _from = w  # e.g. an Input/Const
         if split_state and isinstance(w, Register):
             _from = w
 
         try:
             _to_list = wire_dst_dict[w]
         except Exception:
-            _to_list = [w]
+            _to_list = [w]  # e.g. an Output
 
         for _to in _to_list:
             graph[_from][_to] = w

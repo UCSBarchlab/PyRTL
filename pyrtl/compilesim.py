@@ -234,8 +234,8 @@ class CompiledSimulation(object):
     def run(self, inputs):
         """Run many steps of the simulation.
 
-        The argument is a list of input mappings for each step,
-        and its length is the number of steps to be executed.
+        :param inputs: A list of input mappings for each step;
+          its length is the number of steps to be executed.
         """
         steps = len(inputs)
         # create i/o arrays of the appropriate length

@@ -751,7 +751,7 @@ class FastSimulation(object):
 
     def _compiled(self):
         """Return a string of the self.block compiled to a block of
-         code that can be execed to get a function to execute"""
+         code that can be executed to get a function to execute"""
         # Dev Notes:
         # Because of fast locals in functions in both CPython and PyPy, getting a
         # function to execute makes the code a few times faster than
@@ -971,8 +971,8 @@ class TraceStorage(collections.Mapping):
                 DeprecationWarning)
             key = key.name
         if key not in self.__data:
-            raise PyrtlError('cannot find "%s" in trace -- if using CompiledSim you make be '
-                             'attempting to access internal states but only inputs/output are '
+            raise PyrtlError('Cannot find "%s" in trace -- if using CompiledSim, you may be '
+                             'attempting to access internal states but only inputs/outputs are '
                              'available.' % key)
         return self.__data[key]
 
@@ -984,8 +984,10 @@ class SimulationTrace(object):
         """
         Creates a new Simulation Trace
 
-        :param wires_to_track: The wires that the tracer should track
-        :param block:
+        :param wires_to_track: The wires that the tracer should track.
+            If unspecified, will track all explicitly-named wires.
+            If set to 'all', will track all wires, including internal wires.
+        :param block: Block containing logic to trace
         """
         self.block = working_block(block)
 
@@ -1127,7 +1129,7 @@ class SimulationTrace(object):
 
         """ Render the trace to a file using unicode and ASCII escape sequences.
 
-        :param trace_list: A list of signals to be output in the specified order.
+        :param trace_list: A list of signal names to be output in the specified order.
         :param file: The place to write output, default to stdout.
         :param render_cls: A class that translates traces into output bytes.
         :param symbol_len: The "length" of each rendered cycle in characters.
