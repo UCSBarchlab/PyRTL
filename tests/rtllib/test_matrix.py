@@ -869,8 +869,8 @@ class TestMatrixAdd(unittest.TestCase):
 
     def test_add_3_by_2(self):
         self.add([[2, 4], [5, 4], [2, 5]], 3, 2, 4,
-                 [[0, 1], [3, 4], [6, 7]], 3, 2, 4, [[2,  5],
-                                                     [8,  8],
+                 [[0, 1], [3, 4], [6, 7]], 3, 2, 4, [[2, 5],
+                                                     [8, 8],
                                                      [8, 12]])
 
     def test_add_3_by_3_same(self):
