@@ -1722,6 +1722,73 @@ class TestMatrixInplaceMatrixPower(unittest.TestCase):
                 self.assertEqual(given_output[i][j], expected_output[i][j])
 
 
+class TestMultiply(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def tearDown(self):
+        pyrtl.reset_working_block()
+
+    def test_multiply_scalar(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        first_matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+
+        b_input = pyrtl.Input(bitwidth=2, name='b_input')
+
+        result_matrix = Matrix.multiply(first_matrix, b_input)
+
+        self.assertEqual(result_matrix.rows, 3)
+        self.assertEqual(result_matrix.columns, 3)
+
+        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
+        output <<= result_matrix.to_WireVector()
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim.step({b_input: 3})
+
+        given_output = matrix_result(sim.inspect(
+            "output"), 3, 3, result_matrix.bits)
+        expected_output = [[0, 3, 6], [9, 12, 15], [18, 21, 24]]
+
+        for i in range(3):
+            for j in range(3):
+                self.assertEqual(given_output[i][j], expected_output[i][j])
+
+    def test_multiply_matrix(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        first_matrix = Matrix.Matrix(
+            3, 3, 4, value=int_matrix)
+        second_matrix = Matrix.Matrix(
+            3, 3, 4, value=int_matrix)
+
+        result_matrix = Matrix.multiply(first_matrix, second_matrix)
+
+        self.assertEqual(result_matrix.rows, 3)
+        self.assertEqual(result_matrix.columns, 3)
+
+        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
+        output <<= result_matrix.to_WireVector()
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim.step({})
+
+        given_output = matrix_result(sim.inspect(
+            "output"), 3, 3, result_matrix.bits)
+        expected_output = [[0, 1, 4], [9, 16, 25], [36, 49, 64]]
+        for i in range(3):
+            for j in range(3):
+                self.assertEqual(given_output[i][j], expected_output[i][j])
+
+    def test_multiply_fail_string(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+            second_matrix = pyrtl.Matrix(
+                3, 3, 4, value=int_matrix)
+            result_matrix = funcs.multiply(1, second_matrix)
+
+
 class TestSum(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

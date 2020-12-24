@@ -456,6 +456,8 @@ class Matrix():
         being preformed.
 
         Is used with a - b. Preforms an elementwise subtraction.
+
+        Note: If using unsigned numbers, the result will be floored at 0
         '''
         if not isinstance(other, Matrix):
             raise PyrtlError('error, expecting a Matrix'
