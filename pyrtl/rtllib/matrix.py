@@ -99,6 +99,7 @@ class Matrix():
 
         self.rows = rows
         self.columns = columns
+        self._bits = bits
         self.bits = bits
         self.signed = False
         self.max_bits = max_bits
