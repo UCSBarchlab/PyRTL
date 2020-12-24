@@ -1320,9 +1320,9 @@ class TestMatrixMultiply(unittest.TestCase):
         first_matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix)
         bits = 1
         if number != 0:
-            bits = math.floor(math.log(number, 2)) + 1
+            bits = int(math.log(number, 2)) + 1
 
-        b_input = pyrtl.Input(bitwidth=bits, name='b_input')
+        b_input = pyrtl.Input(bitwidth=int(bits), name='b_input')
 
         result_matrix = first_matrix * b_input
 

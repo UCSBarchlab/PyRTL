@@ -7,7 +7,7 @@ from ..corecircuits import as_wires, concat_list, select
 from ..pyrtlexceptions import PyrtlError
 
 
-class Matrix():
+class Matrix(object):
     '''Class for making a Matrix using PyRTL.
     Provides the ability to perform different matrix opperations.
     '''
