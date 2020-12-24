@@ -264,8 +264,8 @@ class Matrix(object):
 
             for i in range(len(result)):
                 for j in range(len(result[0])):
-                    result[i][j] = self._matrix[i +
-                                                rows.start][j + columns.start]
+                    result[i][j] = self._matrix[i
+                                                + rows.start][j + columns.start]
             return Matrix(len(result), len(result[0]), self._bits,
                           signed=self.signed, value=result, max_bits=self.max_bits)
 
@@ -357,9 +357,10 @@ class Matrix(object):
 
                 for i in range(rows.stop - rows.start):
                     for j in range(columns.stop - columns.start):
-                        self._matrix[rows.start +
-                                     i][columns.start + j] = as_wires(
-                                         value[i, j], bitwidth=self.bits)
+                        self._matrix[rows.start
+                                     + i][columns.start
+                                          + j] = as_wires(value[i, j],
+                                                          bitwidth=self.bits)
             # Second Case when setting value to wirevector
             elif isinstance(value, WireVector):
                 if ((rows.stop - rows.start) != 1) or \
