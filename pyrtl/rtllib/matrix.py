@@ -481,7 +481,12 @@ class Matrix():
 
         for i in range(result.rows):
             for j in range(result.columns):
-                result[i, j] = self[i, j] - other[i, j]
+                if self.signed:
+                    result[i, j] = self[i, j] - other[i, j]
+                else:
+                    result[i, j] = select(
+                        self[i, j] > other[i, j], self[i, j] - other[i, j], Const(0))
+
         return result
 
     def __imul__(self, other):
