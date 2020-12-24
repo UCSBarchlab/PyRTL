@@ -1777,6 +1777,7 @@ class TestMultiply(unittest.TestCase):
         given_output = matrix_result(sim.inspect(
             "output"), 3, 3, result_matrix.bits)
         expected_output = [[0, 1, 4], [9, 16, 25], [36, 49, 64]]
+
         for i in range(3):
             for j in range(3):
                 self.assertEqual(given_output[i][j], expected_output[i][j])
@@ -1784,9 +1785,9 @@ class TestMultiply(unittest.TestCase):
     def test_multiply_fail_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
             int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-            second_matrix = pyrtl.Matrix(
+            second_matrix = Matrix.Matrix(
                 3, 3, 4, value=int_matrix)
-            result_matrix = funcs.multiply(1, second_matrix)
+            result_matrix = Matrix.multiply(1, second_matrix)
 
 
 class TestSum(unittest.TestCase):
