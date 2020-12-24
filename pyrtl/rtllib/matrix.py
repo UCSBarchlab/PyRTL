@@ -981,4 +981,4 @@ def dot(first, second):
             return sum(first * second)
 
     # Third case when it is Matrix Multiply
-    return first @ second
+    return first.__matmul__(second)
