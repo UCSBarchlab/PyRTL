@@ -418,7 +418,7 @@ class Block(object):
         well as facilitate other places in which one would need wire source
         and wire sink information
 
-        Look at input_output.net_graph for one such graph that uses the information
+        Look at inputoutput.net_graph for one such graph that uses the information
         from this function
         """
         src_list = {}
@@ -426,8 +426,10 @@ class Block(object):
 
         def add_wire_src(edge, node):
             if edge in src_list:
-                raise PyrtlError('Wire "{}" has multiple drivers (check for multiple assignments '
-                                 'with "<<=" or accidental mixing of "|=" and "<<=")'.format(edge))
+                raise PyrtlError('Wire "{}" has multiple drivers: [{}] and [{}] (check for '
+                                 'multiple assignments with "<<=" or accidental mixing of '
+                                 '"|=" and "<<=")'
+                                 .format(edge, str(src_list[edge]).strip(), str(node).strip()))
             src_list[edge] = node
 
         def add_wire_dst(edge, node):
