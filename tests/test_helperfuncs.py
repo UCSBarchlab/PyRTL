@@ -801,3 +801,137 @@ class TestLoopDetection(unittest.TestCase):
         res = reg + in_w
         reg.next <<= res
         self.assert_no_loop()
+
+
+class TestBundle(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_create_bundle_from_tuples(self):
+        rformat = [
+            ("funct7", 7),
+            ("rs2", 5),
+            ("rs1", 5),
+            ("funct3", 3),
+            ("rd", 5),
+            ("opcode", 7),
+        ]
+        self.create_and_check_bundle(rformat)
+
+    def test_create_bundle_from_dict(self):
+        rformat = {
+            "funct7": 7,
+            "rs2": 5,
+            "rs1": 5,
+            "funct3": 3,
+            "rd": 5,
+            "opcode": 7
+        }
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                self.create_and_check_bundle(rformat)
+            self.assertEqual(
+                str(ex.exception),
+                "For Python versions < 3.7, the dictionary used to instantiate "
+                "a Bundle must be explicitly ordered (i.e. OrderedDict)"
+            )
+        else:
+            self.create_and_check_bundle(rformat)
+
+    def test_create_bundle_from_class(self):
+        class RFormat:
+            funct7 = 7
+            rs2 = 5
+            rs1 = 5
+            funct3 = 3
+            rd = 5
+            opcode = 7
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                self.create_and_check_bundle(RFormat)
+            self.assertEqual(
+                str(ex.exception),
+                "Passing a class as an argument to Bundle() is only "
+                "allowed for Python versions >= 3.7"
+            )
+        else:
+            self.create_and_check_bundle(RFormat)
+
+    def test_create_bundle_from_tuples_with_callable(self):
+        a = pyrtl.Input(1, 'a')
+        b = pyrtl.Input(2, 'b')
+
+        bundler = {
+            'a_not': (1, ~a),
+            'b_is_2': (1, b == 2),
+            'sum': (3, a + b)
+        }
+
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                w = pyrtl.helperfuncs.Bundle(bundler)
+            self.assertEqual(
+                str(ex.exception),
+                "For Python versions < 3.7, the dictionary used to instantiate "
+                "a Bundle must be explicitly ordered (i.e. OrderedDict)"
+            )
+        else:
+            w = pyrtl.helperfuncs.Bundle(bundler)
+            self.assertTrue(isinstance(w, pyrtl.WireVector))
+            self.assertTrue(hasattr(w, 'a_not'))
+            self.assertTrue(hasattr(w, 'b_is_2'))
+            self.assertTrue(hasattr(w, 'sum'))
+            self.assertEqual(len(w.a_not), 1)
+            self.assertEqual(len(w.b_is_2), 1)
+            self.assertEqual(len(w.sum), 3)
+
+            pyrtl.probe(w.a_not, 'a_not_out')
+            pyrtl.probe(w.b_is_2, 'b_is_2_out')
+            pyrtl.probe(w.sum, 'sum_out')
+            sim = pyrtl.Simulation()
+            sim.step_multiple({
+                'a': '00001111',
+                'b': '01230123',
+            })
+            output = six.StringIO()
+            sim.tracer.print_trace(output, compact=True)
+            self.assertEqual(output.getvalue(),
+                             '         a 00001111\n'
+                             ' a_not_out 11110000\n'
+                             '         b 01230123\n'
+                             'b_is_2_out 00100010\n'
+                             '   sum_out 01231234\n')
+
+    def create_and_check_bundle(self, bundler):
+        w = pyrtl.helperfuncs.Bundle(bundler)
+        self.assertTrue(isinstance(w, pyrtl.WireVector))
+        self.assertTrue(hasattr(w, 'funct7'))
+        self.assertTrue(hasattr(w, 'rs2'))
+        self.assertTrue(hasattr(w, 'rs1'))
+        self.assertTrue(hasattr(w, 'funct3'))
+        self.assertTrue(hasattr(w, 'rd'))
+        self.assertTrue(hasattr(w, 'opcode'))
+        self.assertEqual(len(w), 32)
+        self.assertEqual(len(w.funct7), 7)
+        self.assertEqual(len(w.rs2), 5)
+        self.assertEqual(len(w.rs1), 5)
+        self.assertEqual(len(w.funct3), 3)
+        self.assertEqual(len(w.rd), 5)
+        self.assertEqual(len(w.opcode), 7)
+
+        r = pyrtl.Register(len(w))
+        r.next <<= w
+        y = r.as_bundle(bundler)
+        self.assertTrue(hasattr(y, 'funct7'))
+        self.assertTrue(hasattr(y, 'rs2'))
+        self.assertTrue(hasattr(y, 'rs1'))
+        self.assertTrue(hasattr(y, 'funct3'))
+        self.assertTrue(hasattr(y, 'rd'))
+        self.assertTrue(hasattr(y, 'opcode'))
+        self.assertEqual(len(y), 32)
+        self.assertEqual(len(y.funct7), 7)
+        self.assertEqual(len(y.rs2), 5)
+        self.assertEqual(len(y.rs1), 5)
+        self.assertEqual(len(y.funct3), 3)
+        self.assertEqual(len(y.rd), 5)
+        self.assertEqual(len(y.opcode), 7)
