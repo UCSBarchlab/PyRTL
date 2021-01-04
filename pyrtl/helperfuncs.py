@@ -7,6 +7,8 @@ import collections
 import math
 import numbers
 import six
+import sys
+from functools import reduce
 
 from .core import working_block, _NameIndexer, _get_debug_mode
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
@@ -704,3 +706,164 @@ class _NetCount(object):
         return less_nets
 
     shrinking = shrank
+
+
+class Bundle(WireVector):
+    """ A WireVector whose individual bits are named.
+
+    The initializer takes as its first argument the name of a class whose
+    attributes will be interpreted as the names and lengths of fields in a wire.
+    The order in which the attributes are defined is important; the first class
+    attribute is the MSB of the wire, and the last class attribute of the list is the LSB.
+
+    For example, say there is a wire that represents an instruction. If we wanted to name
+    certain segments of bits a certain way, we would create a class with the names and lengths
+    of these fields as attributes follows:
+
+        class RFormat:
+            funct7 = 7
+            rs2 = 5
+            rs1 = 5
+            funct3 = 3
+            rd = 5
+            opcode = 7
+
+    Then use it as the argument to Bundle to get back an object whose fields are actually
+    wirevectors, accessible by field name:
+
+        w = pyrtl.Bundle(RFormat)
+        w <<= 0b00000100110001010000010110010011
+        assert sim.inspect(w.funct7) == 0b0000010
+        assert sim.inspect(w.rs2) == 0b01100
+        assert sim.inspect(w.rs1) == 0b01010
+        assert sim.inspect(w.funct3) == 0b000
+        assert sim.inspect(w.rd) == 0b01011
+        assert sim.inspect(w.opcode) == 0b0010011
+
+    It can be used anywhere a normal wire can be used:
+
+        r = pyrtl.Register(len(w), "r")
+        r.next <<= w
+        # ...after stepping a few times...
+        assert sim.inspect(r) == 0b00000100110001010000010110010011
+
+    And you can interpret other wires as instances of the bundled class, by calling
+    `as_bundle`. This does lightweight checks such as making sure that the bundled class
+    and the wire you call `as_bundle` on has the same length so that the bits can map properly.
+    This allows you to access portions of the wire via fields.
+
+        f7 = r.as_bundle(RFormat).funct7
+        assert sim.inspect(f7) == 0b0000010
+
+        y = r.as_bundle(RFormat)
+        assert sim.inspect(y.funct7) == 0b0000010
+        assert sim.inspect(y.rs2) == 0b01100
+        assert sim.inspect(y.rs1) == 0b01010
+        assert sim.inspect(y.funct3) == 0b000
+        assert sim.inspect(y.rd) == 0b01011
+        assert sim.inspect(y.opcode) == 0b0010011
+
+    You can also pass in a list of (field, width) pairs:
+
+        rformat = [("funct7", 7), ("rs2", 5), ("rs1", 5), ("funct3", 3), ("rd", 5), ("opcode", 7)]
+        w = pyrtl.Bundle(rformat)
+
+    or an (ordered) dictionary (OrderedDict is the default for Python >= 3.7):
+
+        rformat = {"funct7": 7, "rs2": 5, "rs1": 5, "funct3": 3, "rd": 5, "opcode": 7}
+        w = pyrtl.Bundle(rformat)
+
+    instead of a class to form a Bundle. In all forms, order is important.
+
+    In all cases, the 'width' member may actually be a tuple of the form (n, w),
+    where n is the actual width and f is a wirevector or function returning
+    a wirevector that will be used to define the wire. Otherwise, 'width' should
+    just be an integer and will be interpreted as the literal width.
+
+    Finally, you can build the Bundle from wires directly (rather than just interpreting
+    an existing wire with named fields like the above examples) by passing in the wire
+    corresponding to each field. This is useful if you want to return a group of wires from a
+    function, each with meaningful names:
+
+        def timer(cycles, reset):
+            _, bw = pyrtl.infer_val_and_bitwidth(cycles)
+            time = pyrtl.Register(bw)
+            with pyrtl.conditional_assignment:
+                with reset:
+                    time.next |= 0
+                with time == (cycles - 1):
+                    time.next |= 0
+                with pyrtl.otherwise:
+                    time.next |= time + 1
+
+            out = pyrtl.Bundle({
+                'time': (bw, time),
+                'elapsed': (1, time == (cycles - 1)),
+            })
+            return out
+
+        reset = pyrtl.Input(1, 'reset')
+        out = timer(5, reset)
+        pyrtl.probe(out.elapsed, 'elapsed')
+    """
+    @staticmethod
+    def _get_fields(obj):
+        if isinstance(obj, list) and all(map(lambda t: isinstance(t, tuple), obj)):
+            # Passed in a list of tuples (i.e. (field, width) pairs), in order from MSB to LSB
+            fields = obj
+        elif isinstance(obj, dict):
+            from collections import OrderedDict
+            if (not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7)
+               and (not isinstance(obj, OrderedDict))):
+                raise PyrtlError("For Python versions < 3.7, the dictionary used to instantiate "
+                                 "a Bundle must be explicitly ordered (i.e. OrderedDict)")
+            # Assume dictionary stores (field, width) pairs
+            fields = list(obj.items())
+        elif isinstance(obj, six.class_types):
+            if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7):
+                raise PyrtlError("Passing a class as an argument to Bundle() "
+                                 "is only allowed for Python versions >= 3.7")
+            # Let's assume 'obj' is a **class** name, so treat it as if it has field names.
+            # As of Python 3.7, dictionaries preserve insertion order, so a class's attributes
+            # (in __dict__) will being ordered as well. This relies on that fact because the
+            # fields are defined in MSB to LSB order in the class.
+            fs = filter(lambda attr: not attr.startswith("__"), vars(obj))
+            fields = [(attr, getattr(obj, attr)) for attr in fs]
+        else:
+            raise PyrtlError("Cannot determine (field, width) pairs from %s object" % type(obj))
+        return fields
+
+    @staticmethod
+    def get_bundle_bitwidth(obj):
+        fields = Bundle._get_fields(obj)
+
+        def aux(acc, t):
+            if isinstance(t[1], tuple):
+                width = t[1][0]
+            else:
+                width = t[1]
+            return acc + width
+        return reduce(aux, fields, 0)
+
+    def __init__(self, obj, name="", block=None):
+        super(Bundle, self).__init__(Bundle.get_bundle_bitwidth(obj), name, block)
+
+        fields = Bundle._get_fields(obj)
+        start = 0
+        args = []
+        for field, length in fields[::-1]:
+            if isinstance(length, tuple):
+                from .corecircuits import as_wires
+                # length is actually a tuple of the form (width, val)
+                val = length[1]
+                length = length[0]
+                if callable(val):
+                    val = val()
+                val = as_wires(val, bitwidth=length)
+                args.append(val)
+            setattr(self, field, self[start:start + length])
+            start += length
+
+        if args:
+            from .corecircuits import concat_list
+            self <<= concat_list(args)
