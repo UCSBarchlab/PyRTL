@@ -618,7 +618,7 @@ class Block(object):
 
     def sanity_check_net(self, net):
         """ Check that net is a valid LogicNet. """
-        from .wire import Input, Output, Const
+        from .wire import Input, Output, Const, Register
         from .memory import _MemReadBase
 
         # general sanity checks that apply to all operations
@@ -649,7 +649,7 @@ class Block(object):
             raise PyrtlInternalError('error, net op "%s" not from acceptable set %s' %
                                      (net.op, self.legal_ops))
 
-        # operation specific checks on arguments
+        # operation-specific checks on arguments
         if net.op in 'w~rsm' and len(net.args) != 1:
             raise PyrtlInternalError('error, op only allowed 1 argument')
         if net.op in '&|^n+-*<>=' and len(net.args) != 2:
@@ -672,7 +672,7 @@ class Block(object):
         if net.op == '@' and net.args[2].bitwidth != 1:
             raise PyrtlInternalError('error, mem write enable must be 1 bit')
 
-        # operation specific checks on op_params
+        # operation-specific checks on op_params
         if net.op in 'w~&|^n+-*<>=xcr' and net.op_param is not None:
             raise PyrtlInternalError('error, op_param should be None')
         if net.op == 's':
@@ -693,6 +693,14 @@ class Block(object):
             if not isinstance(net.op_param[1], _MemReadBase):
                 raise PyrtlInternalError('error, mem op requires second operand of a memory type')
 
+        # operation-specific checks on destinations
+        if net.op in 'w~&|^n+-*<>=xcsrm' and len(net.dests) != 1:
+            raise PyrtlInternalError('error, op only allowed 1 destination')
+        if net.op == '@' and net.dests != ():
+            raise PyrtlInternalError('error, mem write dest should be empty tuple')
+        if net.op == 'r' and not isinstance(net.dests[0], Register):
+            raise PyrtlInternalError('error, dest of next op should be a Register')
+
         # check destination validity
         if net.op in 'w~&|^nr' and net.dests[0].bitwidth > net.args[0].bitwidth:
             raise PyrtlInternalError('error, upper bits of destination unassigned')
@@ -710,8 +718,6 @@ class Block(object):
             raise PyrtlInternalError('error, upper bits of select output undefined')
         if net.op == 'm' and net.dests[0].bitwidth != net.op_param[1].bitwidth:
             raise PyrtlInternalError('error, mem read dest bitwidth mismatch')
-        if net.op == '@' and net.dests != ():
-            raise PyrtlInternalError('error, mem write dest should be empty tuple')
 
 
 class PostSynthBlock(Block):
