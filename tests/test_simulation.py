@@ -376,7 +376,7 @@ class SimStepMultipleBase(unittest.TestCase):
 
         sim_trace = pyrtl.SimulationTrace()
         sim = self.sim(tracer=sim_trace)
-        sim.step_multiple({}, nsteps=5)
+        sim.step_multiple(nsteps=5)
 
         correct_output = ("--- Values in base 10 ---\n"
                           "b 0 1 2 3 4\n")
@@ -401,7 +401,7 @@ class SimStepMultipleBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
 
         with self.assertRaises(pyrtl.PyrtlError) as error:
-            sim.step_multiple({})
+            sim.step_multiple()
         self.assertEqual(str(error.exception),
                          'need to supply either input values '
                          'or a number of steps to simulate')
