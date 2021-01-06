@@ -1,7 +1,7 @@
 *.py[cod]
 
 # coverage
-htmlconv/
+htmlcov/
 .coverage/
 
 # C extensions
