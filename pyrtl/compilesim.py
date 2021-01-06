@@ -62,6 +62,7 @@ class CompiledSimulation(object):
     at the cost of somewhat longer setup time.
     Generally this will do better than FastSimulation for simulations requiring over 1000 steps.
     It is not built to be a debugging tool, though it may help with debugging.
+    Note that only Input and Output wires can be traced using CompiledSimulation.
 
     In order to use this, you need:
         - A 64-bit processor
