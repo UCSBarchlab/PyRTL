@@ -217,7 +217,7 @@ class Simulation(object):
         # raise the appropriate exceptions
         check_rtl_assertions(self)
 
-    def step_multiple(self, provided_inputs, expected_outputs=None, nsteps=None,
+    def step_multiple(self, provided_inputs={}, expected_outputs={}, nsteps=None,
                       file=sys.stdout, stop_after_first_error=False):
         """ Take the simulation forward N cycles, where N is the number of values
          for each provided input.
@@ -261,9 +261,9 @@ class Simulation(object):
             b <<= a
 
             sim = pyrtl.Simulation()
-            sim.step_multiple({}, steps=3)
+            sim.step_multiple(nsteps=3)
 
-        Using sim.step_multiple({}, 3) simulates 3 cycles, after which we would expect the value
+        Using sim.step_multiple(nsteps=3) simulates 3 cycles, after which we would expect the value
         of 'b' to be 2.
 
         """
@@ -291,7 +291,7 @@ class Simulation(object):
                 "must supply a value for each provided wire "
                 "for each step of simulation")
 
-        if expected_outputs and list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
+        if list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
             raise PyrtlError(
                 "any expected outputs must have a supplied value "
                 "each step of simulation")
@@ -300,12 +300,11 @@ class Simulation(object):
         for i in range(nsteps):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
-            if expected_outputs is not None:
-                for expvar in expected_outputs.keys():
-                    expected = int(expected_outputs[expvar][i])
-                    actual = self.inspect(expvar)
-                    if expected != actual:
-                        failed.append((i, expvar, expected, actual))
+            for expvar in expected_outputs.keys():
+                expected = int(expected_outputs[expvar][i])
+                actual = self.inspect(expvar)
+                if expected != actual:
+                    failed.append((i, expvar, expected, actual))
 
             if failed and stop_after_first_error:
                 break
@@ -549,7 +548,7 @@ class FastSimulation(object):
         # check the rtl assertions
         check_rtl_assertions(self)
 
-    def step_multiple(self, provided_inputs, expected_outputs=None, nsteps=None,
+    def step_multiple(self, provided_inputs={}, expected_outputs={}, nsteps=None,
                       file=sys.stdout, stop_after_first_error=False):
         """ Take the simulation forward N cycles, where N is the number of values
          for each provided input.
@@ -593,9 +592,9 @@ class FastSimulation(object):
             b <<= a
 
             sim = pyrtl.Simulation()
-            sim.step_multiple({}, steps=3)
+            sim.step_multiple(nsteps=3)
 
-        Using sim.step_multiple({}, 3) simulates 3 cycles, after which we would expect the value
+        Using sim.step_multiple(nsteps=3) simulates 3 cycles, after which we would expect the value
         of 'b' to be 2.
 
         """
@@ -623,7 +622,7 @@ class FastSimulation(object):
                 "must supply a value for each provided wire "
                 "for each step of simulation")
 
-        if expected_outputs and list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
+        if list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
             raise PyrtlError(
                 "any expected outputs must have a supplied value "
                 "each step of simulation")
@@ -632,12 +631,11 @@ class FastSimulation(object):
         for i in range(nsteps):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
-            if expected_outputs is not None:
-                for expvar in expected_outputs.keys():
-                    expected = int(expected_outputs[expvar][i])
-                    actual = self.inspect(expvar)
-                    if expected != actual:
-                        failed.append((i, expvar, expected, actual))
+            for expvar in expected_outputs.keys():
+                expected = int(expected_outputs[expvar][i])
+                actual = self.inspect(expvar)
+                if expected != actual:
+                    failed.append((i, expvar, expected, actual))
 
             if failed and stop_after_first_error:
                 break
