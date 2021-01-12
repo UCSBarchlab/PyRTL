@@ -1005,6 +1005,20 @@ class TraceErrorBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.sim_trace = pyrtl.SimulationTrace()
 
+    def test_empty_trace_after_untraceable_removed(self):
+        r = pyrtl.Register(2, 'r')
+        r.next <<= r + 1
+        sim = self.sim()
+        sim.step_multiple(provided_inputs={}, nsteps=10)
+        with self.assertRaises(pyrtl.PyrtlError) as ex:
+            sim.tracer.render_trace()
+        self.assertEquals(
+            str(ex.exception),
+            "Empty trace list. This may have occurred because "
+            "untraceable wires were removed prior to simulation, "
+            "if a CompiledSimulation was used."
+        )
+
     def test_invalid_base(self):
         self.in1 = pyrtl.Input(8, "in1")
         self.out = pyrtl.Output(8, "out")

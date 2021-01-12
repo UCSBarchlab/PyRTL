@@ -1191,6 +1191,12 @@ class SimulationTrace(object):
                 DeprecationWarning)
             trace_list = [getattr(x, 'name', x) for x in trace_list]
 
+        if not trace_list:
+            raise PyrtlError(
+                "Empty trace list. This may have occurred because "
+                "untraceable wires were removed prior to simulation, "
+                "if a CompiledSimulation was used.")
+
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map
 
