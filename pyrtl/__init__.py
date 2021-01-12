@@ -85,6 +85,7 @@ from .compilesim import CompiledSimulation
 from .inputoutput import input_from_blif
 from .inputoutput import output_to_trivialgraph
 from .inputoutput import output_to_graphviz
+from .inputoutput import output_to_svg
 from .inputoutput import output_to_firrtl
 from .inputoutput import block_to_graphviz_string
 from .inputoutput import block_to_svg
