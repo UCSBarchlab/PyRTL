@@ -119,3 +119,5 @@ from .transform import replace_wire_fast
 from .analysis import area_estimation
 from .analysis import TimingAnalysis
 from .analysis import yosys_area_delay
+from .analysis import paths
+from .analysis import distance
