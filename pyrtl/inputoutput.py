@@ -537,14 +537,14 @@ def _default_edge_namer(edge, is_to_splitmerge=False, extra_edge_info=None):
              in to block_to_graphviz_string
     """
 
-    if (edge.name is None
-            or (edge.name.startswith('tmp') and not extra_edge_info)
-            or isinstance(edge, (Input, Output, Const, Register))):
+    name = '' if edge.name is None else '/'.join([edge.name, str(len(edge))])
+    if extra_edge_info and edge in extra_edge_info:
+        # Always label an edge if present in the extra_edge_info map
+        name = name + " (" + str(extra_edge_info[edge]) + ")"
+    elif (edge.name is None
+          or edge.name.startswith('tmp')
+          or isinstance(edge, (Input, Output, Const, Register))):
         name = ''
-    else:
-        name = '/'.join([edge.name, str(len(edge))])
-        if extra_edge_info and edge in extra_edge_info:
-            name = name + " (" + str(extra_edge_info[edge]) + ")"
 
     penwidth = 2 if len(edge) == 1 else 6
     arrowhead = 'none' if is_to_splitmerge else 'normal'
