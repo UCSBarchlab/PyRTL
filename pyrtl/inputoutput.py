@@ -15,6 +15,7 @@ from .core import working_block, _NameSanitizer
 from .wire import WireVector, Input, Output, Const, Register
 from .corecircuits import concat_list
 from .memory import RomBlock
+from .passes import two_way_concat, one_bit_selects
 
 
 # -----------------------------------------------------------------
@@ -234,6 +235,35 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
 #   \__/ \__/  |  |    \__/  |
 #
 
+
+def _natural_sort_key(key):
+    """ Convert the key into a form such that it will be sorted naturally,
+        e.g. such that "tmp4" appears before "tmp18".
+    """
+    def convert(text):
+        return int(text) if text.isdigit() else text
+    return [convert(c) for c in re.split(r'(\d+)', key)]
+
+
+def _net_sorted(logic, name_mapper=lambda w: w.name):
+    # Sort nets based on the name of the destination
+    # wire, unless it's a memory write net.
+    def natural_keys(n):
+        if n.op == '@':
+            # Sort based on the name of the wr_en wire, since
+            # this particular net is used within 'always begin ... end'
+            # blocks for memory update logic.
+            key = str(n.args[2])
+        else:
+            key = name_mapper(n.dests[0])
+        return _natural_sort_key(key)
+    return sorted(logic, key=natural_keys)
+
+
+def _name_sorted(wires, name_mapper=lambda w: w.name):
+    return sorted(wires, key=lambda w: _natural_sort_key(name_mapper(w)))
+
+
 def output_to_firrtl(open_file, rom_blocks=None, block=None):
     """ Output the block as firrtl code to the output file.
 
@@ -241,35 +271,41 @@ def output_to_firrtl(open_file, rom_blocks=None, block=None):
     If rom is intialized in pyrtl code, you can pass in the rom_blocks as a list [rom1, rom2, ...]
     """
     block = working_block(block)
+
+    # FIRRTL only allows 'bits' operations to have two parameters: a high and low
+    # index representing the inclusive bounds of a contiguous range. PyRTL uses
+    # slice syntax, which aren't always contiguous, so we need to convert them.
+    one_bit_selects()  # pylint: disable=no-value-for-parameter
+
+    # FIRRTL only allows 'concatenate' operations to have two arguments,
+    # but PyRTL's 'c' op allows an arbitrary number of wires. We need to convert
+    # these n-way concats to series of two-way concats accordingly.
+    two_way_concat()  # pylint: disable=no-value-for-parameter
+
     f = open_file
     # write out all the implicit stuff
-    f.write("circuit Example : \n")
-    f.write("  module Example : \n")
+    f.write("circuit Example :\n")
+    f.write("  module Example :\n")
     f.write("    input clock : Clock\n    input reset : UInt<1>\n")
     # write out IO signals, wires and registers
-    wireRegDefs = ""
-    for wire in list(block.wirevector_subset()):
-        if type(wire) == Input:
-            f.write("    input %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
-        elif type(wire) == Output:
-            f.write("    output %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
-        elif type(wire) == WireVector:
-            wireRegDefs += "    wire {} : UInt<{}>\n".format(wire.name, wire.bitwidth)
-        elif type(wire) == Register:
-            wireRegDefs += "    reg {} : UInt<{}>, clock\n".format(wire.name, wire.bitwidth)
-        elif type(wire) == Const:
-            # some const is in the form like const_0_1'b1, is this legal operation?
-            wire.name = wire.name.split("'").pop(0)
-            wireRegDefs += "    node {} = UInt<{}>({})\n".format(wire.name, wire.bitwidth, wire.val)
-        else:
-            return 1
-    f.write(wireRegDefs)
+    for wire in _name_sorted(block.wirevector_subset(Input)):
+        f.write("    input %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+    for wire in _name_sorted(block.wirevector_subset(Output)):
+        f.write("    output %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+    for wire in _name_sorted(block.wirevector_subset(exclude=(Input, Output, Register, Const))):
+        f.write("    wire %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+    for wire in _name_sorted(block.wirevector_subset(Register)):
+        f.write("    reg %s : UInt<%d>, clock\n" % (wire.name, wire.bitwidth))
+    for wire in _name_sorted(block.wirevector_subset(Const)):
+        # some const is in the form like const_0_1'b1, is this legal operation?
+        wire.name = wire.name.split("'").pop(0)
+        f.write("    node %s = UInt<%d>(%d)\n" % (wire.name, wire.bitwidth, wire.val))
     f.write("\n")
 
     # write "Main"
     node_cntr = 0
     initializedMem = []
-    for log_net in list(block.logic_subset()):
+    for log_net in _net_sorted(block.logic_subset()):
         if log_net.op == '&':
             f.write("    %s <= and(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
                                                  log_net.args[1].name))
@@ -310,16 +346,21 @@ def output_to_firrtl(open_file, rom_blocks=None, block=None):
             f.write("    %s <= mux(%s, %s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
                                                      log_net.args[2].name, log_net.args[1].name))
         elif log_net.op == 'c':
+            if len(log_net.args) != 2:
+                raise PyrtlInternalError(
+                    "Expected concat net to have only two "
+                    "argument wires; has %d" % len(log_net.args)
+                )
             f.write("    %s <= cat(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
                                                  log_net.args[1].name))
         elif log_net.op == 's':
-            selEnd = log_net.op_param[0]
-            if len(log_net.op_param) < 2:
-                selBegin = selEnd
-            else:
-                selBegin = log_net.op_param[len(log_net.op_param) - 1]
+            if len(log_net.op_param) != 1:
+                raise PyrtlInternalError(
+                    "Expected select net to have single "
+                    "select bit; has %d" % len(log_net.op_param)
+                )
             f.write("    %s <= bits(%s, %s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                      selBegin, selEnd))
+                                                      log_net.op_param[0], log_net.op_param[0]))
         elif log_net.op == 'r':
             f.write("    %s <= mux(reset, UInt<%s>(0), %s)\n" %
                     (log_net.dests[0].name, log_net.dests[0].bitwidth, log_net.args[0].name))
@@ -377,7 +418,6 @@ def output_to_firrtl(open_file, rom_blocks=None, block=None):
         else:
             pass
 
-    f.close()
     return 0
 
 

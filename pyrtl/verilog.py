@@ -14,6 +14,7 @@ from .core import working_block, _NameSanitizer
 from .wire import WireVector, Input, Output, Const, Register
 from .corecircuits import concat
 from .memory import RomBlock
+from .inputoutput import _name_sorted, _net_sorted
 
 
 # ----------------------------------------------------------------
@@ -93,20 +94,11 @@ def _verilog_block_parts(block):
     return inputs, outputs, registers, wires, memories
 
 
-def _natural_sort_key(key):
-    """ Convert the key into a form such that it will be sorted naturally,
-        e.g. such that "tmp4" appears before "tmp18".
-    """
-    def convert(text):
-        return int(text) if text.isdigit() else text
-    return [convert(c) for c in re.split(r'(\d+)', key)]
-
-
 def _to_verilog_header(file, block, varname):
     """ Print the header of the verilog implementation. """
 
     def name_sorted(wires):
-        return sorted(wires, key=lambda w: _natural_sort_key(varname(w)))
+        return _name_sorted(wires, name_mapper=varname)
 
     def name_list(wires):
         return [varname(w) for w in wires]
@@ -161,24 +153,11 @@ def _to_verilog_header(file, block, varname):
         print('', file=file)
 
 
-def _net_sorted(logic, varname):
-    def natural_keys(n):
-        if n.op == '@':
-            # Sort based on the name of the wr_en wire, since
-            # this particular net is used within 'always begin ... end'
-            # blocks for memory update logic.
-            key = str(n.args[2])
-        else:
-            key = varname(n.dests[0])
-        return _natural_sort_key(key)
-    return sorted(logic, key=natural_keys)
-
-
 def _to_verilog_combinational(file, block, varname):
     """ Print the combinational logic of the verilog implementation. """
 
     def name_sorted(wires):
-        return sorted(wires, key=lambda w: _natural_sort_key(varname(w)))
+        return _name_sorted(wires, name_mapper=varname)
 
     print('    // Combinational', file=file)
 

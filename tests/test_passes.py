@@ -634,5 +634,57 @@ class TestSynthOptTiming(NetWireNumTestCases):
         self.everything_t_procedure()
 
 
+class TestConcatAndSelectSimplification(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_two_way_concat(self):
+        i = pyrtl.Const(0b1100)
+        j = pyrtl.Const(0b011, bitwidth=3)
+        k = pyrtl.Const(0b100110)
+        o = pyrtl.Output(13, 'o')
+        o <<= pyrtl.concat(i, j, k)
+
+        block = pyrtl.working_block()
+        concat_nets = list(block.logic_subset(op='c'))
+        self.assertEqual(len(concat_nets), 1)
+        self.assertEqual(concat_nets[0].args, (i, j, k))
+
+        pyrtl.passes.two_way_concat()
+
+        concat_nets = list(block.logic_subset(op='c'))
+        self.assertEqual(len(concat_nets), 2)
+        upper_concat = next(n for n in concat_nets if i is n.args[0])
+        lower_concat = next(n for n in concat_nets if k is n.args[1])
+        self.assertNotEqual(upper_concat, lower_concat)
+        self.assertEqual(upper_concat.args, (i, j))
+        self.assertEqual(lower_concat.args, (upper_concat.dests[0], k))
+
+        sim = pyrtl.Simulation()
+        sim.step({})
+        self.assertEqual(sim.inspect('o'), 0b1100011100110)
+
+    def test_one_bit_selects(self):
+        a = pyrtl.Const(0b101101001101)
+        b = pyrtl.Output(6, 'b')
+        b <<= a[::2]  # bits 0, 2, 4, 6, 8, and 10 of wire a
+
+        block = pyrtl.working_block()
+        select_nets = list(block.logic_subset(op='s'))
+        self.assertEqual(len(select_nets), 1)
+        self.assertEqual(tuple(select_nets[0].op_param), (0, 2, 4, 6, 8, 10))
+
+        pyrtl.passes.one_bit_selects()
+
+        select_nets = list(block.logic_subset(op='s'))
+        for net in select_nets:
+            indices = net.op_param
+            self.assertEqual(len(indices), 1)
+
+        sim = pyrtl.Simulation()
+        sim.step({})
+        self.assertEqual(sim.inspect('b'), 0b00011011)
+
+
 if __name__ == "__main__":
     unittest.main()
