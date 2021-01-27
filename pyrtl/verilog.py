@@ -132,7 +132,8 @@ def _to_verilog_header(file, block, varname):
                                                     memsize_str, m.name), file=file)
     for w in name_sorted(registers):
         print('    reg{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
-    print('', file=file)
+    if (memories or registers):
+        print('', file=file)
 
     # wires
     for w in name_sorted(wires):
@@ -204,6 +205,9 @@ def _to_verilog_combinational(file, block, varname):
 
 def _to_verilog_sequential(file, block, varname):
     """ Print the sequential logic of the verilog implementation. """
+    if not block.logic_subset(op='r'):
+        return
+
     print('    // Registers', file=file)
     print('    always @( posedge clk )', file=file)
     print('    begin', file=file)

@@ -4,8 +4,33 @@ import io
 import pyrtl
 from pyrtl import verilog
 
+verilog_output_small = """\
+// Generated automatically via PyRTL
+// As one initial test of synthesis, map to FPGA with:
+//   yosys -p "synth_xilinx -top toplevel" thisfile.v
 
-verilog_output = """\
+module toplevel(clk, o);
+    input clk;
+    output[12:0] o;
+
+    wire[3:0] const_0_12;
+    wire[2:0] const_1_3;
+    wire[5:0] const_2_38;
+    wire[12:0] tmp0;
+
+    // Combinational
+    assign const_0_12 = 12;
+    assign const_1_3 = 3;
+    assign const_2_38 = 38;
+    assign o = tmp0;
+    assign tmp0 = {const_0_12, const_1_3, const_2_38};
+
+endmodule
+
+"""
+
+
+verilog_output_large = """\
 // Generated automatically via PyRTL
 // As one initial test of synthesis, map to FPGA with:
 //   yosys -p "synth_xilinx -top toplevel" thisfile.v
@@ -614,7 +639,19 @@ class TestVerilog(unittest.TestCase):
         with io.StringIO() as testbuffer:
             pyrtl.output_to_verilog(testbuffer)
 
-    def test_textual_consistency(self):
+    def test_textual_consistency_small(self):
+        i = pyrtl.Const(0b1100)
+        j = pyrtl.Const(0b011, bitwidth=3)
+        k = pyrtl.Const(0b100110)
+        o = pyrtl.Output(13, 'o')
+        o <<= pyrtl.concat(i, j, k)
+
+        buffer = io.StringIO()
+        pyrtl.output_to_verilog(buffer)
+
+        self.assertEqual(buffer.getvalue(), verilog_output_small)
+
+    def test_textual_consistency_large(self):
         # The following is a non-sensical program created to test
         # that the Verilog that is created is deterministic
         # in the order in which it presents the wire, register,
@@ -642,7 +679,7 @@ class TestVerilog(unittest.TestCase):
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer)
 
-        self.assertEqual(buffer.getvalue(), verilog_output)
+        self.assertEqual(buffer.getvalue(), verilog_output_large)
 
 
 if __name__ == "__main__":
