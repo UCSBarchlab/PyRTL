@@ -679,17 +679,16 @@ def block_to_graphviz_string(block=None, namer=graphviz_default_namer, split_sta
     return rstring
 
 
-def output_to_svg(file, block=None):
+def output_to_svg(file, block=None, split_state=True):
     """ Output the block as an SVG to the open file. """
-    print(block_to_svg(block), file=file)
+    print(block_to_svg(block, split_state), file=file)
 
 
-def block_to_svg(block=None):
+def block_to_svg(block=None, split_state=True):
     """ Return an SVG for the block. """
-    block = working_block(block)
     try:
         from graphviz import Source
-        return Source(block_to_graphviz_string())._repr_svg_()
+        return Source(block_to_graphviz_string(block, split_state=split_state))._repr_svg_()
     except ImportError:
         raise PyrtlError('need graphviz installed (try "pip install graphviz")')
 
