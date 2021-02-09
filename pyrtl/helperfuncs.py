@@ -698,10 +698,10 @@ def _currently_in_jupyter_notebook():
 def _print_netlist_latex(netlist):
     """ Print each net in netlist in a Latex array """
     from IPython.display import display, Latex  # pylint: disable=import-error
-    out = r'\n\\begin{array}{ \| c \| c \| l \| }\n'
-    out += r'\n\hline\n'
-    out += r'\\hline\n'.join(str(n) for n in netlist)
-    out += r'\hline\n\\end{array}\n'
+    out = '\n\\begin{array}{ \\| c \\| c \\| l \\| }\n'
+    out += '\n\\hline\n'
+    out += '\\hline\n'.join(str(n) for n in netlist)
+    out += '\\hline\n\\end{array}\n'
     display(Latex(out))
 
 
