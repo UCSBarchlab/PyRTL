@@ -514,7 +514,7 @@ def _convert_int(val, bitwidth=None, signed=False):
 
 def _convert_verilog_str(val, bitwidth=None, signed=False):
     if signed:
-        raise PyrtlError('error, signed verilog-style string constants not supported currently')
+        raise PyrtlError('error, "signed" option with verilog-style string constants not supported')
 
     bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16, 'x': 16}
     passed_bitwidth = bitwidth
@@ -549,6 +549,10 @@ def _convert_verilog_str(val, bitwidth=None, signed=False):
                          ' the bitwidth infered from the verilog style specification'
                          ' (if bitwidth=None is used, pyrtl will determine the bitwidth from the'
                          ' verilog-style constant specification)')
+
+    if num >> bitwidth != 0:
+        raise PyrtlError('specified bitwidth %d for verilog constant insufficient to store value %d'
+                         % (bitwidth, num))
 
     return ValueBitwidthTuple(num, bitwidth)
 

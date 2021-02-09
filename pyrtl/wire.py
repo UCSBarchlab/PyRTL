@@ -578,26 +578,37 @@ class Const(WireVector):
 
     _code = 'C'
 
-    def __init__(self, val, bitwidth=None, block=None):
+    def __init__(self, val, bitwidth=None, signed=False, block=None):
         """ Construct a constant implementation at initialization
 
-        :param int or str val: The value for the const wirevector
+        :param int, bool, or str val: The value for the const wirevector
+        :param int: the desired bitwidth of the resulting const
+        :param signed: specify if bits should be used for twos complement
         :return: a wirevector object representing a const wire
 
         Descriptions for all parameters not listed above can be found at
         py:method:: WireVector.__init__()
+
+        For details of how constants are converted fron int, bool, and
+        strings (for verilog constants), see documentation for the
+        helper function infer_val_and_bitwidth.  Please note that a
+        a constant generated with signed=True is still just a raw bitvector
+        and all arthimetic on it is unsigned by default.  The signed=True
+        argument is only used for proper inference of WireVector size and certain
+        bitwidth sanity checks assuming a two's complement representation of
+        the constants.
         """
         self._validate_bitwidth(bitwidth)
         from .helperfuncs import infer_val_and_bitwidth
-        num, bitwidth = infer_val_and_bitwidth(val, bitwidth)
+        num, bitwidth = infer_val_and_bitwidth(val, bitwidth, signed)
 
         if num < 0:
             raise PyrtlInternalError(
                 'Const somehow evaluating to negative integer after checks')
         if (num >> bitwidth) != 0:
-            raise PyrtlError(
-                'error constant "%s" cannot fit in the specified %d bits'
-                % (str(num), bitwidth))
+            raise PyrtlInternalError(
+                'constant %d returned by infer_val_and_bitwidth somehow not fitting in %d bits'
+                % (num, bitwidth))
 
         name = _constIndexer.make_valid_string() + '_' + str(val)
 

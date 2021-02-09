@@ -235,11 +235,23 @@ class TestConst(unittest.TestCase):
         self.check_const(1, 1, 1)
         self.check_const(5, 5, 3)
         self.check_const(1, 1, 5, bitwidth=5)
+        self.check_const(0, 0b0, 1)
+        self.check_const(0, 0b0, 1, signed=True)
+        self.check_const(1, 0b01, 2, signed=True)
+        self.check_const(2, 0b010, 3, signed=True)
+        self.check_const(3, 0b011, 3, signed=True)
+        self.check_const(4, 0b0100, 4, signed=True)
+        self.check_const(5, 0b0101, 4, signed=True)
 
     def test_neg_integers(self):
         self.check_const(-1, 0b11111, 5, bitwidth=5)
         self.check_const(-2, 0b110, 3, bitwidth=3)
         self.check_const(-5, 0b1011, 4, bitwidth=4)
+        self.check_const(-1, 0b1, 1, signed=True)
+        self.check_const(-2, 0b10, 2, signed=True)
+        self.check_const(-3, 0b101, 3, signed=True)
+        self.check_const(-4, 0b100, 3, signed=True)
+        self.check_const(-5, 0b1011, 4, signed=True)
 
     def test_too_big(self):
         self.assert_bad_const(5, 2)
