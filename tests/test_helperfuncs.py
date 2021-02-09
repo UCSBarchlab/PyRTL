@@ -113,6 +113,36 @@ class TestNonCoreHelpers(unittest.TestCase):
         self.assertEqual(pyrtl.infer_val_and_bitwidth("5'b10"), (2, 5))
         self.assertEqual(pyrtl.infer_val_and_bitwidth("5'b10"), (2, 5))
         self.assertEqual(pyrtl.infer_val_and_bitwidth("8'B 0110_1100"), (108, 8))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-3, bitwidth=5), (0b11101, 5))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(3, signed=True), (3, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-3, signed=True), (5, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-4, signed=True), (4, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-3, bitwidth=5, signed=True), (29, 5))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(3, bitwidth=2), (3, 2))
+
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(0), (0, 1))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(1), (1, 1))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(2), (2, 2))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(3), (3, 2))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(4), (4, 3))
+
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(0, signed=True), (0, 1))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(1, signed=True), (1, 2))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(2, signed=True), (2, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(3, signed=True), (3, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(4, signed=True), (4, 4))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-1, signed=True), (1, 1))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-2, signed=True), (2, 2))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-3, signed=True), (5, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-4, signed=True), (4, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-5, signed=True), (11, 4))
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.infer_val_and_bitwidth(-3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.infer_val_and_bitwidth(True, signed=True)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.infer_val_and_bitwidth(3, bitwidth=2, signed=True)
 
 
 class TestChop(unittest.TestCase):

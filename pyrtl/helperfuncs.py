@@ -428,21 +428,32 @@ def val_to_formatted_str(val, format, enum_set=None):
 ValueBitwidthTuple = collections.namedtuple('ValueBitwidthTuple', 'value bitwidth')
 
 
-def infer_val_and_bitwidth(rawinput, bitwidth=None):
+def infer_val_and_bitwidth(rawinput, bitwidth=None, signed=False):
     """ Return a tuple (value, bitwidth) infered from the specified input.
 
     :param rawinput: a bool, int, or verilog-style string constant
     :param bitwidth: an integer bitwidth or (by default) None
+    :param signed: a bool (by default set False) to include bits for proper twos complement
     :returns tuple of integers (value, bitwidth)
 
     Given a boolean, integer, or verilog-style string constant, this function returns a
     tuple of two integers (value, bitwidth) which are infered from the specified rawinput.
     The tuple returned is, in fact, a named tuple with names .value and .bitwidth for feilds
-    0 and 1 respectively.  Error checks are performed that determine if the bitwidths specified
-    are sufficient and appropriate for the values specified. Examples can be found below ::
+    0 and 1 respectively.  If signed is set to true, bits will be included to ensure a proper
+    two's complement representation is possible, otherwise it is assume all bits can be used
+    for standard unsigned representation.  Error checks are performed that determine if the
+    bitwidths specified are sufficient and appropriate for the values specified.
+    Examples can be found below ::
 
         infer_val_and_bitwidth(2, bitwidth=5) == (2, 5)
         infer_val_and_bitwidth(3) == (3, 2)  # bitwidth infered from value
+        infer_val_and_bitwidth(3, signed=True) == (3, 3)  # need a bit for the leading zero
+        infer_val_and_bitwidth(-3, signed=True) == (5, 3)  # 5 = -3 & 0b111 = ..111101 & 0b111
+        infer_val_and_bitwidth(-4, signed=True) == (4, 3)  # 4 = -4 & 0b111 = ..111100 & 0b111
+        infer_val_and_bitwidth(-3, bitwidth=5, signed=True) == (29, 5)
+        infer_val_and_bitwidth(-3) ==> Error  # negative numbers require bitwidth or signed=True
+        infer_val_and_bitwidth(3, bitwidth=2) == (3, 2)
+        infer_val_and_bitwidth(3, bitwidth=2, signed=True) ==> Error  # need space for sign bit
         infer_val_and_bitwidth(True) == (1, 1)
         infer_val_and_bitwidth(False) == (0, 1)
         infer_val_and_bitwidth("5'd12") == (12, 5)
@@ -453,17 +464,19 @@ def infer_val_and_bitwidth(rawinput, bitwidth=None):
     """
 
     if isinstance(rawinput, bool):
-        return _convert_bool(rawinput, bitwidth)
+        return _convert_bool(rawinput, bitwidth, signed)
     elif isinstance(rawinput, numbers.Integral):
-        return _convert_int(rawinput, bitwidth)
+        return _convert_int(rawinput, bitwidth, signed)
     elif isinstance(rawinput, six.string_types):
-        return _convert_verilog_str(rawinput, bitwidth)
+        return _convert_verilog_str(rawinput, bitwidth, signed)
     else:
         raise PyrtlError('error, the value provided is of an improper type, "%s"'
                          'proper types are bool, int, and string' % type(rawinput))
 
 
-def _convert_bool(bool_val, bitwidth=None):
+def _convert_bool(bool_val, bitwidth=None, signed=False):
+    if signed:
+        raise PyrtlError('error, booleans cannot be signed (covert to int first)')
     num = int(bool_val)
     if bitwidth is None:
         bitwidth = 1
@@ -472,23 +485,37 @@ def _convert_bool(bool_val, bitwidth=None):
     return ValueBitwidthTuple(num, bitwidth)
 
 
-def _convert_int(val, bitwidth=None):
+def _convert_int(val, bitwidth=None, signed=False):
     if val >= 0:
         num = val
         # infer bitwidth if it is not specified explicitly
+        min_bitwidth = len(bin(num)) - 2  # the -2 for the "0b" at the start of the string
+        if signed and val != 0:
+            min_bitwidth += 1  # extra bit needed for the zero
+
         if bitwidth is None:
-            bitwidth = len(bin(num)) - 2  # the -2 for the "0b" at the start of the string
+            bitwidth = min_bitwidth
+        elif bitwidth < min_bitwidth:
+            raise PyrtlError('bitwidth specified is insufficient to represent constant')
+
     else:  # val is negative
+        if not signed and bitwidth is None:
+            raise PyrtlError('negative constants require either signed=True or specified bitwidth')
+
         if bitwidth is None:
-            raise PyrtlError(
-                'negative Const values must have bitwidth declared explicitly')
+            bitwidth = 1 if val == -1 else len(bin(~val)) - 1
+
         if (val >> bitwidth - 1) != -1:
             raise PyrtlError('insufficient bits for negative number')
+
         num = val & ((1 << bitwidth) - 1)  # result is a twos complement value
     return ValueBitwidthTuple(num, bitwidth)
 
 
-def _convert_verilog_str(val, bitwidth=None):
+def _convert_verilog_str(val, bitwidth=None, signed=False):
+    if signed:
+        raise PyrtlError('error, signed verilog-style string constants not supported currently')
+
     bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16, 'x': 16}
     passed_bitwidth = bitwidth
 
