@@ -127,7 +127,7 @@ class TestComparisonBasicOperations_MSB0(unittest.TestCase):
         self.check_trace('o     0  0  0  0  0  1  1  1  \n')
 
 
-class TestSignedAddBasicOperations(unittest.TestCase):
+class TestSignedArithBasicOperations(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         # test with '101' in binary, which should be
@@ -152,3 +152,38 @@ class TestSignedAddBasicOperations(unittest.TestCase):
         self.o <<= pyrtl.signed_add(self.r, self.c)
         #                  0   1   2  3  -4  -3  -2  -1
         self.check_trace('-3  -2  -1  0  -7  -6  -5  -4')
+
+    def test_basic_signed_add(self):
+        self.o <<= pyrtl.signed_add(self.r, Const(-3, signed=True))
+        self.check_trace('-3  -2  -1  0  -7  -6  -5  -4')
+
+    def test_basic_signed_add(self):
+        self.o <<= pyrtl.signed_add(self.r, -3)
+        self.check_trace('-3  -2  -1  0  -7  -6  -5  -4')
+
+    def test_basic_signed_mult(self):
+        self.o <<= pyrtl.signed_mult(self.r, self.c)
+        #                 0   1   2  3  -4  -3  -2  -1
+        self.check_trace('0  -3  -6  7  -4  -7  6  3')
+        # the above numbers don't look like multiplication but when you sign
+        # extend the inputs, truncate to the last 4 digits and then sign extend,
+        # the output I assure that they are indeed correct. :)
+
+    def test_basic_signed_mult(self):
+        self.o <<= pyrtl.signed_mult(self.r, pyrtl.Const(-2, bitwidth=3))
+        #                 0   1   2   3  -4 -3 -2 -1
+        self.check_trace('0  -2  -4  -6  -8  6  4  2')
+        # this one is multiplies by -2 and the trend is easier to see (-4 x -3 does
+        # overflow the 4 bits though).
+
+    def test_basic_signed_mult(self):
+        self.o <<= pyrtl.signed_mult(self.r, pyrtl.Const(-2, signed=True))
+        self.check_trace('0  -2  -4  -6  -8  6  4  2')
+
+    def test_basic_signed_mult(self):
+        self.o <<= pyrtl.signed_mult(self.r, -2)
+        self.check_trace('0  -2  -4  -6  -8  6  4  2')
+
+    def test_basic_signed_mult(self):
+        self.o <<= pyrtl.signed_mult(-2, self.r)
+        self.check_trace('0  -2  -4  -6  -8  6  4  2')

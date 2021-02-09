@@ -167,7 +167,13 @@ def signed_add(a, b):
 
     Given a length n and length m wirevector the result of the
     signed addition is length max(n,m)+1.  The inputs are twos
-    complement sign extended to the same length before adding."""
+    complement sign extended to the same length before adding.
+    If an integer is passed to either a or b, it will be converted
+    automatically to a two's complemented constant"""
+    if isinstance(a, int):
+        a = Const(a, signed=True)
+    if isinstance(b, int):
+        b = Const(b, signed=True)
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     result_len = len(a) + 1
     ext_a = a.sign_extended(result_len)
@@ -182,7 +188,19 @@ def mult_signed(a, b):
 
 
 def signed_mult(a, b):
-    """ Return a*b where a and b are treated as signed values. """
+    """ Return a*b where a and b are treated as signed values.
+
+    :param a: a wirevector to serve as first input to multiplication
+    :param b: a wirevector to serve as second input to multiplication
+
+    If an integer is passed to either a or b, it will be converted
+    automatically to a two's complemented constant"""
+    # if an integer, convert to a two's complement constant
+    if isinstance(a, int):
+        a = Const(a, signed=True)
+    if isinstance(b, int):
+        b = Const(b, signed=True)
+    # if not a wirevector yet, use standard conversion method
     a, b = as_wires(a), as_wires(b)
     final_len = len(a) + len(b)
     # sign extend both inputs to the final target length
