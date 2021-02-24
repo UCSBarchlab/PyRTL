@@ -710,7 +710,7 @@ class FastSimulation(object):
         if isinstance(wire, (Input, Register)):
             return 'd[' + repr(wire.name) + ']'  # passed in
         elif isinstance(wire, Const):
-            return str(wire.val)  # hardcoded
+            return str(int(wire.val))  # hardcoded
         else:
             return self._varname(wire)
 
