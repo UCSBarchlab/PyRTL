@@ -260,7 +260,7 @@ class TimingAnalysis(object):
         The result assumes that the circuit is implemented in a 130nm process, and that there is no
         setup or hold time associated with the circuit.  The resulting value is in picoseconds.  If
         an proper estimation of timing is required it is recommended to us "max_freq" to determine
-        the clock period as it more accurately consideres scaling and setup/hold.
+        the clock period as it more accurately considers scaling and setup/hold.
         """
         return max(self.timing_map.values())
 
@@ -315,7 +315,7 @@ class TimingAnalysis(object):
     @staticmethod
     def print_critical_paths(critical_paths):
         """ Prints the results of the critical path length analysis.
-            Done by default by the `timing_critical_path()` function.
+            Done by default by the `TimingAnalysis().critical_path()` function.
         """
         line_indent = " " * 2
         #  print the critical path

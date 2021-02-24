@@ -30,7 +30,11 @@ def net_transform(transform_func, block=None, **kwargs):
 
     :param transform_func:
         Function signature: func(orig_net (logicnet)) -> keep_orig_net (bool)
+    :param block: optional block to work on (defaults to working block)
     :return:
+
+    If transform_func does not return True, the original net is removed from
+    the block's logic set. The net's argument wire/destination wires are not removed.
     """
     block = working_block(block)
     with set_working_block(block, True):

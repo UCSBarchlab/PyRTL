@@ -19,7 +19,7 @@ def mux(index, *mux_ins, **kwargs):
     :param WireVector index: used as the select input to the multiplexer
     :param WireVector mux_ins: additional WireVector arguments selected when select>1
     :param WireVector kwargs: additional WireVectors, keyword arg "default"
-      If you are selecting between less items than your index can address, you can
+      If you are selecting between fewer items than your index can address, you can
       use the "default" keyword argument to auto-expand those terms.  For example,
       if you have a 3-bit index but are selecting between 6 options, you need to specify
       a value for those other 2 possible values of index (0b110 and 0b111).
@@ -91,7 +91,7 @@ def select(sel, truecase, falsecase):
 
     The hardware this generates is exactly the same as "mux" but by putting the
     true case as the first argument it matches more of the C-style ternary operator
-    semantics which can be helpful for readablity.
+    semantics which can be helpful for readability.
 
     Example of mux as "ternary operator" to take the min of 'a' and 5: ::
 
@@ -145,9 +145,9 @@ def concat_list(wire_list):
     :param wire_list: list of WireVectors to concat
     :return: WireVector with length equal to the sum of the args' lengths
 
-    This take a list of wirevectors and concats them all into a single wire
-    vector with the element at index 0 serving as the least significant bits.
-    This is useful when you have a variable number of wirevectors to concatenate,
+    This take a list of WireVectors and concats them all into a single
+    WireVector with the element at index 0 serving as the least significant bits.
+    This is useful when you have a variable number of WireVectors to concatenate,
     otherwise "concat" is prefered.
 
     Example using concat to combine two bytes into a 16-bit quantity: ::
@@ -160,12 +160,12 @@ def concat_list(wire_list):
 
 
 def signed_add(a, b):
-    """ Return wirevector for result of signed addition.
+    """ Return a WireVector for result of signed addition.
 
-    :param a: a wirevector to serve as first input to addition
-    :param b: a wirevector to serve as second input to addition
+    :param a: a WireVector to serve as first input to addition
+    :param b: a WireVector to serve as second input to addition
 
-    Given a length n and length m wirevector the result of the
+    Given a length n and length m WireVector the result of the
     signed addition is length max(n,m)+1.  The inputs are twos
     complement sign extended to the same length before adding.
     If an integer is passed to either a or b, it will be converted
@@ -259,7 +259,7 @@ def shift_left_arithmetic(bits_to_shift, shift_amount):
     of the input `bits_to_shift` but where the bits have been shifted
     to the left.  An arithemetic shift is one that treats the value as
     as signed number, although for left shift arithmetic and logic shift
-    are identical.  Note that `shift_amount` is treated as unsigned.
+    they are identical.  Note that `shift_amount` is treated as unsigned.
     """
     # shift left arithmetic and logical are the same thing
     return shift_left_logical(bits_to_shift, shift_amount)
@@ -324,7 +324,8 @@ def shift_right_logical(bits_to_shift, shift_amount):
 
 
 def match_bitwidth(*args, **opt):
-    """ Matches the bitwidth of all of the input arguments with zero or sign extend
+    """ Matches the bitwidth of all of the input arguments with zero or sign extension,
+        returning new WireVectors
 
     :param args: WireVectors of which to match bitwidths
     :param opt: Optional keyword argument 'signed=True' (defaults to False)
@@ -333,12 +334,12 @@ def match_bitwidth(*args, **opt):
     Example of matching the bitwidths of two WireVectors `a` and `b` with
     with zero extention: ::
 
-        a,b = match_bitwidth(a, b)
+        a, b = match_bitwidth(a, b)
 
     Example of matching the bitwidths of three WireVectors `a`,`b`, and `c` with
     with sign extention: ::
 
-        a,b = match_bitwidth(a, b, c, signed=True)
+        a, b = match_bitwidth(a, b, c, signed=True)
     """
     # TODO: when we drop 2.7 support, this code should be cleaned up with explicit
     # kwarg support for "signed" rather than the less than helpful "**opt"
@@ -376,7 +377,7 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
             b = as_wires(input_b)
         myhardware(3, x)
 
-    The function as_wires will covert the 3 to Const but keep `x` unchanged
+    The function as_wires will convert the 3 to Const but keep `x` unchanged
     assuming it is a WireVector.
 
     """
@@ -407,19 +408,19 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
 
 
 def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
-    """ Return wirevector w but with some of the bits overwritten by newvalue.
+    """ Return WireVector w but with some of the bits overwritten by newvalue.
 
-    :param w: a wirevector to use as the starting point for the update
+    :param w: a WireVector to use as the starting point for the update
     :param range_start: the start of the range of bits to be updated
     :param range_end: the end of the range of bits to be updated
     :param newvalue: the value to be written in to the start:end range
     :param truncating: if true, silently clip newvalue to the proper bitwidth rather than
           throw an error if the value provided is too large
 
-    Given a wirevector w, this function returns a new wirevector that
+    Given a WireVector w, this function returns a new WireVector that
     is identical to w except in the range of bits specified.  In that
     specified range, the value newvalue is swapped in.  For example:
-    `bitfield_update(w, 20, 23, 0x7)` will return return a wirevector
+    `bitfield_update(w, 20, 23, 0x7)` will return return a WireVector
     of the same length as w, and with the same values as w, but with
     bits 20, 21, and 22 all set to 1.
 
@@ -463,16 +464,16 @@ def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
 def enum_mux(cntrl, table, default=None, strict=True):
     """ Build a mux for the control signals specified by an enum.
 
-    :param cntrl: is a wirevector and control for the mux.
-    :param table: is a dictionary of the form mapping enum->wirevector.
-    :param default: is a wirevector to use when the key is not present. In addtion
+    :param cntrl: is a WireVector and control for the mux.
+    :param table: is a dictionary of the form mapping enum->WireVector.
+    :param default: is a WireVector to use when the key is not present. In addition
         it is possible to use the key 'otherwise' to specify a default value, but
         it is an error if both are supplied.
     :param strict: is flag, that when set, will cause enum_mux to check
         that the dictionary has an entry for every possible value in the enum.
         Note that if a default is set, then this check is not performed as
         the default will provide valid values for any underspecified keys.
-    :return: a wirevector which is the result of the mux.
+    :return: a WireVector which is the result of the mux.
     ::
 
         from enum import IntEnum
@@ -567,7 +568,7 @@ def _apply_op_over_all_bits(op, vector):
 
 
 def rtl_any(*vectorlist):
-    """ Hardware equivalent of python native "any".
+    """ Hardware equivalent of Python native "any".
 
     :param WireVector vectorlist: all arguments are WireVectors of length 1
     :return: WireVector of length 1
@@ -584,7 +585,7 @@ def rtl_any(*vectorlist):
 
 
 def rtl_all(*vectorlist):
-    """ Hardware equivalent of python native "all".
+    """ Hardware equivalent of Python native "all".
 
     :param WireVector vectorlist: all arguments are WireVectors of length 1
     :return: WireVector of length 1

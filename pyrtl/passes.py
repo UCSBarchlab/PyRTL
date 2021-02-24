@@ -353,7 +353,7 @@ def _remove_unused_wires(block, keep_inputs=True):
 
 
 def synthesize(update_working_block=True, block=None):
-    """ Lower the design to just single-bit "and", "or", and "not" gates.
+    """ Lower the design to just single-bit "and", "or", "xor", and "not" gates.
 
     :param update_working_block: Boolean specifying if working block update
     :param block: The block you want to synthesize
@@ -366,9 +366,9 @@ def synthesize(update_working_block=True, block=None):
     of w, &, |, ^, and ~ and sequential elements of registers (which are
     one bit as well).  The two exceptions are for inputs/outputs (so that
     we can keep the same interface) which are immediately broken down into
-    the individual bits and memories.  Memories (read and write ports) which
+    the individual bits and memories (read and write ports) which
     require the reassembly and disassembly of the wirevectors immediately
-    before and after.  There arethe only two places where 'c' and 's' ops
+    before and after. These are the only two places where 'c' and 's' ops
     should exist.
 
     The block that results from synthesis is actually of type
@@ -380,7 +380,7 @@ def synthesize(update_working_block=True, block=None):
     """
 
     block_pre = working_block(block)
-    block_pre.sanity_check()  # before going further, make sure that pressynth is valid
+    block_pre.sanity_check()  # before going further, make sure that presynth is valid
     block_in = copy_block(block_pre, update_working_block=False)
 
     block_out = PostSynthBlock()
@@ -422,7 +422,6 @@ def synthesize(update_working_block=True, block=None):
                 wirevector_map[(wirevector, i)] <<= input_vector[i]
         for wirevector in block_in.wirevector_subset(Output):
             output_vector = Output(name=wirevector.name, bitwidth=len(wirevector))
-            # the "reversed" is needed because most significant bit comes first in concat
             output_bits = [wirevector_map[(wirevector, i)]
                            for i in range(len(output_vector))]
             output_vector <<= concat_list(output_bits)

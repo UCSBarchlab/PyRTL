@@ -5,8 +5,8 @@ These blocks of memories can be read (potentially async) and written (sync)
 MemBlocks supports any number of the following operations:
 
 * read: `d = mem[address]`
-* write: `mem[address] = d`
-* write with an enable: `mem[address] = MemBlock.EnabledWrite(d,enable=we)`
+* write: `mem[address] <<= d`
+* write with an enable: `mem[address] <<= MemBlock.EnabledWrite(d,enable=we)`
 
 Based on the number of reads and writes a memory will be inferred
 with the correct number of ports to support that
@@ -154,7 +154,7 @@ class MemBlock(_MemReadBase):
 
     Usage::
 
-        data <<= memory[addr]  (infer read port)
+        data = memory[addr]  (infer read port)
         memory[addr] <<= data  (infer write port)
         mem[address] <<= MemBlock.EnabledWrite(data,enable=we)
 

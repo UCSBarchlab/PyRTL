@@ -385,9 +385,9 @@ class WireVector(object):
         return outwire
 
     def __lshift__(self, other):
-        raise PyrtlError('Shifting using the << and >> operators are not supported'
-                         'in PyRTL.'
-                         'If you are trying to select bits in a wire, use'
+        raise PyrtlError('Shifting using the << and >> operators are not supported '
+                         'in PyRTL. '
+                         'If you are trying to select bits in a wire, use '
                          'the indexing operator (wire[indexes]) instead.\n\n'
                          'For example: wire[2:9] selects the wires from index 2 to '
                          'index 8 to make a new length 7 wire. \n\n If you are really '
@@ -557,6 +557,7 @@ class Input(WireVector):
 
 class Output(WireVector):
     """ A WireVector type denoting outputs of a block (no readers)
+
     Even though Output seems to have valid ops such as __or__ , using
     them will throw an error.
     """
@@ -569,10 +570,10 @@ class Output(WireVector):
 class Const(WireVector):
     """ A WireVector representation of a constant value
 
-    Converts from bool, integer, or verilog-style strings to a constant
+    Converts from bool, integer, or Verilog-style strings to a constant
     of the specified bitwidth.  If the bitwidth is too short to represent
-    the specified constant then an error is raised.  If a possitive
-    integer is specified the bitwidth can be infered from the constant.
+    the specified constant, then an error is raised.  If a positive
+    integer is specified, the bitwidth can be inferred from the constant.
     If a negative integer is provided in the simulation, it is converted
     to a two's complement representation of the specified bitwidth."""
 
@@ -623,7 +624,7 @@ class Const(WireVector):
             % str(self.name))
 
     def __ior__(self, _):
-        """ This is an illegal op for Inputs. They cannot be assigned to in this way """
+        """ This is an illegal op for Consts. They cannot be assigned to in this way """
         raise PyrtlError(
             'Connection using |= operator attempted on Const. '
             'ConstWires, such as "%s", cannot have values generated internally. '
