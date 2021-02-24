@@ -25,8 +25,7 @@ from .wire import Const, Input, Output, WireVector, Register
 
 
 def net_transform(transform_func, block=None, **kwargs):
-    """
-    Maps nets to new sets of nets according to a custom function
+    """ Maps nets to new sets of nets according to a custom function
 
     :param transform_func:
         Function signature: func(orig_net (logicnet)) -> keep_orig_net (bool)
@@ -54,16 +53,13 @@ def all_nets(transform_func):
 
 def wire_transform(transform_func, select_types=WireVector,
                    exclude_types=(Input, Output, Register, Const), block=None):
-    """
-    Maps Wires to new sets of nets and wires according to a custom function
+    """ Maps Wires to new sets of nets and wires according to a custom function.
 
-    :param transform_func: The function you want to run on all wires
+    :param transform_func: The function you want to run on all wires.
         Function signature: func(orig_wire (WireVector)) -> src_wire, dst_wire
         src_wire is the src for the stuff you made in the transform func
-        and dst_wire is the sink
-
-        to indicate that the wire has not been changed, make src_wire and dst_wire both
-        the original wire
+        and dst_wire is the sink. To indicate that the wire has not been changed,
+        make src_wire and dst_wire both the original wire.
     :param select_types: Type or Tuple of types of WireVectors to replace
     :param exclude_types: Type or Tuple of types of WireVectors to exclude from replacement
     :param block: The Block to replace wires on
@@ -111,11 +107,10 @@ def replace_wire(orig_wire, new_src, new_dst, block=None):
 
 
 def replace_wires(wire_map, block=None):
-    """
-    Quickly replace all wires in a block
+    """ Quickly replace all wires in a block
 
     :param {old_wire: new_wire} wire_map: mapping of old wires to
-      new wires
+        new wires
     """
     block = working_block(block)
     src_nets, dst_nets = block.net_connections(include_virtual_nodes=False)
@@ -168,15 +163,14 @@ def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=Non
 
 
 def clone_wire(old_wire, name=None):
-    """
-    Makes a copy of any existing wire
+    """ Makes a copy of any existing wire.
 
     :param old_wire: The wire to clone
-    :param name: a name for the new wire
+    :param name: A name for the new wire
 
     Note that this function is mainly intended to be used when the
     two wires are from different blocks. Making two wires with the
-    same name in the same block is not allowed
+    same name in the same block is not allowed.
     """
     if isinstance(old_wire, Const):
         if name is None:
@@ -189,10 +183,9 @@ def clone_wire(old_wire, name=None):
 
 
 def copy_block(block=None, update_working_block=True):
-    """
-    Makes a copy of an existing block
+    """ Makes a copy of an existing block.
 
-    :param block: The block to clone. (defaults to the working block)
+    :param block: The block to clone (defaults to the working block).
     :return: The resulting block
     """
     block_in = working_block(block)
@@ -208,9 +201,8 @@ def copy_block(block=None, update_working_block=True):
 
 
 def _clone_block_and_wires(block_in):
-    """
-    This is a generic function to copy the WireVectors for another round of
-    synthesis This does not split a WireVector with multiple wires.
+    """ This is a generic function to copy the WireVectors for another round of
+    synthesis. This does not split a WireVector with multiple wires.
 
     :param block_in: The block to change
     :param synth_name: a name to prepend to all new copies of a wire
@@ -228,7 +220,7 @@ def _clone_block_and_wires(block_in):
 
 
 def _copy_net(block_out, net, temp_wv_net, mem_map):
-    """This function makes a copy of all nets passed to it for synth uses
+    """ This function makes a copy of all nets passed to it for synth uses.
     """
     new_args = tuple(temp_wv_net[a_arg] for a_arg in net.args)
     new_dests = tuple(temp_wv_net[a_dest] for a_dest in net.dests)
@@ -242,8 +234,8 @@ def _copy_net(block_out, net, temp_wv_net, mem_map):
 
 
 def _get_new_block_mem_instance(op_param, mem_map, block_out):
-    """ gets the instance of the memory in the new block that is
-    associated with a memory in a old block
+    """ Gets the instance of the memory in the new block that is
+    associated with a memory in a old block.
     """
     memid, old_mem = op_param
     if old_mem not in mem_map:

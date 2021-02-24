@@ -177,8 +177,8 @@ class MatchedFields(collections.namedtuple('MatchedFields', 'matched fields')):
 
 
 def match_bitpattern(w, bitpattern, field_map=None):
-    """ Returns a single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern,
-    and a tuple containining the matched fields, if any.
+    """ Returns a single-bit wirevector that is 1 if and only if 'w' matches the bitpattern,
+    and a tuple containining the matched fields, if any. Compatible with the 'with' statement.
 
     :param w: The wirevector to be compared to the bitpattern
     :param bitpattern: A string holding the pattern (of bits and wildcards) to match
@@ -218,7 +218,7 @@ def match_bitpattern(w, bitpattern, field_map=None):
             with match_bitpattern(inst, "0000000rrrrrsssss111ddddd0110011") as (rs2, rs1, rd):
                 regfile[rd] |= regfile[rs1] & regfile[rs2]
                 pc.next |= pc + 1
-            with match_bitpattern(inst, "0000000rrrrrsssss000iiiii0110011") as (rs2, rs1, rd):
+            with match_bitpattern(inst, "0000000rrrrrsssss000ddddd0110011") as (rs2, rs1, rd):
                 regfile[rd] |= (regfile[rs1] + regfile[rs2]).truncate(32)
                 pc.next |= pc + 1
             # ...etc...

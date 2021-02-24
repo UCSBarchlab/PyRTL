@@ -45,7 +45,8 @@ class _MemIndexed(WireVector):
     hence the underscore in the name.  It presents a very similar interface to
     wiresVectors (all of the normal wirevector operations should still work),
     but if you try to *set* the value with <<= or |= then it will generate a
-    _MemAssignment object rather than the normal wire assignment. """
+    _MemAssignment object rather than the normal wire assignment.
+    """
 
     def __init__(self, mem, index):
         self.mem = mem
@@ -87,9 +88,10 @@ class _MemIndexed(WireVector):
 
 
 class _MemReadBase(object):
-    """This is the base class for the memories and ROM blocks and
+    """ This is the base class for the memories and ROM blocks and
     it implements the read and initialization operations needed for
-    both of them"""
+    both of them.
+    """
 
     # FIXME: right now read port is built unconditionally (no read enable)
 
@@ -147,7 +149,7 @@ class _MemReadBase(object):
 
 
 class MemBlock(_MemReadBase):
-    """ MemBlock is the object for specifying block memories.  In can be
+    """ MemBlock is the object for specifying block memories.  It can be
     indexed like an array for both reading and writing.  Writes under a conditional
     are automatically converted to enabled writes.   For example, consider the following
     examples where `addr`, `data`, and `we` are all WireVectors.
@@ -160,7 +162,7 @@ class MemBlock(_MemReadBase):
 
     When the address of a memory is assigned to using a EnableWrite object
     items will only be written to the memory when the enable WireVector is
-    set to high (1)
+    set to high (1).
     """
     # FIXME: write ports assume that only one port is under control of the conditional
     EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
@@ -282,7 +284,7 @@ class RomBlock(_MemReadBase):
         :param int bitwidth: The bitwidth of each item stored in the ROM
         :param int addrwidth: The bitwidth of the address bus (determines number of addresses)
         :param romdata: This can either be a function or an array (iterable) that maps
-          an address as an input to a result as an output
+            an address as an input to a result as an output
         :param str name: The identifier for the memory
         :param max_read_ports: limits the number of read ports each block can create;
             passing `None` indicates there is no limit

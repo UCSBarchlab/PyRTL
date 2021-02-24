@@ -14,7 +14,7 @@ from .conditional import otherwise
 
 
 def mux(index, *mux_ins, **kwargs):
-    """ Multiplexer returning the value of the wire in .
+    """ Multiplexer returning the value of the wire from mux_ins according to index.
 
     :param WireVector index: used as the select input to the multiplexer
     :param WireVector mux_ins: additional WireVector arguments selected when select>1
@@ -34,17 +34,17 @@ def mux(index, *mux_ins, **kwargs):
     Example of mux as "selector" to pick between a0 and a1: ::
 
         index = WireVector(1)
-        mux( index, a0, a1 )
+        mux(index, a0, a1)
 
     Example of mux as "selector" to pick between a0 ... a3: ::
 
         index = WireVector(2)
-        mux( index, a0, a1, a2, a3 )
+        mux(index, a0, a1, a2, a3)
 
     Example of "default" to specify additional arguments: ::
 
         index = WireVector(3)
-        mux( index, a0, a1, a2, a3, a4, a5, default=0 )
+        mux(index, a0, a1, a2, a3, a4, a5, default=0)
     """
     if kwargs:  # only "default" is allowed as kwarg.
         if len(kwargs) != 1 or 'default' not in kwargs:
@@ -96,7 +96,7 @@ def select(sel, truecase, falsecase):
 
     Example of mux as "ternary operator" to take the min of 'a' and 5: ::
 
-        select( a<5, truecase=a, falsecase=5 )
+        select(a<5, truecase=a, falsecase=5)
     """
     sel, f, t = (as_wires(w) for w in (sel, falsecase, truecase))
     f, t = match_bitwidth(f, t)
@@ -108,7 +108,7 @@ def select(sel, truecase, falsecase):
 
 
 def concat(*args):
-    """ Concatenates multiple WireVectors into a single WireVector
+    """ Concatenates multiple WireVectors into a single WireVector.
 
     :param WireVector args: inputs to be concatenated
     :return: WireVector with length equal to the sum of the args' lengths
@@ -121,7 +121,7 @@ def concat(*args):
 
     Example using concat to combine two bytes into a 16-bit quantity: ::
 
-        concat( msb, lsb )
+        concat(msb, lsb)
     """
     if len(args) <= 0:
         raise PyrtlError('error, concat requires at least 1 argument')
@@ -141,7 +141,7 @@ def concat(*args):
 
 
 def concat_list(wire_list):
-    """ Concatenates a list of WireVectors into a single WireVector
+    """ Concatenates a list of WireVectors into a single WireVector.
 
     :param wire_list: list of WireVectors to concat
     :return: WireVector with length equal to the sum of the args' lengths
@@ -153,8 +153,8 @@ def concat_list(wire_list):
 
     Example using concat to combine two bytes into a 16-bit quantity: ::
 
-        mylist = [ lsb, msb ]
-        concat_list( mylist )
+        mylist = [lsb, msb]
+        concat_list(mylist)
 
     """
     return concat(*reversed(wire_list))
@@ -295,8 +295,8 @@ def shift_left_logical(bits_to_shift, shift_amount):
 
     This function returns a new WireVector of length equal to the length
     of the input `bits_to_shift` but where the bits have been shifted
-    to the left.  An logical shift is one that treats the value as
-    as unsigned number, meaning the zeros are shifted in.  Note that
+    to the left.  A logical shift is one that treats the value as
+    as unsigned number, meaning the zeroes are shifted in.  Note that
     `shift_amount` is treated as unsigned.
     """
     a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
@@ -314,7 +314,7 @@ def shift_right_logical(bits_to_shift, shift_amount):
 
     This function returns a new WireVector of length equal to the length
     of the input `bits_to_shift` but where the bits have been shifted
-    to the right.  An logical shift is one that treats the value as
+    to the right.  A logical shift is one that treats the value as
     as unsigned number, meaning the zeros are shifted in regardless of
     the "sign bit".  Note that `shift_amount` is treated as unsigned.
     """
@@ -325,8 +325,7 @@ def shift_right_logical(bits_to_shift, shift_amount):
 
 
 def match_bitwidth(*args, **opt):
-    """ Matches the bitwidth of all of the input arguments with zero or sign extension,
-        returning new WireVectors
+    """ Matches the argument wires' bitwidth via zero or sign extension, returning new WireVectors
 
     :param args: WireVectors of which to match bitwidths
     :param opt: Optional keyword argument 'signed=True' (defaults to False)
@@ -361,12 +360,11 @@ def match_bitwidth(*args, **opt):
 def as_wires(val, bitwidth=None, truncating=True, block=None):
     """ Return wires from val which may be wires, integers (including IntEnums), strings, or bools.
 
-    :param val: a wirevector-like object or something that can be converted into
-      a Const
+    :param val: a wirevector-like object or something that can be converted into a Const
     :param bitwidth: The bitwidth the resulting wire should be
     :param bool truncating: determines whether bits will be dropped to achieve
-     the desired bitwidth if it is too long (if true, the most-significant bits
-     will be dropped)
+        the desired bitwidth if it is too long (if true, the most-significant bits
+        will be dropped)
     :param Block block: block to use for wire
 
     This function is mainly used to coerce values into WireVectors (for

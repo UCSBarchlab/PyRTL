@@ -38,7 +38,7 @@ def make_inputs_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None,
     :param function dist: function to generate the random values
     :return: wires; list of values for the wires
 
-    The list of values is a list of lists. the interior lists represent the
+    The list of values is a list of lists. The interior lists represent the
     values of a single wire for all of the simulation cycles
 
     """
