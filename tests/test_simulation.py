@@ -274,6 +274,32 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_outp)
 
+    def test_consts_from_int_enums(self):
+        from enum import IntEnum
+
+        class MyEnum(IntEnum):
+            A = 0
+            B = 1
+            C = 3
+
+        i = pyrtl.Input(max(MyEnum).bit_length(), 'i')
+        o = pyrtl.Output(1, 'o')
+        with pyrtl.conditional_assignment:
+            with (i == MyEnum.A) | (i == MyEnum.B):
+                o |= 0
+            with pyrtl.otherwise:
+                o |= 1
+
+        trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=trace)
+
+        sim.step({'i': MyEnum.A})
+        self.assertEqual(sim.inspect(o), 0)
+        sim.step({'i': MyEnum.B})
+        self.assertEqual(sim.inspect(o), 0)
+        sim.step({'i': MyEnum.C})
+        self.assertEqual(sim.inspect(o), 1)
+
 
 class SimInputValidationBase(unittest.TestCase):
     def setUp(self):
