@@ -579,10 +579,10 @@ class Const(WireVector):
 
     _code = 'C'
 
-    def __init__(self, val, bitwidth=None, signed=False, block=None):
+    def __init__(self, val, bitwidth=None, name='', signed=False, block=None):
         """ Construct a constant implementation at initialization
 
-        :param int, bool, or str val: The value for the const wirevector
+        :param int, bool, or str val: the value for the const wirevector
         :param int: the desired bitwidth of the resulting const
         :param signed: specify if bits should be used for twos complement
         :return: a wirevector object representing a const wire
@@ -611,7 +611,7 @@ class Const(WireVector):
                 'constant %d returned by infer_val_and_bitwidth somehow not fitting in %d bits'
                 % (num, bitwidth))
 
-        name = _constIndexer.make_valid_string() + '_' + str(val)
+        name = name if name else _constIndexer.make_valid_string() + '_' + str(val)
 
         super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)
         # add the member "val" to track the value of the constant

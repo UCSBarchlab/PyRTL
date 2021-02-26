@@ -316,6 +316,18 @@ class TestConst(unittest.TestCase):
             c = pyrtl.Const(4)
             c <<= 3
 
+    def test_named(self):
+        block = pyrtl.working_block()
+        c = pyrtl.Const(20, name="archid")
+        self.assertIn("archid", block.wirevector_by_name)
+        self.assertIn(c, block.wirevector_set)
+        self.assertEqual(c.val, 20)
+        c.name = "vendorid"
+        self.assertNotIn("archid", block.wirevector_by_name)
+        self.assertIn("vendorid", block.wirevector_by_name)
+        self.assertIn(c, block.wirevector_set)
+        self.assertEqual(c.val, 20)
+
     def check_const(self, val_in, expected_val, expected_bitwidth, **kargs):
         c = pyrtl.Const(val_in, **kargs)
         self.assertEqual(c.val, expected_val)
