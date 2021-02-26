@@ -15,15 +15,15 @@ module toplevel(clk, o);
 
     wire[3:0] const_0_12;
     wire[2:0] const_1_3;
-    wire[5:0] const_2_38;
+    wire[5:0] k;
     wire[12:0] tmp0;
 
     // Combinational
     assign const_0_12 = 12;
     assign const_1_3 = 3;
-    assign const_2_38 = 38;
+    assign k = 38;
     assign o = tmp0;
-    assign tmp0 = {const_0_12, const_1_3, const_2_38};
+    assign tmp0 = {const_0_12, const_1_3, k};
 
 endmodule
 
@@ -642,7 +642,7 @@ class TestVerilog(unittest.TestCase):
     def test_textual_consistency_small(self):
         i = pyrtl.Const(0b1100)
         j = pyrtl.Const(0b011, bitwidth=3)
-        k = pyrtl.Const(0b100110)
+        k = pyrtl.Const(0b100110, name='k')
         o = pyrtl.Output(13, 'o')
         o <<= pyrtl.concat(i, j, k)
 

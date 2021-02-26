@@ -558,7 +558,8 @@ def _default_node_namer(node, split_state=False, extra_node_info=None):
         return v
 
     if isinstance(node, Const):
-        return '[label="%d", shape=circle, fillcolor=lightgrey]' % label(node.val)
+        name = node.name + ': ' if not node.name.startswith('const_') else ''
+        return '[label="%s", shape=circle, fillcolor=lightgrey]' % label(name + str(node.val))
     elif isinstance(node, Input):
         return '[label="%s", shape=invhouse, fillcolor=coral]' % label(node.name)
     elif isinstance(node, Output):

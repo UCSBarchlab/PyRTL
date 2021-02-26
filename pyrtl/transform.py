@@ -179,7 +179,9 @@ def clone_wire(old_wire, name=None):
     same name in the same block is not allowed
     """
     if isinstance(old_wire, Const):
-        return Const(old_wire.val, old_wire.bitwidth)
+        if name is None:
+            return Const(old_wire.val, old_wire.bitwidth, name=old_wire.name)
+        return Const(old_wire.val, old_wire.bitwidth, name=name)
     else:
         if name is None:
             return old_wire.__class__(old_wire.bitwidth, name=old_wire.name)

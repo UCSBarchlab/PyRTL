@@ -300,6 +300,25 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         sim.step({'i': MyEnum.C})
         self.assertEqual(sim.inspect(o), 1)
 
+    def test_named_consts(self):
+        in1 = pyrtl.Input(8, "in1")
+        c1 = pyrtl.Const(1, 1, "c1")
+        out1 = pyrtl.Output(16, "out1")
+        out1 <<= in1 + c1
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        for i in range(10):
+            sim.step({
+                'in1': 2 * i,
+            })
+        correct_outp = (" --- Values in base 10 ---\n"
+                        "c1    1  1  1  1  1  1  1  1  1  1\n"
+                        "in1   0  2  4  6  8 10 12 14 16 18\n"
+                        "out1  1  3  5  7  9 11 13 15 17 19\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_outp)
+
 
 class SimInputValidationBase(unittest.TestCase):
     def setUp(self):

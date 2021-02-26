@@ -992,7 +992,7 @@ class SimulationTrace(object):
         self.block = working_block(block)
 
         def is_internal_name(name):
-            return (name.startswith('tmp') or name.startswith('const')
+            return (name.startswith('tmp') or name.startswith('const_')
                     # or name.startswith('synth_')
                     or name.endswith("'"))
 
