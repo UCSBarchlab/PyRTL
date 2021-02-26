@@ -849,9 +849,9 @@ class FastSimulation(object):
         if self.tracer is not None:
             for wire_name in self.tracer.trace:
                 wire = self.block.wirevector_by_name[wire_name]
-                if not isinstance(wire, (Input, Const, Register, Output)):
-                    v_wire_name = self._varname(wire)
-                    prog.append('    outs["%s"] = %s' % (wire_name, v_wire_name))
+                if not isinstance(wire, (Input, Register, Output)):
+                    value = int(wire.val) if isinstance(wire, Const) else self._varname(wire)
+                    prog.append('    outs["%s"] = %s' % (wire_name, value))
 
         prog.append("    return regs, outs, mem_ws")
         return '\n'.join(prog)
