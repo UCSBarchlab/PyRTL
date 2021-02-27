@@ -241,6 +241,69 @@ class TestBitField_Update(unittest.TestCase):
         self.bitfield_update_checker(10, 3, 6, 3)
 
 
+class TestBitField_Update_Set(unittest.TestCase):
+    def setUp(self):
+        random.seed(8492049)
+        pyrtl.reset_working_block()
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(8):
+            sim.step({})
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_field_too_big(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update_set(a, {(1, 2): b})
+
+    def test_field_too_big_truncate(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=3)
+        o = pyrtl.bitfield_update_set(a, {(1, 2): b}, truncating=True)
+
+    def test_no_bits_to_update(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update_set(a, {(1, 1): b}, truncating=True)
+
+    def test_overlapping_ranges(self):
+        a = pyrtl.WireVector(name='a', bitwidth=10)
+        b = pyrtl.WireVector(name='b', bitwidth=10)
+        c = pyrtl.WireVector(name='c', bitwidth=10)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update_set(a, {(1, 4): b, (3, 6): c}, truncating=True)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update_set(a, {(8, 10): b, (-1, None): c}, truncating=True)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update_set(a, {(None, 3): b, (0, 1): c}, truncating=True)
+
+    def bitfield_update_checker(self, input_width, range_start, range_end,
+                                update_width, test_amt=20):
+        def ref(i, s, e, u):
+            mask = ((1 << (e)) - 1) - ((1 << s) - 1)
+            return (i & ~mask) | ((u << s) & mask)
+        inp, inp_vals = utils.an_input_and_vals(input_width, test_vals=test_amt, name='inp')
+        upd, upd_vals = utils.an_input_and_vals(update_width, test_vals=test_amt, name='upd')
+        # inp_vals = [1,1,0,0]
+        # upd_vals = [0x7,0x6,0x7,0x6]
+        out = pyrtl.Output(input_width, "out")
+        bfu_out = pyrtl.bitfield_update_set(inp, {(range_start, range_end): upd})
+        self.assertEqual(len(out), len(bfu_out))  # output should have width of input
+        out <<= bfu_out
+        true_result = [ref(i, range_start, range_end, u) for i, u in zip(inp_vals, upd_vals)]
+        upd_result = utils.sim_and_ret_out(out, [inp, upd], [inp_vals, upd_vals])
+        self.assertEqual(upd_result, true_result)
+
+    def test_bitfield(self):
+        self.bitfield_update_checker(10, 3, 6, 3)
+
+
 class TestAnyAll(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

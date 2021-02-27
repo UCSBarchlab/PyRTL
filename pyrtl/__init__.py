@@ -54,6 +54,7 @@ from .corecircuits import as_wires
 from .corecircuits import match_bitwidth
 from .corecircuits import enum_mux
 from .corecircuits import bitfield_update
+from .corecircuits import bitfield_update_set
 from .corecircuits import signed_add
 from .corecircuits import signed_mult
 from .corecircuits import signed_lt

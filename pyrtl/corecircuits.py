@@ -437,12 +437,12 @@ def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
 
     w = as_wires(w)
     idxs = list(range(len(w)))  # we make a list of integers and slice those up to use as indexes
-    idxs_lower = idxs[0:range_start]
     idxs_middle = idxs[range_start:range_end]
-    idxs_upper = idxs[range_end:]
-
     if len(idxs_middle) == 0:
         raise PyrtlError('Cannot update bitfield of size 0 (i.e. there are no bits to update)')
+    idxs_lower = idxs[:idxs_middle[0]]
+    idxs_upper = idxs[idxs_middle[-1] + 1:]
+
     newvalue = as_wires(newvalue, bitwidth=len(idxs_middle), truncating=truncating)
     if len(idxs_middle) != len(newvalue):
         raise PyrtlError('Cannot update bitfield of length %d with value of length %d '
@@ -459,6 +459,42 @@ def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
     if len(result) != len(w):
         raise PyrtlInternalError('len(result)=%d, len(original)=%d' % (len(result), len(w)))
     return result
+
+
+def bitfield_update_set(w, update_set, truncating=False):
+    """ Return WireVector w but with some of the bits overwritten by values in update_set.
+
+    :param w: a WireVector to use as the starting point for the update
+    :param update_set: a map from tuples of integers (bit ranges) to the new values
+    :param truncating: if true, silently clip new values to the proper bitwidth rather than
+          throw an error if the value provided is too large
+
+    Given a WireVector w, this function returns a new WireVector that is identical to w except
+    in the range of bits specified.  When multiple non-overlapping fields need to be updated
+    in a single cycle this provides a clearer way to describe that behavior than iterative calls to
+    bitfield_update (although that is, in fact, what it is doing).
+
+        w = bitfield_update_set(w, {
+                (20, 23):    0x6,      # sets bit 20 to 0, bits 21 and 22 to 1
+                (26, None):  0x7,      # assuming w is 32 bits, sets bits 31..26 to 0x7
+                (-1, None):  0x0       # set the LSB (bit) to 0
+                })
+    """
+    w = as_wires(w)
+    # keep a list of bits that are updated to find overlaps
+    setlist = [False] * len(w)
+    # call bitfield for each one
+    for range in update_set:
+        range_start, range_end = range
+        new_value = update_set[range]
+        # check for overlaps
+        setbits = setlist[range_start:range_end]
+        if any(setbits):
+            raise PyrtlError('Bitfields for update are overlapping')
+        setlist[range_start:range_end] = [True] * len(setbits)
+        # do the actual update
+        w = bitfield_update(w, range_start, range_end, new_value, truncating)
+    return w
 
 
 def enum_mux(cntrl, table, default=None, strict=True):
