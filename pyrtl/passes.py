@@ -408,7 +408,7 @@ def synthesize(update_working_block=True, block=None):
                 new_name = '_'.join((wirevector.name, 'synth', str(i)))
                 if isinstance(wirevector, Const):
                     new_val = (wirevector.val >> i) & 0x1
-                    new_wirevector = Const(bitwidth=1, val=new_val)
+                    new_wirevector = Const(name=new_name, bitwidth=1, val=new_val)
                 elif isinstance(wirevector, (Input, Output)):
                     new_wirevector = WireVector(name="tmp_" + new_name, bitwidth=1)
                 else:
