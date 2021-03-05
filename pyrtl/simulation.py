@@ -424,7 +424,7 @@ class Simulation(object):
 
 
 class FastSimulation(object):
-    """A class for running JIT implementations of blocks.
+    """A class for running JIT-to-python implementations of blocks.
     """
 
     # Dev Notes:

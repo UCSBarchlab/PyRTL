@@ -54,15 +54,12 @@ class DllMemInspector(collections.Mapping):
 class CompiledSimulation(object):
     """Simulate a block, compiling to C for efficiency.
 
-    THIS IS AN EXPERIMENTAL SIMULATION CLASS.
-    NO SUPPORT WILL BE GIVEN TO PEOPLE WHO CANNOT GET IT TO RUN.
-    EXPECT THE API TO CHANGE IN THE FUTURE.
-
     This module provides significant speed improvements over FastSimulation,
     at the cost of somewhat longer setup time.
     Generally this will do better than FastSimulation for simulations requiring over 1000 steps.
     It is not built to be a debugging tool, though it may help with debugging.
-    Note that only Input and Output wires can be traced using CompiledSimulation.
+    Note that only Input and Output wires can be traced using CompiledSimulation.  This code
+    is still experimental, but has been used on designs of significant scale to good effect.
 
     In order to use this, you need:
         - A 64-bit processor
