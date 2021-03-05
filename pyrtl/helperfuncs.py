@@ -13,7 +13,7 @@ from functools import reduce
 from .core import working_block, _NameIndexer, _get_debug_mode
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
-from .corecircuits import as_wires
+from .corecircuits import as_wires, rtl_all, rtl_any
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -163,6 +163,38 @@ def truncate(wirevector_or_integer, bitwidth):
         return x.truncate(bitwidth)
     except AttributeError:
         return x & ((1 << bitwidth) - 1)
+
+
+def match_bitpattern(w, bitpattern):
+    """ Returns single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern
+
+    :param w: The wirevector to be compared to the bitpattern
+    :param bitpattern: A string holding the pattern of bits to match
+    :return: A 1-bit wirevector carrying the result of the comparison
+
+    This function will compare a multi-bit wirevector to a specified pattern of bits, where some
+    of the pattern can be "wildcard" bits.  If any of the "1" or "0" values specified in the
+    bitpattern fail to match the wirevector during execution, a "0" will be produced, otherwise
+    the value carried on the wire will be "1".  Any non-whitespace character can be used in the
+    pattern to specify a wildcard although "?" and "X" are recommended for clarity.  The number
+    of non-whitespace characters in the string must equal the length of the wirevector specified.
+
+    Examples: ::
+        m = match_bitpattern(w, '0101')  # basically the same as w=='0b0101' 
+        m = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111' 
+        m = match_bitpattern(w, 'xx01')  # m be true when last two bits of w are '01'
+        m = match_bitpattern(w, 'xx 01')  # spaces will be ignored, same as example above
+    """
+    w = as_wires(w)
+    if not isinstance(bitpattern, six.string_types):
+            raise PyrtlError('bitpattern must be a string')
+    nospace_string = ''.join(bitpattern.split())
+    assert len(w) == len(nospace_string)
+    lsb_first_string = nospace_string[::-1]  #flip so index 0 is lsb
+
+    zero_bits = [w[index] for index,x in enumerate(lsb_first_string) if x == '0']
+    one_bits = [w[index] for index,x in enumerate(lsb_first_string) if x == '1']
+    return rtl_all(*one_bits) & ~rtl_any(*zero_bits)
 
 
 def chop(w, *segment_widths):
