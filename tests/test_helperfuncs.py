@@ -145,6 +145,49 @@ class TestNonCoreHelpers(unittest.TestCase):
             pyrtl.infer_val_and_bitwidth(3, bitwidth=2, signed=True)
 
 
+class TestMatchBitpattern(unittest.TestCase):
+    def setUp(self):
+        random.seed(8492049)
+        pyrtl.reset_working_block()
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(8):
+            sim.step({})
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_pattern_type_or_length_mismatch(self):
+        instr = pyrtl.WireVector(name='instr', bitwidth=8)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, '000100010')
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, '0001000')
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, '0b00010001')
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, 'abcd0000')
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, 0b000100010)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, '')
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, None)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, instr)
+
+    def test_match_bitwidth_does_simulation_correct(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        a = pyrtl.match_bitpattern(r, '00_?0 ?1')
+        o = pyrtl.Output(name='o')
+        o <<= a
+        self.check_trace('o 01010000\nr 036912151821\n')
+
+
 class TestChop(unittest.TestCase):
     def setUp(self):
         random.seed(8492049)
