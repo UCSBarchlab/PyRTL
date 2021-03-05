@@ -166,7 +166,7 @@ def truncate(wirevector_or_integer, bitwidth):
 
 
 def match_bitpattern(w, bitpattern):
-    """ Returns single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern
+    """ Returns a single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern
 
     :param w: The wirevector to be compared to the bitpattern
     :param bitpattern: A string holding the pattern (of bits and wildcards) to match
@@ -183,19 +183,26 @@ def match_bitpattern(w, bitpattern):
         m = match_bitpattern(w, '0101')  # basically the same as w=='0b0101'
         m = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
         m = match_bitpattern(w, 'xx01')  # m be true when last two bits of w are '01'
-        m = match_bitpattern(w, 'xx_0 1')  # spaces/underscors will be ignored, same as line above
+        m = match_bitpattern(w, 'xx_0 1')  # spaces/underscores will be ignored, same as line above
     """
     w = as_wires(w)
     if not isinstance(bitpattern, six.string_types):
         raise PyrtlError('bitpattern must be a string')
     nospace_string = ''.join(bitpattern.replace('_', '').split())
+    if any(c not in '01?xX' for c in nospace_string):
+        raise PyrtlError("bitpattern string contains invalid characters "
+                         "(only '0', '1', and wildcard characters '?', 'x', and 'X' allowed)")
     if len(w) != len(nospace_string):
         raise PyrtlError('bitpattern string different length than wirevector provided')
     lsb_first_string = nospace_string[::-1]  # flip so index 0 is lsb
 
     zero_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '0']
+    all_zeroes_low = ~rtl_any(*zero_bits) if zero_bits else True
+
     one_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '1']
-    return rtl_all(*one_bits) & ~rtl_any(*zero_bits)
+    all_ones_high = rtl_all(*one_bits) if one_bits else True
+
+    return all_ones_high & all_zeroes_low
 
 
 def chop(w, *segment_widths):

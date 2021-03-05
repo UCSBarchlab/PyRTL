@@ -187,6 +187,24 @@ class TestMatchBitpattern(unittest.TestCase):
         o <<= a
         self.check_trace('o 01010000\nr 036912151821\n')
 
+    def test_match_bitwidth_simulates_no_ones_in_pattern(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        a = pyrtl.match_bitpattern(r, '00??00')
+        o = pyrtl.Output(name='o')
+        o <<= a
+        self.check_trace('o 10001000\nr 036912151821\n')
+
+    def test_match_bitwidth_simulates_no_zeroes_in_pattern(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        a = pyrtl.match_bitpattern(r, '?1??1?')
+        o = pyrtl.Output(name='o')
+        o <<= a
+        self.check_trace('o 00000010\nr 036912151821\n')
+
 
 class TestChop(unittest.TestCase):
     def setUp(self):
@@ -1071,3 +1089,7 @@ class TestBundle(unittest.TestCase):
         self.assertEqual(len(y.funct3), 3)
         self.assertEqual(len(y.rd), 5)
         self.assertEqual(len(y.opcode), 7)
+
+
+if __name__ == "__main__":
+    unittest.main()
