@@ -509,21 +509,6 @@ class WireVector(object):
             working_block().add_net(net)
             return concat(extvector, self)
 
-    def as_bundle(self, obj):
-        from .helperfuncs import Bundle
-
-        bundle_bw = Bundle.get_bundle_bitwidth(obj)
-
-        if len(self) != bundle_bw:
-            raise PyrtlError(
-                "Width of wire %s (%d) does not equal width of bundle %s (%d)"
-                % (str(self.name), len(self), str(obj.name), bundle_bw)
-            )
-
-        w = Bundle(obj)
-        w <<= self
-        return w
-
 
 # -----------------------------------------------------------------------
 #  ___     ___  ___       __   ___  __           ___  __  ___  __   __   __
