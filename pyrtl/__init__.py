@@ -38,7 +38,6 @@ from .helperfuncs import rtl_assert
 from .helperfuncs import check_rtl_assertions
 from .helperfuncs import find_loop
 from .helperfuncs import find_and_print_loop
-from .helperfuncs import Bundle
 
 from .corecircuits import and_all_bits
 from .corecircuits import or_all_bits
