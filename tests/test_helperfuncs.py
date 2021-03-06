@@ -113,6 +113,106 @@ class TestNonCoreHelpers(unittest.TestCase):
         self.assertEqual(pyrtl.infer_val_and_bitwidth("5'b10"), (2, 5))
         self.assertEqual(pyrtl.infer_val_and_bitwidth("5'b10"), (2, 5))
         self.assertEqual(pyrtl.infer_val_and_bitwidth("8'B 0110_1100"), (108, 8))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-3, bitwidth=5), (0b11101, 5))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(3, signed=True), (3, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-3, signed=True), (5, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-4, signed=True), (4, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-3, bitwidth=5, signed=True), (29, 5))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(3, bitwidth=2), (3, 2))
+
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(0), (0, 1))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(1), (1, 1))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(2), (2, 2))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(3), (3, 2))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(4), (4, 3))
+
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(0, signed=True), (0, 1))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(1, signed=True), (1, 2))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(2, signed=True), (2, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(3, signed=True), (3, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(4, signed=True), (4, 4))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-1, signed=True), (1, 1))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-2, signed=True), (2, 2))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-3, signed=True), (5, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-4, signed=True), (4, 3))
+        self.assertEqual(pyrtl.infer_val_and_bitwidth(-5, signed=True), (11, 4))
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.infer_val_and_bitwidth(-3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.infer_val_and_bitwidth(True, signed=True)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.infer_val_and_bitwidth(3, bitwidth=2, signed=True)
+
+
+class TestMatchBitpattern(unittest.TestCase):
+    def setUp(self):
+        random.seed(8492049)
+        pyrtl.reset_working_block()
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(8):
+            sim.step({})
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_pattern_type_or_length_mismatch(self):
+        instr = pyrtl.WireVector(name='instr', bitwidth=8)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, '000100010')
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, '0001000')
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, '0b00010001')
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, 'abcd0000')
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, 0b000100010)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, '')
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, None)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.match_bitpattern(instr, instr)
+
+    def test_match_bitwidth_does_simulation_correct(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        a = pyrtl.match_bitpattern(r, '00_?0 ?1')
+        o = pyrtl.Output(name='o')
+        o <<= a
+        self.check_trace('o 01010000\nr 036912151821\n')
+
+    def test_match_bitwidth_simulates_no_ones_in_pattern(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        a = pyrtl.match_bitpattern(r, '00??00')
+        o = pyrtl.Output(name='o')
+        o <<= a
+        self.check_trace('o 10001000\nr 036912151821\n')
+
+    def test_match_bitwidth_simulates_no_zeroes_in_pattern(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        a = pyrtl.match_bitpattern(r, '?1??1?')
+        o = pyrtl.Output(name='o')
+        o <<= a
+        self.check_trace('o 00000010\nr 036912151821\n')
+
+    def test_match_bitwidth_simulates_only_wildcards(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        a = pyrtl.match_bitpattern(r, '??????')
+        o = pyrtl.Output(name='o')
+        o <<= a
+        self.check_trace('o 11111111\nr 036912151821\n')
 
 
 class TestChop(unittest.TestCase):
@@ -201,6 +301,69 @@ class TestBitField_Update(unittest.TestCase):
         # upd_vals = [0x7,0x6,0x7,0x6]
         out = pyrtl.Output(input_width, "out")
         bfu_out = pyrtl.bitfield_update(inp, range_start, range_end, upd)
+        self.assertEqual(len(out), len(bfu_out))  # output should have width of input
+        out <<= bfu_out
+        true_result = [ref(i, range_start, range_end, u) for i, u in zip(inp_vals, upd_vals)]
+        upd_result = utils.sim_and_ret_out(out, [inp, upd], [inp_vals, upd_vals])
+        self.assertEqual(upd_result, true_result)
+
+    def test_bitfield(self):
+        self.bitfield_update_checker(10, 3, 6, 3)
+
+
+class TestBitField_Update_Set(unittest.TestCase):
+    def setUp(self):
+        random.seed(8492049)
+        pyrtl.reset_working_block()
+
+    def check_trace(self, correct_string):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for i in range(8):
+            sim.step({})
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), correct_string)
+
+    def test_field_too_big(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update_set(a, {(1, 2): b})
+
+    def test_field_too_big_truncate(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=3)
+        o = pyrtl.bitfield_update_set(a, {(1, 2): b}, truncating=True)
+
+    def test_no_bits_to_update(self):
+        a = pyrtl.WireVector(name='a', bitwidth=3)
+        b = pyrtl.WireVector(name='b', bitwidth=3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update_set(a, {(1, 1): b}, truncating=True)
+
+    def test_overlapping_ranges(self):
+        a = pyrtl.WireVector(name='a', bitwidth=10)
+        b = pyrtl.WireVector(name='b', bitwidth=10)
+        c = pyrtl.WireVector(name='c', bitwidth=10)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update_set(a, {(1, 4): b, (3, 6): c}, truncating=True)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update_set(a, {(8, 10): b, (-1, None): c}, truncating=True)
+        with self.assertRaises(pyrtl.PyrtlError):
+            o = pyrtl.bitfield_update_set(a, {(None, 3): b, (0, 1): c}, truncating=True)
+
+    def bitfield_update_checker(self, input_width, range_start, range_end,
+                                update_width, test_amt=20):
+        def ref(i, s, e, u):
+            mask = ((1 << (e)) - 1) - ((1 << s) - 1)
+            return (i & ~mask) | ((u << s) & mask)
+        inp, inp_vals = utils.an_input_and_vals(input_width, test_vals=test_amt, name='inp')
+        upd, upd_vals = utils.an_input_and_vals(update_width, test_vals=test_amt, name='upd')
+        # inp_vals = [1,1,0,0]
+        # upd_vals = [0x7,0x6,0x7,0x6]
+        out = pyrtl.Output(input_width, "out")
+        bfu_out = pyrtl.bitfield_update_set(inp, {(range_start, range_end): upd})
         self.assertEqual(len(out), len(bfu_out))  # output should have width of input
         out <<= bfu_out
         true_result = [ref(i, range_start, range_end, u) for i, u in zip(inp_vals, upd_vals)]
@@ -801,3 +964,141 @@ class TestLoopDetection(unittest.TestCase):
         res = reg + in_w
         reg.next <<= res
         self.assert_no_loop()
+
+
+class TestBundle(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_create_bundle_from_tuples(self):
+        rformat = [
+            ("funct7", 7),
+            ("rs2", 5),
+            ("rs1", 5),
+            ("funct3", 3),
+            ("rd", 5),
+            ("opcode", 7),
+        ]
+        self.create_and_check_bundle(rformat)
+
+    def test_create_bundle_from_dict(self):
+        rformat = {
+            "funct7": 7,
+            "rs2": 5,
+            "rs1": 5,
+            "funct3": 3,
+            "rd": 5,
+            "opcode": 7
+        }
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                self.create_and_check_bundle(rformat)
+            self.assertEqual(
+                str(ex.exception),
+                "For Python versions < 3.7, the dictionary used to instantiate "
+                "a Bundle must be explicitly ordered (i.e. OrderedDict)"
+            )
+        else:
+            self.create_and_check_bundle(rformat)
+
+    def test_create_bundle_from_class(self):
+        class RFormat:
+            funct7 = 7
+            rs2 = 5
+            rs1 = 5
+            funct3 = 3
+            rd = 5
+            opcode = 7
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                self.create_and_check_bundle(RFormat)
+            self.assertEqual(
+                str(ex.exception),
+                "Passing a class as an argument to Bundle() is only "
+                "allowed for Python versions >= 3.7"
+            )
+        else:
+            self.create_and_check_bundle(RFormat)
+
+    def test_create_bundle_from_tuples_with_callable(self):
+        a = pyrtl.Input(1, 'a')
+        b = pyrtl.Input(2, 'b')
+
+        bundler = {
+            'a_not': (1, ~a),
+            'b_is_2': (1, b == 2),
+            'sum': (3, a + b)
+        }
+
+        if six.PY2:
+            with self.assertRaises(pyrtl.PyrtlError) as ex:
+                w = pyrtl.helperfuncs.Bundle(bundler)
+            self.assertEqual(
+                str(ex.exception),
+                "For Python versions < 3.7, the dictionary used to instantiate "
+                "a Bundle must be explicitly ordered (i.e. OrderedDict)"
+            )
+        else:
+            w = pyrtl.helperfuncs.Bundle(bundler)
+            self.assertTrue(isinstance(w, pyrtl.WireVector))
+            self.assertTrue(hasattr(w, 'a_not'))
+            self.assertTrue(hasattr(w, 'b_is_2'))
+            self.assertTrue(hasattr(w, 'sum'))
+            self.assertEqual(len(w.a_not), 1)
+            self.assertEqual(len(w.b_is_2), 1)
+            self.assertEqual(len(w.sum), 3)
+
+            pyrtl.probe(w.a_not, 'a_not_out')
+            pyrtl.probe(w.b_is_2, 'b_is_2_out')
+            pyrtl.probe(w.sum, 'sum_out')
+            sim = pyrtl.Simulation()
+            sim.step_multiple({
+                'a': '00001111',
+                'b': '01230123',
+            })
+            output = six.StringIO()
+            sim.tracer.print_trace(output, compact=True)
+            self.assertEqual(output.getvalue(),
+                             '         a 00001111\n'
+                             ' a_not_out 11110000\n'
+                             '         b 01230123\n'
+                             'b_is_2_out 00100010\n'
+                             '   sum_out 01231234\n')
+
+    def create_and_check_bundle(self, bundler):
+        w = pyrtl.helperfuncs.Bundle(bundler)
+        self.assertTrue(isinstance(w, pyrtl.WireVector))
+        self.assertTrue(hasattr(w, 'funct7'))
+        self.assertTrue(hasattr(w, 'rs2'))
+        self.assertTrue(hasattr(w, 'rs1'))
+        self.assertTrue(hasattr(w, 'funct3'))
+        self.assertTrue(hasattr(w, 'rd'))
+        self.assertTrue(hasattr(w, 'opcode'))
+        self.assertEqual(len(w), 32)
+        self.assertEqual(len(w.funct7), 7)
+        self.assertEqual(len(w.rs2), 5)
+        self.assertEqual(len(w.rs1), 5)
+        self.assertEqual(len(w.funct3), 3)
+        self.assertEqual(len(w.rd), 5)
+        self.assertEqual(len(w.opcode), 7)
+
+        r = pyrtl.Register(len(w))
+        r.next <<= w
+        y = r.as_bundle(bundler)
+        self.assertTrue(hasattr(y, 'funct7'))
+        self.assertTrue(hasattr(y, 'rs2'))
+        self.assertTrue(hasattr(y, 'rs1'))
+        self.assertTrue(hasattr(y, 'funct3'))
+        self.assertTrue(hasattr(y, 'rd'))
+        self.assertTrue(hasattr(y, 'opcode'))
+        self.assertEqual(len(y), 32)
+        self.assertEqual(len(y.funct7), 7)
+        self.assertEqual(len(y.rs2), 5)
+        self.assertEqual(len(y.rs1), 5)
+        self.assertEqual(len(y.funct3), 3)
+        self.assertEqual(len(y.rd), 5)
+        self.assertEqual(len(y.opcode), 7)
+
+
+if __name__ == "__main__":
+    unittest.main()

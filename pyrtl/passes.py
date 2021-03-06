@@ -10,7 +10,7 @@ from .core import working_block, set_working_block, _get_debug_mode, LogicNet, P
 from .helperfuncs import _NetCount
 from .corecircuits import (_basic_mult, _basic_add, _basic_sub, _basic_eq,
                            _basic_lt, _basic_gt, _basic_select, concat_list,
-                           as_wires)
+                           as_wires, concat)
 from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
@@ -353,7 +353,7 @@ def _remove_unused_wires(block, keep_inputs=True):
 
 
 def synthesize(update_working_block=True, block=None):
-    """ Lower the design to just single-bit "and", "or", and "not" gates.
+    """ Lower the design to just single-bit "and", "or", "xor", and "not" gates.
 
     :param update_working_block: Boolean specifying if working block update
     :param block: The block you want to synthesize
@@ -366,9 +366,9 @@ def synthesize(update_working_block=True, block=None):
     of w, &, |, ^, and ~ and sequential elements of registers (which are
     one bit as well).  The two exceptions are for inputs/outputs (so that
     we can keep the same interface) which are immediately broken down into
-    the individual bits and memories.  Memories (read and write ports) which
+    the individual bits and memories (read and write ports) which
     require the reassembly and disassembly of the wirevectors immediately
-    before and after.  There arethe only two places where 'c' and 's' ops
+    before and after. These are the only two places where 'c' and 's' ops
     should exist.
 
     The block that results from synthesis is actually of type
@@ -380,7 +380,7 @@ def synthesize(update_working_block=True, block=None):
     """
 
     block_pre = working_block(block)
-    block_pre.sanity_check()  # before going further, make sure that pressynth is valid
+    block_pre.sanity_check()  # before going further, make sure that presynth is valid
     block_in = copy_block(block_pre, update_working_block=False)
 
     block_out = PostSynthBlock()
@@ -422,7 +422,6 @@ def synthesize(update_working_block=True, block=None):
                 wirevector_map[(wirevector, i)] <<= input_vector[i]
         for wirevector in block_in.wirevector_subset(Output):
             output_vector = Output(name=wirevector.name, bitwidth=len(wirevector))
-            # the "reversed" is needed because most significant bit comes first in concat
             output_bits = [wirevector_map[(wirevector, i)]
                            for i in range(len(output_vector))]
             output_vector <<= concat_list(output_bits)
@@ -523,6 +522,7 @@ def _decompose(net, wv_map, mems, block_out):
 def nand_synth(net):
     """
     Synthesizes an Post-Synthesis block into one consisting of nands and inverters in place
+
     :param block: The block to synthesize.
     """
     if net.op in '~nrwcsm@':
@@ -547,6 +547,7 @@ def nand_synth(net):
 def and_inverter_synth(net):
     """
     Transforms a decomposed block into one consisting of ands and inverters in place
+
     :param block: The block to synthesize
     """
     if net.op in '~&rwcsm@':
@@ -566,3 +567,70 @@ def and_inverter_synth(net):
         dest <<= ~(arg(0) & arg(1))
     else:
         raise PyrtlError("Op, '{}' is not supported in and_inv_synth".format(net.op))
+
+
+@transform.all_nets
+def two_way_concat(net):
+    """
+    Transforms a block such that all n-way (n > 2) concats are replaced
+    with series of 2-way concats.
+
+    :param block: The block to transform
+
+    This is useful for preparing the netlist for output to other formats, like
+    FIRRTL or BTOR2, whose 'concatenate' operation ('cat' and 'concat', respectively),
+    only allow two arguments (most-significant wire and least-significant wire).
+    """
+
+    # Turns a netlist of the form (where [] denote nets):
+    #
+    #  w1  w2  w3
+    #   |  |   |
+    #   [concat]
+    #      |
+    #      w4
+    #
+    # into:
+    #
+    #  w1 w2   w3
+    #   | |    |
+    # [concat] |
+    #      |   |
+    #     [concat]
+    #        |
+    #      [wire]
+    #        |
+    #        w4
+    if net.op != 'c':
+        return True
+
+    if len(net.args) <= 2:
+        return True
+
+    w = concat(net.args[0], net.args[1])
+    for a in net.args[2:]:
+        w = concat(w, a)
+
+    dest = net.dests[0]
+    dest <<= w
+
+
+@transform.all_nets
+def one_bit_selects(net):
+    """
+    Converts arbitrary-sliced selects to concatenations of 1-bit selects
+
+    :param block: The block to transform
+
+    This is useful for preparing the netlist for output to other formats, like
+    FIRRTL or BTOR2, whose 'select' operation ('bits' and 'slice', respectively)
+    require contiguous ranges. Python slices are not necessarily contiguous ranges,
+    e.g. the range [::2] (syntactic sugar for slice(None, None, 2)) produces indices
+    0, 2, 4, etc. up to the length of the list on which it is used.
+    """
+    if net.op != 's':
+        return True
+
+    catlist = [net.args[0][i] for i in net.op_param]
+    dest = net.dests[0]
+    dest <<= concat_list(catlist)

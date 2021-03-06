@@ -30,7 +30,11 @@ def net_transform(transform_func, block=None, **kwargs):
 
     :param transform_func:
         Function signature: func(orig_net (logicnet)) -> keep_orig_net (bool)
+    :param block: optional block to work on (defaults to working block)
     :return:
+
+    If transform_func does not return True, the original net is removed from
+    the block's logic set. The net's argument wire/destination wires are not removed.
     """
     block = working_block(block)
     with set_working_block(block, True):
@@ -175,7 +179,9 @@ def clone_wire(old_wire, name=None):
     same name in the same block is not allowed
     """
     if isinstance(old_wire, Const):
-        return Const(old_wire.val, old_wire.bitwidth)
+        if name is None:
+            return Const(old_wire.val, old_wire.bitwidth, name=old_wire.name)
+        return Const(old_wire.val, old_wire.bitwidth, name=name)
     else:
         if name is None:
             return old_wire.__class__(old_wire.bitwidth, name=old_wire.name)

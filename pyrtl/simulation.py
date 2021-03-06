@@ -217,7 +217,7 @@ class Simulation(object):
         # raise the appropriate exceptions
         check_rtl_assertions(self)
 
-    def step_multiple(self, provided_inputs, expected_outputs=None, nsteps=None,
+    def step_multiple(self, provided_inputs={}, expected_outputs={}, nsteps=None,
                       file=sys.stdout, stop_after_first_error=False):
         """ Take the simulation forward N cycles, where N is the number of values
          for each provided input.
@@ -261,9 +261,9 @@ class Simulation(object):
             b <<= a
 
             sim = pyrtl.Simulation()
-            sim.step_multiple({}, steps=3)
+            sim.step_multiple(nsteps=3)
 
-        Using sim.step_multiple({}, 3) simulates 3 cycles, after which we would expect the value
+        Using sim.step_multiple(nsteps=3) simulates 3 cycles, after which we would expect the value
         of 'b' to be 2.
 
         """
@@ -291,7 +291,7 @@ class Simulation(object):
                 "must supply a value for each provided wire "
                 "for each step of simulation")
 
-        if expected_outputs and list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
+        if list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
             raise PyrtlError(
                 "any expected outputs must have a supplied value "
                 "each step of simulation")
@@ -300,12 +300,11 @@ class Simulation(object):
         for i in range(nsteps):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
-            if expected_outputs is not None:
-                for expvar in expected_outputs.keys():
-                    expected = int(expected_outputs[expvar][i])
-                    actual = self.inspect(expvar)
-                    if expected != actual:
-                        failed.append((i, expvar, expected, actual))
+            for expvar in expected_outputs.keys():
+                expected = int(expected_outputs[expvar][i])
+                actual = self.inspect(expvar)
+                if expected != actual:
+                    failed.append((i, expvar, expected, actual))
 
             if failed and stop_after_first_error:
                 break
@@ -425,7 +424,7 @@ class Simulation(object):
 
 
 class FastSimulation(object):
-    """A class for running JIT implementations of blocks.
+    """A class for running JIT-to-python implementations of blocks.
     """
 
     # Dev Notes:
@@ -549,7 +548,7 @@ class FastSimulation(object):
         # check the rtl assertions
         check_rtl_assertions(self)
 
-    def step_multiple(self, provided_inputs, expected_outputs=None, nsteps=None,
+    def step_multiple(self, provided_inputs={}, expected_outputs={}, nsteps=None,
                       file=sys.stdout, stop_after_first_error=False):
         """ Take the simulation forward N cycles, where N is the number of values
          for each provided input.
@@ -593,9 +592,9 @@ class FastSimulation(object):
             b <<= a
 
             sim = pyrtl.Simulation()
-            sim.step_multiple({}, steps=3)
+            sim.step_multiple(nsteps=3)
 
-        Using sim.step_multiple({}, 3) simulates 3 cycles, after which we would expect the value
+        Using sim.step_multiple(nsteps=3) simulates 3 cycles, after which we would expect the value
         of 'b' to be 2.
 
         """
@@ -623,7 +622,7 @@ class FastSimulation(object):
                 "must supply a value for each provided wire "
                 "for each step of simulation")
 
-        if expected_outputs and list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
+        if list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
             raise PyrtlError(
                 "any expected outputs must have a supplied value "
                 "each step of simulation")
@@ -632,12 +631,11 @@ class FastSimulation(object):
         for i in range(nsteps):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
-            if expected_outputs is not None:
-                for expvar in expected_outputs.keys():
-                    expected = int(expected_outputs[expvar][i])
-                    actual = self.inspect(expvar)
-                    if expected != actual:
-                        failed.append((i, expvar, expected, actual))
+            for expvar in expected_outputs.keys():
+                expected = int(expected_outputs[expvar][i])
+                actual = self.inspect(expvar)
+                if expected != actual:
+                    failed.append((i, expvar, expected, actual))
 
             if failed and stop_after_first_error:
                 break
@@ -712,7 +710,7 @@ class FastSimulation(object):
         if isinstance(wire, (Input, Register)):
             return 'd[' + repr(wire.name) + ']'  # passed in
         elif isinstance(wire, Const):
-            return str(wire.val)  # hardcoded
+            return str(int(wire.val))  # hardcoded
         else:
             return self._varname(wire)
 
@@ -753,7 +751,7 @@ class FastSimulation(object):
 
     def _compiled(self):
         """Return a string of the self.block compiled to a block of
-         code that can be execed to get a function to execute"""
+         code that can be executed to get a function to execute"""
         # Dev Notes:
         # Because of fast locals in functions in both CPython and PyPy, getting a
         # function to execute makes the code a few times faster than
@@ -851,9 +849,9 @@ class FastSimulation(object):
         if self.tracer is not None:
             for wire_name in self.tracer.trace:
                 wire = self.block.wirevector_by_name[wire_name]
-                if not isinstance(wire, (Input, Const, Register, Output)):
-                    v_wire_name = self._varname(wire)
-                    prog.append('    outs["%s"] = %s' % (wire_name, v_wire_name))
+                if not isinstance(wire, (Input, Register, Output)):
+                    value = int(wire.val) if isinstance(wire, Const) else self._varname(wire)
+                    prog.append('    outs["%s"] = %s' % (wire_name, value))
 
         prog.append("    return regs, outs, mem_ws")
         return '\n'.join(prog)
@@ -973,8 +971,8 @@ class TraceStorage(collections.Mapping):
                 DeprecationWarning)
             key = key.name
         if key not in self.__data:
-            raise PyrtlError('cannot find "%s" in trace -- if using CompiledSim you make be '
-                             'attempting to access internal states but only inputs/output are '
+            raise PyrtlError('Cannot find "%s" in trace -- if using CompiledSim, you may be '
+                             'attempting to access internal states but only inputs/outputs are '
                              'available.' % key)
         return self.__data[key]
 
@@ -986,13 +984,15 @@ class SimulationTrace(object):
         """
         Creates a new Simulation Trace
 
-        :param wires_to_track: The wires that the tracer should track
-        :param block:
+        :param wires_to_track: The wires that the tracer should track.
+            If unspecified, will track all explicitly-named wires.
+            If set to 'all', will track all wires, including internal wires.
+        :param block: Block containing logic to trace
         """
         self.block = working_block(block)
 
         def is_internal_name(name):
-            return (name.startswith('tmp') or name.startswith('const')
+            return (name.startswith('tmp') or name.startswith('const_')
                     # or name.startswith('synth_')
                     or name.endswith("'"))
 
@@ -1129,7 +1129,7 @@ class SimulationTrace(object):
 
         """ Render the trace to a file using unicode and ASCII escape sequences.
 
-        :param trace_list: A list of signals to be output in the specified order.
+        :param trace_list: A list of signal names to be output in the specified order.
         :param file: The place to write output, default to stdout.
         :param render_cls: A class that translates traces into output bytes.
         :param symbol_len: The "length" of each rendered cycle in characters.
@@ -1192,6 +1192,12 @@ class SimulationTrace(object):
                 'Access to trace by WireVector instead of name is deprecated.',
                 DeprecationWarning)
             trace_list = [getattr(x, 'name', x) for x in trace_list]
+
+        if not trace_list:
+            raise PyrtlError(
+                "Empty trace list. This may have occurred because "
+                "untraceable wires were removed prior to simulation, "
+                "if a CompiledSimulation was used.")
 
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map

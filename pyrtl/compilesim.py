@@ -54,14 +54,12 @@ class DllMemInspector(collections.Mapping):
 class CompiledSimulation(object):
     """Simulate a block, compiling to C for efficiency.
 
-    THIS IS AN EXPERIMENTAL SIMULATION CLASS.
-    NO SUPPORT WILL BE GIVEN TO PEOPLE WHO CANNOT GET IT TO RUN.
-    EXPECT THE API TO CHANGE IN THE FUTURE.
-
     This module provides significant speed improvements over FastSimulation,
     at the cost of somewhat longer setup time.
     Generally this will do better than FastSimulation for simulations requiring over 1000 steps.
     It is not built to be a debugging tool, though it may help with debugging.
+    Note that only Input and Output wires can be traced using CompiledSimulation.  This code
+    is still experimental, but has been used on designs of significant scale to good effect.
 
     In order to use this, you need:
         - A 64-bit processor
@@ -120,7 +118,7 @@ class CompiledSimulation(object):
         """
         self.run([inputs])
 
-    def step_multiple(self, provided_inputs, expected_outputs=None, nsteps=None,
+    def step_multiple(self, provided_inputs={}, expected_outputs={}, nsteps=None,
                       file=sys.stdout, stop_after_first_error=False):
         """ Take the simulation forward N cycles, where N is the number of values
          for each provided input.
@@ -164,10 +162,10 @@ class CompiledSimulation(object):
             b <<= a
 
             sim = pyrtl.Simulation()
-            sim.step_multiple({}, steps=3)
+            sim.step_multiple(nsteps=3)
 
-        Using sim.step_multiple(3) simulates 3 cycles, after which we would expect the value of 'b'
-        to be 2.
+        Using sim.step_multiple(nsteps=3) simulates 3 cycles, after which we would expect the value
+        of 'b' to be 2.
 
         """
 
@@ -194,7 +192,7 @@ class CompiledSimulation(object):
                 "must supply a value for each provided wire "
                 "for each step of simulation")
 
-        if expected_outputs and list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
+        if list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
             raise PyrtlError(
                 "any expected outputs must have a supplied value "
                 "each step of simulation")
@@ -203,12 +201,11 @@ class CompiledSimulation(object):
         for i in range(nsteps):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
-            if expected_outputs is not None:
-                for expvar in expected_outputs.keys():
-                    expected = int(expected_outputs[expvar][i])
-                    actual = self.inspect(expvar)
-                    if expected != actual:
-                        failed.append((i, expvar, expected, actual))
+            for expvar in expected_outputs.keys():
+                expected = int(expected_outputs[expvar][i])
+                actual = self.inspect(expvar)
+                if expected != actual:
+                    failed.append((i, expvar, expected, actual))
 
             if failed and stop_after_first_error:
                 break
@@ -234,8 +231,8 @@ class CompiledSimulation(object):
     def run(self, inputs):
         """Run many steps of the simulation.
 
-        The argument is a list of input mappings for each step,
-        and its length is the number of steps to be executed.
+        :param inputs: A list of input mappings for each step;
+          its length is the number of steps to be executed.
         """
         steps = len(inputs)
         # create i/o arrays of the appropriate length

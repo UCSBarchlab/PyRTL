@@ -169,95 +169,6 @@ class TestWirevectorSlicing(unittest.TestCase):
         self.invalid_empty_slice(8, slice(-1, 1, 2))
 
 
-class TestWireAsBundle(unittest.TestCase):
-    def setUp(self):
-        pyrtl.reset_working_block()
-
-    def test_create_bundle_from_tuples(self):
-        rformat = [
-            ("funct7", 7),
-            ("rs2", 5),
-            ("rs1", 5),
-            ("funct3", 3),
-            ("rd", 5),
-            ("opcode", 7),
-        ]
-        self.create_and_check_bundle(rformat)
-
-    def test_create_bundle_from_dict(self):
-        rformat = {
-            "funct7": 7,
-            "rs2": 5,
-            "rs1": 5,
-            "funct3": 3,
-            "rd": 5,
-            "opcode": 7
-        }
-        if six.PY2:
-            with self.assertRaises(pyrtl.PyrtlError) as ex:
-                self.create_and_check_bundle(rformat)
-            self.assertEqual(
-                str(ex.exception),
-                "For Python versions < 3.7, the dictionary used to instantiate "
-                "a Bundle must be explicitly ordered (i.e. OrderedDict)"
-            )
-        else:
-            self.create_and_check_bundle(rformat)
-
-    def test_create_bundle_from_class(self):
-        class RFormat:
-            funct7 = 7
-            rs2 = 5
-            rs1 = 5
-            funct3 = 3
-            rd = 5
-            opcode = 7
-        if six.PY2:
-            with self.assertRaises(pyrtl.PyrtlError) as ex:
-                self.create_and_check_bundle(RFormat)
-            self.assertEqual(
-                str(ex.exception),
-                "Passing a class as an argument to Bundle() is only "
-                "allowed for Python versions >= 3.7"
-            )
-        else:
-            self.create_and_check_bundle(RFormat)
-
-    def create_and_check_bundle(self, bundler):
-        w = pyrtl.Bundle(bundler)
-        assert isinstance(w, pyrtl.WireVector)
-        assert hasattr(w, 'funct7')
-        assert hasattr(w, 'rs2')
-        assert hasattr(w, 'rs1')
-        assert hasattr(w, 'funct3')
-        assert hasattr(w, 'rd')
-        assert hasattr(w, 'opcode')
-        assert len(w) == 32
-        assert len(w.funct7) == 7
-        assert len(w.rs2) == 5
-        assert len(w.rs1) == 5
-        assert len(w.funct3) == 3
-        assert len(w.rd) == 5
-        assert len(w.opcode) == 7
-
-        r = pyrtl.Register(len(w))
-        r.next <<= w
-        y = r.as_bundle(bundler)
-        assert hasattr(y, 'funct7')
-        assert hasattr(y, 'rs2')
-        assert hasattr(y, 'rs1')
-        assert hasattr(y, 'funct3')
-        assert hasattr(y, 'rd')
-        assert hasattr(y, 'opcode')
-        assert len(y) == 32
-        assert len(y.funct7) == 7
-        assert len(y.rs2) == 5
-        assert len(y.rs1) == 5
-        assert len(y.funct3) == 3
-        assert len(y.rd) == 5
-        assert len(y.opcode) == 7
-
-
 class TestInput(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -324,11 +235,23 @@ class TestConst(unittest.TestCase):
         self.check_const(1, 1, 1)
         self.check_const(5, 5, 3)
         self.check_const(1, 1, 5, bitwidth=5)
+        self.check_const(0, 0b0, 1)
+        self.check_const(0, 0b0, 1, signed=True)
+        self.check_const(1, 0b01, 2, signed=True)
+        self.check_const(2, 0b010, 3, signed=True)
+        self.check_const(3, 0b011, 3, signed=True)
+        self.check_const(4, 0b0100, 4, signed=True)
+        self.check_const(5, 0b0101, 4, signed=True)
 
     def test_neg_integers(self):
         self.check_const(-1, 0b11111, 5, bitwidth=5)
         self.check_const(-2, 0b110, 3, bitwidth=3)
         self.check_const(-5, 0b1011, 4, bitwidth=4)
+        self.check_const(-1, 0b1, 1, signed=True)
+        self.check_const(-2, 0b10, 2, signed=True)
+        self.check_const(-3, 0b101, 3, signed=True)
+        self.check_const(-4, 0b100, 3, signed=True)
+        self.check_const(-5, 0b1011, 4, signed=True)
 
     def test_too_big(self):
         self.assert_bad_const(5, 2)
@@ -392,6 +315,18 @@ class TestConst(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             c = pyrtl.Const(4)
             c <<= 3
+
+    def test_named(self):
+        block = pyrtl.working_block()
+        c = pyrtl.Const(20, name="archid")
+        self.assertIn("archid", block.wirevector_by_name)
+        self.assertIn(c, block.wirevector_set)
+        self.assertEqual(c.val, 20)
+        c.name = "vendorid"
+        self.assertNotIn("archid", block.wirevector_by_name)
+        self.assertIn("vendorid", block.wirevector_by_name)
+        self.assertIn(c, block.wirevector_set)
+        self.assertEqual(c.val, 20)
 
     def check_const(self, val_in, expected_val, expected_bitwidth, **kargs):
         c = pyrtl.Const(val_in, **kargs)

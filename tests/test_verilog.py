@@ -4,8 +4,33 @@ import io
 import pyrtl
 from pyrtl import verilog
 
+verilog_output_small = """\
+// Generated automatically via PyRTL
+// As one initial test of synthesis, map to FPGA with:
+//   yosys -p "synth_xilinx -top toplevel" thisfile.v
 
-verilog_output = """\
+module toplevel(clk, o);
+    input clk;
+    output[12:0] o;
+
+    wire[3:0] const_0_12;
+    wire[2:0] const_1_3;
+    wire[5:0] k;
+    wire[12:0] tmp0;
+
+    // Combinational
+    assign const_0_12 = 12;
+    assign const_1_3 = 3;
+    assign k = 38;
+    assign o = tmp0;
+    assign tmp0 = {const_0_12, const_1_3, k};
+
+endmodule
+
+"""
+
+
+verilog_output_large = """\
 // Generated automatically via PyRTL
 // As one initial test of synthesis, map to FPGA with:
 //   yosys -p "synth_xilinx -top toplevel" thisfile.v
@@ -596,6 +621,11 @@ class TestVerilogNames(unittest.TestCase):
 class TestVerilog(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
+        # To compare textual consistency, need to make
+        # sure we're starting at the same index for all
+        # automatically created names.
+        pyrtl.wire._reset_wire_indexers()
+        pyrtl.memory._reset_memory_indexer()
 
     def test_romblock_does_not_throw_error(self):
         from pyrtl.corecircuits import _basic_add
@@ -609,16 +639,19 @@ class TestVerilog(unittest.TestCase):
         with io.StringIO() as testbuffer:
             pyrtl.output_to_verilog(testbuffer)
 
-    def test_textual_consistency(self):
-        from pyrtl.wire import _reset_wire_indexers
-        from pyrtl.memory import _reset_memory_indexer
+    def test_textual_consistency_small(self):
+        i = pyrtl.Const(0b1100)
+        j = pyrtl.Const(0b011, bitwidth=3)
+        k = pyrtl.Const(0b100110, name='k')
+        o = pyrtl.Output(13, 'o')
+        o <<= pyrtl.concat(i, j, k)
 
-        # To compare textual consistency, need to make
-        # sure we're starting at the same index for all
-        # automatically created names.
-        _reset_wire_indexers()
-        _reset_memory_indexer()
+        buffer = io.StringIO()
+        pyrtl.output_to_verilog(buffer)
 
+        self.assertEqual(buffer.getvalue(), verilog_output_small)
+
+    def test_textual_consistency_large(self):
         # The following is a non-sensical program created to test
         # that the Verilog that is created is deterministic
         # in the order in which it presents the wire, register,
@@ -646,7 +679,7 @@ class TestVerilog(unittest.TestCase):
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer)
 
-        self.assertEqual(buffer.getvalue(), verilog_output)
+        self.assertEqual(buffer.getvalue(), verilog_output_large)
 
 
 if __name__ == "__main__":

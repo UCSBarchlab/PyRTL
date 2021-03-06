@@ -24,6 +24,23 @@ class NetWireNumTestCases(unittest.TestCase):
         self.assertEquals(len(block.wirevector_subset(wiretype)), num)
 
 
+class WireMemoryNameTestCases(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def name_wires(self, names, block=None):
+        block = pyrtl.working_block()
+        names = set(names.split(' '))
+        for n in names:
+            self.assertIn(n, block.wirevector_by_name)
+
+    def name_memories(self, names, block=None):
+        block = pyrtl.working_block()
+        names = set(names.split(' '))
+        for n in names:
+            self.assertIn(n, block.memblock_by_name)
+
+
 def insert_random_inversions(rate=0.5):
     """
     an example transform that can be used for testing
@@ -57,7 +74,7 @@ class TestWireTransform(NetWireNumTestCases):
         self.assertIsNot(new_and_net.dests[0], o)
 
 
-class TestCopyBlock(NetWireNumTestCases):
+class TestCopyBlock(NetWireNumTestCases, WireMemoryNameTestCases):
     def num_memories(self, mems_expected, block):
         memories = set()
         for net in block.logic_subset('m@'):
@@ -70,9 +87,9 @@ class TestCopyBlock(NetWireNumTestCases):
         self.assert_num_wires(0, block)
 
     def test_block(self):
-        a = pyrtl.Const(23)
-        b = pyrtl.Input(5)
-        o = pyrtl.Output(5)
+        a = pyrtl.Const(23, name='a')
+        b = pyrtl.Input(5, name='b')
+        o = pyrtl.Output(5, name='o')
         o <<= ~a & b
 
         old_block = pyrtl.working_block()
@@ -80,17 +97,21 @@ class TestCopyBlock(NetWireNumTestCases):
         self.assert_num_wires(5, old_block)
         self.assert_num_net(3, old_block)
 
+        self.name_wires('a b o', old_block)
+
         new_block = transform.copy_block()
         new_block.sanity_check()
         self.assert_num_wires(5, new_block)
-        self.assert_num_net(3, old_block)
+        self.assert_num_net(3, new_block)
+
+        self.name_wires('a b o', new_block)
 
     def test_copy_mem(self):
         ins = [pyrtl.Input(5) for i in range(4)]
         out = pyrtl.Output(5)
 
-        mem1 = pyrtl.MemBlock(5, 5)
-        mem2 = pyrtl.MemBlock(5, 5)
+        mem1 = pyrtl.MemBlock(5, 5, name='mem1')
+        mem2 = pyrtl.MemBlock(5, 5, name='mem2')
 
         mem1_o1 = mem1[ins[0]]
         mem1[ins[1]] <<= ins[2]
@@ -104,11 +125,15 @@ class TestCopyBlock(NetWireNumTestCases):
         self.num_net_of_type('&', 1, old_block)
         self.num_memories(2, old_block)
 
+        self.name_memories('mem1 mem2', old_block)
+
         new_block = transform.copy_block()
         self.num_net_of_type('m', 2, new_block)
         self.num_net_of_type('@', 1, new_block)
         self.num_net_of_type('&', 1, new_block)
         self.num_memories(2, new_block)
+
+        self.name_memories('mem1 mem2', new_block)
 
 
 class TestFastWireReplace(unittest.TestCase):
@@ -191,3 +216,6 @@ def test_probe(self, probe):
     transform_examples.probe_wire_if(probe_cond)
     probe.assert_called_once_with(test_wire)
 """
+
+if __name__ == "__main__":
+    unittest.main()

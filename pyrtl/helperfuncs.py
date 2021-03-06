@@ -7,11 +7,13 @@ import collections
 import math
 import numbers
 import six
+import sys
+from functools import reduce
 
 from .core import working_block, _NameIndexer, _get_debug_mode
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
-from .corecircuits import as_wires
+from .corecircuits import as_wires, rtl_all, rtl_any
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -161,6 +163,46 @@ def truncate(wirevector_or_integer, bitwidth):
         return x.truncate(bitwidth)
     except AttributeError:
         return x & ((1 << bitwidth) - 1)
+
+
+def match_bitpattern(w, bitpattern):
+    """ Returns a single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern
+
+    :param w: The wirevector to be compared to the bitpattern
+    :param bitpattern: A string holding the pattern (of bits and wildcards) to match
+    :return: A 1-bit wirevector carrying the result of the comparison
+
+    This function will compare a multi-bit wirevector to a specified pattern of bits, where some
+    of the pattern can be "wildcard" bits.  If any of the "1" or "0" values specified in the
+    bitpattern fail to match the wirevector during execution, a "0" will be produced, otherwise
+    the value carried on the wire will be "1".  Wildcard characters must be one of '?', 'x', 'X'.
+    The string must have length equal to the wirevector specified, although whitespace and
+    underscore characters will be ignored and can be used for pattern readability.
+
+    Examples: ::
+        m = match_bitpattern(w, '0101')  # basically the same as w=='0b0101'
+        m = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
+        m = match_bitpattern(w, 'xx01')  # m be true when last two bits of w are '01'
+        m = match_bitpattern(w, 'xx_0 1')  # spaces/underscores will be ignored, same as line above
+    """
+    w = as_wires(w)
+    if not isinstance(bitpattern, six.string_types):
+        raise PyrtlError('bitpattern must be a string')
+    nospace_string = ''.join(bitpattern.replace('_', '').split())
+    if any(c not in '01?xX' for c in nospace_string):
+        raise PyrtlError("bitpattern string contains invalid characters "
+                         "(only '0', '1', and wildcard characters '?', 'x', and 'X' allowed)")
+    if len(w) != len(nospace_string):
+        raise PyrtlError('bitpattern string different length than wirevector provided')
+    lsb_first_string = nospace_string[::-1]  # flip so index 0 is lsb
+
+    zero_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '0']
+    all_zeroes_low = ~rtl_any(*zero_bits) if zero_bits else True
+
+    one_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '1']
+    all_ones_high = rtl_all(*one_bits) if one_bits else True
+
+    return all_ones_high & all_zeroes_low
 
 
 def chop(w, *segment_widths):
@@ -327,7 +369,7 @@ def formatted_str_to_val(data, format, enum_set=None):
 
     :param data: a string holding the value to convert
     :param format: a string holding a format which will be used to convert the data string
-    :param enum_set: an iterable of enums which are used as part of the converstion process
+    :param enum_set: an iterable of enums which are used as part of the conversion process
 
     Given a string (not a wirevector!) covert that to an unsigned integer ready for input
     to the simulation enviornment.  This helps deal with signed/unsigned numbers (simulation
@@ -426,21 +468,32 @@ def val_to_formatted_str(val, format, enum_set=None):
 ValueBitwidthTuple = collections.namedtuple('ValueBitwidthTuple', 'value bitwidth')
 
 
-def infer_val_and_bitwidth(rawinput, bitwidth=None):
+def infer_val_and_bitwidth(rawinput, bitwidth=None, signed=False):
     """ Return a tuple (value, bitwidth) infered from the specified input.
 
     :param rawinput: a bool, int, or verilog-style string constant
     :param bitwidth: an integer bitwidth or (by default) None
+    :param signed: a bool (by default set False) to include bits for proper twos complement
     :returns tuple of integers (value, bitwidth)
 
     Given a boolean, integer, or verilog-style string constant, this function returns a
     tuple of two integers (value, bitwidth) which are infered from the specified rawinput.
     The tuple returned is, in fact, a named tuple with names .value and .bitwidth for feilds
-    0 and 1 respectively.  Error checks are performed that determine if the bitwidths specified
-    are sufficient and appropriate for the values specified. Examples can be found below ::
+    0 and 1 respectively.  If signed is set to true, bits will be included to ensure a proper
+    two's complement representation is possible, otherwise it is assume all bits can be used
+    for standard unsigned representation.  Error checks are performed that determine if the
+    bitwidths specified are sufficient and appropriate for the values specified.
+    Examples can be found below ::
 
         infer_val_and_bitwidth(2, bitwidth=5) == (2, 5)
         infer_val_and_bitwidth(3) == (3, 2)  # bitwidth infered from value
+        infer_val_and_bitwidth(3, signed=True) == (3, 3)  # need a bit for the leading zero
+        infer_val_and_bitwidth(-3, signed=True) == (5, 3)  # 5 = -3 & 0b111 = ..111101 & 0b111
+        infer_val_and_bitwidth(-4, signed=True) == (4, 3)  # 4 = -4 & 0b111 = ..111100 & 0b111
+        infer_val_and_bitwidth(-3, bitwidth=5, signed=True) == (29, 5)
+        infer_val_and_bitwidth(-3) ==> Error  # negative numbers require bitwidth or signed=True
+        infer_val_and_bitwidth(3, bitwidth=2) == (3, 2)
+        infer_val_and_bitwidth(3, bitwidth=2, signed=True) ==> Error  # need space for sign bit
         infer_val_and_bitwidth(True) == (1, 1)
         infer_val_and_bitwidth(False) == (0, 1)
         infer_val_and_bitwidth("5'd12") == (12, 5)
@@ -451,17 +504,19 @@ def infer_val_and_bitwidth(rawinput, bitwidth=None):
     """
 
     if isinstance(rawinput, bool):
-        return _convert_bool(rawinput, bitwidth)
+        return _convert_bool(rawinput, bitwidth, signed)
     elif isinstance(rawinput, numbers.Integral):
-        return _convert_int(rawinput, bitwidth)
+        return _convert_int(rawinput, bitwidth, signed)
     elif isinstance(rawinput, six.string_types):
-        return _convert_verilog_str(rawinput, bitwidth)
+        return _convert_verilog_str(rawinput, bitwidth, signed)
     else:
         raise PyrtlError('error, the value provided is of an improper type, "%s"'
                          'proper types are bool, int, and string' % type(rawinput))
 
 
-def _convert_bool(bool_val, bitwidth=None):
+def _convert_bool(bool_val, bitwidth=None, signed=False):
+    if signed:
+        raise PyrtlError('error, booleans cannot be signed (covert to int first)')
     num = int(bool_val)
     if bitwidth is None:
         bitwidth = 1
@@ -470,23 +525,37 @@ def _convert_bool(bool_val, bitwidth=None):
     return ValueBitwidthTuple(num, bitwidth)
 
 
-def _convert_int(val, bitwidth=None):
+def _convert_int(val, bitwidth=None, signed=False):
     if val >= 0:
         num = val
         # infer bitwidth if it is not specified explicitly
+        min_bitwidth = len(bin(num)) - 2  # the -2 for the "0b" at the start of the string
+        if signed and val != 0:
+            min_bitwidth += 1  # extra bit needed for the zero
+
         if bitwidth is None:
-            bitwidth = len(bin(num)) - 2  # the -2 for the "0b" at the start of the string
+            bitwidth = min_bitwidth
+        elif bitwidth < min_bitwidth:
+            raise PyrtlError('bitwidth specified is insufficient to represent constant')
+
     else:  # val is negative
+        if not signed and bitwidth is None:
+            raise PyrtlError('negative constants require either signed=True or specified bitwidth')
+
         if bitwidth is None:
-            raise PyrtlError(
-                'negative Const values must have bitwidth declared explicitly')
+            bitwidth = 1 if val == -1 else len(bin(~val)) - 1
+
         if (val >> bitwidth - 1) != -1:
             raise PyrtlError('insufficient bits for negative number')
+
         num = val & ((1 << bitwidth) - 1)  # result is a twos complement value
     return ValueBitwidthTuple(num, bitwidth)
 
 
-def _convert_verilog_str(val, bitwidth=None):
+def _convert_verilog_str(val, bitwidth=None, signed=False):
+    if signed:
+        raise PyrtlError('error, "signed" option with verilog-style string constants not supported')
+
     bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16, 'x': 16}
     passed_bitwidth = bitwidth
 
@@ -520,6 +589,10 @@ def _convert_verilog_str(val, bitwidth=None):
                          ' the bitwidth infered from the verilog style specification'
                          ' (if bitwidth=None is used, pyrtl will determine the bitwidth from the'
                          ' verilog-style constant specification)')
+
+    if num >> bitwidth != 0:
+        raise PyrtlError('specified bitwidth %d for verilog constant insufficient to store value %d'
+                         % (bitwidth, num))
 
     return ValueBitwidthTuple(num, bitwidth)
 
@@ -665,10 +738,10 @@ def _currently_in_jupyter_notebook():
 def _print_netlist_latex(netlist):
     """ Print each net in netlist in a Latex array """
     from IPython.display import display, Latex  # pylint: disable=import-error
-    out = r'\n\\begin{array}{ \| c \| c \| l \| }\n'
-    out += r'\n\hline\n'
-    out += r'\\hline\n'.join(str(n) for n in netlist)
-    out += r'\hline\n\\end{array}\n'
+    out = '\n\\begin{array}{ \\| c \\| c \\| l \\| }\n'
+    out += '\n\\hline\n'
+    out += '\\hline\n'.join(str(n) for n in netlist)
+    out += '\\hline\n\\end{array}\n'
     display(Latex(out))
 
 
@@ -684,7 +757,7 @@ class _NetCount(object):
 
     def shrank(self, block=None, percent_diff=0, abs_diff=1):
         """
-        Returns whether a block has less nets than before
+        Returns whether a block has fewer nets than before
 
         :param Block block: block to check (if changed)
         :param Number percent_diff: percentage difference threshold
@@ -704,3 +777,164 @@ class _NetCount(object):
         return less_nets
 
     shrinking = shrank
+
+
+class Bundle(WireVector):
+    """ A WireVector whose individual bits are named.
+
+    The initializer takes as its first argument the name of a class whose
+    attributes will be interpreted as the names and lengths of fields in a wire.
+    The order in which the attributes are defined is important; the first class
+    attribute is the MSB of the wire, and the last class attribute of the list is the LSB.
+
+    For example, say there is a wire that represents an instruction. If we wanted to name
+    certain segments of bits a certain way, we would create a class with the names and lengths
+    of these fields as attributes follows:
+
+        class RFormat:
+            funct7 = 7
+            rs2 = 5
+            rs1 = 5
+            funct3 = 3
+            rd = 5
+            opcode = 7
+
+    Then use it as the argument to Bundle to get back an object whose fields are actually
+    wirevectors, accessible by field name:
+
+        w = pyrtl.Bundle(RFormat)
+        w <<= 0b00000100110001010000010110010011
+        assert sim.inspect(w.funct7) == 0b0000010
+        assert sim.inspect(w.rs2) == 0b01100
+        assert sim.inspect(w.rs1) == 0b01010
+        assert sim.inspect(w.funct3) == 0b000
+        assert sim.inspect(w.rd) == 0b01011
+        assert sim.inspect(w.opcode) == 0b0010011
+
+    It can be used anywhere a normal wire can be used:
+
+        r = pyrtl.Register(len(w), "r")
+        r.next <<= w
+        # ...after stepping a few times...
+        assert sim.inspect(r) == 0b00000100110001010000010110010011
+
+    And you can interpret other wires as instances of the bundled class, by calling
+    `as_bundle`. This does lightweight checks such as making sure that the bundled class
+    and the wire you call `as_bundle` on has the same length so that the bits can map properly.
+    This allows you to access portions of the wire via fields.
+
+        f7 = r.as_bundle(RFormat).funct7
+        assert sim.inspect(f7) == 0b0000010
+
+        y = r.as_bundle(RFormat)
+        assert sim.inspect(y.funct7) == 0b0000010
+        assert sim.inspect(y.rs2) == 0b01100
+        assert sim.inspect(y.rs1) == 0b01010
+        assert sim.inspect(y.funct3) == 0b000
+        assert sim.inspect(y.rd) == 0b01011
+        assert sim.inspect(y.opcode) == 0b0010011
+
+    You can also pass in a list of (field, width) pairs:
+
+        rformat = [("funct7", 7), ("rs2", 5), ("rs1", 5), ("funct3", 3), ("rd", 5), ("opcode", 7)]
+        w = pyrtl.Bundle(rformat)
+
+    or an (ordered) dictionary (OrderedDict is the default for Python >= 3.7):
+
+        rformat = {"funct7": 7, "rs2": 5, "rs1": 5, "funct3": 3, "rd": 5, "opcode": 7}
+        w = pyrtl.Bundle(rformat)
+
+    instead of a class to form a Bundle. In all forms, order is important.
+
+    In all cases, the 'width' member may actually be a tuple of the form (n, w),
+    where n is the actual width and f is a wirevector or function returning
+    a wirevector that will be used to define the wire. Otherwise, 'width' should
+    just be an integer and will be interpreted as the literal width.
+
+    Finally, you can build the Bundle from wires directly (rather than just interpreting
+    an existing wire with named fields like the above examples) by passing in the wire
+    corresponding to each field. This is useful if you want to return a group of wires from a
+    function, each with meaningful names:
+
+        def timer(cycles, reset):
+            _, bw = pyrtl.infer_val_and_bitwidth(cycles)
+            time = pyrtl.Register(bw)
+            with pyrtl.conditional_assignment:
+                with reset:
+                    time.next |= 0
+                with time == (cycles - 1):
+                    time.next |= 0
+                with pyrtl.otherwise:
+                    time.next |= time + 1
+
+            out = pyrtl.Bundle({
+                'time': (bw, time),
+                'elapsed': (1, time == (cycles - 1)),
+            })
+            return out
+
+        reset = pyrtl.Input(1, 'reset')
+        out = timer(5, reset)
+        pyrtl.probe(out.elapsed, 'elapsed')
+    """
+    @staticmethod
+    def _get_fields(obj):
+        if isinstance(obj, list) and all(map(lambda t: isinstance(t, tuple), obj)):
+            # Passed in a list of tuples (i.e. (field, width) pairs), in order from MSB to LSB
+            fields = obj
+        elif isinstance(obj, dict):
+            from collections import OrderedDict
+            if (not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7)
+               and (not isinstance(obj, OrderedDict))):
+                raise PyrtlError("For Python versions < 3.7, the dictionary used to instantiate "
+                                 "a Bundle must be explicitly ordered (i.e. OrderedDict)")
+            # Assume dictionary stores (field, width) pairs
+            fields = list(obj.items())
+        elif isinstance(obj, six.class_types):
+            if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7):
+                raise PyrtlError("Passing a class as an argument to Bundle() "
+                                 "is only allowed for Python versions >= 3.7")
+            # Let's assume 'obj' is a **class** name, so treat it as if it has field names.
+            # As of Python 3.7, dictionaries preserve insertion order, so a class's attributes
+            # (in __dict__) will being ordered as well. This relies on that fact because the
+            # fields are defined in MSB to LSB order in the class.
+            fs = filter(lambda attr: not attr.startswith("__"), vars(obj))
+            fields = [(attr, getattr(obj, attr)) for attr in fs]
+        else:
+            raise PyrtlError("Cannot determine (field, width) pairs from %s object" % type(obj))
+        return fields
+
+    @staticmethod
+    def get_bundle_bitwidth(obj):
+        fields = Bundle._get_fields(obj)
+
+        def aux(acc, t):
+            if isinstance(t[1], tuple):
+                width = t[1][0]
+            else:
+                width = t[1]
+            return acc + width
+        return reduce(aux, fields, 0)
+
+    def __init__(self, obj, name="", block=None):
+        super(Bundle, self).__init__(Bundle.get_bundle_bitwidth(obj), name, block)
+
+        fields = Bundle._get_fields(obj)
+        start = 0
+        args = []
+        for field, length in fields[::-1]:
+            if isinstance(length, tuple):
+                from .corecircuits import as_wires
+                # length is actually a tuple of the form (width, val)
+                val = length[1]
+                length = length[0]
+                if callable(val):
+                    val = val()
+                val = as_wires(val, bitwidth=length)
+                args.append(val)
+            setattr(self, field, self[start:start + length])
+            start += length
+
+        if args:
+            from .corecircuits import concat_list
+            self <<= concat_list(args)

@@ -314,7 +314,7 @@ class SimStepMultipleBase(unittest.TestCase):
 
         sim_trace = pyrtl.SimulationTrace()
         sim = self.sim(tracer=sim_trace)
-        sim.step_multiple({}, nsteps=5)
+        sim.step_multiple(nsteps=5)
 
         correct_output = ("--- Values in base 10 ---\n"
                           "b 0 1 2 3 4\n")
@@ -337,7 +337,7 @@ class SimStepMultipleBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
 
         with self.assertRaises(pyrtl.PyrtlError) as error:
-            sim.step_multiple({})
+            sim.step_multiple()
         self.assertEqual(str(error.exception),
                          'need to supply either input values '
                          'or a number of steps to simulate')
@@ -1004,6 +1004,20 @@ class TraceErrorBase(unittest.TestCase):
     def test_empty_trace(self):
         with self.assertRaises(pyrtl.PyrtlError):
             self.sim_trace = pyrtl.SimulationTrace()
+
+    def test_empty_trace_after_untraceable_removed(self):
+        r = pyrtl.Register(2, 'r')
+        r.next <<= r + 1
+        sim = self.sim()
+        sim.step_multiple(provided_inputs={}, nsteps=10)
+        with self.assertRaises(pyrtl.PyrtlError) as ex:
+            sim.tracer.render_trace()
+        self.assertEquals(
+            str(ex.exception),
+            "Empty trace list. This may have occurred because "
+            "untraceable wires were removed prior to simulation, "
+            "if a CompiledSimulation was used."
+        )
 
     def test_invalid_base(self):
         self.in1 = pyrtl.Input(8, "in1")

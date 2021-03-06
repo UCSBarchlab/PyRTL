@@ -15,6 +15,7 @@ from .core import working_block, _NameSanitizer
 from .wire import WireVector, Input, Output, Const, Register
 from .corecircuits import concat_list
 from .memory import RomBlock
+from .passes import two_way_concat, one_bit_selects
 
 
 # -----------------------------------------------------------------
@@ -234,6 +235,35 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
 #   \__/ \__/  |  |    \__/  |
 #
 
+
+def _natural_sort_key(key):
+    """ Convert the key into a form such that it will be sorted naturally,
+        e.g. such that "tmp4" appears before "tmp18".
+    """
+    def convert(text):
+        return int(text) if text.isdigit() else text
+    return [convert(c) for c in re.split(r'(\d+)', key)]
+
+
+def _net_sorted(logic, name_mapper=lambda w: w.name):
+    # Sort nets based on the name of the destination
+    # wire, unless it's a memory write net.
+    def natural_keys(n):
+        if n.op == '@':
+            # Sort based on the name of the wr_en wire, since
+            # this particular net is used within 'always begin ... end'
+            # blocks for memory update logic.
+            key = str(n.args[2])
+        else:
+            key = name_mapper(n.dests[0])
+        return _natural_sort_key(key)
+    return sorted(logic, key=natural_keys)
+
+
+def _name_sorted(wires, name_mapper=lambda w: w.name):
+    return sorted(wires, key=lambda w: _natural_sort_key(name_mapper(w)))
+
+
 def output_to_firrtl(open_file, rom_blocks=None, block=None):
     """ Output the block as firrtl code to the output file.
 
@@ -241,35 +271,41 @@ def output_to_firrtl(open_file, rom_blocks=None, block=None):
     If rom is intialized in pyrtl code, you can pass in the rom_blocks as a list [rom1, rom2, ...]
     """
     block = working_block(block)
+
+    # FIRRTL only allows 'bits' operations to have two parameters: a high and low
+    # index representing the inclusive bounds of a contiguous range. PyRTL uses
+    # slice syntax, which aren't always contiguous, so we need to convert them.
+    one_bit_selects(block=block)  # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
+
+    # FIRRTL only allows 'concatenate' operations to have two arguments,
+    # but PyRTL's 'c' op allows an arbitrary number of wires. We need to convert
+    # these n-way concats to series of two-way concats accordingly.
+    two_way_concat(block=block)  # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
+
     f = open_file
     # write out all the implicit stuff
-    f.write("circuit Example : \n")
-    f.write("  module Example : \n")
+    f.write("circuit Example :\n")
+    f.write("  module Example :\n")
     f.write("    input clock : Clock\n    input reset : UInt<1>\n")
     # write out IO signals, wires and registers
-    wireRegDefs = ""
-    for wire in list(block.wirevector_subset()):
-        if type(wire) == Input:
-            f.write("    input %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
-        elif type(wire) == Output:
-            f.write("    output %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
-        elif type(wire) == WireVector:
-            wireRegDefs += "    wire {} : UInt<{}>\n".format(wire.name, wire.bitwidth)
-        elif type(wire) == Register:
-            wireRegDefs += "    reg {} : UInt<{}>, clock\n".format(wire.name, wire.bitwidth)
-        elif type(wire) == Const:
-            # some const is in the form like const_0_1'b1, is this legal operation?
-            wire.name = wire.name.split("'").pop(0)
-            wireRegDefs += "    node {} = UInt<{}>({})\n".format(wire.name, wire.bitwidth, wire.val)
-        else:
-            return 1
-    f.write(wireRegDefs)
+    for wire in _name_sorted(block.wirevector_subset(Input)):
+        f.write("    input %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+    for wire in _name_sorted(block.wirevector_subset(Output)):
+        f.write("    output %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+    for wire in _name_sorted(block.wirevector_subset(exclude=(Input, Output, Register, Const))):
+        f.write("    wire %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+    for wire in _name_sorted(block.wirevector_subset(Register)):
+        f.write("    reg %s : UInt<%d>, clock\n" % (wire.name, wire.bitwidth))
+    for wire in _name_sorted(block.wirevector_subset(Const)):
+        # some const is in the form like const_0_1'b1, is this legal operation?
+        wire.name = wire.name.split("'").pop(0)
+        f.write("    node %s = UInt<%d>(%d)\n" % (wire.name, wire.bitwidth, wire.val))
     f.write("\n")
 
     # write "Main"
     node_cntr = 0
     initializedMem = []
-    for log_net in list(block.logic_subset()):
+    for log_net in _net_sorted(block.logic_subset()):
         if log_net.op == '&':
             f.write("    %s <= and(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
                                                  log_net.args[1].name))
@@ -310,16 +346,21 @@ def output_to_firrtl(open_file, rom_blocks=None, block=None):
             f.write("    %s <= mux(%s, %s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
                                                      log_net.args[2].name, log_net.args[1].name))
         elif log_net.op == 'c':
+            if len(log_net.args) != 2:
+                raise PyrtlInternalError(
+                    "Expected concat net to have only two "
+                    "argument wires; has %d" % len(log_net.args)
+                )
             f.write("    %s <= cat(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
                                                  log_net.args[1].name))
         elif log_net.op == 's':
-            selEnd = log_net.op_param[0]
-            if len(log_net.op_param) < 2:
-                selBegin = selEnd
-            else:
-                selBegin = log_net.op_param[len(log_net.op_param) - 1]
+            if len(log_net.op_param) != 1:
+                raise PyrtlInternalError(
+                    "Expected select net to have single "
+                    "select bit; has %d" % len(log_net.op_param)
+                )
             f.write("    %s <= bits(%s, %s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                      selBegin, selEnd))
+                                                      log_net.op_param[0], log_net.op_param[0]))
         elif log_net.op == 'r':
             f.write("    %s <= mux(reset, UInt<%s>(0), %s)\n" %
                     (log_net.dests[0].name, log_net.dests[0].bitwidth, log_net.args[0].name))
@@ -377,7 +418,6 @@ def output_to_firrtl(open_file, rom_blocks=None, block=None):
         else:
             pass
 
-    f.close()
     return 0
 
 
@@ -400,7 +440,13 @@ def _trivialgraph_default_namer(thing, is_edge=True):
 
 
 def net_graph(block=None, split_state=False):
-    """ Return a graph representation of the current block.
+    """ Return a graph representation of the given block.
+
+    :param block: block to use (defaults to current working block)
+    :param split_state: if True, split connections to/from a register update net; this
+        means that registers will be appear as source nodes of the network, and
+        'r' nets (i.e. the logic for setting a register's next value) will
+        be treated as sink nodes of the network
 
     Graph has the following form:
         { node1: { nodeA: edge1A, nodeB: edge1B},
@@ -410,7 +456,7 @@ def net_graph(block=None, split_state=False):
 
     aka: edge = graph[source][dest]
 
-    Each node can be either a logic net or a WireVector (e.g. an Input, and Output, a
+    Each node can be either a logic net or a WireVector (e.g. an Input, an Output, a
     Const or even an undriven WireVector (which acts as a source or sink in the network)
     Each edge is a WireVector or derived type (Input, Output, Register, etc.)
     Note that inputs, consts, and outputs will be both "node" and "edge".
@@ -442,14 +488,14 @@ def net_graph(block=None, split_state=False):
         try:
             _from = wire_src_dict[w]
         except Exception:
-            _from = w
+            _from = w  # e.g. an Input/Const
         if split_state and isinstance(w, Register):
             _from = w
 
         try:
             _to_list = wire_dst_dict[w]
         except Exception:
-            _to_list = [w]
+            _to_list = [w]  # e.g. an Output
 
         for _to in _to_list:
             graph[_from][_to] = w
@@ -457,9 +503,9 @@ def net_graph(block=None, split_state=False):
     return graph
 
 
-def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None):
+def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None, split_state=False):
     """ Walk the block and output it in trivial graph format to the open file. """
-    graph = net_graph(block)
+    graph = net_graph(block, split_state)
     node_index_map = {}  # map node -> index
 
     # print the list of nodes
@@ -478,68 +524,80 @@ def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None):
             print('%d %d %s' % (from_index, to_index, namer(edge)), file=file)
 
 
-def _default_edge_namer(edge, is_to_splitmerge=False):
+def _default_edge_namer(edge, is_to_splitmerge=False, extra_edge_info=None):
     """
     A function for naming an edge for use in the graphviz graph.
 
     :param edge: the edge (i.e. WireVector or deriving class)
-    :param is_to_splitmerge: if the node from to which the edge points
+    :param is_to_splitmerge: if the node to which the edge points
                              is a select or concat operation
+    :param extra_edge_info: a map from edge to any additional data you want
+                            to print associated with it (e.g. timing data).
     :return: a function that can be called by graph namer function you pass
              in to block_to_graphviz_string
     """
 
-    if (edge.name is None
-            or edge.name.startswith('tmp')
-            or isinstance(edge, (Input, Output, Const, Register))):
+    name = '' if edge.name is None else '/'.join([edge.name, str(len(edge))])
+    if extra_edge_info and edge in extra_edge_info:
+        # Always label an edge if present in the extra_edge_info map
+        name = name + " (" + str(extra_edge_info[edge]) + ")"
+    elif (edge.name is None
+          or edge.name.startswith('tmp')
+          or isinstance(edge, (Input, Output, Const, Register))):
         name = ''
-    else:
-        name = '/'.join([edge.name, str(len(edge))])
 
     penwidth = 2 if len(edge) == 1 else 6
     arrowhead = 'none' if is_to_splitmerge else 'normal'
     return '[label="%s", penwidth="%d", arrowhead="%s"]' % (name, penwidth, arrowhead)
 
 
-def _default_node_namer(node):
+def _default_node_namer(node, split_state=False, extra_node_info=None):
+    def label(v):
+        if extra_node_info and node in extra_node_info:
+            v = v + "(" + str(extra_node_info[node]) + ")"
+        return v
+
     if isinstance(node, Const):
-        return '[label="%d", shape=circle, fillcolor=lightgrey]' % node.val
+        name = node.name + ': ' if not node.name.startswith('const_') else ''
+        return '[label="%s", shape=circle, fillcolor=lightgrey]' % label(name + str(node.val))
     elif isinstance(node, Input):
-        return '[label="%s", shape=invhouse, fillcolor=coral]' % node.name
+        return '[label="%s", shape=invhouse, fillcolor=coral]' % label(node.name)
     elif isinstance(node, Output):
-        return '[label="%s", shape=house, fillcolor=lawngreen]' % node.name
+        return '[label="%s", shape=house, fillcolor=lawngreen]' % label(node.name)
     elif isinstance(node, Register):
-        return '[label="%s", shape=square, fillcolor=gold]' % node.name
+        return '[label="%s", shape=square, fillcolor=gold]' % label(node.name)
     elif isinstance(node, WireVector):
-        return '[label="%s", shape=circle, fillcolor=none]' % node.name
+        return '[label="%s", shape=circle, fillcolor=none]' % label(node.name)
     else:
         try:
             if node.op == '&':
-                return '[label="and"]'
+                return '[label="%s"]' % label("and")
             elif node.op == '|':
-                return '[label="or"]'
+                return '[label="%s"]' % label("or")
             elif node.op == '^':
-                return '[label="xor"]'
+                return '[label="%s"]' % label("xor")
             elif node.op == '~':
-                return '[label="not", shape=invtriangle]'
+                return '[label="%s", shape=invtriangle]' % label("not")
             elif node.op == 'x':
-                return '[label="mux", shape=invtrapezium]'
+                return '[label="%s", shape=invtrapezium]' % label("mux")
             elif node.op == 's':
                 selEnd = node.op_param[0]
                 if len(node.op_param) < 2:
                     selBegin = selEnd
                 else:
                     selBegin = node.op_param[len(node.op_param) - 1]
-                return '[label="bits(%s,%s)", height=.1, width=.1]' % (selBegin, selEnd)
+                return '[label="%s", height=.1, width=.1]' % \
+                    (label("bits(%s,%s)" % (selBegin, selEnd)))
             elif node.op in 'c':
-                return '[label="concat", height=.1, width=.1]'
+                return '[label="%s", height=.1, width=.1]' % label("concat")
             elif node.op == 'r':
                 name = node.dests[0].name or ''
-                return '[label="%s.next", shape=square, fillcolor=gold]' % name
+                name = ("%s.next" % name) if split_state else name
+                return '[label="%s", shape=square, fillcolor=gold]' % label(name)
             elif node.op == 'w':
-                return '[label="", height=.1, width=.1]'
+                return '[label="%s", height=.1, width=.1]' % label("")
             else:
-                return '[label="%s"]' % (node.op + str(node.op_param or ''))
+                return '[label="%s"]' % label(node.op + str(node.op_param or ''))
         except AttributeError:
             raise PyrtlError('no naming rule for "%s"' % str(node))
 
@@ -548,47 +606,49 @@ def graphviz_default_namer(
         thing,
         is_edge,
         is_to_splitmerge,
+        split_state,
         node_namer=_default_node_namer,
         edge_namer=_default_edge_namer):
     """ Returns a "good" graphviz label for thing. """
     if is_edge:
         return edge_namer(thing, is_to_splitmerge=is_to_splitmerge)
     else:
-        return node_namer(thing)
+        return node_namer(thing, split_state=split_state)
 
 
-def detailed_edge_namer(extra_edge_info=None):
+def graphviz_detailed_namer(
+        extra_node_info=None,
+        extra_edge_info=None):
+    """ Returns a detailed namer that prints extra information about nodes/edges in the given maps
+
+        :param extra_node_info: A map from node to some object about that node
+                                (its string representation will be printed next to the node's label)
+        :param extra_edge_info: A map from edge to some object about that edge
+                                (its string representation will be printed next to the edge's label)
+        :return: a function that can be used as the namer function for block_to_graphviz_string
     """
-    A function for naming an edge for use in the graphviz graph.
 
-    :param extra_edge_info: a map from edge to any additional data you want
-                            to print associated with it (e.g. timing data)
-    :return: a function that can be called by graph namer function you pass
-             in to block_to_graphviz_string
-    """
+    def node_namer(node, split_state):
+        return _default_node_namer(node, split_state, extra_node_info)
+
     def edge_namer(edge, is_to_splitmerge):
-        if (edge.name is None
-                or isinstance(edge, (Input, Output, Const, Register))):
-            name = ''
-        else:
-            name = '/'.join([edge.name, str(len(edge))])
-            if extra_edge_info and edge in extra_edge_info:
-                name = name + " (" + str(extra_edge_info[edge]) + ")"
+        return _default_edge_namer(edge, is_to_splitmerge, extra_edge_info)
 
-        penwidth = 2 if len(edge) == 1 else 6
-        arrowhead = 'none' if is_to_splitmerge else 'normal'
-        return '[label="%s", penwidth="%d", arrowhead="%s"]' % (name, penwidth, arrowhead)
-    return edge_namer
+    def namer(thing, is_edge, is_to_splitmerge, split_state):
+        return graphviz_default_namer(
+            thing, is_edge, is_to_splitmerge, split_state,
+            node_namer=node_namer, edge_namer=edge_namer)
+    return namer
 
 
-def output_to_graphviz(file, namer=graphviz_default_namer, block=None):
+def output_to_graphviz(file, namer=graphviz_default_namer, block=None, split_state=True):
     """ Walk the block and output it in graphviz format to the open file. """
-    print(block_to_graphviz_string(block, namer), file=file)
+    print(block_to_graphviz_string(block, namer, split_state), file=file)
 
 
-def block_to_graphviz_string(block=None, namer=graphviz_default_namer):
+def block_to_graphviz_string(block=None, namer=graphviz_default_namer, split_state=True):
     """ Return a graphviz string for the block. """
-    graph = net_graph(block, split_state=True)
+    graph = net_graph(block, split_state)
     node_index_map = {}  # map node -> index
 
     rstring = """\
@@ -602,7 +662,7 @@ def block_to_graphviz_string(block=None, namer=graphviz_default_namer):
 
     # print the list of nodes
     for index, node in enumerate(graph):
-        label = namer(node, False, False)
+        label = namer(node, False, False, split_state)
         rstring += '    n%s %s;\n' % (index, label)
         node_index_map[node] = index
 
@@ -613,19 +673,23 @@ def block_to_graphviz_string(block=None, namer=graphviz_default_namer):
             to_index = node_index_map[_to]
             edge = graph[_from][_to]
             is_to_splitmerge = True if hasattr(_to, 'op') and _to.op in 'cs' else False
-            label = namer(edge, True, is_to_splitmerge)
+            label = namer(edge, True, is_to_splitmerge, False)
             rstring += '   n%d -> n%d %s;\n' % (from_index, to_index, label)
 
     rstring += '}\n'
     return rstring
 
 
-def block_to_svg(block=None):
+def output_to_svg(file, block=None, split_state=True):
+    """ Output the block as an SVG to the open file. """
+    print(block_to_svg(block, split_state), file=file)
+
+
+def block_to_svg(block=None, split_state=True):
     """ Return an SVG for the block. """
-    block = working_block(block)
     try:
         from graphviz import Source
-        return Source(block_to_graphviz_string())._repr_svg_()
+        return Source(block_to_graphviz_string(block, split_state=split_state))._repr_svg_()
     except ImportError:
         raise PyrtlError('need graphviz installed (try "pip install graphviz")')
 

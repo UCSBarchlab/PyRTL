@@ -8,7 +8,6 @@ Types defined in this file include:
 * `Output` -- a wire vector that defines an output for a block
 * `Const` -- a wire vector fed by a constant
 * `Register` -- a wire vector that is latched each cycle
-* `Bundle` -- a wire vector that has named fields for easy access
 """
 
 from __future__ import print_function, unicode_literals
@@ -17,7 +16,6 @@ import numbers
 import six
 import re
 import sys
-from functools import reduce
 
 from . import core  # needed for _setting_keep_wirevector_call_stack
 
@@ -387,9 +385,9 @@ class WireVector(object):
         return outwire
 
     def __lshift__(self, other):
-        raise PyrtlError('Shifting using the << and >> operators are not supported'
-                         'in PyRTL.'
-                         'If you are trying to select bits in a wire, use'
+        raise PyrtlError('Shifting using the << and >> operators are not supported '
+                         'in PyRTL. '
+                         'If you are trying to select bits in a wire, use '
                          'the indexing operator (wire[indexes]) instead.\n\n'
                          'For example: wire[2:9] selects the wires from index 2 to '
                          'index 8 to make a new length 7 wire. \n\n If you are really '
@@ -512,6 +510,8 @@ class WireVector(object):
             return concat(extvector, self)
 
     def as_bundle(self, obj):
+        from .helperfuncs import Bundle
+
         bundle_bw = Bundle.get_bundle_bitwidth(obj)
 
         if len(self) != bundle_bw:
@@ -557,6 +557,7 @@ class Input(WireVector):
 
 class Output(WireVector):
     """ A WireVector type denoting outputs of a block (no readers)
+
     Even though Output seems to have valid ops such as __or__ , using
     them will throw an error.
     """
@@ -569,37 +570,48 @@ class Output(WireVector):
 class Const(WireVector):
     """ A WireVector representation of a constant value
 
-    Converts from bool, integer, or verilog-style strings to a constant
+    Converts from bool, integer, or Verilog-style strings to a constant
     of the specified bitwidth.  If the bitwidth is too short to represent
-    the specified constant then an error is raised.  If a possitive
-    integer is specified the bitwidth can be infered from the constant.
+    the specified constant, then an error is raised.  If a positive
+    integer is specified, the bitwidth can be inferred from the constant.
     If a negative integer is provided in the simulation, it is converted
     to a two's complement representation of the specified bitwidth."""
 
     _code = 'C'
 
-    def __init__(self, val, bitwidth=None, block=None):
+    def __init__(self, val, bitwidth=None, name='', signed=False, block=None):
         """ Construct a constant implementation at initialization
 
-        :param int or str val: The value for the const wirevector
+        :param int, bool, or str val: the value for the const wirevector
+        :param int: the desired bitwidth of the resulting const
+        :param signed: specify if bits should be used for twos complement
         :return: a wirevector object representing a const wire
 
         Descriptions for all parameters not listed above can be found at
         py:method:: WireVector.__init__()
+
+        For details of how constants are converted fron int, bool, and
+        strings (for verilog constants), see documentation for the
+        helper function infer_val_and_bitwidth.  Please note that a
+        a constant generated with signed=True is still just a raw bitvector
+        and all arthimetic on it is unsigned by default.  The signed=True
+        argument is only used for proper inference of WireVector size and certain
+        bitwidth sanity checks assuming a two's complement representation of
+        the constants.
         """
         self._validate_bitwidth(bitwidth)
         from .helperfuncs import infer_val_and_bitwidth
-        num, bitwidth = infer_val_and_bitwidth(val, bitwidth)
+        num, bitwidth = infer_val_and_bitwidth(val, bitwidth, signed)
 
         if num < 0:
             raise PyrtlInternalError(
                 'Const somehow evaluating to negative integer after checks')
         if (num >> bitwidth) != 0:
-            raise PyrtlError(
-                'error constant "%s" cannot fit in the specified %d bits'
-                % (str(num), bitwidth))
+            raise PyrtlInternalError(
+                'constant %d returned by infer_val_and_bitwidth somehow not fitting in %d bits'
+                % (num, bitwidth))
 
-        name = _constIndexer.make_valid_string() + '_' + str(val)
+        name = name if name else _constIndexer.make_valid_string() + '_' + str(val)
 
         super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)
         # add the member "val" to track the value of the constant
@@ -612,7 +624,7 @@ class Const(WireVector):
             % str(self.name))
 
     def __ior__(self, _):
-        """ This is an illegal op for Inputs. They cannot be assigned to in this way """
+        """ This is an illegal op for Consts. They cannot be assigned to in this way """
         raise PyrtlError(
             'Connection using |= operator attempted on Const. '
             'ConstWires, such as "%s", cannot have values generated internally. '
@@ -723,138 +735,3 @@ class Register(WireVector):
         self.reg_in = next
         net = LogicNet('r', None, args=(self.reg_in,), dests=(self,))
         working_block().add_net(net)
-
-
-class Bundle(WireVector):
-    """ A WireVector whose individual bits are named.
-
-    The initializer takes as its first argument the name of a class whose
-    attributes will be interpreted as the names and lengths of fields in a wire.
-    The order in which the attributes are defined is important; the first class
-    attribute is the MSB of the wire, and the last class attribute of the list is the LSB.
-
-    For example, say there is a wire that represents an instruction. If we wanted to name
-    certain segments of bits a certain way, we would create a class with the names and lengths
-    of these fields as attributes follows:
-
-        class RFormat:
-            funct7 = 7
-            rs2 = 5
-            rs1 = 5
-            funct3 = 3
-            rd = 5
-            opcode = 7
-
-    Then use it as the argument to Bundle to get back an object whose fields are actually
-    wirevectors, accessible by field name:
-
-        w = pyrtl.Bundle(RFormat)
-        w <<= 0b00000100110001010000010110010011
-        assert sim.inspect(w.funct7) == 0b0000010
-        assert sim.inspect(w.rs2) == 0b01100
-        assert sim.inspect(w.rs1) == 0b01010
-        assert sim.inspect(w.funct3) == 0b000
-        assert sim.inspect(w.rd) == 0b01011
-        assert sim.inspect(w.opcode) == 0b0010011
-
-    It can be used anywhere a normal wire can be used:
-
-        r = pyrtl.Register(len(w), "r")
-        r.next <<= w
-        # ...after stepping a few times...
-        assert sim.inspect(r) == 0b00000100110001010000010110010011
-
-    And you can interpret other wires as instances of the bundled class, by calling
-    `as_bundle`. This does lightweight checks such as making sure that the bundled class
-    and the wire you call `as_bundle` on has the same length so that the bits can map properly.
-    This allows you to access portions of the wire via fields.
-
-        f7 = r.as_bundle(RFormat).funct7
-        assert sim.inspect(f7) == 0b0000010
-
-        y = r.as_bundle(RFormat)
-        assert sim.inspect(y.funct7) == 0b0000010
-        assert sim.inspect(y.rs2) == 0b01100
-        assert sim.inspect(y.rs1) == 0b01010
-        assert sim.inspect(y.funct3) == 0b000
-        assert sim.inspect(y.rd) == 0b01011
-        assert sim.inspect(y.opcode) == 0b0010011
-
-    You can also pass in a list of (field, width) pairs:
-
-        rformat = [("funct7", 7), ("rs2", 5), ("rs1", 5), ("funct3", 3), ("rd", 5), ("opcode", 7)]
-        w = pyrtl.Bundle(rformat)
-
-    or an (ordered) dictionary (OrderedDict is the default for Python >= 3.7):
-
-        rformat = {"funct7": 7, "rs2": 5, "rs1": 5, "funct3": 3, "rd": 5, "opcode": 7}
-        w = pyrtl.Bundle(rformat)
-
-    instead of a class to form a Bundle. In all forms, order is important.
-
-    In all cases, the 'width' member may actually be a tuple of the form (n, w),
-    where n is the actual width and f is a wirevector or function returning
-    a wirevector that will be used to define the wire. Otherwise, 'width' should
-    just be an integer and will be interpreted as the literal width.
-    """
-    @staticmethod
-    def _get_fields(obj):
-        if isinstance(obj, list) and all(map(lambda t: isinstance(t, tuple), obj)):
-            # Passed in a list of tuples (i.e. (field, width) pairs), in order from MSB to LSB
-            fields = obj
-        elif isinstance(obj, dict):
-            from collections import OrderedDict
-            if (not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7)
-               and (not isinstance(obj, OrderedDict))):
-                raise PyrtlError("For Python versions < 3.7, the dictionary used to instantiate "
-                                 "a Bundle must be explicitly ordered (i.e. OrderedDict)")
-            # Assume dictionary stores (field, width) pairs
-            fields = list(obj.items())
-        elif isinstance(obj, six.class_types):
-            if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7):
-                raise PyrtlError("Passing a class as an argument to Bundle() "
-                                 "is only allowed for Python versions >= 3.7")
-            # Let's assume 'obj' is a **class** name, so treat it as if it has field names.
-            # As of Python 3.7, dictionaries preserve insertion order, so a class's attributes
-            # (in __dict__) will being ordered as well. This relies on that fact because the
-            # fields are defined in MSB to LSB order in the class.
-            fs = filter(lambda attr: not attr.startswith("__"), vars(obj))
-            fields = [(attr, getattr(obj, attr)) for attr in fs]
-        else:
-            raise PyrtlError("Cannot determine (field, width) pairs from %s object" % type(obj))
-        return fields
-
-    @staticmethod
-    def get_bundle_bitwidth(obj):
-        fields = Bundle._get_fields(obj)
-
-        def aux(acc, t):
-            if isinstance(t[1], tuple):
-                width = t[1][0]
-            else:
-                width = t[1]
-            return acc + width
-        return reduce(aux, fields, 0)
-
-    def __init__(self, obj, name="", block=None):
-        super(Bundle, self).__init__(Bundle.get_bundle_bitwidth(obj), name, block)
-
-        fields = Bundle._get_fields(obj)
-        start = 0
-        args = []
-        for field, length in fields[::-1]:
-            if isinstance(length, tuple):
-                from .corecircuits import as_wires
-                # length is actually a tuple of the form (width, val)
-                val = length[1]
-                length = length[0]
-                if callable(val):
-                    val = val()
-                val = as_wires(val, bitwidth=length)
-                args.append(val)
-            setattr(self, field, self[start:start + length])
-            start += length
-
-        if args:
-            from .corecircuits import concat_list
-            self <<= concat_list(args)

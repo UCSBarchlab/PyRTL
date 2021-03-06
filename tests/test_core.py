@@ -129,8 +129,10 @@ class TestSanityCheckNet(unittest.TestCase):
     def new_net(op='&', op_param=None, args=None, dests=None):
         if args is None or isinstance(args, int):
             args = tuple(pyrtl.Input(2) for i in range(args if isinstance(args, int) else 2))
-        if dests is None:
-            dests = (pyrtl.Output(2, 'out'),)
+        if dests is None or isinstance(dests, int):
+            def dest():
+                return pyrtl.Register(2) if op == 'r' else pyrtl.Output(2)
+            dests = tuple(dest() for i in range(dests if isinstance(dests, int) else 1))
         return pyrtl.LogicNet(op=op, op_param=op_param, args=args, dests=dests)
 
     def test_net_make_with_not_net(self):
@@ -253,10 +255,30 @@ class TestSanityCheckNet(unittest.TestCase):
                                args=tuple(pyrtl.Input(1) for i in range(1 if op == 'm' else 3)))
             self.invalid_net("mem op requires second operand of a memory type", net)
 
+    def test_net_dest_wrong_arity_or_type(self):
+        for op in 'w~&|^n+-*<>=cr':
+            net = self.new_net(op=op, args=1 if op in 'w~r' else 2, dests=2)
+            self.invalid_net("error, op only allowed 1 destination", net)
+        net = self.new_net(op='s', op_param=(1,), args=1, dests=2)
+        self.invalid_net("error, op only allowed 1 destination", net)
+        net = self.new_net(op='x', args=(pyrtl.Input(1), pyrtl.Input(2), pyrtl.Input(2)), dests=2)
+        self.invalid_net("error, op only allowed 1 destination", net)
+        net = self.new_net(op='m', op_param=(1234, pyrtl.MemBlock(1, 2)), args=1, dests=2)
+        self.invalid_net("error, op only allowed 1 destination", net)
+
+        net = self.new_net(op='@', op_param=(1234, pyrtl.MemBlock(2, 2)),
+                           args=tuple(pyrtl.Input(i) for i in (2, 2, 1)))
+        self.invalid_net("mem write dest should be empty tuple", net)
+
+        net = self.new_net(op='r', args=1, dests=(pyrtl.WireVector(2),))
+        self.invalid_net("error, dest of next op should be a Register", net)
+
     def test_net_dest_wrong_bitwidth(self):
-        for op in 'w~&|^nr':
-            net = self.new_net(op=op, args=1 if op in 'w~r' else 2, dests=(pyrtl.Output(3),))
+        for op in 'w~&|^n':
+            net = self.new_net(op=op, args=1 if op in 'w~' else 2, dests=(pyrtl.Output(3),))
             self.invalid_net("upper bits of destination unassigned", net)
+        net = self.new_net(op='r', args=1, dests=(pyrtl.Register(3),))
+        self.invalid_net("upper bits of destination unassigned", net)
         for op in '<>=':
             net = self.new_net(op=op, dests=(pyrtl.Output(2),))
             self.invalid_net("destination should be of bitwidth=1", net)
@@ -273,9 +295,6 @@ class TestSanityCheckNet(unittest.TestCase):
         self.invalid_net("upper bits of select output undefined", net)
         net = self.new_net(op='m', op_param=(1234, pyrtl.MemBlock(3, 2)), args=1)
         self.invalid_net("mem read dest bitwidth mismatch", net)
-        net = self.new_net(op='@', op_param=(1234, pyrtl.MemBlock(2, 2)),
-                           args=tuple(pyrtl.Input(i) for i in (2, 2, 1)))
-        self.invalid_net("mem write dest should be empty tuple", net)
 
 
 class TestSetWorkingBlock(unittest.TestCase):

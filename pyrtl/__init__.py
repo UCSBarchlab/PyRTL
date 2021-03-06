@@ -18,7 +18,6 @@ from .wire import WireVector
 from .wire import Input, Output
 from .wire import Const
 from .wire import Register
-from .wire import Bundle
 
 # helper functions
 
@@ -28,6 +27,7 @@ from .helperfuncs import register_list
 from .helperfuncs import wirevector_list
 from .helperfuncs import log2
 from .helperfuncs import truncate
+from .helperfuncs import match_bitpattern
 from .helperfuncs import chop
 from .helperfuncs import val_to_signed_integer
 from .helperfuncs import val_to_formatted_str
@@ -38,6 +38,7 @@ from .helperfuncs import rtl_assert
 from .helperfuncs import check_rtl_assertions
 from .helperfuncs import find_loop
 from .helperfuncs import find_and_print_loop
+from .helperfuncs import Bundle
 
 from .corecircuits import and_all_bits
 from .corecircuits import or_all_bits
@@ -54,6 +55,7 @@ from .corecircuits import as_wires
 from .corecircuits import match_bitwidth
 from .corecircuits import enum_mux
 from .corecircuits import bitfield_update
+from .corecircuits import bitfield_update_set
 from .corecircuits import signed_add
 from .corecircuits import signed_mult
 from .corecircuits import signed_lt
@@ -85,6 +87,7 @@ from .compilesim import CompiledSimulation
 from .inputoutput import input_from_blif
 from .inputoutput import output_to_trivialgraph
 from .inputoutput import output_to_graphviz
+from .inputoutput import output_to_svg
 from .inputoutput import output_to_firrtl
 from .inputoutput import block_to_graphviz_string
 from .inputoutput import block_to_svg
@@ -102,6 +105,7 @@ from .passes import synthesize
 from .passes import nand_synth
 from .passes import and_inverter_synth
 from .passes import optimize
-
+from .passes import one_bit_selects
+from .passes import two_way_concat
 
 from .transform import net_transform, wire_transform, replace_wire, copy_block, clone_wire
