@@ -525,7 +525,6 @@ class TestOutputFirrtl(unittest.TestCase):
         buffer = io.StringIO()
         pyrtl.output_to_firrtl(buffer)
 
-        print(buffer.getvalue())
         self.assertEqual(buffer.getvalue(), firrtl_output_select_test)
 
 
