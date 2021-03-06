@@ -197,12 +197,9 @@ def match_bitpattern(w, bitpattern):
     lsb_first_string = nospace_string[::-1]  # flip so index 0 is lsb
 
     zero_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '0']
-    all_zeroes_low = ~rtl_any(*zero_bits) if zero_bits else True
-
     one_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '1']
-    all_ones_high = rtl_all(*one_bits) if one_bits else True
 
-    return all_ones_high & all_zeroes_low
+    return rtl_all(*one_bits) & ~rtl_any(*zero_bits)
 
 
 def chop(w, *segment_widths):

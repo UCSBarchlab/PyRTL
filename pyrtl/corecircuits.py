@@ -610,10 +610,13 @@ def rtl_any(*vectorlist):
     :return: WireVector of length 1
 
     Returns a 1-bit WireVector which will hold a '1' if any of the inputs
-    are '1' (i.e. it is a big ol' OR gate)
+    are '1' (i.e. it is a big ol' OR gate).  If no inputs are provided it
+    will return a Const 0 (since there are no '1's present) similar to python's
+    any function called with an empty list.
+
     """
-    if len(vectorlist) <= 0:
-        raise PyrtlError('rtl_any requires at least 1 argument')
+    if len(vectorlist) == 0:
+        return as_wires(False)
     converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
         raise PyrtlError('only length 1 WireVectors can be inputs to rtl_any')
@@ -627,10 +630,12 @@ def rtl_all(*vectorlist):
     :return: WireVector of length 1
 
     Returns a 1-bit WireVector which will hold a '1' only if all of the
-    inputs are '1' (i.e. it is a big ol' AND gate)
+    inputs are '1' (i.e. it is a big ol' AND gate).  If no inputs are provided it
+    will return a Const 0 (since there are no '1's present) similar to python's
+    any function called with an empty list.
     """
-    if len(vectorlist) <= 0:
-        raise PyrtlError('rtl_all requires at least 1 argument')
+    if len(vectorlist) == 0:
+        return as_wires(True)
     converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
         raise PyrtlError('only length 1 WireVectors can be inputs to rtl_all')
