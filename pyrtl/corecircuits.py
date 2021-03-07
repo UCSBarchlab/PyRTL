@@ -339,7 +339,7 @@ def match_bitwidth(*args, **opt):
     Example of matching the bitwidths of three WireVectors `a`,`b`, and `c` with
     with sign extention: ::
 
-        a, b = match_bitwidth(a, b, c, signed=True)
+        a, b, c = match_bitwidth(a, b, c, signed=True)
     """
     # TODO: when we drop 2.7 support, this code should be cleaned up with explicit
     # kwarg support for "signed" rather than the less than helpful "**opt"
