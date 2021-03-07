@@ -2,7 +2,7 @@ PyRTL
 =====
 
 [![PyPI version](https://badge.fury.io/py/pyrtl.svg)](http://badge.fury.io/py/pyrtl)
-[![Build Status](https://travis-ci.org/UCSBarchlab/PyRTL.svg)](https://travis-ci.org/UCSBarchlab/PyRTL)
+[![Build Status](https://github.com/UCSBarchlab/PyRTL/actions/workflows/python-package.yml/badge.svg)](https://github.com/UCSBarchlab/PyRTL/actions)
 [![Code Coverage](https://codecov.io/github/UCSBarchlab/PyRTL/coverage.svg?branch=development)](https://codecov.io/github/UCSBarchlab/PyRTL?branch=development)
 [![Documentation Status](https://readthedocs.org/projects/pyrtl/badge/?version=latest)](http://pyrtl.readthedocs.org/en/latest/?badge=latest)
 [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/UCSBarchlab/PyRTL/development?filepath=%2Fipynb-examples%2F)
