@@ -615,6 +615,11 @@ def rtl_any(*vectorlist):
     will return a Const 0 (since there are no '1's present) similar to python's
     any function called with an empty list.
 
+    Examples::
+
+        rtl_any(thing1, thing2, thing3)  # same as thing1 | thing2 | thing3
+        rtl_any(*[list_of_things])  # the unpack operator ("*") can be used for lists
+        rtl_any()  # returns Const(False) which comes up if the list above is empty
     """
     if len(vectorlist) == 0:
         return as_wires(False)
@@ -632,8 +637,14 @@ def rtl_all(*vectorlist):
 
     Returns a 1-bit WireVector which will hold a '1' only if all of the
     inputs are '1' (i.e. it is a big ol' AND gate).  If no inputs are provided it
-    will return a Const 0 (since there are no '1's present) similar to python's
-    any function called with an empty list.
+    will return a Const 1 (since there are no '0's present) similar to python's
+    all function called with an empty list.
+
+    Examples::
+
+        rtl_all(thing1, thing2, thing3)  # same as thing1 & thing2 & thing3
+        rtl_all(*[list_of_things])  # the unpack operator ("*") can be used for lists
+        rtl_all()  # returns Const(True) which comes up if the list above is empty
     """
     if len(vectorlist) == 0:
         return as_wires(True)
