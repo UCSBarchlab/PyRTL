@@ -62,6 +62,7 @@ def mux(index, *mux_ins, **kwargs):
         default = None
 
     # find the diff between the addressable range and number of inputs given
+    index = as_wires(index)
     short_by = 2**len(index) - len(mux_ins)
     if short_by > 0:
         if default is not None:  # extend the list to appropriate size
