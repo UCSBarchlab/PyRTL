@@ -165,6 +165,17 @@ def truncate(wirevector_or_integer, bitwidth):
         return x & ((1 << bitwidth) - 1)
 
 
+class MatchedFields(collections.namedtuple('MatchedFields', 'matched fields')):
+    def __enter__(self):
+        from .conditional import _push_condition
+        _push_condition(self.matched)
+        return self.fields
+
+    def __exit__(self, *execinfo):
+        from .conditional import _pop_condition
+        _pop_condition()
+
+
 def match_bitpattern(w, bitpattern):
     """ Returns a single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern
 
@@ -209,15 +220,18 @@ def match_bitpattern(w, bitpattern):
     one_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '1']
     match = rtl_all(*one_bits) & ~rtl_any(*zero_bits)
 
+    # Since only Python 3.7 and above guarantees maintaining insertion order in dictionaries,
+    # do all of this to make sure we can maintain the ordering in the returned Tuple.
+    # Order of fields is determined based on left-to-right ordering in original string.
     fields = {}
     for i, c in enumerate(lsb_first_string):
         if c not in '01?':
             fields.setdefault(c, []).append(w[i])
-    # sort based on left-to-right ordering in original string
-    fields = sorted(fields.items(), key=lambda m: nospace_string.index(m[0]))
-    fields = tuple(concat_list(l) for _, l in fields)
+    fields = sorted(fields.items(), key=lambda m: nospace_string.index(m[0]))  # now list of tuples
+    Fields = collections.namedtuple('Fields', ' '.join(name for name, _ in fields))
+    fields = Fields(**{k: concat_list(l) for k, l in fields})
 
-    return match, fields
+    return MatchedFields(match, fields)
 
 
 def chop(w, *segment_widths):

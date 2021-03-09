@@ -285,6 +285,28 @@ class TestMatchBitpattern(unittest.TestCase):
             'r 036912151821\n'
         )
 
+    def test_match_bitwidth_with_pattern_matched_fields(self):
+        i = pyrtl.Input(5, 'i')
+        out = pyrtl.Output(2, 'out')
+
+        with pyrtl.conditional_assignment:
+            with pyrtl.match_bitpattern(i, '1a?a0') as (a,):
+                out |= a
+            with pyrtl.match_bitpattern(i, 'b0?1b') as (b,):
+                out |= b
+            with pyrtl.match_bitpattern(i, 'ba1ab') as (b, a):
+                out |= a + b
+
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'i': [0b11010, 0b00011, 0b01101]})
+        output = six.StringIO()
+        sim.tracer.print_trace(output, compact=True)
+        self.assertEqual(
+            output.getvalue(),
+            '  i 26313\n'
+            'out 313\n'
+        )
+
 
 class TestChop(unittest.TestCase):
     def setUp(self):
