@@ -13,7 +13,7 @@ from functools import reduce
 from .core import working_block, _NameIndexer, _get_debug_mode
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
-from .corecircuits import as_wires, rtl_all, rtl_any
+from .corecircuits import as_wires, rtl_all, rtl_any, concat_list
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -175,31 +175,49 @@ def match_bitpattern(w, bitpattern):
     This function will compare a multi-bit wirevector to a specified pattern of bits, where some
     of the pattern can be "wildcard" bits.  If any of the "1" or "0" values specified in the
     bitpattern fail to match the wirevector during execution, a "0" will be produced, otherwise
-    the value carried on the wire will be "1".  Wildcard characters must be one of '?', 'x', 'X'.
+    the value carried on the wire will be "1".  The wildcard characters can be any other
+    alphanumeric character, with characters other than "?" having special functionality (see below).
     The string must have length equal to the wirevector specified, although whitespace and
     underscore characters will be ignored and can be used for pattern readability.
 
+    For all other characters besides "1", "0", or "?", a tuple of wirevectors will be returned as
+    the second return value. Each character will be treated as the name of a field,
+    and non-consecutive fields with the same name will be concatenated together, left-to-right, into
+    a single field in the resultant tuple. For example, "01aa1?bbb11a" will match a string such
+    as "010010100111", and the resultant matched fields are (a, b) = (0b001, 0b100), where the 'a'
+    field is the concenation of bits 9, 8, and 0, and the 'b' field is the concenation of
+    bits 5, 4, and 3. Thus, arbitrary characters beside "?" act as wildcard characters for the
+    purposes of matching, with the additional benefit of returning the wirevectors corresponding
+    to those fields.
+
     Examples: ::
-        m = match_bitpattern(w, '0101')  # basically the same as w=='0b0101'
-        m = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
-        m = match_bitpattern(w, 'xx01')  # m be true when last two bits of w are '01'
-        m = match_bitpattern(w, 'xx_0 1')  # spaces/underscores will be ignored, same as line above
+        m, _ = match_bitpattern(w, '0101')  # basically the same as w=='0b0101'
+        m, _ = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
+        m, _ = match_bitpattern(w, '??01')  # m be true when last two bits of w are '01'
+        m, _ = match_bitpattern(w, '??_0 1')  # spaces/underscores are ignored, same as line above
+        m, (a, b) = match_pattern(w, '01aa1?bbb11a')  # all bits with same letter make up same field
     """
     w = as_wires(w)
     if not isinstance(bitpattern, six.string_types):
         raise PyrtlError('bitpattern must be a string')
     nospace_string = ''.join(bitpattern.replace('_', '').split())
-    if any(c not in '01?xX' for c in nospace_string):
-        raise PyrtlError("bitpattern string contains invalid characters "
-                         "(only '0', '1', and wildcard characters '?', 'x', and 'X' allowed)")
     if len(w) != len(nospace_string):
         raise PyrtlError('bitpattern string different length than wirevector provided')
     lsb_first_string = nospace_string[::-1]  # flip so index 0 is lsb
 
     zero_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '0']
     one_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '1']
+    match = rtl_all(*one_bits) & ~rtl_any(*zero_bits)
 
-    return rtl_all(*one_bits) & ~rtl_any(*zero_bits)
+    fields = {}
+    for i, c in enumerate(lsb_first_string):
+        if c not in '01?':
+            fields.setdefault(c, []).append(w[i])
+    # sort based on left-to-right ordering in original string
+    fields = sorted(fields.items(), key=lambda m: nospace_string.index(m[0]))
+    fields = tuple(concat_list(l) for _, l in fields)
+
+    return match, fields
 
 
 def chop(w, *segment_widths):

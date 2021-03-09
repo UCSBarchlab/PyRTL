@@ -162,36 +162,35 @@ class TestMatchBitpattern(unittest.TestCase):
     def test_pattern_type_or_length_mismatch(self):
         instr = pyrtl.WireVector(name='instr', bitwidth=8)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.match_bitpattern(instr, '000100010')
+            o, _ = pyrtl.match_bitpattern(instr, '000100010')
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.match_bitpattern(instr, '0001000')
+            o, _ = pyrtl.match_bitpattern(instr, '0001000')
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.match_bitpattern(instr, '0b00010001')
+            o, _ = pyrtl.match_bitpattern(instr, '0b00010001')
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.match_bitpattern(instr, 'abcd0000')
+            o, _ = pyrtl.match_bitpattern(instr, 0b000100010)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.match_bitpattern(instr, 0b000100010)
+            o, _ = pyrtl.match_bitpattern(instr, '')
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.match_bitpattern(instr, '')
+            o, _ = pyrtl.match_bitpattern(instr, None)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.match_bitpattern(instr, None)
-        with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.match_bitpattern(instr, instr)
+            o, _ = pyrtl.match_bitpattern(instr, instr)
 
     def test_match_bitwidth_does_simulation_correct(self):
         r = pyrtl.Register(6, 'r')
         r.next <<= r + 3
         # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
-        a = pyrtl.match_bitpattern(r, '00_?0 ?1')
+        a, matches = pyrtl.match_bitpattern(r, '00_?0 ?1')
         o = pyrtl.Output(name='o')
         o <<= a
+        self.assertEqual(matches, ())  # '?' wildcard doesn't bind to a field
         self.check_trace('o 01010000\nr 036912151821\n')
 
     def test_match_bitwidth_simulates_no_ones_in_pattern(self):
         r = pyrtl.Register(6, 'r')
         r.next <<= r + 3
         # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
-        a = pyrtl.match_bitpattern(r, '00??00')
+        a, _ = pyrtl.match_bitpattern(r, '00??00')
         o = pyrtl.Output(name='o')
         o <<= a
         self.check_trace('o 10001000\nr 036912151821\n')
@@ -200,7 +199,7 @@ class TestMatchBitpattern(unittest.TestCase):
         r = pyrtl.Register(6, 'r')
         r.next <<= r + 3
         # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
-        a = pyrtl.match_bitpattern(r, '?1??1?')
+        a, _ = pyrtl.match_bitpattern(r, '?1??1?')
         o = pyrtl.Output(name='o')
         o <<= a
         self.check_trace('o 00000010\nr 036912151821\n')
@@ -209,10 +208,82 @@ class TestMatchBitpattern(unittest.TestCase):
         r = pyrtl.Register(6, 'r')
         r.next <<= r + 3
         # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
-        a = pyrtl.match_bitpattern(r, '??????')
+        a, _ = pyrtl.match_bitpattern(r, '??????')
         o = pyrtl.Output(name='o')
         o <<= a
         self.check_trace('o 11111111\nr 036912151821\n')
+
+    def test_match_bitwidth_with_consecutive_fields(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        m, (b, a) = pyrtl.match_bitpattern(r, 'bb0a?1')
+        pyrtl.probe(b, 'b')
+        pyrtl.probe(a, 'a')
+        o = pyrtl.Output(name='o')
+        o <<= m
+        self.check_trace(
+            'a 00101101\n'
+            'b 00000011\n'
+            'o 01000001\n'
+            'r 036912151821\n'
+        )
+
+    def test_match_bitwidth_with_non_consecutive_field(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        m, (b, a) = pyrtl.match_bitpattern(r, 'bb0ab1')
+        pyrtl.probe(b, 'b')
+        pyrtl.probe(a, 'a')
+        o = pyrtl.Output(name='o')
+        o <<= m
+        self.check_trace(
+            'a 00101101\n'
+            'b 01100132\n'
+            'o 01000001\n'
+            'r 036912151821\n'
+        )
+
+    def test_match_bitwidth_with_several_non_consecutive_fields(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        m, (a, b) = pyrtl.match_bitpattern(r, 'ab0aba')
+        pyrtl.probe(a, 'a')
+        pyrtl.probe(b, 'b')
+        o = pyrtl.Output(name='o')
+        o <<= m
+        self.check_trace(
+            'a 01212303\n'
+            'b 01100132\n'
+            'o 11100011\n'
+            'r 036912151821\n'
+        )
+
+    def test_match_bitwidth_with_all_fields(self):
+        r = pyrtl.Register(6, 'r')
+        r.next <<= r + 3
+        # 000000 -> 000011 -> 000110 -> 001001 -> 001100 -> 001111 -> 010010 -> 010101
+        m, (a, b, c, d, e, f) = pyrtl.match_bitpattern(r, 'abcdef')
+        pyrtl.probe(a, 'a')
+        pyrtl.probe(b, 'b')
+        pyrtl.probe(c, 'c')
+        pyrtl.probe(d, 'd')
+        pyrtl.probe(e, 'e')
+        pyrtl.probe(f, 'f')
+        o = pyrtl.Output(name='o')
+        o <<= m
+        self.check_trace(
+            'a 00000000\n'
+            'b 00000011\n'
+            'c 00011100\n'
+            'd 00101101\n'
+            'e 01100110\n'
+            'f 01010101\n'
+            'o 11111111\n'
+            'r 036912151821\n'
+        )
 
 
 class TestChop(unittest.TestCase):
