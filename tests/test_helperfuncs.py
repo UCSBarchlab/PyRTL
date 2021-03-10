@@ -285,6 +285,17 @@ class TestMatchBitpattern(unittest.TestCase):
             'r 036912151821\n'
         )
 
+    def check_all_accesses_valid(self):
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'i': [0b11010, 0b00011, 0b01101]})
+        output = six.StringIO()
+        sim.tracer.print_trace(output, compact=True)
+        self.assertEqual(
+            output.getvalue(),
+            '  i 26313\n'
+            'out 313\n'
+        )
+
     def test_match_bitwidth_with_pattern_matched_fields(self):
         i = pyrtl.Input(5, 'i')
         out = pyrtl.Output(2, 'out')
@@ -297,15 +308,7 @@ class TestMatchBitpattern(unittest.TestCase):
             with pyrtl.match_bitpattern(i, 'ba1ab') as (b, a):
                 out |= a + b
 
-        sim = pyrtl.Simulation()
-        sim.step_multiple({'i': [0b11010, 0b00011, 0b01101]})
-        output = six.StringIO()
-        sim.tracer.print_trace(output, compact=True)
-        self.assertEqual(
-            output.getvalue(),
-            '  i 26313\n'
-            'out 313\n'
-        )
+        self.check_all_accesses_valid()
 
     def test_match_bitwidth_with_pattern_matched_fields_by_name(self):
         i = pyrtl.Input(5, 'i')
@@ -319,15 +322,32 @@ class TestMatchBitpattern(unittest.TestCase):
             with pyrtl.match_bitpattern(i, 'ba1ab') as x:
                 out |= x.a + x.b
 
-        sim = pyrtl.Simulation()
-        sim.step_multiple({'i': [0b11010, 0b00011, 0b01101]})
-        output = six.StringIO()
-        sim.tracer.print_trace(output, compact=True)
-        self.assertEqual(
-            output.getvalue(),
-            '  i 26313\n'
-            'out 313\n'
-        )
+        self.check_all_accesses_valid()
+
+    def test_match_bitwidth_with_pattern_matched_fields_with_field_map(self):
+        i = pyrtl.Input(5, 'i')
+        out = pyrtl.Output(2, 'out')
+
+        field_map = {'a': 'field1', 'b': 'field2'}
+        with pyrtl.conditional_assignment:
+            with pyrtl.match_bitpattern(i, '1a?a0', field_map) as x:
+                out |= x.field1
+            with pyrtl.match_bitpattern(i, 'b0?1b', field_map) as x:
+                out |= x.field2
+            with pyrtl.match_bitpattern(i, 'ba1ab', field_map) as x:
+                out |= x.field1 + x.field2
+
+        self.check_all_accesses_valid()
+
+    def test_match_bitwidth_with_pattern_matched_fields_with_bad_field_map(self):
+        i = pyrtl.Input(5, 'i')
+        out = pyrtl.Output(2, 'out')
+
+        field_map = {'a': 'field1', 'c': 'field2'}
+        with self.assertRaises(pyrtl.PyrtlError):
+            with pyrtl.conditional_assignment:
+                with pyrtl.match_bitpattern(i, 'b0?1b', field_map) as x:
+                    out |= x.field2
 
 
 class TestChop(unittest.TestCase):

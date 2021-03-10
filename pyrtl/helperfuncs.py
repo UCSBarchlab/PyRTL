@@ -176,14 +176,17 @@ class MatchedFields(collections.namedtuple('MatchedFields', 'matched fields')):
         _pop_condition()
 
 
-def match_bitpattern(w, bitpattern):
+def match_bitpattern(w, bitpattern, field_map=None):
     """ Returns a single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern,
     and a tuple containining the matched fields, if any.
 
     :param w: The wirevector to be compared to the bitpattern
     :param bitpattern: A string holding the pattern (of bits and wildcards) to match
+    :param field_map: (optional) A map from single-character field name in the bitpattern
+    to the desired name of field in the returned namedtuple. If given, all non-"1"/"0"/"?"
+    characters in the bitpattern must be present in the map.
     :return: A tuple of 1-bit wirevector carrying the result of the comparison, followed
-    by a tuple containing the matched fields, if any.
+    by a named tuple containing the matched fields, if any.
 
     This function will compare a multi-bit wirevector to a specified pattern of bits, where some
     of the pattern can be "wildcard" bits.  If any of the "1" or "0" values specified in the
@@ -225,6 +228,7 @@ def match_bitpattern(w, bitpattern):
         m, _ = match_bitpattern(w, '??01')  # m be true when last two bits of w are '01'
         m, _ = match_bitpattern(w, '??_0 1')  # spaces/underscores are ignored, same as line above
         m, (a, b) = match_pattern(w, '01aa1?bbb11a')  # all bits with same letter make up same field
+        m, fs = match_pattern(w, '01aa1?bbb11a', {'a': 'foo', 'b': 'bar'})  # fields fs.foo, fs.bar
     """
     w = as_wires(w)
     if not isinstance(bitpattern, six.string_types):
@@ -241,13 +245,21 @@ def match_bitpattern(w, bitpattern):
     # Since only Python 3.7 and above guarantees maintaining insertion order in dictionaries,
     # do all of this to make sure we can maintain the ordering in the returned Tuple.
     # Order of fields is determined based on left-to-right ordering in original string.
+    def field_name(name):
+        if field_map is not None:
+            if name not in field_map:
+                raise PyrtlError('field_map argument has been given, '
+                                 'but %s field is not present' % name)
+            return field_map[name]
+        return name
+
     fields = collections.defaultdict(list)
     for i, c in enumerate(lsb_first_string):
         if c not in '01?':
             fields[c].append(w[i])
     fields = sorted(fields.items(), key=lambda m: nospace_string.index(m[0]))  # now list of tuples
-    Fields = collections.namedtuple('Fields', ' '.join(name for name, _ in fields))
-    fields = Fields(**{k: concat_list(l) for k, l in fields})
+    Fields = collections.namedtuple('Fields', ' '.join(field_name(name) for name, _ in fields))
+    fields = Fields(**{field_name(k): concat_list(l) for k, l in fields})
 
     return MatchedFields(match, fields)
 
