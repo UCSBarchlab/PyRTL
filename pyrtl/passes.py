@@ -30,7 +30,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     Return an optimized version of a synthesized hardware block.
 
     :param Boolean update_working_block: Don't copy the block and optimize the
-    new block
+        new block
     :param Block block: the block to optimize (defaults to working block)
 
     Note:

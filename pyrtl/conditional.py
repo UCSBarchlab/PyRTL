@@ -6,6 +6,7 @@ which the condition should apply is well defined.  It is easiest
 to see with an example:
 
 Example::
+
    r1 = Register()
    r2 = Register()
    w3 = WireVector()
@@ -24,6 +25,7 @@ Example::
            w3.next |= m  # d is true (assignments must be independent)
 
 This is equivalent to::
+
     r1.next <<= select(a, i, select(c, k, default))
     r2.next <<= select(a, select(b, j, default), select(c, k, l))
     w3 <<= select(d, m, 0)

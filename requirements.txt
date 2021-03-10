@@ -2,6 +2,8 @@ pep8
 pylint
 astroid
 sphinx
+sphinx_rtd_theme
+sphinx-hoverxref
 nose
 pyparsing
 six

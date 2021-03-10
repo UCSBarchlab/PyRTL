@@ -10,7 +10,7 @@ Simulation
     :special-members: __init__            
             
 Fast (JIT to Python) Simulation
----------------
+-------------------------------
 
 .. autoclass:: pyrtl.simulation.FastSimulation
     :members:
@@ -18,15 +18,15 @@ Fast (JIT to Python) Simulation
     :special-members: __init__            
 
 Compiled (JIT to C) Simulation
----------------
+------------------------------
 
-.. autoclass:: pyrtl.simulation.CompiledSimulation
+.. autoclass:: pyrtl.compilesim.CompiledSimulation
     :members:
     :show-inheritance:
     :special-members: __init__            
 
 Simulation Trace
----------------
+----------------
 
 .. autoclass:: pyrtl.simulation.SimulationTrace
     :members:

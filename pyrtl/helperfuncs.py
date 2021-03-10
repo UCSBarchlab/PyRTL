@@ -207,6 +207,7 @@ def match_bitpattern(w, bitpattern, field_map=None):
     to those fields.
 
     A prime example of this is for decoding an ISA's instructions. Here we decode some RISC-V: ::
+
         with pyrtl.conditional_assignment:
             with match_bitpattern(inst, "iiiiiiiiiiiirrrrr010ddddd0000011") as (imm, rs1, rd):
                 regfile[rd] |= mem[(regfile[rs1] + imm.sign_extended(32)).truncate(32)]
@@ -217,12 +218,13 @@ def match_bitpattern(w, bitpattern, field_map=None):
             with match_bitpattern(inst, "0000000rrrrrsssss111ddddd0110011") as (rs2, rs1, rd):
                 regfile[rd] |= regfile[rs1] & regfile[rs2]
                 pc.next |= pc + 1
-            with match_bitpattern(inst, 0000000rrrrrsssss000iiiii0110011) as (rs2, rs1, rd):
+            with match_bitpattern(inst, "0000000rrrrrsssss000iiiii0110011") as (rs2, rs1, rd):
                 regfile[rd] |= (regfile[rs1] + regfile[rs2]).truncate(32)
                 pc.next |= pc + 1
             # ...etc...
 
-    Examples: ::
+    Some smaller examples: ::
+
         m, _ = match_bitpattern(w, '0101')  # basically the same as w=='0b0101'
         m, _ = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
         m, _ = match_bitpattern(w, '??01')  # m be true when last two bits of w are '01'

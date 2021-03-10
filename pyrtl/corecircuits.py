@@ -184,7 +184,7 @@ def signed_add(a, b):
 
 
 def mult_signed(a, b):
-    # mult_signed is now deprecated, use "signed_mult" instead
+    """ mult_signed is now deprecated, use ``signed_mult`` instead """
     return signed_mult(a, b)
 
 
@@ -473,7 +473,7 @@ def bitfield_update_set(w, update_set, truncating=False):
     Given a WireVector w, this function returns a new WireVector that is identical to w except
     in the range of bits specified.  When multiple non-overlapping fields need to be updated
     in a single cycle this provides a clearer way to describe that behavior than iterative calls to
-    bitfield_update (although that is, in fact, what it is doing).
+    bitfield_update (although that is, in fact, what it is doing). ::
 
         w = bitfield_update_set(w, {
                 (20, 23):    0x6,      # sets bit 20 to 0, bits 21 and 22 to 1
