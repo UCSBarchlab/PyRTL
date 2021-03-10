@@ -177,11 +177,13 @@ class MatchedFields(collections.namedtuple('MatchedFields', 'matched fields')):
 
 
 def match_bitpattern(w, bitpattern):
-    """ Returns a single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern
+    """ Returns a single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern,
+    and a tuple containining the matched fields, if any.
 
     :param w: The wirevector to be compared to the bitpattern
     :param bitpattern: A string holding the pattern (of bits and wildcards) to match
-    :return: A 1-bit wirevector carrying the result of the comparison
+    :return: A tuple of 1-bit wirevector carrying the result of the comparison, followed
+    by a tuple containing the matched fields, if any.
 
     This function will compare a multi-bit wirevector to a specified pattern of bits, where some
     of the pattern can be "wildcard" bits.  If any of the "1" or "0" values specified in the
@@ -200,6 +202,22 @@ def match_bitpattern(w, bitpattern):
     bits 5, 4, and 3. Thus, arbitrary characters beside "?" act as wildcard characters for the
     purposes of matching, with the additional benefit of returning the wirevectors corresponding
     to those fields.
+
+    A prime example of this is for decoding an ISA's instructions. Here we decode some RISC-V: ::
+        with pyrtl.conditional_assignment:
+            with match_bitpattern(inst, "iiiiiiiiiiiirrrrr010ddddd0000011") as (imm, rs1, rd):
+                regfile[rd] |= mem[(regfile[rs1] + imm.sign_extended(32)).truncate(32)]
+                pc.next |= pc + 1
+            with match_bitpattern(inst, "iiiiiiirrrrrsssss010iiiii0100011") as (imm, rs2, rs1):
+                mem[(regfile[rs1] + imm.sign_extended(32)).truncate(32)] |= regfile[rs2]
+                pc.next |= pc + 1
+            with match_bitpattern(inst, "0000000rrrrrsssss111ddddd0110011") as (rs2, rs1, rd):
+                regfile[rd] |= regfile[rs1] & regfile[rs2]
+                pc.next |= pc + 1
+            with match_bitpattern(inst, 0000000rrrrrsssss000iiiii0110011) as (rs2, rs1, rd):
+                regfile[rd] |= (regfile[rs1] + regfile[rs2]).truncate(32)
+                pc.next |= pc + 1
+            # ...etc...
 
     Examples: ::
         m, _ = match_bitpattern(w, '0101')  # basically the same as w=='0b0101'
@@ -223,10 +241,10 @@ def match_bitpattern(w, bitpattern):
     # Since only Python 3.7 and above guarantees maintaining insertion order in dictionaries,
     # do all of this to make sure we can maintain the ordering in the returned Tuple.
     # Order of fields is determined based on left-to-right ordering in original string.
-    fields = {}
+    fields = collections.defaultdict(list)
     for i, c in enumerate(lsb_first_string):
         if c not in '01?':
-            fields.setdefault(c, []).append(w[i])
+            fields[c].append(w[i])
     fields = sorted(fields.items(), key=lambda m: nospace_string.index(m[0]))  # now list of tuples
     Fields = collections.namedtuple('Fields', ' '.join(name for name, _ in fields))
     fields = Fields(**{k: concat_list(l) for k, l in fields})
