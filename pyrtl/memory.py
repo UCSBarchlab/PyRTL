@@ -176,8 +176,10 @@ class MemBlock(_MemReadBase):
         :param int addrwidth: The number of bits used to address an element of the
          memory. This also defines the size of the memory
         :param str name: The identifier for the memory
-        :param max_read_ports, max_write_ports: limits the number of read and write ports each
-            block can create; passing `None` to either indicates there is no limit
+        :param max_read_ports: limits the number of read ports each
+            block can create; passing `None` indicates there is no limit
+        :param max_write_ports: limits the number of write ports each
+            block can create; passing `None` indicates there is no limit
         :param bool asynchronous: If false make sure that memory reads are only done
             using values straight from a register. (aka make sure that the
             read is synchronous)
