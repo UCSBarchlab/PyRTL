@@ -13,7 +13,7 @@ from functools import reduce
 from .core import working_block, _NameIndexer, _get_debug_mode
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
-from .corecircuits import as_wires, rtl_all, rtl_any
+from .corecircuits import as_wires, rtl_all, rtl_any, concat_list
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -165,41 +165,103 @@ def truncate(wirevector_or_integer, bitwidth):
         return x & ((1 << bitwidth) - 1)
 
 
-def match_bitpattern(w, bitpattern):
-    """ Returns a single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern
+class MatchedFields(collections.namedtuple('MatchedFields', 'matched fields')):
+    def __enter__(self):
+        from .conditional import _push_condition
+        _push_condition(self.matched)
+        return self.fields
+
+    def __exit__(self, *execinfo):
+        from .conditional import _pop_condition
+        _pop_condition()
+
+
+def match_bitpattern(w, bitpattern, field_map=None):
+    """ Returns a single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern,
+    and a tuple containining the matched fields, if any.
 
     :param w: The wirevector to be compared to the bitpattern
     :param bitpattern: A string holding the pattern (of bits and wildcards) to match
-    :return: A 1-bit wirevector carrying the result of the comparison
+    :param field_map: (optional) A map from single-character field name in the bitpattern
+    to the desired name of field in the returned namedtuple. If given, all non-"1"/"0"/"?"
+    characters in the bitpattern must be present in the map.
+    :return: A tuple of 1-bit wirevector carrying the result of the comparison, followed
+    by a named tuple containing the matched fields, if any.
 
     This function will compare a multi-bit wirevector to a specified pattern of bits, where some
     of the pattern can be "wildcard" bits.  If any of the "1" or "0" values specified in the
     bitpattern fail to match the wirevector during execution, a "0" will be produced, otherwise
-    the value carried on the wire will be "1".  Wildcard characters must be one of '?', 'x', 'X'.
+    the value carried on the wire will be "1".  The wildcard characters can be any other
+    alphanumeric character, with characters other than "?" having special functionality (see below).
     The string must have length equal to the wirevector specified, although whitespace and
     underscore characters will be ignored and can be used for pattern readability.
 
+    For all other characters besides "1", "0", or "?", a tuple of wirevectors will be returned as
+    the second return value. Each character will be treated as the name of a field,
+    and non-consecutive fields with the same name will be concatenated together, left-to-right, into
+    a single field in the resultant tuple. For example, "01aa1?bbb11a" will match a string such
+    as "010010100111", and the resultant matched fields are (a, b) = (0b001, 0b100), where the 'a'
+    field is the concenation of bits 9, 8, and 0, and the 'b' field is the concenation of
+    bits 5, 4, and 3. Thus, arbitrary characters beside "?" act as wildcard characters for the
+    purposes of matching, with the additional benefit of returning the wirevectors corresponding
+    to those fields.
+
+    A prime example of this is for decoding an ISA's instructions. Here we decode some RISC-V: ::
+        with pyrtl.conditional_assignment:
+            with match_bitpattern(inst, "iiiiiiiiiiiirrrrr010ddddd0000011") as (imm, rs1, rd):
+                regfile[rd] |= mem[(regfile[rs1] + imm.sign_extended(32)).truncate(32)]
+                pc.next |= pc + 1
+            with match_bitpattern(inst, "iiiiiiirrrrrsssss010iiiii0100011") as (imm, rs2, rs1):
+                mem[(regfile[rs1] + imm.sign_extended(32)).truncate(32)] |= regfile[rs2]
+                pc.next |= pc + 1
+            with match_bitpattern(inst, "0000000rrrrrsssss111ddddd0110011") as (rs2, rs1, rd):
+                regfile[rd] |= regfile[rs1] & regfile[rs2]
+                pc.next |= pc + 1
+            with match_bitpattern(inst, 0000000rrrrrsssss000iiiii0110011) as (rs2, rs1, rd):
+                regfile[rd] |= (regfile[rs1] + regfile[rs2]).truncate(32)
+                pc.next |= pc + 1
+            # ...etc...
+
     Examples: ::
-        m = match_bitpattern(w, '0101')  # basically the same as w=='0b0101'
-        m = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
-        m = match_bitpattern(w, 'xx01')  # m be true when last two bits of w are '01'
-        m = match_bitpattern(w, 'xx_0 1')  # spaces/underscores will be ignored, same as line above
+        m, _ = match_bitpattern(w, '0101')  # basically the same as w=='0b0101'
+        m, _ = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
+        m, _ = match_bitpattern(w, '??01')  # m be true when last two bits of w are '01'
+        m, _ = match_bitpattern(w, '??_0 1')  # spaces/underscores are ignored, same as line above
+        m, (a, b) = match_pattern(w, '01aa1?bbb11a')  # all bits with same letter make up same field
+        m, fs = match_pattern(w, '01aa1?bbb11a', {'a': 'foo', 'b': 'bar'})  # fields fs.foo, fs.bar
     """
     w = as_wires(w)
     if not isinstance(bitpattern, six.string_types):
         raise PyrtlError('bitpattern must be a string')
     nospace_string = ''.join(bitpattern.replace('_', '').split())
-    if any(c not in '01?xX' for c in nospace_string):
-        raise PyrtlError("bitpattern string contains invalid characters "
-                         "(only '0', '1', and wildcard characters '?', 'x', and 'X' allowed)")
     if len(w) != len(nospace_string):
         raise PyrtlError('bitpattern string different length than wirevector provided')
     lsb_first_string = nospace_string[::-1]  # flip so index 0 is lsb
 
     zero_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '0']
     one_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '1']
+    match = rtl_all(*one_bits) & ~rtl_any(*zero_bits)
 
-    return rtl_all(*one_bits) & ~rtl_any(*zero_bits)
+    # Since only Python 3.7 and above guarantees maintaining insertion order in dictionaries,
+    # do all of this to make sure we can maintain the ordering in the returned Tuple.
+    # Order of fields is determined based on left-to-right ordering in original string.
+    def field_name(name):
+        if field_map is not None:
+            if name not in field_map:
+                raise PyrtlError('field_map argument has been given, '
+                                 'but %s field is not present' % name)
+            return field_map[name]
+        return name
+
+    fields = collections.defaultdict(list)
+    for i, c in enumerate(lsb_first_string):
+        if c not in '01?':
+            fields[c].append(w[i])
+    fields = sorted(fields.items(), key=lambda m: nospace_string.index(m[0]))  # now list of tuples
+    Fields = collections.namedtuple('Fields', ' '.join(field_name(name) for name, _ in fields))
+    fields = Fields(**{field_name(k): concat_list(l) for k, l in fields})
+
+    return MatchedFields(match, fields)
 
 
 def chop(w, *segment_widths):
