@@ -183,10 +183,10 @@ def match_bitpattern(w, bitpattern, field_map=None):
     :param w: The wirevector to be compared to the bitpattern
     :param bitpattern: A string holding the pattern (of bits and wildcards) to match
     :param field_map: (optional) A map from single-character field name in the bitpattern
-    to the desired name of field in the returned namedtuple. If given, all non-"1"/"0"/"?"
-    characters in the bitpattern must be present in the map.
+        to the desired name of field in the returned namedtuple. If given, all non-"1"/"0"/"?"
+        characters in the bitpattern must be present in the map.
     :return: A tuple of 1-bit wirevector carrying the result of the comparison, followed
-    by a named tuple containing the matched fields, if any.
+        by a named tuple containing the matched fields, if any.
 
     This function will compare a multi-bit wirevector to a specified pattern of bits, where some
     of the pattern can be "wildcard" bits.  If any of the "1" or "0" values specified in the
