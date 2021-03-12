@@ -132,7 +132,7 @@ class MultiSelector(object):
 
     def __enter__(self):
         """ For compatibility with `with` statements, which is the recommended
-         method of using a MultiSelector
+        method of using a MultiSelector.
         """
         return self
 

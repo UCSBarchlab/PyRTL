@@ -21,7 +21,7 @@ __all__ = ['CompiledSimulation']
 
 
 class DllMemInspector(collections.Mapping):
-    """Dictionary-like access to a hashmap in a CompiledSimulation."""
+    """ Dictionary-like access to a hashmap in a CompiledSimulation. """
 
     def __init__(self, sim, mem):
         self._aw = mem.addrwidth
@@ -229,10 +229,10 @@ class CompiledSimulation(object):
             file.flush()
 
     def run(self, inputs):
-        """Run many steps of the simulation.
+        """ Run many steps of the simulation.
 
         :param inputs: A list of input mappings for each step;
-          its length is the number of steps to be executed.
+            its length is the number of steps to be executed.
         """
         steps = len(inputs)
         # create i/o arrays of the appropriate length
@@ -288,7 +288,7 @@ class CompiledSimulation(object):
             self.tracer.trace[name].extend(res)
 
     def _traceable(self, wv):
-        """Check if wv is able to be traced
+        """ Check if wv is able to be traced.
 
         If it is traceable due to a probe, record that probe in _probe_mapping.
         """
@@ -301,7 +301,7 @@ class CompiledSimulation(object):
         return False
 
     def _remove_untraceable(self):
-        """Remove from the tracer those wires that CompiledSimulation cannot track.
+        """ Remove from the tracer those wires that CompiledSimulation cannot track.
 
         Create _probe_mapping for wires only traceable via probes.
         """
@@ -312,7 +312,7 @@ class CompiledSimulation(object):
         self.tracer.trace.__init__(wvs)
 
     def _create_dll(self):
-        """Create a dynamically-linked library implementing the simulation logic."""
+        """ Create a dynamically-linked library implementing the simulation logic. """
         self._dir = tempfile.mkdtemp()
         with open(path.join(self._dir, 'pyrtlsim.c'), 'w') as f:
             self._create_code(lambda s: f.write(s + '\n'))
@@ -334,11 +334,11 @@ class CompiledSimulation(object):
         self._mem_lookup.restype = ctypes.POINTER(ctypes.c_uint64)
 
     def _limbs(self, w):
-        """Number of 64-bit words needed to store value of wire."""
+        """ Number of 64-bit words needed to store value of wire. """
         return (w.bitwidth + 63) // 64
 
     def _makeini(self, w, v):
-        """C initializer string for a wire with a given value."""
+        """ C initializer string for a wire with a given value. """
         pieces = []
         for _ in range(self._limbs(w)):
             pieces.append(hex(v & ((1 << 64) - 1)))
@@ -346,7 +346,7 @@ class CompiledSimulation(object):
         return ','.join(pieces).join('{}')
 
     def _romwidth(self, m):
-        """Bitwidth of integer type sufficient to hold rom entry.
+        """ Bitwidth of integer type sufficient to hold rom entry.
 
         On large memories, returns 64; an array will be needed.
         """
@@ -369,18 +369,18 @@ class CompiledSimulation(object):
         return ''
 
     def _getarglimb(self, arg, n):
-        """Get the nth limb of the given wire.
+        """ Get the nth limb of the given wire.
 
         Returns '0' when the wire does not have sufficient limbs.
         """
         return '{vn}[{n}]'.format(vn=self.varname[arg], n=n) if arg.bitwidth > 64 * n else '0'
 
     def _clean_name(self, prefix, obj):
-        """Create a C variable name with the given prefix based on the name of obj."""
+        """ Create a C variable name with the given prefix based on the name of obj. """
         return '{}{}_{}'.format(prefix, self._uid(), ''.join(c for c in obj.name if c.isalnum()))
 
     def _uid(self):
-        """Get an auto-incrementing number suitable for use as a unique identifier."""
+        """ Get an auto-incrementing number suitable for use as a unique identifier. """
         x = self._uid_counter
         self._uid_counter += 1
         return x

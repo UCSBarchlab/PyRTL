@@ -255,7 +255,7 @@ def _to_verilog_footer(file):
 
 def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=None,
                              vcd="waveform.vcd", cmd=None, block=None):
-    """Output a Verilog testbench for the block/inputs used in the simulation trace.
+    """ Output a Verilog testbench for the block/inputs used in the simulation trace.
 
     :param dest_file: an open file to which the test bench will be printed.
     :param simulation_trace: a simulation trace from which the inputs will be extracted
