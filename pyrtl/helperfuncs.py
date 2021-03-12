@@ -138,16 +138,16 @@ def log2(integer_val):
 
 
 def truncate(wirevector_or_integer, bitwidth):
-    """ Returns a wirevector or integer truncated to the specified bitwidth
+    """ Returns a WireVector or integer truncated to the specified bitwidth
 
-    :param wirevector_or_integer: Either a wirevector or an integer to be truncated
+    :param wirevector_or_integer: Either a WireVector or an integer to be truncated.
     :param bitwidth: The length to which the first argument should be truncated.
-    :return: Returns a tuncated wirevector or integer as appropriate
+    :return: A truncated WireVector or integer as appropriate.
 
     This function truncates the most significant bits of the input, leaving a result
     that is only "bitwidth" bits wide.  For integers this is performed with a simple
-    bitmask of size "bitwidth".  For wirevectors the function calls WireVector.truncate
-    and returns a wirevector of the specified bitwidth.
+    bitmask of size "bitwidth".  For WireVectors the function calls 'WireVector.truncate'
+    and returns a WireVector of the specified bitwidth.
 
     Examples: ::
 
@@ -177,26 +177,26 @@ class MatchedFields(collections.namedtuple('MatchedFields', 'matched fields')):
 
 
 def match_bitpattern(w, bitpattern, field_map=None):
-    """ Returns a single-bit wirevector that is 1 if and only if 'w' matches the bitpattern,
+    """ Returns a single-bit WireVector that is 1 if and only if 'w' matches the bitpattern,
     and a tuple containining the matched fields, if any. Compatible with the 'with' statement.
 
-    :param w: The wirevector to be compared to the bitpattern
+    :param w: The WireVector to be compared to the bitpattern
     :param bitpattern: A string holding the pattern (of bits and wildcards) to match
     :param field_map: (optional) A map from single-character field name in the bitpattern
         to the desired name of field in the returned namedtuple. If given, all non-"1"/"0"/"?"
         characters in the bitpattern must be present in the map.
-    :return: A tuple of 1-bit wirevector carrying the result of the comparison, followed
+    :return: A tuple of 1-bit WireVector carrying the result of the comparison, followed
         by a named tuple containing the matched fields, if any.
 
-    This function will compare a multi-bit wirevector to a specified pattern of bits, where some
+    This function will compare a multi-bit WireVector to a specified pattern of bits, where some
     of the pattern can be "wildcard" bits.  If any of the "1" or "0" values specified in the
-    bitpattern fail to match the wirevector during execution, a "0" will be produced, otherwise
+    bitpattern fail to match the WireVector during execution, a "0" will be produced, otherwise
     the value carried on the wire will be "1".  The wildcard characters can be any other
     alphanumeric character, with characters other than "?" having special functionality (see below).
     The string must have length equal to the wirevector specified, although whitespace and
     underscore characters will be ignored and can be used for pattern readability.
 
-    For all other characters besides "1", "0", or "?", a tuple of wirevectors will be returned as
+    For all other characters besides "1", "0", or "?", a tuple of WireVectors will be returned as
     the second return value. Each character will be treated as the name of a field,
     and non-consecutive fields with the same name will be concatenated together, left-to-right, into
     a single field in the resultant tuple. For example, "01aa1?bbb11a" will match a string such
@@ -267,13 +267,13 @@ def match_bitpattern(w, bitpattern, field_map=None):
 
 
 def chop(w, *segment_widths):
-    """ Returns a list of wirevectors each a slice of the original 'w'
+    """ Returns a list of WireVectors each a slice of the original 'w'
 
-    :param w: The wirevector to be chopped up into segments
+    :param w: The WireVector to be chopped up into segments
     :param segment_widths: Additional arguments are integers which are bitwidths
-    :return: A list of wirevectors each with a proper segment width
+    :return: A list of WireVectors each with a proper segment width
 
-    This function chops a wirevector into a set of smaller wirevectors of different
+    This function chops a WireVector into a set of smaller WireVectors of different
     lengths.  It is most useful when multiple "fields" are contained with a single
     wirevector, for example when breaking apart an instruction.  For example, if
     you wish to break apart a 32-bit MIPS I-type (Immediate) instruction you know

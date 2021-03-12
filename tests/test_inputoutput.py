@@ -422,6 +422,43 @@ class TestInputFromBlif(unittest.TestCase):
         self.assertIn(outw, io_output)
 
 
+graphviz_string = """
+              digraph g {
+
+              graph [splines="spline"];
+              node [shape=circle, style=filled, fillcolor=lightblue1,
+                    fontcolor=black, fontname=helvetica, penwidth=0,
+                    fixedsize=true];
+              edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
+                  n0 [label="bits(0,0) (Fanout: 1)", height=.1, width=.1];
+    n1 [label="bits(7,2) (Fanout: 1)", height=.1, width=.1];
+    n2 [label="bits(0,0) (Fanout: 1)", height=.1, width=.1];
+    n3 [label="concat (Fanout: 1)", height=.1, width=.1];
+    n4 [label=" (Fanout: 0)", height=.1, width=.1];
+    n5 [label="concat (Fanout: 1)", height=.1, width=.1];
+    n6 [label="* (Fanout: 1)"];
+    n7 [label="8", shape=circle, fillcolor=lightgrey];
+    n8 [label="d", shape=house, fillcolor=lawngreen];
+    n9 [label="0", shape=circle, fillcolor=lightgrey];
+    n10 [label="0", shape=circle, fillcolor=lightgrey];
+    n11 [label="a", shape=invhouse, fillcolor=coral];
+   n0 -> n3 [label="tmp0/2 (Delay: 0.00)", penwidth="6", arrowhead="none"];
+   n1 -> n5 [label="tmp3/6 (Delay: 706.50)", penwidth="6", arrowhead="none"];
+   n2 -> n5 [label="tmp4/4 (Delay: 0.00)", penwidth="6", arrowhead="none"];
+   n3 -> n6 [label="tmp1/4 (Delay: 0.00)", penwidth="6", arrowhead="normal"];
+   n4 -> n8 [label="d/10 (Delay: 706.50)", penwidth="6", arrowhead="normal"];
+   n5 -> n4 [label="tmp5/10 (Delay: 706.50)", penwidth="6", arrowhead="normal"];
+   n6 -> n1 [label="tmp2/8 (Delay: 706.50)", penwidth="6", arrowhead="none"];
+   n7 -> n6 [label="const_0_8/4 (Delay: 0.00)", penwidth="6", arrowhead="normal"];
+   n9 -> n0 [label="const_1_0/1 (Delay: 0.00)", penwidth="2", arrowhead="none"];
+   n10 -> n2 [label="const_2_0/1 (Delay: 0.00)", penwidth="2", arrowhead="none"];
+   n11 -> n3 [label="a/2 (Delay: 0.00)", penwidth="6", arrowhead="none"];
+}
+
+
+"""
+
+
 class TestOutputGraphs(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -446,6 +483,44 @@ class TestOutputGraphs(unittest.TestCase):
                 extra_edge_info=timing.timing_map
             )
             pyrtl.output_to_graphviz(vfile, namer=graph_namer)
+
+    @unittest.skip("Need to make Graphviz output order deterministic via sorting")
+    def test_output_to_graphviz_correct_detailed_output(self):
+        from pyrtl.analysis.estimate import TimingAnalysis
+
+        a = pyrtl.Input(2, 'a')
+        b = a * 8
+        c = b[2:]
+        d = pyrtl.Output(10, 'd')
+        d <<= c
+
+        analysis = TimingAnalysis()
+        _, dst_map = pyrtl.working_block().net_connections()
+
+        def get_fanout(n):
+            if isinstance(n, pyrtl.LogicNet):
+                if n.op == '@':
+                    return 0
+                w = n.dests[0]
+            else:
+                w = n
+
+            if isinstance(w, pyrtl.Output):
+                return 0
+            else:
+                return len(dst_map[w])
+
+        node_fanout = {n: "Fanout: %d" % get_fanout(n) for n in pyrtl.working_block().logic}
+        wire_delay = {
+            w: "Delay: %.2f" % analysis.timing_map[w] for w in pyrtl.working_block().wirevector_set
+        }
+
+        with io.StringIO() as vfile:
+            pyrtl.output_to_graphviz(
+                file=vfile,
+                namer=pyrtl.graphviz_detailed_namer(node_fanout, wire_delay)
+            )
+            self.assertEqual(vfile.getvalue(), graphviz_string)
 
 
 class TestNetGraph(unittest.TestCase):
