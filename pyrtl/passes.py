@@ -30,7 +30,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     Return an optimized version of a synthesized hardware block.
 
     :param Boolean update_working_block: Don't copy the block and optimize the
-    new block
+        new block
     :param Block block: the block to optimize (defaults to working block)
 
     Note:
@@ -53,8 +53,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
 
 
 class _ProducerList(object):
-    """  Maps from wire to its immediate producer and finds ultimate producers
-    """
+    """  Maps from wire to its immediate producer and finds ultimate producers. """
     def __init__(self):
         self.dict = {}  # map from wirevector to its direct producer wirevector
 
@@ -571,9 +570,7 @@ def and_inverter_synth(net):
 
 @transform.all_nets
 def two_way_concat(net):
-    """
-    Transforms a block such that all n-way (n > 2) concats are replaced
-    with series of 2-way concats.
+    """ Transforms a block so all n-way (n > 2) concats are replaced with series of 2-way concats.
 
     :param block: The block to transform
 
@@ -617,8 +614,7 @@ def two_way_concat(net):
 
 @transform.all_nets
 def one_bit_selects(net):
-    """
-    Converts arbitrary-sliced selects to concatenations of 1-bit selects
+    """ Converts arbitrary-sliced selects to concatenations of 1-bit selects.
 
     :param block: The block to transform
 

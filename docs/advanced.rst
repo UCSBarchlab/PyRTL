@@ -9,7 +9,7 @@ Passes
    :exclude-members: __dict__,__weakref__,__module__
 
 Conditional Blocks
-================
+==================
 
 .. automodule:: pyrtl.conditional
    :members:

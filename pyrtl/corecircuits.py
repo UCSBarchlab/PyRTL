@@ -14,7 +14,7 @@ from .conditional import otherwise
 
 
 def mux(index, *mux_ins, **kwargs):
-    """ Multiplexer returning the value of the wire in .
+    """ Multiplexer returning the value of the wire from mux_ins according to index.
 
     :param WireVector index: used as the select input to the multiplexer
     :param WireVector mux_ins: additional WireVector arguments selected when select>1
@@ -34,17 +34,17 @@ def mux(index, *mux_ins, **kwargs):
     Example of mux as "selector" to pick between a0 and a1: ::
 
         index = WireVector(1)
-        mux( index, a0, a1 )
+        mux(index, a0, a1)
 
     Example of mux as "selector" to pick between a0 ... a3: ::
 
         index = WireVector(2)
-        mux( index, a0, a1, a2, a3 )
+        mux(index, a0, a1, a2, a3)
 
     Example of "default" to specify additional arguments: ::
 
         index = WireVector(3)
-        mux( index, a0, a1, a2, a3, a4, a5, default=0 )
+        mux(index, a0, a1, a2, a3, a4, a5, default=0)
     """
     if kwargs:  # only "default" is allowed as kwarg.
         if len(kwargs) != 1 or 'default' not in kwargs:
@@ -62,6 +62,7 @@ def mux(index, *mux_ins, **kwargs):
         default = None
 
     # find the diff between the addressable range and number of inputs given
+    index = as_wires(index)
     short_by = 2**len(index) - len(mux_ins)
     if short_by > 0:
         if default is not None:  # extend the list to appropriate size
@@ -95,7 +96,7 @@ def select(sel, truecase, falsecase):
 
     Example of mux as "ternary operator" to take the min of 'a' and 5: ::
 
-        select( a<5, truecase=a, falsecase=5 )
+        select(a<5, truecase=a, falsecase=5)
     """
     sel, f, t = (as_wires(w) for w in (sel, falsecase, truecase))
     f, t = match_bitwidth(f, t)
@@ -107,7 +108,7 @@ def select(sel, truecase, falsecase):
 
 
 def concat(*args):
-    """ Concatenates multiple WireVectors into a single WireVector
+    """ Concatenates multiple WireVectors into a single WireVector.
 
     :param WireVector args: inputs to be concatenated
     :return: WireVector with length equal to the sum of the args' lengths
@@ -120,7 +121,7 @@ def concat(*args):
 
     Example using concat to combine two bytes into a 16-bit quantity: ::
 
-        concat( msb, lsb )
+        concat(msb, lsb)
     """
     if len(args) <= 0:
         raise PyrtlError('error, concat requires at least 1 argument')
@@ -140,7 +141,7 @@ def concat(*args):
 
 
 def concat_list(wire_list):
-    """ Concatenates a list of WireVectors into a single WireVector
+    """ Concatenates a list of WireVectors into a single WireVector.
 
     :param wire_list: list of WireVectors to concat
     :return: WireVector with length equal to the sum of the args' lengths
@@ -152,8 +153,8 @@ def concat_list(wire_list):
 
     Example using concat to combine two bytes into a 16-bit quantity: ::
 
-        mylist = [ lsb, msb ]
-        concat_list( mylist )
+        mylist = [lsb, msb]
+        concat_list(mylist)
 
     """
     return concat(*reversed(wire_list))
@@ -183,7 +184,7 @@ def signed_add(a, b):
 
 
 def mult_signed(a, b):
-    # mult_signed is now deprecated, use "signed_mult" instead
+    """ mult_signed is now deprecated, use ``signed_mult`` instead """
     return signed_mult(a, b)
 
 
@@ -294,8 +295,8 @@ def shift_left_logical(bits_to_shift, shift_amount):
 
     This function returns a new WireVector of length equal to the length
     of the input `bits_to_shift` but where the bits have been shifted
-    to the left.  An logical shift is one that treats the value as
-    as unsigned number, meaning the zeros are shifted in.  Note that
+    to the left.  A logical shift is one that treats the value as
+    as unsigned number, meaning the zeroes are shifted in.  Note that
     `shift_amount` is treated as unsigned.
     """
     a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
@@ -313,7 +314,7 @@ def shift_right_logical(bits_to_shift, shift_amount):
 
     This function returns a new WireVector of length equal to the length
     of the input `bits_to_shift` but where the bits have been shifted
-    to the right.  An logical shift is one that treats the value as
+    to the right.  A logical shift is one that treats the value as
     as unsigned number, meaning the zeros are shifted in regardless of
     the "sign bit".  Note that `shift_amount` is treated as unsigned.
     """
@@ -324,8 +325,7 @@ def shift_right_logical(bits_to_shift, shift_amount):
 
 
 def match_bitwidth(*args, **opt):
-    """ Matches the bitwidth of all of the input arguments with zero or sign extension,
-        returning new WireVectors
+    """ Matches the argument wires' bitwidth via zero or sign extension, returning new WireVectors
 
     :param args: WireVectors of which to match bitwidths
     :param opt: Optional keyword argument 'signed=True' (defaults to False)
@@ -339,7 +339,7 @@ def match_bitwidth(*args, **opt):
     Example of matching the bitwidths of three WireVectors `a`,`b`, and `c` with
     with sign extention: ::
 
-        a, b = match_bitwidth(a, b, c, signed=True)
+        a, b, c = match_bitwidth(a, b, c, signed=True)
     """
     # TODO: when we drop 2.7 support, this code should be cleaned up with explicit
     # kwarg support for "signed" rather than the less than helpful "**opt"
@@ -360,12 +360,11 @@ def match_bitwidth(*args, **opt):
 def as_wires(val, bitwidth=None, truncating=True, block=None):
     """ Return wires from val which may be wires, integers (including IntEnums), strings, or bools.
 
-    :param val: a wirevector-like object or something that can be converted into
-      a Const
+    :param val: a wirevector-like object or something that can be converted into a Const
     :param bitwidth: The bitwidth the resulting wire should be
     :param bool truncating: determines whether bits will be dropped to achieve
-     the desired bitwidth if it is too long (if true, the most-significant bits
-     will be dropped)
+        the desired bitwidth if it is too long (if true, the most-significant bits
+        will be dropped)
     :param Block block: block to use for wire
 
     This function is mainly used to coerce values into WireVectors (for
@@ -472,7 +471,7 @@ def bitfield_update_set(w, update_set, truncating=False):
     Given a WireVector w, this function returns a new WireVector that is identical to w except
     in the range of bits specified.  When multiple non-overlapping fields need to be updated
     in a single cycle this provides a clearer way to describe that behavior than iterative calls to
-    bitfield_update (although that is, in fact, what it is doing).
+    bitfield_update (although that is, in fact, what it is doing). ::
 
         w = bitfield_update_set(w, {
                 (20, 23):    0x6,      # sets bit 20 to 0, bits 21 and 22 to 1
@@ -610,10 +609,18 @@ def rtl_any(*vectorlist):
     :return: WireVector of length 1
 
     Returns a 1-bit WireVector which will hold a '1' if any of the inputs
-    are '1' (i.e. it is a big ol' OR gate)
+    are '1' (i.e. it is a big ol' OR gate).  If no inputs are provided it
+    will return a Const 0 (since there are no '1's present) similar to python's
+    any function called with an empty list.
+
+    Examples::
+
+        rtl_any(thing1, thing2, thing3)  # same as thing1 | thing2 | thing3
+        rtl_any(*[list_of_things])  # the unpack operator ("*") can be used for lists
+        rtl_any()  # returns Const(False) which comes up if the list above is empty
     """
-    if len(vectorlist) <= 0:
-        raise PyrtlError('rtl_any requires at least 1 argument')
+    if len(vectorlist) == 0:
+        return as_wires(False)
     converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
         raise PyrtlError('only length 1 WireVectors can be inputs to rtl_any')
@@ -627,10 +634,18 @@ def rtl_all(*vectorlist):
     :return: WireVector of length 1
 
     Returns a 1-bit WireVector which will hold a '1' only if all of the
-    inputs are '1' (i.e. it is a big ol' AND gate)
+    inputs are '1' (i.e. it is a big ol' AND gate).  If no inputs are provided it
+    will return a Const 1 (since there are no '0's present) similar to python's
+    all function called with an empty list.
+
+    Examples::
+
+        rtl_all(thing1, thing2, thing3)  # same as thing1 & thing2 & thing3
+        rtl_all(*[list_of_things])  # the unpack operator ("*") can be used for lists
+        rtl_all()  # returns Const(True) which comes up if the list above is empty
     """
-    if len(vectorlist) <= 0:
-        raise PyrtlError('rtl_all requires at least 1 argument')
+    if len(vectorlist) == 0:
+        return as_wires(True)
     converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
         raise PyrtlError('only length 1 WireVectors can be inputs to rtl_all')

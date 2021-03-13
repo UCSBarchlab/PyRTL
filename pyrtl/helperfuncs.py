@@ -13,7 +13,7 @@ from functools import reduce
 from .core import working_block, _NameIndexer, _get_debug_mode
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
-from .corecircuits import as_wires, rtl_all, rtl_any
+from .corecircuits import as_wires, rtl_all, rtl_any, concat_list
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -165,44 +165,105 @@ def truncate(wirevector_or_integer, bitwidth):
         return x & ((1 << bitwidth) - 1)
 
 
-def match_bitpattern(w, bitpattern):
-    """ Returns a single-bit wirevector that will be 1 if and only if 'w' matches the bitpattern
+class MatchedFields(collections.namedtuple('MatchedFields', 'matched fields')):
+    def __enter__(self):
+        from .conditional import _push_condition
+        _push_condition(self.matched)
+        return self.fields
+
+    def __exit__(self, *execinfo):
+        from .conditional import _pop_condition
+        _pop_condition()
+
+
+def match_bitpattern(w, bitpattern, field_map=None):
+    """ Returns a single-bit wirevector that is 1 if and only if 'w' matches the bitpattern,
+    and a tuple containining the matched fields, if any. Compatible with the 'with' statement.
 
     :param w: The wirevector to be compared to the bitpattern
     :param bitpattern: A string holding the pattern (of bits and wildcards) to match
-    :return: A 1-bit wirevector carrying the result of the comparison
+    :param field_map: (optional) A map from single-character field name in the bitpattern
+        to the desired name of field in the returned namedtuple. If given, all non-"1"/"0"/"?"
+        characters in the bitpattern must be present in the map.
+    :return: A tuple of 1-bit wirevector carrying the result of the comparison, followed
+        by a named tuple containing the matched fields, if any.
 
     This function will compare a multi-bit wirevector to a specified pattern of bits, where some
     of the pattern can be "wildcard" bits.  If any of the "1" or "0" values specified in the
     bitpattern fail to match the wirevector during execution, a "0" will be produced, otherwise
-    the value carried on the wire will be "1".  Wildcard characters must be one of '?', 'x', 'X'.
+    the value carried on the wire will be "1".  The wildcard characters can be any other
+    alphanumeric character, with characters other than "?" having special functionality (see below).
     The string must have length equal to the wirevector specified, although whitespace and
     underscore characters will be ignored and can be used for pattern readability.
 
-    Examples: ::
-        m = match_bitpattern(w, '0101')  # basically the same as w=='0b0101'
-        m = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
-        m = match_bitpattern(w, 'xx01')  # m be true when last two bits of w are '01'
-        m = match_bitpattern(w, 'xx_0 1')  # spaces/underscores will be ignored, same as line above
+    For all other characters besides "1", "0", or "?", a tuple of wirevectors will be returned as
+    the second return value. Each character will be treated as the name of a field,
+    and non-consecutive fields with the same name will be concatenated together, left-to-right, into
+    a single field in the resultant tuple. For example, "01aa1?bbb11a" will match a string such
+    as "010010100111", and the resultant matched fields are (a, b) = (0b001, 0b100), where the 'a'
+    field is the concenation of bits 9, 8, and 0, and the 'b' field is the concenation of
+    bits 5, 4, and 3. Thus, arbitrary characters beside "?" act as wildcard characters for the
+    purposes of matching, with the additional benefit of returning the wirevectors corresponding
+    to those fields.
+
+    A prime example of this is for decoding an ISA's instructions. Here we decode some RISC-V: ::
+
+        with pyrtl.conditional_assignment:
+            with match_bitpattern(inst, "iiiiiiiiiiiirrrrr010ddddd0000011") as (imm, rs1, rd):
+                regfile[rd] |= mem[(regfile[rs1] + imm.sign_extended(32)).truncate(32)]
+                pc.next |= pc + 1
+            with match_bitpattern(inst, "iiiiiiirrrrrsssss010iiiii0100011") as (imm, rs2, rs1):
+                mem[(regfile[rs1] + imm.sign_extended(32)).truncate(32)] |= regfile[rs2]
+                pc.next |= pc + 1
+            with match_bitpattern(inst, "0000000rrrrrsssss111ddddd0110011") as (rs2, rs1, rd):
+                regfile[rd] |= regfile[rs1] & regfile[rs2]
+                pc.next |= pc + 1
+            with match_bitpattern(inst, "0000000rrrrrsssss000ddddd0110011") as (rs2, rs1, rd):
+                regfile[rd] |= (regfile[rs1] + regfile[rs2]).truncate(32)
+                pc.next |= pc + 1
+            # ...etc...
+
+    Some smaller examples: ::
+
+        m, _ = match_bitpattern(w, '0101')  # basically the same as w=='0b0101'
+        m, _ = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
+        m, _ = match_bitpattern(w, '??01')  # m be true when last two bits of w are '01'
+        m, _ = match_bitpattern(w, '??_0 1')  # spaces/underscores are ignored, same as line above
+        m, (a, b) = match_pattern(w, '01aa1?bbb11a')  # all bits with same letter make up same field
+        m, fs = match_pattern(w, '01aa1?bbb11a', {'a': 'foo', 'b': 'bar'})  # fields fs.foo, fs.bar
     """
     w = as_wires(w)
     if not isinstance(bitpattern, six.string_types):
         raise PyrtlError('bitpattern must be a string')
     nospace_string = ''.join(bitpattern.replace('_', '').split())
-    if any(c not in '01?xX' for c in nospace_string):
-        raise PyrtlError("bitpattern string contains invalid characters "
-                         "(only '0', '1', and wildcard characters '?', 'x', and 'X' allowed)")
     if len(w) != len(nospace_string):
         raise PyrtlError('bitpattern string different length than wirevector provided')
     lsb_first_string = nospace_string[::-1]  # flip so index 0 is lsb
 
     zero_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '0']
-    all_zeroes_low = ~rtl_any(*zero_bits) if zero_bits else True
-
     one_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '1']
-    all_ones_high = rtl_all(*one_bits) if one_bits else True
+    match = rtl_all(*one_bits) & ~rtl_any(*zero_bits)
 
-    return all_ones_high & all_zeroes_low
+    # Since only Python 3.7 and above guarantees maintaining insertion order in dictionaries,
+    # do all of this to make sure we can maintain the ordering in the returned Tuple.
+    # Order of fields is determined based on left-to-right ordering in original string.
+    def field_name(name):
+        if field_map is not None:
+            if name not in field_map:
+                raise PyrtlError('field_map argument has been given, '
+                                 'but %s field is not present' % name)
+            return field_map[name]
+        return name
+
+    fields = collections.defaultdict(list)
+    for i, c in enumerate(lsb_first_string):
+        if c not in '01?':
+            fields[c].append(w[i])
+    fields = sorted(fields.items(), key=lambda m: nospace_string.index(m[0]))  # now list of tuples
+    Fields = collections.namedtuple('Fields', ' '.join(field_name(name) for name, _ in fields))
+    fields = Fields(**{field_name(k): concat_list(l) for k, l in fields})
+
+    return MatchedFields(match, fields)
 
 
 def chop(w, *segment_widths):
@@ -777,164 +838,3 @@ class _NetCount(object):
         return less_nets
 
     shrinking = shrank
-
-
-class Bundle(WireVector):
-    """ A WireVector whose individual bits are named.
-
-    The initializer takes as its first argument the name of a class whose
-    attributes will be interpreted as the names and lengths of fields in a wire.
-    The order in which the attributes are defined is important; the first class
-    attribute is the MSB of the wire, and the last class attribute of the list is the LSB.
-
-    For example, say there is a wire that represents an instruction. If we wanted to name
-    certain segments of bits a certain way, we would create a class with the names and lengths
-    of these fields as attributes follows:
-
-        class RFormat:
-            funct7 = 7
-            rs2 = 5
-            rs1 = 5
-            funct3 = 3
-            rd = 5
-            opcode = 7
-
-    Then use it as the argument to Bundle to get back an object whose fields are actually
-    wirevectors, accessible by field name:
-
-        w = pyrtl.Bundle(RFormat)
-        w <<= 0b00000100110001010000010110010011
-        assert sim.inspect(w.funct7) == 0b0000010
-        assert sim.inspect(w.rs2) == 0b01100
-        assert sim.inspect(w.rs1) == 0b01010
-        assert sim.inspect(w.funct3) == 0b000
-        assert sim.inspect(w.rd) == 0b01011
-        assert sim.inspect(w.opcode) == 0b0010011
-
-    It can be used anywhere a normal wire can be used:
-
-        r = pyrtl.Register(len(w), "r")
-        r.next <<= w
-        # ...after stepping a few times...
-        assert sim.inspect(r) == 0b00000100110001010000010110010011
-
-    And you can interpret other wires as instances of the bundled class, by calling
-    `as_bundle`. This does lightweight checks such as making sure that the bundled class
-    and the wire you call `as_bundle` on has the same length so that the bits can map properly.
-    This allows you to access portions of the wire via fields.
-
-        f7 = r.as_bundle(RFormat).funct7
-        assert sim.inspect(f7) == 0b0000010
-
-        y = r.as_bundle(RFormat)
-        assert sim.inspect(y.funct7) == 0b0000010
-        assert sim.inspect(y.rs2) == 0b01100
-        assert sim.inspect(y.rs1) == 0b01010
-        assert sim.inspect(y.funct3) == 0b000
-        assert sim.inspect(y.rd) == 0b01011
-        assert sim.inspect(y.opcode) == 0b0010011
-
-    You can also pass in a list of (field, width) pairs:
-
-        rformat = [("funct7", 7), ("rs2", 5), ("rs1", 5), ("funct3", 3), ("rd", 5), ("opcode", 7)]
-        w = pyrtl.Bundle(rformat)
-
-    or an (ordered) dictionary (OrderedDict is the default for Python >= 3.7):
-
-        rformat = {"funct7": 7, "rs2": 5, "rs1": 5, "funct3": 3, "rd": 5, "opcode": 7}
-        w = pyrtl.Bundle(rformat)
-
-    instead of a class to form a Bundle. In all forms, order is important.
-
-    In all cases, the 'width' member may actually be a tuple of the form (n, w),
-    where n is the actual width and f is a wirevector or function returning
-    a wirevector that will be used to define the wire. Otherwise, 'width' should
-    just be an integer and will be interpreted as the literal width.
-
-    Finally, you can build the Bundle from wires directly (rather than just interpreting
-    an existing wire with named fields like the above examples) by passing in the wire
-    corresponding to each field. This is useful if you want to return a group of wires from a
-    function, each with meaningful names:
-
-        def timer(cycles, reset):
-            _, bw = pyrtl.infer_val_and_bitwidth(cycles)
-            time = pyrtl.Register(bw)
-            with pyrtl.conditional_assignment:
-                with reset:
-                    time.next |= 0
-                with time == (cycles - 1):
-                    time.next |= 0
-                with pyrtl.otherwise:
-                    time.next |= time + 1
-
-            out = pyrtl.Bundle({
-                'time': (bw, time),
-                'elapsed': (1, time == (cycles - 1)),
-            })
-            return out
-
-        reset = pyrtl.Input(1, 'reset')
-        out = timer(5, reset)
-        pyrtl.probe(out.elapsed, 'elapsed')
-    """
-    @staticmethod
-    def _get_fields(obj):
-        if isinstance(obj, list) and all(map(lambda t: isinstance(t, tuple), obj)):
-            # Passed in a list of tuples (i.e. (field, width) pairs), in order from MSB to LSB
-            fields = obj
-        elif isinstance(obj, dict):
-            from collections import OrderedDict
-            if (not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7)
-               and (not isinstance(obj, OrderedDict))):
-                raise PyrtlError("For Python versions < 3.7, the dictionary used to instantiate "
-                                 "a Bundle must be explicitly ordered (i.e. OrderedDict)")
-            # Assume dictionary stores (field, width) pairs
-            fields = list(obj.items())
-        elif isinstance(obj, six.class_types):
-            if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 7):
-                raise PyrtlError("Passing a class as an argument to Bundle() "
-                                 "is only allowed for Python versions >= 3.7")
-            # Let's assume 'obj' is a **class** name, so treat it as if it has field names.
-            # As of Python 3.7, dictionaries preserve insertion order, so a class's attributes
-            # (in __dict__) will being ordered as well. This relies on that fact because the
-            # fields are defined in MSB to LSB order in the class.
-            fs = filter(lambda attr: not attr.startswith("__"), vars(obj))
-            fields = [(attr, getattr(obj, attr)) for attr in fs]
-        else:
-            raise PyrtlError("Cannot determine (field, width) pairs from %s object" % type(obj))
-        return fields
-
-    @staticmethod
-    def get_bundle_bitwidth(obj):
-        fields = Bundle._get_fields(obj)
-
-        def aux(acc, t):
-            if isinstance(t[1], tuple):
-                width = t[1][0]
-            else:
-                width = t[1]
-            return acc + width
-        return reduce(aux, fields, 0)
-
-    def __init__(self, obj, name="", block=None):
-        super(Bundle, self).__init__(Bundle.get_bundle_bitwidth(obj), name, block)
-
-        fields = Bundle._get_fields(obj)
-        start = 0
-        args = []
-        for field, length in fields[::-1]:
-            if isinstance(length, tuple):
-                from .corecircuits import as_wires
-                # length is actually a tuple of the form (width, val)
-                val = length[1]
-                length = length[0]
-                if callable(val):
-                    val = val()
-                val = as_wires(val, bitwidth=length)
-                args.append(val)
-            setattr(self, field, self[start:start + length])
-            start += length
-
-        if args:
-            from .corecircuits import concat_list
-            self <<= concat_list(args)

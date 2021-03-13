@@ -1,53 +1,79 @@
-.. PyRTL documentation master file, created by
-   sphinx-quickstart on Mon Nov  3 09:36:08 2014.
+.. pyrtl documentation master file, created by
+   sphinx-quickstart on Tue Mar  9 23:14:28 2021.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. default-domain:: pyrtl
-
-
-PyRTL
+PYRTL
 =====
 
-A collection of classes providing simple RTL specification, simulation, tracing, and testing suitable for teaching and research. Simplicity, usability, clarity, and extendibility rather than performance or optimization is the overarching goal.  With PyRTL you can use the full power of python to describe complex synthesizable digital designs, simulate and test them, and export them to verilog.  
+A collection of classes providing simple RTL specification, simulation, tracing, and testing suitable for 
+teaching and research. Simplicity, usability, clarity, and extendibility rather than performance or 
+optimization is the overarching goal.  With PyRTL you can use the full power of python to describe complex 
+synthesizable digital designs, simulate and test them, and export them to verilog.
 
 Quick links
------------
+===========
 * Get an overview from the `PyRTL Project Webpage <http://ucsbarchlab.github.io/PyRTL/>`_
 * Read through `Example PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/master/examples>`_
-* See `File a Bug or Issue <https://github.com/UCSBarchlab/PyRTL/issues>`_
+* File a `Bug or Issue Report <https://github.com/UCSBarchlab/PyRTL/issues>`_
 * Contribute to project on `GitHub <https://github.com/UCSBarchlab/PyRTL>`_
-* Academic paper describing `the PyRTL approach and experience on an FPGA <http://www.cs.ucsb.edu/~sherwood/pubs/FPL-17-pyrtl.pdf>`_
 
 Installation
-------------
+============
 
 **Automatic installation**::
 
     pip install pyrtl
 
 PyRTL is listed in `PyPI <http://pypi.python.org/pypi/pyrtl>`_ and
-can be installed with ``pip`` or ``easy_install``.  If the above
+can be installed with ``pip`` or ``pip3``.  If the above
 command fails due to insufficient permissions, you may need to do 
 ``sudo pip install pyrtl`` (to install as superuser) or ``pip install --user pyrtl``
 (to install as a normal user). 
 
-**Prerequisites**:
+PyRTL is tested to work with Python 2.7 and 3.7+.
 
-PyRTL will work with Python 2.7 and 3.4+.
 
+
+Design, Simulate, and Inspect in 15 lines
+=========================================
+
+.. code-block::
+    :linenos:
+   
+    import pyrtl
+
+    a = pyrtl.Input(8,'a')  # input "pins"
+    b = pyrtl.Input(8,'b')
+    q = pyrtl.Output(8,'q')  # output "pins"
+    gt5 = pyrtl.Output(1,'gt5')
+
+    result = a + b  # makes an 8-bit adder
+    q <<= result  # assigns output of adder to out pin
+    gt5 <<= result > 5  # does a comparison, assigns that to different pin
+
+    # simulate and output the resulting waveform to the terminal
+    sim = pyrtl.Simulation()
+    sim.step_multiple({'a':[0,1,2,3,4], 'b':[2,2,3,3,4]})
+    sim.tracer.render_trace() 
+
+After you have PyRTL installed, you should be able to cut and paste the above into a file and run it with 
+Python.  The result you should see, drawn right into the terminal, is the output of the simulation.  While a 
+great deal of work has gone into making hardware design in PyRTL as friendly a process as possible, please 
+don't mistake that for a lack of depth.  You can just as easily export to Verilog or other hardware formats, 
+view results with your favorite waveform viewer, build hardware transformation passes, run JIT-accelerated 
+simulations, design, test, and even verify hugely complex digital systems, and much more.  Most critically of 
+all it is easy to extend with your own approaches to digital hardware development as you find necessary.
 
 PyRTL Classes:
 --------------
 
-
-Perhaps the most important class to understand is ``WireVector``, which is the basic type from 
-which you build all hardware.  If you are coming to PyRTL from Verilog, a `WireVector` is closest
-to a multi-bit `wire`.  Every new `WireVector` builds a set of wires which you can then connect with
-other `WireVector` through overloaded operations such as `addition` or `bitwise or`.
-A bunch of other related classes, including ``Input``, ``Output``, ``Const``, and ``Register``
-are all derived from `WireVector`. Coupled with ``MemBlock`` (and ``RomBlock``), this is
-all a user needs to create a functional hardware design.
+Perhaps the most important class to understand is ``WireVector``, which is the basic type from which you build 
+all hardware.  If you are coming to PyRTL from Verilog, a `WireVector` is closest to a multi-bit `wire`.  
+Every new `WireVector` builds a set of wires which you can then connect with other `WireVector` through 
+overloaded operations such as `addition` or `bitwise or`. A bunch of other related classes, including 
+``Input``, ``Output``, ``Const``, and ``Register`` are all derived from `WireVector`. Coupled with 
+``MemBlock`` (and ``RomBlock``), this is all a user needs to create a functional hardware design.
 
 * :py:class:`~pyrtl.wire.WireVector`
     * :py:class:`~pyrtl.wire.Input` (WireVector)
@@ -63,22 +89,22 @@ After specifying a hardware design, there are then options to simulate your desi
 synthesize it down to primitive 1-bit operations, optimize it, and export it to Verilog (along with
 a testbench),.
 
-To simulate your hardware design one needs to do a simulation, and to view the output we need
-to capture a "trace".  Simulation is how your hardware is "executed" for the purposes of testing,
-and two different classes help you do that: `Simulation` and `FastSimulation`.  Both 
-have the same interface and, except for a few debugging cases, can be used
-interchangeably.  Typically one starts with `Simulation` and then moves to `FastSimulation` when
-performance begins to matter.
+To simulate your hardware design one needs to do a simulation, and to view the output we need to capture a 
+"trace".  Simulation is how your hardware is "executed" for the purposes of testing, and three different 
+classes help you do that: ``Simulation``, ``FastSimulation`` and ``CompiledSimulation``.  All three have 
+`almost` the same interface and, except for a few debugging cases, can be used interchangeably.  Typically one 
+starts with `Simulation` and then moves up to `FastSimulation` when performance begins to matter.  
 
-Both `Simulation` and `FastSimulation` take an instance of `SimulationTrace` as an argument,
-which stores a list of the signals as they are simulated.  This trace can then be rendered to the 
-terminal using one of the Renderer classes, although unless there are some problems with the default 
-configurations, most end users should not need to even be aware of these Renderer classes.  The examples
-describe other ways that the trace may be handled, including extraction as a test bench and export
-to a VCD file.
+Both `Simulation` and `FastSimulation` take an instance of `SimulationTrace` as an argument (or make a new 
+blank one by default), which stores a list of the signals as they are simulated.  This trace can then be 
+rendered to the terminal using one of the Renderer classes, although unless there are some problems with the 
+default configurations, most end users should not need to even be aware of these Renderer classes.  The 
+examples describe other ways that the trace may be handled, including extraction as a test bench and export to 
+a VCD file.
 
 * :py:class:`~pyrtl.simulation.Simulation` 
 * :py:class:`~pyrtl.simulation.FastSimulation`
+* :py:class:`~pyrtl.compilesim.CompiledSimulation`
 * :py:class:`~pyrtl.simulation.SimulationTrace`
 * Renderers [base class for internal use only]
     * :py:class:`~pyrtl.simulation.Utf8WaveRenderer` (_WaveRendererBase)
@@ -146,9 +172,10 @@ PyRTL Quick Reference:
     * synthesize(update_working_block=True, block=None)
 
 PyRTL Functionality:
---------------------
+====================
 .. toctree::
    :maxdepth: 2
+   :caption: Contents:
    
    basic
    helpers
@@ -158,10 +185,12 @@ PyRTL Functionality:
    rtllib
    advanced
    
+
 Indices and tables
-------------------
+==================
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
 

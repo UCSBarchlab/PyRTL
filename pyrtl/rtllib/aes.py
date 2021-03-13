@@ -1,9 +1,8 @@
-"""
-A class for building a PyRTL AES circuit.
+""" A class for building a PyRTL AES circuit.
 
 Currently this class only supports 128 bit AES encryption/decryption
 
-``Example``::
+Example::
 
     aes = AES()
     plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')

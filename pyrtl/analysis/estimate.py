@@ -336,13 +336,18 @@ class TimingAnalysis(object):
 #      |  \__/ .__/  |  .__/
 #
 
-def yosys_area_delay(library, abc_cmd=None, block=None):
+def yosys_area_delay(library, abc_cmd=None, leave_in_dir=None, block=None):
     """ Synthesize with Yosys and return estimate of area and delay.
 
     :param library: stdcell library file to target in liberty format
     :param abc_cmd: string of commands for yosys to pass to abc for synthesis
+    :param dir: the directory where temporary files should be left
     :param block: pyrtl block to analyze
     :return: a tuple of numbers: area, delay
+
+    If dir is specified, that directory will be used to create any temporary
+    files, and the resulting files will be left behind there (which can be
+    useful for manual exploration or debugging)
 
     The area and delay are returned in units as defined by the stdcell
     library.  In the standard vsc 130nm library, the area is in a number of
@@ -364,7 +369,9 @@ def yosys_area_delay(library, abc_cmd=None, block=None):
         abc_cmd = '%s;print_stats;' % abc_cmd
 
     def extract_area_delay_from_yosys_output(yosys_output):
-        report_lines = [line for line in yosys_output.split('\n') if 'ABC: netlist' in line]
+        report_lines = [line
+                        for line in yosys_output.decode().split('\n')
+                        if 'ABC: netlist' in line]
         area = re.match(r'.*area\s*=\s*([0-9\.]*)', report_lines[0]).group(1)
         delay = re.match(r'.*delay\s*=\s*([0-9\.]*)', report_lines[0]).group(1)
         return float(area), float(delay)
@@ -374,26 +381,31 @@ def yosys_area_delay(library, abc_cmd=None, block=None):
     synth -top toplevel;
     dfflibmap -liberty %s;
     abc -liberty %s -script +%s
-    """
+    """.replace('\n', ' ')
 
-    temp_d, temp_path = tempfile.mkstemp(suffix='.v')
+    temp_d, temp_path = tempfile.mkstemp(prefix='pyrtl_verilog', suffix='.v',
+                                         dir=leave_in_dir, text=True)
     try:
         # write the verilog to a temp
-        with os.fdopen(temp_d, 'w') as f:
-            output_to_verilog(f, block=block)
-        # call yosys on the temp, and grab the output
         yosys_arg = yosys_arg_template % (temp_path, library, library, abc_cmd)
+        with open(temp_path, 'w') as f:
+            print('// generated via pyrtl yosys_area_delay', file=f)
+            print('// yosys %s' % yosys_arg, file=f)
+            output_to_verilog(f, block=block)
+        os.close(temp_d)
+        # call yosys on the temp, and grab the output
         yosys_output = subprocess.check_output(['yosys', yosys_arg])
         area, delay = extract_area_delay_from_yosys_output(yosys_output)
     except (subprocess.CalledProcessError, ValueError) as e:
         print('Error with call to yosys...', file=sys.stderr)
         print('---------------------------------------------', file=sys.stderr)
-        print(e.output, file=sys.stderr)
+        print(str(e.output).replace('\\n', '\n'), file=sys.stderr)
         print('---------------------------------------------', file=sys.stderr)
         raise PyrtlError('Yosys callfailed')
     except OSError as e:
         print('Error with call to yosys...', file=sys.stderr)
         raise PyrtlError('Call to yosys failed (not installed or on path?)')
     finally:
-        os.remove(temp_path)
+        if leave_in_dir is None:
+            os.remove(temp_path)
     return area, delay

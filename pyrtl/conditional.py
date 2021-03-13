@@ -6,6 +6,7 @@ which the condition should apply is well defined.  It is easiest
 to see with an example:
 
 Example::
+
    r1 = Register()
    r2 = Register()
    w3 = WireVector()
@@ -24,6 +25,7 @@ Example::
            w3.next |= m  # d is true (assignments must be independent)
 
 This is equivalent to::
+
     r1.next <<= select(a, i, select(c, k, default))
     r2.next <<= select(a, select(b, j, default), select(c, k, l))
     w3 <<= select(d, m, 0)
@@ -56,7 +58,7 @@ from .wire import WireVector, Const, Register
 
 
 def currently_under_condition():
-    """Returns True if execution is currently in the context of a _ConditionalAssignment."""
+    """ Returns True if execution is currently in the context of a _ConditionalAssignment. """
     return _depth > 0
 
 
@@ -65,7 +67,7 @@ def currently_under_condition():
 # instances (hopefully the only and unchanging instances) of the following two types.
 
 class _ConditionalAssignment(object):
-    """ helper type of global "conditional_assignment". """
+    """ Helper type of global "conditional_assignment". """
     def __enter__(self):
         global _depth
         _check_no_nesting()
@@ -81,7 +83,7 @@ class _ConditionalAssignment(object):
 
 
 class _Otherwise(object):
-    """ helper type of global "otherwise". """
+    """ Helper type of global "otherwise". """
     def __enter__(self):
         _push_condition(otherwise)
 
@@ -90,7 +92,7 @@ class _Otherwise(object):
 
 
 def _reset_conditional_state():
-    """Set or reset all the module state required for conditionals."""
+    """ Set or reset all the module state required for conditionals. """
     global _conditions_list_stack
     global _conflicts_map
     global _predicate_map

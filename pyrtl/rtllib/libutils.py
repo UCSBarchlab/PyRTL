@@ -14,6 +14,13 @@ def match_bitwidth(*args):
 
 
 def partition_wire(wire, partition_size):
+    """ Partitions a wire into a list of N wires of size 'partition_size'.
+
+    :param wire: Wire to partition
+    :param partition_size: Integer representing size of each partition
+
+    The wire's bitwidth must be evenly divisible by 'parition_size'.
+    """
     if len(wire) % partition_size != 0:
         raise pyrtl.PyrtlError("Wire {} cannot be evenly partitioned into items of size {}"
                                .format(wire, partition_size))
@@ -35,9 +42,13 @@ def str_to_int_array(string, base=16):
 
 def twos_comp_repr(val, bitwidth):
     """
-    Converts a value to it's two's-complement (positive) integer representation using a
+    Converts a value to its two's-complement (positive) integer representation using a
     given bitwidth (only converts the value if it is negative).
-    For use with Simulation.step() etc. in passing negative numbers, which it does not accept
+
+    :param val: Integer literal to convert to two's complement
+    :param bitwidth: Size of val in bits
+
+    For use with Simulation.step() etc. in passing negative numbers, which it does not accept.
     """
     correctbw = abs(val).bit_length() + 1
     if bitwidth < correctbw:

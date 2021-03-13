@@ -370,7 +370,8 @@ class Block(object):
         If no cls is specified, the full set of wirevectors associated with the Block are
         returned.  If cls is a single type, or a tuple of types, only those wirevectors of
         the matching types will be returned.  This is helpful for getting all inputs, outputs,
-        or registers of a block for example."""
+        or registers of a block for example.
+        """
         if cls is None:
             initial_set = self.wirevector_set
         else:
@@ -384,7 +385,8 @@ class Block(object):
         """Return set of logicnets, filtered by the type(s) of logic op provided as op.
 
         If no op is specified, the full set of logicnets associated with the Block are
-        returned.  This is helpful for getting all memories of a block for example."""
+        returned.  This is helpful for getting all memories of a block for example.
+        """
         if op is None:
             return self.logic
         else:
@@ -395,7 +397,8 @@ class Block(object):
 
         By fallthrough, if a matching wirevector cannot be found the value None is
         returned.  However, if the argument strict is set to True, then this will
-        instead throw a PyrtlError when no match is found."""
+        instead throw a PyrtlError when no match is found.
+        """
         if name in self.wirevector_by_name:
             return self.wirevector_by_name[name]
         elif strict:
@@ -468,7 +471,8 @@ class Block(object):
         Note: this method will throw an error if there are loops in the
         logic that do not involve registers.
         Also, the order of the nets is not guaranteed to be the same
-        over multiple iterations"""
+        over multiple iterations.
+        """
         from .wire import Input, Const, Register
         src_dict, dest_dict = self.net_connections()
         to_clear = self.wirevector_subset((Input, Const, Register))
@@ -498,7 +502,8 @@ class Block(object):
         """ Check block and throw PyrtlError or PyrtlInternalError if there is an issue.
 
         Should not modify anything, only check data structures to make sure they have been
-        built according to the assumptions stated in the Block comments."""
+        built according to the assumptions stated in the Block comments.
+        """
 
         # TODO: check that the wirevector_by_name is sane
         from .wire import Input, Const, Output
@@ -724,7 +729,7 @@ class Block(object):
 
 class PostSynthBlock(Block):
     """ This is a block with extra metadata required to maintain the
-    pre synthesis interface post synthesis
+    pre-synthesis interface during post-synthesis.
     """
 
     def __init__(self):
@@ -758,7 +763,8 @@ def _get_debug_mode():
 
 
 def _get_useful_callpoint_name():
-    """ Attempts to find the lowest user-level call into the pyrtl module
+    """ Attempts to find the lowest user-level call into the PyRTL module.
+
     :return (string, int) or None: the file name and line number respectively
 
     This function walks back the current frame stack attempting to find the
@@ -815,10 +821,10 @@ def reset_working_block():
 
 class set_working_block(object):
     """ Set the working block to be the block passed as argument.
-        Compatible with the 'with' statement
+    Compatible with the 'with' statement.
 
-        Sanity checks will only be run if the new block is different
-        from the original block
+    Sanity checks will only be run if the new block is different
+    from the original block.
     """
 
     @staticmethod
@@ -844,8 +850,9 @@ class set_working_block(object):
 
 def temp_working_block():
     """ Set the working block to be new temporary block.
-        If used with the 'with' statement the block will be reset to the
-        original value (at the time of call) at exit of the context.
+
+    If used with the 'with' statement the block will be reset to the
+    original value (at the time of call) at exit of the context.
     """
     return set_working_block(Block())
 
@@ -864,13 +871,13 @@ _py_regex = r'^[^\d\W]\w*\Z'
 
 
 class _NameIndexer(object):
-    """ Provides internal names that are based on a prefix and an index"""
+    """ Provides internal names that are based on a prefix and an index. """
     def __init__(self, internal_prefix='_sani_temp'):
         self.internal_prefix = internal_prefix
         self.internal_index = 0
 
     def make_valid_string(self):
-        """Build a valid string based on the prefix and internal index"""
+        """ Build a valid string based on the prefix and internal index. """
         return self.internal_prefix + str(self.next_index())
 
     def next_index(self):
@@ -880,9 +887,8 @@ class _NameIndexer(object):
 
 
 class _NameSanitizer(_NameIndexer):
-    """
-    Sanitizes the names so that names can be used in places that don't allow
-    for arbitrary names while not mangling valid names
+    """ Sanitizes the names so that names can be used in places that don't allow
+    for arbitrary names while not mangling valid names.
 
     Put the values you want to validate into make_valid_string the first time
     you want to sanitize a particular string (or before the first time), and
@@ -902,7 +908,7 @@ class _NameSanitizer(_NameIndexer):
         super(_NameSanitizer, self).__init__(internal_prefix)
 
     def __getitem__(self, item):
-        """ Get a value from the sanitizer"""
+        """ Get a value from the sanitizer """
         if not self.map_valid and self.is_valid_str(item):
             return item
         return self.val_map[item]
@@ -911,7 +917,7 @@ class _NameSanitizer(_NameIndexer):
         return self.identifier.match(string) and self.extra_checks(string)
 
     def make_valid_string(self, string=''):
-        """ Inputting a value for the first time """
+        """ Inputting a value for the first time. """
         if not self.is_valid_str(string):
             if string in self.val_map and not self.allow_dups:
                 raise IndexError("Value {} has already been given to the sanitizer".format(string))
@@ -925,7 +931,7 @@ class _NameSanitizer(_NameIndexer):
 
 
 class _PythonSanitizer(_NameSanitizer):
-    """ Name Sanitizer specifically built for Python identifers"""
+    """ Name Sanitizer specifically built for Python identifers. """
     def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
         super(_PythonSanitizer, self).__init__(_py_regex, internal_prefix, map_valid_vals)
         self.extra_checks = lambda s: not keyword.iskeyword(s)

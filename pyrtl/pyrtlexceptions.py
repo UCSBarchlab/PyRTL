@@ -8,10 +8,10 @@
 
 
 class PyrtlError(Exception):
-    """ Raised on any user-facing error in this module """
+    """ Raised on any user-facing error in this module. """
     pass
 
 
 class PyrtlInternalError(Exception):
-    """ Raised on any PyRTL internal failure """
+    """ Raised on any PyRTL internal failure. """
     pass

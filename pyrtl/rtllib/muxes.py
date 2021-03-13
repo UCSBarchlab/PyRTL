@@ -2,8 +2,7 @@ import pyrtl
 
 
 def prioritized_mux(selects, vals):
-    """
-    Returns the value in the first wire for which its select bit is 1
+    """ Returns the value in the first wire for which its select bit is 1
 
     :param [WireVector] selects: a list of WireVectors signaling whether
         a wire should be chosen
@@ -36,8 +35,7 @@ SparseDefault = "default"
 
 
 def sparse_mux(sel, vals):
-    """
-    Mux that avoids instantiating unnecessary mux_2s when possible.
+    """ Mux that avoids instantiating unnecessary mux_2s when possible.
 
     :param WireVector sel: Select wire, determines what is selected on a given cycle
     :param dictionary vals: dictionary of values at mux inputs (of type `{int:WireVector}`)
@@ -68,8 +66,7 @@ def sparse_mux(sel, vals):
 
 
 def _sparse_mux(sel, vals):
-    """
-    Mux that avoids instantiating unnecessary mux_2s when possible.
+    """ Mux that avoids instantiating unnecessary mux_2s when possible.
 
     :param WireVector sel: Select wire, determines what is selected on a given cycle
     :param {int: WireVector} vals: dictionary to store the values that are
@@ -109,8 +106,7 @@ def _sparse_mux(sel, vals):
 
 
 class MultiSelector(object):
-    """
-    The MultiSelector allows you to specify multiple wire value results
+    """ The MultiSelector allows you to specify multiple wire value results
     for a single select wire.
 
     Useful for processors, finite state machines and other places where the
@@ -119,9 +115,9 @@ class MultiSelector(object):
 
     Example::
 
-    with muxes.MultiSelector(select, res0, res1, res2, ...) as ms:
-        ms.option(val1, data0, data1, data2, ...)
-        ms.option(val2, data0_2, data1_2, data2_2, ...)
+        with muxes.MultiSelector(select, res0, res1, res2, ...) as ms:
+            ms.option(val1, data0, data1, data2, ...)
+            ms.option(val2, data0_2, data1_2, data2_2, ...)
 
     This means that when the select wire equals the val1 wire
     the results will have the values in the coresponding data wires
@@ -135,9 +131,8 @@ class MultiSelector(object):
         self.dest_instrs_info = {dest_w: [] for dest_w in dest_wires}
 
     def __enter__(self):
-        """
-        For compatibility with `with` statements, which is the recommended
-         method of using a MultiSelector
+        """ For compatibility with `with` statements, which is the recommended
+        method of using a MultiSelector.
         """
         return self
 
@@ -176,8 +171,7 @@ class MultiSelector(object):
             self.dest_instrs_info[dw].append(data_signal)
 
     def finalize(self):
-        """
-        Connects the wires.
+        """ Connects the wires.
         """
         self._check_finalized()
         self._final = True
@@ -188,8 +182,7 @@ class MultiSelector(object):
 
 
 def demux(select):
-    """
-    Demultiplexes a wire of arbitrary bitwidth
+    """ Demultiplexes a wire of arbitrary bitwidth
 
     :param WireVector select: indicates which wire to set on
     :return (WireVector, ...): a tuple of wires corresponding to each demultiplexed wire

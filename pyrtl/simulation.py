@@ -53,7 +53,7 @@ class Simulation(object):
     def __init__(
             self, tracer=True, register_value_map=None, memory_value_map=None,
             default_value=0, block=None):
-        """ Creates a new circuit simulator
+        """ Creates a new circuit simulator.
 
         :param tracer: an instance of SimulationTrace used to store execution results.
             Defaults to a new SimulationTrace with no params passed to it.  If None is
@@ -61,15 +61,15 @@ class Simulation(object):
             If the default (true) is passed, Simulation will create a new tracer automatically
             which can be referenced by the member variable .tracer
         :param register_value_map: Defines the initial value for
-          the registers specified. Format: {Register: value}.
+            the registers specified. Format: {Register: value}.
         :param memory_value_map: Defines initial values for many
-          addresses in a single or multiple memory. Format: {Memory: {address: Value}}.
-          Memory is a memory block, address is the address of a value
+            addresses in a single or multiple memory. Format: {Memory: {address: Value}}.
+            Memory is a memory block, address is the address of a value
         :param default_value: is the value that all unspecified registers and
-          memories will initialize to. If no default_value is specified, it will
-          use the value stored in the object (default to 0)
+            memories will initialize to. If no default_value is specified, it will
+            use the value stored in the object (default to 0)
         :param block: the hardware block to be traced (which might be of type PostSynthesisBlock).
-          defaults to the working block
+            defaults to the working block
 
         Warning: Simulation initializes some things when called with __init__,
         so changing items in the block for Simulation will likely break
@@ -99,8 +99,8 @@ class Simulation(object):
         :param register_value_map: is a map of {Register: value}.
         :param memory_value_map: is a map of maps {Memory: {address: Value}}.
         :param default_value: is the value that all unspecified registers and memories will
-         default to. If no default_value is specified, it will use the value stored in the
-         object (default to 0)
+            default to. If no default_value is specified, it will use the value stored in the
+            object (default to 0)
         """
 
         if default_value is None:
@@ -150,16 +150,18 @@ class Simulation(object):
         self.mem_update_nets = tuple((self.block.logic_subset('@')))
 
     def step(self, provided_inputs):
-        """ Take the simulation forward one cycle
+        """ Take the simulation forward one cycle.
 
         :param provided_inputs: a dictionary mapping wirevectors to their values for this step
 
         All input wires must be in the provided_inputs in order for the simulation
         to accept these values
 
-        Example: if we have inputs named 'a' and 'x', we can call:
-        sim.step({'a': 1, 'x': 23}) to simulate a cycle with values 1 and 23
-        respectively
+        Example: if we have inputs named 'a' and 'x', we can call: ::
+
+            sim.step({'a': 1, 'x': 23})
+
+        to simulate a cycle with values 1 and 23 respectively.
         """
 
         # Check that all Input have a corresponding provided_input
@@ -219,8 +221,7 @@ class Simulation(object):
 
     def step_multiple(self, provided_inputs={}, expected_outputs={}, nsteps=None,
                       file=sys.stdout, stop_after_first_error=False):
-        """ Take the simulation forward N cycles, where N is the number of values
-         for each provided input.
+        """ Take the simulation forward N cycles, based on the number of values for each input
 
         :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
         :param expected_outputs: a dictionary mapping wirevectors to their expected values
@@ -252,7 +253,7 @@ class Simulation(object):
         0 and 0, respectively, on the first cycle and '1' and '1', respectively, on the second
         cycle.
 
-        Example: if the design had no inputs, like so:
+        Example: if the design had no inputs, like so: ::
 
             a = pyrtl.Register(8)
             b = pyrtl.Output(8, 'b')
@@ -424,8 +425,7 @@ class Simulation(object):
 
 
 class FastSimulation(object):
-    """A class for running JIT-to-python implementations of blocks.
-    """
+    """A class for running JIT-to-python implementations of blocks."""
 
     # Dev Notes:
     #  Wire name processing:
@@ -446,7 +446,7 @@ class FastSimulation(object):
         In addition to the Simualtion arguments, FastSimulation additional takes:
 
         :param code_file: The file in which to store a copy of the generated
-        python code. Defaults to no code being stored.
+            python code. Defaults to no code being stored.
 
         Look at Simulation.__init__ for descriptions for the other parameters
 
