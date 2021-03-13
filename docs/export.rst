@@ -1,9 +1,34 @@
+
 Exporting and Importing Designs
 ===============================
 
-.. automodule:: pyrtl.inputoutput
-   :members:
-   :show-inheritance:
-   :special-members:
-   :undoc-members:
-   :exclude-members: __dict__,__weakref__,__module__
+
+Exporting Hardware Designs
+--------------------------
+
+.. autofunction:: pyrtl.verilog.output_to_verilog
+
+.. autofunction:: pyrtl.inputoutput.output_to_firrtl
+
+Exporting Testbenches
+------------------------
+
+.. autofunction:: pyrtl.verilog.output_verilog_testbench
+
+
+Importing Verilog
+-----------------
+
+.. autofunction:: pyrtl.inputoutput.input_from_blif
+
+
+Outputing for Visualization
+---------------------------
+
+.. autofunction:: pyrtl.inputoutput.output_to_trivialgraph
+.. autofunction:: pyrtl.inputoutput.output_to_graphviz
+.. autofunction:: pyrtl.inputoutput.output_to_svg
+.. autofunction:: pyrtl.inputoutput.block_to_graphviz_string
+.. autofunction:: pyrtl.inputoutput.block_to_svg
+.. autofunction:: pyrtl.inputoutput.trace_to_html
+

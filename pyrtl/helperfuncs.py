@@ -535,7 +535,7 @@ def infer_val_and_bitwidth(rawinput, bitwidth=None, signed=False):
     :param rawinput: a bool, int, or verilog-style string constant
     :param bitwidth: an integer bitwidth or (by default) None
     :param signed: a bool (by default set False) to include bits for proper twos complement
-    :returns tuple of integers (value, bitwidth)
+    :return: tuple of integers (value, bitwidth)
 
     Given a boolean, integer, or verilog-style string constant, this function returns a
     tuple of two integers (value, bitwidth) which are infered from the specified rawinput.
@@ -777,8 +777,7 @@ def print_loop(loop_data):
 
 
 def _currently_in_jupyter_notebook():
-    """
-    Return true if running under Jupyter notebook, otherwise return False.
+    """ Return true if running under Jupyter notebook, otherwise return False.
 
     We want to check for more than just the presence of __IPYTHON__ because
     that is present in both Jupyter notebooks and IPython terminals.
@@ -807,8 +806,7 @@ def _print_netlist_latex(netlist):
 
 
 class _NetCount(object):
-    """
-    Helper class to track when to stop an iteration that depends on number of nets
+    """ Helper class to track when to stop an iteration that depends on number of nets
 
     Mainly useful for iterations that are for optimization
     """

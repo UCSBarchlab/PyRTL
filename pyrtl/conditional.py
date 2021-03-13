@@ -67,7 +67,7 @@ def currently_under_condition():
 # instances (hopefully the only and unchanging instances) of the following two types.
 
 class _ConditionalAssignment(object):
-    """ Helper type of global "conditional_assignment". """
+    """ Context providing funcitionality of "conditional_assignment". """
     def __enter__(self):
         global _depth
         _check_no_nesting()
@@ -83,7 +83,7 @@ class _ConditionalAssignment(object):
 
 
 class _Otherwise(object):
-    """ Helper type of global "otherwise". """
+    """ Context providing functionality of pyrtl "otherwise". """
     def __enter__(self):
         _push_condition(otherwise)
 

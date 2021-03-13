@@ -3,6 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+=====
 PYRTL
 =====
 
@@ -64,6 +65,14 @@ don't mistake that for a lack of depth.  You can just as easily export to Verilo
 view results with your favorite waveform viewer, build hardware transformation passes, run JIT-accelerated 
 simulations, design, test, and even verify hugely complex digital systems, and much more.  Most critically of 
 all it is easy to extend with your own approaches to digital hardware development as you find necessary.
+
+
+Overview of PyRTL
+=================
+
+If you are brand new to PyRTL we recommend that you start with going through the 
+`Examples of PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/master/examples>`_ which will show you 
+most of the core functionality in the context of a complete design.  
 
 PyRTL Classes:
 --------------
@@ -178,8 +187,9 @@ PyRTL Functionality:
    :caption: Contents:
    
    basic
-   helpers
    simtest
+   blocks
+   helpers
    analysis
    export
    rtllib

@@ -262,7 +262,7 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
         for inclusion in the test bench.  The test bench generated will just replay the
         inputs played to the simulation cycle by cycle.
     :param toplevel_include: name of the file containing the toplevel module this testbench
-        is testing.  If not None, an '`include' directive will be added to the top.
+        is testing.  If not None, an `include` directive will be added to the top.
     :param vcd: By default the testbench generator will include a command in the testbench
         to write the output of the testbench execution to a .vcd file (via $dumpfile), and
         this parameter is the string of the name of the file to use.  If None is specified

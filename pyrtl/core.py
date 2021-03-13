@@ -858,7 +858,16 @@ def temp_working_block():
 
 
 def set_debug_mode(debug=True):
-    """ Set the global debug mode. """
+    """ Set the global debug mode.
+
+    :param debug: Optional boolean paramter to which debug mode will be set
+
+    This function will set the debug mode to the specified value.  Debug mode
+    is, by default, set to off to keep the performance of the system.  With debug
+    mode set to true, all temporary WireVectors created will be given a name based
+    on the line of code on which they were created and a snapshot of the call-stack
+    for those WireVectors will be kept as well.
+    """
     global debug_mode
     global _setting_keep_wirevector_call_stack
     global _setting_slower_but_more_descriptive_tmps

@@ -17,9 +17,6 @@ Provides tools for analyzing aspects of PyRTL designs
 
 .. .. _estimate-ref:
 
-Estimate
---------
-
 .. automodule:: pyrtl.analysis.estimate
    :members:
    :show-inheritance:

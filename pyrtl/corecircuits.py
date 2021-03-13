@@ -509,7 +509,8 @@ def enum_mux(cntrl, table, default=None, strict=True):
         Note that if a default is set, then this check is not performed as
         the default will provide valid values for any underspecified keys.
     :return: a WireVector which is the result of the mux.
-    ::
+
+    Examples::
 
         from enum import IntEnum
 
