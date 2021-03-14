@@ -143,9 +143,9 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
             # we need to create an intermediate wire, which will be used in twire()
             # whenever the original wire is referenced. For example, given 2-bit Output 'a',
             # every access to 'a[1]' will really be a reference to 'a[1]_i', a normal
-            # WireVector connected to 'a[1]. An key property is that the name by
-            # which all other parts of the code refers to this wire doesn't change;
-            # the only thing that changes is what underlying wire
+            # WireVector connected to 'a[1]'. A key property is that the name by
+            # which all other parts of the code refer to this wire doesn't change;
+            # the only thing that changes is what underlying wire is used.
             if bitwidth == 1:
                 bit_internal = WireVector(bitwidth=1, name=output_name + '[0]', block=block)
                 bit_out = Output(bitwidth=1, name=output_name, block=block)
