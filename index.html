@@ -68,13 +68,43 @@ performance or optimization is the overarching goal.  Features include:</p>
   
 <!-- Tab links -->
 <div class="tab">
-  <button class="tablinks" onclick="openCode(event, 'GCD')" id="defaultOpen"> GCD </button>
+  <button class="tablinks" onclick="openCode(event, 'FIR')" id="defaultOpen"> FIR </button>
+  <button class="tablinks" onclick="openCode(event, 'GCD')"> GCD </button>
   <button class="tablinks" onclick="openCode(event, 'MaxN')">MaxN</button>
   <button class="tablinks" onclick="openCode(event, 'Mul')">Mul</button>
   <button class="tablinks" onclick="openCode(event, 'Adder')">Adder</button>
 </div>
 
 <!-- Code example formatted with https://dillinger.io/ -->
+<div id="FIR" class="tabcontent">
+  <p>A finite impulse response filter  -- this function generates a sequential curcuit that grabs input <code>x</code> and a list of coefficients<code>bs</code>. If one looks to the
+    <a href="https://en.wikipedia.org/wiki/Finite_impulse_response">Wikipedia FIR description</a> you can see that list <code>zs</code> is the registers required
+    to implement the delay.  The function returns an output "y" which is the resulting sum of products and is valid every cycle (since the design is naturally fully
+    pipelined).  The code below the <code>fir</code> function is everything needed to instantiate, simulate, and visualize the resulting design.</p>
+<pre><code class="has-line-data" data-line-start="1" data-line-end="22" class="language-python"><span class="hljs-keyword">import</span> pyrtl
+
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">fir</span><span class="hljs-params">(x, bs)</span>:</span>
+    rwidth = len(x)  <span class="hljs-comment"># bitwidth of the registers</span>
+    ntaps = len(bs) <span class="hljs-comment"># number of coefficients</span>
+
+    zs = [x] + [pyrtl.Register(rwidth) <span class="hljs-keyword">for</span> _ <span class="hljs-keyword">in</span> range(ntaps-<span class="hljs-number">1</span>)]
+    <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> range(<span class="hljs-number">1</span>,ntaps):
+        zs[i].next &lt;&lt;= zs[i-<span class="hljs-number">1</span>]
+
+    <span class="hljs-comment"># produce the final sum of products</span>
+    <span class="hljs-keyword">return</span> sum([z*b <span class="hljs-keyword">for</span> z,b <span class="hljs-keyword">in</span> zip(zs, bs)])
+
+x = pyrtl.Input(<span class="hljs-number">8</span>, <span class="hljs-string">'x'</span>)
+y = pyrtl.Output(<span class="hljs-number">8</span>, <span class="hljs-string">'y'</span>)
+y &lt;&lt;= fir(x, [<span class="hljs-number">0</span>, <span class="hljs-number">1</span>])
+
+sim = pyrtl.Simulation()
+sim.step_multiple({<span class="hljs-string">'x'</span>:[<span class="hljs-number">0</span>, <span class="hljs-number">9</span>, <span class="hljs-number">18</span>, <span class="hljs-number">8</span>, <span class="hljs-number">17</span>, <span class="hljs-number">7</span>, <span class="hljs-number">16</span>, <span class="hljs-number">6</span>, <span class="hljs-number">15</span>, <span class="hljs-number">5</span>]})
+sim.tracer.render_trace()
+</code></pre>
+</div>
+
+  
 <div id="GCD" class="tabcontent">
   <p>A greatest common demoninator calculator -- this function generates a sequential curcuit that grabs inputs <code>a</code> and <code>b</code> when <code>e</code> goes high, 
   and then, while <code>e</code> is low, calculates the GCD through iterative subtraction.  The function returns two "wires", one which will hold the value 
