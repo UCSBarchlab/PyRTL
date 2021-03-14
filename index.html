@@ -92,7 +92,7 @@ performance or optimization is the overarching goal.  Features include:</p>
         zs[i].next &lt;&lt;= zs[i-<span class="hljs-number">1</span>]
 
     <span class="hljs-comment"># produce the final sum of products</span>
-    <span class="hljs-keyword">return</span> sum([z*b <span class="hljs-keyword">for</span> z,b <span class="hljs-keyword">in</span> zip(zs, bs)])
+    <span class="hljs-keyword">return</span> sum(z*b <span class="hljs-keyword">for</span> z,b <span class="hljs-keyword">in</span> zip(zs, bs))
 
 x = pyrtl.Input(<span class="hljs-number">8</span>, <span class="hljs-string">'x'</span>)
 y = pyrtl.Output(<span class="hljs-number">8</span>, <span class="hljs-string">'y'</span>)
