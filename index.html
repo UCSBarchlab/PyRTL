@@ -80,6 +80,7 @@ performance or optimization is the overarching goal.  Features include:</p>
   and then, while <code>e</code> is low, calculates the GCD through iterative subtraction.  The function returns two "wires", one which will hold the value 
   when it is ready, and the other which is a boolean ready signal.</p>
 <pre><code class="has-line-data" data-line-start="1" data-line-end="20" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
+
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">gcd</span><span class="hljs-params">(a, b, begin)</span>:</span>
     x = Register(len(a))
     y = Register(len(b))
