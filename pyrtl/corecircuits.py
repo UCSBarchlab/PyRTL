@@ -556,7 +556,8 @@ def enum_mux(cntrl, table, default=None, strict=True):
 def and_all_bits(vector):
     """ Returns WireVector, the result of "and"ing all items of the argument vector.
 
-    Takes a single WireVector and returns a 1 bit result, the bitwise and of all of
+    :param vector: Takes a single arbitrary length WireVector
+    :return: Returns a 1 bit result, the bitwise `and` of all of
     the bits in the vector to a single bit.
     """
     return tree_reduce(lambda a, b: a & b, vector)
@@ -565,7 +566,8 @@ def and_all_bits(vector):
 def or_all_bits(vector):
     """ Returns WireVector, the result of "or"ing all items of the argument vector.
 
-    Takes a single WireVector and returns a 1 bit result, the bitwise or of all of
+    :param vector: Takes a single arbitrary length WireVector
+    :return: Returns a 1 bit result, the bitwise `or` of all of
     the bits in the vector to a single bit.
     """
     return tree_reduce(lambda a, b: a | b, vector)
@@ -574,14 +576,14 @@ def or_all_bits(vector):
 def xor_all_bits(vector):
     """ Returns WireVector, the result of "xor"ing all items of the argument vector.
 
-    Takes a single WireVector and returns a 1 bit result, the bitwise xor of all of
-    the bits in the vector to a single bit. This function is also aliased as `parity`
-    and you can call it either way.
+    :param vector: Takes a single arbitrary length WireVector
+    :return: Returns a 1 bit result, the bitwise `xor` of all of
+    the bits in the vector to a single bit.
     """
     return tree_reduce(lambda a, b: a ^ b, vector)
 
 
-parity = xor_all_bits  # shadowing the xor_all_bits_function
+parity = xor_all_bits  # shadowing the xor_all_bits function
 
 
 def tree_reduce(op, vector):
