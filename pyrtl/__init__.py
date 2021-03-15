@@ -85,12 +85,14 @@ from .compilesim import CompiledSimulation
 # input and output to file format routines
 from .inputoutput import input_from_blif
 from .inputoutput import output_to_trivialgraph
+from .inputoutput import graphviz_detailed_namer
 from .inputoutput import output_to_graphviz
 from .inputoutput import output_to_svg
 from .inputoutput import output_to_firrtl
 from .inputoutput import block_to_graphviz_string
 from .inputoutput import block_to_svg
 from .inputoutput import trace_to_html
+from .inputoutput import net_graph
 
 # extraction to verilog and verilog testbench
 from .verilog import output_to_verilog
