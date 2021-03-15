@@ -755,11 +755,11 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer, split_st
     function that can subsequently be passed to 'output_to_graphviz' or
     'block_to_graphviz_string'. ::
 
-        node_fanout = {n: "Fanout: %d" % my_fanout_func(n) for n in pyrtl.working_block().logic}
-        wire_delay = {w: "Delay: %.2f" % my_delay_func(w) for w in pyrtl.working_block().wirevector_set}
+        node_fanout = {n: "Fanout: %d" % my_fanout_func(n) for n in working_block().logic}
+        wire_delay = {w: "Delay: %.2f" % my_delay_func(w) for w in working_block().wirevector_set}
 
         with open("out.gv", "w") as f:
-            pyrtl.output_to_graphviz(f, namer=pyrtl.graphviz_detailed_namer(node_fanout, wire_delay))
+            output_to_graphviz(f, namer=graphviz_detailed_namer(node_fanout, wire_delay))
     """
     graph = net_graph(block, split_state)
     node_index_map = {}  # map node -> index
