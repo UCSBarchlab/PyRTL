@@ -58,11 +58,15 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
         s = block.get_wirevector_by_name(x)
         if s is None:
             s = WireVector(bitwidth=1, name=x)
-        if isinstance(s, Output) and (merge_io_vectors or len(x) == 1):
+        elif isinstance(s, Output):
             # To allow an output wire to be used as an argument (legal in BLIF),
-            # use the intermediate wire that was created in its place. extract_outputs()
-            # creates this intermediate wire.
-            s = block.get_wirevector_by_name(x + '[0]')
+            # use the intermediate wire that was created in its place.
+            # extract_outputs() creates this intermediate wire. Must check for
+            # merge_io_vectors first!
+            if not merge_io_vectors:
+                s = block.get_wirevector_by_name(x + '_i')
+            elif len(s) == 1:
+                s = block.get_wirevector_by_name(x + '[0]')
         return s
 
     # Begin BLIF language definition
@@ -117,28 +121,36 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
             bitwidth = name_counts[input_name]
             if input_name == clock_name:
                 clk_set.add(input_name)
-            elif not merge_io_vectors or bitwidth == 1:
-                block.add_wirevector(Input(bitwidth=1, name=input_name))
-            else:
+            elif bitwidth == 1:
+                block.add_wirevector(Input(bitwidth=1, name=input_name, block=block))
+            elif merge_io_vectors:
                 wire_in = Input(bitwidth=bitwidth, name=input_name, block=block)
                 for i in range(bitwidth):
                     bit_name = input_name + '[' + str(i) + ']'
                     bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_wire <<= wire_in[i]
+            else:
+                for i in range(bitwidth):
+                    bit_name = input_name + '[' + str(i) + ']'
+                    block.add_wirevector(Input(bitwidth=1, name=bit_name, block=block))
 
     def extract_outputs(model):
         start_names = [re.sub(r'\[([0-9]+)\]$', '', x) for x in model['output_list']]
         name_counts = collections.Counter(start_names)
         for output_name in name_counts:
             bitwidth = name_counts[output_name]
-            if not merge_io_vectors or bitwidth == 1:
-                # To allow an output wire to be used as an argument (legal in BLIF),
-                # create an intermediate wire that will be used in its place. twire()
-                # checks for this and uses the intermediate wire when needed
-                w = WireVector(bitwidth=1, name=output_name + '[0]')
-                out = Output(bitwidth=1, name=output_name)
-                out <<= w
-            else:
+            # To allow an output wire to be used as an argument (legal in BLIF),
+            # we need to create an intermediate wire, which will be used in twire()
+            # whenever the original wire is referenced. For example, given 2-bit Output 'a',
+            # every access to 'a[1]' will really be a reference to 'a[1]_i', a normal
+            # WireVector connected to 'a[1]'. A key property is that the name by
+            # which all other parts of the code refer to this wire doesn't change;
+            # the only thing that changes is what underlying wire is used.
+            if bitwidth == 1:
+                bit_internal = WireVector(bitwidth=1, name=output_name + '[0]', block=block)
+                bit_out = Output(bitwidth=1, name=output_name, block=block)
+                bit_out <<= bit_internal
+            elif merge_io_vectors:
                 wire_out = Output(bitwidth=bitwidth, name=output_name, block=block)
                 bit_list = []
                 for i in range(bitwidth):
@@ -146,6 +158,12 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
                     bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
                     bit_list.append(bit_wire)
                 wire_out <<= concat_list(bit_list)
+            else:
+                for i in range(bitwidth):
+                    bit_name = output_name + '[' + str(i) + ']'
+                    bit_internal = WireVector(bitwidth=1, name=bit_name + '_i', block=block)
+                    bit_out = Output(bitwidth=1, name=bit_name, block=block)
+                    bit_out <<= bit_internal
 
     def extract_commands(model):
         # for each "command" (dff or net) in the model
