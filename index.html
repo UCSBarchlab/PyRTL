@@ -330,7 +330,7 @@ all in the same framework.</p>
 provides some very helpful embedded language features and a rich type system. Chisel is (like PyRTL) a elaborate-through-execution hardware design language.  With support
 for signed types, named hierarchies of wires useful for hardware protocols, and a neat control structure call "when" that inspired our
 conditional contexts, Chisel is a powerful tool used in some great research projects including OpenRISC.  Unlike Chisel, PyRTL has
-concentrated on a complete tool chain which is useful for instructional projects, and provides a clearly defined and relatively easy-to-manipulate
+concentrated on a simple to use and complete tool chain which is useful for instructional projects, and provides a clearly defined and relatively easy-to-manipulate
 intermediate structure in the class Block (often times call pyrtl.core) which allows rapid prototyping of hardware analysis
 routines which can then be codesigned with the architecture.</p>
 
@@ -340,8 +340,9 @@ play very nicely together in that PyRTL can output Verilog that can then be synt
 Verilog designs and synthesize them to a very simple library of gates and output them as a "blif" file which can then be read in by
 PyRTL.</p>
 
-<p><a href="https://github.com/cornell-brg/pymtl">PyMTL</a> is an alpha stage "open-source Python-based framework for multi-level hardware modeling."
-One of the neat things about this project is that they are trying to allow simulation and modeling at multiple different levels of the
+<p><a href="https://pymtl.github.io/">PyMTL3</a> (a.k.a. Mamba) is an beta stage an "open-source Python-based hardware generation, simulation, and
+verification framework with multi-level hardware modeling support".  One of the neat things about this project is that they are trying to allow
+simulation, modeling, and verification at multiple different levels of the
 design from the functional level, the cycle-close level, and down to the register-transfer level (where PyRTL really is built to play).
 Like MyHDL they do some meta-programming tricks like parsing the Python AST to allow executable software descriptions to be (under
 certain restrictions -- sort of like Verilog) automatically converted into implementable hardware.  PyRTL, on the other hand, is about
