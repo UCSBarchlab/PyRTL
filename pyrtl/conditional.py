@@ -203,9 +203,15 @@ def _finalize():
         # handle wirevector and register assignments
         else:
             if isinstance(lhs, Register):
-                result = lhs  # default for registers is "self"
+                if hasattr(lhs, 'condition_default'):
+                    result = lhs.condition_default
+                else:
+                    result = lhs  # default for registers is "self"
             elif isinstance(lhs, WireVector):
-                result = 0  # default for wire is "0"
+                if hasattr(lhs, 'condition_default'):
+                    result = lhs.condition_default
+                else:
+                    result = 0  # default for wire is "0"
             else:
                 raise PyrtlInternalError('unknown assignment in finalize')
             predlist = _predicate_map[lhs]
