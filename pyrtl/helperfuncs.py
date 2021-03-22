@@ -266,6 +266,73 @@ def match_bitpattern(w, bitpattern, field_map=None):
     return MatchedFields(match, fields)
 
 
+def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
+    """ Return an unsigned integer representation of field format filled with the provided values.
+
+    :param bitpattern: A string holding the pattern (of bits and wildcards) to match
+    :param ordered_fields: A list of parameters to be matched to the provided bit pattern in
+        the order provided.  If ordered_fields are provided then no named_fields can be used.
+    :param named_fields: A list of parameters to be matched to the provided bit pattern in
+        by the names provided.  If named_fields are provided then no ordered_fields can be used.
+    :return: An unsigned integer carrying the result of the field substitution.
+
+    This function will compare take a specified pattern of bits, where some
+    of the pattern can be "wildcard" bits.  The wildcard bits must all be named with a single
+    letter and, unlike the related function ``match_bitpattern``, no "?" can be used.  The function
+    will take the provided bitpattern and create an integer that substitutes the provided fields
+    in for the given wildcards at the bit level.  This sort of bit substitution is useful when
+    creating values for testing when the resulting values will be "chopped" up by the hardware
+    later (e.g. instruction decode or other bitfield heavy functions).
+
+    Examples::
+
+        bitpattern_to_val('0000000rrrrrsssss000ddddd0110011', r=1, s=2, d=3)  # RISCV ADD instr
+        bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', i=0, r=3, s=4)  # RISCV SW instr
+
+    """
+
+    if len(ordered_fields) > 0 and len(named_fields) > 0:
+        raise PyrtlError('named and ordered fields cannot be mixed')
+
+    def letters_in_field_order():
+        seen = []
+        for c in bitpattern:
+            if c != '0' and c != '1' and c not in seen:
+                seen.append(c)
+        return seen
+
+    bitlist = []
+    lifo = letters_in_field_order()
+    if ordered_fields:
+        if len(lifo) != len(ordered_fields):
+            raise PyrtlError('number of fields and number of unique patterns do not match')
+        intfields = [int(f) for f in ordered_fields]
+    else:
+        if len(lifo) != len(named_fields):
+            raise PyrtlError('number of fields and number of unique patterns do not match')
+        try:
+            intfields = [int(named_fields[n]) for n in lifo]
+        except KeyError:
+            raise PyrtlError('named field does not appear in bitpattern format string')
+
+    fmap = dict(zip(lifo, intfields))
+    for c in bitpattern[::-1]:
+        if c == '0' or c == '1':
+            bitlist.append(c)
+        elif c == '?':
+            raise PyrtlError('all fields in must have names')
+        else:
+            bitlist.append(str(fmap[c] & 0x1))  # append lsb of the field
+            fmap[c] = fmap[c] >> 1  # and bit shift by one position
+    for f in fmap:
+        if fmap[f] not in [0, -1]:
+            raise PyrtlError('too many bits given to value to fit in field')
+    if len(bitpattern) != len(bitlist):
+        raise PyrtlInternalError('resulting values have different bitwidths')
+    final_str = ''.join(bitlist[::-1])
+    return int(final_str, 2)
+
+
 def chop(w, *segment_widths):
     """ Returns a list of WireVectors each a slice of the original 'w'
 
