@@ -90,10 +90,6 @@ overloaded operations such as `addition` or `bitwise or`. A bunch of other relat
     * :py:class:`~pyrtl.wire.Const` (WireVector)
     * :py:class:`~pyrtl.wire.Register` (WireVector)
 
-* Memory blocks [base class for internal use only]
-    * :py:class:`~pyrtl.memory.MemBlock` (_MemReadBase)
-    * :py:class:`~pyrtl.memory.RomBlock` (_MemReadBase)
-
 After specifying a hardware design, there are then options to simulate your design right in PyRTL,
 synthesize it down to primitive 1-bit operations, optimize it, and export it to Verilog (along with
 a testbench),.

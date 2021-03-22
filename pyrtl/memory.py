@@ -87,68 +87,7 @@ class _MemIndexed(WireVector):
         as_wires(self).name = n
 
 
-class _MemReadBase(object):
-    """ This is the base class for the memories and ROM blocks and
-    it implements the read and initialization operations needed for
-    both of them.
-    """
-
-    # FIXME: right now read port is built unconditionally (no read enable)
-
-    def __init__(self, bitwidth, addrwidth, name, max_read_ports, asynchronous, block):
-        self.max_read_ports = max_read_ports
-        self.read_ports = 0
-        self.block = working_block(block)
-        name = next_tempvar_name(name)
-
-        if bitwidth <= 0:
-            raise PyrtlError('bitwidth must be >= 1')
-        if addrwidth <= 0:
-            raise PyrtlError('addrwidth must be >= 1')
-
-        self.bitwidth = bitwidth
-        self.name = name
-        self.addrwidth = addrwidth
-        self.readport_nets = []
-        self.id = _memIndex.next_index()
-        self.asynchronous = asynchronous
-        self.block._add_memblock(self)
-
-    def __getitem__(self, item):
-        """ Builds circuitry to retrieve an item from the memory """
-        item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
-        if len(item) > self.addrwidth:
-            raise PyrtlError('memory index bitwidth > addrwidth')
-        return _MemIndexed(mem=self, index=item)
-
-    def _readaccess(self, addr):
-        # FIXME: add conditional read ports
-        return self._build_read_port(addr)
-
-    def _build_read_port(self, addr):
-        if self.max_read_ports is not None:
-            self.read_ports += 1
-            if self.read_ports > self.max_read_ports:
-                raise PyrtlError('maximum number of read ports (%d) exceeded' % self.max_read_ports)
-        data = WireVector(bitwidth=self.bitwidth)
-        readport_net = LogicNet(
-            op='m',
-            op_param=(self.id, self),
-            args=(addr,),
-            dests=(data,))
-        working_block().add_net(readport_net)
-        self.readport_nets.append(readport_net)
-        return data
-
-    def __setitem__(self, key, value):
-        """ Not legal on a object that only allows for reads"""
-        raise PyrtlError("error, invalid call __setitem__ made on _MemReadBase")
-
-    def _make_copy(self, block):
-        pass
-
-
-class MemBlock(_MemReadBase):
+class MemBlock(object):
     """ MemBlock is the object for specifying block memories.  It can be
     indexed like an array for both reading and writing.  Writes under a conditional
     are automatically converted to enabled writes.   For example, consider the following
@@ -205,11 +144,34 @@ class MemBlock(_MemReadBase):
         that memories with high numbers of ports may not be possible to map to physical memories
         such as block rams or existing memory hardware macros.
         """
-        super(MemBlock, self).__init__(bitwidth, addrwidth, name, max_read_ports,
-                                       asynchronous, block)
+        self.max_read_ports = max_read_ports
+        self.num_read_ports = 0
+        self.block = working_block(block)
+        name = next_tempvar_name(name)
+
+        if bitwidth <= 0:
+            raise PyrtlError('bitwidth must be >= 1')
+        if addrwidth <= 0:
+            raise PyrtlError('addrwidth must be >= 1')
+
+        self.bitwidth = bitwidth
+        self.name = name
+        self.addrwidth = addrwidth
+        self.readport_nets = []
+        self.id = _memIndex.next_index()
+        self.asynchronous = asynchronous
+        self.block._add_memblock(self)
+
         self.max_write_ports = max_write_ports
-        self.write_ports = 0
+        self.num_write_ports = 0
         self.writeport_nets = []
+
+    def __getitem__(self, item):
+        """ Builds circuitry to retrieve an item from the memory """
+        item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
+        if len(item) > self.addrwidth:
+            raise PyrtlError('memory index bitwidth > addrwidth')
+        return _MemIndexed(mem=self, index=item)
 
     def __setitem__(self, item, assignment):
         """ Builds circuitry to set an item in the memory """
@@ -217,6 +179,25 @@ class MemBlock(_MemReadBase):
             self._assignment(item, assignment.rhs, is_conditional=assignment.is_conditional)
         else:
             raise PyrtlError('error, assigment to memories should use "<<=" not "=" operator')
+
+    def _readaccess(self, addr):
+        # FIXME: add conditional read ports
+        return self._build_read_port(addr)
+
+    def _build_read_port(self, addr):
+        if self.max_read_ports is not None:
+            self.num_read_ports += 1
+            if self.num_read_ports > self.max_read_ports:
+                raise PyrtlError('maximum number of read ports (%d) exceeded' % self.max_read_ports)
+        data = WireVector(bitwidth=self.bitwidth)
+        readport_net = LogicNet(
+            op='m',
+            op_param=(self.id, self),
+            args=(addr,),
+            dests=(data,))
+        working_block().add_net(readport_net)
+        self.readport_nets.append(readport_net)
+        return data
 
     def _assignment(self, item, val, is_conditional):
         from .conditional import _build
@@ -246,8 +227,8 @@ class MemBlock(_MemReadBase):
     def _build(self, addr, data, enable):
         """ Builds a write port. """
         if self.max_write_ports is not None:
-            self.write_ports += 1
-            if self.write_ports > self.max_write_ports:
+            self.num_write_ports += 1
+            if self.num_write_ports > self.max_write_ports:
                 raise PyrtlError('maximum number of write ports (%d) exceeded' %
                                  self.max_write_ports)
         writeport_net = LogicNet(
@@ -269,7 +250,7 @@ class MemBlock(_MemReadBase):
                         block=block)
 
 
-class RomBlock(_MemReadBase):
+class RomBlock(MemBlock):
     """ PyRTL Read Only Memory.
 
     RomBlocks are the read only memory block for PyRTL.  They support the same read interface
@@ -302,8 +283,9 @@ class RomBlock(_MemReadBase):
         :param block: The block to add to, defaults to the working block
         """
 
-        super(RomBlock, self).__init__(bitwidth, addrwidth, name, max_read_ports,
-                                       asynchronous, block)
+        super(RomBlock, self).__init__(bitwidth=bitwidth, addrwidth=addrwidth, name=name,
+                                       max_read_ports=max_read_ports, max_write_ports=0,
+                                       asynchronous=asynchronous, block=block)
         self.data = romdata
         self.build_new_roms = build_new_roms
         self.current_copy = self
@@ -316,6 +298,9 @@ class RomBlock(_MemReadBase):
                              "Instead, get the value from the source data for this Rom")
             # If you really know what you are doing, use a Const WireVector instead.
         return super(RomBlock, self).__getitem__(item)
+
+    def __setitem__(self, item, assignment):
+        raise PyrtlError('no writing to a read-only memory')
 
     def _get_read_data(self, address):
         import types
@@ -361,7 +346,7 @@ class RomBlock(_MemReadBase):
 
     def _build_read_port(self, addr):
         if self.build_new_roms and \
-                (self.current_copy.read_ports >= self.current_copy.max_read_ports):
+                (self.current_copy.num_read_ports >= self.current_copy.max_read_ports):
             self.current_copy = self._make_copy()
         return super(RomBlock, self.current_copy)._build_read_port(addr)
 

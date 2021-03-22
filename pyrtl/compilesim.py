@@ -705,7 +705,7 @@ class CompiledSimulation(object):
         self._declare_mem_helpers(write)
         roms = {mem for mem in mems if isinstance(mem, RomBlock)}
         self._declare_roms(write, roms)
-        mems = {mem for mem in mems if isinstance(mem, MemBlock)}
+        mems = {mem for mem in mems if isinstance(mem, MemBlock) and not isinstance(mem, RomBlock)}
         self._declare_mems(write, mems)
 
         # single step function

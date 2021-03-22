@@ -617,16 +617,16 @@ class Block(object):
 
     def sanity_check_memblock(self, m):
         """ Check that m is a valid memblock type. """
-        from .memory import _MemReadBase
-        if not isinstance(m, _MemReadBase):
+        from .memory import MemBlock
+        if not isinstance(m, MemBlock):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
-                'instead of _MemReadBase' % type(m))
+                'instead of MemBlock' % type(m))
 
     def sanity_check_net(self, net):
         """ Check that net is a valid LogicNet. """
         from .wire import Input, Output, Const, Register
-        from .memory import _MemReadBase
+        from .memory import MemBlock
 
         # general sanity checks that apply to all operations
         if not isinstance(net, LogicNet):
@@ -697,7 +697,7 @@ class Block(object):
                 raise PyrtlInternalError('error, mem op requires 2 op_params in tuple')
             if not isinstance(net.op_param[0], int):
                 raise PyrtlInternalError('error, mem op requires first operand as int')
-            if not isinstance(net.op_param[1], _MemReadBase):
+            if not isinstance(net.op_param[1], MemBlock):
                 raise PyrtlInternalError('error, mem op requires second operand of a memory type')
 
         # operation-specific checks on destinations
