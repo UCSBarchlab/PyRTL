@@ -266,6 +266,7 @@ def match_bitpattern(w, bitpattern, field_map=None):
     return MatchedFields(match, fields)
 
 
+# TODO: not currently tested or exported at package level
 def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
     """ Return an unsigned integer representation of field format filled with the provided values.
 
@@ -287,7 +288,10 @@ def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
     Examples::
 
         bitpattern_to_val('0000000rrrrrsssss000ddddd0110011', r=1, s=2, d=3)  # RISCV ADD instr
-        bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', i=0, r=3, s=4)  # RISCV SW instr
+        # evaluates to   0b00000000000100010000000110110011
+
+        bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', i=1, r=3, s=4)  # RISCV SW instr
+        # evaluates to   0b00000000001100100010000010100011
 
     """
 
