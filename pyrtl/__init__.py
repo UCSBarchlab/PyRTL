@@ -28,6 +28,7 @@ from .helperfuncs import wirevector_list
 from .helperfuncs import log2
 from .helperfuncs import truncate
 from .helperfuncs import match_bitpattern
+from .helperfuncs import bitpattern_to_val
 from .helperfuncs import chop
 from .helperfuncs import val_to_signed_integer
 from .helperfuncs import val_to_formatted_str

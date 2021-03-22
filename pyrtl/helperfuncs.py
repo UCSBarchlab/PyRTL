@@ -316,21 +316,21 @@ def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
             raise PyrtlError('number of fields and number of unique patterns do not match')
         try:
             intfields = [int(named_fields[n]) for n in lifo]
-        except KeyError:
-            raise PyrtlError('named field does not appear in bitpattern format string')
+        except KeyError as e:
+            raise PyrtlError('bitpattern field %s was not provided in named_field list' % e.args[0])
 
     fmap = dict(zip(lifo, intfields))
     for c in bitpattern[::-1]:
         if c == '0' or c == '1':
             bitlist.append(c)
         elif c == '?':
-            raise PyrtlError('all fields in must have names')
+            raise PyrtlError('all fields in the bitpattern must have names')
         else:
             bitlist.append(str(fmap[c] & 0x1))  # append lsb of the field
             fmap[c] = fmap[c] >> 1  # and bit shift by one position
     for f in fmap:
         if fmap[f] not in [0, -1]:
-            raise PyrtlError('too many bits given to value to fit in field')
+            raise PyrtlError('too many bits given to value to fit in field %s' % f)
     if len(bitpattern) != len(bitlist):
         raise PyrtlInternalError('resulting values have different bitwidths')
     final_str = ''.join(bitlist[::-1])
