@@ -121,6 +121,37 @@ class TestConditional(unittest.TestCase):
                 r2.next |= 3
         self.check_trace(' i 01230123\nr1 01222344\nr2 00013334\n')
 
+    def test_default_value_for_wires(self):
+        i = pyrtl.Register(bitwidth=2, name='i')
+        i.next <<= i + 1
+        r1 = pyrtl.Register(bitwidth=3, name='r1')
+        r2 = pyrtl.Register(bitwidth=3, name='r2')
+        r3 = pyrtl.Register(bitwidth=3, name='r3')
+        o = pyrtl.Output(bitwidth=3, name='o')
+        with pyrtl.conditional_assignment(defaults={r1: r1 + 2, r2: 6, o: 3}):
+            with i < 2:
+                r1.next |= r1 + 1
+                # r2 will be updated to 6
+                # r3 remains the same as previous cycle
+                o |= i
+            with i < 3:
+                # r1 will be updated to r1 + 2
+                r2.next |= r2 + 1
+                # r3 remains the same as previous cycle
+                # o will be updated to 3
+            with pyrtl.otherwise:
+                # r1 will be updated to r1 + 2
+                # r2 will be updated to 6
+                r3.next |= 2
+                o |= 7
+        self.check_trace(
+            ' i 01230123\n'
+            ' o 01370137\n'
+            'r1 01246702\n'
+            'r2 06676667\n'
+            'r3 00002222\n'
+        )
+
     def test_error_on_unconditioned_update_in_under_conditional(self):
         i = pyrtl.Register(bitwidth=2, name='i')
         with pyrtl.conditional_assignment:

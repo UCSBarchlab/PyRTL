@@ -67,6 +67,13 @@ def currently_under_condition():
 # instances (hopefully the only and unchanging instances) of the following two types.
 
 class _ConditionalAssignment(object):
+    def __init__(self):
+        self.defaults = {}
+
+    def __call__(self, defaults):
+        self.defaults = defaults
+        return self
+
     """ Context providing funcitionality of "conditional_assignment". """
     def __enter__(self):
         global _depth
@@ -75,7 +82,7 @@ class _ConditionalAssignment(object):
 
     def __exit__(self, *exc_info):
         try:
-            _finalize()
+            _finalize(self.defaults)
         finally:
             # even if the above finalization throws an error we need to
             # reset the state to prevent errors from bleeding over
@@ -181,7 +188,7 @@ def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
     return True
 
 
-def _finalize():
+def _finalize(defaults):
     """Build the required muxes and call back to WireVector to finalize the wirevector build."""
     from .memory import MemBlock
     from pyrtl.corecircuits import select
@@ -203,13 +210,13 @@ def _finalize():
         # handle wirevector and register assignments
         else:
             if isinstance(lhs, Register):
-                if hasattr(lhs, 'condition_default'):
-                    result = lhs.condition_default
+                if lhs in defaults:
+                    result = defaults[lhs]
                 else:
                     result = lhs  # default for registers is "self"
             elif isinstance(lhs, WireVector):
-                if hasattr(lhs, 'condition_default'):
-                    result = lhs.condition_default
+                if lhs in defaults:
+                    result = defaults[lhs]
                 else:
                     result = 0  # default for wire is "0"
             else:
