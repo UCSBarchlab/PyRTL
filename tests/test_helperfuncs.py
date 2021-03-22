@@ -350,6 +350,95 @@ class TestMatchBitpattern(unittest.TestCase):
                     out |= x.field2
 
 
+class TestBitpatternToVal(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    @staticmethod
+    def r5_br_immed(x):
+        # i is the 12th bit, k is the 11th bit, and j is the bottom 10 bits of the immediate field
+        return {'i': (x >> 11) & 0x1, 'k': (x >> 10) & 0x1, 'j': x & ((1 << 10) - 1)}
+
+    def test_ordered_fields(self):
+        self.assertEqual(
+            pyrtl.bitpattern_to_val('0000000rrrrrsssss000ddddd0110011', 1, 2, 3),  # RISC-V ADD
+            0b00000000000100010000000110110011
+        )
+
+        self.assertEqual(
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', 1, 3, 4),  # RISC-V SW
+            0b00000000001100100010000010100011
+        )
+
+        m = TestBitpatternToVal.r5_br_immed(-5)
+        self.assertEqual(
+            pyrtl.bitpattern_to_val(
+                'ijjjjjjrrrrrsssss100jjjjk1100011', m['i'], m['j'], 2, 3, m['k']
+            ),  # RISC-V BLT
+            0b11111110001000011100101111100011
+        )
+
+    def test_named_fields(self):
+        self.assertEqual(
+            pyrtl.bitpattern_to_val(
+                '0000000rrrrrsssss000ddddd0110011', r=1, s=2, d=3
+            ),  # RISC-V ADD
+            0b00000000000100010000000110110011
+        )
+
+        self.assertEqual(
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', i=1, r=3, s=4),  # RISC-V SW
+            0b00000000001100100010000010100011
+        )
+
+        self.assertEqual(
+            pyrtl.bitpattern_to_val(
+                'ijjjjjjrrrrrsssss100jjjjk1100011',
+                r=2, s=3, **TestBitpatternToVal.r5_br_immed(-5)
+            ),  # RISC-V BLT
+            0b11111110001000011100101111100011
+        )
+
+    def test_fields_all_different(self):
+        self.assertEqual(
+            pyrtl.bitpattern_to_val('abcdefg', a=1, b=0, c=1, d=0, e=0, f=1, g=0),
+            0b1010010
+        )
+
+    def test_no_fields(self):
+        self.assertEqual(
+            pyrtl.bitpattern_to_val('1010010'),
+            0b1010010
+        )
+
+    def test_error_both_ordered_and_named_fields(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', 1, r=3, s=4)
+
+    def test_error_invalid_num_unique_patterns(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', 1, 3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', i=1, r=3)
+
+    def test_error_bitpattern_field_not_provided(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', i=1, r=3, t=4)
+
+    def test_error_unnamed_fields_in_bitpattern(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiii?????sssss010iiiii0100011', 1, 3, 4)
+
+    def test_error_value_doesnt_fit_in_field(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', 1, 65, 4)
+
+    @unittest.skip("This error might not be possible")
+    def test_error_bitlist_and_value_different_sizes(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pass
+
+
 class TestChop(unittest.TestCase):
     def setUp(self):
         random.seed(8492049)
