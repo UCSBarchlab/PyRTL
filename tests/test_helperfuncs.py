@@ -361,19 +361,19 @@ class TestBitpatternToVal(unittest.TestCase):
 
     def test_ordered_fields(self):
         self.assertEqual(
-            pyrtl.bitpattern_to_val('0000000rrrrrsssss000ddddd0110011', 1, 2, 3),  # RISC-V ADD
+            pyrtl.bitpattern_to_val('0000000sssssrrrrr000ddddd0110011', 1, 2, 3),  # RISC-V ADD
             0b00000000000100010000000110110011
         )
 
         self.assertEqual(
-            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', 1, 3, 4),  # RISC-V SW
+            pyrtl.bitpattern_to_val('iiiiiiisssssrrrrr010iiiii0100011', 1, 3, 4),  # RISC-V SW
             0b00000000001100100010000010100011
         )
 
         m = TestBitpatternToVal.r5_br_immed(-5)
         self.assertEqual(
             pyrtl.bitpattern_to_val(
-                'ijjjjjjrrrrrsssss100jjjjk1100011', m['i'], m['j'], 2, 3, m['k']
+                'ijjjjjjsssssrrrrr100jjjjk1100011', m['i'], m['j'], 2, 3, m['k']
             ),  # RISC-V BLT
             0b11111110001000011100101111100011
         )
@@ -381,22 +381,43 @@ class TestBitpatternToVal(unittest.TestCase):
     def test_named_fields(self):
         self.assertEqual(
             pyrtl.bitpattern_to_val(
-                '0000000rrrrrsssss000ddddd0110011', r=1, s=2, d=3
+                '0000000sssssrrrrr000ddddd0110011', s=1, r=2, d=3
             ),  # RISC-V ADD
             0b00000000000100010000000110110011
         )
 
         self.assertEqual(
-            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', i=1, r=3, s=4),  # RISC-V SW
+            pyrtl.bitpattern_to_val('iiiiiiisssssrrrrr010iiiii0100011', i=1, s=3, r=4),  # RISC-V SW
             0b00000000001100100010000010100011
         )
 
         self.assertEqual(
             pyrtl.bitpattern_to_val(
-                'ijjjjjjrrrrrsssss100jjjjk1100011',
-                r=2, s=3, **TestBitpatternToVal.r5_br_immed(-5)
+                'ijjjjjjsssssrrrrr100jjjjk1100011',
+                s=2, r=3, **TestBitpatternToVal.r5_br_immed(-5)
             ),  # RISC-V BLT
             0b11111110001000011100101111100011
+        )
+
+    def test_named_fields_with_field_map(self):
+        field_map = {
+            's': 'rs2',
+            'r': 'rs1',
+            'd': 'rd',
+            'i': 'imm',
+        }
+        self.assertEqual(
+            pyrtl.bitpattern_to_val(
+                '0000000sssssrrrrr000ddddd0110011', rs2=1, rs1=2, rd=3, field_map=field_map
+            ),  # RISC-V ADD
+            0b00000000000100010000000110110011
+        )
+
+        self.assertEqual(
+            pyrtl.bitpattern_to_val(
+                'iiiiiiisssssrrrrr010iiiii0100011', imm=1, rs2=3, rs1=4, field_map=field_map
+            ),  # RISC-V SW
+            0b00000000001100100010000010100011
         )
 
     def test_fields_all_different(self):
