@@ -18,13 +18,51 @@ from .memory import RomBlock
 from .passes import two_way_concat, one_bit_selects
 
 
+class Subcircuit:
+    """
+    This is a way to create and track per-module-instance wire names, so there
+    are not name clashes when we instantiate a module more than once.
+    """
+
+    def __init__(self, model, is_top=False, clk_set={'clk'}, block=None):
+        self.model = model
+        self.is_top = is_top
+        self.clk_set = clk_set
+        self.block = working_block(block)
+        self.inputs = {}
+        self.outputs = {}
+        self.wirevector_by_name = {}
+
+    def add_input(self, original_name, wire):
+        self.inputs[original_name] = wire
+        self.wirevector_by_name[original_name] = wire
+
+    def add_output(self, original_name, wire):
+        self.outputs[original_name] = wire
+        self.wirevector_by_name[original_name] = wire
+
+    def add_reg(self, original_name, wire):
+        self.wirevector_by_name[original_name] = wire
+
+    def add_clock(self, clock_name):
+        self.clk_set.add(clock_name)
+
+    def twire(self, x):
+        """ Find or make wire named x and return it. """
+        s = self.wirevector_by_name.get(x)
+        if s is None:
+            # Purposefully *not* setting its name to 'x', so we don't have name clashes
+            s = WireVector(bitwidth=1)
+            self.wirevector_by_name[x] = s
+        return s
+
 # -----------------------------------------------------------------
 #            __       ___
 #    | |\ | |__) |  |  |
 #    | | \| |    \__/  |
 
 
-def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
+def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', top_model=None):
     """ Read an open BLIF file or string as input, updating the block appropriately.
 
     :param blif: An open BLIF file to read
@@ -33,6 +71,8 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
         by a indexing subscript (e.g. 1-bit wires 'a[0]' and 'a[1]') will be combined
         into a single Input/Output (e.g. a 2-bit wire 'a').
     :param clock_name: The name of the clock (defaults to 'clk')
+    :param top_model: name of top-level model to instantiate; if None, defaults to first model
+        listed in the BLIF
 
     If merge_io_vectors is True, then given 1-bit Input wires 'a[0]' and 'a[1]', these
     wires will be combined into a single 2-bit Input wire 'a' that can be accessed
@@ -67,29 +107,13 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
     def SLiteral(x):
         return Suppress(Literal(x))
 
-    def twire(x):
-        """ Find or make wire named x and return it. """
-        s = block.get_wirevector_by_name(x)
-        if s is None:
-            s = WireVector(bitwidth=1, name=x)
-        elif isinstance(s, Output):
-            # To allow an output wire to be used as an argument (legal in BLIF),
-            # use the intermediate wire that was created in its place.
-            # extract_outputs() creates this intermediate wire. Must check for
-            # merge_io_vectors first!
-            if not merge_io_vectors:
-                s = block.get_wirevector_by_name(x + '_i')
-            elif len(s) == 1:
-                s = block.get_wirevector_by_name(x + '[0]')
-        return s
-
     # Begin BLIF language definition
-    signal_start = pyparsing.alphas + r'$:[]_<>\\\/?'
-    signal_middle = pyparsing.alphas + pyparsing.nums + r'$:[]_<>\\\/.?'
+    signal_start = pyparsing.alphas + '$:[]_<>\\/?'
+    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\/.?-'
     signal_id = Word(signal_start, signal_middle)
     header = SKeyword('.model') + signal_id('model_name')
-    input_list = Group(SKeyword('.inputs') + OneOrMore(signal_id))('input_list')
-    output_list = Group(SKeyword('.outputs') + OneOrMore(signal_id))('output_list')
+    input_list = Group(SKeyword('.inputs') + ZeroOrMore(signal_id))('input_list')
+    output_list = Group(SKeyword('.outputs') + ZeroOrMore(signal_id))('output_list')
 
     cover_atom = Word('01-')
     cover_list = Group(ZeroOrMore(cover_atom))('cover_list')
@@ -113,7 +137,15 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
                      + SLiteral('re')
                      + signal_id('C')
                      + dffs_init_val('I'))('dffs_def')
-    command_def = name_def | dffas_def | dffs_def
+
+    # model reference
+    formal_actual = Group(signal_id('formal') + SLiteral('=')
+                          + signal_id('actual'))('formal_actual')
+    formal_actual_list = Group(OneOrMore(formal_actual))('formal_actual_list')
+    model_name = signal_id('model_name')
+    model_ref = Group(SKeyword('.subckt') + model_name + formal_actual_list)('model_ref')
+
+    command_def = name_def | dffas_def | dffs_def | model_ref
     command_list = Group(OneOrMore(command_def))('command_list')
 
     footer = SKeyword('.end')
@@ -123,75 +155,115 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
 
     # Begin actually reading and parsing the BLIF file
     result = parser.parseString(blif_string, parseAll=True)
-    # Blif file with multiple models (currently only handles one flattened models)
-    assert(len(result) == 1)
-    clk_set = set([])
     ff_clk_set = set([])
+    models = {}  # model name -> model, for subckt instantiation
 
-    def extract_inputs(model):
-        start_names = [re.sub(r'\[([0-9]+)\]$', '', x) for x in model['input_list']]
-        name_counts = collections.Counter(start_names)
-        for input_name in name_counts:
-            bitwidth = name_counts[input_name]
-            if input_name == clock_name:
-                clk_set.add(input_name)
-            elif bitwidth == 1:
-                block.add_wirevector(Input(bitwidth=1, name=input_name, block=block))
-            elif merge_io_vectors:
-                wire_in = Input(bitwidth=bitwidth, name=input_name, block=block)
-                for i in range(bitwidth):
-                    bit_name = input_name + '[' + str(i) + ']'
-                    bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
-                    bit_wire <<= wire_in[i]
-            else:
-                for i in range(bitwidth):
-                    bit_name = input_name + '[' + str(i) + ']'
-                    block.add_wirevector(Input(bitwidth=1, name=bit_name, block=block))
+    def extract_inputs(subckt):
+        if subckt.is_top:
+            # NOTE: Assumes that:
+            # - Top-level inputs starting with the same prefix are part of the same wire
+            # - Indices start at 0
+            start_names = [re.sub(r'\[([0-9]+)\]$', '', x) for x in subckt.model['input_list']]
+            name_counts = collections.Counter(start_names)
+            for input_name in name_counts:
+                bitwidth = name_counts[input_name]
+                if input_name in subckt.clk_set:
+                    continue
+                elif bitwidth == 1:
+                    wire_in = Input(bitwidth=1, name=input_name, block=block)
+                    subckt.add_input(input_name, wire_in)
+                    block.add_wirevector(wire_in)
+                elif merge_io_vectors:
+                    wire_in = Input(bitwidth=bitwidth, name=input_name, block=block)
+                    for i in range(bitwidth):
+                        bit_name = input_name + '[' + str(i) + ']'
+                        bit_wire = WireVector(bitwidth=1, block=block)
+                        bit_wire <<= wire_in[i]
+                        subckt.add_input(bit_name, bit_wire)
+                else:
+                    for i in range(bitwidth):
+                        bit_name = input_name + '[' + str(i) + ']'
+                        wire_in = Input(bitwidth=1, name=bit_name, block=block)
+                        subckt.add_input(bit_name, wire_in)
+                        block.add_wirevector(wire_in)
+        else:
+            # For subckts:
+            # - Never merge input vectors
+            # - All inputs are 1-bit
+            for input_name in subckt.model['input_list']:
+                if input_name in subckt.clk_set:
+                    continue
+                wire_in = WireVector(bitwidth=1, block=block)  # Internal name prevents name clash
+                subckt.add_input(input_name, wire_in)
+                block.add_wirevector(wire_in)
 
-    def extract_outputs(model):
-        start_names = [re.sub(r'\[([0-9]+)\]$', '', x) for x in model['output_list']]
-        name_counts = collections.Counter(start_names)
-        for output_name in name_counts:
-            bitwidth = name_counts[output_name]
-            # To allow an output wire to be used as an argument (legal in BLIF),
-            # we need to create an intermediate wire, which will be used in twire()
-            # whenever the original wire is referenced. For example, given 2-bit Output 'a',
-            # every access to 'a[1]' will really be a reference to 'a[1]_i', a normal
-            # WireVector connected to 'a[1]'. A key property is that the name by
-            # which all other parts of the code refer to this wire doesn't change;
-            # the only thing that changes is what underlying wire is used.
-            if bitwidth == 1:
-                bit_internal = WireVector(bitwidth=1, name=output_name + '[0]', block=block)
-                bit_out = Output(bitwidth=1, name=output_name, block=block)
-                bit_out <<= bit_internal
-            elif merge_io_vectors:
-                wire_out = Output(bitwidth=bitwidth, name=output_name, block=block)
-                bit_list = []
-                for i in range(bitwidth):
-                    bit_name = output_name + '[' + str(i) + ']'
-                    bit_wire = WireVector(bitwidth=1, name=bit_name, block=block)
-                    bit_list.append(bit_wire)
-                wire_out <<= concat_list(bit_list)
-            else:
-                for i in range(bitwidth):
-                    bit_name = output_name + '[' + str(i) + ']'
-                    bit_internal = WireVector(bitwidth=1, name=bit_name + '_i', block=block)
-                    bit_out = Output(bitwidth=1, name=bit_name, block=block)
+    def extract_outputs(subckt):
+        if subckt.is_top:
+            # NOTE: Assumes that:
+            # - Top-level outputs starting with the same prefix are part of the same wire
+            # - Indices start at 0
+            start_names = [re.sub(r'\[([0-9]+)\]$', '', x) for x in subckt.model['output_list']]
+            name_counts = collections.Counter(start_names)
+            for output_name in name_counts:
+                bitwidth = name_counts[output_name]
+                # To allow an output wire to be used as an argument (legal in BLIF),
+                # we need to create an intermediate wire, which will be used in twire()
+                # whenever the original wire is referenced. For example, given 2-bit Output 'a',
+                # every access to 'a[1]' will really be a reference to 'a[1]_i', a normal
+                # WireVector connected to 'a[1]'. A key property is that the name by
+                # which all other parts of the code refer to this wire doesn't change;
+                # the only thing that changes is what underlying wire is used.
+                if bitwidth == 1:
+                    bit_internal = WireVector(bitwidth=1, block=block)
+                    bit_out = Output(bitwidth=1, name=output_name, block=block)
                     bit_out <<= bit_internal
+                    # NOTE this is important: redirecting user-visible name to internal wire
+                    subckt.add_output(output_name, bit_internal)
+                elif merge_io_vectors:
+                    wire_out = Output(bitwidth=bitwidth, name=output_name, block=block)
+                    bit_list = []
+                    for i in range(bitwidth):
+                        bit_name = output_name + '[' + str(i) + ']'
+                        bit_wire = WireVector(bitwidth=1, block=block)
+                        bit_list.append(bit_wire)
+                        subckt.add_output(bit_name, bit_wire)
+                    wire_out <<= concat_list(bit_list)
+                else:
+                    for i in range(bitwidth):
+                        bit_name = output_name + '[' + str(i) + ']'
+                        bit_internal = WireVector(bitwidth=1, block=block)
+                        bit_out = Output(bitwidth=1, name=bit_name, block=block)
+                        bit_out <<= bit_internal
+                        # NOTE this is important: redirecting user-visible name to internal wire
+                        subckt.add_output(bit_name, bit_internal)
+        else:
+            # For subckts:
+            # - Never merge outputs vectors
+            # - All outputs are 1-bit
+            for output_name in subckt.model['output_list']:
+                bit_out = WireVector(bitwidth=1, block=block)
+                block.add_wirevector(bit_out)
+                subckt.add_output(output_name, bit_out)
 
-    def extract_commands(model):
+    def extract_commands(subckt):
         # for each "command" (dff or net) in the model
-        for command in model['command_list']:
+        for command in subckt.model['command_list']:
             # if it is a net (specified as a cover)
             if command.getName() == 'name_def':
-                extract_cover(command)
+                extract_cover(subckt, command)
             # else if the command is a d flop flop
             elif command.getName() == 'dffas_def' or command.getName() == 'dffs_def':
-                extract_flop(command)
+                extract_flop(subckt, command)
+            elif command.getName() == 'model_ref':
+                extract_model_reference(subckt, command)
             else:
                 raise PyrtlError('unknown command type')
 
-    def extract_cover(command):
+    def extract_cover(subckt, command):
+
+        def twire(w):
+            return subckt.twire(w)
+
         # pylint: disable=invalid-unary-operand-type
         netio = command['namesignal_list']
         if len(command['cover_list']) == 0:
@@ -202,10 +274,10 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
             output_wire <<= Const(1, bitwidth=1, block=block)  # const "TRUE"
         elif command['cover_list'].asList() == ['1', '1']:
             # Populate clock list if one input is already a clock
-            if(netio[1] in clk_set):
-                clk_set.add(netio[0])
-            elif(netio[0] in clk_set):
-                clk_set.add(netio[1])
+            if (netio[1] in subckt.clk_set):
+                subckt.add_clock(netio[0])
+            elif (netio[0] in subckt.clk_set):
+                subckt.add_clock(netio[1])
             else:
                 output_wire = twire(netio[1])
                 output_wire <<= twire(netio[0])  # simple wire
@@ -236,13 +308,18 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
             raise PyrtlError('Blif file with unknown logic cover set "%s"'
                              '(currently gates are hard coded)' % command['cover_list'])
 
-    def extract_flop(command):
+    def extract_flop(subckt, command):
+
+        def twire(w):
+            return subckt.twire(w)
+
         if(command['C'] not in ff_clk_set):
             ff_clk_set.add(command['C'])
 
         # Create register and assign next state to D and output to Q
         regname = command['Q'] + '_reg'
-        flop = Register(bitwidth=1, name=regname)
+        flop = Register(bitwidth=1)
+        subckt.add_reg(regname, flop)
         flop.next <<= twire(command['D'])
         flop_output = twire(command['Q'])
         init_val = command['I']
@@ -255,10 +332,53 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk'):
                              "logic.")
         flop_output <<= flop
 
+    def extract_model_reference(parent, command):
+
+        def twire(w):
+            return parent.twire(w)
+
+        def get_formal_connected_to_parent_clocks():
+            clks = set()
+            for fa in command['formal_actual_list']:
+                if fa['actual'] in parent.clk_set:
+                    clks.add(fa['formal'])
+            return clks
+        formal_clks = get_formal_connected_to_parent_clocks()
+
+        subckt = Subcircuit(models[command['model_name']], clk_set=formal_clks, block=block)
+        instantiate(subckt)
+        for fa in command['formal_actual_list']:
+            formal = fa['formal']
+            actual = fa['actual']
+            if actual in parent.clk_set:
+                assert(formal in subckt.clk_set)
+                # We didn't create an input wire corresponding to this.
+                continue
+            elif formal in subckt.inputs:
+                wf = subckt.inputs[formal]
+                wa = twire(actual)
+                wf <<= wa
+            elif formal in subckt.outputs:
+                wf = subckt.outputs[formal]
+                wa = twire(actual)
+                wa <<= wf
+            else:
+                raise PyrtlError("%s formal parameter is neither an input nor output of subckt %s"
+                                 % (formal, command['model_name']))
+
+    def instantiate(subckt):
+        extract_inputs(subckt)
+        extract_outputs(subckt)
+        extract_commands(subckt)
+
+    # Get all model definitions
     for model in result:
-        extract_inputs(model)
-        extract_outputs(model)
-        extract_commands(model)
+        if not top_model:
+            top_model = model['model_name']
+        models[model['model_name']] = model
+
+    top = Subcircuit(models[top_model], is_top=True, clk_set={clock_name}, block=block)
+    instantiate(top)
 
 
 # ----------------------------------------------------------------
