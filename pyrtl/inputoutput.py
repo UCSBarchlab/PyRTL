@@ -108,12 +108,12 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
         return Suppress(Literal(x))
 
     # Begin BLIF language definition
-    signal_start = pyparsing.alphas + r'$:[]_<>\\\/?'
-    signal_middle = pyparsing.alphas + pyparsing.nums + r'$:[]_<>\\\/.?-'
+    signal_start = pyparsing.alphas + '$:[]_<>\\/?'
+    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\/.?-'
     signal_id = Word(signal_start, signal_middle)
     header = SKeyword('.model') + signal_id('model_name')
-    input_list = Group(SKeyword('.inputs') + OneOrMore(signal_id))('input_list')
-    output_list = Group(SKeyword('.outputs') + OneOrMore(signal_id))('output_list')
+    input_list = Group(SKeyword('.inputs') + ZeroOrMore(signal_id))('input_list')
+    output_list = Group(SKeyword('.outputs') + ZeroOrMore(signal_id))('output_list')
 
     cover_atom = Word('01-')
     cover_list = Group(ZeroOrMore(cover_atom))('cover_list')
