@@ -194,6 +194,7 @@ def copy_block(block=None, update_working_block=True):
     for net in block_in.logic:
         _copy_net(block_out, net, temp_wv_map, mems)
     block_out.mem_map = mems
+    block_out.io_map = {io: w for io, w in temp_wv_map.items() if isinstance(io, (Input, Output))}
 
     if update_working_block:
         set_working_block(block_out)

@@ -1,6 +1,7 @@
 from __future__ import print_function, unicode_literals, absolute_import
 
 import unittest
+from unittest.main import main
 import six
 import operator
 import os
@@ -68,6 +69,93 @@ class TestSynthesis(unittest.TestCase):
     def test_mux_simulation(self):
         self.r.next <<= pyrtl.mux(self.r, 4, 3, 1, 7, 2, 6, 0, 5)
         self.check_trace('r 04213756\n')
+
+
+class TestIOInterfaceSynthesis(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        a, b = pyrtl.input_list('a/4 b/4')
+        o = pyrtl.Output(5, 'o')
+        o <<= a + b
+
+    def check_merged_names(self, block):
+        inputs = block.wirevector_subset(pyrtl.Input)
+        outputs = block.wirevector_subset(pyrtl.Output)
+        self.assertEqual({w.name for w in inputs}, {'a', 'b'})
+        self.assertEqual({w.name for w in outputs}, {'o'})
+
+    def check_unmerged_names(self, block):
+        inputs = block.wirevector_subset(pyrtl.Input)
+        outputs = block.wirevector_subset(pyrtl.Output)
+        self.assertEqual(
+            {w.name for w in inputs},
+            {'a[0]', 'a[1]', 'a[2]', 'a[3]', 'b[0]', 'b[1]', 'b[2]', 'b[3]'}
+        )
+        self.assertEqual(
+            {w.name for w in outputs},
+            {'o[0]', 'o[1]', 'o[2]', 'o[3]', 'o[4]'}
+        )
+
+    def test_synthesize_merged_io_names_correct(self):
+        pyrtl.synthesize()
+        self.check_merged_names(pyrtl.working_block())
+
+    def test_synthesize_merged_io_mapped_correctly(self):
+        old_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
+        pyrtl.synthesize()
+        new_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
+        for oi in old_io:
+            for ni in new_io:
+                if oi.name == ni.name:
+                    self.assertEqual(pyrtl.working_block().io_map[oi], [ni])
+
+    def test_synthesize_merged_io_simulates_correctly(self):
+        pyrtl.synthesize()
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': [4, 6, 2, 3],
+            'b': [2, 9, 11, 4],
+        })
+        output = six.StringIO()
+        sim.tracer.print_trace(output, compact=True)
+        self.assertEqual(
+            output.getvalue(),
+            'a 4623\n'
+            'b 29114\n'
+            'o 615137\n'
+        )
+
+    def test_synthesize_unmerged_io_names_correct(self):
+        pyrtl.synthesize(merge_io_vectors=False)
+        self.check_unmerged_names(pyrtl.working_block())
+
+    def test_synthesize_unmerged_io_mapped_correctly(self):
+        old_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
+        pyrtl.synthesize()
+        new_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
+        for oi in old_io:
+            for ni in new_io:
+                if ni.name.startswith(oi.name):
+                    self.assertIn(ni, pyrtl.working_block().io_map[oi])
+
+    def test_synthesize_unmerged_io_simulates_correctly(self):
+        pyrtl.synthesize(merge_io_vectors=False)
+        sim = pyrtl.Simulation()
+        for (a, b) in [(4, 2), (6, 9), (2, 11), (3, 4)]:
+            args = {}
+            for ix in range(4):
+                args['a[' + str(ix) + ']'] = (a >> ix) & 1
+                args['b[' + str(ix) + ']'] = (b >> ix) & 1
+            sim.step(args)
+            expected = a + b
+            for ix in range(5):
+                out = sim.inspect('o[' + str(ix) + ']')
+                self.assertEqual(out, (expected >> ix) & 1)
+
+    def test_synthesize_does_not_update_working_block(self):
+        synth_block = pyrtl.synthesize(update_working_block=False, merge_io_vectors=False)
+        self.check_merged_names(pyrtl.working_block())
+        self.check_unmerged_names(synth_block)
 
 
 class TestMultiplierSynthesis(unittest.TestCase):
