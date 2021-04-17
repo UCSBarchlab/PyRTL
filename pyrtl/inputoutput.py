@@ -760,13 +760,20 @@ def _default_node_namer(node, split_state=False, extra_node_info=None):
             elif node.op == 'x':
                 return '[label="%s", shape=invtrapezium]' % label("mux")
             elif node.op == 's':
-                selEnd = node.op_param[0]
-                if len(node.op_param) < 2:
-                    selBegin = selEnd
+                # node.op_param is a tuple of the selected bits to pull from the argument wire,
+                # so it could look something like (0,0,0,0,0,0,0), meaning dest wire is going
+                # to be a concatenation of the zero-th bit of the argument wire, 7 times.
+                selLower = node.op_param[0]
+                selUpper = node.op_param[-1]
+                if len(node.op_param) == 1:
+                    bits = "[%d]" % selLower
+                elif node.op_param == tuple(range(selLower, selUpper + 1)):  # consecutive
+                    bits = "[%d:%d]" % (selUpper, selLower)
+                elif all([ix == node.op_param[0] for ix in node.op_param[1:]]):  # all the same
+                    bits = "[%d]*%d" % (node.op_param[0], len(node.op_param))
                 else:
-                    selBegin = node.op_param[len(node.op_param) - 1]
-                return '[label="%s", height=.1, width=.1]' % \
-                    (label("bits(%s,%s)" % (selBegin, selEnd)))
+                    bits = "bits" + str(tuple(reversed(node.op_param)))
+                return '[label="%s", fillcolor=azure1, height=.25, width=.25]' % label(bits)
             elif node.op in 'c':
                 return '[label="%s", height=.1, width=.1]' % label("concat")
             elif node.op == 'r':
@@ -775,6 +782,13 @@ def _default_node_namer(node, split_state=False, extra_node_info=None):
                 return '[label="%s", shape=square, fillcolor=gold]' % label(name)
             elif node.op == 'w':
                 return '[label="%s", height=.1, width=.1]' % label("")
+            elif node.op in 'm@':
+                name = node.op_param[1].name
+                if name.startswith("tmp"):
+                    name = ""
+                else:
+                    name = "(" + name + ")"
+                return '[label="%s"]' % label(node.op + name)
             else:
                 return '[label="%s"]' % label(node.op + str(node.op_param or ''))
         except AttributeError:
@@ -886,10 +900,10 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer, split_st
 
     rstring = """\
               digraph g {\n
-              graph [splines="spline"];
+              graph [splines="spline", outputorder="edgesfirst"];
               node [shape=circle, style=filled, fillcolor=lightblue1,
                     fontcolor=black, fontname=helvetica, penwidth=0,
-                    fixedsize=true];
+                    fixedsize=shape];
               edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
               """
 
