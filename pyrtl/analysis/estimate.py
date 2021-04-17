@@ -16,7 +16,7 @@ import sys
 from ..core import working_block
 from ..wire import Input, Const, Register
 from ..pyrtlexceptions import PyrtlError, PyrtlInternalError
-from ..verilog import output_to_verilog
+from ..inputoutput.verilog import output_to_verilog
 from ..memory import RomBlock
 from ..helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
 

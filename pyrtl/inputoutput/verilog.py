@@ -1,20 +1,14 @@
 """
-Helper functions creating verilog implementations and testbenches.
-
-Each of the functions in inputoutput take a block and a file descriptor.
-The functions provided either read the file and update the Block
-accordingly, or write information from the Block out to the file.
+Functions for creating Verilog implementations and testbenches from a Block.
 """
 
 from __future__ import print_function, unicode_literals
-import re
 
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, _NameSanitizer
-from .wire import WireVector, Input, Output, Const, Register
-from .corecircuits import concat
-from .memory import RomBlock
-from .inputoutput import _name_sorted, _net_sorted
+from ..pyrtlexceptions import PyrtlError, PyrtlInternalError
+from ..core import working_block, _NameSanitizer
+from ..wire import Input, Output, Const, Register
+from ..memory import RomBlock
+from .graphs import _name_sorted, _net_sorted
 
 
 # ----------------------------------------------------------------

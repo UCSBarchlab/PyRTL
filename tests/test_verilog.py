@@ -2,7 +2,6 @@ import unittest
 import random
 import io
 import pyrtl
-from pyrtl import verilog
 
 verilog_output_small = """\
 // Generated automatically via PyRTL
@@ -589,7 +588,7 @@ class TestOutputTestbench(unittest.TestCase):
 class TestVerilogNames(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        self.vnames = verilog._VerilogSanitizer("_sani_test")
+        self.vnames = pyrtl.inputoutput.verilog._VerilogSanitizer("_sani_test")
 
     def checkname(self, name):
         self.assertEqual(self.vnames.make_valid_string(name), name)
