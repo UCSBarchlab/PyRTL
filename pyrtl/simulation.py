@@ -1001,8 +1001,9 @@ class SimulationTrace(object):
         elif wires_to_track == 'all':
             wires_to_track = self.block.wirevector_set
 
-        if not len(wires_to_track):
-            raise PyrtlError("There needs to be at least one named wire "
+        non_const_tracked = list(filter(lambda w: not isinstance(w, Const), wires_to_track))
+        if not len(non_const_tracked):
+            raise PyrtlError("There needs to be at least one named non-constant wire "
                              "for simulation to be useful")
         self.wires_to_track = wires_to_track
         self.trace = TraceStorage(wires_to_track)
