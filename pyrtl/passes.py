@@ -5,7 +5,6 @@ ways to change a block.
 """
 
 from __future__ import print_function, unicode_literals
-from re import I
 
 from .core import working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock
 from .helperfuncs import _NetCount
