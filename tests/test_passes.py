@@ -1,7 +1,6 @@
 from __future__ import print_function, unicode_literals, absolute_import
 
 import unittest
-from unittest.main import main
 import six
 import operator
 import os
