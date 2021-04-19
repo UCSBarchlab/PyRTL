@@ -69,6 +69,15 @@ class TestSynthesis(unittest.TestCase):
         self.r.next <<= pyrtl.mux(self.r, 4, 3, 1, 7, 2, 6, 0, 5)
         self.check_trace('r 04213756\n')
 
+    def test_synthesize_regs_mapped_correctly(self):
+        r2 = pyrtl.Register(5)
+        self.r.next <<= ~ self.r
+        r2.next <<= self.r + 1
+        synth_block = pyrtl.synthesize()
+        self.assertEqual(len(synth_block.reg_map), 2)
+        self.assertEqual(len(synth_block.reg_map[self.r]), len(self.r))
+        self.assertEqual(len(synth_block.reg_map[r2]), len(r2))
+
 
 class TestIOInterfaceSynthesis(unittest.TestCase):
     def setUp(self):
@@ -104,9 +113,11 @@ class TestIOInterfaceSynthesis(unittest.TestCase):
         pyrtl.synthesize()
         new_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
         for oi in old_io:
+            io_list = pyrtl.working_block().io_map[oi]
+            self.assertEqual(len(io_list), 1)
             for ni in new_io:
                 if oi.name == ni.name:
-                    self.assertEqual(pyrtl.working_block().io_map[oi], [ni])
+                    self.assertEqual(io_list, [ni])
 
     def test_synthesize_merged_io_simulates_correctly(self):
         pyrtl.synthesize()
@@ -130,12 +141,16 @@ class TestIOInterfaceSynthesis(unittest.TestCase):
 
     def test_synthesize_unmerged_io_mapped_correctly(self):
         old_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
-        pyrtl.synthesize()
+        pyrtl.synthesize(merge_io_vectors=False)
         new_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
         for oi in old_io:
+            io_list = [w.name for w in pyrtl.working_block().io_map[oi]]
+            self.assertEqual(len(io_list), len(oi))
             for ni in new_io:
                 if ni.name.startswith(oi.name):
-                    self.assertIn(ni, pyrtl.working_block().io_map[oi])
+                    # Dev note: comparing names because comparing wires (e.g. list/set inclusion)
+                    # creates an '=' net, which is definitely not what we want here.
+                    self.assertIn(ni.name, io_list)
 
     def test_synthesize_unmerged_io_simulates_correctly(self):
         pyrtl.synthesize(merge_io_vectors=False)
