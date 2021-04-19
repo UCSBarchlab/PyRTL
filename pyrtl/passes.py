@@ -15,7 +15,8 @@ from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
 from .transform import net_transform, _get_new_block_mem_instance, copy_block, replace_wires
-from . import transform  # transform.all_nets looks better than all_nets
+from . import transform
+from pyrtl import wire  # transform.all_nets looks better than all_nets
 
 
 # --------------------------------------------------------------------
@@ -411,6 +412,7 @@ def synthesize(update_working_block=True, merge_io_vectors=True, block=None):
         # to the original io wirevector found in block_pre. We use it to create
         # the block_out.io_map that is returned to the user.
         orig_io_map = {temp: orig for orig, temp in block_in.io_map.items()}
+        orig_reg_map = {temp: orig for orig, temp in block_in.reg_map.items()}
 
         # Next, create all of the new wires for the new block
         # from the original wires and store them in the wirevector_map
@@ -430,9 +432,11 @@ def synthesize(update_working_block=True, merge_io_vectors=True, block=None):
                         if len(wirevector) > 1:
                             new_name += '[' + str(i) + ']'
                         new_wirevector = wirevector.__class__(name=new_name, bitwidth=1)
-                        block_out.io_map[orig_io_map[wirevector]] = new_wirevector
+                        block_out.io_map[orig_io_map[wirevector]].append(new_wirevector)
                 else:
                     new_wirevector = wirevector.__class__(name=new_name, bitwidth=1)
+                    if isinstance(wirevector, Register):
+                        block_out.reg_map[orig_reg_map[wirevector]].append(new_wirevector)
                 wirevector_map[(wirevector, i)] = new_wirevector
 
         # Now connect up the inputs and outputs to maintain the interface
@@ -441,12 +445,12 @@ def synthesize(update_working_block=True, merge_io_vectors=True, block=None):
                 input_vector = Input(name=wirevector.name, bitwidth=len(wirevector))
                 for i in range(len(wirevector)):
                     wirevector_map[(wirevector, i)] <<= input_vector[i]
-                block_out.io_map[orig_io_map[wirevector]] = [input_vector]
+                block_out.io_map[orig_io_map[wirevector]].append(input_vector)
             for wirevector in block_in.wirevector_subset(Output):
                 output_vector = Output(name=wirevector.name, bitwidth=len(wirevector))
                 output_bits = [wirevector_map[(wirevector, i)] for i in range(len(output_vector))]
                 output_vector <<= concat_list(output_bits)
-                block_out.io_map[orig_io_map[wirevector]] = [output_vector]
+                block_out.io_map[orig_io_map[wirevector]].append(output_vector)
 
         # Now that we have all the wires built and mapped, walk all the blocks
         # and map the logic to the equivalent set of primitives in the system
