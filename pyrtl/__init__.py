@@ -110,4 +110,9 @@ from .passes import optimize
 from .passes import one_bit_selects
 from .passes import two_way_concat
 
-from .transform import net_transform, wire_transform, replace_wire, copy_block, clone_wire
+from .transform import net_transform
+from .transform import wire_transform
+from .transform import copy_block
+from .transform import clone_wire
+from .transform import replace_wires
+from .transform import replace_wire_fast

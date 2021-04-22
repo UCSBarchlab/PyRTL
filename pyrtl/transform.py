@@ -63,51 +63,27 @@ def wire_transform(transform_func, select_types=WireVector,
     :param select_types: Type or Tuple of types of WireVectors to replace
     :param exclude_types: Type or Tuple of types of WireVectors to exclude from replacement
     :param block: The Block to replace wires on
+
+    Note that if both new_src and new_dst don't equal orig_wire, orig_wire will
+    be removed from the block entirely.
     """
     block = working_block(block)
+    src_nets, dst_nets = block.net_connections(include_virtual_nodes=False)
     for orig_wire in block.wirevector_subset(select_types, exclude_types):
         new_src, new_dst = transform_func(orig_wire)
-        replace_wire(orig_wire, new_src, new_dst, block)
+        replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block)
 
 
 def all_wires(transform_func):
-    """Decorator that wraps a wire transform function"""
+    """ Decorator that wraps a wire transform function. """
     @functools.wraps(transform_func)
     def t_res(**kwargs):
         wire_transform(transform_func, **kwargs)
     return t_res
 
 
-def replace_wire(orig_wire, new_src, new_dst, block=None):
-    block = working_block(block)
-    if new_src is not orig_wire:
-        # don't need to add the new_src and new_dst because they were made added at creation
-        for net in block.logic:
-            for wire in net.dests:  # problem is that tuples use the == operator when using 'in'
-                if wire is orig_wire:
-                    new_net = LogicNet(
-                        op=net.op, op_param=net.op_param, args=net.args,
-                        dests=tuple(new_src if w is orig_wire else w for w in net.dests))
-                    block.add_net(new_net)
-                    block.logic.remove(net)
-                    break
-
-    if new_dst is not orig_wire:
-        for net in block.logic:
-            for wire in set(net.args):
-                if wire is orig_wire:
-                    new_net = LogicNet(
-                        op=net.op, op_param=net.op_param, dests=net.dests,
-                        args=tuple(new_src if w is orig_wire else w for w in net.args))
-                    block.add_net(new_net)
-                    block.logic.remove(net)
-
-    if new_dst is not orig_wire and new_src is not orig_wire:
-        block.remove_wirevector(orig_wire)
-
-
 def replace_wires(wire_map, block=None):
-    """ Quickly replace all wires in a block.
+    """ Replace all wires in a block.
 
     :param {old_wire: new_wire} wire_map: mapping of old wires to new wires
     :param block: block to operate over (defaults to working block)
@@ -119,11 +95,7 @@ def replace_wires(wire_map, block=None):
 
 
 def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=None):
-    """
-    Replace orig_wire with new_src and/or new_dst. The net that orig_wire originates from
-    (its source net) will now feed into new_src as its destination, and the nets that
-    orig_wire went to (its destination nets) will be fed from new_dst as
-    their respective arguments.
+    """ Replace orig_wire with new_src and/or new_dst.
 
     :param WireVector orig_wire: Wire to be replaced
     :param WireVector new_src: Wire to replace orig_wire, anywhere orig_wire is the
@@ -134,10 +106,12 @@ def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=Non
     :param {WireVector: List[LogicNet]} dst_nets: Maps a wire to list of nets where it is an arg
     :param Block block: The block on which to operate (defaults to working block)
 
-    new_src will now originate from orig_wire's source net (meaning new_src will be that net's
-    destination). new_dst will be now 
+    The net that orig_wire originates from (its source net) will use new_src as its
+    destination wire. The nets that orig_wire went to (its destination nets) will now
+    have new_dst as one of their argument wires instead.
 
-    This *updates* the src_nets and dst_nets maps that are passed in, such that:
+    This removes and/or adds nets to the block's logic set. This also *updates* the
+    src_nets and dst_nets maps that are passed in, such that the following hold:
 
     ```
         old_src_net = src_nets[orig_wire]
@@ -148,8 +122,6 @@ def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=Non
         old_dst_nets = dst_nets[orig_wire]
         dst_nets[new_dst] = [old_dst_net (where old_dst_net.args replaces orig_wire with new_dst) foreach old_dst_net]  # noqa
     ```
-
-    This also removes and/or adds nets to the block's logic set.
 
     For example, given the graph on left, `replace_wire_fast(w1, w4, w1, ...)` produces on right:
 
