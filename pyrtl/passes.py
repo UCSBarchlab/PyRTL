@@ -216,8 +216,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
 
 
 def common_subexp_elimination(block=None, abs_thresh=1, percent_thresh=0):
-    """
-    Common Subexpression Elimination for PyRTL blocks
+    """ Common Subexpression Elimination for PyRTL blocks.
 
     :param block: the block to run the subexpression elimination on
     :param abs_thresh: absolute threshold for stopping optimization
@@ -235,6 +234,18 @@ ops_where_arg_order_matters = 'm@xc<>-'
 
 
 def _find_common_subexps(block):
+    """ Finds nets that can be considered the same based on op type, op param, and arguments.
+
+    :param block: Block to operate over
+    :return dict[LogicNet, [LogicNet]]: mapping from a logic net (with a placehold dest)
+        representing the common subexp, to a list of nets matching that common subexp that
+        can be replaced with the single common subexp.
+
+    Nets are the "same" if 1) their op types are the same, 2) their op_params are
+    the same (e.g. same memory if a memory-related op), and 3) their arguments are
+    the same (same constant value and bitwidth for const wires, otherwise same wire
+    object). The destination wire for a net is not considered.
+    """
     net_table = {}  # {net (without dest) : [net, ...]
     t = tuple()  # just a placeholder
     const_dict = {}
@@ -252,6 +263,11 @@ def _find_common_subexps(block):
 
 
 def _const_to_int(wire, const_dict):
+    """ Return a repr a Const (a tuple composed of width and value) for comparison with an 'is'.
+
+    If the wire is not a Const, just return the wire itself; comparison will be
+    done on the identity of the wire object instead.
+    """
     if isinstance(wire, Const):
         # a very bad hack to make sure two consts will compare
         # correctly with an 'is'
@@ -268,6 +284,12 @@ def _const_to_int(wire, const_dict):
 
 
 def _replace_subexps(block, net_table):
+    """ Removes unnecessary nets, connecting the common net's dest wire to unnecessary net's dest.
+
+    :param block: The block to operate over.
+    :param net_table: A mapping from common subexpression (a net) to a list of nets
+        that can be replaced with that common net.
+    """
     wire_map = {}
     unnecessary_nets = []
     for nets in net_table.values():
@@ -282,6 +304,16 @@ def _has_normal_dest_wire(net):
 
 
 def _process_nets_to_discard(nets, wire_map, unnecessary_nets):
+    """ Helper for tracking how a group of related nets should be replaced with a common one.
+
+    :param nets: List of nets that are considered equal and which should
+        be replaced by a single common net.
+    :param wire_map: Dict that will be updated with a mapping from every
+        old destination wire that needs to be removed, to the new destination
+        wire with which it should be replaced.
+    :param unnecessary_nets: List of nets that are to be discarded.
+
+    """
     if len(nets) == 1:
         return  # also deals with nets with no dest wires
     nets_to_consider = list(filter(_has_normal_dest_wire, nets))
@@ -297,7 +329,9 @@ def _process_nets_to_discard(nets, wire_map, unnecessary_nets):
 
 
 def _remove_unlistened_nets(block):
-    """ Removes all nets that are not connected to an output wirevector
+    """ Removes all nets that are not connected to an output wirevector.
+
+    :param block: The block to operate over.
     """
 
     listened_nets = set()
@@ -326,7 +360,12 @@ def _remove_unlistened_nets(block):
 
 
 def _remove_unused_wires(block, keep_inputs=True):
-    """ Removes all unconnected wires from a block"""
+    """ Removes all unconnected wires from a block's wirevector_set.
+
+    :param block: The block to operate over.
+    :param keep_inputs: If True, retain any Input wires that are not connected
+        to any net.
+    """
     valid_wires = set()
     for logic_net in block.logic:
         valid_wires.update(logic_net.args, logic_net.dests)

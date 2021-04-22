@@ -25,7 +25,7 @@ from .wire import Const, Input, Output, WireVector, Register
 
 
 def net_transform(transform_func, block=None, **kwargs):
-    """ Maps nets to new sets of nets according to a custom function
+    """ Maps nets to new sets of nets according to a custom function.
 
     :param transform_func:
         Function signature: func(orig_net (logicnet)) -> keep_orig_net (bool)
@@ -44,7 +44,7 @@ def net_transform(transform_func, block=None, **kwargs):
 
 
 def all_nets(transform_func):
-    """Decorator that wraps a net transform function"""
+    """ Decorator that wraps a net transform function. """
     @functools.wraps(transform_func)
     def t_res(**kwargs):
         net_transform(transform_func, **kwargs)
@@ -107,10 +107,10 @@ def replace_wire(orig_wire, new_src, new_dst, block=None):
 
 
 def replace_wires(wire_map, block=None):
-    """ Quickly replace all wires in a block
+    """ Quickly replace all wires in a block.
 
-    :param {old_wire: new_wire} wire_map: mapping of old wires to
-        new wires
+    :param {old_wire: new_wire} wire_map: mapping of old wires to new wires
+    :param block: block to operate over (defaults to working block)
     """
     block = working_block(block)
     src_nets, dst_nets = block.net_connections(include_virtual_nodes=False)
@@ -119,6 +119,80 @@ def replace_wires(wire_map, block=None):
 
 
 def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=None):
+    """
+    Replace orig_wire with new_src and/or new_dst. The net that orig_wire originates from
+    (its source net) will now feed into new_src as its destination, and the nets that
+    orig_wire went to (its destination nets) will be fed from new_dst as
+    their respective arguments.
+
+    :param WireVector orig_wire: Wire to be replaced
+    :param WireVector new_src: Wire to replace orig_wire, anywhere orig_wire is the
+        destination of a net. Ignored if orig_wire equals new_src.
+    :param WireVector new_dst: Wire to replace orig_wire, anywhere orig_wire is an
+        argument of a net. Ignored if orig_wire equals new_dst.
+    :param {WireVector: LogicNet} src_nets: Maps a wire to the net where it is a dest
+    :param {WireVector: List[LogicNet]} dst_nets: Maps a wire to list of nets where it is an arg
+    :param Block block: The block on which to operate (defaults to working block)
+
+    new_src will now originate from orig_wire's source net (meaning new_src will be that net's
+    destination). new_dst will be now 
+
+    This *updates* the src_nets and dst_nets maps that are passed in, such that:
+
+    ```
+        old_src_net = src_nets[orig_wire]
+        src_nets[new_src] = old_src_net (where old_src_net.dests = (new_src,))
+    ``` 
+    and
+    ```
+        old_dst_nets = dst_nets[orig_wire]
+        dst_nets[new_dst] = [old_dst_net (where old_dst_net.args replaces orig_wire with new_dst) foreach old_dst_net]  # noqa
+    ```
+
+    This also removes and/or adds nets to the block's logic set.
+
+    For example, given the graph on left, `replace_wire_fast(w1, w4, w1, ...)` produces on right:
+
+    ```
+      a b c d                   a b    c d
+      | | | |                   | |    | |
+      net net                   net    net
+        | |                      |      |
+       w1 w2  ==> produces  ==>  w4 w1 w2
+        | |                          | |
+        net                          net
+         |                            |
+         w3                           w3
+    ```
+
+    And given the graph on the left, `replace_wire_fast(w1, w1, w4, ...)` produces on the right:
+    ```
+      a b c d                   a b    c d
+      | | | |                   | |    | |
+      net net                   net    net
+        | |                      |      |
+       w1 w2  ==> produces  ==>  w1 w4 w2
+        | |                          | |
+        net                          net
+         |                            |
+         w3                           w3
+    ```
+
+    Calling `replace_wire_fast(w1, w4, w4, ...)`, then, fully replaces w1 with w3 in both
+    its argument and dest positions:
+
+    ```
+      a b c d                   a b c d
+      | | | |                   | | | |
+      net net                   net net
+        | |                      |   |
+       w1 w2  ==> produces  ==>  w4 w2
+        | |                       | |
+        net                       net
+         |                         |
+         w3                        w3
+    ```
+    """
     def remove_net(net_):
         for arg in set(net_.args):
             dst_nets[arg].remove(net_)

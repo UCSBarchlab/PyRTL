@@ -197,6 +197,66 @@ class TestFastWireReplace(unittest.TestCase):
             self.assertNotIn(old_wire, block.wirevector_set)
         block.sanity_check()
 
+    def test_replace_only_src_wire(self):
+        a, b, c, d = pyrtl.input_list('a/1 b/1 c/1 d/1')
+        w1 = a & b
+        w1.name = 'w1'
+        w2 = c | d
+        w2.name = 'w2'
+        w3 = w1 ^ w2
+        w3.name = 'w3'
+        o = pyrtl.Output(1, 'o')
+        o <<= w3
+
+        w4 = pyrtl.WireVector(1, 'w4')
+        src_nets, dst_nets = pyrtl.working_block().net_connections()
+
+        w1_src_net = src_nets[w1]
+        w1_dst_net = dst_nets[w1][0]
+        self.assertEqual(w1_src_net.args, (a, b))
+        self.assertEqual(w1_src_net.dests, (w1,))
+        self.assertEqual(w1_dst_net.args, (w1, w2))
+        self.assertEqual(w1_dst_net.dests, (w3,))
+        self.assertNotIn(w4, src_nets)
+
+        pyrtl.transform.replace_wire_fast(w1, w4, w1, src_nets, dst_nets)
+
+        self.assertNotIn(w1, src_nets)  # The maps have been updated...
+        self.assertEqual(dst_nets[w1], [w1_dst_net])
+        w4_src_net = src_nets[w4]  # ...but the net can't be, so new updated versions were created
+        self.assertEqual(w4_src_net.args, w1_src_net.args)
+        self.assertEqual(w4_src_net.dests, (w4,))
+
+    def test_replace_only_dst_wire(self):
+        a, b, c, d = pyrtl.input_list('a/1 b/1 c/1 d/1')
+        w1 = a & b
+        w1.name = 'w1'
+        w2 = c | d
+        w2.name = 'w2'
+        w3 = w1 ^ w2
+        w3.name = 'w3'
+        o = pyrtl.Output(1, 'o')
+        o <<= w3
+
+        w4 = pyrtl.WireVector(1, 'w4')
+        src_nets, dst_nets = pyrtl.working_block().net_connections()
+
+        w1_src_net = src_nets[w1]
+        w1_dst_net = dst_nets[w1][0]
+        self.assertEqual(w1_src_net.args, (a, b))
+        self.assertEqual(w1_src_net.dests, (w1,))
+        self.assertEqual(w1_dst_net.args, (w1, w2))
+        self.assertEqual(w1_dst_net.dests, (w3,))
+        self.assertNotIn(w4, src_nets)
+
+        pyrtl.transform.replace_wire_fast(w1, w1, w4, src_nets, dst_nets)
+
+        self.assertNotIn(w1, dst_nets)  # The maps have been updated...
+        self.assertEqual(src_nets[w1], w1_src_net)
+        w4_dst_net = dst_nets[w4][0]  # ...but the net can't be, so new versions were created
+        self.assertEqual(w4_dst_net.args, (w4, w2))
+        self.assertEqual(w4_dst_net.dests, w1_dst_net.dests)
+
 
 # this code needs mocking from python 3's unittests to work
 """
