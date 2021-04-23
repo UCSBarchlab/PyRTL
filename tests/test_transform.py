@@ -1,3 +1,4 @@
+from pyrtl.core import set_working_block
 import unittest
 import pyrtl
 from pyrtl import transform
@@ -256,6 +257,70 @@ class TestFastWireReplace(unittest.TestCase):
         w4_dst_net = dst_nets[w4][0]  # ...but the net can't be, so new versions were created
         self.assertEqual(w4_dst_net.args, (w4, w2))
         self.assertEqual(w4_dst_net.dests, w1_dst_net.dests)
+
+class TestCloning(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_clone_wire_no_or_same_name_same_block(self):
+        for clone_name in (None, 'a'):
+            a = pyrtl.WireVector(1, 'a')
+            self.assertEqual(a.name, 'a')
+            self.assertEqual(pyrtl.working_block().wirevector_set, {a})
+            self.assertIs(pyrtl.working_block().wirevector_by_name['a'], a)
+
+            w = pyrtl.clone_wire(a, name=clone_name)
+            self.assertTrue(a.name.startswith("tmp"))
+            self.assertEqual(w.name, 'a')
+            self.assertIs(pyrtl.working_block().wirevector_by_name['a'], w)
+            self.assertEqual(pyrtl.working_block().wirevector_set, {a, w})
+
+            w.name = 'w'
+            self.assertEqual(w.name, 'w')
+            self.assertIs(pyrtl.working_block().wirevector_by_name['w'], w)
+
+            pyrtl.working_block().remove_wirevector(a)
+            self.assertEqual(pyrtl.working_block().wirevector_set, {w})
+            pyrtl.reset_working_block()
+
+    def test_clone_wire_no_or_same_name_different_block(self):
+        for clone_name in (None, 'a'):
+            a = pyrtl.WireVector(1, 'a')
+            b = pyrtl.Block()
+            with pyrtl.set_working_block(b):
+                w = pyrtl.clone_wire(a, name=clone_name)
+
+            self.assertEqual(a.name, 'a')
+            self.assertIs(pyrtl.working_block().wirevector_by_name['a'], a)
+            self.assertEqual(pyrtl.working_block().wirevector_set, {a})
+
+            self.assertEqual(w.name, 'a')
+            self.assertIs(b.wirevector_by_name['a'], w)
+            self.assertEqual(b.wirevector_set, {w})
+            pyrtl.reset_working_block()
+
+    def test_clone_wire_with_different_name_same_block(self):
+        a = pyrtl.WireVector(1, 'a')
+        w = pyrtl.clone_wire(a, 'w')
+        self.assertEqual(a.name, 'a')
+        self.assertEqual(w.name, 'w')
+        self.assertIs(pyrtl.working_block().wirevector_by_name['a'], a)
+        self.assertEqual(pyrtl.working_block().wirevector_set, {a, w})
+
+        pyrtl.working_block().remove_wirevector(a)
+        self.assertEqual(pyrtl.working_block().wirevector_set, {w})
+
+    def test_clone_wire_with_different_name_different_block(self):
+        a = pyrtl.WireVector(1, 'a')
+        b = pyrtl.Block()
+        with set_working_block(b):
+            w = pyrtl.clone_wire(a, 'w')
+        self.assertEqual(a.name, 'a')
+        self.assertEqual(w.name, 'w')
+        self.assertIs(pyrtl.working_block().wirevector_by_name['a'], a)
+        self.assertEqual(pyrtl.working_block().wirevector_set, {a})
+        self.assertIs(b.wirevector_by_name['w'], w)
+        self.assertEqual(b.wirevector_set, {w})
 
 
 # this code needs mocking from python 3's unittests to work

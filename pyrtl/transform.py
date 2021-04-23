@@ -21,7 +21,7 @@ structures (through Block.logic, block.Wirevector_set, etc).
 import functools
 
 from .core import set_working_block, LogicNet, working_block
-from .wire import Const, Input, Output, WireVector, Register
+from .wire import Const, Input, Output, WireVector, Register, next_tempvar_name
 
 
 def net_transform(transform_func, block=None, **kwargs):
@@ -242,17 +242,18 @@ def clone_wire(old_wire, name=None):
     :param old_wire: The wire to clone
     :param name: A name for the new wire
 
-    Note that this function is mainly intended to be used when the
-    two wires are from different blocks. Making two wires with the
-    same name in the same block is not allowed.
+    Naming the newly cloned wire the same as another existing wire in the same
+    block will cause the other wire to be given a new internally created name. This
+    function is mainly intended to be used when the two wires are from different blocks.
     """
+    name = old_wire.name if name is None else name
+    if name in working_block().wirevector_by_name and (working_block() is old_wire._block):
+        w = working_block().wirevector_by_name[name]
+        w.name = next_tempvar_name()
+
     if isinstance(old_wire, Const):
-        if name is None:
-            return Const(old_wire.val, old_wire.bitwidth, name=old_wire.name)
         return Const(old_wire.val, old_wire.bitwidth, name=name)
     else:
-        if name is None:
-            return old_wire.__class__(old_wire.bitwidth, name=old_wire.name)
         return old_wire.__class__(old_wire.bitwidth, name=name)
 
 
