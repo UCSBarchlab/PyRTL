@@ -258,6 +258,7 @@ class TestFastWireReplace(unittest.TestCase):
         self.assertEqual(w4_dst_net.args, (w4, w2))
         self.assertEqual(w4_dst_net.dests, w1_dst_net.dests)
 
+
 class TestCloning(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
