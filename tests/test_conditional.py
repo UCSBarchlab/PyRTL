@@ -133,7 +133,8 @@ class TestConditional(unittest.TestCase):
                 r1: r1 + 2,
                 r2: 6,
                 o: 3
-            }):
+            }
+        ):
             with i < 2:
                 r1.next |= r1 + 1
                 # r2 will be updated to 6

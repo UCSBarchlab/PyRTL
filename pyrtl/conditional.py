@@ -34,7 +34,33 @@ This functionality is provided through two instances: "conditional_update", whic
 is a context manager (under which conditional assignements can be made), and "otherwise",
 which is an instance that stands in for a 'fall through' case.  The details of how these
 should be used, and the difference between normal assignments and condtional assignments,
-described in more detail in the state machine example from in prytl/examples.
+described in more detail in the state machine example in examples/example3-statemachine.py.
+
+There are instances where you might want a wirevector to be set to a certain value in all
+but certain with blocks. For example, say you have a processor with a PC register that is
+normally updated to PC + 1 after each cycle, except when the current instruction is
+a branch or jump. You could represent that as follows::
+
+    pc = pyrtl.Register(32)
+    instr = pyrtl.WireVector(32)
+    res = pyrtl.WireVector(32)
+
+    op = instr[:7]
+    ADD = 0b0110011
+    JMP = 0b1101111
+
+    with conditional_assignment(
+        defaults={
+            pc: pc + 1,
+            res: 0
+        }
+    ):
+        with op == ADD:
+            res |= instr[15:20] + instr[20:25]
+            # pc will be updated to pc + 1
+        with op == JMP:
+            pc.next |= pc + instr[7:]
+            # res will be set to 0
 
 In addition to the conditional context, there is a helper function "currently_under_condition"
 which will test if the code where it is called is currently elaborating hardware
