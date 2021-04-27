@@ -34,7 +34,33 @@ This functionality is provided through two instances: "conditional_update", whic
 is a context manager (under which conditional assignements can be made), and "otherwise",
 which is an instance that stands in for a 'fall through' case.  The details of how these
 should be used, and the difference between normal assignments and condtional assignments,
-described in more detail in the state machine example from in prytl/examples.
+described in more detail in the state machine example in examples/example3-statemachine.py.
+
+There are instances where you might want a wirevector to be set to a certain value in all
+but certain with blocks. For example, say you have a processor with a PC register that is
+normally updated to PC + 1 after each cycle, except when the current instruction is
+a branch or jump. You could represent that as follows::
+
+    pc = pyrtl.Register(32)
+    instr = pyrtl.WireVector(32)
+    res = pyrtl.WireVector(32)
+
+    op = instr[:7]
+    ADD = 0b0110011
+    JMP = 0b1101111
+
+    with conditional_assignment(
+        defaults={
+            pc: pc + 1,
+            res: 0
+        }
+    ):
+        with op == ADD:
+            res |= instr[15:20] + instr[20:25]
+            # pc will be updated to pc + 1
+        with op == JMP:
+            pc.next |= pc + instr[7:]
+            # res will be set to 0
 
 In addition to the conditional context, there is a helper function "currently_under_condition"
 which will test if the code where it is called is currently elaborating hardware
@@ -67,6 +93,13 @@ def currently_under_condition():
 # instances (hopefully the only and unchanging instances) of the following two types.
 
 class _ConditionalAssignment(object):
+    def __init__(self):
+        self.defaults = {}
+
+    def __call__(self, defaults):
+        self.defaults = defaults
+        return self
+
     """ Context providing funcitionality of "conditional_assignment". """
     def __enter__(self):
         global _depth
@@ -75,7 +108,7 @@ class _ConditionalAssignment(object):
 
     def __exit__(self, *exc_info):
         try:
-            _finalize()
+            _finalize(self.defaults)
         finally:
             # even if the above finalization throws an error we need to
             # reset the state to prevent errors from bleeding over
@@ -181,7 +214,7 @@ def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
     return True
 
 
-def _finalize():
+def _finalize(defaults):
     """Build the required muxes and call back to WireVector to finalize the wirevector build."""
     from .memory import MemBlock
     from pyrtl.corecircuits import select
@@ -203,13 +236,13 @@ def _finalize():
         # handle wirevector and register assignments
         else:
             if isinstance(lhs, Register):
-                if hasattr(lhs, 'condition_default'):
-                    result = lhs.condition_default
+                if lhs in defaults:
+                    result = defaults[lhs]
                 else:
                     result = lhs  # default for registers is "self"
             elif isinstance(lhs, WireVector):
-                if hasattr(lhs, 'condition_default'):
-                    result = lhs.condition_default
+                if lhs in defaults:
+                    result = defaults[lhs]
                 else:
                     result = 0  # default for wire is "0"
             else:
