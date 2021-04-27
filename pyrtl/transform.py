@@ -19,9 +19,10 @@ and WireVector are as well as how Blocks store the latter two
 structures (through Block.logic, block.Wirevector_set, etc).
 """
 import functools
+from pyrtl.pyrtlexceptions import PyrtlError
 
 from .core import set_working_block, LogicNet, working_block
-from .wire import Const, Input, Output, WireVector, Register, next_tempvar_name
+from .wire import Const, Input, Output, WireVector, Register
 
 
 def net_transform(transform_func, block=None, **kwargs):
@@ -240,16 +241,21 @@ def clone_wire(old_wire, name=None):
     """ Makes a copy of any existing wire.
 
     :param old_wire: The wire to clone
-    :param name: A name for the new wire
+    :param name: A name for the new wire (required if the old wire
+        and newly cloned wire are part of the same block)
 
-    Naming the newly cloned wire the same as another existing wire in the same
-    block will cause the other wire to be given a new internally created name. This
-    function is mainly intended to be used when the two wires are from different blocks.
+    This function is mainly intended to be used when the two wires are from different
+    blocks. Making two wires with the same name in the same block is not allowed.
     """
-    name = old_wire.name if name is None else name
-    if name in working_block().wirevector_by_name and (working_block() is old_wire._block):
-        w = working_block().wirevector_by_name[name]
-        w.name = next_tempvar_name()
+    if name is None:
+        if working_block() is old_wire._block:
+            raise PyrtlError("Must provide a name for the newly cloned wire "
+                             "when cloning within the same block.")
+        name = old_wire.name
+
+    if name in working_block().wirevector_by_name:
+        raise PyrtlError("Cannot give a newly cloned wire the same name "
+                         "as an existing wire.")
 
     if isinstance(old_wire, Const):
         return Const(old_wire.val, old_wire.bitwidth, name=name)

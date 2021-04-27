@@ -51,7 +51,8 @@ def insert_random_inversions(rate=0.5):
 
     def randomly_replace(wire):
         if random.random() < rate:
-            new_src, new_dst = transform.clone_wire(wire), transform.clone_wire(wire)
+            new_src = transform.clone_wire(wire, pyrtl.wire.next_tempvar_name())
+            new_dst = transform.clone_wire(wire, pyrtl.wire.next_tempvar_name())
             new_dst <<= ~new_src
             return new_src, new_dst
         return wire, wire
@@ -263,26 +264,47 @@ class TestCloning(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_clone_wire_no_or_same_name_same_block(self):
-        for clone_name in (None, 'a'):
-            a = pyrtl.WireVector(1, 'a')
-            self.assertEqual(a.name, 'a')
-            self.assertEqual(pyrtl.working_block().wirevector_set, {a})
-            self.assertIs(pyrtl.working_block().wirevector_by_name['a'], a)
+    def test_same_type(self):
+        for ix, cls in enumerate([pyrtl.WireVector, pyrtl.Register, pyrtl.Input, pyrtl.Output]):
+            w1 = cls(4, 'w%d' % ix)
+            w2 = pyrtl.clone_wire(w1, 'y%d' % ix)
+            self.assertIsInstance(w2, cls)
+            self.assertEqual(w1.bitwidth, w2.bitwidth)
 
-            w = pyrtl.clone_wire(a, name=clone_name)
-            self.assertTrue(a.name.startswith("tmp"))
-            self.assertEqual(w.name, 'a')
-            self.assertIs(pyrtl.working_block().wirevector_by_name['a'], w)
-            self.assertEqual(pyrtl.working_block().wirevector_set, {a, w})
+    def test_clone_wire_no_name_same_block(self):
+        a = pyrtl.WireVector(1, 'a')
+        with self.assertRaises(pyrtl.PyrtlError) as error:
+            pyrtl.clone_wire(a)
+        self.assertEqual(
+            str(error.exception),
+            "Must provide a name for the newly cloned wire "
+            "when cloning within the same block."
+        )
 
-            w.name = 'w'
-            self.assertEqual(w.name, 'w')
-            self.assertIs(pyrtl.working_block().wirevector_by_name['w'], w)
+    def test_clone_wire_same_name_same_block(self):
+        a = pyrtl.WireVector(1, 'a')
+        with self.assertRaises(pyrtl.PyrtlError) as error:
+            pyrtl.clone_wire(a, 'a')
+        self.assertEqual(
+            str(error.exception),
+            "Cannot give a newly cloned wire the same name as an existing wire."
+        )
 
-            pyrtl.working_block().remove_wirevector(a)
-            self.assertEqual(pyrtl.working_block().wirevector_set, {w})
-            pyrtl.reset_working_block()
+    def test_clone_wire_different_name_same_block(self):
+        a = pyrtl.WireVector(1, 'a')
+        self.assertEqual(a.name, 'a')
+        self.assertEqual(pyrtl.working_block().wirevector_set, {a})
+        self.assertIs(pyrtl.working_block().wirevector_by_name['a'], a)
+
+        w = pyrtl.clone_wire(a, name='w')
+        self.assertEqual(w.name, 'w')
+        self.assertEqual(a.name, 'a')
+        self.assertIs(pyrtl.working_block().wirevector_by_name['w'], w)
+        self.assertIs(pyrtl.working_block().wirevector_by_name['a'], a)
+        self.assertEqual(pyrtl.working_block().wirevector_set, {a, w})
+
+        pyrtl.working_block().remove_wirevector(a)
+        self.assertEqual(pyrtl.working_block().wirevector_set, {w})
 
     def test_clone_wire_no_or_same_name_different_block(self):
         for clone_name in (None, 'a'):
@@ -300,18 +322,7 @@ class TestCloning(unittest.TestCase):
             self.assertEqual(b.wirevector_set, {w})
             pyrtl.reset_working_block()
 
-    def test_clone_wire_with_different_name_same_block(self):
-        a = pyrtl.WireVector(1, 'a')
-        w = pyrtl.clone_wire(a, 'w')
-        self.assertEqual(a.name, 'a')
-        self.assertEqual(w.name, 'w')
-        self.assertIs(pyrtl.working_block().wirevector_by_name['a'], a)
-        self.assertEqual(pyrtl.working_block().wirevector_set, {a, w})
-
-        pyrtl.working_block().remove_wirevector(a)
-        self.assertEqual(pyrtl.working_block().wirevector_set, {w})
-
-    def test_clone_wire_with_different_name_different_block(self):
+    def test_clone_wire_different_name_different_block(self):
         a = pyrtl.WireVector(1, 'a')
         b = pyrtl.Block()
         with set_working_block(b):
