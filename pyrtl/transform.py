@@ -19,6 +19,7 @@ and WireVector are as well as how Blocks store the latter two
 structures (through Block.logic, block.Wirevector_set, etc).
 """
 import functools
+from pyrtl.pyrtlexceptions import PyrtlError
 
 from .core import set_working_block, LogicNet, working_block
 from .wire import Const, Input, Output, WireVector, Register
@@ -240,19 +241,25 @@ def clone_wire(old_wire, name=None):
     """ Makes a copy of any existing wire.
 
     :param old_wire: The wire to clone
-    :param name: A name for the new wire
+    :param name: A name for the new wire (required if the old wire
+        and newly cloned wire are part of the same block)
 
-    Note that this function is mainly intended to be used when the
-    two wires are from different blocks. Making two wires with the
-    same name in the same block is not allowed.
+    This function is mainly intended to be used when the two wires are from different
+    blocks. Making two wires with the same name in the same block is not allowed.
     """
+    if name is None:
+        if working_block() is old_wire._block:
+            raise PyrtlError("Must provide a name for the newly cloned wire "
+                             "when cloning within the same block.")
+        name = old_wire.name
+
+    if name in working_block().wirevector_by_name:
+        raise PyrtlError("Cannot give a newly cloned wire the same name "
+                         "as an existing wire.")
+
     if isinstance(old_wire, Const):
-        if name is None:
-            return Const(old_wire.val, old_wire.bitwidth, name=old_wire.name)
         return Const(old_wire.val, old_wire.bitwidth, name=name)
     else:
-        if name is None:
-            return old_wire.__class__(old_wire.bitwidth, name=old_wire.name)
         return old_wire.__class__(old_wire.bitwidth, name=name)
 
 
