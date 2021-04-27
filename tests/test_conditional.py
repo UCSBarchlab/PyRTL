@@ -128,7 +128,12 @@ class TestConditional(unittest.TestCase):
         r2 = pyrtl.Register(bitwidth=3, name='r2')
         r3 = pyrtl.Register(bitwidth=3, name='r3')
         o = pyrtl.Output(bitwidth=3, name='o')
-        with pyrtl.conditional_assignment(defaults={r1: r1 + 2, r2: 6, o: 3}):
+        with pyrtl.conditional_assignment(
+            defaults={
+                r1: r1 + 2,
+                r2: 6,
+                o: 3
+            }):
             with i < 2:
                 r1.next |= r1 + 1
                 # r2 will be updated to 6
