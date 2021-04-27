@@ -75,6 +75,56 @@ class TestWireTransform(NetWireNumTestCases):
             self.assertIsNot(arg, b)
         self.assertIsNot(new_and_net.dests[0], o)
 
+    def test_replace_input(self):
+
+        def f(wire):
+            if wire.name == 'a':
+                w = pyrtl.clone_wire(wire, 'w2')
+            else:
+                w = pyrtl.clone_wire(wire, 'w3')
+            return wire, w
+
+        a, b = pyrtl.input_list('a/1 b/1')
+        w1 = a & b
+        o = pyrtl.Output(1, 'o')
+        o <<= w1
+
+        src_nets, dst_nets = pyrtl.working_block().net_connections()
+        self.assertEqual(src_nets[w1], pyrtl.LogicNet('&', None, (a, b), (w1,)))
+        self.assertIn(a, dst_nets)
+        self.assertIn(b, dst_nets)
+
+        transform.wire_transform(f, select_types=pyrtl.Input, exclude_types=tuple())
+
+        w2 = pyrtl.working_block().get_wirevector_by_name('w2')
+        w3 = pyrtl.working_block().get_wirevector_by_name('w3')
+        src_nets, dst_nets = pyrtl.working_block().net_connections()
+        self.assertEqual(src_nets[w1], pyrtl.LogicNet('&', None, (w2, w3), (w1,)))
+        self.assertNotIn(a, dst_nets)
+        self.assertNotIn(b, dst_nets)
+
+    def test_replace_output(self):
+
+        def f(wire):
+            w = pyrtl.clone_wire(wire, 'w2')
+            return w, wire
+
+        a, b = pyrtl.input_list('a/1 b/1')
+        w1 = a & b
+        o = pyrtl.Output(1, 'o')
+        o <<= w1
+
+        src_nets, dst_nets = pyrtl.working_block().net_connections()
+        self.assertEqual(dst_nets[w1], [pyrtl.LogicNet('w', None, (w1,), (o,))])
+        self.assertIn(o, src_nets)
+
+        transform.wire_transform(f, select_types=pyrtl.Output, exclude_types=tuple())
+
+        w2 = pyrtl.working_block().get_wirevector_by_name('w2')
+        src_nets, dst_nets = pyrtl.working_block().net_connections()
+        self.assertEqual(dst_nets[w1], [pyrtl.LogicNet('w', None, (w1,), (w2,))])
+        self.assertNotIn(o, src_nets)
+
 
 class TestCopyBlock(NetWireNumTestCases, WireMemoryNameTestCases):
     def num_memories(self, mems_expected, block):
