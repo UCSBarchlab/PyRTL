@@ -8,7 +8,6 @@ import sys
 
 import pyrtl
 from pyrtl.wire import Const, Output
-from pyrtl.analysis import estimate
 
 from .test_transform import NetWireNumTestCases
 
@@ -613,7 +612,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         # to make sure that the timing matches
         # this is a subprocess to do the synth and timing
         block = pyrtl.working_block()
-        timing = estimate.TimingAnalysis(block)
+        timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
         if timing_val is not None:
             self.assertEqual(timing_max_length, timing_val)
@@ -623,7 +622,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         pyrtl.optimize()
 
         block = pyrtl.working_block()
-        timing = estimate.TimingAnalysis(block)
+        timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
         if opt_timing_val is not None:
             self.assertEqual(timing_max_length, opt_timing_val)
@@ -633,7 +632,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         pyrtl.optimize()
 
         block = pyrtl.working_block()
-        timing = estimate.TimingAnalysis(block)
+        timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
         critical_path = timing.critical_path(print_cp=False)
         block = pyrtl.working_block()
@@ -644,7 +643,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         pyrtl.optimize()
 
         block = pyrtl.working_block()
-        timing = estimate.TimingAnalysis(block)
+        timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
         critical_path = timing.critical_path(print_cp=False)
         block.sanity_check()
@@ -687,7 +686,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
             pyrtl.synthesize()
             pyrtl.optimize()
             block = pyrtl.working_block()
-            _timing = estimate.TimingAnalysis(block)
+            _timing = pyrtl.TimingAnalysis(block)
         sys.stdout = sys.__stdout__
         self.assertTrue(output.getvalue().startswith("Loop found:"))
 
@@ -752,7 +751,7 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
         self.assertEqual(len(concat_nets), 1)
         self.assertEqual(concat_nets[0].args, (i, j, k))
 
-        pyrtl.passes.two_way_concat()
+        pyrtl.two_way_concat()
 
         concat_nets = list(block.logic_subset(op='c'))
         self.assertEqual(len(concat_nets), 2)
@@ -776,7 +775,7 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
         self.assertEqual(len(select_nets), 1)
         self.assertEqual(tuple(select_nets[0].op_param), (0, 2, 4, 6, 8, 10))
 
-        pyrtl.passes.one_bit_selects()
+        pyrtl.one_bit_selects()
 
         select_nets = list(block.logic_subset(op='s'))
         for net in select_nets:

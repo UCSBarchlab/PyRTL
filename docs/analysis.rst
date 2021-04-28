@@ -18,7 +18,7 @@ Estimation
 
 .. .. _estimate-ref:
 
-.. automodule:: pyrtl.analysis.estimate
+.. automodule:: pyrtl.analysis
    :members:
    :show-inheritance:
    :special-members:

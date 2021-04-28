@@ -460,7 +460,7 @@ class Block(object):
 
     def _repr_svg_(self):
         """ IPython display support for Block. """
-        from .inputoutput import block_to_svg
+        from .visualization import block_to_svg
         return block_to_svg(self)
 
     def __iter__(self):
