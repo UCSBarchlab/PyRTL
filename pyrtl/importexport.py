@@ -1,5 +1,5 @@
 """
-Helper functions creating verilog implementations and testbenches.
+Helper functions for reading and writing hardware files.
 
 Each of the functions in inputoutput take a block and a file descriptor.
 The functions provided either read the file and update the Block
@@ -639,12 +639,6 @@ def _to_verilog_memories(file, block, varname):
 def _to_verilog_footer(file):
     print('endmodule\n', file=file)
 
-
-# ----------------------------------------------------------------
-#   ___  ___  __  ___  __   ___       __
-#    |  |__  /__`  |  |__) |__  |\ | /  ` |__|
-#    |  |___ .__/  |  |__) |___ | \| \__, |  |
-#
 
 def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=None,
                              vcd="waveform.vcd", cmd=None, block=None):

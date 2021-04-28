@@ -2,7 +2,7 @@ import unittest
 import random
 import io
 import pyrtl
-from .test_inputoutput import full_adder_blif
+from .test_importexport import full_adder_blif
 
 
 graphviz_string = """

@@ -6,20 +6,20 @@ Exporting and Importing Designs
 Exporting Hardware Designs
 --------------------------
 
-.. autofunction:: pyrtl.inputoutput.output_to_verilog
+.. autofunction:: pyrtl.importexport.output_to_verilog
 
-.. autofunction:: pyrtl.inputoutput.output_to_firrtl
+.. autofunction:: pyrtl.importexport.output_to_firrtl
 
 Exporting Testbenches
 ------------------------
 
-.. autofunction:: pyrtl.inputoutput.output_verilog_testbench
+.. autofunction:: pyrtl.importexport.output_verilog_testbench
 
 
 Importing Verilog
 -----------------
 
-.. autofunction:: pyrtl.inputoutput.input_from_blif
+.. autofunction:: pyrtl.importexport.input_from_blif
 
 
 Outputting for Visualization

@@ -91,12 +91,12 @@ from .visualization import block_to_svg
 from .visualization import trace_to_html
 from .visualization import net_graph
 
-# input and output to file format routines
-from .inputoutput import output_to_verilog
-from .inputoutput import OutputToVerilog
-from .inputoutput import output_verilog_testbench
-from .inputoutput import input_from_blif
-from .inputoutput import output_to_firrtl
+# import from and export to file format routines
+from .importexport import output_to_verilog
+from .importexport import OutputToVerilog
+from .importexport import output_verilog_testbench
+from .importexport import input_from_blif
+from .importexport import output_to_firrtl
 
 # different transform passes
 from .passes import common_subexp_elimination

@@ -1,9 +1,8 @@
 """
-Helper functions for reading and writing hardware files.
+Helper functions for viewing the block visually.
 
-Each of the functions in inputoutput take a block and a file descriptor.
-The functions provided either read the file and update the Block
-accordingly, or write information from the Block out to the file.
+Each of the functions in visualization take a block and a file descriptor.
+The functions provided write the block as a given visual format to the file.
 """
 
 from __future__ import print_function, unicode_literals
@@ -11,36 +10,6 @@ from __future__ import print_function, unicode_literals
 from .pyrtlexceptions import PyrtlError
 from .core import working_block
 from .wire import WireVector, Input, Output, Const, Register
-
-
-# -----------------------------------------------------------------
-#            __       ___
-#    | |\ | |__) |  |  |
-#    | | \| |    \__/  |
-
-# ----------------------------------------------------------------
-#    __       ___  __       ___
-#   /  \ |  |  |  |__) |  |  |
-#   \__/ \__/  |  |    \__/  |
-#
-
-
-def _trivialgraph_default_namer(thing, is_edge=True):
-    """ Returns a "good" string for thing in printed graphs. """
-    if is_edge:
-        if thing.name is None or thing.name.startswith('tmp'):
-            return ''
-        else:
-            return '/'.join([thing.name, str(len(thing))])
-    elif isinstance(thing, Const):
-        return str(thing.val)
-    elif isinstance(thing, WireVector):
-        return thing.name or '??'
-    else:
-        try:
-            return thing.op + str(thing.op_param or '')
-        except AttributeError:
-            raise PyrtlError('no naming rule for "%s"' % str(thing))
 
 
 def net_graph(block=None, split_state=False):
@@ -107,6 +76,29 @@ def net_graph(block=None, split_state=False):
     return graph
 
 
+# -----------------------------------------------------------------
+#    ___  __   ___
+#     |  / _` |___
+#     |  \__> |
+
+def _trivialgraph_default_namer(thing, is_edge=True):
+    """ Returns a "good" string for thing in printed graphs. """
+    if is_edge:
+        if thing.name is None or thing.name.startswith('tmp'):
+            return ''
+        else:
+            return '/'.join([thing.name, str(len(thing))])
+    elif isinstance(thing, Const):
+        return str(thing.val)
+    elif isinstance(thing, WireVector):
+        return thing.name or '??'
+    else:
+        try:
+            return thing.op + str(thing.op_param or '')
+        except AttributeError:
+            raise PyrtlError('no naming rule for "%s"' % str(thing))
+
+
 def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None, split_state=False):
     """ Walk the block and output it in trivial graph format to the open file.
 
@@ -138,6 +130,11 @@ def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None, 
             edge = graph[_from][_to]
             print('%d %d %s' % (from_index, to_index, namer(edge)), file=file)
 
+
+# -----------------------------------------------------------------
+#     __   __   __   __              __
+#    / _` |__) |__| |__) |__| \  / |  /
+#    \__> |  \ |  | |    |  |  \/  | /__
 
 def _default_edge_namer(edge, is_to_splitmerge=False, extra_edge_info=None):
     """
@@ -376,6 +373,11 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer, split_st
     return rstring
 
 
+# -----------------------------------------------------------------
+#     __        __
+#    /__` \  / / _`
+#    .__/  \/  \__>
+
 def output_to_svg(file, block=None, split_state=True):
     """ Output the block as an SVG to the open file.
 
@@ -399,6 +401,11 @@ def block_to_svg(block=None, split_state=True):
     except ImportError:
         raise PyrtlError('need graphviz installed (try "pip install graphviz")')
 
+
+# -----------------------------------------------------------------
+#         ___
+#    |__|  |  |\/| |
+#    |  |  |  |  | |___
 
 def trace_to_html(simtrace, trace_list=None, sortkey=None):
     """ Return a HTML block showing the trace.

@@ -3,7 +3,7 @@ import random
 import io
 import six
 import pyrtl
-from pyrtl.inputoutput import _VerilogSanitizer
+from pyrtl.importexport import _VerilogSanitizer
 from pyrtl.rtllib import testingutils as utils
 
 
