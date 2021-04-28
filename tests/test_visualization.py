@@ -2,7 +2,6 @@ import unittest
 import random
 import io
 import pyrtl
-from pyrtl import analysis
 from .test_inputoutput import full_adder_blif
 
 
@@ -60,7 +59,7 @@ class TestOutputGraphs(unittest.TestCase):
     def test_output_to_graphviz_with_custom_namer_does_not_throw_error(self):
         with io.StringIO() as vfile:
             pyrtl.input_from_blif(full_adder_blif)
-            timing = analysis.TimingAnalysis()
+            timing = pyrtl.TimingAnalysis()
             node_fan_in = {net: len(net.args) for net in pyrtl.working_block()}
             graph_namer = pyrtl.graphviz_detailed_namer(
                 extra_node_info=node_fan_in,
@@ -70,15 +69,13 @@ class TestOutputGraphs(unittest.TestCase):
 
     @unittest.skip("Need to make Graphviz output order deterministic via sorting")
     def test_output_to_graphviz_correct_detailed_output(self):
-        from pyrtl.analysis.estimate import TimingAnalysis
-
         a = pyrtl.Input(2, 'a')
         b = a * 8
         c = b[2:]
         d = pyrtl.Output(10, 'd')
         d <<= c
 
-        analysis = TimingAnalysis()
+        analysis = pyrtl.TimingAnalysis()
         _, dst_map = pyrtl.working_block().net_connections()
 
         def get_fanout(n):

@@ -98,7 +98,7 @@ from .inputoutput import output_verilog_testbench
 from .inputoutput import input_from_blif
 from .inputoutput import output_to_firrtl
 
-# different analysis and transform passes
+# different transform passes
 from .passes import common_subexp_elimination
 from .passes import constant_propagation
 from .passes import synthesize
@@ -114,3 +114,8 @@ from .transform import copy_block
 from .transform import clone_wire
 from .transform import replace_wires
 from .transform import replace_wire_fast
+
+# analysis and estimation functions
+from .analysis import area_estimation
+from .analysis import TimingAnalysis
+from .analysis import yosys_area_delay
