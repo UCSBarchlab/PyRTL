@@ -20,7 +20,6 @@ from .wire import Const
 from .wire import Register
 
 # helper functions
-
 from .helperfuncs import input_list
 from .helperfuncs import output_list
 from .helperfuncs import register_list
@@ -67,7 +66,6 @@ from .corecircuits import shift_right_arithmetic
 from .corecircuits import shift_left_logical
 from .corecircuits import shift_right_logical
 
-
 # memory blocks
 from .memory import MemBlock
 from .memory import RomBlock
@@ -83,22 +81,22 @@ from .simulation import FastSimulation
 from .simulation import SimulationTrace
 from .compilesim import CompiledSimulation
 
-# input and output to file format routines
-from .inputoutput import input_from_blif
-from .inputoutput import output_to_trivialgraph
-from .inputoutput import graphviz_detailed_namer
-from .inputoutput import output_to_graphviz
-from .inputoutput import output_to_svg
-from .inputoutput import output_to_firrtl
-from .inputoutput import block_to_graphviz_string
-from .inputoutput import block_to_svg
-from .inputoutput import trace_to_html
-from .inputoutput import net_graph
+# block visualization output formats
+from .visualization import output_to_trivialgraph
+from .visualization import graphviz_detailed_namer
+from .visualization import output_to_graphviz
+from .visualization import output_to_svg
+from .visualization import block_to_graphviz_string
+from .visualization import block_to_svg
+from .visualization import trace_to_html
+from .visualization import net_graph
 
-# extraction to verilog and verilog testbench
-from .verilog import output_to_verilog
-from .verilog import OutputToVerilog
-from .verilog import output_verilog_testbench
+# input and output to file format routines
+from .inputoutput import output_to_verilog
+from .inputoutput import OutputToVerilog
+from .inputoutput import output_verilog_testbench
+from .inputoutput import input_from_blif
+from .inputoutput import output_to_firrtl
 
 # different analysis and transform passes
 from .passes import common_subexp_elimination
