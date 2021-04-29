@@ -132,9 +132,9 @@ def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None, 
 
 
 # -----------------------------------------------------------------
-#     __   __   __   __              __
-#    / _` |__) |__| |__) |__| \  / |  /
-#    \__> |  \ |  | |    |  |  \/  | /__
+#     __   __        __              __
+#    / _` |__)  /\  |__) |__| \  / |  /
+#    \__> |  \ /~~\ |    |  |  \/  | /__
 
 def _default_edge_namer(edge, is_to_splitmerge=False, extra_edge_info=None):
     """
