@@ -266,7 +266,6 @@ def match_bitpattern(w, bitpattern, field_map=None):
     return MatchedFields(match, fields)
 
 
-# TODO: not currently tested or exported at package level
 def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
     """ Return an unsigned integer representation of field format filled with the provided values.
 
@@ -275,6 +274,9 @@ def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
         the order provided.  If ordered_fields are provided then no named_fields can be used.
     :param named_fields: A list of parameters to be matched to the provided bit pattern in
         by the names provided.  If named_fields are provided then no ordered_fields can be used.
+        A special keyword argument, 'field_map', can be provided, which will allow you specify
+        a correspondence between the 1-letter field names in the bitpattern string and longer,
+        human readable field names (see example below).
     :return: An unsigned integer carrying the result of the field substitution.
 
     This function will compare take a specified pattern of bits, where some
@@ -285,14 +287,24 @@ def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
     creating values for testing when the resulting values will be "chopped" up by the hardware
     later (e.g. instruction decode or other bitfield heavy functions).
 
+    If a special keyword argument, 'field_map', is provided, then the named fields provided
+    can be longer, human-readable field names, which will correspond to the field in the
+    bitpattern according to the field_map. See the third example below.
+
     Examples::
 
-        bitpattern_to_val('0000000rrrrrsssss000ddddd0110011', r=1, s=2, d=3)  # RISCV ADD instr
+        bitpattern_to_val('0000000sssssrrrrr000ddddd0110011', s=2, r=1, d=3)  # RISCV ADD instr
         # evaluates to   0b00000000000100010000000110110011
 
-        bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', i=1, r=3, s=4)  # RISCV SW instr
+        bitpattern_to_val('iiiiiiisssssrrrrr010iiiii0100011', i=1, s=4, r=3)  # RISCV SW instr
         # evaluates to   0b00000000001100100010000010100011
 
+        bitpattern_to_val(
+            'iiiiiiisssssrrrrr010iiiii0100011',
+            imm=1, rs2=4, rs1=3,
+            field_map={'i': 'imm', 's': 'rs2', 'r': 'rs1}
+        )  # RISCV SW instr
+        # evaluates to   0b00000000001100100010000010100011
     """
 
     if len(ordered_fields) > 0 and len(named_fields) > 0:
@@ -305,6 +317,11 @@ def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
                 seen.append(c)
         return seen
 
+    field_map = None
+    if 'field_map' in named_fields:
+        field_map = named_fields['field_map']
+        named_fields.pop('field_map')
+
     bitlist = []
     lifo = letters_in_field_order()
     if ordered_fields:
@@ -315,22 +332,24 @@ def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
         if len(lifo) != len(named_fields):
             raise PyrtlError('number of fields and number of unique patterns do not match')
         try:
-            intfields = [int(named_fields[n]) for n in lifo]
-        except KeyError:
-            raise PyrtlError('named field does not appear in bitpattern format string')
+            def fn(n):
+                return field_map[n] if field_map else n
+            intfields = [int(named_fields[fn(n)]) for n in lifo]
+        except KeyError as e:
+            raise PyrtlError('bitpattern field %s was not provided in named_field list' % e.args[0])
 
     fmap = dict(zip(lifo, intfields))
     for c in bitpattern[::-1]:
         if c == '0' or c == '1':
             bitlist.append(c)
         elif c == '?':
-            raise PyrtlError('all fields in must have names')
+            raise PyrtlError('all fields in the bitpattern must have names')
         else:
             bitlist.append(str(fmap[c] & 0x1))  # append lsb of the field
             fmap[c] = fmap[c] >> 1  # and bit shift by one position
     for f in fmap:
         if fmap[f] not in [0, -1]:
-            raise PyrtlError('too many bits given to value to fit in field')
+            raise PyrtlError('too many bits given to value to fit in field %s' % f)
     if len(bitpattern) != len(bitlist):
         raise PyrtlInternalError('resulting values have different bitwidths')
     final_str = ''.join(bitlist[::-1])

@@ -460,7 +460,7 @@ class Block(object):
 
     def _repr_svg_(self):
         """ IPython display support for Block. """
-        from .inputoutput import block_to_svg
+        from .visualization import block_to_svg
         return block_to_svg(self)
 
     def __iter__(self):
@@ -730,11 +730,21 @@ class Block(object):
 class PostSynthBlock(Block):
     """ This is a block with extra metadata required to maintain the
     pre-synthesis interface during post-synthesis.
+
+    It currently holds the following instance attributes:
+
+    * *.io_map*: a map from old IO wirevector to a list of new IO wirevectors it maps to;
+        this is a list because for unmerged io vectors, each old N-bit IO wirevector maps
+        to N new 1-bit IO wirevectors.
+    * *.reg_map*: a map from old register to a list of new registers; a list because post-synthesis,
+        each N-bit register has been mapped to N 1-bit registers
+    * *.mem_map*: a map from old memory block to the new memory block
     """
 
     def __init__(self):
         super(PostSynthBlock, self).__init__()
-        self.io_map = {}
+        self.io_map = collections.defaultdict(list)
+        self.reg_map = collections.defaultdict(list)
         self.mem_map = {}
 
 

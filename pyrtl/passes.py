@@ -15,7 +15,8 @@ from .memory import MemBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register
 from .transform import net_transform, _get_new_block_mem_instance, copy_block, replace_wires
-from . import transform  # transform.all_nets looks better than all_nets
+from . import transform
+from pyrtl import wire  # transform.all_nets looks better than all_nets
 
 
 # --------------------------------------------------------------------
@@ -215,8 +216,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
 
 
 def common_subexp_elimination(block=None, abs_thresh=1, percent_thresh=0):
-    """
-    Common Subexpression Elimination for PyRTL blocks
+    """ Common Subexpression Elimination for PyRTL blocks.
 
     :param block: the block to run the subexpression elimination on
     :param abs_thresh: absolute threshold for stopping optimization
@@ -234,6 +234,18 @@ ops_where_arg_order_matters = 'm@xc<>-'
 
 
 def _find_common_subexps(block):
+    """ Finds nets that can be considered the same based on op type, op param, and arguments.
+
+    :param block: Block to operate over
+    :return dict[LogicNet, [LogicNet]]: mapping from a logic net (with a placehold dest)
+        representing the common subexp, to a list of nets matching that common subexp that
+        can be replaced with the single common subexp.
+
+    Nets are the "same" if 1) their op types are the same, 2) their op_params are
+    the same (e.g. same memory if a memory-related op), and 3) their arguments are
+    the same (same constant value and bitwidth for const wires, otherwise same wire
+    object). The destination wire for a net is not considered.
+    """
     net_table = {}  # {net (without dest) : [net, ...]
     t = tuple()  # just a placeholder
     const_dict = {}
@@ -251,6 +263,11 @@ def _find_common_subexps(block):
 
 
 def _const_to_int(wire, const_dict):
+    """ Return a repr a Const (a tuple composed of width and value) for comparison with an 'is'.
+
+    If the wire is not a Const, just return the wire itself; comparison will be
+    done on the identity of the wire object instead.
+    """
     if isinstance(wire, Const):
         # a very bad hack to make sure two consts will compare
         # correctly with an 'is'
@@ -267,6 +284,12 @@ def _const_to_int(wire, const_dict):
 
 
 def _replace_subexps(block, net_table):
+    """ Removes unnecessary nets, connecting the common net's dest wire to unnecessary net's dest.
+
+    :param block: The block to operate over.
+    :param net_table: A mapping from common subexpression (a net) to a list of nets
+        that can be replaced with that common net.
+    """
     wire_map = {}
     unnecessary_nets = []
     for nets in net_table.values():
@@ -281,6 +304,16 @@ def _has_normal_dest_wire(net):
 
 
 def _process_nets_to_discard(nets, wire_map, unnecessary_nets):
+    """ Helper for tracking how a group of related nets should be replaced with a common one.
+
+    :param nets: List of nets that are considered equal and which should
+        be replaced by a single common net.
+    :param wire_map: Dict that will be updated with a mapping from every
+        old destination wire that needs to be removed, to the new destination
+        wire with which it should be replaced.
+    :param unnecessary_nets: List of nets that are to be discarded.
+
+    """
     if len(nets) == 1:
         return  # also deals with nets with no dest wires
     nets_to_consider = list(filter(_has_normal_dest_wire, nets))
@@ -296,7 +329,9 @@ def _process_nets_to_discard(nets, wire_map, unnecessary_nets):
 
 
 def _remove_unlistened_nets(block):
-    """ Removes all nets that are not connected to an output wirevector
+    """ Removes all nets that are not connected to an output wirevector.
+
+    :param block: The block to operate over.
     """
 
     listened_nets = set()
@@ -325,7 +360,12 @@ def _remove_unlistened_nets(block):
 
 
 def _remove_unused_wires(block, keep_inputs=True):
-    """ Removes all unconnected wires from a block"""
+    """ Removes all unconnected wires from a block's wirevector_set.
+
+    :param block: The block to operate over.
+    :param keep_inputs: If True, retain any Input wires that are not connected
+        to any net.
+    """
     valid_wires = set()
     for logic_net in block.logic:
         valid_wires.update(logic_net.args, logic_net.dests)
@@ -351,11 +391,14 @@ def _remove_unused_wires(block, keep_inputs=True):
 #
 
 
-def synthesize(update_working_block=True, block=None):
+def synthesize(update_working_block=True, merge_io_vectors=True, block=None):
     """ Lower the design to just single-bit "and", "or", "xor", and "not" gates.
 
-    :param update_working_block: Boolean specifying if working block update
-    :param block: The block you want to synthesize
+    :param update_working_block: Boolean specifying if working block should
+        be set to the newly synthesized block.
+    :param merge_io_wirevectors: if False, turn all N-bit IO wirevectors
+        into N 1-bit IO wirevectors (i.e. don't maintain interface).
+    :param block: The block you want to synthesize.
     :return: The newly synthesized block (of type PostSynthesisBlock).
 
     Takes as input a block (default to working block) and creates a new
@@ -368,7 +411,10 @@ def synthesize(update_working_block=True, block=None):
     the individual bits and memories (read and write ports) which
     require the reassembly and disassembly of the wirevectors immediately
     before and after. These are the only two places where 'c' and 's' ops
-    should exist.
+    should exist. If merge_io_vectors is False, then these individual
+    bits are not reassembled and disassembled before and after, and so no
+    'c' and 's' ops will exist. Instead, they will be named <name>[n],
+    where n is the bit number of original wire to which it corresponds.
 
     The block that results from synthesis is actually of type
     "PostSynthesisBlock" which contains a mapping from the original inputs
@@ -384,7 +430,9 @@ def synthesize(update_working_block=True, block=None):
 
     block_out = PostSynthBlock()
     # resulting block should only have one of a restricted set of net ops
-    block_out.legal_ops = set('~&|^nrwcsm@')
+    block_out.legal_ops = set('~&|^nrwm@')
+    if merge_io_vectors:
+        block_out.legal_ops.update(set('cs'))
     wirevector_map = {}  # map from (vector,index) -> new_wire
 
     with set_working_block(block_out, no_sanity_check=True):
@@ -399,6 +447,12 @@ def synthesize(update_working_block=True, block=None):
                 ('>', _basic_gt)]:
             net_transform(_replace_op(op, fun), block_in)
 
+        # This is a map from the cloned io wirevector created in copy_block,
+        # to the original io wirevector found in block_pre. We use it to create
+        # the block_out.io_map that is returned to the user.
+        orig_io_map = {temp: orig for orig, temp in block_in.io_map.items()}
+        orig_reg_map = {temp: orig for orig, temp in block_in.reg_map.items()}
+
         # Next, create all of the new wires for the new block
         # from the original wires and store them in the wirevector_map
         # for reference.
@@ -407,23 +461,35 @@ def synthesize(update_working_block=True, block=None):
                 new_name = '_'.join((wirevector.name, 'synth', str(i)))
                 if isinstance(wirevector, Const):
                     new_val = (wirevector.val >> i) & 0x1
-                    new_wirevector = Const(bitwidth=1, val=new_val)
+                    new_wirevector = Const(name=new_name, bitwidth=1, val=new_val)
                 elif isinstance(wirevector, (Input, Output)):
-                    new_wirevector = WireVector(name="tmp_" + new_name, bitwidth=1)
+                    if merge_io_vectors:
+                        new_wirevector = WireVector(name="tmp_" + new_name, bitwidth=1)
+                    else:
+                        # Creating N 1-bit io wires for a given single N-bit io wire.
+                        new_name = wirevector.name
+                        if len(wirevector) > 1:
+                            new_name += '[' + str(i) + ']'
+                        new_wirevector = wirevector.__class__(name=new_name, bitwidth=1)
+                        block_out.io_map[orig_io_map[wirevector]].append(new_wirevector)
                 else:
                     new_wirevector = wirevector.__class__(name=new_name, bitwidth=1)
+                    if isinstance(wirevector, Register):
+                        block_out.reg_map[orig_reg_map[wirevector]].append(new_wirevector)
                 wirevector_map[(wirevector, i)] = new_wirevector
 
         # Now connect up the inputs and outputs to maintain the interface
-        for wirevector in block_in.wirevector_subset(Input):
-            input_vector = Input(name=wirevector.name, bitwidth=len(wirevector))
-            for i in range(len(wirevector)):
-                wirevector_map[(wirevector, i)] <<= input_vector[i]
-        for wirevector in block_in.wirevector_subset(Output):
-            output_vector = Output(name=wirevector.name, bitwidth=len(wirevector))
-            output_bits = [wirevector_map[(wirevector, i)]
-                           for i in range(len(output_vector))]
-            output_vector <<= concat_list(output_bits)
+        if merge_io_vectors:
+            for wirevector in block_in.wirevector_subset(Input):
+                input_vector = Input(name=wirevector.name, bitwidth=len(wirevector))
+                for i in range(len(wirevector)):
+                    wirevector_map[(wirevector, i)] <<= input_vector[i]
+                block_out.io_map[orig_io_map[wirevector]].append(input_vector)
+            for wirevector in block_in.wirevector_subset(Output):
+                output_vector = Output(name=wirevector.name, bitwidth=len(wirevector))
+                output_bits = [wirevector_map[(wirevector, i)] for i in range(len(output_vector))]
+                output_vector <<= concat_list(output_bits)
+                block_out.io_map[orig_io_map[wirevector]].append(output_vector)
 
         # Now that we have all the wires built and mapped, walk all the blocks
         # and map the logic to the equivalent set of primitives in the system

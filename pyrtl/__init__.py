@@ -20,7 +20,6 @@ from .wire import Const
 from .wire import Register
 
 # helper functions
-
 from .helperfuncs import input_list
 from .helperfuncs import output_list
 from .helperfuncs import register_list
@@ -28,6 +27,7 @@ from .helperfuncs import wirevector_list
 from .helperfuncs import log2
 from .helperfuncs import truncate
 from .helperfuncs import match_bitpattern
+from .helperfuncs import bitpattern_to_val
 from .helperfuncs import chop
 from .helperfuncs import val_to_signed_integer
 from .helperfuncs import val_to_formatted_str
@@ -66,7 +66,6 @@ from .corecircuits import shift_right_arithmetic
 from .corecircuits import shift_left_logical
 from .corecircuits import shift_right_logical
 
-
 # memory blocks
 from .memory import MemBlock
 from .memory import RomBlock
@@ -82,24 +81,24 @@ from .simulation import FastSimulation
 from .simulation import SimulationTrace
 from .compilesim import CompiledSimulation
 
-# input and output to file format routines
-from .inputoutput import input_from_blif
-from .inputoutput import output_to_trivialgraph
-from .inputoutput import graphviz_detailed_namer
-from .inputoutput import output_to_graphviz
-from .inputoutput import output_to_svg
-from .inputoutput import output_to_firrtl
-from .inputoutput import block_to_graphviz_string
-from .inputoutput import block_to_svg
-from .inputoutput import trace_to_html
-from .inputoutput import net_graph
+# block visualization output formats
+from .visualization import output_to_trivialgraph
+from .visualization import graphviz_detailed_namer
+from .visualization import output_to_graphviz
+from .visualization import output_to_svg
+from .visualization import block_to_graphviz_string
+from .visualization import block_to_svg
+from .visualization import trace_to_html
+from .visualization import net_graph
 
-# extraction to verilog and verilog testbench
-from .verilog import output_to_verilog
-from .verilog import OutputToVerilog
-from .verilog import output_verilog_testbench
+# import from and export to file format routines
+from .importexport import output_to_verilog
+from .importexport import OutputToVerilog
+from .importexport import output_verilog_testbench
+from .importexport import input_from_blif
+from .importexport import output_to_firrtl
 
-# different analysis and transform passes
+# different transform passes
 from .passes import common_subexp_elimination
 from .passes import constant_propagation
 from .passes import synthesize
@@ -109,4 +108,14 @@ from .passes import optimize
 from .passes import one_bit_selects
 from .passes import two_way_concat
 
-from .transform import net_transform, wire_transform, replace_wire, copy_block, clone_wire
+from .transform import net_transform
+from .transform import wire_transform
+from .transform import copy_block
+from .transform import clone_wire
+from .transform import replace_wires
+from .transform import replace_wire_fast
+
+# analysis and estimation functions
+from .analysis import area_estimation
+from .analysis import TimingAnalysis
+from .analysis import yosys_area_delay

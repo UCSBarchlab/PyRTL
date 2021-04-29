@@ -8,7 +8,6 @@
 
 
 import pyrtl
-from pyrtl.analysis import estimate
 
 # --- Part 1: Timing Analysis ------------------------------------------------
 
@@ -27,7 +26,7 @@ out_wire <<= const_wire + in_wire2
 
 # Generating timing analysis information
 print("Pre Synthesis:")
-timing = estimate.TimingAnalysis()
+timing = pyrtl.TimingAnalysis()
 timing.print_max_length()
 
 # We are also able to print out the critical paths as well as get them
@@ -39,7 +38,7 @@ critical_path_info = timing.critical_path()
 # PyRTL also provides estimates for the area that would be used up if the
 # circuit was printed as an ASIC.
 
-logic_area, mem_area = estimate.area_estimation(tech_in_nm=65)
+logic_area, mem_area = pyrtl.area_estimation(tech_in_nm=65)
 est_area = logic_area + mem_area
 print("Estimated Area of block", est_area, "sq mm")
 print()
@@ -58,7 +57,7 @@ print()
 pyrtl.synthesize()
 
 print("Pre Optimization:")
-timing = estimate.TimingAnalysis()
+timing = pyrtl.TimingAnalysis()
 timing.print_max_length()
 for net in pyrtl.working_block().logic:
     print(str(net))
@@ -73,7 +72,7 @@ pyrtl.optimize()
 
 # Now to see the difference
 print("Post Optimization:")
-timing = estimate.TimingAnalysis()
+timing = pyrtl.TimingAnalysis()
 timing.print_max_length()
 
 for net in pyrtl.working_block().logic:

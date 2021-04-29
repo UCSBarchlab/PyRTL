@@ -12,7 +12,7 @@ from .core import working_block, PostSynthBlock, _PythonSanitizer
 from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock
 from .helperfuncs import check_rtl_assertions, _currently_in_jupyter_notebook
-from .verilog import _VerilogSanitizer
+from .importexport import _VerilogSanitizer
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -1001,8 +1001,9 @@ class SimulationTrace(object):
         elif wires_to_track == 'all':
             wires_to_track = self.block.wirevector_set
 
-        if not len(wires_to_track):
-            raise PyrtlError("There needs to be at least one named wire "
+        non_const_tracked = list(filter(lambda w: not isinstance(w, Const), wires_to_track))
+        if not len(non_const_tracked):
+            raise PyrtlError("There needs to be at least one named non-constant wire "
                              "for simulation to be useful")
         self.wires_to_track = wires_to_track
         self.trace = TraceStorage(wires_to_track)
@@ -1143,7 +1144,7 @@ class SimulationTrace(object):
         """
         if _currently_in_jupyter_notebook():
             from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
-            from .inputoutput import trace_to_html
+            from .visualization import trace_to_html
             htmlstring = trace_to_html(self, trace_list=trace_list, sortkey=_trace_sort_key)
             html_elem = HTML(htmlstring)
             display(html_elem)
