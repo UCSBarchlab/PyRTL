@@ -829,7 +829,7 @@ class RegisterDefaultsBase(unittest.TestCase):
         pyrtl.reset_working_block()
         self.i = pyrtl.Input(bitwidth=3)
         self.r1 = pyrtl.Register(name='r1', bitwidth=3)
-        self.r2 = pyrtl.Register(name='r2', bitwidth=3)
+        self.r2 = pyrtl.Register(name='r2', bitwidth=3, reset_value=7)
         self.o = pyrtl.Output(name='o', bitwidth=3)
         self.r1.next <<= self.i
         self.r2.next <<= self.r1
@@ -845,17 +845,20 @@ class RegisterDefaultsBase(unittest.TestCase):
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
-    def test_default_value(self):
-        self.check_trace('o 55012345\n', default_value=5)
+    def test_reset_value(self):
+        self.check_trace('o 70012345\n')
 
-    def test_register_map(self):
+    def test_register_map_overrides_reset_value(self):
         self.check_trace('o 36012345\n', register_value_map={self.r1: 6, self.r2: 3})
 
     def test_partial_map(self):
-        self.check_trace('o 06012345\n', register_value_map={self.r1: 6})
+        self.check_trace('o 76012345\n', register_value_map={self.r1: 6})
 
-    def test_map_and_default(self):
-        self.check_trace('o 56012345\n', default_value=5, register_value_map={self.r1: 6})
+    def test_partial_map_overrides_default(self):
+        self.check_trace('o 76012345\n', default_value=5, register_value_map={self.r1: 6})
+
+    def test_default_used_for_non_reset_value(self):
+        self.check_trace('o 75012345\n', default_value=5)
 
 
 class RomBlockSimBase(unittest.TestCase):

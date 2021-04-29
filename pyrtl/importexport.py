@@ -157,7 +157,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
     dffas_def = Group(SKeyword('.subckt') + dffas_keyword + dffas_formal)('dffas_def')
 
     # synchronous Flip-flop
-    dffs_init_val = Optional(oneOf("0 1 2 3"), default=Literal("0"))
+    dffs_init_val = Optional(oneOf('0 1 2 3'), default='0')
     # TODO I think <type> and <control> ('re' and 'C') below are technically optional too
     dffs_def = Group(SKeyword('.latch')
                      + signal_id('D')
@@ -345,19 +345,14 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
             ff_clk_set.add(command['C'])
 
         # Create register and assign next state to D and output to Q
+        # We ignore initialization values of 2 (don't care) and 3 (unknown).
         regname = command['Q'] + '_reg'
-        flop = Register(bitwidth=1)
+        init_val = command['I']
+        rval = {'0': 0, '1': 1, '2': None, '3': None}[init_val]
+        flop = Register(bitwidth=1, reset_value=rval)
         subckt.add_reg(regname, flop)
         flop.next <<= twire(command['D'])
         flop_output = twire(command['Q'])
-        init_val = command['I']
-        if init_val == "1":
-            # e.g. in Verilog: `initial reg <= 1;`
-            raise PyrtlError("Initializing latches to 1 is not supported. "
-                             "Acceptable values are: 0, 2 (don't care), and 3 (unknown); "
-                             "in any case, PyRTL will ensure all stateful elements come up 0. "
-                             "For finer control over the initial value, use specialized reset "
-                             "logic.")
         flop_output <<= flop
 
     def extract_model_reference(parent, command):
@@ -416,8 +411,22 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
 #
 
 
-def output_to_verilog(dest_file, block=None):
-    """ A function to walk the block and output it in verilog format to the open file. """
+def output_to_verilog(dest_file, add_reset=True, block=None):
+    """ A function to walk the block and output it in Verilog format to the open file.
+
+    :param dest_file: Open file where the Verilog output will be written
+    :param add_reset: If reset logic should be added. Allowable options are:
+        False (meaning no reset logic is added), True (default, for adding synchronous
+        reset logic), and 'asynchronous' (for adding asynchronous reset logic).
+    :param block: Block to be walked and exported
+
+    The registers will be set to their reset_value, if specified, otherwise 0.
+    """
+
+    if not isinstance(add_reset, bool):
+        if add_reset != 'asynchronous':
+            raise PyrtlError("Invalid add_reset option %s. Acceptable options are "
+                             "False, True, and 'asynchronous'")
 
     block = working_block(block)
     file = dest_file
@@ -429,15 +438,15 @@ def output_to_verilog(dest_file, block=None):
     def varname(wire):
         return internal_names[wire.name]
 
-    _to_verilog_header(file, block, varname)
+    _to_verilog_header(file, block, varname, add_reset)
     _to_verilog_combinational(file, block, varname)
-    _to_verilog_sequential(file, block, varname)
+    _to_verilog_sequential(file, block, varname, add_reset)
     _to_verilog_memories(file, block, varname)
     _to_verilog_footer(file)
 
 
 def OutputToVerilog(dest_file, block=None):
-    """ A deprecated function to output verilog, use "output_to_verilog" instead. """
+    """ A deprecated function to output Verilog, use "output_to_verilog" instead. """
     return output_to_verilog(dest_file, block)
 
 
@@ -487,7 +496,7 @@ def _verilog_block_parts(block):
     return inputs, outputs, registers, wires, memories
 
 
-def _to_verilog_header(file, block, varname):
+def _to_verilog_header(file, block, varname, add_reset):
     """ Print the header of the verilog implementation. """
 
     def name_sorted(wires):
@@ -504,6 +513,8 @@ def _to_verilog_header(file, block, varname):
 
     # module name
     io_list = ['clk'] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
+    if add_reset:
+        io_list.insert(1, 'rst')
     if any(w.startswith('tmp') for w in io_list):
         raise PyrtlError('input or output with name starting with "tmp" indicates unnamed IO')
     io_list_str = ', '.join(io_list)
@@ -511,6 +522,8 @@ def _to_verilog_header(file, block, varname):
 
     # inputs and outputs
     print('    input clk;', file=file)
+    if add_reset:
+        print('    input rst;', file=file)
     for w in name_sorted(inputs):
         print('    input{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
     for w in name_sorted(outputs):
@@ -596,18 +609,33 @@ def _to_verilog_combinational(file, block, varname):
     print('', file=file)
 
 
-def _to_verilog_sequential(file, block, varname):
+def _to_verilog_sequential(file, block, varname, add_reset):
     """ Print the sequential logic of the verilog implementation. """
     if not block.logic_subset(op='r'):
         return
 
     print('    // Registers', file=file)
-    print('    always @( posedge clk )', file=file)
+    if add_reset == 'asynchronous':
+        print('    always @(posedge clk or posedge rst)', file=file)
+    else:
+        print('    always @(posedge clk)', file=file)
     print('    begin', file=file)
+    if add_reset:
+        print('        if (rst) begin', file=file)
+        for net in _net_sorted(block.logic, varname):
+            if net.op == 'r':
+                dest = varname(net.dests[0])
+                rval = net.dests[0].reset_value
+                if rval is None:
+                    rval = 0
+                print('            {:s} <= {:d};'.format(dest, rval), file=file)
+        print('        end', file=file)
+    print('        else begin', file=file)
     for net in _net_sorted(block.logic, varname):
         if net.op == 'r':
             dest, src = (varname(net.dests[0]), varname(net.args[0]))
-            print('        {:s} <= {:s};'.format(dest, src), file=file)
+            print('            {:s} <= {:s};'.format(dest, src), file=file)
+    print('        end', file=file)
     print('    end', file=file)
     print('', file=file)
 
@@ -617,7 +645,7 @@ def _to_verilog_memories(file, block, varname):
     memories = {n.op_param[1] for n in block.logic_subset('m@')}
     for m in sorted(memories, key=lambda m: m.id):
         print('    // Memory mem_{}: {}'.format(m.id, m.name), file=file)
-        print('    always @( posedge clk )', file=file)
+        print('    always @(posedge clk)', file=file)
         print('    begin', file=file)
         for net in _net_sorted(block.logic_subset('@'), varname):
             if net.op_param[1] == m:
@@ -692,7 +720,16 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     def init_regvalue(r):
         if simulation_trace:
-            return simulation_trace.init_regvalue.get(r, simulation_trace.default_value)
+            rval = simulation_trace.init_regvalue.get(r)
+            # Currently, the simulation stores the initial value for all registers
+            # in init_regvalue, so rval should not be None at this point.
+            # For the strange case where the trace was made by hand/other special use
+            # cases, check it against None anyway.
+            if rval is None:
+                rval = r.reset_value
+            if rval is None:
+                rval = simulation_trace.default_value
+            return rval
         else:
             return 0
 
