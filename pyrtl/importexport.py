@@ -624,7 +624,7 @@ def _to_verilog_memories(file, block, varname):
                 t = (varname(net.args[2]), net.op_param[0],
                      varname(net.args[0]), varname(net.args[1]))
                 print(('        if (%s) begin\n'
-                       '                mem_%s[%s] <= %s;\n'
+                       '            mem_%s[%s] <= %s;\n'
                        '        end') % t, file=file)
         print('    end', file=file)
         for net in _net_sorted(block.logic_subset('m'), varname):
@@ -654,11 +654,11 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
         to write the output of the testbench execution to a .vcd file (via $dumpfile), and
         this parameter is the string of the name of the file to use.  If None is specified
         instead, then no dumpfile will be used.
-    :param cmd: The string passed as cmd will be copied verbatim into the testbench at the
+    :param cmd: The string passed as cmd will be copied verbatim into the testbench
         just before the end of each cycle. This is useful for doing things like printing
         specific values out during testbench evaluation (e.g. cmd='$display("%d", out);'
         will instruct the testbench to print the value of 'out' every cycle which can then
-        be compared easy with a reference.
+        be compared easy with a reference).
 
     The test bench does not return any values.
 
@@ -682,6 +682,12 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
     for wire in block.wirevector_set:
         ver_name.make_valid_string(wire.name)
 
+    def name_sorted(wires):
+        return _name_sorted(wires, name_mapper=lambda w: ver_name[w.name])
+
+    def name_list(wires):
+        return [ver_name[w.name] for w in wires]
+
     # Output an include, if given
     if toplevel_include:
         print('`include "{:s}"'.format(toplevel_include), file=dest_file)
@@ -692,13 +698,13 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     # Declare all block inputs as reg
     print('    reg clk;', file=dest_file)
-    for w in inputs:
-        print('    reg {:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
+    for w in name_sorted(inputs):
+        print('    reg{:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
               file=dest_file)
 
     # Declare all block outputs as wires
-    for w in outputs:
-        print('    wire {:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
+    for w in name_sorted(outputs):
+        print('    wire{:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
               file=dest_file)
     print('', file=dest_file)
 
@@ -706,8 +712,7 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
     print('    integer tb_iter;', file=dest_file)
 
     # Instantiate logic block
-    io_list = [ver_name[w.name] for w in block.wirevector_subset((Input, Output))]
-    io_list.append('clk')
+    io_list = ['clk'] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
     io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
     print('    toplevel block({:s});\n'.format(', '.join(io_list_str)), file=dest_file)
 
@@ -725,16 +730,17 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     # Initialize clk, and all the registers and memories
     print('        clk = 0;', file=dest_file)
-    for r in registers:
+    for r in name_sorted(registers):
         print('        block.%s = 0;' % ver_name[r.name], file=dest_file)
-    for m in memories:
-        print('        for(tb_iter=0;tb_iter<%d;tb_iter++) begin block.mem_%s[tb_iter] = 0; end' %
+    for m in sorted(memories, key=lambda m: m.id):
+        print('        for (tb_iter = 0; tb_iter < %d; tb_iter++) '
+              'begin block.mem_%s[tb_iter] = 0; end' %
               (1 << m.addrwidth, m.id), file=dest_file)
 
     if simulation_trace:
         tracelen = max(len(t) for t in simulation_trace.trace.values())
         for i in range(tracelen):
-            for w in inputs:
+            for w in name_sorted(inputs):
                 print('        {:s} = {:s}{:d};'.format(
                     ver_name[w.name],
                     "{:d}'d".format(len(w)),
