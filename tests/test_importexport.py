@@ -1065,7 +1065,7 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_103_1) begin
-                mem_0[const_102_0] <= const_104_9;
+            mem_0[const_102_0] <= const_104_9;
         end
     end
 
@@ -1073,10 +1073,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_2_1) begin
-                mem_1[const_1_0] <= a;
+            mem_1[const_1_0] <= a;
         end
         if (const_7_1) begin
-                mem_1[const_6_1] <= tmp17;
+            mem_1[const_6_1] <= tmp17;
         end
     end
     assign tmp74 = mem_1[const_105_0];
@@ -1085,10 +1085,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_10_1) begin
-                mem_2[const_9_0] <= a;
+            mem_2[const_9_0] <= a;
         end
         if (const_15_1) begin
-                mem_2[const_14_1] <= tmp21;
+            mem_2[const_14_1] <= tmp21;
         end
     end
     assign tmp78 = mem_2[const_107_0];
@@ -1097,10 +1097,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_18_1) begin
-                mem_3[const_17_0] <= a;
+            mem_3[const_17_0] <= a;
         end
         if (const_23_1) begin
-                mem_3[const_22_1] <= tmp25;
+            mem_3[const_22_1] <= tmp25;
         end
     end
 
@@ -1108,10 +1108,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_26_1) begin
-                mem_4[const_25_0] <= a;
+            mem_4[const_25_0] <= a;
         end
         if (const_31_1) begin
-                mem_4[const_30_1] <= tmp29;
+            mem_4[const_30_1] <= tmp29;
         end
     end
 
@@ -1119,10 +1119,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_34_1) begin
-                mem_5[const_33_0] <= a;
+            mem_5[const_33_0] <= a;
         end
         if (const_39_1) begin
-                mem_5[const_38_1] <= tmp33;
+            mem_5[const_38_1] <= tmp33;
         end
     end
 
@@ -1130,10 +1130,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_42_1) begin
-                mem_6[const_41_0] <= a;
+            mem_6[const_41_0] <= a;
         end
         if (const_47_1) begin
-                mem_6[const_46_1] <= tmp37;
+            mem_6[const_46_1] <= tmp37;
         end
     end
 
@@ -1141,10 +1141,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_50_1) begin
-                mem_7[const_49_0] <= a;
+            mem_7[const_49_0] <= a;
         end
         if (const_55_1) begin
-                mem_7[const_54_1] <= tmp41;
+            mem_7[const_54_1] <= tmp41;
         end
     end
 
@@ -1152,10 +1152,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_58_1) begin
-                mem_8[const_57_0] <= a;
+            mem_8[const_57_0] <= a;
         end
         if (const_63_1) begin
-                mem_8[const_62_1] <= tmp45;
+            mem_8[const_62_1] <= tmp45;
         end
     end
 
@@ -1163,10 +1163,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_66_1) begin
-                mem_9[const_65_0] <= a;
+            mem_9[const_65_0] <= a;
         end
         if (const_71_1) begin
-                mem_9[const_70_1] <= tmp49;
+            mem_9[const_70_1] <= tmp49;
         end
     end
 
@@ -1174,10 +1174,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_74_1) begin
-                mem_10[const_73_0] <= a;
+            mem_10[const_73_0] <= a;
         end
         if (const_79_1) begin
-                mem_10[const_78_1] <= tmp53;
+            mem_10[const_78_1] <= tmp53;
         end
     end
 
@@ -1185,10 +1185,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_82_1) begin
-                mem_11[const_81_0] <= a;
+            mem_11[const_81_0] <= a;
         end
         if (const_87_1) begin
-                mem_11[const_86_1] <= tmp57;
+            mem_11[const_86_1] <= tmp57;
         end
     end
 
@@ -1196,10 +1196,10 @@ module toplevel(clk, a, o);
     always @( posedge clk )
     begin
         if (const_90_1) begin
-                mem_12[const_89_0] <= a;
+            mem_12[const_89_0] <= a;
         end
         if (const_95_1) begin
-                mem_12[const_94_1] <= tmp61;
+            mem_12[const_94_1] <= tmp61;
         end
     end
 
@@ -1208,22 +1208,53 @@ endmodule
 """
 
 
-class TestOutputTestbench(unittest.TestCase):
-    def setUp(self):
-        pyrtl.reset_working_block()
+verilog_test_bench = """\
+module tb();
+    reg clk;
+    reg[1:0] a100;
+    reg[3:0] w1;
+    reg[2:0] w12;
+    wire[1:0] out1;
+    wire[8:0] out10;
 
-    def test_verilog_testbench_does_not_throw_error(self):
-        zero = pyrtl.Input(1, 'zero')
-        counter_output = pyrtl.Output(3, 'counter_output')
-        counter = pyrtl.Register(3, 'counter')
-        counter.next <<= pyrtl.mux(zero, counter + 1, 0)
-        counter_output <<= counter
-        sim_trace = pyrtl.SimulationTrace([counter_output, zero])
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for cycle in range(15):
-            sim.step({zero: random.choice([0, 0, 0, 1])})
-        with io.StringIO() as tbfile:
-            pyrtl.output_verilog_testbench(tbfile, sim_trace)
+    integer tb_iter;
+    toplevel block(.clk(clk), .a100(a100), .w1(w1), .w12(w12), .out1(out1), .out10(out10));
+
+    always
+        #5 clk = ~clk;
+
+    initial begin
+        $dumpfile ("waveform.vcd");
+        $dumpvars;
+
+        clk = 0;
+        block.r1 = 0;
+        block.r2 = 0;
+        block.tmp13 = 0;
+        a100 = 2'd0;
+        w1 = 4'd0;
+        w12 = 3'd0;
+
+        #10
+        a100 = 2'd1;
+        w1 = 4'd4;
+        w12 = 3'd1;
+
+        #10
+        a100 = 2'd3;
+        w1 = 4'd2;
+        w12 = 3'd7;
+
+        #10
+        a100 = 2'd2;
+        w1 = 4'd3;
+        w12 = 3'd4;
+
+        #10
+        $finish;
+    end
+endmodule
+"""
 
 
 class TestVerilogNames(unittest.TestCase):
@@ -1320,6 +1351,47 @@ class TestVerilog(unittest.TestCase):
         pyrtl.output_to_verilog(buffer)
 
         self.assertEqual(buffer.getvalue(), verilog_output_large)
+
+
+class TestOutputTestbench(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_verilog_testbench_does_not_throw_error(self):
+        zero = pyrtl.Input(1, 'zero')
+        counter_output = pyrtl.Output(3, 'counter_output')
+        counter = pyrtl.Register(3, 'counter')
+        counter.next <<= pyrtl.mux(zero, counter + 1, 0)
+        counter_output <<= counter
+        sim_trace = pyrtl.SimulationTrace([counter_output, zero])
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for cycle in range(15):
+            sim.step({zero: random.choice([0, 0, 0, 1])})
+        with io.StringIO() as tbfile:
+            pyrtl.output_verilog_testbench(tbfile, sim_trace)
+
+    def test_verilog_testbench_consistency(self):
+        # Various wire names so we can verify they are printed
+        # in deterministic order each time
+        i1, i2, i3 = pyrtl.input_list('w1/4 w12/3 a100/2')
+        r1, r2 = pyrtl.register_list('r1/3 r2/4')
+        r3 = pyrtl.Register(8)
+        o1, o2 = pyrtl.output_list('out1/2 out10/9')
+        r1.next <<= i1 + i2
+        r2.next <<= r1 * i3
+        r3.next <<= r1 & r2
+        o1 <<= i3 - r2
+        o2 <<= r1
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim.step_multiple({
+            'w1': [0, 4, 2, 3],
+            'w12': [0, 1, 7, 4],
+            'a100': [0, 1, 3, 2],
+        })
+        with io.StringIO() as tbfile:
+            pyrtl.output_verilog_testbench(tbfile, sim_trace)
+            self.assertEqual(tbfile.getvalue(), verilog_test_bench)
 
 
 firrtl_output_concat_test = """\
