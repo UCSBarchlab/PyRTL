@@ -1228,9 +1228,12 @@ module tb();
         $dumpvars;
 
         clk = 0;
-        block.r1 = 0;
-        block.r2 = 0;
+        block.r1 = 2;
+        block.r2 = 3;
         block.tmp13 = 0;
+        for (tb_iter = 0; tb_iter < 32; tb_iter++) begin block.mem_0[tb_iter] = 0; end
+        block.mem_0[2] = 9;
+        block.mem_0[9] = 12;
         a100 = 2'd0;
         w1 = 4'd0;
         w12 = 3'd0;
@@ -1376,14 +1379,24 @@ class TestOutputTestbench(unittest.TestCase):
         i1, i2, i3 = pyrtl.input_list('w1/4 w12/3 a100/2')
         r1, r2 = pyrtl.register_list('r1/3 r2/4')
         r3 = pyrtl.Register(8)
+        mem = pyrtl.MemBlock(4, 5)
         o1, o2 = pyrtl.output_list('out1/2 out10/9')
         r1.next <<= i1 + i2
         r2.next <<= r1 * i3
         r3.next <<= r1 & r2
+        mem[i1] <<= r1 + 3
         o1 <<= i3 - r2
         o2 <<= r1
         sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation(tracer=sim_trace, register_value_map={
+            r1: 2,
+            r2: 3,
+        }, memory_value_map={
+            mem: {
+                2: 9,
+                9: 12,
+            },
+        })
         sim.step_multiple({
             'w1': [0, 4, 2, 3],
             'w12': [0, 1, 7, 4],
