@@ -646,13 +646,15 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     :param dest_file: an open file to which the test bench will be printed.
     :param simulation_trace: a simulation trace from which the inputs will be extracted
-        for inclusion in the test bench.  The test bench generated will just replay the
-        inputs played to the simulation cycle by cycle.
+        for inclusion in the test bench. The test bench generated will just replay the
+        inputs played to the simulation cycle by cycle. The default values for all
+        registers and memories will be based on the trace, otherwise they will be initialized
+        to 0.
     :param toplevel_include: name of the file containing the toplevel module this testbench
-        is testing.  If not None, an `include` directive will be added to the top.
+        is testing. If not None, an `include` directive will be added to the top.
     :param vcd: By default the testbench generator will include a command in the testbench
         to write the output of the testbench execution to a .vcd file (via $dumpfile), and
-        this parameter is the string of the name of the file to use.  If None is specified
+        this parameter is the string of the name of the file to use. If None is specified
         instead, then no dumpfile will be used.
     :param cmd: The string passed as cmd will be copied verbatim into the testbench
         just before the end of each cycle. This is useful for doing things like printing
@@ -687,6 +689,26 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     def name_list(wires):
         return [ver_name[w.name] for w in wires]
+
+    def init_regvalue(r):
+        if simulation_trace:
+            return simulation_trace.init_regvalue.get(r, simulation_trace.default_value)
+        else:
+            return 0
+
+    def init_memvalue(m, ix):
+        # Return None if not present, or if already equal to default value, so we know not to
+        # emit any additional Verilog initing this mem address.
+        if simulation_trace:
+            if m not in simulation_trace.init_memvalue:
+                return None
+            v = simulation_trace.init_memvalue[m].get(ix, simulation_trace.default_value)
+            return None if v == simulation_trace.default_value else v
+        else:
+            return None
+
+    def default_value():
+        return simulation_trace.default_value if simulation_trace else 0
 
     # Output an include, if given
     if toplevel_include:
@@ -731,11 +753,17 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
     # Initialize clk, and all the registers and memories
     print('        clk = 0;', file=dest_file)
     for r in name_sorted(registers):
-        print('        block.%s = 0;' % ver_name[r.name], file=dest_file)
+        print('        block.%s = %d;' % (ver_name[r.name], init_regvalue(r)), file=dest_file)
     for m in sorted(memories, key=lambda m: m.id):
+        max_iter = 1 << m.addrwidth
         print('        for (tb_iter = 0; tb_iter < %d; tb_iter++) '
-              'begin block.mem_%s[tb_iter] = 0; end' %
-              (1 << m.addrwidth, m.id), file=dest_file)
+              'begin block.mem_%s[tb_iter] = %d; end' % (max_iter, m.id, default_value()),
+              file=dest_file)
+        for ix in range(max_iter):
+            # Now just individually update the memory values that aren't the default
+            val = init_memvalue(m.id, ix)
+            if val is not None:
+                print('        block.mem_%s[%d] = %d;' % (m.id, ix, val), file=dest_file)
 
     if simulation_trace:
         tracelen = max(len(t) for t in simulation_trace.trace.values())
