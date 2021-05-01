@@ -761,7 +761,8 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
               file=dest_file)
         for ix in range(max_iter):
             # Now just individually update the memory values that aren't the default
-            if (val := init_memvalue(m.id, ix)) is not None:
+            val = init_memvalue(m.id, ix)
+            if val is not None:
                 print('        block.mem_%s[%d] = %d;' % (m.id, ix, val), file=dest_file)
 
     if simulation_trace:
