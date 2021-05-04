@@ -22,12 +22,12 @@ def net_graph(block=None, split_state=False):
         be treated as sink nodes of the network.
 
     The graph has the following form:
-        { node1: { nodeA: edge1A, nodeB: edge1B},
-          node2: { nodeB: edge2B, nodeC: edge2C},
+        { node1: { nodeA: [edge1A_1, edge1A_2], nodeB: [edge1B]},
+          node2: { nodeB: [edge2B],             nodeC: [edge2C_1, edge2C_2},
           ...
         }
 
-    aka: edge = graph[source][dest]
+    aka: edges = graph[source][dest]
 
     Each node can be either a logic net or a WireVector (e.g. an Input, an Output, a
     Const or even an undriven WireVector (which acts as a source or sink in the network).
@@ -68,10 +68,10 @@ def net_graph(block=None, split_state=False):
         try:
             _to_list = wire_dst_dict[w]
         except Exception:
-            _to_list = [w]  # e.g. an Output
-
-        for _to in _to_list:
-            graph[_from][_to] = w
+            graph[_from][w] = [w]  # e.g. an Output
+        else:
+            for _to in _to_list:
+                graph[_from][_to] = list(filter(lambda arg: arg is w, _to.args))
 
     return graph
 
@@ -127,8 +127,8 @@ def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None, 
         for _to in graph[_from]:
             from_index = node_index_map[_from]
             to_index = node_index_map[_to]
-            edge = graph[_from][_to]
-            print('%d %d %s' % (from_index, to_index, namer(edge)), file=file)
+            for edge in graph[_from][_to]:
+                print('%d %d %s' % (from_index, to_index, namer(edge)), file=file)
 
 
 # -----------------------------------------------------------------
@@ -364,10 +364,10 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer, split_st
         for _to in graph[_from]:
             from_index = node_index_map[_from]
             to_index = node_index_map[_to]
-            edge = graph[_from][_to]
-            is_to_splitmerge = True if hasattr(_to, 'op') and _to.op in 'cs' else False
-            label = namer(edge, True, is_to_splitmerge, False)
-            rstring += '   n%d -> n%d %s;\n' % (from_index, to_index, label)
+            for edge in graph[_from][_to]:
+                is_to_splitmerge = True if hasattr(_to, 'op') and _to.op in 'cs' else False
+                label = namer(edge, True, is_to_splitmerge, False)
+                rstring += '   n%d -> n%d %s;\n' % (from_index, to_index, label)
 
     rstring += '}\n'
     return rstring
