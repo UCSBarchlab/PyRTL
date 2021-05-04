@@ -127,6 +127,13 @@ class TestNetGraph(unittest.TestCase):
         # can be safely updated.
         self.assertEqual(len(g), 10)
 
+        self.assertEqual(len(g[inwire]), 1)
+        self.assertEqual(list(g[inwire].keys())[0].op, '|')
+        self.assertEqual(len(g[inwire].values()), 1)
+        edges = list(g[inwire].values())[0]
+        self.assertEqual(len(edges), 1)
+        self.assertIs(edges[0], inwire)
+
     def test_netgraph_unused_wires(self):
         genwire = pyrtl.WireVector(8, "genwire")
         inwire = pyrtl.Input(8, "inwire")
@@ -134,7 +141,17 @@ class TestNetGraph(unittest.TestCase):
         constwire = pyrtl.Const(8, 8)
         reg = pyrtl.Register(8, "reg")
         g = pyrtl.net_graph()
-        self.assertEquals(len(g), 0)
+        self.assertEqual(len(g), 0)
+
+    def test_netgraph_same_wire_multiple_edges_to_same_net(self):
+        c = pyrtl.Const(1, 1)
+        w = pyrtl.concat(c, c, c)
+        g = pyrtl.net_graph()
+        self.assertEqual(len(g[c]), 1)
+        edges = list(g[c].values())[0]
+        self.assertEqual(len(edges), 3)
+        for w in edges:
+            self.assertIs(w, c)
 
 
 class TestOutputIPynb(unittest.TestCase):
