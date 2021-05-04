@@ -253,7 +253,7 @@ def shift_left_arithmetic(bits_to_shift, shift_amount):
     """ Shift left arithmetic operation.
 
     :param bits_to_shift: WireVector to shift left
-    :param shift_amount: WireVector specifying amount to shift
+    :param shift_amount: WireVector or integer specifying amount to shift
     :return: WireVector of same length as bits_to_shift
 
     This function returns a new WireVector of length equal to the length
@@ -270,7 +270,7 @@ def shift_right_arithmetic(bits_to_shift, shift_amount):
     """ Shift right arithmetic operation.
 
     :param bits_to_shift: WireVector to shift right
-    :param shift_amount: WireVector specifying amount to shift
+    :param shift_amount: WireVector or integer specifying amount to shift
     :return: WireVector of same length as bits_to_shift
 
     This function returns a new WireVector of length equal to the length
@@ -280,7 +280,9 @@ def shift_right_arithmetic(bits_to_shift, shift_amount):
     `bits_to_shift`) is shifted in. Note that `shift_amount` is treated as
     unsigned.
     """
-    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    if isinstance(shift_amount, int):
+        return bits_to_shift[shift_amount:].sign_extended(len(bits_to_shift))
+
     bit_in = bits_to_shift[-1]  # shift in sign_bit
     dir = Const(0)  # shift right
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
@@ -290,7 +292,7 @@ def shift_left_logical(bits_to_shift, shift_amount):
     """ Shift left logical operation.
 
     :param bits_to_shift: WireVector to shift left
-    :param shift_amount: WireVector specifying amount to shift
+    :param shift_amount: WireVector or integer specifying amount to shift
     :return: WireVector of same length as bits_to_shift
 
     This function returns a new WireVector of length equal to the length
@@ -299,7 +301,9 @@ def shift_left_logical(bits_to_shift, shift_amount):
     as unsigned number, meaning the zeroes are shifted in.  Note that
     `shift_amount` is treated as unsigned.
     """
-    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    if isinstance(shift_amount, int):
+        return concat(bits_to_shift[:-shift_amount], Const(0, shift_amount))
+
     bit_in = Const(0)  # shift in a 0
     dir = Const(1)  # shift left
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
@@ -309,7 +313,7 @@ def shift_right_logical(bits_to_shift, shift_amount):
     """ Shift right logical operation.
 
     :param bits_to_shift: WireVector to shift left
-    :param shift_amount: WireVector specifying amount to shift
+    :param shift_amount: WireVector or integer specifying amount to shift
     :return: WireVector of same length as bits_to_shift
 
     This function returns a new WireVector of length equal to the length
@@ -318,7 +322,9 @@ def shift_right_logical(bits_to_shift, shift_amount):
     as unsigned number, meaning the zeros are shifted in regardless of
     the "sign bit".  Note that `shift_amount` is treated as unsigned.
     """
-    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    if isinstance(shift_amount, int):
+        return bits_to_shift[shift_amount:].zero_extended(len(bits_to_shift))
+
     bit_in = Const(0)  # shift in a 0
     dir = Const(0)  # shift right
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
