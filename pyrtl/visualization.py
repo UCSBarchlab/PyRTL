@@ -23,7 +23,7 @@ def net_graph(block=None, split_state=False):
 
     The graph has the following form:
         { node1: { nodeA: [edge1A_1, edge1A_2], nodeB: [edge1B]},
-          node2: { nodeB: [edge2B],             nodeC: [edge2C_1, edge2C_2},
+          node2: { nodeB: [edge2B],             nodeC: [edge2C_1, edge2C_2]},
           ...
         }
 
