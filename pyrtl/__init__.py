@@ -107,6 +107,7 @@ from .passes import and_inverter_synth
 from .passes import optimize
 from .passes import one_bit_selects
 from .passes import two_way_concat
+from .passes import direct_connect_outputs
 
 from .transform import net_transform
 from .transform import wire_transform

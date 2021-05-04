@@ -696,3 +696,70 @@ def one_bit_selects(net):
     catlist = [net.args[0][i] for i in net.op_param]
     dest = net.dests[0]
     dest <<= concat_list(catlist)
+
+
+def direct_connect_outputs(block=None):
+    """ Remove 'w' nets immediately before outputs, if possible.
+
+    :param block: block to update (defaults to working block)
+
+    The 'w' nets that are eligible for removal with this pass
+    meet the following requirements:
+        * The destination wirevector of the net is an Output
+        * The source wirevector of the net doesn't go to any other nets.
+    """
+    # Turns a netlist of the form (where [] denote nets and o is an Output):
+    #
+    #  w1 w2
+    #   | |
+    #   [*]
+    #    |
+    #    w3
+    #    |
+    #   [w]
+    #    |
+    #    o
+    #
+    # into:
+    #
+    #  w1 w2
+    #   | |
+    #   [*]
+    #    |
+    #    o
+
+    # NOTE: would use transform.all_nets(), but it becomes tricky when
+    # we want to remove more than just the current net on a single pass
+    block = working_block(block)
+    _, dst_nets = block.net_connections()
+
+    nets_to_remove = set()
+    nets_to_add = set()
+    wirevectors_to_remove = set()
+
+    for net in block.logic:
+        if net.op == '@':
+            continue
+
+        dest_wire = net.dests[0]
+        if dest_wire not in dst_nets or len(dst_nets[dest_wire]) > 1:
+            continue
+
+        dst_net = dst_nets[dest_wire][0]
+        if dst_net.op != 'w' or not isinstance(dst_net.dests[0], Output):
+            continue
+
+        new_net = LogicNet(
+            op=net.op,
+            op_param=net.op_param,
+            args=net.args,
+            dests=dst_net.dests,
+        )
+        nets_to_remove.add(net)
+        nets_to_remove.add(dst_net)
+        wirevectors_to_remove.add(dst_net.args[0])
+        nets_to_add.add(new_net)
+
+    block.logic.difference_update(nets_to_remove)
+    block.logic.update(nets_to_add)
+    block.wirevector_set.difference_update(wirevectors_to_remove)

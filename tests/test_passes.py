@@ -8,6 +8,7 @@ import sys
 
 import pyrtl
 from pyrtl.wire import Const, Output
+from pyrtl.rtllib import testingutils as utils
 
 from .test_transform import NetWireNumTestCases
 
@@ -785,6 +786,94 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
         sim = pyrtl.Simulation()
         sim.step({})
         self.assertEqual(sim.inspect('b'), 0b00011011)
+
+
+class TestDirectlyConnectedOutputs(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_single_output(self):
+        i, j = pyrtl.input_list('i/4 j/4')
+        o = pyrtl.Output(8, 'o')
+        o <<= i * j
+
+        self.assertEqual(len(pyrtl.working_block().logic), 2)
+        # Includes intermediary 'w' wire
+        self.assertEqual(len(pyrtl.working_block().wirevector_set), 4)
+        pyrtl.direct_connect_outputs()
+        self.assertEqual(len(pyrtl.working_block().logic), 1)
+        self.assertEqual(pyrtl.working_block().wirevector_set, {i, j, o})
+
+    def test_single_output_simulates_correctly(self):
+        i, ivals = utils.an_input_and_vals(4, name='i')
+        j, jvals = utils.an_input_and_vals(4, name='j')
+        o = pyrtl.Output(8, 'o')
+        o <<= i * j
+
+        pyrtl.direct_connect_outputs()
+        true_result = [x * y for x, y in zip(ivals, jvals)]
+        sim_result = utils.sim_and_ret_out(o, [i, j], [ivals, jvals])
+        self.assertEqual(true_result, sim_result)
+
+    def test_several_outputs(self):
+        i, j = pyrtl.input_list('i/2 j/2')
+        o, p, q = pyrtl.output_list('o p q')
+        o <<= i * j
+        w = i + 2
+        p <<= w
+        q <<= ~w
+
+        self.assertEqual(len(pyrtl.working_block().logic), 9)
+        self.assertEqual(len(pyrtl.working_block().logic_subset(op='w')), 3)
+        pyrtl.direct_connect_outputs()
+        self.assertEqual(len(pyrtl.working_block().logic), 6)
+        self.assertEqual(len(pyrtl.working_block().logic_subset(op='w')), 0)
+
+    def test_several_outputs_simulates_correctly(self):
+        i, j = pyrtl.input_list('i/2 j/2')
+        o, p, q = pyrtl.output_list('o p q')
+        o <<= i * j
+        w = i + 2
+        p <<= w
+        q <<= ~w
+
+        inputs = [(0, 1), (1, 0), (2, 3), (3, 0), (1, 3)]
+        trace_pre = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=trace_pre)
+        for x, y in inputs:
+            inp_map = {'i': x, 'j': y}
+            sim.step(inp_map)
+
+        pyrtl.direct_connect_outputs()
+
+        trace_post = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=trace_post)
+        for x, y in inputs:
+            inp_map = {'i': x, 'j': y}
+            sim.step(inp_map)
+
+        self.assertEqual(trace_pre.trace, trace_post.trace)
+
+    def test_some_outputs_unaffected(self):
+        i = pyrtl.Input(2, 'i')
+        o, p, q = pyrtl.output_list('o/4 p/4 q/2')
+        w = i * 2
+        o <<= w
+        p <<= w
+        q <<= ~i
+
+        src_nets, _ = pyrtl.working_block().net_connections()
+        self.assertEqual(src_nets[o].op, 'w')
+        self.assertEqual(src_nets[p].op, 'w')
+        self.assertEqual(src_nets[q].op, 'w')
+        self.assertEqual(len(pyrtl.working_block().logic), 5)
+
+        pyrtl.direct_connect_outputs()
+        src_nets, _ = pyrtl.working_block().net_connections()
+        self.assertEqual(src_nets[o].op, 'w')
+        self.assertEqual(src_nets[p].op, 'w')
+        self.assertEqual(src_nets[q].op, '~')
+        self.assertEqual(len(pyrtl.working_block().logic), 4)
 
 
 if __name__ == "__main__":
