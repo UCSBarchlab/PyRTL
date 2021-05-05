@@ -5,6 +5,7 @@ ways to change a block.
 """
 
 from __future__ import print_function, unicode_literals
+import collections
 
 from .core import working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock
 from .helperfuncs import _NetCount
@@ -763,3 +764,66 @@ def direct_connect_outputs(block=None):
     block.logic.difference_update(nets_to_remove)
     block.logic.update(nets_to_add)
     block.wirevector_set.difference_update(wirevectors_to_remove)
+
+
+def _make_tree(wire, block, curr_fanout):
+    def f(w, n):
+        if n == 1:
+            return (w,)
+        else:
+            l_fanout = n // 2
+            r_fanout = n - l_fanout
+            o = WireVector(len(w), block=block)
+            split_net = LogicNet(
+                op='w',
+                op_param=None,
+                args=(w,),
+                dests=(o,),
+            )
+            block.add_net(split_net)
+            return f(o, l_fanout) + f(o, r_fanout)
+    return f(wire, curr_fanout)
+
+
+def two_way_fanout(block=None):
+    """ Update the block such that no wire goes to more than 2 destination nets
+
+    :param block: block to update (defaults to working block)
+    """
+    from .analysis import fanout
+    block = working_block(block)
+
+    _, dst_map = block.net_connections()
+    # Two-pass approach: Remember which nets will need to change, in case
+    # there are multiple arguments which will be changing along the way.
+    nets_to_update = collections.defaultdict(list)
+    for wire in block.wirevector_subset(exclude=(Output)):
+        curr_fanout = fanout(wire)
+        if curr_fanout > 1:
+            s = _make_tree(wire, block, curr_fanout)
+            curr_ix = 0
+            for dst_net in dst_map[wire]:
+                for i, arg in enumerate(dst_net.args):
+                    if arg is wire:
+                        nets_to_update[dst_net].append((wire, i, s[curr_ix]))
+                        curr_ix += 1
+            if curr_ix != curr_fanout:
+                raise PyrtlInternalError("Calculated fanout does not equal number of wires found")
+
+    for old_net, args in nets_to_update.items():
+        def get_arg(i, a):
+            for orig, ix, from_tree in args:
+                # Checking index as well because the same wire could be
+                # used as multiple arguments to the same net.
+                if i == ix and a is orig:
+                    return from_tree
+            return a
+
+        new_net = LogicNet(
+            op=old_net.op,
+            op_param=old_net.op_param,
+            args=tuple(get_arg(ix, a) for ix, a in enumerate(old_net.args)),
+            dests=old_net.dests
+        )
+        block.add_net(new_net)
+        block.logic.remove(old_net)

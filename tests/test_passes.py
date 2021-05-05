@@ -876,5 +876,49 @@ class TestDirectlyConnectedOutputs(unittest.TestCase):
         self.assertEqual(len(pyrtl.working_block().logic), 4)
 
 
+class TestTwoWayFanout(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def check_all_leq_two(self):
+        for w in pyrtl.working_block().wirevector_subset(exclude=(pyrtl.Output)):
+            self.assertLessEqual(pyrtl.fanout(w), 2)
+
+    def test_two_way_fanout_small_design(self):
+        i = pyrtl.Input(1, 'i')
+        o, p, q = pyrtl.output_list('o p q')
+        o <<= ~i
+        p <<= i
+        q <<= i & 0
+
+        self.assertEqual(pyrtl.fanout(i), 3)
+        pyrtl.two_way_fanout()
+        self.check_all_leq_two()
+
+    def test_two_way_fanout_medium_design(self):
+        i = pyrtl.Input(1, 'i')
+        o, p = pyrtl.output_list('o p')
+        w = i & 0
+        x = (w & w) ^ w
+        o <<= x
+        p <<= w
+
+        self.assertEqual(pyrtl.fanout(w), 4)
+        pyrtl.two_way_fanout()
+        self.check_all_leq_two()
+
+    def test_two_way_fanout_large_design(self):
+        i, j = pyrtl.input_list('i/1 j/2')
+        o, p, q, r = pyrtl.output_list('o p q r')
+        o <<= ~i
+        p <<= i * j
+        q <<= i & 0
+        r <<= i - 3
+
+        self.assertEqual(pyrtl.fanout(i), 4)
+        pyrtl.two_way_fanout()
+        self.check_all_leq_two()
+
+
 if __name__ == "__main__":
     unittest.main()
