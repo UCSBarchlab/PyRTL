@@ -492,3 +492,17 @@ def distance(src, dst, f, block=None):
     # Turning path into tuple so it can be the key
     m = {tuple(path): sum(map(f, path)) for path in ps}
     return m
+
+
+def fanout(w):
+    """ Get the number of places a wire is used as an argument.
+
+    :param w: WireVector to check fanout for
+    :return: integer fanout count
+    """
+    _, dst_nets = w._block.net_connections()
+    if w not in dst_nets:
+        return 0
+
+    all_args = [arg for net in dst_nets[w] for arg in net.args]
+    return len(list(filter(lambda arg: arg is w, all_args)))

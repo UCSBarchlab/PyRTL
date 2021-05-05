@@ -246,5 +246,32 @@ class TestDistance(unittest.TestCase):
         self.assertEqual(list(distances.values())[0], 5)
 
 
+class TestFanout(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_fanout_simple(self):
+        i = pyrtl.Input(1, 'i')
+        o = pyrtl.Output(3, 'o')
+        w = i ^ 1
+        y = i | 1
+        z = i & 0
+        o <<= w + y + z
+        self.assertEqual(pyrtl.fanout(i), 3)
+        for wire in (w, y, z):
+            self.assertEqual(pyrtl.fanout(wire), 1)
+        self.assertEqual(pyrtl.fanout(o), 0)
+
+    def test_fanout_wire_repeated_as_arg(self):
+        i = pyrtl.Input(1, 'i')
+        _w = i * i
+        self.assertEqual(pyrtl.fanout(i), 2)
+
+    def test_fanout_wire_repeated_in_concat(self):
+        w = pyrtl.WireVector(2)
+        _c = pyrtl.concat(w, w, w, w)
+        self.assertEqual(pyrtl.fanout(w), 4)
+
+
 if __name__ == "__main__":
     unittest.main()
