@@ -8,7 +8,7 @@ The functions provided write the block as a given visual format to the file.
 from __future__ import print_function, unicode_literals
 
 from .pyrtlexceptions import PyrtlError
-from .core import working_block
+from .core import working_block, LogicNet
 from .wire import WireVector, Input, Output, Const, Register
 
 
@@ -345,29 +345,40 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer, split_st
     node_index_map = {}  # map node -> index
 
     rstring = """\
-              digraph g {\n
-              graph [splines="spline", outputorder="edgesfirst"];
-              node [shape=circle, style=filled, fillcolor=lightblue1,
-                    fontcolor=black, fontname=helvetica, penwidth=0,
-                    fixedsize=shape];
-              edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
-              """
+digraph g {
+    graph [splines="spline", outputorder="edgesfirst"];
+    node [shape=circle, style=filled, fillcolor=lightblue1,
+        fontcolor=black, fontname=helvetica, penwidth=0,
+        fixedsize=shape];
+    edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
+"""
+    from .importexport import _natural_sort_key
+
+    def _node_sort_key(node):
+        if isinstance(node, LogicNet):
+            if node.op == '@':
+                key = str(node.args[2])
+            else:
+                key = node.dests[0].name
+        else:
+            key = node.name
+        return _natural_sort_key(key)
 
     # print the list of nodes
-    for index, node in enumerate(graph):
+    for index, node in enumerate(sorted(graph.keys(), key=_node_sort_key)):
         label = namer(node, False, False, split_state)
         rstring += '    n%s %s;\n' % (index, label)
         node_index_map[node] = index
 
     # print the list of edges
-    for _from in graph:
-        for _to in graph[_from]:
+    for _from in sorted(graph.keys(), key=_node_sort_key):
+        for _to in sorted(graph[_from].keys(), key=_node_sort_key):
             from_index = node_index_map[_from]
             to_index = node_index_map[_to]
             for edge in graph[_from][_to]:
                 is_to_splitmerge = True if hasattr(_to, 'op') and _to.op in 'cs' else False
                 label = namer(edge, True, is_to_splitmerge, False)
-                rstring += '   n%d -> n%d %s;\n' % (from_index, to_index, label)
+                rstring += '    n%d -> n%d %s;\n' % (from_index, to_index, label)
 
     rstring += '}\n'
     return rstring

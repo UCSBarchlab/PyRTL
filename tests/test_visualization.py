@@ -5,39 +5,37 @@ import pyrtl
 from .test_importexport import full_adder_blif
 
 
-graphviz_string = """
-              digraph g {
-
-              graph [splines="spline"];
-              node [shape=circle, style=filled, fillcolor=lightblue1,
-                    fontcolor=black, fontname=helvetica, penwidth=0,
-                    fixedsize=true];
-              edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
-                  n0 [label="bits(0,0) (Fanout: 1)", height=.1, width=.1];
-    n1 [label="bits(7,2) (Fanout: 1)", height=.1, width=.1];
-    n2 [label="bits(0,0) (Fanout: 1)", height=.1, width=.1];
-    n3 [label="concat (Fanout: 1)", height=.1, width=.1];
+graphviz_string = """\
+digraph g {
+    graph [splines="spline", outputorder="edgesfirst"];
+    node [shape=circle, style=filled, fillcolor=lightblue1,
+        fontcolor=black, fontname=helvetica, penwidth=0,
+        fixedsize=shape];
+    edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
+    n0 [label="a", shape=invhouse, fillcolor=coral];
+    n1 [label="8", shape=circle, fillcolor=lightgrey];
+    n2 [label="0", shape=circle, fillcolor=lightgrey];
+    n3 [label="0", shape=circle, fillcolor=lightgrey];
     n4 [label=" (Fanout: 0)", height=.1, width=.1];
-    n5 [label="concat (Fanout: 1)", height=.1, width=.1];
-    n6 [label="* (Fanout: 1)"];
-    n7 [label="8", shape=circle, fillcolor=lightgrey];
-    n8 [label="d", shape=house, fillcolor=lawngreen];
-    n9 [label="0", shape=circle, fillcolor=lightgrey];
-    n10 [label="0", shape=circle, fillcolor=lightgrey];
-    n11 [label="a", shape=invhouse, fillcolor=coral];
-   n0 -> n3 [label="tmp0/2 (Delay: 0.00)", penwidth="6", arrowhead="none"];
-   n1 -> n5 [label="tmp3/6 (Delay: 706.50)", penwidth="6", arrowhead="none"];
-   n2 -> n5 [label="tmp4/4 (Delay: 0.00)", penwidth="6", arrowhead="none"];
-   n3 -> n6 [label="tmp1/4 (Delay: 0.00)", penwidth="6", arrowhead="normal"];
-   n4 -> n8 [label="d/10 (Delay: 706.50)", penwidth="6", arrowhead="normal"];
-   n5 -> n4 [label="tmp5/10 (Delay: 706.50)", penwidth="6", arrowhead="normal"];
-   n6 -> n1 [label="tmp2/8 (Delay: 706.50)", penwidth="6", arrowhead="none"];
-   n7 -> n6 [label="const_0_8/4 (Delay: 0.00)", penwidth="6", arrowhead="normal"];
-   n9 -> n0 [label="const_1_0/1 (Delay: 0.00)", penwidth="2", arrowhead="none"];
-   n10 -> n2 [label="const_2_0/1 (Delay: 0.00)", penwidth="2", arrowhead="none"];
-   n11 -> n3 [label="a/2 (Delay: 0.00)", penwidth="6", arrowhead="none"];
+    n5 [label="d", shape=house, fillcolor=lawngreen];
+    n6 [label="[0]*2 (Fanout: 1)", fillcolor=azure1, height=.25, width=.25];
+    n7 [label="concat (Fanout: 1)", height=.1, width=.1];
+    n8 [label="* (Fanout: 1)"];
+    n9 [label="[7:2] (Fanout: 1)", fillcolor=azure1, height=.25, width=.25];
+    n10 [label="[0]*4 (Fanout: 1)", fillcolor=azure1, height=.25, width=.25];
+    n11 [label="concat (Fanout: 1)", height=.1, width=.1];
+    n0 -> n7 [label="a/2 (Delay: 0.00)", penwidth="6", arrowhead="none"];
+    n1 -> n8 [label="const_0_8/4 (Delay: 0.00)", penwidth="6", arrowhead="normal"];
+    n2 -> n6 [label="const_1_0/1 (Delay: 0.00)", penwidth="2", arrowhead="none"];
+    n3 -> n10 [label="const_2_0/1 (Delay: 0.00)", penwidth="2", arrowhead="none"];
+    n4 -> n5 [label="d/10 (Delay: 706.50)", penwidth="6", arrowhead="normal"];
+    n6 -> n7 [label="tmp0/2 (Delay: 0.00)", penwidth="6", arrowhead="none"];
+    n7 -> n8 [label="tmp1/4 (Delay: 0.00)", penwidth="6", arrowhead="normal"];
+    n8 -> n9 [label="tmp2/8 (Delay: 706.50)", penwidth="6", arrowhead="none"];
+    n9 -> n11 [label="tmp3/6 (Delay: 706.50)", penwidth="6", arrowhead="none"];
+    n10 -> n11 [label="tmp4/4 (Delay: 0.00)", penwidth="6", arrowhead="none"];
+    n11 -> n4 [label="tmp5/10 (Delay: 706.50)", penwidth="6", arrowhead="normal"];
 }
-
 
 """
 
@@ -67,8 +65,9 @@ class TestOutputGraphs(unittest.TestCase):
             )
             pyrtl.output_to_graphviz(vfile, namer=graph_namer)
 
-    @unittest.skip("Need to make Graphviz output order deterministic via sorting")
     def test_output_to_graphviz_correct_detailed_output(self):
+        pyrtl.wire._reset_wire_indexers()
+
         a = pyrtl.Input(2, 'a')
         b = a * 8
         c = b[2:]
