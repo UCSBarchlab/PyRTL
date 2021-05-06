@@ -43,6 +43,14 @@ class TestMatrixInit(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.init_wirevector([[0], [0], [0], [0]], 0, 4, 4)
 
+    def test_init_fail_bad_number_of_rows(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.init_int_matrix([[0], [0]], 1, 1, 4)
+
+    def test_init_fail_bad_number_of_columns(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.init_int_matrix([[0, 0], [0], [0, 0]], 3, 2, 4)
+
     def test_init_fail_string_row(self):
         with self.assertRaises(pyrtl.PyrtlError):
             self.init_int_matrix([[0]], "1", 1, 2)
@@ -124,7 +132,7 @@ class TestMatrixInit(unittest.TestCase):
         self.assertEqual(len(matrix), (rows * columns * bits))
 
         output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_WireVector()
+        output <<= matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -146,7 +154,7 @@ class TestMatrixInit(unittest.TestCase):
         self.assertEqual(len(matrix), (rows * columns * bits))
 
         output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_WireVector()
+        output <<= matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -175,7 +183,7 @@ class TestMatrixBits(unittest.TestCase):
         self.assertEqual(matrix.bits, 4)
 
         output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_WireVector()
+        output <<= matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -198,7 +206,7 @@ class TestMatrixBits(unittest.TestCase):
         self.assertEqual(matrix.bits, 5)
 
         output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_WireVector()
+        output <<= matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -220,7 +228,7 @@ class TestMatrixBits(unittest.TestCase):
         self.assertEqual(matrix.bits, 2)
 
         output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_WireVector()
+        output <<= matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -351,7 +359,7 @@ class TestMatrixGetItem(unittest.TestCase):
         out_rows, out_columns = x_slice.stop - x_slice.start, \
             y_slice.stop - y_slice.start
         if isinstance(item, Matrix.Matrix):
-            output <<= item.to_WireVector()
+            output <<= item.to_wirevector()
             self.assertEqual(out_rows, item.rows)
             self.assertEqual(out_columns, item.columns)
             self.assertEqual(bits, item.bits)
@@ -381,7 +389,7 @@ class TestMatrixGetItem(unittest.TestCase):
         item = matrix[:, :]
 
         output = pyrtl.Output(name="output", bitwidth=len(item))
-        output <<= item.to_WireVector()
+        output <<= item.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -399,7 +407,7 @@ class TestMatrixGetItem(unittest.TestCase):
         item = matrix[1]
 
         output = pyrtl.Output(name="output", bitwidth=len(item))
-        output <<= item.to_WireVector()
+        output <<= item.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -569,7 +577,7 @@ class TestMatrixSetItem(unittest.TestCase):
         matrix[x_slice, y_slice] = value_matrix
 
         output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_WireVector()
+        output <<= matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -590,7 +598,7 @@ class TestMatrixSetItem(unittest.TestCase):
         matrix[-2:-1, -2:-1] = pyrtl.Const(0)
 
         output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_WireVector()
+        output <<= matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -615,7 +623,7 @@ class TestMatrixSetItem(unittest.TestCase):
         matrix[:, :] = value_matrix
 
         output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_WireVector()
+        output <<= matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -640,7 +648,7 @@ class TestMatrixSetItem(unittest.TestCase):
         matrix[1] = value_matrix
 
         output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_WireVector()
+        output <<= matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -687,21 +695,21 @@ class TestPyRTLCopy(unittest.TestCase):
 
         copy_output = pyrtl.Output(
             name="copy_output", bitwidth=len(copy_matrix))
-        copy_output <<= copy_matrix.to_WireVector()
+        copy_output <<= copy_matrix.to_wirevector()
 
         matrix_output = pyrtl.Output(
             name="matrix_output", bitwidth=len(matrix))
-        matrix_output <<= matrix.to_WireVector()
+        matrix_output <<= matrix.to_wirevector()
 
         copy_matrix[:, :] = change_matrix[:, :]
 
         matrix_output_1 = pyrtl.Output(
             name="matrix_output_1", bitwidth=len(matrix))
-        matrix_output_1 <<= matrix.to_WireVector()
+        matrix_output_1 <<= matrix.to_wirevector()
 
         copy_output_1 = pyrtl.Output(
             name="copy_output_1", bitwidth=len(copy_matrix))
-        copy_output_1 <<= copy_matrix.to_WireVector()
+        copy_output_1 <<= copy_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -775,7 +783,7 @@ class TestPyRTLTranspose(unittest.TestCase):
         self.assertEqual(len(transpose_matrix), rows * columns * bits)
 
         output = pyrtl.Output(name="output", bitwidth=len(transpose_matrix))
-        output <<= transpose_matrix.to_WireVector()
+        output <<= transpose_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -838,7 +846,7 @@ class TestMatrixReverse(unittest.TestCase):
         self.assertEqual(len(reversed_matrix), rows * columns * bits)
 
         output = pyrtl.Output(name="output", bitwidth=len(reversed_matrix))
-        output <<= reversed_matrix.to_WireVector()
+        output <<= reversed_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -938,7 +946,7 @@ class TestMatrixAdd(unittest.TestCase):
         self.assertEqual(result_matrix.columns, columns1)
 
         output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_WireVector()
+        output <<= result_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1013,7 +1021,7 @@ class TestMatrixInplaceAdd(unittest.TestCase):
         self.assertEqual(first_matrix.columns, columns1)
 
         output = pyrtl.Output(name='output', bitwidth=len(first_matrix))
-        output <<= first_matrix.to_WireVector()
+        output <<= first_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1093,7 +1101,7 @@ class TestMatrixSub(unittest.TestCase):
         self.assertEqual(result_matrix.columns, columns1)
 
         output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_WireVector()
+        output <<= result_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1176,7 +1184,7 @@ class TestMatrixInplaceSub(unittest.TestCase):
         self.assertEqual(first_matrix.columns, columns1)
 
         output = pyrtl.Output(name='output', bitwidth=len(first_matrix))
-        output <<= first_matrix.to_WireVector()
+        output <<= first_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1267,7 +1275,7 @@ class TestMatrixMultiply(unittest.TestCase):
         self.assertEqual(result_matrix.columns, columns1)
 
         output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_WireVector()
+        output <<= result_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1330,7 +1338,7 @@ class TestMatrixMultiply(unittest.TestCase):
         self.assertEqual(result_matrix.columns, columns)
 
         output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_WireVector()
+        output <<= result_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1417,7 +1425,7 @@ class TestMatrixInplaceMultiply(unittest.TestCase):
         self.assertEqual(first_matrix.columns, columns1)
 
         output = pyrtl.Output(name='output', bitwidth=len(first_matrix))
-        output <<= first_matrix.to_WireVector()
+        output <<= first_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1516,7 +1524,7 @@ class TestMatrixMatrixMultiply(unittest.TestCase):
         self.assertEqual(result_matrix.columns, columns2)
 
         output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_WireVector()
+        output <<= result_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1601,7 +1609,7 @@ class TestMatrixInplaceMatrixMultiply(unittest.TestCase):
         self.assertEqual(first_matrix.columns, columns2)
 
         output = pyrtl.Output(name='output', bitwidth=len(first_matrix))
-        output <<= first_matrix.to_WireVector()
+        output <<= first_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1666,7 +1674,7 @@ class TestMatrixMatrixPower(unittest.TestCase):
         result_matrix = matrix ** exp
 
         output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_WireVector()
+        output <<= result_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1708,7 +1716,7 @@ class TestMatrixInplaceMatrixPower(unittest.TestCase):
         matrix **= exp
 
         output = pyrtl.Output(name='output', bitwidth=len(matrix))
-        output <<= matrix.to_WireVector()
+        output <<= matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1741,7 +1749,7 @@ class TestMultiply(unittest.TestCase):
         self.assertEqual(result_matrix.columns, 3)
 
         output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_WireVector()
+        output <<= result_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1768,7 +1776,7 @@ class TestMultiply(unittest.TestCase):
         self.assertEqual(result_matrix.columns, 3)
 
         output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_WireVector()
+        output <<= result_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -1914,7 +1922,7 @@ class TestSum(unittest.TestCase):
         if axis is None:
             output <<= result
         else:
-            output <<= result.to_WireVector()
+            output <<= result.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -2059,7 +2067,7 @@ class TestMin(unittest.TestCase):
         if axis is None:
             output <<= result
         else:
-            output <<= result.to_WireVector()
+            output <<= result.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -2203,7 +2211,7 @@ class TestMax(unittest.TestCase):
         if axis is None:
             output <<= result
         else:
-            output <<= result.to_WireVector()
+            output <<= result.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -2357,7 +2365,7 @@ class TestArgMax(unittest.TestCase):
         if axis is None:
             output <<= result
         else:
-            output <<= result.to_WireVector()
+            output <<= result.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -2546,7 +2554,7 @@ class TestDot(unittest.TestCase):
         if isinstance(result_matrix, pyrtl.WireVector):
             output <<= result_matrix
         else:
-            output <<= result_matrix.to_WireVector()
+            output <<= result_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
@@ -2608,6 +2616,4 @@ def check_matrix_matches(first, second):
 
 
 if __name__ == '__main__':
-    # unittest.main(
-    #    defaultTest='TestDot', verbosity=2)
-    unittest.main(verbosity=2)
+    unittest.main()
