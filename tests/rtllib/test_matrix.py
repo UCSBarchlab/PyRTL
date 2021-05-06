@@ -2574,6 +2574,143 @@ class TestDot(unittest.TestCase):
                 for j in range(len(expected_output[0])):
                     self.assertEqual(given_output[i][j], expected_output[i][j])
 
+class TestHStack(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def check_against_array(self, matrix, expected):
+        output = pyrtl.Output(name='output')
+        output <<= matrix.to_wirevector()
+
+        sim = pyrtl.Simulation()
+        sim.step({})
+
+        given_output = matrix_result(sim.inspect("output"),
+                                     matrix.rows, matrix.columns, matrix.bits)
+
+        for r in range(len(expected)):
+            for c in range(len(expected[0])):
+                self.assertEqual(given_output[r][c], expected[r][c])
+
+    def test_hstack_two_row_vectors(self):
+        v1 = Matrix.Matrix(1, 3, bits=4, value=[[1, 2, 3]])
+        v2 = Matrix.Matrix(1, 5, bits=8, value=[[4, 5, 6, 7, 8]])
+        v3 = Matrix.hstack(v1, v2)
+        self.assertEqual(v3.bits, 8)
+        self.assertEqual(v3.max_bits, max(v1.max_bits, v2.max_bits))
+        self.check_against_array(v3, [[1, 2, 3, 4, 5, 6, 7, 8]])
+
+    def test_hstack_one_row_vector(self):
+        v1 = Matrix.Matrix(1, 3, bits=4, value=[[1, 2, 3]])
+        v2 = Matrix.hstack(v1)
+        self.assertEqual(v2.bits, 4)
+        self.assertEqual(v2.max_bits, v1.max_bits)
+        self.check_against_array(v2, [[1, 2, 3]])
+
+    def test_concatenate(self):
+        m1 = Matrix.Matrix(2, 3, bits=4, value=[[1, 2, 3], [4, 5, 6]])
+        m2 = Matrix.Matrix(2, 5, bits=8, value=[[7, 8, 9, 10, 11], [12, 13, 14, 15, 16]])
+        m3 = Matrix.concatenate([m1, m2])
+        self.check_against_array(m3,
+            [[1, 2, 3, 7, 8, 9, 10, 11],
+             [4, 5, 6, 12, 13, 14, 15, 16]]
+        )
+
+    def test_hstack_several_matrices(self):
+        m1 = Matrix.Matrix(2, 3, bits=4, value=[[1, 2, 3], [4, 5, 6]])
+        m2 = Matrix.Matrix(2, 5, bits=8, value=[[7, 8, 9, 10, 11], [12, 13, 14, 15, 16]])
+        m3 = Matrix.Matrix(2, 1, bits=3, value=[[0], [1]])
+        m4 = Matrix.hstack(m1, m2, m3)
+        self.assertEqual(m4.bits, 8)
+        self.assertEqual(m4.max_bits, max(m1.max_bits, m2.max_bits, m3.max_bits))
+        self.check_against_array(m4,
+            [[1, 2, 3, 7, 8, 9, 10, 11, 0],
+             [4, 5, 6, 12, 13, 14, 15, 16, 1]]
+        )
+
+    def test_hstack_fail_on_inconsistent_rows(self):
+        m1 = Matrix.Matrix(1, 2, bits=2, value=[[0, 1]])
+        m2 = Matrix.Matrix(2, 2, bits=4, value=[[1, 2], [3, 4]])
+        m3 = Matrix.Matrix(1, 4, bits=3, value=[[0, 0, 0, 0]])
+        with self.assertRaises(pyrtl.PyrtlError):
+            _v = Matrix.hstack(m1, m2, m3)
+
+    def test_hstack_empty_args_fails(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            _v = Matrix.hstack()
+
+
+class TestVStack(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def check_against_array(self, matrix, expected):
+        output = pyrtl.Output(name='output')
+        output <<= matrix.to_wirevector()
+
+        sim = pyrtl.Simulation()
+        sim.step({})
+
+        given_output = matrix_result(sim.inspect("output"),
+                                     matrix.rows, matrix.columns, matrix.bits)
+
+        for r in range(len(expected)):
+            for c in range(len(expected[0])):
+                self.assertEqual(given_output[r][c], expected[r][c])
+
+    def test_vstack_two_column_vectors(self):
+        v1 = Matrix.Matrix(3, 1, bits=4, value=[[1], [2], [3]])
+        v2 = Matrix.Matrix(5, 1, bits=8, value=[[4], [5], [6], [7], [8]])
+        v3 = Matrix.vstack(v1, v2)
+        self.assertEqual(v3.bits, 8)
+        self.assertEqual(v3.max_bits, max(v1.max_bits, v2.max_bits))
+        self.check_against_array(v3, [[1], [2], [3], [4], [5], [6], [7], [8]])
+
+    def test_vstack_one_column_vector(self):
+        v1 = Matrix.Matrix(3, 1, bits=4, value=[[1], [2], [3]])
+        v2 = Matrix.vstack(v1)
+        self.assertEqual(v2.bits, 4)
+        self.assertEqual(v2.max_bits, v1.max_bits)
+        self.check_against_array(v2, [[1], [2], [3]])
+
+    def test_concatenate(self):
+        m1 = Matrix.Matrix(2, 3, bits=5, value=[[1, 2, 3], [4, 5, 6]])
+        m2 = Matrix.Matrix(1, 3, bits=10, value=[[7, 8, 9]])
+        m3 = Matrix.concatenate([m1, m2], axis=1)
+        self.check_against_array(m3,
+            [[1,2,3],
+             [4,5,6],
+             [7,8,9]]
+        )
+
+    def test_vstack_several_matrix(self):
+        m1 = Matrix.Matrix(2, 3, bits=5, value=[[1, 2, 3], [4, 5, 6]])
+        m2 = Matrix.Matrix(1, 3, bits=10, value=[[7, 8, 9]])
+        m3 = Matrix.Matrix(3, 3, bits=8, value=[[10, 11, 12], [13, 14, 15], [16, 17, 18]])
+        m4 = Matrix.vstack(m1, m2, m3)
+    
+        self.assertEqual(m4.bits, 10)
+        self.assertEqual(m4.max_bits, max(m1.max_bits, m2.max_bits, m3.max_bits))
+        self.check_against_array(m4,
+            [[1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9],
+             [10, 11, 12],
+             [13, 14, 15],
+             [16, 17, 18]
+            ]
+        )
+
+    def test_vstack_fail_on_inconsistent_cols(self):
+        m1 = Matrix.Matrix(1, 1, bits=2, value=[[0]])
+        m2 = Matrix.Matrix(2, 2, bits=4, value=[[1, 2], [3, 4]])
+        m3 = Matrix.Matrix(3, 1, bits=3, value=[[0], [0], [0]])
+        with self.assertRaises(pyrtl.PyrtlError):
+            _v = Matrix.vstack(m1, m2, m3)
+
+    def test_vstack_empty_args_fails(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            _v = Matrix.vstack()
 
 '''
 These are helpful functions to use in testing

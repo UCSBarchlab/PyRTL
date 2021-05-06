@@ -1,4 +1,5 @@
 from functools import reduce
+from six.moves import builtins
 
 from pyrtl.rtllib import multipliers as mult
 
@@ -27,7 +28,7 @@ class Matrix(object):
             If a WireVector, must be of size `rows * columns * bits`. If a list, must have
             `rows` rows and `columns` columns, and every element must fit in `bits` size.
             If not given, the matrix initializes to 0.
-        :param int max_bits: 
+        :param int max_bits:
         :return: a constructed Matrix object.
         '''
         if not isinstance(rows, int):
@@ -339,12 +340,12 @@ class Matrix(object):
                 if value.rows != (rows.stop - rows.start):
                     raise PyrtlError(
                         'Value rows mismatch. Expected Matrix '
-                        'of rows "%s", instead recieved Matrix of rows "%s' %
+                        'of rows "%s", instead recieved Matrix of rows "%s"' %
                         (str(rows.stop - rows.start), str(value.rows)))
                 if value.columns != (columns.stop - columns.start):
                     raise PyrtlError(
                         'Value columns mismatch. Expected Matrix '
-                        'of columns "%s", instead recieved Matrix of columns "%s' %
+                        'of columns "%s", instead recieved Matrix of columns "%s"' %
                         (str(columns.stop - columns.start), str(value.columns)))
 
                 for i in range(rows.stop - rows.start):
@@ -959,3 +960,123 @@ def dot(first, second):
 
     # Third case when it is Matrix Multiply
     return first.__matmul__(second)
+
+
+def hstack(*matrices):
+    """ Stack matrices in sequence horizontally (column-wise).
+
+    :param list[Matrix] matrices: a list of matrices to concatenate one after another horizontally
+    :return Matrix: a new Matrix, with the same number of rows as the original, with
+        a bitwidth equal to the max of the bitwidths of all the matrices
+
+    All the matrices must have the same number of rows and same 'signed' value.
+
+    For example:
+
+        m1 = Matrix(2, 3, bits=5,  value=[[1,2,3],
+                                          [4,5,6]])
+        m2 = Matrix(2, 1, bits=10, value=[[17],
+                                          [23]]])
+        m3 = hstack(m1, m2)
+
+    m3 looks like:
+
+        [[1,2,3,17],
+         [4,5,6,23]]
+    """
+    if len(matrices) == 0:
+        raise PyrtlError("Must supply at least one matrix to hstack()")
+
+    if len(matrices) == 1:
+        return matrices[0].copy()
+
+    new_rows = matrices[0].rows
+    if any([m.rows != new_rows for m in matrices]):
+        raise PyrtlError("All matrices being hstacked together must have the same number of rows")
+
+    new_signed = matrices[0].signed
+    if any([m.signed != new_signed for m in matrices]):
+        raise PyrtlError("All matrices being hstacked together must have the same signedness")
+
+    new_cols = builtins.sum(m.columns for m in matrices)
+    new_bits = builtins.max(m.bits for m in matrices)
+    new_max_bits = builtins.max(m.max_bits for m in matrices)
+    new = Matrix(new_rows, new_cols, new_bits, max_bits=new_max_bits)
+
+    new_c = 0
+    for matrix in matrices:
+        for c in range(matrix.columns):
+            for r in range(matrix.rows):
+                new[r, new_c] = matrix[r, c]
+            new_c += 1
+
+    return new
+
+
+def vstack(*matrices):
+    """ Stack matrices in sequence vertically (row-wise).
+
+    :param list[Matrix] matrices: a list of matrices to concatenate one after another vertically
+    :return Matrix: a new Matrix, with the same number of columns as the original, with
+        a bitwidth equal to the max of the bitwidths of all the matrices
+
+    All the matrices must have the same number of columns and same 'signed' value.
+
+    For example:
+
+        m1 = Matrix(2, 3, bits=5,  value=[[1,2,3],
+                                          [4,5,6]])
+        m2 = Matrix(1, 3, bits=10, value=[[7,8,9]])
+        m3 = vstack(m1, m2)
+
+    m3 looks like:
+
+        [[1,2,3],
+         [4,5,6],
+         [7,8,9]]
+    """
+    if len(matrices) == 0:
+        raise PyrtlError("Must supply at least one matrix to hstack()")
+
+    if len(matrices) == 1:
+        return matrices[0].copy()
+
+    new_cols = matrices[0].columns
+    if any([m.columns != new_cols for m in matrices]):
+        raise PyrtlError("All matrices being vstacked together must have the "
+                         "same number of columns")
+
+    new_signed = matrices[0].signed
+    if any([m.signed != new_signed for m in matrices]):
+        raise PyrtlError("All matrices being hstacked together must have the same signedness")
+
+    new_rows = builtins.sum(m.rows for m in matrices)
+    new_bits = builtins.max(m.bits for m in matrices)
+    new_max_bits = builtins.max(m.max_bits for m in matrices)
+    new = Matrix(new_rows, new_cols, new_bits, max_bits=new_max_bits)
+
+    new_r = 0
+    for matrix in matrices:
+        for r in range(matrix.rows):
+            for c in range(matrix.columns):
+                new[new_r, c] = matrix[r, c]
+            new_r += 1
+
+    return new
+
+
+def concatenate(matrices, axis=0):
+    """ Join a sequence of matrices along an existing axis.
+
+    :param list[Matrix] matrices: a list of matrices to concatenate one after another
+    :param int axix: axis along which to join; 0 is horizontally, 1 is vertically (defaults to 0)
+    :return: a new Matrix composed of the given matrices joined together
+
+    This function essentially wraps hstack/vstack.
+    """
+    if axis == 0:
+        return hstack(*matrices)
+    elif axis == 1:
+        return vstack(*matrices)
+    else:
+        raise PyrtlError("Only allowable axes are 0 or 1")
