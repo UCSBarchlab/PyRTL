@@ -5,7 +5,7 @@ import pyrtl
 from .test_importexport import full_adder_blif
 
 
-graphviz_string = """\
+graphviz_string_detailed = """\
 digraph g {
     graph [splines="spline", outputorder="edgesfirst"];
     node [shape=circle, style=filled, fillcolor=lightblue1,
@@ -35,6 +35,138 @@ digraph g {
     n9 -> n11 [label="tmp3/6 (Delay: 706.50)", penwidth="6", arrowhead="none"];
     n10 -> n11 [label="tmp4/4 (Delay: 0.00)", penwidth="6", arrowhead="none"];
     n11 -> n4 [label="tmp5/10 (Delay: 706.50)", penwidth="6", arrowhead="normal"];
+    {
+        rank=same;
+        edge[style=invis];
+        n6 -> n0;
+        rankdir=LR;
+    }
+    {
+        rank=same;
+        edge[style=invis];
+        n10 -> n9;
+        rankdir=LR;
+    }
+}
+
+"""
+
+graphviz_string_arg_ordered = """\
+digraph g {
+    graph [splines="spline", outputorder="edgesfirst"];
+    node [shape=circle, style=filled, fillcolor=lightblue1,
+        fontcolor=black, fontname=helvetica, penwidth=0,
+        fixedsize=shape];
+    edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
+    n0 [label="0", shape=circle, fillcolor=lightgrey];
+    n1 [label="0", shape=circle, fillcolor=lightgrey];
+    n2 [label="0", shape=circle, fillcolor=lightgrey];
+    n3 [label="i", shape=invhouse, fillcolor=coral];
+    n4 [label="j", shape=invhouse, fillcolor=coral];
+    n5 [label="", height=.1, width=.1];
+    n6 [label="o", shape=house, fillcolor=lawngreen];
+    n7 [label="", height=.1, width=.1];
+    n8 [label="q", shape=house, fillcolor=lawngreen];
+    n9 [label="[0]*4", fillcolor=azure1, height=.25, width=.25];
+    n10 [label="concat", height=.1, width=.1];
+    n11 [label="<"];
+    n12 [label="[0]*7", fillcolor=azure1, height=.25, width=.25];
+    n13 [label="concat", height=.1, width=.1];
+    n14 [label="[0]*4", fillcolor=azure1, height=.25, width=.25];
+    n15 [label="concat", height=.1, width=.1];
+    n16 [label=">"];
+    n0 -> n9 [label="", penwidth="2", arrowhead="none"];
+    n1 -> n12 [label="", penwidth="2", arrowhead="none"];
+    n2 -> n14 [label="", penwidth="2", arrowhead="none"];
+    n3 -> n11 [label="", penwidth="6", arrowhead="normal"];
+    n3 -> n16 [label="", penwidth="6", arrowhead="normal"];
+    n4 -> n10 [label="", penwidth="6", arrowhead="none"];
+    n4 -> n15 [label="", penwidth="6", arrowhead="none"];
+    n5 -> n6 [label="", penwidth="6", arrowhead="normal"];
+    n7 -> n8 [label="", penwidth="2", arrowhead="normal"];
+    n9 -> n10 [label="", penwidth="6", arrowhead="none"];
+    n10 -> n11 [label="", penwidth="6", arrowhead="normal"];
+    n11 -> n13 [label="", penwidth="2", arrowhead="none"];
+    n12 -> n13 [label="", penwidth="6", arrowhead="none"];
+    n13 -> n5 [label="", penwidth="6", arrowhead="normal"];
+    n14 -> n15 [label="", penwidth="6", arrowhead="none"];
+    n15 -> n16 [label="", penwidth="6", arrowhead="normal"];
+    n16 -> n7 [label="", penwidth="2", arrowhead="normal"];
+    {
+        rank=same;
+        edge[style=invis];
+        n9 -> n4;
+        rankdir=LR;
+    }
+    {
+        rank=same;
+        edge[style=invis];
+        n3 -> n10;
+        rankdir=LR;
+    }
+    {
+        rank=same;
+        edge[style=invis];
+        n12 -> n11;
+        rankdir=LR;
+    }
+    {
+        rank=same;
+        edge[style=invis];
+        n14 -> n4;
+        rankdir=LR;
+    }
+    {
+        rank=same;
+        edge[style=invis];
+        n15 -> n3;
+        rankdir=LR;
+    }
+}
+
+"""
+
+graphviz_string_arg_unordered = """\
+digraph g {
+    graph [splines="spline", outputorder="edgesfirst"];
+    node [shape=circle, style=filled, fillcolor=lightblue1,
+        fontcolor=black, fontname=helvetica, penwidth=0,
+        fixedsize=shape];
+    edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
+    n0 [label="0", shape=circle, fillcolor=lightgrey];
+    n1 [label="0", shape=circle, fillcolor=lightgrey];
+    n2 [label="0", shape=circle, fillcolor=lightgrey];
+    n3 [label="i", shape=invhouse, fillcolor=coral];
+    n4 [label="j", shape=invhouse, fillcolor=coral];
+    n5 [label="", height=.1, width=.1];
+    n6 [label="o", shape=house, fillcolor=lawngreen];
+    n7 [label="", height=.1, width=.1];
+    n8 [label="q", shape=house, fillcolor=lawngreen];
+    n9 [label="[0]*4", fillcolor=azure1, height=.25, width=.25];
+    n10 [label="concat", height=.1, width=.1];
+    n11 [label="<"];
+    n12 [label="[0]*7", fillcolor=azure1, height=.25, width=.25];
+    n13 [label="concat", height=.1, width=.1];
+    n14 [label="[0]*4", fillcolor=azure1, height=.25, width=.25];
+    n15 [label="concat", height=.1, width=.1];
+    n16 [label=">"];
+    n0 -> n9 [label="", penwidth="2", arrowhead="none"];
+    n1 -> n12 [label="", penwidth="2", arrowhead="none"];
+    n2 -> n14 [label="", penwidth="2", arrowhead="none"];
+    n3 -> n11 [label="", penwidth="6", arrowhead="normal"];
+    n3 -> n16 [label="", penwidth="6", arrowhead="normal"];
+    n4 -> n10 [label="", penwidth="6", arrowhead="none"];
+    n4 -> n15 [label="", penwidth="6", arrowhead="none"];
+    n5 -> n6 [label="", penwidth="6", arrowhead="normal"];
+    n7 -> n8 [label="", penwidth="2", arrowhead="normal"];
+    n9 -> n10 [label="", penwidth="6", arrowhead="none"];
+    n10 -> n11 [label="", penwidth="6", arrowhead="normal"];
+    n11 -> n13 [label="", penwidth="2", arrowhead="none"];
+    n12 -> n13 [label="", penwidth="6", arrowhead="none"];
+    n13 -> n5 [label="", penwidth="6", arrowhead="normal"];
+    n14 -> n15 [label="", penwidth="6", arrowhead="none"];
+    n15 -> n16 [label="", penwidth="6", arrowhead="normal"];
+    n16 -> n7 [label="", penwidth="2", arrowhead="normal"];
 }
 
 """
@@ -98,9 +230,34 @@ class TestOutputGraphs(unittest.TestCase):
         with io.StringIO() as vfile:
             pyrtl.output_to_graphviz(
                 file=vfile,
-                namer=pyrtl.graphviz_detailed_namer(node_fanout, wire_delay)
+                namer=pyrtl.graphviz_detailed_namer(node_fanout, wire_delay),
+                maintain_arg_order=True
             )
-            self.assertEqual(vfile.getvalue(), graphviz_string)
+            self.assertEqual(vfile.getvalue(), graphviz_string_detailed)
+
+    def test_output_to_graphviz_correct_output_with_arg_ordering(self):
+        i = pyrtl.Input(8, 'i')
+        j = pyrtl.Input(4, 'j')
+        o = pyrtl.Output(8, 'o')
+        q = pyrtl.Output(1, 'q')
+        o <<= i < j
+        q <<= j > i
+
+        with io.StringIO() as vfile:
+            pyrtl.output_to_graphviz(file=vfile, maintain_arg_order=True)
+            self.assertEqual(vfile.getvalue(), graphviz_string_arg_ordered)
+
+    def test_output_to_graphviz_correct_output_without_arg_ordering(self):
+        i = pyrtl.Input(8, 'i')
+        j = pyrtl.Input(4, 'j')
+        o = pyrtl.Output(8, 'o')
+        q = pyrtl.Output(1, 'q')
+        o <<= i < j
+        q <<= j > i
+
+        with io.StringIO() as vfile:
+            pyrtl.output_to_graphviz(file=vfile)
+            self.assertEqual(vfile.getvalue(), graphviz_string_arg_unordered)
 
 
 class TestNetGraph(unittest.TestCase):

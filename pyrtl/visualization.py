@@ -6,8 +6,9 @@ The functions provided write the block as a given visual format to the file.
 """
 
 from __future__ import print_function, unicode_literals
+import collections
 
-from .pyrtlexceptions import PyrtlError
+from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, LogicNet
 from .wire import WireVector, Input, Output, Const, Register
 
@@ -298,7 +299,8 @@ def graphviz_detailed_namer(
     return namer
 
 
-def output_to_graphviz(file, block=None, namer=_graphviz_default_namer, split_state=True):
+def output_to_graphviz(file, block=None, namer=_graphviz_default_namer,
+                       split_state=True, maintain_arg_order=False):
     """ Walk the block and output it in Graphviz format to the open file.
 
     :param file: Open file to write to
@@ -306,11 +308,15 @@ def output_to_graphviz(file, block=None, namer=_graphviz_default_namer, split_st
     :param namer: Function used to label each edge and node; see 'block_to_graphviz_string'
         for more information.
     :param split_state: If True, visually split the connections to/from a register update net.
+    :param maintain_arg_order: If True, will add ordering constraints so that that incoming edges
+        are ordered left-to-right for nets where argument order matters (e.g. '<'). Keeping this
+        as False results in a cleaner, though less visually precise, graphical output.
     """
-    print(block_to_graphviz_string(block, namer, split_state), file=file)
+    print(block_to_graphviz_string(block, namer, split_state, maintain_arg_order), file=file)
 
 
-def block_to_graphviz_string(block=None, namer=_graphviz_default_namer, split_state=True):
+def block_to_graphviz_string(block=None, namer=_graphviz_default_namer,
+                             split_state=True, maintain_arg_order=False):
     """ Return a Graphviz string for the block.
 
     :param namer: A function mapping graph objects (wires/logic nets) to labels.
@@ -320,6 +326,9 @@ def block_to_graphviz_string(block=None, namer=_graphviz_default_namer, split_st
         means that registers will be appear as source nodes of the network, and
         'r' nets (i.e. the logic for setting a register's next value) will
         be treated as sink nodes of the network.
+    :param maintain_arg_order: If True, will add ordering constraints so that that incoming edges
+        are ordered left-to-right for nets where argument order matters (e.g. '<'). Keeping this
+        as False results in a cleaner, though less visually precise, graphical output.
 
     The normal namer function will label user-named wires with their names and label the nodes
     (logic nets or Input/Output/Const terminals) with their operator symbol or name/value,
@@ -371,6 +380,7 @@ digraph g {
         node_index_map[node] = index
 
     # print the list of edges
+    srcs = collections.defaultdict(list)
     for _from in sorted(graph.keys(), key=_node_sort_key):
         for _to in sorted(graph[_from].keys(), key=_node_sort_key):
             from_index = node_index_map[_from]
@@ -379,6 +389,33 @@ digraph g {
                 is_to_splitmerge = True if hasattr(_to, 'op') and _to.op in 'cs' else False
                 label = namer(edge, True, is_to_splitmerge, False)
                 rstring += '    n%d -> n%d %s;\n' % (from_index, to_index, label)
+                srcs[_to].append((_from, edge))
+
+    # Maintain left-to-right order of incoming wires for nets where order matters.
+    # This won't be visually perfect sometimes (especially for a wire used twice
+    # in a net's argument list), but for the majority of cases this will improve
+    # the visualization.
+    def index_of(w, args):
+        # Special helper so we compare id rather than using builtin operators
+        ix = 0
+        for arg in args:
+            if w is arg:
+                return ix
+            ix += 1
+        raise PyrtlInternalError('Expected to find wire in set of args')
+
+    if maintain_arg_order:
+        block = working_block(block)
+        for net in sorted(block.logic_subset(op='c-<>x@'), key=_node_sort_key):
+            args = [(node_index_map[n], wire) for (n, wire) in srcs[net]]
+            args.sort(key=lambda t: index_of(t[1], net.args))
+            s = ' -> '.join(['n%d' % n for n, _ in args])
+            rstring += '    {\n'
+            rstring += '        rank=same;\n'
+            rstring += '        edge[style=invis];\n'
+            rstring += '        ' + s + ';\n'
+            rstring += '        rankdir=LR;\n'
+            rstring += '    }\n'
 
     rstring += '}\n'
     return rstring
@@ -399,16 +436,20 @@ def output_to_svg(file, block=None, split_state=True):
     print(block_to_svg(block, split_state), file=file)
 
 
-def block_to_svg(block=None, split_state=True):
+def block_to_svg(block=None, split_state=True, maintain_arg_order=False):
     """ Return an SVG for the block.
 
     :param block: Block to use (defaults to current working block)
     :param split_state: If True, visually split the connections to/from a register update net.
+    :param maintain_arg_order: If True, will add ordering constraints so that that incoming edges
+        are ordered left-to-right for nets where argument order matters (e.g. '<'). Keeping this
+        as False results in a cleaner, though less visually precise, graphical output.
     :return: The SVG representation of the block
     """
     try:
         from graphviz import Source
-        return Source(block_to_graphviz_string(block, split_state=split_state))._repr_svg_()
+        return Source(block_to_graphviz_string(block, split_state=split_state,
+                                               maintain_arg_order=maintain_arg_order))._repr_svg_()
     except ImportError:
         raise PyrtlError('need graphviz installed (try "pip install graphviz")')
 
