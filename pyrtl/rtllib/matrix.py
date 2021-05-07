@@ -276,10 +276,13 @@ class Matrix(object):
         ''' Mutator for the matrix.
 
         :param (slice/int rows, slice/int columns) key: The key value to set
-        :param Wirevector/Matrix value: The value in which to set the key
+        :param Wirevector/int/Matrix value: The value in which to set the key
 
         Called when setting a value using square brackets.
         (e.g. matrix[a, b] = value)
+
+        The value given will be truncated to match the bitwidth of all the elements
+        in the matrix.
         '''
 
         if isinstance(key, tuple):
@@ -354,7 +357,7 @@ class Matrix(object):
                             as_wires(value[i, j], bitwidth=self.bits)
 
             # Second case when setting value to wirevector
-            elif isinstance(value, WireVector):
+            elif isinstance(value, (int, WireVector)):
                 if ((rows.stop - rows.start) != 1) or \
                         ((columns.stop - columns.start) != 1):
                     raise PyrtlError(

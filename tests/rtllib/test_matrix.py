@@ -5,12 +5,47 @@ import unittest
 import pyrtl
 import pyrtl.rtllib.matrix as Matrix
 
+class MatrixTestBase(unittest.TestCase):
 
-class TestMatrixInit(unittest.TestCase):
+    def check_against_expected(self, result, expected_output, floored=False):
+        """
+        :param Matrix result: matrix that is the result of some operation we're testing
+        :param list[list] expected_output: a list of lists to compare against
+            the resulting matrix after simulation
+        :param bool floored: needed to indicate that we're checking the result of
+            a matrix subtraction, to ensure the matrix properly floored results to
+            zero when needed (defaults to False)
+        """
+        output = pyrtl.Output(name='output')
+
+        if isinstance(result, pyrtl.WireVector):
+            output <<= result
+        else:
+            output <<= result.to_wirevector()
+
+        sim = pyrtl.Simulation()
+        sim.step({})
+
+        if isinstance(result, pyrtl.WireVector):
+            given_output = sim.inspect("output")
+        else:
+            given_output = matrix_result(sim.inspect("output"),
+                                         result.rows, result.columns, result.bits)
+
+        if isinstance(given_output, int):
+            self.assertEqual(given_output, expected_output)
+        else:
+            for r in range(len(expected_output)):
+                for c in range(len(expected_output[0])):
+                    expected = expected_output[r][c]
+                    if floored and expected < 0:
+                        expected = 0
+                    self.assertEqual(given_output[r][c], expected)
+
+
+
+class TestMatrixInit(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_init_basic(self):
@@ -123,27 +158,15 @@ class TestMatrixInit(unittest.TestCase):
         self.init_wirevector(matrix, rows, columns, bits)
 
     def init_wirevector(self, matrix_value, rows, columns, bits):
-        matrix_input = pyrtl.Input(rows * columns * bits, 'matrix_input')
+        matrix_input = pyrtl.Const(matrix_to_int(matrix_value, bits), rows * columns * bits)
         matrix = Matrix.Matrix(rows, columns, bits, value=matrix_input)
 
         self.assertEqual(rows, matrix.rows)
         self.assertEqual(columns, matrix.columns)
         self.assertEqual(bits, matrix.bits)
         self.assertEqual(len(matrix), (rows * columns * bits))
+        self.check_against_expected(matrix, matrix_value)
 
-        output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({matrix_input: matrix_to_int(matrix_value, bits)})
-
-        given_output = matrix_result(
-            sim.inspect("output"), rows, columns, bits)
-
-        for i in range(rows):
-            for j in range(columns):
-                self.assertEqual(given_output[i][j], matrix_value[i][j])
 
     def init_int_matrix(self, int_matrix, rows, columns, bits):
         matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix)
@@ -152,123 +175,55 @@ class TestMatrixInit(unittest.TestCase):
         self.assertEqual(columns, matrix.columns)
         self.assertEqual(bits, matrix.bits)
         self.assertEqual(len(matrix), (rows * columns * bits))
-
-        output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(
-            sim.inspect("output"), rows, columns, bits)
-
-        for i in range(rows):
-            for j in range(columns):
-                self.assertEqual(given_output[i][j], int_matrix[i][j])
+        self.check_against_expected(matrix, int_matrix)
 
 
-class TestMatrixBits(unittest.TestCase):
+class TestMatrixBits(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_bits_no_change(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-        matrix = Matrix.Matrix(
-            3, 3, 4, value=int_matrix)
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
 
         self.assertEqual(matrix.bits, 4)
-
-        output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(
-            sim.inspect("output"), 3, 3, 4)
-
-        for i in range(3):
-            for j in range(3):
-                self.assertEqual(given_output[i][j], int_matrix[i][j])
+        self.check_against_expected(matrix, int_matrix)
 
     def test_bits_basic_change_bits(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-        matrix = Matrix.Matrix(
-            3, 3, 4, value=int_matrix)
-
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
         matrix.bits = 5
 
         self.assertEqual(matrix.bits, 5)
-
-        output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-        given_output = matrix_result(
-            sim.inspect("output"), 3, 3, 5)
-
-        for i in range(3):
-            for j in range(3):
-                self.assertEqual(given_output[i][j], int_matrix[i][j])
+        self.check_against_expected(matrix, int_matrix)
 
     def test_bits_basic_change_bits_trunicate(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-        matrix = Matrix.Matrix(
-            3, 3, 4, value=int_matrix)
-
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
         matrix.bits = 2
-
-        self.assertEqual(matrix.bits, 2)
-
-        output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-        given_output = matrix_result(
-            sim.inspect("output"), 3, 3, 2)
-
         int_matrix = [[0, 1, 2], [3, 0, 1], [2, 3, 0]]
 
-        for i in range(3):
-            for j in range(3):
-                self.assertEqual(given_output[i][j], int_matrix[i][j])
+        self.assertEqual(matrix.bits, 2)
+        self.check_against_expected(matrix, int_matrix)
 
     def test_bits_fail_change_bits_zero(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
-
+            matrix = Matrix.Matrix(3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
             matrix.bits = 0
 
     def test_bits_fail_change_bits_negative(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
-
+            matrix = Matrix.Matrix(3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
             matrix.bits = -1
 
     def test_bits_fail_change_bits_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
-
+            matrix = Matrix.Matrix(3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
             matrix.bits = "1"
 
 
-class TestMatrixGetItem(unittest.TestCase):
+class TestMatrixGetItem(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_getitem_basic_case(self):
@@ -351,99 +306,37 @@ class TestMatrixGetItem(unittest.TestCase):
 
     def get_item(self, value_array, rows, columns, bits, x_slice, y_slice, expected_output):
         matrix = Matrix.Matrix(rows, columns, bits, value=value_array)
-
         item = matrix[x_slice, y_slice]
 
-        output = pyrtl.Output(name="output", bitwidth=len(item))
-
-        out_rows, out_columns = x_slice.stop - x_slice.start, \
-            y_slice.stop - y_slice.start
+        out_rows, out_columns = x_slice.stop - x_slice.start, y_slice.stop - y_slice.start
         if isinstance(item, Matrix.Matrix):
-            output <<= item.to_wirevector()
             self.assertEqual(out_rows, item.rows)
             self.assertEqual(out_columns, item.columns)
             self.assertEqual(bits, item.bits)
             self.assertEqual(len(item), out_rows * out_columns * bits)
-        else:
-            output <<= item
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), out_rows, out_columns, bits)
-
-        if isinstance(item, Matrix.Matrix):
-            for row in range(len(given_output)):
-                for column in range(len(given_output[0])):
-                    self.assertEqual(
-                        given_output[row][column], expected_output[row][column])
-        else:
-            self.assertEqual(given_output[0][0], expected_output)
+        self.check_against_expected(item, expected_output)
 
     def test_getitem_full(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
-
         item = matrix[:, :]
-
-        output = pyrtl.Output(name="output", bitwidth=len(item))
-        output <<= item.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect("output"), 3, 3, 4)
-        for i in range(3):
-            for j in range(3):
-                self.assertEqual(given_output[i][j], int_matrix[i][j])
+        self.check_against_expected(item, int_matrix)
 
     def test_getitem_full_row(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
-
         item = matrix[1]
-
-        output = pyrtl.Output(name="output", bitwidth=len(item))
-        output <<= item.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        expected_output = [[3], [4], [5]]
-
-        given_output = matrix_result(sim.inspect("output"), 3, 1, 4)
-        for column in range(len(given_output[0])):
-            self.assertEqual(
-                given_output[0][column], expected_output[0][column])
+        self.check_against_expected(item, [[3, 4, 5]])
 
     def test_getitem_negative(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
-
         item = matrix[-2:-1, -2:-1]
-
-        output = pyrtl.Output(name="output", bitwidth=len(item))
-        output <<= item
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = sim.inspect("output")
-        expected_output = 4
-
-        self.assertEqual(given_output, expected_output)
+        self.check_against_expected(item, 4)
 
 
-class TestMatrixSetItem(unittest.TestCase):
+class TestMatrixSetItem(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_setitem_basic_case(self):
@@ -550,11 +443,6 @@ class TestMatrixSetItem(unittest.TestCase):
             matrix = Matrix.Matrix(3, 3, 3)
             matrix[1, 0:2] = pyrtl.Const(0, bitwidth=3)
 
-    def test_getitem_fail_int_value(self):
-        with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            matrix[1, 1] = 1
-
     def test_getitem_fail_value_matrix_incorrect_rows(self):
         with self.assertRaises(pyrtl.PyrtlError):
             matrix = Matrix.Matrix(3, 3, 3)
@@ -573,103 +461,43 @@ class TestMatrixSetItem(unittest.TestCase):
         value_matrix = Matrix.Matrix(
             x_slice.stop - x_slice.start, y_slice.stop - y_slice.start,
             bits, value=value)
-
         matrix[x_slice, y_slice] = value_matrix
-
-        output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows, columns, bits)
-
-        for row in range(len(given_output)):
-            for column in range(len(given_output[0])):
-                self.assertEqual(
-                    given_output[row][column], expected_output[row][column])
+        self.check_against_expected(matrix, expected_output)
 
     def test_setitem_negative(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
-
         matrix[-2:-1, -2:-1] = pyrtl.Const(0)
-
-        output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), 3, 3, 4)
-
         expected_output = [[0, 1, 2], [3, 0, 5], [6, 7, 8]]
+        self.check_against_expected(matrix, expected_output)
 
-        for row in range(len(given_output)):
-            for column in range(len(given_output[0])):
-                self.assertEqual(
-                    given_output[row][column], expected_output[row][column])
+    def test_setitem_raw_int(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        matrix[-2:-1, -2:-1] = 9
+        expected_output = [[0, 1, 2], [3, 9, 5], [6, 7, 8]]
+        self.check_against_expected(matrix, expected_output)
 
     def test_setitem_full(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         value_int_matrix = [[8, 7, 6], [5, 4, 3], [2, 1, 0]]
         matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
         value_matrix = Matrix.Matrix(3, 3, 4, value=value_int_matrix)
-
         matrix[:, :] = value_matrix
-
-        output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), 3, 3, 4)
-
-        expected_output = value_int_matrix
-
-        for row in range(len(given_output)):
-            for column in range(len(given_output[0])):
-                self.assertEqual(
-                    given_output[row][column], expected_output[row][column])
+        self.check_against_expected(matrix, value_int_matrix)
 
     def test_setitem_full_row_item(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         value_int_matrix = [[8, 7, 6]]
         matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
         value_matrix = Matrix.Matrix(1, 3, 4, value=value_int_matrix)
-
         matrix[1] = value_matrix
-
-        output = pyrtl.Output(name="output", bitwidth=len(matrix))
-        output <<= matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), 3, 3, 4)
-
         expected_output = [[0, 1, 2], [8, 7, 6], [6, 7, 8]]
-
-        for row in range(len(given_output)):
-            for column in range(len(given_output[0])):
-                self.assertEqual(
-                    given_output[row][column], expected_output[row][column])
+        self.check_against_expected(matrix, expected_output)
 
 
-class TestPyRTLCopy(unittest.TestCase):
+class TestMatrixCopy(unittest.TestCase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_copy_basic(self):
@@ -684,8 +512,7 @@ class TestPyRTLCopy(unittest.TestCase):
 
     def copy(self, first_value, rows, columns, bits, second_value):
         matrix = Matrix.Matrix(rows, columns, bits, value=first_value)
-        change_matrix = Matrix.Matrix(
-            rows, columns, bits, value=second_value)
+        change_matrix = Matrix.Matrix(rows, columns, bits, value=second_value)
         copy_matrix = matrix.copy()
 
         self.assertEqual(copy_matrix.rows, matrix.rows)
@@ -693,42 +520,33 @@ class TestPyRTLCopy(unittest.TestCase):
         self.assertEqual(copy_matrix.bits, matrix.bits)
         self.assertEqual(len(copy_matrix), len(matrix))
 
-        copy_output = pyrtl.Output(
-            name="copy_output", bitwidth=len(copy_matrix))
+        copy_output = pyrtl.Output(name="copy_output", bitwidth=len(copy_matrix))
         copy_output <<= copy_matrix.to_wirevector()
 
-        matrix_output = pyrtl.Output(
-            name="matrix_output", bitwidth=len(matrix))
+        matrix_output = pyrtl.Output(name="matrix_output", bitwidth=len(matrix))
         matrix_output <<= matrix.to_wirevector()
 
         copy_matrix[:, :] = change_matrix[:, :]
 
-        matrix_output_1 = pyrtl.Output(
-            name="matrix_output_1", bitwidth=len(matrix))
+        matrix_output_1 = pyrtl.Output(name="matrix_output_1", bitwidth=len(matrix))
         matrix_output_1 <<= matrix.to_wirevector()
 
-        copy_output_1 = pyrtl.Output(
-            name="copy_output_1", bitwidth=len(copy_matrix))
+        copy_output_1 = pyrtl.Output(name="copy_output_1", bitwidth=len(copy_matrix))
         copy_output_1 <<= copy_matrix.to_wirevector()
 
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
         sim.step({})
 
-        given_output = matrix_result(sim.inspect(
-            "matrix_output"), rows, columns, bits)
-        expected_output = matrix_result(sim.inspect(
-            "copy_output"), rows, columns, bits)
+        given_output = matrix_result(sim.inspect("matrix_output"), rows, columns, bits)
+        expected_output = matrix_result(sim.inspect("copy_output"), rows, columns, bits)
 
         for i in range(rows):
             for j in range(columns):
                 self.assertEqual(given_output[i][j], expected_output[i][j])
 
-        given_output = matrix_result(sim.inspect(
-            "matrix_output_1"), rows, columns, bits)
-
-        expected_output = matrix_result(sim.inspect(
-            "copy_output_1"), rows, columns, bits)
+        given_output = matrix_result(sim.inspect("matrix_output_1"), rows, columns, bits)
+        expected_output = matrix_result(sim.inspect("copy_output_1"), rows, columns, bits)
 
         for i in range(rows):
             for j in range(columns):
@@ -736,11 +554,8 @@ class TestPyRTLCopy(unittest.TestCase):
                 self.assertNotEqual(given_output[i][j], expected_output[i][j])
 
 
-class TestPyRTLTranspose(unittest.TestCase):
+class TestMatrixTranspose(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_transpose_basic(self):
@@ -774,34 +589,17 @@ class TestPyRTLTranspose(unittest.TestCase):
 
     def transpose(self, int_matrix, rows, columns, bits, expected_output):
         matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix)
-
         transpose_matrix = matrix.transpose()
 
         self.assertEqual(columns, transpose_matrix.rows)
         self.assertEqual(rows, transpose_matrix.columns)
         self.assertEqual(bits, transpose_matrix.bits)
         self.assertEqual(len(transpose_matrix), rows * columns * bits)
-
-        output = pyrtl.Output(name="output", bitwidth=len(transpose_matrix))
-        output <<= transpose_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(
-            sim.inspect("output"), columns, rows, bits)
-
-        for i in range(columns):
-            for j in range(rows):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(transpose_matrix, expected_output)
 
 
-class TestMatrixReverse(unittest.TestCase):
+class TestMatrixReverse(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_reverse_basic(self):
@@ -837,34 +635,17 @@ class TestMatrixReverse(unittest.TestCase):
 
     def reverse(self, int_matrix, rows, columns, bits, expected_output):
         matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix)
-
         reversed_matrix = reversed(matrix)
 
         self.assertEqual(rows, reversed_matrix.rows)
         self.assertEqual(columns, reversed_matrix.columns)
         self.assertEqual(bits, reversed_matrix.bits)
         self.assertEqual(len(reversed_matrix), rows * columns * bits)
-
-        output = pyrtl.Output(name="output", bitwidth=len(reversed_matrix))
-        output <<= reversed_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(
-            sim.inspect("output"), rows, columns, bits)
-
-        for i in range(rows):
-            for j in range(columns):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(reversed_matrix, expected_output)
 
 
-class TestMatrixAdd(unittest.TestCase):
+class TestMatrixAdd(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_add_basic_case(self):
@@ -935,36 +716,17 @@ class TestMatrixAdd(unittest.TestCase):
 
     def add(self, first_int_matrix, rows1, columns1, bits1, second_int_matrix,
             rows2, columns2, bits2, expected_output):
-        first_matrix = Matrix.Matrix(
-            rows1, columns1, bits1, value=first_int_matrix)
-        second_matrix = Matrix.Matrix(
-            rows2, columns2, bits2, value=second_int_matrix)
-
+        first_matrix = Matrix.Matrix(rows1, columns1, bits1, value=first_int_matrix)
+        second_matrix = Matrix.Matrix(rows2, columns2, bits2, value=second_int_matrix)
         result_matrix = first_matrix + second_matrix
 
         self.assertEqual(result_matrix.rows, rows1)
         self.assertEqual(result_matrix.columns, columns1)
-
-        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows1, columns1, result_matrix.bits)
-
-        for i in range(rows1):
-            for j in range(columns1):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(result_matrix, expected_output)
 
 
-class TestMatrixInplaceAdd(unittest.TestCase):
+class TestMatrixInplaceAdd(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_iadd_basic(self):
@@ -1010,36 +772,17 @@ class TestMatrixInplaceAdd(unittest.TestCase):
 
     def iadd(self, first_int_matrix, rows1, columns1, bits1, second_int_matrix,
              rows2, columns2, bits2, expected_output):
-        first_matrix = Matrix.Matrix(
-            rows1, columns1, bits1, value=first_int_matrix)
-        second_matrix = Matrix.Matrix(
-            rows2, columns2, bits2, value=second_int_matrix)
-
+        first_matrix = Matrix.Matrix(rows1, columns1, bits1, value=first_int_matrix)
+        second_matrix = Matrix.Matrix(rows2, columns2, bits2, value=second_int_matrix)
         first_matrix += second_matrix
 
         self.assertEqual(first_matrix.rows, rows1)
         self.assertEqual(first_matrix.columns, columns1)
-
-        output = pyrtl.Output(name='output', bitwidth=len(first_matrix))
-        output <<= first_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows1, columns1, first_matrix.bits)
-
-        for i in range(rows1):
-            for j in range(columns1):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(first_matrix, expected_output)
 
 
-class TestMatrixSub(unittest.TestCase):
+class TestMatrixSub(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_sub_basic(self):
@@ -1055,8 +798,7 @@ class TestMatrixSub(unittest.TestCase):
 
     def test_sub_fail_int(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(
-                1, 3, 3)
+            first_matrix = Matrix.Matrix(1, 3, 3)
             result = first_matrix - 1
 
     def test_sub_fail_3_by_3_sub_3_by_2(self):
@@ -1090,39 +832,17 @@ class TestMatrixSub(unittest.TestCase):
 
     def sub(self, first_int_matrix, rows1, columns1, bits1, second_int_matrix,
             rows2, columns2, bits2, expected_output):
-        first_matrix = Matrix.Matrix(
-            rows1, columns1, bits1, value=first_int_matrix)
-        second_matrix = Matrix.Matrix(
-            rows2, columns2, bits2, value=second_int_matrix)
-
+        first_matrix = Matrix.Matrix(rows1, columns1, bits1, value=first_int_matrix)
+        second_matrix = Matrix.Matrix(rows2, columns2, bits2, value=second_int_matrix)
         result_matrix = first_matrix - second_matrix
 
         self.assertEqual(result_matrix.rows, rows1)
         self.assertEqual(result_matrix.columns, columns1)
-
-        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows1, columns1, result_matrix.bits)
-
-        for i in range(rows1):
-            for j in range(columns1):
-                if expected_output[i][j] > 0:
-                    self.assertEqual(given_output[i][j], expected_output[i][j])
-                else:
-                    self.assertEqual(given_output[i][j], 0)
+        self.check_against_expected(result_matrix, expected_output, floored=True)
 
 
-class TestMatrixInplaceSub(unittest.TestCase):
+class TestMatrixInplaceSub(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_isub_basic(self):
@@ -1173,36 +893,17 @@ class TestMatrixInplaceSub(unittest.TestCase):
 
     def isub(self, first_int_matrix, rows1, columns1, bits1, second_int_matrix,
              rows2, columns2, bits2, expected_output):
-        first_matrix = Matrix.Matrix(
-            rows1, columns1, bits1, value=first_int_matrix)
-        second_matrix = Matrix.Matrix(
-            rows2, columns2, bits2, value=second_int_matrix)
-
+        first_matrix = Matrix.Matrix(rows1, columns1, bits1, value=first_int_matrix)
+        second_matrix = Matrix.Matrix(rows2, columns2, bits2, value=second_int_matrix)
         first_matrix -= second_matrix
 
         self.assertEqual(first_matrix.rows, rows1)
         self.assertEqual(first_matrix.columns, columns1)
-
-        output = pyrtl.Output(name='output', bitwidth=len(first_matrix))
-        output <<= first_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows1, columns1, first_matrix.bits)
-
-        for i in range(rows1):
-            for j in range(columns1):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(first_matrix, expected_output)
 
 
-class TestMatrixMultiply(unittest.TestCase):
+class TestMatrixMultiply(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_element_wise_multiply_basic(self):
@@ -1233,14 +934,12 @@ class TestMatrixMultiply(unittest.TestCase):
 
     def test_element_wise_multiply_fail_3_by_3_multiply_3_by_2(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            self.element_wise_multiply([[2, 4, 3], [5, 4, 7], [2, 5, 1]], 3, 3,
-                                       4,
+            self.element_wise_multiply([[2, 4, 3], [5, 4, 7], [2, 5, 1]], 3, 3, 4,
                                        [[0, 1], [0, 1], [0, 1]], 3, 2, 4, [[]])
 
     def test_element_wise_multiply_fail_3_by_3_multiply_2_by_3(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            self.element_wise_multiply([[2, 4, 3], [5, 4, 7], [2, 5, 1]], 3, 3,
-                                       4,
+            self.element_wise_multiply([[2, 4, 3], [5, 4, 7], [2, 5, 1]], 3, 3, 4,
                                        [[0, 1, 1], [0, 1, 1]], 2, 3, 4, [[]])
     '''
     def test_element_wise_multiply_random_case(self):
@@ -1264,29 +963,13 @@ class TestMatrixMultiply(unittest.TestCase):
 
     def element_wise_multiply(self, first_int_matrix, rows1, columns1, bits1,
                               second_int_matrix, rows2, columns2, bits2, expected_output):
-        first_matrix = Matrix.Matrix(
-            rows1, columns1, bits1, value=first_int_matrix)
-        second_matrix = Matrix.Matrix(
-            rows2, columns2, bits2, value=second_int_matrix)
-
+        first_matrix = Matrix.Matrix(rows1, columns1, bits1, value=first_int_matrix)
+        second_matrix = Matrix.Matrix(rows2, columns2, bits2, value=second_int_matrix)
         result_matrix = first_matrix * second_matrix
 
         self.assertEqual(result_matrix.rows, rows1)
         self.assertEqual(result_matrix.columns, columns1)
-
-        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows1, columns1, result_matrix.bits)
-
-        for i in range(rows1):
-            for j in range(columns1):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(result_matrix, expected_output)
 
     def test_multiply_scalar_basic(self):
         self.multiply_number([[2]], 1, 1, 3, 1, [[2]])
@@ -1326,43 +1009,21 @@ class TestMatrixMultiply(unittest.TestCase):
 
     def multiply_number(self, int_matrix, rows, columns, bits, number, expected_output):
         first_matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix)
-        bits = 1
-        if number != 0:
-            bits = int(math.log(number, 2)) + 1
-
-        b_input = pyrtl.Input(bitwidth=int(bits), name='b_input')
-
-        result_matrix = first_matrix * b_input
+        bits = int(math.log(number, 2)) + 1 if number != 0 else 1
+        result_matrix = first_matrix * pyrtl.Const(number, bits)
 
         self.assertEqual(result_matrix.rows, rows)
         self.assertEqual(result_matrix.columns, columns)
-
-        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({b_input: number})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows, columns, result_matrix.bits)
-
-        for i in range(rows):
-            for j in range(columns):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(result_matrix, expected_output)
 
     def test_multiply_fail_int(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(
-                3, 2, 3)
+            first_matrix = Matrix.Matrix(3, 2, 3)
             result = first_matrix * 1
 
 
-class TestMatrixInplaceMultiply(unittest.TestCase):
+class TestMatrixInplaceMultiply(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_element_wise_imultiply_basic(self):
@@ -1382,14 +1043,12 @@ class TestMatrixInplaceMultiply(unittest.TestCase):
 
     def test_element_wise_imultiply_fail_3_by_3_multiply_2_by_3(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            self.element_wise_imultiply([[2, 4, 3], [5, 4, 7], [2, 5, 1]], 3, 3,
-                                        4,
+            self.element_wise_imultiply([[2, 4, 3], [5, 4, 7], [2, 5, 1]], 3, 3, 4,
                                         [[0, 1], [0, 1], [0, 1]], 2, 3, 4, [[]])
 
     def test_element_wise_imultiply_fail_3_by_3_multiply_3_by_2(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            self.element_wise_imultiply([[2, 4, 3], [5, 4, 7], [2, 5, 1]], 3, 3,
-                                        4,
+            self.element_wise_imultiply([[2, 4, 3], [5, 4, 7], [2, 5, 1]], 3, 3, 4,
                                         [[0, 1, 1], [0, 1, 1]], 3, 2, 4, [[]])
 
     '''
@@ -1414,36 +1073,17 @@ class TestMatrixInplaceMultiply(unittest.TestCase):
 
     def element_wise_imultiply(self, first_int_matrix, rows1, columns1, bits1,
                                second_int_matrix, rows2, columns2, bits2, expected_output):
-        first_matrix = Matrix.Matrix(
-            rows1, columns1, bits1, value=first_int_matrix)
-        second_matrix = Matrix.Matrix(
-            rows2, columns2, bits2, value=second_int_matrix)
-
+        first_matrix = Matrix.Matrix(rows1, columns1, bits1, value=first_int_matrix)
+        second_matrix = Matrix.Matrix(rows2, columns2, bits2, value=second_int_matrix)
         first_matrix *= second_matrix
 
         self.assertEqual(first_matrix.rows, rows1)
         self.assertEqual(first_matrix.columns, columns1)
-
-        output = pyrtl.Output(name='output', bitwidth=len(first_matrix))
-        output <<= first_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows1, columns1, first_matrix.bits)
-
-        for i in range(rows1):
-            for j in range(columns1):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(first_matrix, expected_output)
 
 
-class TestMatrixMatrixMultiply(unittest.TestCase):
+class TestMatrixMatrixMultiply(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_mat_mul_basic(self):
@@ -1466,8 +1106,7 @@ class TestMatrixMatrixMultiply(unittest.TestCase):
 
     def test_mat_mul_fail_int(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(
-                3, 2, 3)
+            first_matrix = Matrix.Matrix(3, 2, 3)
             result = first_matrix.__matmul__(1)
 
     def test_mat_mul_fail_3_by_3_multiply_2_by_2(self):
@@ -1482,10 +1121,8 @@ class TestMatrixMatrixMultiply(unittest.TestCase):
 
     def test_mat_mul_fail_3_by_2_multiply_3_by_2(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(
-                3, 2, 3)
-            second_matrix = Matrix.Matrix(
-                3, 2, 3)
+            first_matrix = Matrix.Matrix(3, 2, 3)
+            second_matrix = Matrix.Matrix(3, 2, 3)
             result = first_matrix.__matmul__(second_matrix)
 
     '''
@@ -1513,36 +1150,17 @@ class TestMatrixMatrixMultiply(unittest.TestCase):
 
     def matmul(self, first_int_matrix, rows1, columns1, bits1,
                second_int_matrix, rows2, columns2, bits2, expected_output):
-        first_matrix = Matrix.Matrix(
-            rows1, columns1, bits1, value=first_int_matrix)
-        second_matrix = Matrix.Matrix(
-            rows2, columns2, bits2, value=second_int_matrix)
-
+        first_matrix = Matrix.Matrix(rows1, columns1, bits1, value=first_int_matrix)
+        second_matrix = Matrix.Matrix(rows2, columns2, bits2, value=second_int_matrix)
         result_matrix = first_matrix.__matmul__(second_matrix)
 
         self.assertEqual(result_matrix.rows, rows1)
         self.assertEqual(result_matrix.columns, columns2)
-
-        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows1, columns2, result_matrix.bits)
-
-        for i in range(rows1):
-            for j in range(columns2):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(result_matrix, expected_output)
 
 
-class TestMatrixInplaceMatrixMultiply(unittest.TestCase):
+class TestMatrixInplaceMatrixMultiply(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_imat_mul_basic(self):
@@ -1598,36 +1216,17 @@ class TestMatrixInplaceMatrixMultiply(unittest.TestCase):
 
     def imatmul(self, first_int_matrix, rows1, columns1, bits1,
                 second_int_matrix, rows2, columns2, bits2, expected_output):
-        first_matrix = Matrix.Matrix(
-            rows1, columns1, bits1, value=first_int_matrix)
-        second_matrix = Matrix.Matrix(
-            rows2, columns2, bits2, value=second_int_matrix)
-
+        first_matrix = Matrix.Matrix(rows1, columns1, bits1, value=first_int_matrix)
+        second_matrix = Matrix.Matrix(rows2, columns2, bits2, value=second_int_matrix)
         first_matrix.__imatmul__(second_matrix)
 
         self.assertEqual(first_matrix.rows, rows1)
         self.assertEqual(first_matrix.columns, columns2)
-
-        output = pyrtl.Output(name='output', bitwidth=len(first_matrix))
-        output <<= first_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows1, columns2, first_matrix.bits)
-
-        for i in range(rows1):
-            for j in range(columns2):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(first_matrix, expected_output)
 
 
-class TestMatrixMatrixPower(unittest.TestCase):
+class TestMatrixMatrixPower(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_matrix_power_3_by_3_power_0(self):
@@ -1670,25 +1269,11 @@ class TestMatrixMatrixPower(unittest.TestCase):
 
     def matrix_power(self, int_matrix, rows, columns, bits, exp, expected_output):
         matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix)
-
         result_matrix = matrix ** exp
-
-        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows, columns, result_matrix.bits)
-
-        for i in range(rows):
-            for j in range(columns):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(result_matrix, expected_output)
 
 
-class TestMatrixInplaceMatrixPower(unittest.TestCase):
+class TestMatrixInplaceMatrixPower(MatrixTestBase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -1712,97 +1297,44 @@ class TestMatrixInplaceMatrixPower(unittest.TestCase):
 
     def imatrix_power(self, int_matrix, rows, columns, bits, exp, expected_output):
         matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix)
-
         matrix **= exp
-
-        output = pyrtl.Output(name='output', bitwidth=len(matrix))
-        output <<= matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), rows, columns, matrix.bits)
-
-        for i in range(rows):
-            for j in range(columns):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(matrix, expected_output)
 
 
-class TestMultiply(unittest.TestCase):
+class TestMultiply(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_multiply_scalar(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         first_matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
-
-        b_input = pyrtl.Input(bitwidth=2, name='b_input')
-
-        result_matrix = Matrix.multiply(first_matrix, b_input)
+        result_matrix = Matrix.multiply(first_matrix, pyrtl.Const(3))
+        expected_output = [[0, 3, 6], [9, 12, 15], [18, 21, 24]]
 
         self.assertEqual(result_matrix.rows, 3)
         self.assertEqual(result_matrix.columns, 3)
-
-        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({b_input: 3})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), 3, 3, result_matrix.bits)
-        expected_output = [[0, 3, 6], [9, 12, 15], [18, 21, 24]]
-
-        for i in range(3):
-            for j in range(3):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(result_matrix, expected_output)
 
     def test_multiply_matrix(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-        first_matrix = Matrix.Matrix(
-            3, 3, 4, value=int_matrix)
-        second_matrix = Matrix.Matrix(
-            3, 3, 4, value=int_matrix)
-
+        first_matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        second_matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
         result_matrix = Matrix.multiply(first_matrix, second_matrix)
+        expected_output = [[0, 1, 4], [9, 16, 25], [36, 49, 64]]
 
         self.assertEqual(result_matrix.rows, 3)
         self.assertEqual(result_matrix.columns, 3)
-
-        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        output <<= result_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect(
-            "output"), 3, 3, result_matrix.bits)
-        expected_output = [[0, 1, 4], [9, 16, 25], [36, 49, 64]]
-
-        for i in range(3):
-            for j in range(3):
-                self.assertEqual(given_output[i][j], expected_output[i][j])
+        self.check_against_expected(result_matrix, expected_output)
 
     def test_multiply_fail_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
             int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-            second_matrix = Matrix.Matrix(
-                3, 3, 4, value=int_matrix)
+            second_matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
             result_matrix = Matrix.multiply(1, second_matrix)
 
 
-class TestSum(unittest.TestCase):
+class TestSum(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_sum_basic(self):
@@ -1815,8 +1347,7 @@ class TestSum(unittest.TestCase):
         self.sum([[0]], 1, 1, 2, 1, [[0]])
 
     def test_sum_3_by_3(self):
-        self.sum([[0, 1, 2], [3, 4, 5], [6, 7, 8]],
-                 3, 3, 4, None, 36)
+        self.sum([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3, 4, None, 36)
 
     def test_sum_3_by_3_column(self):
         self.sum([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3, 4, 0, [[9, 12, 15]])
@@ -1860,17 +1391,8 @@ class TestSum(unittest.TestCase):
     '''
 
     def test_sum_wire(self):
-        wire = pyrtl.Const(3)
-        sum_wire = pyrtl.Output(name="output", bitwidth=len(wire))
-        sum_wire <<= Matrix.sum(wire)
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        output = sim.inspect("output")
-
-        self.assertEqual(output, 3)
+        sum_wire = Matrix.sum(pyrtl.Const(3))
+        self.check_against_expected(sum_wire, 3)
 
     def test_sum_fail_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
@@ -1878,76 +1400,42 @@ class TestSum(unittest.TestCase):
 
     def test_sum_fail_negative_axis(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.sum(matrix, -1)
 
     def test_sum_fail_axis_out_of_bounds(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.sum(matrix, 2)
 
     def test_sum_fail_string_axis(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.sum(matrix, "0")
 
     def test_sum_fail_string_bits(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.sum(matrix, axis=0, bits="0")
 
     def test_sum_fail_negative_bits(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.sum(matrix, axis=0, bits=-1)
 
     def test_sum_fail_zero_bits(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.sum(matrix, axis=0, bits=0)
 
     def sum(self, int_matrix, rows, columns, bits, axis, expected_output):
-        matrix = Matrix.Matrix(
-            rows, columns, bits, value=int_matrix, max_bits=bits * rows)
-
-        result = Matrix.sum(
-            matrix, axis=axis, bits=bits * max(rows, columns))
-        output = pyrtl.Output(name="output", bitwidth=len(result))
-        if axis is None:
-            output <<= result
-        else:
-            output <<= result.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = None
-        if axis is None:
-            given_output = sim.inspect("output")
-        else:
-            given_output = matrix_result(sim.inspect(
-                "output"), result.rows, result.columns, result.bits)
-
-        if axis is None:
-            self.assertEqual(given_output, expected_output)
-        else:
-            for i in range(result.rows):
-                for j in range(result.columns):
-                    self.assertEqual(given_output[i][j], expected_output[i][j])
+        matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix, max_bits=bits * rows)
+        result = Matrix.sum(matrix, axis=axis, bits=bits * max(rows, columns))
+        self.check_against_expected(result, expected_output)
 
 
-class TestMin(unittest.TestCase):
+class TestMin(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_min_basic(self):
@@ -2004,17 +1492,8 @@ class TestMin(unittest.TestCase):
     '''
 
     def test_min_wire(self):
-        wire = pyrtl.Const(3)
-        sum_wire = pyrtl.Output(name="output", bitwidth=len(wire))
-        sum_wire <<= Matrix.min(wire)
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        output = sim.inspect("output")
-
-        self.assertEqual(output, 3)
+        min_wire = Matrix.min(pyrtl.Const(3))
+        self.check_against_expected(min_wire, 3)
 
     def test_min_fail_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
@@ -2022,77 +1501,43 @@ class TestMin(unittest.TestCase):
 
     def test_min_fail_axis_out_of_bounds(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.min(matrix, 4)
 
     def test_min_fail_axis_negative(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.min(matrix, -1)
 
     def test_min_fail_axis_string(self):
 
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.min(matrix, "0")
 
     def test_min_fail_bits_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.min(matrix, axis=0, bits="1")
 
     def test_min_fail_bits_zero(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.min(matrix, axis=0, bits=0)
 
     def test_min_fail_bits_negative(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.min(matrix, axis=0, bits=-2)
 
     def min(self, int_matrix, rows, columns, bits, axis, expected_output):
-        matrix = Matrix.Matrix(
-            rows, columns, bits, value=int_matrix, max_bits=bits * rows)
-
-        result = Matrix.min(
-            matrix, axis=axis, bits=bits * max(rows, columns))
-        output = pyrtl.Output(name="output", bitwidth=len(result))
-        if axis is None:
-            output <<= result
-        else:
-            output <<= result.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = None
-        if axis is None:
-            given_output = sim.inspect("output")
-        else:
-            given_output = matrix_result(sim.inspect(
-                "output"), result.rows, result.columns, result.bits)
-
-        if axis is None:
-            self.assertEqual(given_output, expected_output)
-        else:
-            for i in range(result.rows):
-                for j in range(result.columns):
-                    self.assertEqual(given_output[i][j], expected_output[i][j])
+        matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix, max_bits=bits * rows)
+        result = Matrix.min(matrix, axis=axis, bits=bits * max(rows, columns))
+        self.check_against_expected(result, expected_output)
 
 
-class TestMax(unittest.TestCase):
+class TestMax(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_max_basic(self):
@@ -2149,17 +1594,8 @@ class TestMax(unittest.TestCase):
     '''
 
     def test_max_wire(self):
-        wire = pyrtl.Const(3)
-        max_wire = pyrtl.Output(name="output", bitwidth=len(wire))
-        max_wire <<= Matrix.max(wire)
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        output = sim.inspect("output")
-
-        self.assertEqual(output, 3)
+        max_wire = Matrix.max(pyrtl.Const(3))
+        self.check_against_expected(max_wire, 3)
 
     def test_max_fail_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
@@ -2167,76 +1603,42 @@ class TestMax(unittest.TestCase):
 
     def test_max_fail_axis_out_of_bounds(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.max(matrix, 4)
 
     def test_max_fail_axis_negative(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.max(matrix, -1)
 
     def test_max_fail_axis_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.max(matrix, "0")
 
     def test_max_fail_bits_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.max(matrix, axis=0, bits="1")
 
     def test_max_fail_bits_zero(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.max(matrix, axis=0, bits=0)
 
     def test_max_fail_bits_negative(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.max(matrix, axis=0, bits=-1)
 
     def max(self, int_matrix, rows, columns, bits, axis, expected_output):
-        matrix = Matrix.Matrix(
-            rows, columns, bits, value=int_matrix, max_bits=bits * rows)
-
-        result = Matrix.max(
-            matrix, axis=axis, bits=bits * max(rows, columns))
-        output = pyrtl.Output(name="output", bitwidth=len(result))
-        if axis is None:
-            output <<= result
-        else:
-            output <<= result.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = None
-        if axis is None:
-            given_output = sim.inspect("output")
-        else:
-            given_output = matrix_result(sim.inspect(
-                "output"), result.rows, result.columns, result.bits)
-
-        if axis is None:
-            self.assertEqual(given_output, expected_output)
-        else:
-            for i in range(result.rows):
-                for j in range(result.columns):
-                    self.assertEqual(given_output[i][j], expected_output[i][j])
+        matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix, max_bits=bits * rows)
+        result = Matrix.max(matrix, axis=axis, bits=bits * max(rows, columns))
+        self.check_against_expected(result, expected_output)
 
 
-class TestArgMax(unittest.TestCase):
+class TestArgMax(MatrixTestBase):
     def setUp(self):
-        pyrtl.reset_working_block()
-
-    def tearDown(self):
         pyrtl.reset_working_block()
 
     def test_argument_max_basic(self):
@@ -2252,12 +1654,10 @@ class TestArgMax(unittest.TestCase):
         self.argument_max([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3, 4, None, 8)
 
     def test_argument_max_3_by_3_columns(self):
-        self.argument_max([[0, 1, 2], [3, 4, 5], [6, 7, 8]],
-                          3, 3, 4, 0, [[2, 2, 2]])
+        self.argument_max([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3, 4, 0, [[2, 2, 2]])
 
     def test_argument_max_3_by_3_rows(self):
-        self.argument_max([[0, 1, 2], [3, 4, 5], [6, 7, 8]],
-                          3, 3, 4, 1, [[2, 2, 2]])
+        self.argument_max([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3, 4, 1, [[2, 2, 2]])
 
     def test_argument_max_4_by_1(self):
         self.argument_max([[0], [1], [0], [1]], 4, 1, 4, None, 1)
@@ -2266,8 +1666,7 @@ class TestArgMax(unittest.TestCase):
         self.argument_max([[0], [1], [0], [1]], 4, 1, 4, 0, [[1]])
 
     def test_argument_max_4_by_1_rows(self):
-        self.argument_max([[0], [1], [0], [1]], 4, 1, 4,
-                          1, [[0, 0, 0, 0]])
+        self.argument_max([[0], [1], [0], [1]], 4, 1, 4, 1, [[0, 0, 0, 0]])
 
     def test_argument_max_1_by_4(self):
         self.argument_max([[0, 1, 0, 1]], 1, 4, 4, None, 1)
@@ -2296,97 +1695,50 @@ class TestArgMax(unittest.TestCase):
     '''
 
     def test_argument_max_wire(self):
-        wire = pyrtl.Const(3)
-        sum_wire = pyrtl.Output(name="output", bitwidth=len(wire))
-        sum_wire <<= Matrix.argmax(wire)
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        output = sim.inspect("output")
-
-        self.assertEqual(output, 0)
+        arg_max_wire = Matrix.argmax(pyrtl.Const(3))
+        self.check_against_expected(arg_max_wire, 0)
 
     def test_argument_max_string(self):
-
         with self.assertRaises(pyrtl.PyrtlError):
             output = Matrix.argmax("1", axis=0)
 
     def test_argument_max_axis_out_of_bounds(self):
-
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.argmax(matrix, axis=4)
 
     def test_argument_max_axis_negative(self):
-
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.argmax(matrix, axis=-1)
 
     def test_argument_max_axis_string(self):
-
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.argmax(matrix, "1")
 
     def test_argument_max_bits_string(self):
-
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.argmax(matrix, axis=1, bits="1")
 
     def test_argument_max_bits_negative(self):
-
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.argmax(matrix, axis=1, bits=-1)
 
     def test_argument_max_bits_zero(self):
-
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(
-                3, 3, 3)
+            matrix = Matrix.Matrix(3, 3, 3)
             output = Matrix.argmax(matrix, axis=1, bits=0)
 
     def argument_max(self, int_matrix, rows, columns, bits, axis, expected_output):
-        matrix = Matrix.Matrix(
-            rows, columns, bits, value=int_matrix, max_bits=bits * rows)
-
-        result = Matrix.argmax(
-            matrix, axis=axis, bits=bits * max(rows, columns))
-        output = pyrtl.Output(name="output", bitwidth=len(result))
-        if axis is None:
-            output <<= result
-        else:
-            output <<= result.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = None
-        if axis is None:
-            given_output = sim.inspect("output")
-        else:
-            given_output = matrix_result(sim.inspect(
-                "output"), result.rows, result.columns, result.bits)
-
-        if axis is None:
-            self.assertEqual(given_output, int(expected_output))
-        else:
-            for i in range(result.rows):
-                for j in range(result.columns):
-                    self.assertEqual(given_output[i][j], expected_output[i][j])
+        matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix, max_bits=bits * rows)
+        result = Matrix.argmax(matrix, axis=axis, bits=bits * max(rows, columns))
+        self.check_against_expected(result, expected_output)
 
 
-class TestDot(unittest.TestCase):
+class TestDot(MatrixTestBase):
     def setUp(self):
         pyrtl.reset_working_block()
 
@@ -2423,69 +1775,29 @@ class TestDot(unittest.TestCase):
     def test_dot_both_wires(self):
         first = pyrtl.Const(5)
         second = pyrtl.Const(3)
-
         dot_product = Matrix.dot(first, second)
-
-        output = pyrtl.Output(name='output', bitwidth=len(dot_product))
-        output <<= dot_product
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = sim.inspect('output')
-        expected_output = 15
-
-        self.assertEqual(given_output, expected_output)
+        self.check_against_expected(dot_product, 15)
 
     def test_dot_first_wire(self):
         first = pyrtl.Const(5)
-        second = Matrix.Matrix(
-            1, 1, 3, value=[[3]])
-
+        second = Matrix.Matrix(1, 1, 3, value=[[3]])
         dot_product = Matrix.dot(first, second)
-
-        output = pyrtl.Output(name='output', bitwidth=len(dot_product))
-        output <<= dot_product
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = sim.inspect('output')
-        expected_output = 15
-
-        self.assertEqual(given_output, expected_output)
+        self.check_against_expected(dot_product, 15)
 
     def test_dot_second_wire(self):
-        first = Matrix.Matrix(
-            1, 1, 3, value=[[5]])
+        first = Matrix.Matrix(1, 1, 3, value=[[5]])
         second = pyrtl.Const(3)
-
         dot_product = Matrix.dot(first, second)
-
-        output = pyrtl.Output(name='output', bitwidth=len(dot_product))
-        output <<= dot_product
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = sim.inspect('output')
-        expected_output = 15
-
-        self.assertEqual(given_output, expected_output)
+        self.check_against_expected(dot_product, 15)
 
     def test_dot_fail_int_second(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(
-                3, 2, 3)
+            first_matrix = Matrix.Matrix(3, 2, 3)
             result = Matrix.dot(first_matrix, 1)
 
     def test_dot_fail_int_first(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(
-                3, 2, 3)
+            first_matrix = Matrix.Matrix(3, 2, 3)
             result = Matrix.dot(1, first_matrix)
 
     def test_dot_fail_1_by_2_multiply_1_by_3(self):
@@ -2543,54 +1855,14 @@ class TestDot(unittest.TestCase):
 
     def dot(self, first_int_matrix, rows1, columns1, bits1,
             second_int_matrix, rows2, columns2, bits2, expected_output):
-        first_matrix = Matrix.Matrix(
-            rows1, columns1, bits1, value=first_int_matrix)
-        second_matrix = Matrix.Matrix(
-            rows2, columns2, bits2, value=second_int_matrix)
-
+        first_matrix = Matrix.Matrix(rows1, columns1, bits1, value=first_int_matrix)
+        second_matrix = Matrix.Matrix(rows2, columns2, bits2, value=second_int_matrix)
         result_matrix = Matrix.dot(first_matrix, second_matrix)
+        self.check_against_expected(result_matrix, expected_output)
 
-        output = pyrtl.Output(name='output', bitwidth=len(result_matrix))
-        if isinstance(result_matrix, pyrtl.WireVector):
-            output <<= result_matrix
-        else:
-            output <<= result_matrix.to_wirevector()
-
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        sim.step({})
-
-        given_output = None
-        if isinstance(result_matrix, pyrtl.WireVector):
-            given_output = sim.inspect("output")
-        else:
-            given_output = matrix_result(sim.inspect(
-                "output"), result_matrix.rows, result_matrix.columns, result_matrix.bits)
-
-        if isinstance(given_output, int):
-            self.assertEqual(given_output, expected_output)
-        else:
-            for i in range(len(expected_output)):
-                for j in range(len(expected_output[0])):
-                    self.assertEqual(given_output[i][j], expected_output[i][j])
-
-class TestHStack(unittest.TestCase):
+class TestHStack(MatrixTestBase):
     def setUp(self):
         pyrtl.reset_working_block()
-
-    def check_against_array(self, matrix, expected):
-        output = pyrtl.Output(name='output')
-        output <<= matrix.to_wirevector()
-
-        sim = pyrtl.Simulation()
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect("output"),
-                                     matrix.rows, matrix.columns, matrix.bits)
-
-        for r in range(len(expected)):
-            for c in range(len(expected[0])):
-                self.assertEqual(given_output[r][c], expected[r][c])
 
     def test_hstack_two_row_vectors(self):
         v1 = Matrix.Matrix(1, 3, bits=4, value=[[1, 2, 3]])
@@ -2598,20 +1870,20 @@ class TestHStack(unittest.TestCase):
         v3 = Matrix.hstack(v1, v2)
         self.assertEqual(v3.bits, 8)
         self.assertEqual(v3.max_bits, max(v1.max_bits, v2.max_bits))
-        self.check_against_array(v3, [[1, 2, 3, 4, 5, 6, 7, 8]])
+        self.check_against_expected(v3, [[1, 2, 3, 4, 5, 6, 7, 8]])
 
     def test_hstack_one_row_vector(self):
         v1 = Matrix.Matrix(1, 3, bits=4, value=[[1, 2, 3]])
         v2 = Matrix.hstack(v1)
         self.assertEqual(v2.bits, 4)
         self.assertEqual(v2.max_bits, v1.max_bits)
-        self.check_against_array(v2, [[1, 2, 3]])
+        self.check_against_expected(v2, [[1, 2, 3]])
 
     def test_concatenate(self):
         m1 = Matrix.Matrix(2, 3, bits=4, value=[[1, 2, 3], [4, 5, 6]])
         m2 = Matrix.Matrix(2, 5, bits=8, value=[[7, 8, 9, 10, 11], [12, 13, 14, 15, 16]])
         m3 = Matrix.concatenate([m1, m2])
-        self.check_against_array(m3,
+        self.check_against_expected(m3,
             [[1, 2, 3, 7, 8, 9, 10, 11],
              [4, 5, 6, 12, 13, 14, 15, 16]]
         )
@@ -2623,7 +1895,7 @@ class TestHStack(unittest.TestCase):
         m4 = Matrix.hstack(m1, m2, m3)
         self.assertEqual(m4.bits, 8)
         self.assertEqual(m4.max_bits, max(m1.max_bits, m2.max_bits, m3.max_bits))
-        self.check_against_array(m4,
+        self.check_against_expected(m4,
             [[1, 2, 3, 7, 8, 9, 10, 11, 0],
              [4, 5, 6, 12, 13, 14, 15, 16, 1]]
         )
@@ -2640,23 +1912,9 @@ class TestHStack(unittest.TestCase):
             _v = Matrix.hstack()
 
 
-class TestVStack(unittest.TestCase):
+class TestVStack(MatrixTestBase):
     def setUp(self):
         pyrtl.reset_working_block()
-
-    def check_against_array(self, matrix, expected):
-        output = pyrtl.Output(name='output')
-        output <<= matrix.to_wirevector()
-
-        sim = pyrtl.Simulation()
-        sim.step({})
-
-        given_output = matrix_result(sim.inspect("output"),
-                                     matrix.rows, matrix.columns, matrix.bits)
-
-        for r in range(len(expected)):
-            for c in range(len(expected[0])):
-                self.assertEqual(given_output[r][c], expected[r][c])
 
     def test_vstack_two_column_vectors(self):
         v1 = Matrix.Matrix(3, 1, bits=4, value=[[1], [2], [3]])
@@ -2664,20 +1922,20 @@ class TestVStack(unittest.TestCase):
         v3 = Matrix.vstack(v1, v2)
         self.assertEqual(v3.bits, 8)
         self.assertEqual(v3.max_bits, max(v1.max_bits, v2.max_bits))
-        self.check_against_array(v3, [[1], [2], [3], [4], [5], [6], [7], [8]])
+        self.check_against_expected(v3, [[1], [2], [3], [4], [5], [6], [7], [8]])
 
     def test_vstack_one_column_vector(self):
         v1 = Matrix.Matrix(3, 1, bits=4, value=[[1], [2], [3]])
         v2 = Matrix.vstack(v1)
         self.assertEqual(v2.bits, 4)
         self.assertEqual(v2.max_bits, v1.max_bits)
-        self.check_against_array(v2, [[1], [2], [3]])
+        self.check_against_expected(v2, [[1], [2], [3]])
 
     def test_concatenate(self):
         m1 = Matrix.Matrix(2, 3, bits=5, value=[[1, 2, 3], [4, 5, 6]])
         m2 = Matrix.Matrix(1, 3, bits=10, value=[[7, 8, 9]])
         m3 = Matrix.concatenate([m1, m2], axis=1)
-        self.check_against_array(m3,
+        self.check_against_expected(m3,
             [[1,2,3],
              [4,5,6],
              [7,8,9]]
@@ -2691,7 +1949,7 @@ class TestVStack(unittest.TestCase):
     
         self.assertEqual(m4.bits, 10)
         self.assertEqual(m4.max_bits, max(m1.max_bits, m2.max_bits, m3.max_bits))
-        self.check_against_array(m4,
+        self.check_against_expected(m4,
             [[1, 2, 3],
              [4, 5, 6],
              [7, 8, 9],
@@ -2740,16 +1998,6 @@ def matrix_result(start_value, rows, columns, bits):
             result[i][j] = int_value
             bit_pointer += bits
     return result
-
-
-def check_matrix_matches(first, second):
-    if len(first) != len(second) or len(first[0]) != len(second[0]):
-        return False
-    for row in len(first):
-        for column in len(first[0]):
-            if first[row][column] != second[row][column]:
-                return False
-    return True
 
 
 if __name__ == '__main__':
