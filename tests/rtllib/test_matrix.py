@@ -30,8 +30,9 @@ class MatrixTestBase(unittest.TestCase):
         if isinstance(result, pyrtl.WireVector):
             given_output = sim.inspect("output")
         else:
-            given_output = matrix_result(sim.inspect("output"),
-                                         result.rows, result.columns, result.bits)
+            given_output = Matrix.matrix_wv_to_list(
+                sim.inspect("output"), result.rows, result.columns, result.bits
+            )
 
         if isinstance(given_output, int):
             self.assertEqual(given_output, expected_output)
@@ -659,15 +660,17 @@ class TestMatrixCopy(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         sim.step({})
 
-        given_output = matrix_result(sim.inspect("matrix_output"), rows, columns, bits)
-        expected_output = matrix_result(sim.inspect("copy_output"), rows, columns, bits)
+        given_output = Matrix.matrix_wv_to_list(sim.inspect("matrix_output"), rows, columns, bits)
+        expected_output = Matrix.matrix_wv_to_list(sim.inspect("copy_output"), rows, columns, bits)
 
         for i in range(rows):
             for j in range(columns):
                 self.assertEqual(given_output[i][j], expected_output[i][j])
 
-        given_output = matrix_result(sim.inspect("matrix_output_1"), rows, columns, bits)
-        expected_output = matrix_result(sim.inspect("copy_output_1"), rows, columns, bits)
+        given_output = Matrix.matrix_wv_to_list(sim.inspect("matrix_output_1"),
+                                                rows, columns, bits)
+        expected_output = Matrix.matrix_wv_to_list(sim.inspect("copy_output_1"),
+                                                   rows, columns, bits)
 
         for i in range(rows):
             for j in range(columns):
@@ -739,6 +742,7 @@ class TestMatrixReverse(MatrixTestBase):
                                                      [3],
                                                      [1],
                                                      [0]])
+
     '''
     def test_reverse_random(self):
         rows, columns, bits = random.randint(
@@ -986,6 +990,7 @@ class TestMatrixInplaceSub(MatrixTestBase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.isub([[2, 4, 3], [5, 4, 7], [2, 5, 1]], 3, 3, 4,
                       [[0, 1, 1], [0, 1, 1]], 3, 2, 4, [[]])
+
     '''
     def test_isub_random_case(self):
         rows, columns, bits1 = random.randint(
@@ -1062,6 +1067,7 @@ class TestMatrixMultiply(MatrixTestBase):
         with self.assertRaises(pyrtl.PyrtlError):
             self.element_wise_multiply([[2, 4, 3], [5, 4, 7], [2, 5, 1]], 3, 3, 4,
                                        [[0, 1, 1], [0, 1, 1]], 2, 3, 4, [[]])
+
     '''
     def test_element_wise_multiply_random_case(self):
         rows, columns, bits1, bits2 = random.randint(
@@ -1976,6 +1982,7 @@ class TestDot(MatrixTestBase):
         self.dot(first, 1, columns, bits1,
                  second, 1, columns, bits2)
     '''
+
     '''
     def test_dot_random_matrix_multiply(self):
         rows, columns1, columns2, bits1, bits2 = random.randint(
@@ -2060,6 +2067,12 @@ class TestHStack(MatrixTestBase):
         with self.assertRaises(pyrtl.PyrtlError):
             _v = Matrix.hstack()
 
+    def test_hstack_on_non_matrices_fails(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            w = pyrtl.WireVector(1)
+            m = Matrix.Matrix(1, 2, bits=2, value=[[0, 1]])
+            _v = Matrix.hstack(w, m)
+
 
 class TestVStack(MatrixTestBase):
     def setUp(self):
@@ -2120,6 +2133,12 @@ class TestVStack(MatrixTestBase):
         with self.assertRaises(pyrtl.PyrtlError):
             _v = Matrix.vstack()
 
+    def test_vstack_on_non_matrices_fails(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            w = pyrtl.WireVector(1)
+            m = Matrix.Matrix(2, 1, bits=2, value=[[0], [1]])
+            _v = Matrix.vstack(w, m)
+
 
 '''
 These are helpful functions to use in testing
@@ -2134,21 +2153,6 @@ def matrix_to_int(matrix, n_bits):
             result = result + bin(matrix[i][j])[2:].zfill(n_bits)
 
     return int(result, 2)
-
-
-def matrix_result(start_value, rows, columns, bits):
-    value = bin(start_value)[2:].zfill(rows * columns * bits)
-
-    result = [[0 for _ in range(columns)]
-              for _ in range(rows)]
-
-    bit_pointer = 0
-    for i in range(rows):
-        for j in range(columns):
-            int_value = int(value[bit_pointer: bit_pointer + bits], 2)
-            result[i][j] = int_value
-            bit_pointer += bits
-    return result
 
 
 if __name__ == '__main__':
