@@ -665,6 +665,31 @@ class Matrix(object):
 
         raise PyrtlError('Power must be greater than or equal to 0')
 
+    def flatten(self, order='C'):
+        ''' Flatten the matrix into a single row.
+
+        :param str order: 'C' means row-major order (C-style), and
+            'F' means column-major order (Fortran-style).
+        :return: row vector matrix
+        '''
+        result = []
+        if order == 'C':
+            for r in range(self.rows):
+                for c in range(self.columns):
+                    result.append(as_wires(self[r, c], bitwidth=self.bits))
+        elif order == 'F':
+            for c in range(self.columns):
+                for r in range(self.rows):
+                    result.append(as_wires(self[r, c], bitwidth=self.bits))
+        else:
+            raise PyrtlError(
+                "Invalid order %s. Acceptable orders are 'C' (for row-major C-style order) "
+                "and 'F' (for column-major Fortran-style order)." % order
+            )
+
+        return Matrix(rows=1, columns=len(result), bits=self.bits,
+                      value=[result], max_bits=self.max_bits)
+
 
 def multiply(first, second):
     ''' Perform the elementwise or scalar multiplication operation.
