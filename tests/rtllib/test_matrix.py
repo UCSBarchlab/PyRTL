@@ -5,6 +5,7 @@ import unittest
 import pyrtl
 import pyrtl.rtllib.matrix as Matrix
 
+
 class MatrixTestBase(unittest.TestCase):
 
     def check_against_expected(self, result, expected_output, floored=False):
@@ -41,7 +42,6 @@ class MatrixTestBase(unittest.TestCase):
                     if floored and expected < 0:
                         expected = 0
                     self.assertEqual(given_output[r][c], expected)
-
 
 
 class TestMatrixInit(MatrixTestBase):
@@ -166,7 +166,6 @@ class TestMatrixInit(MatrixTestBase):
         self.assertEqual(bits, matrix.bits)
         self.assertEqual(len(matrix), (rows * columns * bits))
         self.check_against_expected(matrix, matrix_value)
-
 
     def init_int_matrix(self, int_matrix, rows, columns, bits):
         matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix)
@@ -385,6 +384,7 @@ class TestMatrixGetItem(MatrixTestBase):
         matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
         item = matrix[-2:]
         self.check_against_expected(item, [[3, 4, 5], [6, 7, 8]])
+
 
 class TestMatrixSetItem(MatrixTestBase):
     def setUp(self):
@@ -1981,6 +1981,7 @@ class TestDot(MatrixTestBase):
         result_matrix = Matrix.dot(first_matrix, second_matrix)
         self.check_against_expected(result_matrix, expected_output)
 
+
 class TestHStack(MatrixTestBase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -2004,7 +2005,8 @@ class TestHStack(MatrixTestBase):
         m1 = Matrix.Matrix(2, 3, bits=4, value=[[1, 2, 3], [4, 5, 6]])
         m2 = Matrix.Matrix(2, 5, bits=8, value=[[7, 8, 9, 10, 11], [12, 13, 14, 15, 16]])
         m3 = Matrix.concatenate([m1, m2])
-        self.check_against_expected(m3,
+        self.check_against_expected(
+            m3,
             [[1, 2, 3, 7, 8, 9, 10, 11],
              [4, 5, 6, 12, 13, 14, 15, 16]]
         )
@@ -2016,7 +2018,8 @@ class TestHStack(MatrixTestBase):
         m4 = Matrix.hstack(m1, m2, m3)
         self.assertEqual(m4.bits, 8)
         self.assertEqual(m4.max_bits, max(m1.max_bits, m2.max_bits, m3.max_bits))
-        self.check_against_expected(m4,
+        self.check_against_expected(
+            m4,
             [[1, 2, 3, 7, 8, 9, 10, 11, 0],
              [4, 5, 6, 12, 13, 14, 15, 16, 1]]
         )
@@ -2056,10 +2059,11 @@ class TestVStack(MatrixTestBase):
         m1 = Matrix.Matrix(2, 3, bits=5, value=[[1, 2, 3], [4, 5, 6]])
         m2 = Matrix.Matrix(1, 3, bits=10, value=[[7, 8, 9]])
         m3 = Matrix.concatenate([m1, m2], axis=1)
-        self.check_against_expected(m3,
-            [[1,2,3],
-             [4,5,6],
-             [7,8,9]]
+        self.check_against_expected(
+            m3,
+            [[1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]]
         )
 
     def test_vstack_several_matrix(self):
@@ -2067,17 +2071,17 @@ class TestVStack(MatrixTestBase):
         m2 = Matrix.Matrix(1, 3, bits=10, value=[[7, 8, 9]])
         m3 = Matrix.Matrix(3, 3, bits=8, value=[[10, 11, 12], [13, 14, 15], [16, 17, 18]])
         m4 = Matrix.vstack(m1, m2, m3)
-    
+
         self.assertEqual(m4.bits, 10)
         self.assertEqual(m4.max_bits, max(m1.max_bits, m2.max_bits, m3.max_bits))
-        self.check_against_expected(m4,
+        self.check_against_expected(
+            m4,
             [[1, 2, 3],
              [4, 5, 6],
              [7, 8, 9],
              [10, 11, 12],
              [13, 14, 15],
-             [16, 17, 18]
-            ]
+             [16, 17, 18]]
         )
 
     def test_vstack_fail_on_inconsistent_cols(self):
@@ -2090,6 +2094,7 @@ class TestVStack(MatrixTestBase):
     def test_vstack_empty_args_fails(self):
         with self.assertRaises(pyrtl.PyrtlError):
             _v = Matrix.vstack()
+
 
 '''
 These are helpful functions to use in testing
