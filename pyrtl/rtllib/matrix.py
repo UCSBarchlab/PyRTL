@@ -391,9 +391,19 @@ class Matrix(object):
             else:
                 raise PyrtlError('Invalid value of type %s' % type(value))
         else:
-            # Second Case if we just want to get a full column
-            if isinstance(key, (slice, int)):
-                key = slice(key, key + 1, None)
+            # Second case if we just want to set a full row
+            if isinstance(key, int):
+                if key < 0:
+                    start = self.rows - abs(key)
+                    if start < 0:
+                        raise PyrtlError('Index %d is out of bounds for '
+                                         'matrix with %d rows' % (key, self.rows))
+                    key = slice(start, start + 1, None)
+                else:
+                    key = slice(key, key + 1, None)
+                self[key, :] = value
+            # Third case if we want to set full rows
+            elif isinstance(key, slice):
                 self[key, :] = value
             else:
                 raise PyrtlError('Rows must be of type int or slice, '
