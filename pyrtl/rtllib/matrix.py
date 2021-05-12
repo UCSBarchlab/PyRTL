@@ -28,7 +28,9 @@ class Matrix(object):
             If a WireVector, must be of size `rows * columns * bits`. If a list, must have
             `rows` rows and `columns` columns, and every element must fit in `bits` size.
             If not given, the matrix initializes to 0.
-        :param int max_bits:
+        :param int max_bits: The maximum number of bits each wirevector can have, even
+            after operations like adding two matrices together results in larger
+            resulting wirevectors.
         :return: a constructed Matrix object.
         '''
         if not isinstance(rows, int):
@@ -509,8 +511,9 @@ class Matrix(object):
                 if self.signed:
                     result[i, j] = self[i, j] - other[i, j]
                 else:
-                    result[i, j] = select(
-                        self[i, j] > other[i, j], self[i, j] - other[i, j], Const(0))
+                    result[i, j] = select(self[i, j] > other[i, j],
+                                          self[i, j] - other[i, j],
+                                          Const(0))
 
         return result
 
@@ -719,8 +722,7 @@ def sum(matrix, axis=None, bits=None):
         return reduce(sum_2, inputs)
 
     if axis == 0:
-        result = Matrix(
-            1, matrix.columns, signed=matrix.signed, bits=bits)
+        result = Matrix(1, matrix.columns, signed=matrix.signed, bits=bits)
 
         for i in range(matrix.columns):
             inputs = []
@@ -730,8 +732,7 @@ def sum(matrix, axis=None, bits=None):
         return result
 
     if axis == 1:
-        result = Matrix(
-            1, matrix.rows, signed=matrix.signed, bits=bits)
+        result = Matrix(1, matrix.rows, signed=matrix.signed, bits=bits)
         for i in range(matrix.rows):
             inputs = []
             for j in range(matrix.columns):
@@ -785,8 +786,7 @@ def min(matrix, axis=None, bits=None):
         return reduce(min_2, inputs)
 
     if axis == 0:
-        result = Matrix(
-            1, matrix.columns, signed=matrix.signed, bits=bits)
+        result = Matrix(1, matrix.columns, signed=matrix.signed, bits=bits)
 
         for i in range(matrix.columns):
             inputs = []
@@ -796,8 +796,7 @@ def min(matrix, axis=None, bits=None):
         return result
 
     if axis == 1:
-        result = Matrix(
-            1, matrix.rows, signed=matrix.signed, bits=bits)
+        result = Matrix(1, matrix.rows, signed=matrix.signed, bits=bits)
         for i in range(matrix.rows):
             inputs = []
             for j in range(matrix.columns):
