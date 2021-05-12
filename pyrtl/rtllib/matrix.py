@@ -531,12 +531,12 @@ class Matrix(object):
         return self.copy()
 
     def __mul__(self, other):
-        ''' Perform the multiplication operation.
+        ''' Perform the elementwise or scalar multiplication operation.
 
         :Matrix/Wirevector other: the Matrix to multiply
         :return: a Matrix object with the resulting multiplication operation being performed.
 
-        Is used with a * b. Performs an elementwise or scalar multiplication.
+        Is used with a * b.
         '''
 
         if isinstance(other, Matrix):
@@ -1048,6 +1048,9 @@ def hstack(*matrices):
     if len(matrices) == 0:
         raise PyrtlError("Must supply at least one matrix to hstack()")
 
+    if any([not isinstance(matrix, Matrix) for matrix in matrices]):
+        raise PyrtlError("All arguments to hstack must be matrices.")
+
     if len(matrices) == 1:
         return matrices[0].copy()
 
@@ -1099,6 +1102,9 @@ def vstack(*matrices):
     if len(matrices) == 0:
         raise PyrtlError("Must supply at least one matrix to hstack()")
 
+    if any([not isinstance(matrix, Matrix) for matrix in matrices]):
+        raise PyrtlError("All arguments to vstack must be matrices.")
+
     if len(matrices) == 1:
         return matrices[0].copy()
 
@@ -1141,3 +1147,49 @@ def concatenate(matrices, axis=0):
         return vstack(*matrices)
     else:
         raise PyrtlError("Only allowable axes are 0 or 1")
+
+
+def matrix_wv_to_list(matrix_wv, rows, columns, bits):
+    ''' Convert a wirevector representing a matrix into a Python list of lists.
+
+    :param WireVector matrix_wv: result of calling to_wirevector() on a Matrix object
+    :param int rows: number of rows in the matrix matrix_wv represents
+    :param int columns: number of columns in the matrix matrix_wv represents
+    :param int bits: number of bits in each element of the matrix matrix_wv represents
+    :return list[list[int]]: a Python list of lists
+
+    This is useful when printing the value of a wire you've inspected
+    during Simulation that you know represnts a matrix.
+
+    Example::
+
+        values = [[1, 2, 3], [4, 5, 6]]
+        rows = 2
+        cols = 3
+        bits = 4
+        m = Matrix.Matrix(rows, cols, bits, values=values)
+
+        output = Output(name='output')
+        output <<= m.to_wirevector()
+
+        sim = Simulation()
+        sim.step({})
+
+        raw_matrix = Matrix.matrix_wv_to_list(sim.inspect('output'), rows, cols, bits)
+        print(raw_matrix)
+
+        # Produces:
+        # [[1, 2, 3], [4, 5, 6]]
+    '''
+    value = bin(matrix_wv)[2:].zfill(rows * columns * bits)
+
+    result = [[0 for _ in range(columns)]
+              for _ in range(rows)]
+
+    bit_pointer = 0
+    for i in range(rows):
+        for j in range(columns):
+            int_value = int(value[bit_pointer: bit_pointer + bits], 2)
+            result[i][j] = int_value
+            bit_pointer += bits
+    return result
