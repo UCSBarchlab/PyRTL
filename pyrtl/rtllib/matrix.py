@@ -4,7 +4,7 @@ from six.moves import builtins
 from pyrtl.rtllib import multipliers as mult
 
 from ..wire import Const, WireVector
-from ..corecircuits import as_wires, concat_list, select
+from ..corecircuits import as_wires, concat, select
 from ..pyrtlexceptions import PyrtlError
 
 
@@ -154,8 +154,7 @@ class Matrix(object):
             for j in range(len(self._matrix[0])):
                 result.append(as_wires(self[i, j], bitwidth=self.bits))
 
-        result.reverse()
-        return as_wires(concat_list(result), bitwidth=len(self))
+        return as_wires(concat(*result), bitwidth=len(self))
 
     def transpose(self):
         ''' Constructs the transpose of the matrix
@@ -188,6 +187,20 @@ class Matrix(object):
         :return: WireVector or Matrix containing the value of key
 
         Called when using square brackets ([]).
+
+        Examples::
+
+            int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+            matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+
+            matrix[1] == [3, 4, 5]
+            matrix[2, 0] == 6
+            matrix[(2, 0)] = 6
+            matrix[slice(0, 2), slice(0, 3)] == [[0, 1, 2], [3, 4, 5]]
+            matrix[0:2, 0:3] == [[0, 1, 2], [3, 4, 5]]
+            matrix[:2] == [[0, 1, 2], [3, 4, 5]]
+            matrix[-1] == [6, 7, 8]
+            matrix[-2:] == [[3, 4, 5], [6, 7, 8]]
         '''
         if isinstance(key, tuple):
             rows, columns = key
@@ -262,9 +275,20 @@ class Matrix(object):
             return Matrix(len(result), len(result[0]), self._bits,
                           signed=self.signed, value=result, max_bits=self.max_bits)
 
-        # Second case when we just want to get full columns
-        if isinstance(key, (int, slice)):
-            key = slice(key, key + 1, None)
+        # Second case when we just want to get full row
+        if isinstance(key, int):
+            if key < 0:
+                start = self.rows - abs(key)
+                if start < 0:
+                    raise PyrtlError('Index %d is out of bounds for '
+                                     'matrix with %d rows' % (key, self.rows))
+                key = slice(start, start + 1, None)
+            else:
+                key = slice(key, key + 1, None)
+            return self[key, :]
+
+        # Third case when we want multiple rows
+        if isinstance(key, slice):
             return self[key, :]
 
         # Otherwise improper value was passed

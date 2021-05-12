@@ -273,8 +273,12 @@ class TestMatrixGetItem(MatrixTestBase):
             matrix = Matrix.Matrix(3, 3, 3)
             output = matrix[4, 2]
 
-    def test_getitem_fail_out_of_bounds_rows_negative(self):
+    def test_getitem_fail_out_of_bounds_row_negative(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            matrix = Matrix.Matrix(3, 3, 3)
+            output = matrix[-4]
 
+    def test_getitem_fail_out_of_bounds_rows_negative(self):
         with self.assertRaises(pyrtl.PyrtlError):
             matrix = Matrix.Matrix(3, 3, 3)
             output = matrix[-4, 2]
@@ -316,6 +320,24 @@ class TestMatrixGetItem(MatrixTestBase):
             self.assertEqual(len(item), out_rows * out_columns * bits)
         self.check_against_expected(item, expected_output)
 
+    def test_getitem_with_tuple_indices(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[2, 0]
+        self.check_against_expected(item, 6)
+
+    def test_getitem_with_slice_indices_raw(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[slice(0, 2), slice(0, 3)]
+        self.check_against_expected(item, [[0, 1, 2], [3, 4, 5]])
+
+    def test_getitem_with_slice_indices_shorthand(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[0:2, 0:3]
+        self.check_against_expected(item, [[0, 1, 2], [3, 4, 5]])
+
     def test_getitem_full(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
@@ -328,12 +350,41 @@ class TestMatrixGetItem(MatrixTestBase):
         item = matrix[1]
         self.check_against_expected(item, [[3, 4, 5]])
 
-    def test_getitem_negative(self):
+    def test_getitem_full_rows_with_slice_front(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[:2]
+        self.check_against_expected(item, [[0, 1, 2], [3, 4, 5]])
+
+    def test_getitem_full_rows_with_slice_back(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[1:]
+        self.check_against_expected(item, [[3, 4, 5], [6, 7, 8]])
+
+    def test_getitem_negative_returns_single(self):
         int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
         item = matrix[-2:-1, -2:-1]
         self.check_against_expected(item, 4)
 
+    def test_getitem_negative_returns_row_v1(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[-1]
+        self.check_against_expected(item, [[6, 7, 8]])
+
+    def test_getitem_negative_returns_row_v2(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[-2]
+        self.check_against_expected(item, [[3, 4, 5]])
+
+    def test_getitem_negative_returns_rows(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[-2:]
+        self.check_against_expected(item, [[3, 4, 5], [6, 7, 8]])
 
 class TestMatrixSetItem(MatrixTestBase):
     def setUp(self):
