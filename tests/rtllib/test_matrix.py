@@ -1454,6 +1454,31 @@ class TestMultiply(MatrixTestBase):
             result_matrix = Matrix.multiply(1, second_matrix)
 
 
+class TestFlatten(MatrixTestBase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_flatten_row_wise(self):
+        value = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=value)
+        flattened = matrix.flatten()
+        expected = [[0, 1, 2, 3, 4, 5, 6, 7, 8]]
+        self.check_against_expected(flattened, expected)
+
+    def test_flatten_column_wise(self):
+        value = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=value)
+        flattened = matrix.flatten(order='F')
+        expected = [[0, 3, 6, 1, 4, 7, 2, 5, 8]]
+        self.check_against_expected(flattened, expected)
+
+    def test_flatten_invalid_order(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            value = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+            matrix = Matrix.Matrix(3, 3, 4, value=value)
+            flattened = matrix.flatten(order='Z')
+
+
 class TestSum(MatrixTestBase):
     def setUp(self):
         pyrtl.reset_working_block()
