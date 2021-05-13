@@ -206,13 +206,14 @@ class TestDistance(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_simple_distance(self):
-        a = pyrtl.Input(4, 'a')
-        o = pyrtl.Output(name='o')
-        o <<= a * 2
+        for b in (None, pyrtl.working_block()):
+            a = pyrtl.Input(4, 'a')
+            o = pyrtl.Output(name='o')
+            o <<= a * 2
 
-        distances = pyrtl.distance(a, o, lambda _: 1)
-        self.assertEqual(len(distances), 1)
-        self.assertEqual(list(distances.values())[0], 2)
+            distances = pyrtl.distance(a, o, lambda _: 1, b)
+            self.assertEqual(len(distances), 1)
+            self.assertEqual(list(distances.values())[0], 2)
 
     def test_several_distances(self):
         a = pyrtl.Input(4, 'a')
