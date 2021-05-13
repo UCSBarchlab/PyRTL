@@ -414,7 +414,7 @@ def paths(src=None, dst=None, dst_nets=None, block=None):
         if None, will get paths from all Inputs
     :param WireVector dst: destination wire(s) to which to trace your paths
         if None, will get paths to all Outputs
-    :param {WireVector: {LogicNet}}: map from wire to set of nets where the
+    :param {WireVector: {LogicNet}} dst_nets: map from wire to set of nets where the
         wire is an argument; will compute it internally if not given via a
         call to pyrtl.net_connections()
     :param Block block: block to use (defaults to working block)
@@ -487,7 +487,7 @@ def distance(src, dst, f, block=None):
 
     This calls the given function f on each net in a path, summing the result.
     """
-    ps = paths(src, dst, block)
+    ps = paths(src, dst, block=block)
     ps = ps[src][dst]
     # Turning path into tuple so it can be the key
     m = {tuple(path): sum(map(f, path)) for path in ps}
