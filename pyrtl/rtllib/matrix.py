@@ -213,6 +213,11 @@ class Matrix(object):
                     raise PyrtlError('Rows must be of type int or slice, '
                                      'instead "%s" was passed of type %s' %
                                      (str(rows), type(rows)))
+                if rows < 0:
+                    rows = self.rows - abs(rows)
+                    if rows < 0:
+                        raise PyrtlError("Invalid bounds for rows. Max rows: %s, got: %s" % (
+                            str(self.rows), str(rows)))
                 rows = slice(rows, rows + 1, 1)
 
             if not isinstance(columns, slice):
@@ -220,6 +225,11 @@ class Matrix(object):
                     raise PyrtlError('Columns must be of type int or slice, '
                                      'instead "%s" was passed of type %s' %
                                      (str(columns), type(columns)))
+                if columns < 0:
+                    columns = self.columns - abs(columns)
+                    if columns < 0:
+                        raise PyrtlError("Invalid bounds for columns. Max columns: %s, got: %s" % (
+                            str(self.columns), str(columns)))
                 columns = slice(columns, columns + 1, 1)
 
             if rows.start is None:
@@ -665,30 +675,169 @@ class Matrix(object):
 
         raise PyrtlError('Power must be greater than or equal to 0')
 
-    def flatten(self, order='C'):
-        ''' Flatten the matrix into a single row.
+    def put(self, ind, v, mode='raise'):
+        ''' Replace specified elements of the matrix with given values
 
-        :param str order: 'C' means row-major order (C-style), and
-            'F' means column-major order (Fortran-style).
-        :return: row vector matrix
+        :param int/list[int]/tuple[int] ind: target indices
+        :param int/list[int]/tuple[int]/Matrix row-vector v: values to place in
+            matrix at target indices; if v is shorter than ind, it is repeated as necessary
+        :param str mode: how out-of-bounds indices behave; 'raise' raises an
+            error, 'wrap' wraps aoround, and 'clip' clips to the range
+
+        Note that the index is on the flattened matrix.
         '''
-        result = []
-        if order == 'C':
-            for r in range(self.rows):
-                for c in range(self.columns):
-                    result.append(as_wires(self[r, c], bitwidth=self.bits))
-        elif order == 'F':
-            for c in range(self.columns):
-                for r in range(self.rows):
-                    result.append(as_wires(self[r, c], bitwidth=self.bits))
+        count = self.rows * self.columns
+        if isinstance(ind, int):
+            ind = (ind,)
+        elif not isinstance(ind, (tuple, list)):
+            raise PyrtlError("Expected int or list-like indices, got %s" % type(ind))
+
+        if isinstance(v, int):
+            v = (v,)
+
+        if isinstance(v, (tuple, list)) and len(v) == 0:
+            return
+        elif isinstance(v, Matrix):
+            if v.rows != 1:
+                raise PyrtlError(
+                    "Expected a row-vector matrix, instead got matrix with %d rows" % v.rows
+                )
+
+        if mode not in ['raise', 'wrap', 'clip']:
+            raise PyrtlError(
+                "Unexpected mode %s; allowable modes are 'raise', 'wrap', and 'clip'" % mode
+            )
+
+        def get_ix(ix):
+            if ix < 0:
+                ix = count - abs(ix)
+            if ix < 0 or ix >= count:
+                if mode == 'raise':
+                    raise PyrtlError("index %d is out of bounds with size %d" % (ix, count))
+                elif mode == 'wrap':
+                    ix = ix % count
+                elif mode == 'clip':
+                    ix = 0 if ix < 0 else count - 1
+            return ix
+
+        def get_value(ix):
+            if isinstance(v, (tuple, list)):
+                if ix >= len(v):
+                    return v[-1]  # if v is shorter than ind, repeat last as necessary
+                return v[ix]
+            elif isinstance(v, Matrix):
+                if ix >= count:
+                    return v[0, -1]
+                return v[0, ix]
+
+        for v_ix, mat_ix in enumerate(ind):
+            mat_ix = get_ix(mat_ix)
+            row = mat_ix // self.columns
+            col = mat_ix % self.columns
+            self[row, col] = get_value(v_ix)
+
+    def reshape(self, *newshape, order='C'):
+        ''' Create a matrix of the given shape from the current matrix.
+
+        :param int/ints/tuple[int] newshape: shape of the matrix to return;
+            if a single int, will result in a 1-D row-vector of that length;
+            if a tuple, will use values for number of rows and cols. Can also
+            be a varargs.
+        :param str order: 'C' means to read from self using
+            row-major order (C-style), and 'F' means to read from self
+            using column-major order (Fortran-style).
+        :return: A copy of the matrix with same data, with a new number of rows/cols
+
+        One shape dimension in newshape can be -1; in this case, the value
+        for that dimension is inferred from the other given dimension (if any)
+        and the number of elements in the matrix.
+
+        Examples::
+            int_matrix = [[0, 1, 2, 3], [4, 5, 6, 7]]
+            matrix = Matrix.Matrix(2, 4, 4, value=int_matrix)
+
+            matrix.reshape(-1) == [[0, 1, 2, 3, 4, 5, 6, 7]]
+            matrix.reshape(8) == [[0, 1, 2, 3, 4, 5, 6, 7]]
+            matrix.reshape(1, 8) == [[0, 1, 2, 3, 4, 5, 6, 7]]
+            matrix.reshape((1, 8)) == [[0, 1, 2, 3, 4, 5, 6, 7]]
+            matrix.reshape((1, -1)) == [[0, 1, 2, 3, 4, 5, 6, 7]]
+
+            matrix.reshape(4, 2) == [[0, 1], [2, 3], [4, 5], [6, 7]]
+            matrix.reshape(-1, 2) == [[0, 1], [2, 3], [4, 5], [6, 7]]
+            matrix.reshape(4, -1) == [[0, 1], [2, 3], [4, 5], [6, 7]]
+        '''
+        count = self.rows * self.columns
+        if isinstance(newshape, int):
+            if newshape == -1:
+                newshape = (1, count)
+            else:
+                newshape = (1, newshape)
+        elif isinstance(newshape, tuple):
+            if isinstance(newshape[0], tuple):
+                newshape = newshape[0]
+            if len(newshape) == 1:
+                newshape = (1, newshape[0])
+            if len(newshape) > 2:
+                raise PyrtlError("length of newshape tuple must be <= 2")
+            rows, cols = newshape
+            if not isinstance(rows, int) or not isinstance(cols, int):
+                raise PyrtlError(
+                    "newshape dimensions must be integers, instead got %s" % type(newshape)
+                )
+            if rows == -1 and cols == -1:
+                raise PyrtlError("Both dimensions in newshape cannot be -1")
+            if rows == -1:
+                rows = count // cols
+                newshape = (rows, cols)
+            elif cols == -1:
+                cols = count // rows
+                newshape = (rows, cols)
         else:
+            raise PyrtlError(
+                "newshape can be an integer or tuple of integers, not %s" % type(newshape)
+            )
+
+        rows, cols = newshape
+        if rows * cols != count:
+            raise PyrtlError(
+                "Cannot reshape matrix of size %d into shape %s" % (count, str(newshape))
+            )
+
+        if order not in 'CF':
             raise PyrtlError(
                 "Invalid order %s. Acceptable orders are 'C' (for row-major C-style order) "
                 "and 'F' (for column-major Fortran-style order)." % order
             )
 
-        return Matrix(rows=1, columns=len(result), bits=self.bits,
-                      value=[result], max_bits=self.max_bits)
+        value = [[0] * cols for _ in range(rows)]
+        ix = 0
+        if order == 'C':
+            # Read and write in row-wise order
+            for newr in range(rows):
+                for newc in range(cols):
+                    r = ix // self.columns
+                    c = ix % self.columns
+                    value[newr][newc] = self[r, c]
+                    ix += 1
+        else:
+            # Read and write in column-wise order
+            for newc in range(cols):
+                for newr in range(rows):
+                    r = ix % self.rows
+                    c = ix // self.rows
+                    value[newr][newc] = self[r, c]
+                    ix += 1
+
+        return Matrix(rows, cols, self.bits, self.signed, value, self.max_bits)
+
+    def flatten(self, order='C'):
+        ''' Flatten the matrix into a single row.
+
+        :param str order: 'C' means row-major order (C-style), and
+            'F' means column-major order (Fortran-style).
+        :return: A copy of the matrix flattened in to a row vector matrix
+        '''
+        return self.reshape(self.rows * self.columns, order=order)
 
 
 def multiply(first, second):
