@@ -386,6 +386,48 @@ class TestMatrixGetItem(MatrixTestBase):
         item = matrix[-2:]
         self.check_against_expected(item, [[3, 4, 5], [6, 7, 8]])
 
+    def test_getitem_negative_in_tuple_with_slice_returns_row_1(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[-3, :]
+        self.check_against_expected(item, [[0, 1, 2]])
+
+    def test_getitem_negative_in_tuple_with_slice_returns_row_2(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[-2, :]
+        self.check_against_expected(item, [[3, 4, 5]])
+
+    def test_getitem_negative_in_tuple_with_slice_returns_row_3(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[-1, :]
+        self.check_against_expected(item, [[6, 7, 8]])
+
+    def test_getitem_negative_in_tuple_with_slice_returns_column_1(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[:, -3]
+        self.check_against_expected(item, [[0], [3], [6]])
+
+    def test_getitem_negative_in_tuple_with_slice_returns_column_2(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[:, -2]
+        self.check_against_expected(item, [[1], [4], [7]])
+
+    def test_getitem_negative_in_tuple_with_slice_returns_column_3(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[:, -1]
+        self.check_against_expected(item, [[2], [5], [8]])
+
+    def test_getitem_negative_in_tuple_returns_single(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
+        item = matrix[0, -1]
+        self.check_against_expected(item, 2)
+
 
 class TestMatrixSetItem(MatrixTestBase):
     def setUp(self):
@@ -1460,29 +1502,292 @@ class TestMultiply(MatrixTestBase):
             result_matrix = Matrix.multiply(1, second_matrix)
 
 
+class TestReshape(MatrixTestBase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def check_reshape(self, original, rows, columns, shape, expected, order='C'):
+        matrix = Matrix.Matrix(rows, columns, 4, value=original)
+        reshaped = matrix.reshape(shape, order=order)
+        self.check_against_expected(reshaped, expected)
+
+    def test_reshape_negative_one_shape(self):
+        self.check_reshape([[0, 1, 2, 3], [4, 5, 6, 7]], 2, 4, -1,
+                           [[0, 1, 2, 3, 4, 5, 6, 7]])
+
+    def test_reshape_single_int_shape(self):
+        self.check_reshape([[0, 1, 2, 3], [4, 5, 6, 7]], 2, 4, 8,
+                           [[0, 1, 2, 3, 4, 5, 6, 7]])
+
+    def test_reshape_normal_tuple_shape(self):
+        self.check_reshape([[0, 1, 2, 3], [4, 5, 6, 7]], 2, 4, (1, 8),
+                           [[0, 1, 2, 3, 4, 5, 6, 7]])
+
+    def test_reshape_tuple_with_negative_one_shape(self):
+        self.check_reshape([[0, 1, 2, 3], [4, 5, 6, 7]], 2, 4, (1, -1),
+                           [[0, 1, 2, 3, 4, 5, 6, 7]])
+
+    def test_reshape_varargs_shape(self):
+        matrix = Matrix.Matrix(2, 4, 4, value=[[0, 1, 2, 3], [4, 5, 6, 7]])
+        reshaped = matrix.reshape(1, 8)
+        self.check_against_expected(reshaped, [[0, 1, 2, 3, 4, 5, 6, 7]])
+
+    def test_reshape_nonsquare_tuple_shape_1(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (2, 6),
+                           [[0, 1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11]])
+
+    def test_reshape_nonsquare_tuple_shape_2(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (6, 2),
+                           [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11]])
+
+    def test_reshape_nonsquare_tuple_shape_3(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (3, 4),
+                           [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+
+    def test_reshape_nonsquare_tuple_shape_4(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5]], 2, 3, (3, 2),
+                           [[0, 1], [2, 3], [4, 5]])
+
+    def test_reshape_nonsquare_tuple_shape_5(self):
+        self.check_reshape([[0, 1, 2]], 1, 3, (3, 1),
+                           [[0], [1], [2]])
+
+    def test_reshape_nonsquare_int_shape(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, 12,
+                           [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]])
+
+    def test_reshape_nonsquare_negative_one_shape(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, -1,
+                           [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]])
+
+    def test_reshape_nonsquare_tuple_with_negative_one_shape_1(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (-1, 12),
+                           [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]])
+
+    def test_reshape_nonsquare_tuple_with_negative_one_shape_2(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (12, -1),
+                           [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11]])
+
+    def test_reshape_nonsquare_incomplete_tuple_shape(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (12,),
+                           [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]])
+
+    def test_reshape_nonsquare_incomplete_tuple_with_negative_one_shape(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (-1,),
+                           [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]])
+
+    def test_reshape_negative_one_shape_column_order(self):
+        self.check_reshape([[0, 1, 2, 3], [4, 5, 6, 7]], 2, 4, -1,
+                           [[0, 4, 1, 5, 2, 6, 3, 7]], order='F')
+
+    def test_reshape_single_int_shape_column_order(self):
+        self.check_reshape([[0, 1, 2, 3], [4, 5, 6, 7]], 2, 4, 8,
+                           [[0, 4, 1, 5, 2, 6, 3, 7]], order='F')
+
+    def test_reshape_normal_tuple_shape_column_order(self):
+        self.check_reshape([[0, 1, 2, 3], [4, 5, 6, 7]], 2, 4, (1, 8),
+                           [[0, 4, 1, 5, 2, 6, 3, 7]], order='F')
+
+    def test_reshape_tuple_with_negative_one_shape_column_order(self):
+        self.check_reshape([[0, 1, 2, 3], [4, 5, 6, 7]], 2, 4, (1, -1),
+                           [[0, 4, 1, 5, 2, 6, 3, 7]], order='F')
+
+    def test_reshape_varargs_shape_column_order(self):
+        matrix = Matrix.Matrix(2, 4, 4, value=[[0, 1, 2, 3], [4, 5, 6, 7]])
+        reshaped = matrix.reshape(1, 8, order='F')
+        self.check_against_expected(reshaped, [[0, 4, 1, 5, 2, 6, 3, 7]])
+
+    def test_reshape_nonsquare_tuple_shape_column_order_1(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (2, 6),
+                           [[0, 6, 1, 7, 2, 8], [3, 9, 4, 10, 5, 11]], order='F')
+
+    def test_reshape_nonsquare_tuple_shape_column_order_2(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (6, 2),
+                           [[0, 7], [3, 10], [6, 2], [9, 5], [1, 8], [4, 11]], order='F')
+
+    def test_reshape_nonsquare_tuple_shape_column_order_3(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (3, 4),
+                           [[0, 9, 7, 5], [3, 1, 10, 8], [6, 4, 2, 11]], order='F')
+
+    def test_reshape_nonsquare_tuple_shape_column_order_4(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5]], 2, 3, (3, 2),
+                           [[0, 4], [3, 2], [1, 5]], order='F')
+
+    def test_reshape_nonsquare_tuple_shape_column_order_5(self):
+        self.check_reshape([[0, 1, 2]], 1, 3, (3, 1),
+                           [[0], [1], [2]], order='F')
+
+    def test_reshape_nonsquare_int_shape_column_order(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, 12,
+                           [[0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]], order='F')
+
+    def test_reshape_nonsquare_negative_one_shape_column_order(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, -1,
+                           [[0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]], order='F')
+
+    def test_reshape_nonsquare_tuple_with_negative_one_shape_1_column_order(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (-1, 12),
+                           [[0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]], order='F')
+
+    def test_reshape_nonsquare_tuple_with_negative_one_shape_2_column_order(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (12, -1),
+                           [[0], [3], [6], [9], [1], [4], [7], [10], [2], [5], [8], [11]],
+                           order='F')
+
+    def test_reshape_nonsquare_incomplete_tuple_shape_column_order(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (12,),
+                           [[0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]], order='F')
+
+    def test_reshape_nonsquare_incomplete_tuple_with_negative_one_shape_column_order(self):
+        self.check_reshape([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], 4, 3, (-1,),
+                           [[0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]], order='F')
+
+    def check_raises_bad_shape(self, shape, order='C'):
+        with self.assertRaises(pyrtl.PyrtlError):
+            matrix = Matrix.Matrix(2, 3, 4, value=[[0, 1, 2], [3, 4, 5]])
+            matrix.reshape(shape, order=order)
+
+    def test_reshape_bad_tuple_shape_1(self):
+        self.check_raises_bad_shape((4,))
+
+    def test_reshape_bad_tuple_shape_2(self):
+        self.check_raises_bad_shape((1, 6, 12))
+
+    def test_reshape_bad_tuple_shape_3(self):
+        self.check_raises_bad_shape((1, 'bad'))
+
+    def test_reshape_bad_tuple_shape_4(self):
+        self.check_raises_bad_shape('bad')
+
+    def test_reshape_bad_tuple_shape_5(self):
+        self.check_raises_bad_shape((-1, -1))
+
+    def test_reshape_bad_tuple_shape_count(self):
+        self.check_raises_bad_shape((1, 7))
+
+    def test_reshape_bad_tuple_shape_order(self):
+        self.check_raises_bad_shape((1, 6), order='Z')
+
+
 class TestFlatten(MatrixTestBase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_flatten_row_wise(self):
-        value = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-        matrix = Matrix.Matrix(3, 3, 4, value=value)
-        flattened = matrix.flatten()
-        expected = [[0, 1, 2, 3, 4, 5, 6, 7, 8]]
+    def check_flattened(self, original, rows, columns, expected, order='C'):
+        matrix = Matrix.Matrix(rows, columns, 4, value=original)
+        flattened = matrix.flatten(order)
         self.check_against_expected(flattened, expected)
 
+    def test_flatten_row_wise(self):
+        self.check_flattened([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3,
+                             [[0, 1, 2, 3, 4, 5, 6, 7, 8]])
+
+    def test_flatten_row_wise_nonsquare_1(self):
+        self.check_flattened([[0, 1, 2, 3], [4, 5, 6, 7]], 2, 4,
+                             [[0, 1, 2, 3, 4, 5, 6, 7]])
+
+    def test_flatten_row_wise_nonsquare_2(self):
+        self.check_flattened([[0], [1], [2], [3]], 4, 1,
+                             [[0, 1, 2, 3]])
+
+    def test_flatten_row_wise_nonsquare_3(self):
+        self.check_flattened([[0, 1, 2, 3, 4, 5, 6, 7]], 1, 8,
+                             [[0, 1, 2, 3, 4, 5, 6, 7]])
+
     def test_flatten_column_wise(self):
-        value = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-        matrix = Matrix.Matrix(3, 3, 4, value=value)
-        flattened = matrix.flatten(order='F')
-        expected = [[0, 3, 6, 1, 4, 7, 2, 5, 8]]
-        self.check_against_expected(flattened, expected)
+        self.check_flattened([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3,
+                             [[0, 3, 6, 1, 4, 7, 2, 5, 8]], order='F')
+
+    def test_flatten_column_wise_nonsquare_1(self):
+        self.check_flattened([[0, 1, 2, 3], [4, 5, 6, 7]], 2, 4,
+                             [[0, 4, 1, 5, 2, 6, 3, 7]], order='F')
+
+    def test_flatten_column_wise_nonsquare_2(self):
+        self.check_flattened([[0], [1], [2], [3]], 4, 1,
+                             [[0, 1, 2, 3]], order='F')
+
+    def test_flatten_column_wise_nonsquare_3(self):
+        self.check_flattened([[0, 1, 2, 3, 4, 5, 6, 7]], 1, 8,
+                             [[0, 1, 2, 3, 4, 5, 6, 7]], order='F')
 
     def test_flatten_invalid_order(self):
         with self.assertRaises(pyrtl.PyrtlError):
             value = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
             matrix = Matrix.Matrix(3, 3, 4, value=value)
             flattened = matrix.flatten(order='Z')
+
+
+class TestPut(MatrixTestBase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def check_put(self, original, rows, columns, ind, v, expected, mode='raise'):
+        matrix = Matrix.Matrix(rows, columns, 4, value=original)
+        matrix.put(ind, v, mode=mode)
+        self.check_against_expected(matrix, expected)
+
+    def test_put_indices_list_values_1(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, [0, 2], [12, 13],
+                       [[12, 1, 13], [3, 4, 5]])
+
+    def test_put_indices_list_values_2(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, [-1, 2, 3], [12, 13, 15],
+                       [[0, 1, 13], [15, 4, 12]])
+
+    def test_put_indices_tuple_values(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, [-1, 2, 3], (12, 13, 15),
+                       [[0, 1, 13], [15, 4, 12]])
+
+    def test_put_tuple_indices(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, (-1, 2, 3), [12, 13, 15],
+                       [[0, 1, 13], [15, 4, 12]])
+
+    def test_put_matrix(self):
+        v = Matrix.Matrix(1, 3, 4, value=[[12, 13, 15]])
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, [2, 3, 4], v,
+                       [[0, 1, 12], [13, 15, 5]])
+
+    def test_put_indices_list_repeat_v_1(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, [-1, 2, 3], [12],
+                       [[0, 1, 12], [12, 4, 12]])
+
+    def test_put_indices_list_repeat_v_2(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, [-1, 2, 3], 12,
+                       [[0, 1, 12], [12, 4, 12]])
+
+    def test_put_indices_negative(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, -4, 12,
+                       [[0, 1, 12], [3, 4, 5]])
+
+    def test_put_empty(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, [0, 1], [],
+                       [[0, 1, 2], [3, 4, 5]])
+
+    def test_put_indices_raise_1(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, 22, 12,
+                           [[0, 1, 2], [3, 4, 12]])
+
+    def test_put_indices_raise_2(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, -22, 12,
+                           [[12, 1, 2], [3, 4, 5]])
+
+    def test_put_indices_wrap_1(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, 22, 12,
+                       [[0, 1, 2], [3, 12, 5]], mode='wrap')
+
+    def test_put_indices_wrap_2(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, -22, 12,
+                       [[0, 1, 12], [3, 4, 5]], mode='wrap')
+
+    def test_put_indices_clip_1(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, 22, 12,
+                       [[0, 1, 2], [3, 4, 12]], mode='clip')
+
+    def test_put_indices_clip_2(self):
+        self.check_put([[0, 1, 2], [3, 4, 5]], 2, 3, -22, 12,
+                       [[12, 1, 2], [3, 4, 5]], mode='clip')
 
 
 class TestSum(MatrixTestBase):
