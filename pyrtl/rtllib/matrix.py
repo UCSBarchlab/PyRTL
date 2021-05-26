@@ -6,6 +6,7 @@ from pyrtl.rtllib import multipliers as mult
 from ..wire import Const, WireVector
 from ..corecircuits import as_wires, concat, select
 from ..pyrtlexceptions import PyrtlError
+from ..helperfuncs import formatted_str_to_val
 
 
 class Matrix(object):
@@ -1341,4 +1342,59 @@ def matrix_wv_to_list(matrix_wv, rows, columns, bits):
             int_value = int(value[bit_pointer: bit_pointer + bits], 2)
             result[i][j] = int_value
             bit_pointer += bits
+    return result
+
+
+def list_to_int(matrix, n_bits):
+    ''' Convert a Python matrix (a list of lists) into an integer.
+
+    :param list[list[int]] matrix: a pure Python list of lists representing a matrix
+    :param int n_bits: number of bits to be used to represent each element; if an
+        element doesn't fit in n_bits, it truncates the most significant bits.
+    :return int: a N*n_bits wide wirevector containing the elements of `matrix`,
+        where N is the number of elements in `matrix`
+
+    Integers that are signed will automatically be converted to their two's complement form.
+
+    This function is helpful for turning a pure Python list of lists
+    into a integer suitable for creating a Constant wirevector that can
+    be passed in to as a Matrix intializer's `value` argument, or for
+    passing into a Simulation's step function for a particular input wire.
+
+    For example, calling Matrix.list_to_int([3, 5], [7, 9], 4) produces 13,689,
+    which in binary looks like this::
+
+        0011 0101 0111 1001
+
+    Note how the elements of the list of lists were added, 4 bits at a time,
+    in row order, such that the element at row 0, column 0 is in the most significant
+    4 bits, and the element at row 1, column 1 is in the least significant 4 bits.
+
+    Here's an example of using it in simulation::
+
+        a_vals = [[0, 1], [2, 3]]
+        b_vals = [[2, 4, 6], [8, 10, 12]]
+
+        a_in = pyrtl.Input(4 * 4, 'a_in')
+        b_in = pyrtl.Input(6 * 4, 'b_in')
+        a = Matrix.Matrix(2, 2, 4, value=a_in)
+        b = Matrix.Matrix(2, 3, 4, value=b_in)
+        ...
+
+        sim = pyrtl.Simulation()
+        sim.step({
+            'a_in': Matrix.list_to_int(a_vals)
+            'b_in': Matrix.list_to_int(b_vals)
+        })
+    '''
+    if n_bits <= 0:
+        raise PyrtlError("Number of bits per element must be positive, instead got %d" % n_bits)
+
+    result = 0
+
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            val = formatted_str_to_val(str(matrix[i][j]), 's' + str(n_bits))
+            result = (result << n_bits) | val
+
     return result
