@@ -159,7 +159,7 @@ class TestMatrixInit(MatrixTestBase):
         self.init_wirevector(matrix, rows, columns, bits)
 
     def init_wirevector(self, matrix_value, rows, columns, bits):
-        matrix_input = pyrtl.Const(matrix_to_int(matrix_value, bits), rows * columns * bits)
+        matrix_input = pyrtl.Const(Matrix.list_to_int(matrix_value, bits), rows * columns * bits)
         matrix = Matrix.Matrix(rows, columns, bits, value=matrix_input)
 
         self.assertEqual(rows, matrix.rows)
@@ -2445,19 +2445,29 @@ class TestVStack(MatrixTestBase):
             _v = Matrix.vstack(w, m)
 
 
-'''
-These are helpful functions to use in testing
-'''
+class TestHelpers(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
 
+    def test_list_to_int(self):
+        self.assertEquals(Matrix.list_to_int([[0]], 1), 0b0)
+        self.assertEquals(Matrix.list_to_int([[1, 2]], 2), 0b0110)
+        self.assertEquals(Matrix.list_to_int([[1, 2, 3]], 2), 0b011011)
+        self.assertEquals(Matrix.list_to_int([[4, 9, 11], [3, 5, 6]], 4),
+                          0b010010011011001101010110)
 
-def matrix_to_int(matrix, n_bits):
-    result = ''
+    def test_list_to_int_truncates(self):
+        self.assertEquals(Matrix.list_to_int([[4, 9, 27]], 3), 0b100001011)
 
-    for i in range(len(matrix)):
-        for j in range(len(matrix[0])):
-            result = result + bin(matrix[i][j])[2:].zfill(n_bits)
+    def test_list_to_int_negative(self):
+        self.assertEquals(Matrix.list_to_int([[-4, -9, 11]], 5), 0b111001011101011)
 
-    return int(result, 2)
+    def test_list_to_int_negative_truncates(self):
+        self.assertEquals(Matrix.list_to_int([[-4, -9, 11]], 3), 0b100111011)
+
+    def test_list_to_int_non_positive_n_bits(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            Matrix.list_to_int([[3]], 0)
 
 
 if __name__ == '__main__':
