@@ -97,6 +97,7 @@ from .importexport import OutputToVerilog
 from .importexport import output_verilog_testbench
 from .importexport import input_from_blif
 from .importexport import output_to_firrtl
+from .importexport import input_from_iscas_bench
 
 # different transform passes
 from .passes import common_subexp_elimination
