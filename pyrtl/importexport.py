@@ -127,7 +127,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
         if isinstance(blif, six.string_types):
             blif_string = blif
         else:
-            raise PyrtlError('input_blif expecting either open file or string')
+            raise PyrtlError('input_from_blif expecting either open file or string')
 
     def SKeyword(x):
         return Suppress(Keyword(x))
@@ -947,3 +947,111 @@ def output_to_firrtl(open_file, rom_blocks=None, block=None):
             pass
 
     return 0
+
+# -----------------------------------------------------------------
+#       __   __       __     __   ___       __
+#    | /__` /    /\  /__`   |__) |__  |\ | /   |__|
+#    | .__/ \__ /~~\ .__/   |__) |___ | \| \__ |  |
+
+
+def input_from_iscas_bench(bench, block=None):
+    ''' Import an ISCAS .bench file
+
+    :param file bench: an open ISCAS .bench file to read
+    :param block: block to add the imported logic (defaults to current working block)
+    '''
+
+    import pyparsing
+    import six
+    from pyparsing import (Word, Literal, OneOrMore, ZeroOrMore, Suppress, Group, Keyword, oneOf)
+
+    block = working_block(block)
+
+    try:
+        bench_string = bench.read()
+    except AttributeError:
+        if isinstance(bench, six.string_types):
+            bench_string = bench
+        else:
+            raise PyrtlError('input_from_bench expecting either open file or string')
+
+    def SKeyword(x):
+        return Suppress(Keyword(x))
+
+    def SLiteral(x):
+        return Suppress(Literal(x))
+
+    # NOTE: The acceptable signal characters are based on viewing the I/O names
+    # in the available ISCAS benchmark files, and may not be complete.
+    signal_start = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\/?'
+    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\/.?-'
+    signal_id = Word(signal_start, signal_middle)
+
+    gate_names = "AND OR NAND NOR XOR NOT BUFF DFF"
+
+    src_list = Group(signal_id + ZeroOrMore(SLiteral(",") + signal_id))("src_list")
+    net_def = Group(signal_id("dst") + SLiteral("=") + oneOf(gate_names)("gate")
+                    + SLiteral("(") + src_list + SLiteral(")"))("net_def")
+
+    input_def = Group(SKeyword("INPUT") + SLiteral("(")
+                      + signal_id + SLiteral(")"))("input_def")
+    output_def = Group(SKeyword("OUTPUT") + SLiteral("(")
+                       + signal_id + SLiteral(")"))("output_def")
+    command_def = input_def | output_def | net_def
+
+    commands = OneOrMore(command_def)("command_list")
+    parser = commands.ignore(pyparsing.pythonStyleComment)
+
+    # Begin actually reading and parsing the BENCH file
+    result = parser.parseString(bench_string, parseAll=True)
+
+    output_to_internal = {}  # dict: name -> wire
+
+    def twire(name):
+        """ Find or make wire named 'name' and return it. """
+        w = output_to_internal.get(name)
+        if w is None:
+            w = block.wirevector_by_name.get(name)
+            if w is None:
+                w = WireVector(bitwidth=1, name=name)
+        return w
+
+    for cmd in result["command_list"]:
+        if cmd.getName() == "input_def":
+            _wire_in = Input(bitwidth=1, name=str(cmd[0]), block=block)
+        elif cmd.getName() == "output_def":
+            # Create internal wire for indirection, since Outputs can't be inputs to nets in PyRTL
+            wire_internal = WireVector(bitwidth=1, block=block)
+            wire_out = Output(bitwidth=1, name=str(cmd[0]), block=block)
+            wire_out <<= wire_internal
+            output_to_internal[cmd[0]] = wire_internal
+        elif cmd.getName() == "net_def":
+            srcs = cmd["src_list"]
+            if cmd["gate"] == "AND":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= twire(srcs[0]) & twire(srcs[1])
+            elif cmd["gate"] == "OR":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= twire(srcs[0]) | twire(srcs[1])
+            elif cmd["gate"] == "NAND":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= twire(srcs[0]).nand(twire(srcs[1]))
+            elif cmd["gate"] == "NOR":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= ~(twire(srcs[0]) | twire(srcs[1]))
+            elif cmd["gate"] == "XOR":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= twire(srcs[0]) ^ twire(srcs[1])
+            elif cmd["gate"] == "NOT":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= ~twire(srcs[0])
+            elif cmd["gate"] == "BUFF":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= twire(srcs[0])
+            elif cmd["gate"] == "DFF":
+                dst_wire = twire(cmd["dst"])
+                reg = Register(bitwidth=1)
+                reg.next <<= twire(srcs[0])
+                dst_wire <<= reg
+            else:
+                raise PyrtlError("Unexpected gate {%s}" % cmd["gate"])
