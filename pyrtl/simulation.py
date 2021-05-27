@@ -6,13 +6,14 @@ import sys
 import re
 import numbers
 import collections
+import copy
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
 from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock
 from .helperfuncs import check_rtl_assertions, _currently_in_jupyter_notebook
-from .verilog import _VerilogSanitizer
+from .importexport import _VerilogSanitizer
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -93,7 +94,7 @@ class Simulation(object):
         self.tracer = tracer
         self._initialize(register_value_map, memory_value_map)
 
-    def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
+    def _initialize(self, register_value_map=None, memory_value_map=None):
         """ Sets the wire, register, and memory values to default or as specified.
 
         :param register_value_map: is a map of {Register: value}.
@@ -102,15 +103,11 @@ class Simulation(object):
             default to. If no default_value is specified, it will use the value stored in the
             object (default to 0)
         """
-
-        if default_value is None:
-            default_value = self.default_value
-
         # set registers to their values
         reg_set = self.block.wirevector_subset(Register)
         if register_value_map is not None:
             for r in reg_set:
-                self.value[r] = self.regvalue[r] = register_value_map.get(r, default_value)
+                self.value[r] = self.regvalue[r] = register_value_map.get(r, self.default_value)
 
         # set constants to their set values
         for w in self.block.wirevector_subset(Const):
@@ -118,7 +115,6 @@ class Simulation(object):
             assert isinstance(w.val, numbers.Integral)  # for now
 
         # set memories to their passed values
-
         for mem_net in self.block.logic_subset('m@'):
             memid = mem_net.op_param[1].id
             if memid not in self.memvalue:
@@ -143,11 +139,14 @@ class Simulation(object):
         # set all other variables to default value
         for w in self.block.wirevector_set:
             if w not in self.value:
-                self.value[w] = default_value
+                self.value[w] = self.default_value
 
         self.ordered_nets = tuple((i for i in self.block))
         self.reg_update_nets = tuple((self.block.logic_subset('r')))
         self.mem_update_nets = tuple((self.block.logic_subset('@')))
+
+        self.tracer._set_initial_values(self.default_value, self.regvalue.copy(),
+                                        copy.deepcopy(self.memvalue))
 
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle.
@@ -470,9 +469,7 @@ class FastSimulation(object):
         self.internal_names = _PythonSanitizer('_fastsim_tmp_')
         self._initialize(register_value_map, memory_value_map)
 
-    def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
-        if default_value is None:
-            default_value = self.default_value
+    def _initialize(self, register_value_map=None, memory_value_map=None):
         if register_value_map is None:
             register_value_map = {}
 
@@ -482,10 +479,7 @@ class FastSimulation(object):
         # set registers to their values
         reg_set = self.block.wirevector_subset(Register)
         for r in reg_set:
-            if r in register_value_map:
-                self.regs[r.name] = register_value_map[r]
-            else:
-                self.regs[r.name] = default_value
+            self.regs[r.name] = register_value_map.get(r, self.default_value)
 
         self._initialize_mems(memory_value_map)
 
@@ -493,6 +487,9 @@ class FastSimulation(object):
         if self.code_file is not None:
             with open(self.code_file, 'w') as file:
                 file.write(s)
+
+        self.tracer._set_initial_values(self.default_value, self.regs.copy(),
+                                        copy.deepcopy(self.mems))
 
         context = {}
         logic_creator = compile(s, '<string>', 'exec')
@@ -504,7 +501,8 @@ class FastSimulation(object):
             for (mem, mem_map) in memory_value_map.items():
                 if isinstance(mem, RomBlock):
                     raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
-                self.mems[self._mem_varname(mem)] = mem_map
+                name = self._mem_varname(mem)
+                self.mems[name] = mem_map
 
         for net in self.block.logic_subset('m@'):
             mem = net.op_param[1]
@@ -1001,12 +999,17 @@ class SimulationTrace(object):
         elif wires_to_track == 'all':
             wires_to_track = self.block.wirevector_set
 
-        if not len(wires_to_track):
-            raise PyrtlError("There needs to be at least one named wire "
+        non_const_tracked = list(filter(lambda w: not isinstance(w, Const), wires_to_track))
+        if not len(non_const_tracked):
+            raise PyrtlError("There needs to be at least one named non-constant wire "
                              "for simulation to be useful")
         self.wires_to_track = wires_to_track
         self.trace = TraceStorage(wires_to_track)
         self._wires = {wv.name: wv for wv in wires_to_track}
+        # remember for initializing during Verilog testbench output
+        self.default_value = 0
+        self.init_regvalue = {}
+        self.init_memvalue = {}
 
     def __len__(self):
         """ Return the current length of the trace in cycles. """
@@ -1143,7 +1146,7 @@ class SimulationTrace(object):
         """
         if _currently_in_jupyter_notebook():
             from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
-            from .inputoutput import trace_to_html
+            from .visualization import trace_to_html
             htmlstring = trace_to_html(self, trace_list=trace_list, sortkey=_trace_sort_key)
             html_elem = HTML(htmlstring)
             display(html_elem)
@@ -1218,3 +1221,18 @@ class SimulationTrace(object):
             print(formatted_trace_line(w, self.trace[w]), file=file)
         if extra_line:
             print(file=file)
+
+    def _set_initial_values(self, default_value, init_regvalue, init_memvalue):
+        """ Remember the default values that were used when starting the trace.
+
+        :param default_value: Default value to be used for all registers and
+            memory locations if not found in the other passed in maps
+        :param init_regvalue: Default value for registers
+        :param init_memvvalue: Default value for memory locations of given maps
+
+        This is needed when using this trace for outputting a Verilog testbench,
+        and is automatically called during simulation.
+        """
+        self.default_value = default_value
+        self.init_regvalue = init_regvalue
+        self.init_memvalue = init_memvalue

@@ -460,7 +460,7 @@ class Block(object):
 
     def _repr_svg_(self):
         """ IPython display support for Block. """
-        from .inputoutput import block_to_svg
+        from .visualization import block_to_svg
         return block_to_svg(self)
 
     def __iter__(self):
@@ -617,16 +617,16 @@ class Block(object):
 
     def sanity_check_memblock(self, m):
         """ Check that m is a valid memblock type. """
-        from .memory import _MemReadBase
-        if not isinstance(m, _MemReadBase):
+        from .memory import MemBlock
+        if not isinstance(m, MemBlock):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
-                'instead of _MemReadBase' % type(m))
+                'instead of MemBlock' % type(m))
 
     def sanity_check_net(self, net):
         """ Check that net is a valid LogicNet. """
         from .wire import Input, Output, Const, Register
-        from .memory import _MemReadBase
+        from .memory import MemBlock
 
         # general sanity checks that apply to all operations
         if not isinstance(net, LogicNet):
@@ -697,7 +697,7 @@ class Block(object):
                 raise PyrtlInternalError('error, mem op requires 2 op_params in tuple')
             if not isinstance(net.op_param[0], int):
                 raise PyrtlInternalError('error, mem op requires first operand as int')
-            if not isinstance(net.op_param[1], _MemReadBase):
+            if not isinstance(net.op_param[1], MemBlock):
                 raise PyrtlInternalError('error, mem op requires second operand of a memory type')
 
         # operation-specific checks on destinations
@@ -730,11 +730,21 @@ class Block(object):
 class PostSynthBlock(Block):
     """ This is a block with extra metadata required to maintain the
     pre-synthesis interface during post-synthesis.
+
+    It currently holds the following instance attributes:
+
+    * *.io_map*: a map from old IO wirevector to a list of new IO wirevectors it maps to;
+        this is a list because for unmerged io vectors, each old N-bit IO wirevector maps
+        to N new 1-bit IO wirevectors.
+    * *.reg_map*: a map from old register to a list of new registers; a list because post-synthesis,
+        each N-bit register has been mapped to N 1-bit registers
+    * *.mem_map*: a map from old memory block to the new memory block
     """
 
     def __init__(self):
         super(PostSynthBlock, self).__init__()
-        self.io_map = {}
+        self.io_map = collections.defaultdict(list)
+        self.reg_map = collections.defaultdict(list)
         self.mem_map = {}
 
 
@@ -858,7 +868,16 @@ def temp_working_block():
 
 
 def set_debug_mode(debug=True):
-    """ Set the global debug mode. """
+    """ Set the global debug mode.
+
+    :param debug: Optional boolean paramter to which debug mode will be set
+
+    This function will set the debug mode to the specified value.  Debug mode
+    is, by default, set to off to keep the performance of the system.  With debug
+    mode set to true, all temporary WireVectors created will be given a name based
+    on the line of code on which they were created and a snapshot of the call-stack
+    for those WireVectors will be kept as well.
+    """
     global debug_mode
     global _setting_keep_wirevector_call_stack
     global _setting_slower_but_more_descriptive_tmps

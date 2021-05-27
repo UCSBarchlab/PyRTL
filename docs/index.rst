@@ -3,6 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+=====
 PYRTL
 =====
 
@@ -65,6 +66,14 @@ view results with your favorite waveform viewer, build hardware transformation p
 simulations, design, test, and even verify hugely complex digital systems, and much more.  Most critically of 
 all it is easy to extend with your own approaches to digital hardware development as you find necessary.
 
+
+Overview of PyRTL
+=================
+
+If you are brand new to PyRTL we recommend that you start with going through the 
+`Examples of PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/master/examples>`_ which will show you 
+most of the core functionality in the context of a complete design.  
+
 PyRTL Classes:
 --------------
 
@@ -80,10 +89,6 @@ overloaded operations such as `addition` or `bitwise or`. A bunch of other relat
     * :py:class:`~pyrtl.wire.Output` (WireVector)
     * :py:class:`~pyrtl.wire.Const` (WireVector)
     * :py:class:`~pyrtl.wire.Register` (WireVector)
-
-* Memory blocks [base class for internal use only]
-    * :py:class:`~pyrtl.memory.MemBlock` (_MemReadBase)
-    * :py:class:`~pyrtl.memory.RomBlock` (_MemReadBase)
 
 After specifying a hardware design, there are then options to simulate your design right in PyRTL,
 synthesize it down to primitive 1-bit operations, optimize it, and export it to Verilog (along with
@@ -131,45 +136,6 @@ PyrtlInternalError captures internal invariants and assertions over the core log
 be hit when constructing designs in the normal ways.  If you hit a confusing `PyrtlError` or any
 `PyrtlInternalError` feel free to file an issue.
 
-PyRTL Quick Reference:
-----------------------
-
-* Helpful RTL constructs
-    * mux(index_val, val_1, val_2, ... val_n, default=val_x)
-    * select(selector, truecase, falsecase)
-    * concat(wire_msbs, wire_next, ..., wire_lsbs) 
-    * concat_list(wire_list)  # wire_list[0] will be lsb
-    * barrel_shifter(shift_in, bit_in, direction, shift_dist, wrap_around=0)
-    * prioritized_mux(select_list, val_list)  # priority encoder
-    * sparse_mux(selects, vals)
-    * mult_signed(val1, val2)
-
-* Functions useful for test and debug:
-    * set_debug_mode(debug=True)
-    * probe(wire, name=None)
-    * rtl_assert(test_wire, exception_to_be_thrown, block=None)
-    * working_block(block=None)
-    * reset_working_block()
-    * twos_comp_repr(val, bitwidth)
-    * rev_twos_comp_repr(val, bitwidth)
-
-* Allocating and modifying wirevectors
-    * as_wires(val, bitwidth=None, truncating=True, block=None)
-    * match_bitwidth(a, b, c, ..., signed=False)
-    * partition_wire(wire, partition_size)
-    * input_list(names, bitwidth=1)
-    * output_list(names, bitwidth=1)
-    * register_list(names, bitwidth=1)
-    * wirevector_list(names, bitwidth=1, wvtype=WireVector)
-    * WireVector.sign_extended(bitwidth)
-    * WireVector.zero_extended(bitwidth)
-
-* Estimating and optimizing hardware
-    * timing_estimation(tech_in_nm=130, block=None)
-    * area_estimation(tech_in_nm=130, block=None)
-    * yosys_area_delay(library, abc_cmd=None, block=None)
-    * optimize(update_working_block=True, block=None)
-    * synthesize(update_working_block=True, block=None)
 
 PyRTL Functionality:
 ====================
@@ -178,12 +144,12 @@ PyRTL Functionality:
    :caption: Contents:
    
    basic
-   helpers
    simtest
+   blocks
+   helpers
    analysis
    export
    rtllib
-   advanced
    
 
 Indices and tables

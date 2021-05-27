@@ -79,3 +79,18 @@ ROMs
     :members:
     :show-inheritance:
     :special-members: __init__
+
+
+Conditionals
+==================
+
+.. automodule:: pyrtl.conditional
+   :members:
+   :show-inheritance:
+   :special-members:
+   :undoc-members:
+   :exclude-members: __dict__,__weakref__,__module__
+
+.. autodata:: pyrtl.otherwise
+
+.. autodata:: pyrtl.conditional_assignment

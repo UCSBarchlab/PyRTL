@@ -253,7 +253,7 @@ def shift_left_arithmetic(bits_to_shift, shift_amount):
     """ Shift left arithmetic operation.
 
     :param bits_to_shift: WireVector to shift left
-    :param shift_amount: WireVector specifying amount to shift
+    :param shift_amount: WireVector or integer specifying amount to shift
     :return: WireVector of same length as bits_to_shift
 
     This function returns a new WireVector of length equal to the length
@@ -270,7 +270,7 @@ def shift_right_arithmetic(bits_to_shift, shift_amount):
     """ Shift right arithmetic operation.
 
     :param bits_to_shift: WireVector to shift right
-    :param shift_amount: WireVector specifying amount to shift
+    :param shift_amount: WireVector or integer specifying amount to shift
     :return: WireVector of same length as bits_to_shift
 
     This function returns a new WireVector of length equal to the length
@@ -280,7 +280,9 @@ def shift_right_arithmetic(bits_to_shift, shift_amount):
     `bits_to_shift`) is shifted in. Note that `shift_amount` is treated as
     unsigned.
     """
-    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    if isinstance(shift_amount, int):
+        return bits_to_shift[shift_amount:].sign_extended(len(bits_to_shift))
+
     bit_in = bits_to_shift[-1]  # shift in sign_bit
     dir = Const(0)  # shift right
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
@@ -290,7 +292,7 @@ def shift_left_logical(bits_to_shift, shift_amount):
     """ Shift left logical operation.
 
     :param bits_to_shift: WireVector to shift left
-    :param shift_amount: WireVector specifying amount to shift
+    :param shift_amount: WireVector or integer specifying amount to shift
     :return: WireVector of same length as bits_to_shift
 
     This function returns a new WireVector of length equal to the length
@@ -299,7 +301,9 @@ def shift_left_logical(bits_to_shift, shift_amount):
     as unsigned number, meaning the zeroes are shifted in.  Note that
     `shift_amount` is treated as unsigned.
     """
-    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    if isinstance(shift_amount, int):
+        return concat(bits_to_shift[:-shift_amount], Const(0, shift_amount))
+
     bit_in = Const(0)  # shift in a 0
     dir = Const(1)  # shift left
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
@@ -309,7 +313,7 @@ def shift_right_logical(bits_to_shift, shift_amount):
     """ Shift right logical operation.
 
     :param bits_to_shift: WireVector to shift left
-    :param shift_amount: WireVector specifying amount to shift
+    :param shift_amount: WireVector or integer specifying amount to shift
     :return: WireVector of same length as bits_to_shift
 
     This function returns a new WireVector of length equal to the length
@@ -318,7 +322,9 @@ def shift_right_logical(bits_to_shift, shift_amount):
     as unsigned number, meaning the zeros are shifted in regardless of
     the "sign bit".  Note that `shift_amount` is treated as unsigned.
     """
-    a, shamt = _check_shift_inputs(bits_to_shift, shift_amount)
+    if isinstance(shift_amount, int):
+        return bits_to_shift[shift_amount:].zero_extended(len(bits_to_shift))
+
     bit_in = Const(0)  # shift in a 0
     dir = Const(0)  # shift right
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
@@ -509,7 +515,8 @@ def enum_mux(cntrl, table, default=None, strict=True):
         Note that if a default is set, then this check is not performed as
         the default will provide valid values for any underspecified keys.
     :return: a WireVector which is the result of the mux.
-    ::
+
+    Examples::
 
         from enum import IntEnum
 
@@ -555,7 +562,8 @@ def enum_mux(cntrl, table, default=None, strict=True):
 def and_all_bits(vector):
     """ Returns WireVector, the result of "and"ing all items of the argument vector.
 
-    Takes a single WireVector and returns a 1 bit result, the bitwise and of all of
+    :param vector: Takes a single arbitrary length WireVector
+    :return: Returns a 1 bit result, the bitwise `and` of all of
     the bits in the vector to a single bit.
     """
     return tree_reduce(lambda a, b: a & b, vector)
@@ -564,7 +572,8 @@ def and_all_bits(vector):
 def or_all_bits(vector):
     """ Returns WireVector, the result of "or"ing all items of the argument vector.
 
-    Takes a single WireVector and returns a 1 bit result, the bitwise or of all of
+    :param vector: Takes a single arbitrary length WireVector
+    :return: Returns a 1 bit result, the bitwise `or` of all of
     the bits in the vector to a single bit.
     """
     return tree_reduce(lambda a, b: a | b, vector)
@@ -573,14 +582,14 @@ def or_all_bits(vector):
 def xor_all_bits(vector):
     """ Returns WireVector, the result of "xor"ing all items of the argument vector.
 
-    Takes a single WireVector and returns a 1 bit result, the bitwise xor of all of
-    the bits in the vector to a single bit. This function is also aliased as `parity`
-    and you can call it either way.
+    :param vector: Takes a single arbitrary length WireVector
+    :return: Returns a 1 bit result, the bitwise `xor` of all of
+    the bits in the vector to a single bit.
     """
     return tree_reduce(lambda a, b: a ^ b, vector)
 
 
-parity = xor_all_bits  # shadowing the xor_all_bits_function
+parity = xor_all_bits  # shadowing the xor_all_bits function
 
 
 def tree_reduce(op, vector):

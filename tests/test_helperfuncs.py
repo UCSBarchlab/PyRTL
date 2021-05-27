@@ -350,6 +350,116 @@ class TestMatchBitpattern(unittest.TestCase):
                     out |= x.field2
 
 
+class TestBitpatternToVal(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    @staticmethod
+    def r5_br_immed(x):
+        # i is the 12th bit, k is the 11th bit, and j is the bottom 10 bits of the immediate field
+        return {'i': (x >> 11) & 0x1, 'k': (x >> 10) & 0x1, 'j': x & ((1 << 10) - 1)}
+
+    def test_ordered_fields(self):
+        self.assertEqual(
+            pyrtl.bitpattern_to_val('0000000sssssrrrrr000ddddd0110011', 1, 2, 3),  # RISC-V ADD
+            0b00000000000100010000000110110011
+        )
+
+        self.assertEqual(
+            pyrtl.bitpattern_to_val('iiiiiiisssssrrrrr010iiiii0100011', 1, 3, 4),  # RISC-V SW
+            0b00000000001100100010000010100011
+        )
+
+        m = TestBitpatternToVal.r5_br_immed(-5)
+        self.assertEqual(
+            pyrtl.bitpattern_to_val(
+                'ijjjjjjsssssrrrrr100jjjjk1100011', m['i'], m['j'], 2, 3, m['k']
+            ),  # RISC-V BLT
+            0b11111110001000011100101111100011
+        )
+
+    def test_named_fields(self):
+        self.assertEqual(
+            pyrtl.bitpattern_to_val(
+                '0000000sssssrrrrr000ddddd0110011', s=1, r=2, d=3
+            ),  # RISC-V ADD
+            0b00000000000100010000000110110011
+        )
+
+        self.assertEqual(
+            pyrtl.bitpattern_to_val('iiiiiiisssssrrrrr010iiiii0100011', i=1, s=3, r=4),  # RISC-V SW
+            0b00000000001100100010000010100011
+        )
+
+        self.assertEqual(
+            pyrtl.bitpattern_to_val(
+                'ijjjjjjsssssrrrrr100jjjjk1100011',
+                s=2, r=3, **TestBitpatternToVal.r5_br_immed(-5)
+            ),  # RISC-V BLT
+            0b11111110001000011100101111100011
+        )
+
+    def test_named_fields_with_field_map(self):
+        field_map = {
+            's': 'rs2',
+            'r': 'rs1',
+            'd': 'rd',
+            'i': 'imm',
+        }
+        self.assertEqual(
+            pyrtl.bitpattern_to_val(
+                '0000000sssssrrrrr000ddddd0110011', rs2=1, rs1=2, rd=3, field_map=field_map
+            ),  # RISC-V ADD
+            0b00000000000100010000000110110011
+        )
+
+        self.assertEqual(
+            pyrtl.bitpattern_to_val(
+                'iiiiiiisssssrrrrr010iiiii0100011', imm=1, rs2=3, rs1=4, field_map=field_map
+            ),  # RISC-V SW
+            0b00000000001100100010000010100011
+        )
+
+    def test_fields_all_different(self):
+        self.assertEqual(
+            pyrtl.bitpattern_to_val('abcdefg', a=1, b=0, c=1, d=0, e=0, f=1, g=0),
+            0b1010010
+        )
+
+    def test_no_fields(self):
+        self.assertEqual(
+            pyrtl.bitpattern_to_val('1010010'),
+            0b1010010
+        )
+
+    def test_error_both_ordered_and_named_fields(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', 1, r=3, s=4)
+
+    def test_error_invalid_num_unique_patterns(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', 1, 3)
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', i=1, r=3)
+
+    def test_error_bitpattern_field_not_provided(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', i=1, r=3, t=4)
+
+    def test_error_unnamed_fields_in_bitpattern(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiii?????sssss010iiiii0100011', 1, 3, 4)
+
+    def test_error_value_doesnt_fit_in_field(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', 1, 65, 4)
+
+    @unittest.skip("This error might not be possible")
+    def test_error_bitlist_and_value_different_sizes(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pass
+
+
 class TestChop(unittest.TestCase):
     def setUp(self):
         random.seed(8492049)
@@ -779,42 +889,52 @@ class TestShiftSimulation(unittest.TestCase):
         random.seed(8492049)
         pyrtl.reset_working_block()
 
-    def shift_checker(self, shift_func, ref_func, input_width, shift_width, test_amt=20):
+    def shift_checker(self, shift_func, ref_func, input_width, shift_width,
+                      shift_amount=None, test_amt=20):
+        inputs, all_inp_vals = [], []
         inp, inp_vals = utils.an_input_and_vals(input_width, test_vals=test_amt, name='inp')
-        shf, shf_vals = utils.an_input_and_vals(shift_width, test_vals=test_amt, name='shf')
+        inputs.append(inp)
+        all_inp_vals.append(inp_vals)
+        if shift_amount is not None:
+            shf, shf_vals = shift_amount, [shift_amount] * test_amt
+        else:
+            shf, shf_vals = utils.an_input_and_vals(shift_width, test_vals=test_amt, name='shf')
+            inputs.append(shf)
+            all_inp_vals.append(shf_vals)
         out = pyrtl.Output(input_width, "out")
         shf_out = shift_func(inp, shf)
         self.assertEqual(len(out), len(shf_out))  # output should have width of input
         out <<= shf_out
         true_result = [ref_func(i, s) for i, s in zip(inp_vals, shf_vals)]
-        shift_result = utils.sim_and_ret_out(out, [inp, shf], [inp_vals, shf_vals])
+        shift_result = utils.sim_and_ret_out(out, inputs, all_inp_vals)
         self.assertEqual(shift_result, true_result)
 
-    def sll_checker(self, input_width, shift_width):
+    def sll_checker(self, input_width, shift_width, shift_amount=None):
         mask = (1 << input_width) - 1
 
         def ref(i, s):
             return (i << s) & mask
 
-        self.shift_checker(pyrtl.shift_left_logical, ref, input_width, shift_width)
+        self.shift_checker(pyrtl.shift_left_logical, ref, input_width, shift_width, shift_amount)
 
-    def sla_checker(self, input_width, shift_width):
+    def sla_checker(self, input_width, shift_width, shift_amount=None):
         mask = (1 << input_width) - 1
 
         def ref(i, s):
             return (i << s) & mask
 
-        self.shift_checker(pyrtl.shift_left_arithmetic, ref, input_width, shift_width)
+        self.shift_checker(pyrtl.shift_left_arithmetic, ref, input_width,
+                           shift_width, shift_amount)
 
-    def srl_checker(self, input_width, shift_width):
+    def srl_checker(self, input_width, shift_width, shift_amount=None):
         mask = (1 << input_width) - 1
 
         def ref(i, s):
             return (i >> s) & mask
 
-        self.shift_checker(pyrtl.shift_right_logical, ref, input_width, shift_width)
+        self.shift_checker(pyrtl.shift_right_logical, ref, input_width, shift_width, shift_amount)
 
-    def sra_checker(self, input_width, shift_width):
+    def sra_checker(self, input_width, shift_width, shift_amount=None):
         # a little more work is required to take the positive number and treat it
         # as a twos complement number for the purpose of testing the shifter
         def ref(i, s):
@@ -823,7 +943,8 @@ class TestShiftSimulation(unittest.TestCase):
                 return ((~mask | i) >> s) & mask  # negative number
             else:
                 return (i >> s) & mask  # positive number
-        self.shift_checker(pyrtl.shift_right_arithmetic, ref, input_width, shift_width)
+        self.shift_checker(pyrtl.shift_right_arithmetic, ref, input_width,
+                           shift_width, shift_amount)
 
     def test_sll(self):
         self.sll_checker(5, 2)
@@ -860,6 +981,18 @@ class TestShiftSimulation(unittest.TestCase):
 
     def test_sra_over(self):
         self.sra_checker(4, 4)
+
+    def test_sll_integer_shift_amount(self):
+        self.sll_checker(5, 2, 1)
+
+    def test_sla_integer_shift_amount(self):
+        self.sla_checker(5, 2, 1)
+
+    def test_srl_integer_shift_amount(self):
+        self.srl_checker(5, 2, 1)
+
+    def test_sra_integer_shift_amount(self):
+        self.sra_checker(5, 2, 1)
 
 
 class TestBasicMult(unittest.TestCase):

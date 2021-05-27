@@ -129,7 +129,7 @@ class MemIndexedTests(unittest.TestCase):
             })
             self.assertEqual(sim.inspect(y), 5 - i)
             self.assertEqual(sim.inspect(z), 5 - i)
-        self.assertEqual(self.mem.read_ports, 1)
+        self.assertEqual(self.mem.num_read_ports, 1)
 
     def test_write_memindexed_ilshift(self):
         self.mem1 = pyrtl.MemBlock(8, 8)
@@ -151,8 +151,8 @@ class MemIndexedTests(unittest.TestCase):
                 inp: 5 - i
             })
             self.assertEqual(sim.inspect(out), 0 if i == 0 else 5 - (i - 1))
-        self.assertEqual(self.mem1.read_ports, 1)  # 2 b/c of the output read
-        self.assertEqual(self.mem2.write_ports, 1)
+        self.assertEqual(self.mem1.num_read_ports, 1)  # 2 b/c of the output read
+        self.assertEqual(self.mem2.num_write_ports, 1)
 
     def test_read_memindexed_ior(self):
         self.mem = pyrtl.MemBlock(8, 8)
@@ -189,7 +189,7 @@ class MemIndexedTests(unittest.TestCase):
             self.assertEqual(sim.inspect(y), y_exp)
             self.assertEqual(sim.inspect(z), z_exp)
             self.assertEqual(sim.inspect(w), w_exp)
-        self.assertEqual(self.mem.read_ports, 1)
+        self.assertEqual(self.mem.num_read_ports, 1)
 
     def test_write_memindexed_ior(self):
         self.mem1 = pyrtl.MemBlock(8, 8)
@@ -225,8 +225,8 @@ class MemIndexedTests(unittest.TestCase):
             else:
                 out_exp = 2
             self.assertEqual(sim.inspect(out), out_exp)
-        self.assertEqual(self.mem1.read_ports, 1)
-        self.assertEqual(self.mem2.write_ports, 1)
+        self.assertEqual(self.mem1.num_read_ports, 1)
+        self.assertEqual(self.mem2.num_write_ports, 1)
 
 
 class RTLRomBlockWiring(unittest.TestCase):

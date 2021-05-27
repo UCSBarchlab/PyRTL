@@ -90,6 +90,11 @@ class CompiledSimulation(object):
         self._uid_counter = 0
         self.varname = {}  # mapping from wires and memories to C variables
 
+        # Passing the dictionary objects themselves since they aren't updated anywhere.
+        # If that's ever not the case, will need to pass in deep copies of them like done
+        # for the normal Simulation so we retain the initial values that had.
+        self.tracer._set_initial_values(default_value, register_value_map, memory_value_map)
+
         self._create_dll()
         self._initialize_mems()
 
@@ -705,7 +710,7 @@ class CompiledSimulation(object):
         self._declare_mem_helpers(write)
         roms = {mem for mem in mems if isinstance(mem, RomBlock)}
         self._declare_roms(write, roms)
-        mems = {mem for mem in mems if isinstance(mem, MemBlock)}
+        mems = {mem for mem in mems if isinstance(mem, MemBlock) and not isinstance(mem, RomBlock)}
         self._declare_mems(write, mems)
 
         # single step function

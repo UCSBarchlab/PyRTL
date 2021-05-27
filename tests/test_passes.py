@@ -8,7 +8,7 @@ import sys
 
 import pyrtl
 from pyrtl.wire import Const, Output
-from pyrtl.analysis import estimate
+from pyrtl.rtllib import testingutils as utils
 
 from .test_transform import NetWireNumTestCases
 
@@ -68,6 +68,108 @@ class TestSynthesis(unittest.TestCase):
     def test_mux_simulation(self):
         self.r.next <<= pyrtl.mux(self.r, 4, 3, 1, 7, 2, 6, 0, 5)
         self.check_trace('r 04213756\n')
+
+    def test_synthesize_regs_mapped_correctly(self):
+        r2 = pyrtl.Register(5)
+        self.r.next <<= ~ self.r
+        r2.next <<= self.r + 1
+        synth_block = pyrtl.synthesize()
+        self.assertEqual(len(synth_block.reg_map), 2)
+        self.assertEqual(len(synth_block.reg_map[self.r]), len(self.r))
+        self.assertEqual(len(synth_block.reg_map[r2]), len(r2))
+
+
+class TestIOInterfaceSynthesis(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        a, b = pyrtl.input_list('a/4 b/4')
+        o = pyrtl.Output(5, 'o')
+        o <<= a + b
+
+    def check_merged_names(self, block):
+        inputs = block.wirevector_subset(pyrtl.Input)
+        outputs = block.wirevector_subset(pyrtl.Output)
+        self.assertEqual({w.name for w in inputs}, {'a', 'b'})
+        self.assertEqual({w.name for w in outputs}, {'o'})
+
+    def check_unmerged_names(self, block):
+        inputs = block.wirevector_subset(pyrtl.Input)
+        outputs = block.wirevector_subset(pyrtl.Output)
+        self.assertEqual(
+            {w.name for w in inputs},
+            {'a[0]', 'a[1]', 'a[2]', 'a[3]', 'b[0]', 'b[1]', 'b[2]', 'b[3]'}
+        )
+        self.assertEqual(
+            {w.name for w in outputs},
+            {'o[0]', 'o[1]', 'o[2]', 'o[3]', 'o[4]'}
+        )
+
+    def test_synthesize_merged_io_names_correct(self):
+        pyrtl.synthesize()
+        self.check_merged_names(pyrtl.working_block())
+
+    def test_synthesize_merged_io_mapped_correctly(self):
+        old_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
+        pyrtl.synthesize()
+        new_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
+        for oi in old_io:
+            io_list = pyrtl.working_block().io_map[oi]
+            self.assertEqual(len(io_list), 1)
+            for ni in new_io:
+                if oi.name == ni.name:
+                    self.assertEqual(io_list, [ni])
+
+    def test_synthesize_merged_io_simulates_correctly(self):
+        pyrtl.synthesize()
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': [4, 6, 2, 3],
+            'b': [2, 9, 11, 4],
+        })
+        output = six.StringIO()
+        sim.tracer.print_trace(output, compact=True)
+        self.assertEqual(
+            output.getvalue(),
+            'a 4623\n'
+            'b 29114\n'
+            'o 615137\n'
+        )
+
+    def test_synthesize_unmerged_io_names_correct(self):
+        pyrtl.synthesize(merge_io_vectors=False)
+        self.check_unmerged_names(pyrtl.working_block())
+
+    def test_synthesize_unmerged_io_mapped_correctly(self):
+        old_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
+        pyrtl.synthesize(merge_io_vectors=False)
+        new_io = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
+        for oi in old_io:
+            io_list = [w.name for w in pyrtl.working_block().io_map[oi]]
+            self.assertEqual(len(io_list), len(oi))
+            for ni in new_io:
+                if ni.name.startswith(oi.name):
+                    # Dev note: comparing names because comparing wires (e.g. list/set inclusion)
+                    # creates an '=' net, which is definitely not what we want here.
+                    self.assertIn(ni.name, io_list)
+
+    def test_synthesize_unmerged_io_simulates_correctly(self):
+        pyrtl.synthesize(merge_io_vectors=False)
+        sim = pyrtl.Simulation()
+        for (a, b) in [(4, 2), (6, 9), (2, 11), (3, 4)]:
+            args = {}
+            for ix in range(4):
+                args['a[' + str(ix) + ']'] = (a >> ix) & 1
+                args['b[' + str(ix) + ']'] = (b >> ix) & 1
+            sim.step(args)
+            expected = a + b
+            for ix in range(5):
+                out = sim.inspect('o[' + str(ix) + ']')
+                self.assertEqual(out, (expected >> ix) & 1)
+
+    def test_synthesize_does_not_update_working_block(self):
+        synth_block = pyrtl.synthesize(update_working_block=False, merge_io_vectors=False)
+        self.check_merged_names(pyrtl.working_block())
+        self.check_unmerged_names(synth_block)
 
 
 class TestMultiplierSynthesis(unittest.TestCase):
@@ -151,7 +253,6 @@ class TestOptimization(NetWireNumTestCases):
         outwire = pyrtl.Output()
         tempwire <<= inwire
         outwire <<= tempwire
-
         pyrtl.synthesize()
         pyrtl.optimize()
         block = pyrtl.working_block()
@@ -173,6 +274,49 @@ class TestOptimization(NetWireNumTestCases):
         block = pyrtl.working_block()
         self.assert_num_net(5, block)
         self.assert_num_wires(6, block)
+
+    def test_slice_net_removal_1(self):
+        constwire = pyrtl.Const(1, 1)
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output()
+        outwire <<= constwire ^ inwire
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.num_net_of_type('s', 0, block)
+        self.num_net_of_type('~', 1, block)
+
+    def test_slice_net_removal_2(self):
+        inwire = pyrtl.Input(bitwidth=3)
+        outwire = pyrtl.Output()
+        tempwire = inwire[0:3]
+        outwire <<= tempwire[0:3]
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.num_net_of_type('s', 0, block)
+        self.num_net_of_type('w', 1, block)
+
+    def test_slice_net_removal_3(self):
+        inwire = pyrtl.Input(bitwidth=3)
+        outwire = pyrtl.Output()
+        tempwire = inwire[0:2]
+        outwire <<= tempwire[0:2]
+        pyrtl.optimize()
+        # Removes one of the slices, which does nothing.
+        block = pyrtl.working_block()
+        self.num_net_of_type('s', 1, block)
+        self.num_net_of_type('w', 1, block)
+
+    def test_slice_net_removal_4(self):
+        inwire = pyrtl.Input(bitwidth=4)
+        outwire1 = pyrtl.Output()
+        outwire2 = pyrtl.Output()
+        outwire1 <<= inwire[0:4]
+        outwire2 <<= inwire[0:3]
+        pyrtl.optimize()
+        # Removes just the outwire1 slice, which does nothing.
+        block = pyrtl.working_block()
+        self.num_net_of_type('s', 1, block)
+        self.num_net_of_type('w', 2, block)
 
 
 class TestConstFolding(NetWireNumTestCases):
@@ -241,8 +385,8 @@ class TestConstFolding(NetWireNumTestCases):
         # Note: the current implementation still sticks a wire net between
         # a register 'nextsetter' wire and the output wire
         self.num_net_of_type('w', 1, block)
-        self.assert_num_net(4, block)
-        self.assert_num_wires(5, block)
+        self.assert_num_net(3, block)
+        self.assert_num_wires(4, block)
         self.num_wire_of_type(Const, 0, block)
         self.num_wire_of_type(Output, 1, block)
 
@@ -310,9 +454,9 @@ class TestConstFolding(NetWireNumTestCases):
         block = pyrtl.working_block(None)
         self.num_net_of_type('~', 1, block)
         self.num_net_of_type('w', 1, block)
-        self.num_net_of_type('s', 1, block)  # due to synthesis
-        self.assert_num_net(3, block)
-        self.assert_num_wires(4, block)
+        self.num_net_of_type('s', 0, block)
+        self.assert_num_net(2, block)
+        self.assert_num_wires(3, block)
         self.num_wire_of_type(Const, 0, block)
 
     def test_two_var_op_correct_wire_prop(self):
@@ -511,7 +655,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         # to make sure that the timing matches
         # this is a subprocess to do the synth and timing
         block = pyrtl.working_block()
-        timing = estimate.TimingAnalysis(block)
+        timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
         if timing_val is not None:
             self.assertEqual(timing_max_length, timing_val)
@@ -521,7 +665,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         pyrtl.optimize()
 
         block = pyrtl.working_block()
-        timing = estimate.TimingAnalysis(block)
+        timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
         if opt_timing_val is not None:
             self.assertEqual(timing_max_length, opt_timing_val)
@@ -531,7 +675,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         pyrtl.optimize()
 
         block = pyrtl.working_block()
-        timing = estimate.TimingAnalysis(block)
+        timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
         critical_path = timing.critical_path(print_cp=False)
         block = pyrtl.working_block()
@@ -542,7 +686,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         pyrtl.optimize()
 
         block = pyrtl.working_block()
-        timing = estimate.TimingAnalysis(block)
+        timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
         critical_path = timing.critical_path(print_cp=False)
         block.sanity_check()
@@ -585,7 +729,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
             pyrtl.synthesize()
             pyrtl.optimize()
             block = pyrtl.working_block()
-            _timing = estimate.TimingAnalysis(block)
+            _timing = pyrtl.TimingAnalysis(block)
         sys.stdout = sys.__stdout__
         self.assertTrue(output.getvalue().startswith("Loop found:"))
 
@@ -601,7 +745,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         outwire <<= ~tempwire2
         self.everything_t_procedure(48.5, 48.5)
         block = pyrtl.working_block()
-        self.assert_num_net(3, block)
+        self.assert_num_net(2, block)
 
     def test_combo_1(self):
         inwire, inwire2 = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=1)
@@ -650,7 +794,7 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
         self.assertEqual(len(concat_nets), 1)
         self.assertEqual(concat_nets[0].args, (i, j, k))
 
-        pyrtl.passes.two_way_concat()
+        pyrtl.two_way_concat()
 
         concat_nets = list(block.logic_subset(op='c'))
         self.assertEqual(len(concat_nets), 2)
@@ -674,7 +818,7 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
         self.assertEqual(len(select_nets), 1)
         self.assertEqual(tuple(select_nets[0].op_param), (0, 2, 4, 6, 8, 10))
 
-        pyrtl.passes.one_bit_selects()
+        pyrtl.one_bit_selects()
 
         select_nets = list(block.logic_subset(op='s'))
         for net in select_nets:
@@ -684,6 +828,138 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
         sim = pyrtl.Simulation()
         sim.step({})
         self.assertEqual(sim.inspect('b'), 0b00011011)
+
+
+class TestDirectlyConnectedOutputs(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_single_output(self):
+        i, j = pyrtl.input_list('i/4 j/4')
+        o = pyrtl.Output(8, 'o')
+        o <<= i * j
+
+        self.assertEqual(len(pyrtl.working_block().logic), 2)
+        # Includes intermediary 'w' wire
+        self.assertEqual(len(pyrtl.working_block().wirevector_set), 4)
+        pyrtl.direct_connect_outputs()
+        self.assertEqual(len(pyrtl.working_block().logic), 1)
+        self.assertEqual(pyrtl.working_block().wirevector_set, {i, j, o})
+
+    def test_single_output_simulates_correctly(self):
+        i, ivals = utils.an_input_and_vals(4, name='i')
+        j, jvals = utils.an_input_and_vals(4, name='j')
+        o = pyrtl.Output(8, 'o')
+        o <<= i * j
+
+        pyrtl.direct_connect_outputs()
+        true_result = [x * y for x, y in zip(ivals, jvals)]
+        sim_result = utils.sim_and_ret_out(o, [i, j], [ivals, jvals])
+        self.assertEqual(true_result, sim_result)
+
+    def test_several_outputs(self):
+        i, j = pyrtl.input_list('i/2 j/2')
+        o, p, q = pyrtl.output_list('o p q')
+        o <<= i * j
+        w = i + 2
+        p <<= w
+        q <<= ~w
+
+        self.assertEqual(len(pyrtl.working_block().logic), 9)
+        self.assertEqual(len(pyrtl.working_block().logic_subset(op='w')), 3)
+        pyrtl.direct_connect_outputs()
+        self.assertEqual(len(pyrtl.working_block().logic), 6)
+        self.assertEqual(len(pyrtl.working_block().logic_subset(op='w')), 0)
+
+    def test_several_outputs_simulates_correctly(self):
+        i, j = pyrtl.input_list('i/2 j/2')
+        o, p, q = pyrtl.output_list('o p q')
+        o <<= i * j
+        w = i + 2
+        p <<= w
+        q <<= ~w
+
+        inputs = [(0, 1), (1, 0), (2, 3), (3, 0), (1, 3)]
+        trace_pre = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=trace_pre)
+        for x, y in inputs:
+            inp_map = {'i': x, 'j': y}
+            sim.step(inp_map)
+
+        pyrtl.direct_connect_outputs()
+
+        trace_post = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=trace_post)
+        for x, y in inputs:
+            inp_map = {'i': x, 'j': y}
+            sim.step(inp_map)
+
+        self.assertEqual(trace_pre.trace, trace_post.trace)
+
+    def test_some_outputs_unaffected(self):
+        i = pyrtl.Input(2, 'i')
+        o, p, q = pyrtl.output_list('o/4 p/4 q/2')
+        w = i * 2
+        o <<= w
+        p <<= w
+        q <<= ~i
+
+        src_nets, _ = pyrtl.working_block().net_connections()
+        self.assertEqual(src_nets[o].op, 'w')
+        self.assertEqual(src_nets[p].op, 'w')
+        self.assertEqual(src_nets[q].op, 'w')
+        self.assertEqual(len(pyrtl.working_block().logic), 5)
+
+        pyrtl.direct_connect_outputs()
+        src_nets, _ = pyrtl.working_block().net_connections()
+        self.assertEqual(src_nets[o].op, 'w')
+        self.assertEqual(src_nets[p].op, 'w')
+        self.assertEqual(src_nets[q].op, '~')
+        self.assertEqual(len(pyrtl.working_block().logic), 4)
+
+
+class TestTwoWayFanout(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def check_all_leq_two(self):
+        for w in pyrtl.working_block().wirevector_subset(exclude=(pyrtl.Output)):
+            self.assertLessEqual(pyrtl.fanout(w), 2)
+
+    def test_two_way_fanout_small_design(self):
+        i = pyrtl.Input(1, 'i')
+        o, p, q = pyrtl.output_list('o p q')
+        o <<= ~i
+        p <<= i
+        q <<= i & 0
+
+        self.assertEqual(pyrtl.fanout(i), 3)
+        pyrtl.two_way_fanout()
+        self.check_all_leq_two()
+
+    def test_two_way_fanout_medium_design(self):
+        i = pyrtl.Input(1, 'i')
+        o, p = pyrtl.output_list('o p')
+        w = i & 0
+        x = (w & w) ^ w
+        o <<= x
+        p <<= w
+
+        self.assertEqual(pyrtl.fanout(w), 4)
+        pyrtl.two_way_fanout()
+        self.check_all_leq_two()
+
+    def test_two_way_fanout_large_design(self):
+        i, j = pyrtl.input_list('i/1 j/2')
+        o, p, q, r = pyrtl.output_list('o p q r')
+        o <<= ~i
+        p <<= i * j
+        q <<= i & 0
+        r <<= i - 3
+
+        self.assertEqual(pyrtl.fanout(i), 4)
+        pyrtl.two_way_fanout()
+        self.check_all_leq_two()
 
 
 if __name__ == "__main__":

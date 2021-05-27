@@ -138,16 +138,16 @@ def log2(integer_val):
 
 
 def truncate(wirevector_or_integer, bitwidth):
-    """ Returns a wirevector or integer truncated to the specified bitwidth
+    """ Returns a WireVector or integer truncated to the specified bitwidth
 
-    :param wirevector_or_integer: Either a wirevector or an integer to be truncated
+    :param wirevector_or_integer: Either a WireVector or an integer to be truncated.
     :param bitwidth: The length to which the first argument should be truncated.
-    :return: Returns a tuncated wirevector or integer as appropriate
+    :return: A truncated WireVector or integer as appropriate.
 
     This function truncates the most significant bits of the input, leaving a result
     that is only "bitwidth" bits wide.  For integers this is performed with a simple
-    bitmask of size "bitwidth".  For wirevectors the function calls WireVector.truncate
-    and returns a wirevector of the specified bitwidth.
+    bitmask of size "bitwidth".  For WireVectors the function calls 'WireVector.truncate'
+    and returns a WireVector of the specified bitwidth.
 
     Examples: ::
 
@@ -177,26 +177,26 @@ class MatchedFields(collections.namedtuple('MatchedFields', 'matched fields')):
 
 
 def match_bitpattern(w, bitpattern, field_map=None):
-    """ Returns a single-bit wirevector that is 1 if and only if 'w' matches the bitpattern,
+    """ Returns a single-bit WireVector that is 1 if and only if 'w' matches the bitpattern,
     and a tuple containining the matched fields, if any. Compatible with the 'with' statement.
 
-    :param w: The wirevector to be compared to the bitpattern
+    :param w: The WireVector to be compared to the bitpattern
     :param bitpattern: A string holding the pattern (of bits and wildcards) to match
     :param field_map: (optional) A map from single-character field name in the bitpattern
         to the desired name of field in the returned namedtuple. If given, all non-"1"/"0"/"?"
         characters in the bitpattern must be present in the map.
-    :return: A tuple of 1-bit wirevector carrying the result of the comparison, followed
+    :return: A tuple of 1-bit WireVector carrying the result of the comparison, followed
         by a named tuple containing the matched fields, if any.
 
-    This function will compare a multi-bit wirevector to a specified pattern of bits, where some
+    This function will compare a multi-bit WireVector to a specified pattern of bits, where some
     of the pattern can be "wildcard" bits.  If any of the "1" or "0" values specified in the
-    bitpattern fail to match the wirevector during execution, a "0" will be produced, otherwise
+    bitpattern fail to match the WireVector during execution, a "0" will be produced, otherwise
     the value carried on the wire will be "1".  The wildcard characters can be any other
     alphanumeric character, with characters other than "?" having special functionality (see below).
     The string must have length equal to the wirevector specified, although whitespace and
     underscore characters will be ignored and can be used for pattern readability.
 
-    For all other characters besides "1", "0", or "?", a tuple of wirevectors will be returned as
+    For all other characters besides "1", "0", or "?", a tuple of WireVectors will be returned as
     the second return value. Each character will be treated as the name of a field,
     and non-consecutive fields with the same name will be concatenated together, left-to-right, into
     a single field in the resultant tuple. For example, "01aa1?bbb11a" will match a string such
@@ -266,14 +266,104 @@ def match_bitpattern(w, bitpattern, field_map=None):
     return MatchedFields(match, fields)
 
 
+def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
+    """ Return an unsigned integer representation of field format filled with the provided values.
+
+    :param bitpattern: A string holding the pattern (of bits and wildcards) to match
+    :param ordered_fields: A list of parameters to be matched to the provided bit pattern in
+        the order provided.  If ordered_fields are provided then no named_fields can be used.
+    :param named_fields: A list of parameters to be matched to the provided bit pattern in
+        by the names provided.  If named_fields are provided then no ordered_fields can be used.
+        A special keyword argument, 'field_map', can be provided, which will allow you specify
+        a correspondence between the 1-letter field names in the bitpattern string and longer,
+        human readable field names (see example below).
+    :return: An unsigned integer carrying the result of the field substitution.
+
+    This function will compare take a specified pattern of bits, where some
+    of the pattern can be "wildcard" bits.  The wildcard bits must all be named with a single
+    letter and, unlike the related function ``match_bitpattern``, no "?" can be used.  The function
+    will take the provided bitpattern and create an integer that substitutes the provided fields
+    in for the given wildcards at the bit level.  This sort of bit substitution is useful when
+    creating values for testing when the resulting values will be "chopped" up by the hardware
+    later (e.g. instruction decode or other bitfield heavy functions).
+
+    If a special keyword argument, 'field_map', is provided, then the named fields provided
+    can be longer, human-readable field names, which will correspond to the field in the
+    bitpattern according to the field_map. See the third example below.
+
+    Examples::
+
+        bitpattern_to_val('0000000sssssrrrrr000ddddd0110011', s=2, r=1, d=3)  # RISCV ADD instr
+        # evaluates to   0b00000000000100010000000110110011
+
+        bitpattern_to_val('iiiiiiisssssrrrrr010iiiii0100011', i=1, s=4, r=3)  # RISCV SW instr
+        # evaluates to   0b00000000001100100010000010100011
+
+        bitpattern_to_val(
+            'iiiiiiisssssrrrrr010iiiii0100011',
+            imm=1, rs2=4, rs1=3,
+            field_map={'i': 'imm', 's': 'rs2', 'r': 'rs1}
+        )  # RISCV SW instr
+        # evaluates to   0b00000000001100100010000010100011
+    """
+
+    if len(ordered_fields) > 0 and len(named_fields) > 0:
+        raise PyrtlError('named and ordered fields cannot be mixed')
+
+    def letters_in_field_order():
+        seen = []
+        for c in bitpattern:
+            if c != '0' and c != '1' and c not in seen:
+                seen.append(c)
+        return seen
+
+    field_map = None
+    if 'field_map' in named_fields:
+        field_map = named_fields['field_map']
+        named_fields.pop('field_map')
+
+    bitlist = []
+    lifo = letters_in_field_order()
+    if ordered_fields:
+        if len(lifo) != len(ordered_fields):
+            raise PyrtlError('number of fields and number of unique patterns do not match')
+        intfields = [int(f) for f in ordered_fields]
+    else:
+        if len(lifo) != len(named_fields):
+            raise PyrtlError('number of fields and number of unique patterns do not match')
+        try:
+            def fn(n):
+                return field_map[n] if field_map else n
+            intfields = [int(named_fields[fn(n)]) for n in lifo]
+        except KeyError as e:
+            raise PyrtlError('bitpattern field %s was not provided in named_field list' % e.args[0])
+
+    fmap = dict(zip(lifo, intfields))
+    for c in bitpattern[::-1]:
+        if c == '0' or c == '1':
+            bitlist.append(c)
+        elif c == '?':
+            raise PyrtlError('all fields in the bitpattern must have names')
+        else:
+            bitlist.append(str(fmap[c] & 0x1))  # append lsb of the field
+            fmap[c] = fmap[c] >> 1  # and bit shift by one position
+    for f in fmap:
+        if fmap[f] not in [0, -1]:
+            raise PyrtlError('too many bits given to value to fit in field %s' % f)
+    if len(bitpattern) != len(bitlist):
+        raise PyrtlInternalError('resulting values have different bitwidths')
+    final_str = ''.join(bitlist[::-1])
+    return int(final_str, 2)
+
+
 def chop(w, *segment_widths):
-    """ Returns a list of wirevectors each a slice of the original 'w'
+    """ Returns a list of WireVectors each a slice of the original 'w'
 
-    :param w: The wirevector to be chopped up into segments
+    :param w: The WireVector to be chopped up into segments
     :param segment_widths: Additional arguments are integers which are bitwidths
-    :return: A list of wirevectors each with a proper segment width
+    :return: A list of WireVectors each with a proper segment width
 
-    This function chops a wirevector into a set of smaller wirevectors of different
+    This function chops a WireVector into a set of smaller WireVectors of different
     lengths.  It is most useful when multiple "fields" are contained with a single
     wirevector, for example when breaking apart an instruction.  For example, if
     you wish to break apart a 32-bit MIPS I-type (Immediate) instruction you know
@@ -535,7 +625,7 @@ def infer_val_and_bitwidth(rawinput, bitwidth=None, signed=False):
     :param rawinput: a bool, int, or verilog-style string constant
     :param bitwidth: an integer bitwidth or (by default) None
     :param signed: a bool (by default set False) to include bits for proper twos complement
-    :returns tuple of integers (value, bitwidth)
+    :return: tuple of integers (value, bitwidth)
 
     Given a boolean, integer, or verilog-style string constant, this function returns a
     tuple of two integers (value, bitwidth) which are infered from the specified rawinput.
@@ -777,8 +867,7 @@ def print_loop(loop_data):
 
 
 def _currently_in_jupyter_notebook():
-    """
-    Return true if running under Jupyter notebook, otherwise return False.
+    """ Return true if running under Jupyter notebook, otherwise return False.
 
     We want to check for more than just the presence of __IPYTHON__ because
     that is present in both Jupyter notebooks and IPython terminals.
@@ -807,8 +896,7 @@ def _print_netlist_latex(netlist):
 
 
 class _NetCount(object):
-    """
-    Helper class to track when to stop an iteration that depends on number of nets
+    """ Helper class to track when to stop an iteration that depends on number of nets
 
     Mainly useful for iterations that are for optimization
     """
