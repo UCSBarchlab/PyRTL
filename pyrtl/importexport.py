@@ -12,7 +12,7 @@ import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, _NameSanitizer
-from .wire import WireVector, Input, Output, Const, Register
+from .wire import WireVector, Input, Output, Const, Register, next_tempvar_name
 from .corecircuits import concat_list
 from .memory import RomBlock
 from .passes import two_way_concat, one_bit_selects
@@ -1055,3 +1055,20 @@ def input_from_iscas_bench(bench, block=None):
                 dst_wire <<= reg
             else:
                 raise PyrtlError("Unexpected gate {%s}" % cmd["gate"])
+
+    # Benchmarks like c1196, b18, etc. have inputs and outputs by the
+    # same name, that are therefore directly connected. This pass will
+    # rename the outputs so that this is still okay.
+    for o in block.wirevector_subset(Output):
+        inputs = [i for i in block.wirevector_subset(Input) if i.name == o.name]
+        if inputs:
+            if len(inputs) > 1:
+                raise PyrtlError("More than one input found with the name %s" % inputs[0].name)
+            i = inputs[0]
+            o_internal = twire(o.name)
+            o_internal <<= i
+            o.name = next_tempvar_name()
+            # Ensure the input is the one mapped by the original name
+            block.wirevector_by_name[i.name] = i
+            print("Found input and output wires with the same name. "
+                  "Output '%s' has now been renamed to '%s'." % (i.name, o.name))
