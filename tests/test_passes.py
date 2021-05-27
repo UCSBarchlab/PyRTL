@@ -253,7 +253,6 @@ class TestOptimization(NetWireNumTestCases):
         outwire = pyrtl.Output()
         tempwire <<= inwire
         outwire <<= tempwire
-
         pyrtl.synthesize()
         pyrtl.optimize()
         block = pyrtl.working_block()
@@ -275,6 +274,49 @@ class TestOptimization(NetWireNumTestCases):
         block = pyrtl.working_block()
         self.assert_num_net(5, block)
         self.assert_num_wires(6, block)
+
+    def test_slice_net_removal_1(self):
+        constwire = pyrtl.Const(1, 1)
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output()
+        outwire <<= constwire ^ inwire
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.num_net_of_type('s', 0, block)
+        self.num_net_of_type('~', 1, block)
+
+    def test_slice_net_removal_2(self):
+        inwire = pyrtl.Input(bitwidth=3)
+        outwire = pyrtl.Output()
+        tempwire = inwire[0:3]
+        outwire <<= tempwire[0:3]
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.num_net_of_type('s', 0, block)
+        self.num_net_of_type('w', 1, block)
+
+    def test_slice_net_removal_3(self):
+        inwire = pyrtl.Input(bitwidth=3)
+        outwire = pyrtl.Output()
+        tempwire = inwire[0:2]
+        outwire <<= tempwire[0:2]
+        pyrtl.optimize()
+        # Removes one of the slices, which does nothing.
+        block = pyrtl.working_block()
+        self.num_net_of_type('s', 1, block)
+        self.num_net_of_type('w', 1, block)
+
+    def test_slice_net_removal_4(self):
+        inwire = pyrtl.Input(bitwidth=4)
+        outwire1 = pyrtl.Output()
+        outwire2 = pyrtl.Output()
+        outwire1 <<= inwire[0:4]
+        outwire2 <<= inwire[0:3]
+        pyrtl.optimize()
+        # Removes just the outwire1 slice, which does nothing.
+        block = pyrtl.working_block()
+        self.num_net_of_type('s', 1, block)
+        self.num_net_of_type('w', 2, block)
 
 
 class TestConstFolding(NetWireNumTestCases):
@@ -343,8 +385,8 @@ class TestConstFolding(NetWireNumTestCases):
         # Note: the current implementation still sticks a wire net between
         # a register 'nextsetter' wire and the output wire
         self.num_net_of_type('w', 1, block)
-        self.assert_num_net(4, block)
-        self.assert_num_wires(5, block)
+        self.assert_num_net(3, block)
+        self.assert_num_wires(4, block)
         self.num_wire_of_type(Const, 0, block)
         self.num_wire_of_type(Output, 1, block)
 
@@ -412,9 +454,9 @@ class TestConstFolding(NetWireNumTestCases):
         block = pyrtl.working_block(None)
         self.num_net_of_type('~', 1, block)
         self.num_net_of_type('w', 1, block)
-        self.num_net_of_type('s', 1, block)  # due to synthesis
-        self.assert_num_net(3, block)
-        self.assert_num_wires(4, block)
+        self.num_net_of_type('s', 0, block)
+        self.assert_num_net(2, block)
+        self.assert_num_wires(3, block)
         self.num_wire_of_type(Const, 0, block)
 
     def test_two_var_op_correct_wire_prop(self):
@@ -703,7 +745,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         outwire <<= ~tempwire2
         self.everything_t_procedure(48.5, 48.5)
         block = pyrtl.working_block()
-        self.assert_num_net(3, block)
+        self.assert_num_net(2, block)
 
     def test_combo_1(self):
         inwire, inwire2 = pyrtl.Input(bitwidth=1), pyrtl.Input(bitwidth=1)
