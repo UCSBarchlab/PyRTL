@@ -1,6 +1,7 @@
 import unittest
 import random
 import io
+import sys
 import six
 import pyrtl
 from pyrtl.importexport import _VerilogSanitizer
@@ -1875,6 +1876,17 @@ G12 = NOR(G1, G7)
 G13 = NOR(G2, G12)
 """
 
+example_bench_with_io_same_name = """\
+INPUT(G1)
+INPUT(G2)
+INPUT(G3)
+
+OUTPUT(G3)
+OUTPUT(G4)
+
+G4 = OR(G1, G2)
+"""
+
 
 class TestInputISCASBench(unittest.TestCase):
     # NOTE: number of inverters = number of original inverters + number of NORs, since
@@ -1949,6 +1961,22 @@ class TestInputISCASBench(unittest.TestCase):
         output = six.StringIO()
         trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_output)
+
+    def test_bench_with_same_io_name(self):
+        output = six.StringIO()
+        sys.stdout = output
+        pyrtl.input_from_iscas_bench(example_bench_with_io_same_name)
+        sys.stdout = sys.__stdout__
+
+        self.assertEquals(
+            output.getvalue(),
+            "Found input and output wires with the same name. "
+            "Output 'G3' has now been renamed to 'tmp3'.\n"
+        )
+        pyrtl.working_block().sanity_check()
+
+        self.check_io(pyrtl.Input, ['G1', 'G2', 'G3'])
+        self.check_io(pyrtl.Output, ['tmp3', 'G4'])
 
 
 if __name__ == "__main__":
