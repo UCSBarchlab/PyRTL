@@ -18,6 +18,7 @@ This is a set of files that contain useful miscellaneous functions and classes
 | :ref:`libutils-ref`
 | :ref:`multipliers-ref`
 | :ref:`muxes-ref`
+| :ref:`matrix-ref`
 | :ref:`testingutils-ref`
 
 
@@ -101,7 +102,21 @@ Muxes
    :show-inheritance:
    :special-members:
    :undoc-members:
-   :exclude-members: __dict__,__weakref__,__module__, __exit__
+   :exclude-members: __dict__,__weakref__,__module__,__exit__
+
+:ref:`Back to top of page <top-of-page-rtllib>`
+
+.. _matrix-ref:
+
+Matrix
+------
+
+.. automodule:: pyrtl.rtllib.matrix
+   :members:
+   :show-inheritance:
+   :special-members:
+   :undoc-members:
+   :exclude-members: __dict__,__weakref__,__module__
 
 :ref:`Back to top of page <top-of-page-rtllib>`
 
