@@ -46,6 +46,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
         if (not skip_sanity_check) or _get_debug_mode():
             block.sanity_check()
         _remove_wire_nets(block)
+        _remove_slice_nets(block)
         constant_propagation(block, True)
         _remove_unlistened_nets(block)
         common_subexp_elimination(block)
@@ -90,6 +91,67 @@ def _remove_wire_nets(block):
     new_logic = set()
     for net in block.logic:
         if net.op != 'w' or isinstance(net.dests[0], Output):
+            new_args = tuple(wire_src_dict.find_producer(x) for x in net.args)
+            new_net = LogicNet(net.op, net.op_param, new_args, net.dests)
+            new_logic.add(new_net)
+
+    # now update the block with the new logic and remove wirevectors
+    block.logic = new_logic
+    for dead_wirevector in wire_removal_set:
+        del block.wirevector_by_name[dead_wirevector.name]
+        block.wirevector_set.remove(dead_wirevector)
+
+    block.sanity_check()
+
+
+def _remove_slice_nets(block):
+    """ Remove all unneeded slice nodes from the block.
+
+    Unneeded here means that the source and destination wires of a slice net are exactly
+    the same, because the slice takes all the bits, in order, from the source.
+    """
+    # Turns a net of form on the left into the one on the right:
+    #
+    #  w1
+    #   |
+    # [3:0]
+    #   |
+    # [3:0]     ===>  w1
+    #   |             |
+    # [3:0] w2      [3:0] w2
+    #  / \ /         / \ /
+    # ~   +         ~   +
+    # |   |         |   |
+
+    wire_src_dict = _ProducerList()
+    wire_removal_set = set()  # set of all wirevectors to be removed
+
+    def is_net_slicing_entire_wire(net):
+        if net.op != 's':
+            return False
+
+        src_wire = net.args[0]
+        dst_wire = net.dests[0]
+        if len(src_wire) != len(dst_wire):
+            return False
+
+        selLower = net.op_param[0]
+        selUpper = net.op_param[-1]
+        # Check if getting all bits from the src_wire (i.e. consecutive bits, MSB to LSB)
+        return net.op_param == tuple(range(selLower, selUpper + 1))
+
+    # one pass to build the map of value producers and
+    # all of the nets and wires to be removed
+    for net in block.logic:
+        if is_net_slicing_entire_wire(net):
+            wire_src_dict[net.dests[0]] = net.args[0]
+            if not isinstance(net.dests[0], Output):
+                wire_removal_set.add(net.dests[0])
+
+    # second full pass to create the new logic without the wire nets
+    new_logic = set()
+    for net in block.logic:
+        if not is_net_slicing_entire_wire(net) or isinstance(net.dests[0], Output):
             new_args = tuple(wire_src_dict.find_producer(x) for x in net.args)
             new_net = LogicNet(net.op, net.op_param, new_args, net.dests)
             new_logic.add(new_net)
