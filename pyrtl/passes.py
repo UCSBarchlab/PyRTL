@@ -98,8 +98,7 @@ def _remove_wire_nets(block):
     # now update the block with the new logic and remove wirevectors
     block.logic = new_logic
     for dead_wirevector in wire_removal_set:
-        del block.wirevector_by_name[dead_wirevector.name]
-        block.wirevector_set.remove(dead_wirevector)
+        block.remove_wirevector(dead_wirevector)
 
     block.sanity_check()
 
@@ -446,6 +445,7 @@ def _remove_unused_wires(block, keep_inputs=True):
             PyrtlInternalError("Output wire, " + removed_wire.name + " not driven")
 
     block.wirevector_set = valid_wires
+    block.wirevector_by_name = {wire.name: wire for wire in valid_wires}
 
 # --------------------------------------------------------------------
 #    __           ___       ___  __     __
@@ -825,7 +825,8 @@ def direct_connect_outputs(block=None):
 
     block.logic.difference_update(nets_to_remove)
     block.logic.update(nets_to_add)
-    block.wirevector_set.difference_update(wirevectors_to_remove)
+    for w in wirevectors_to_remove:
+        block.remove_wirevector(w)
 
 
 def _make_tree(wire, block, curr_fanout):
