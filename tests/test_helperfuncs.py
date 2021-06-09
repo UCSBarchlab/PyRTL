@@ -454,10 +454,9 @@ class TestBitpatternToVal(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             pyrtl.bitpattern_to_val('iiiiiiirrrrrsssss010iiiii0100011', 1, 65, 4)
 
-    @unittest.skip("This error might not be possible")
-    def test_error_bitlist_and_value_different_sizes(self):
+    def test_error_empty_bitpattern(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            pass
+            pyrtl.bitpattern_to_val('')
 
 
 class TestChop(unittest.TestCase):

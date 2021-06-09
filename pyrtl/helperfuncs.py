@@ -307,6 +307,9 @@ def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
         # evaluates to   0b00000000001100100010000010100011
     """
 
+    if not bitpattern:
+        raise PyrtlError('bitpattern must be nonempty')
+
     if len(ordered_fields) > 0 and len(named_fields) > 0:
         raise PyrtlError('named and ordered fields cannot be mixed')
 
