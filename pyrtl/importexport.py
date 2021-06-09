@@ -95,7 +95,8 @@ class Subcircuit:
         return s
 
 
-def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', top_model=None):
+def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk',
+                    top_model=None, as_block=True):
     """ Read an open BLIF file or string as input, updating the block appropriately.
 
     :param blif: An open BLIF file to read
@@ -104,8 +105,14 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
         by a indexing subscript (e.g. 1-bit wires 'a[0]' and 'a[1]') will be combined
         into a single Input/Output (e.g. a 2-bit wire 'a').
     :param clock_name: The name of the clock (defaults to 'clk')
-    :param top_model: name of top-level model to instantiate; if None, defaults to first model
+    :param top_model: Name of top-level model to instantiate; if None, defaults to first model
         listed in the BLIF
+    :param as_block: if True, the model's io wires will be PyRTL Input/Output WireVectors
+        on the block; otherwise, they will be normal WireVectors accessible in the returned
+        Model object.
+
+    :return: Either a Block, if as_block is True, or a Model object where each
+        io wire is accessible as a field by that wire's original name in the model.
 
     If merge_io_vectors is True, then given 1-bit Input wires 'a[0]' and 'a[1]', these
     wires will be combined into a single 2-bit Input wire 'a' that can be accessed
@@ -190,7 +197,16 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
     # Begin actually reading and parsing the BLIF file
     result = parser.parseString(blif_string, parseAll=True)
     ff_clk_set = set([])
-    models = {}  # model name -> model, for subckt instantiation
+    model_refs = {}  # model name -> model, for subckt instantiation
+    toplevel_io_map = {}  # original_name -> wire
+
+    def toplevel_io(typ, bitwidth, name):
+        if as_block:
+            wire = typ(bitwidth=bitwidth, name=name, block=block)
+        else:
+            wire = WireVector(bitwidth=bitwidth, block=block)
+        toplevel_io_map[name] = wire
+        return wire
 
     def extract_inputs(subckt):
         if subckt.is_top:
@@ -204,11 +220,11 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
                 if input_name in subckt.clk_set:
                     continue
                 elif bitwidth == 1:
-                    wire_in = Input(bitwidth=1, name=input_name, block=block)
+                    wire_in = toplevel_io(Input, 1, input_name)
                     subckt.add_input(input_name, wire_in)
                     block.add_wirevector(wire_in)
                 elif merge_io_vectors:
-                    wire_in = Input(bitwidth=bitwidth, name=input_name, block=block)
+                    wire_in = toplevel_io(Input, bitwidth, input_name)
                     for i in range(bitwidth):
                         bit_name = input_name + '[' + str(i) + ']'
                         bit_wire = WireVector(bitwidth=1, block=block)
@@ -217,7 +233,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
                 else:
                     for i in range(bitwidth):
                         bit_name = input_name + '[' + str(i) + ']'
-                        wire_in = Input(bitwidth=1, name=bit_name, block=block)
+                        wire_in = toplevel_io(Input, 1, bit_name)
                         subckt.add_input(bit_name, wire_in)
                         block.add_wirevector(wire_in)
         else:
@@ -249,12 +265,13 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
                 # the only thing that changes is what underlying wire is used.
                 if bitwidth == 1:
                     bit_internal = WireVector(bitwidth=1, block=block)
-                    bit_out = Output(bitwidth=1, name=output_name, block=block)
+                    bit_out = toplevel_io(Output, 1, output_name)
                     bit_out <<= bit_internal
                     # NOTE this is important: redirecting user-visible name to internal wire
                     subckt.add_output(output_name, bit_internal)
                 elif merge_io_vectors:
-                    wire_out = Output(bitwidth=bitwidth, name=output_name, block=block)
+                    wire_out = toplevel_io(Output, bitwidth, output_name)
+
                     bit_list = []
                     for i in range(bitwidth):
                         bit_name = output_name + '[' + str(i) + ']'
@@ -266,7 +283,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
                     for i in range(bitwidth):
                         bit_name = output_name + '[' + str(i) + ']'
                         bit_internal = WireVector(bitwidth=1, block=block)
-                        bit_out = Output(bitwidth=1, name=bit_name, block=block)
+                        bit_out = toplevel_io(Output, 1, bit_name)
                         bit_out <<= bit_internal
                         # NOTE this is important: redirecting user-visible name to internal wire
                         subckt.add_output(bit_name, bit_internal)
@@ -394,7 +411,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
             return clks
         formal_clks = get_formal_connected_to_parent_clocks()
 
-        subckt = Subcircuit(models[command['model_name']], clk_set=formal_clks, block=block)
+        subckt = Subcircuit(model_refs[command['model_name']], clk_set=formal_clks, block=block)
         instantiate(subckt)
         for fa in command['formal_actual_list']:
             formal = fa['formal']
@@ -424,10 +441,26 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
     for model in result:
         if not top_model:
             top_model = model['model_name']
-        models[model['model_name']] = model
+        model_refs[model['model_name']] = model
 
-    top = Subcircuit(models[top_model], is_top=True, clk_set={clock_name}, block=block)
+    if top_model not in model_refs.keys():
+        raise PyrtlError("Model named '%s' not found in the BLIF." % top_model)
+
+    top = Subcircuit(model_refs[top_model], is_top=True, clk_set={clock_name}, block=block)
     instantiate(top)
+
+    if as_block:
+        return block
+    else:
+        class Model:
+            # Goes beyond a namedtuple, so you can now use <<= on the members,
+            # which is needed for connecting to input wires.
+            def __init__(self, name, io):
+                self.name = name
+                for wire_name, wire in io.items():
+                    setattr(self, wire_name, wire)
+
+        return Model(top_model, toplevel_io_map)
 
 
 # ----------------------------------------------------------------
@@ -437,13 +470,19 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
 #
 
 
-def input_from_verilog(verilog, clock_name='clk', toplevel=None, leave_in_dir=None, block=None):
+def input_from_verilog(verilog, clock_name='clk', toplevel=None, parameters={}, as_block=True,
+                       leave_in_dir=None, block=None):
     """ Read an open Verilog file or string as input via Yosys conversion, updating the block.
 
     :param verilog: An open Verilog file to read
     :param clock_name: The name of the clock (defaults to 'clk')
-    :param toplevel: Name of top-level module to instantiate; if None, defaults to first model
-        defined in the Verilog file
+    :param toplevel: Name of top-level module to instantiate; if None, will be determined
+        automatically by Yosys. Must supply parameters if trying to instantiate a
+        parameterized module.
+    :param parameters: Dictionary mapping parameter names to values for the given toplevel module
+    :param as_block: if True, the module's io wires will be PyRTL Input/Output WireVectors
+        on the block; otherwise, they will be normal WireVectors accessible in the returned
+        Model object.
     :param bool leave_in_dir: If True, save the intermediate BLIF file created in
         the given directory
     :param block: The block where the logic will be added
@@ -488,13 +527,26 @@ def input_from_verilog(verilog, clock_name='clk', toplevel=None, leave_in_dir=No
     yosys_arg_template = (
         "-p "
         "read_verilog %s; "
+        "%s"
         "synth %s; "
         "setundef -zero -undriven; "
         "opt; "
         "write_blif %s; "
     )
 
+    parameters_str = ""
+    if parameters:
+        if toplevel is None:
+            raise PyrtlError("Must supply top-level module name if parameters are given.")
+
+        parameters_str = "chparam "
+        parameters_str += \
+            " ".join("-set " + str(k) + " " + str(v) for k, v
+                     in parameters.items())
+        parameters_str += " " + toplevel + "; "
+
     yosys_arg = yosys_arg_template % (tmp_verilog_path,
+                                      parameters_str,
                                       ('-top ' + toplevel) if toplevel is not None else '-auto-top',
                                       tmp_blif_path)
 
@@ -503,17 +555,19 @@ def input_from_verilog(verilog, clock_name='clk', toplevel=None, leave_in_dir=No
         os.close(temp_bd)
         # call yosys on the script, and grab the output
         _yosys_output = subprocess.check_output(['yosys', yosys_arg])
-        with open(tmp_blif_path) as blif:
-            input_from_blif(blif, block=block, clock_name=clock_name, top_model=toplevel)
     except (subprocess.CalledProcessError, ValueError) as e:
         print('Error with call to yosys...', file=sys.stderr)
         print('---------------------------------------------', file=sys.stderr)
-        print(str(e.output).replace('\\n', '\n'), file=sys.stderr)
+        print(str(e).replace('\\n', '\n'), file=sys.stderr)
         print('---------------------------------------------', file=sys.stderr)
         raise PyrtlError('Yosys callfailed')
     except OSError as e:
         print('Error with call to yosys...', file=sys.stderr)
         raise PyrtlError('Call to yosys failed (not installed or on path?)')
+    else:
+        with open(tmp_blif_path) as blif:
+            return input_from_blif(blif, block=block, merge_io_vectors=True,
+                                   clock_name=clock_name, top_model=toplevel, as_block=as_block)
     finally:
         os.remove(tmp_verilog_path)
         if leave_in_dir is None:
