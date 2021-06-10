@@ -319,6 +319,48 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_outp)
 
+    def test_reset_value_in_reg(self):
+        r = pyrtl.Register(2, reset_value=2)
+        r.next <<= r + 1
+        o = pyrtl.Output(4, 'o')
+        o <<= r
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        sim.step_multiple(nsteps=7)
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), 'o 2301230\n')
+
+    def test_reset_value_overridden_in_simulation(self):
+        r = pyrtl.Register(2, reset_value=2)
+        r.next <<= r + 1
+        o = pyrtl.Output(4, 'o')
+        o <<= r
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace, register_value_map={r: 1})
+        sim.step_multiple(nsteps=7)
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), 'o 1230123\n')
+
+    def test_default_value_for_registers_without_reset_value(self):
+        r = pyrtl.Register(2, name='r', reset_value=3)
+        s = pyrtl.Register(2, name='s')
+        r.next <<= r + 1
+        s.next <<= s - 1
+        o = pyrtl.Output(4, 'o')
+        o <<= r + s
+
+        sim_trace = pyrtl.SimulationTrace()
+        # Should set default value for s only (since r has specified 'reset_value')
+        sim = self.sim(tracer=sim_trace, default_value=3)
+        sim.step_multiple(nsteps=7)
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), 'o 6222622\nr 3012301\ns 3210321\n')
+
 
 class SimInputValidationBase(unittest.TestCase):
     def setUp(self):
