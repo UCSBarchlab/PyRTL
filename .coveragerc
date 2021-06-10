@@ -30,6 +30,7 @@ ignore_errors = True
 
 omit =
     .tox/*
+    */tests/*
     */ctypes/*
     six.py
     pyparsing.py
