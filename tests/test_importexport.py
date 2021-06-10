@@ -1505,7 +1505,7 @@ class TestVerilogNames(unittest.TestCase):
         self.assert_invalid_name('a' * 2000)
 
 
-class TestVerilog(unittest.TestCase):
+class TestVerilogOutput(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         # To compare textual consistency, need to make
@@ -1605,6 +1605,90 @@ class TestVerilog(unittest.TestCase):
         r.next <<= pyrtl.select(rst, 0, r + 1)
         pyrtl.output_to_verilog(buffer, add_reset=False)
         self.assertEqual(buffer.getvalue(), verilog_custom_reset)
+
+
+verilog_input_counter = """\
+module counter (clk, rst, en, count);
+
+    input clk, rst, en;
+    output reg [3:0] count;
+
+    always @(posedge clk)
+        if (rst)
+            count <= 4'd0;
+        else if (en)
+            count <= count + 4'd1;
+
+endmodule
+"""
+
+verilog_input_multi_module = """\
+module foo (a, b, o);
+
+    input a, b;
+    output [1:0] o;
+    assign o = a + b;
+
+endmodule
+
+module top (clk, o);
+    input clk;
+    reg a, b;
+    output [1:0] o;
+    foo f1(a, b, o);
+
+    always @(posedge clk)
+    begin
+        a <= ~a;
+        b <= ~b;
+    end
+endmodule
+"""
+
+
+class TestVerilogInput(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_import_counter(self):
+        pyrtl.input_from_verilog(verilog_input_counter)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'rst': '10000', 'en': '01111'})
+        self.assertEqual(sim.tracer.trace['count'], [0, 0, 1, 2, 3])
+
+    def test_import_small(self):
+        pyrtl.input_from_verilog(verilog_output_small)
+        sim = pyrtl.Simulation()
+        sim.step({})
+        self.assertEqual(sim.tracer.trace['o'][0], 0b1100011100110)
+
+    def test_import_counter_with_reset(self):
+        pyrtl.input_from_verilog(verilog_output_counter_sync_reset)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'rst': '1000'})
+        self.assertEqual(sim.tracer.trace['o'], [0, 2, 3, 4])
+
+    def test_import_multi_module_top_most_module(self):
+        # Import foo module because occurs first in file
+        pyrtl.input_from_verilog(verilog_input_multi_module)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'a': '0011', 'b': '0101'})
+        self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 2])
+
+    def test_import_multi_module_specified_module(self):
+        pyrtl.input_from_verilog(verilog_input_multi_module, toplevel='top')
+        sim = pyrtl.Simulation()
+        sim.step_multiple(nsteps=5)
+        self.assertEqual(sim.tracer.trace['o'], [0, 2, 0, 2, 0])
+
+    def test_error_import_no_module(self):
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "No module found in verilog file"):
+            pyrtl.input_from_verilog("")
+
+    def test_error_import_bad_file(self):
+        with self.assertRaisesRegex(pyrtl.PyrtlError,
+                                    "input_from_verilog expecting either open file or string"):
+            pyrtl.input_from_verilog(3)
 
 
 verilog_testbench = """\
