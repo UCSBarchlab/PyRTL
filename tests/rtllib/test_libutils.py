@@ -31,7 +31,7 @@ class TestPartitionWire(unittest.TestCase):
         partitioned_vals = [[(val >> i) & 0xff for i in (0, 8, 16, 24)] for val in vals[0]]
         true_vals = tuple(zip(*partitioned_vals))
         for index, wire in enumerate(out_wires):
-            self.assertEqual(tuple(out_vals[wire]), true_vals[index])
+            self.assertEqual(tuple(out_vals[wire.name]), true_vals[index])
 
 
 class TestStringConversion(unittest.TestCase):
@@ -76,7 +76,7 @@ class TestTwosComp(unittest.TestCase):
 
     def test_inverse_functionality(self):
         for i in range(20):
-            self.assertEquals(i * 3, libutils.rev_twos_comp_repr(
+            self.assertEqual(i * 3, libutils.rev_twos_comp_repr(
                 libutils.twos_comp_repr(i * 3, 16), 16))
 
     def test_low_bw_error(self):
@@ -96,4 +96,4 @@ class TestTwosComp(unittest.TestCase):
                 'in1': i,
                 'in2': libutils.twos_comp_repr(-2 * i, 8)
             })
-            self.assertEquals(-i, libutils.rev_twos_comp_repr(sim.inspect('out'), 8))
+            self.assertEqual(-i, libutils.rev_twos_comp_repr(sim.inspect('out'), 8))

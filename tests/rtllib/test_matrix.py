@@ -2450,20 +2450,20 @@ class TestHelpers(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_list_to_int(self):
-        self.assertEquals(Matrix.list_to_int([[0]], 1), 0b0)
-        self.assertEquals(Matrix.list_to_int([[1, 2]], 2), 0b0110)
-        self.assertEquals(Matrix.list_to_int([[1, 2, 3]], 2), 0b011011)
-        self.assertEquals(Matrix.list_to_int([[4, 9, 11], [3, 5, 6]], 4),
-                          0b010010011011001101010110)
+        self.assertEqual(Matrix.list_to_int([[0]], 1), 0b0)
+        self.assertEqual(Matrix.list_to_int([[1, 2]], 2), 0b0110)
+        self.assertEqual(Matrix.list_to_int([[1, 2, 3]], 2), 0b011011)
+        self.assertEqual(Matrix.list_to_int([[4, 9, 11], [3, 5, 6]], 4),
+                         0b010010011011001101010110)
 
     def test_list_to_int_truncates(self):
-        self.assertEquals(Matrix.list_to_int([[4, 9, 27]], 3), 0b100001011)
+        self.assertEqual(Matrix.list_to_int([[4, 9, 27]], 3), 0b100001011)
 
     def test_list_to_int_negative(self):
-        self.assertEquals(Matrix.list_to_int([[-4, -9, 11]], 5), 0b111001011101011)
+        self.assertEqual(Matrix.list_to_int([[-4, -9, 11]], 5), 0b111001011101011)
 
     def test_list_to_int_negative_truncates(self):
-        self.assertEquals(Matrix.list_to_int([[-4, -9, 11]], 3), 0b100111011)
+        self.assertEqual(Matrix.list_to_int([[-4, -9, 11]], 3), 0b100111011)
 
     def test_list_to_int_non_positive_n_bits(self):
         with self.assertRaises(pyrtl.PyrtlError):

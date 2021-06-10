@@ -1018,7 +1018,7 @@ class TestBasicMult(unittest.TestCase):
             sim.step({a: xvals[cycle], b: yvals[cycle]})
 
         # Extracting the values and verifying correctness
-        multiplier_result = sim_trace.trace[product]
+        multiplier_result = sim_trace.trace[product.name]
         self.assertEqual(multiplier_result, true_result)
 
     def test_mult_1(self):

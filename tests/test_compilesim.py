@@ -734,7 +734,7 @@ class MemBlockBase(unittest.TestCase):
                 self.write_data: 2 + i
             })
         # check consistency of memory_value_map assignment, insertion, and modification
-        self.assertEquals(sim.inspect_mem(self.mem1), {0: 0, 1: 2, 2: 3, 3: 3, 4: 4, 5: 5})
+        self.assertEqual(sim.inspect_mem(self.mem1), {0: 0, 1: 2, 2: 3, 3: 3, 4: 4, 5: 5})
 
     def test_mem_val_map_defaults(self):
         read_addr3 = pyrtl.Input(self.addrwidth)
@@ -1012,7 +1012,7 @@ class TraceErrorBase(unittest.TestCase):
         sim.step_multiple(provided_inputs={}, nsteps=10)
         with self.assertRaises(pyrtl.PyrtlError) as ex:
             sim.tracer.render_trace()
-        self.assertEquals(
+        self.assertEqual(
             str(ex.exception),
             "Empty trace list. This may have occurred because "
             "untraceable wires were removed prior to simulation, "

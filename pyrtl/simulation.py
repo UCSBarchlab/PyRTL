@@ -1025,15 +1025,15 @@ class SimulationTrace(object):
             raise PyrtlError('error, simulation trace needs at least 1 signal to track '
                              '(by default, unnamed signals are not traced -- try either passing '
                              'a name to a WireVector or setting a "wirevector_subset" option)')
-        for wire in self.trace:
-            tracelist = self.trace[wire]
-            wirevec = self._wires[wire]
+        for wire_name in self.trace:
+            tracelist = self.trace[wire_name]
+            wirevec = self._wires[wire_name]
             tracelist.append(value_map[wirevec])
 
     def add_step_named(self, value_map):
-        for wire in value_map:
-            if wire in self.trace:
-                self.trace[wire].append(value_map[wire])
+        for wire_name in value_map:
+            if wire_name in self.trace:
+                self.trace[wire_name].append(value_map[wire_name])
 
     def add_fast_step(self, fastsim):
         """ Add the fastsim context to the trace. """

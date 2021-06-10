@@ -206,7 +206,7 @@ class TestAESEncrypt(unittest.TestCase):
                 self.in_vector: 0x0, aes_key: 0x1, reset: 0
             })
             circuit_out = sim_trace.trace[self.out_vector][cycle]
-            sim_trace.render_trace(symbol_len=40)
+            # sim_trace.render_trace(symbol_len=40)
             self.assertEqual(circuit_out, true_vals[cycle], "\nAssertion failed on cycle: "
                              + str(cycle) + " Gotten value: " + hex(circuit_out))
 

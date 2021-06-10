@@ -815,7 +815,7 @@ def find_loop(block=None):
 
     # now making a map to quickly look up nets
     dest_nets = {dest_w: net_ for net_ in logic_left for dest_w in net_.dests}
-    initial_w = random.sample(wires_left, 1)[0]
+    initial_w = random.sample(list(wires_left), 1)[0]
 
     current_wires = set()
     checking_stack = [_FilteringState(initial_w)]

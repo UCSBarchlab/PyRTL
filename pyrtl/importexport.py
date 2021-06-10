@@ -772,7 +772,7 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
                 print('        {:s} = {:s}{:d};'.format(
                     ver_name[w.name],
                     "{:d}'d".format(len(w)),
-                    simulation_trace.trace[w][i]), file=dest_file)
+                    simulation_trace.trace[w.name][i]), file=dest_file)
             if cmd:
                 print('        %s' % cmd, file=dest_file)
             print('\n        #10', file=dest_file)

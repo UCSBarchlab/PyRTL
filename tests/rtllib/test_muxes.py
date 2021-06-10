@@ -274,8 +274,8 @@ class TestMultiSelectorSim(unittest.TestCase):
         expected_i1_out = [v1 if s else v0 for s, v0, v1 in zip(sel_vals, i1_0_vals, i1_1_vals)]
         expected_i2_out = [v1 if s else v0 for s, v0, v1 in zip(sel_vals, i2_0_vals, i2_1_vals)]
 
-        self.assertEqual(actual_outputs[i1_out], expected_i1_out)
-        self.assertEqual(actual_outputs[i2_out], expected_i2_out)
+        self.assertEqual(actual_outputs[i1_out.name], expected_i1_out)
+        self.assertEqual(actual_outputs[i2_out.name], expected_i2_out)
 
     def test_simple(self):
         sel, sel_vals = gen_in(2)
@@ -300,9 +300,9 @@ class TestMultiSelectorSim(unittest.TestCase):
         expected_i2_out = [v[s] for s, v in zip(sel_vals, zip(*x2_vals))]
         expected_i3_out = [v[s] for s, v in zip(sel_vals, zip(*x3_vals))]
 
-        self.assertEqual(actual_outputs[i1_out], expected_i1_out)
-        self.assertEqual(actual_outputs[i2_out], expected_i2_out)
-        self.assertEqual(actual_outputs[i3_out], expected_i3_out)
+        self.assertEqual(actual_outputs[i1_out.name], expected_i1_out)
+        self.assertEqual(actual_outputs[i2_out.name], expected_i2_out)
+        self.assertEqual(actual_outputs[i3_out.name], expected_i3_out)
 
 
 class TestDemux(unittest.TestCase):

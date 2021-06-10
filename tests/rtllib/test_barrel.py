@@ -34,8 +34,8 @@ class TestBarrel(unittest.TestCase):
                 self.inp_shift: shifts[i]
             })
             base_sum = vals[i] * pow(2, shifts[i])
-            self.assertEquals(sim.inspect(self.out_zeros), base_sum)
-            self.assertEquals(sim.inspect(self.out_ones), base_sum + pow(2, shifts[i]) - 1)
+            self.assertEqual(sim.inspect(self.out_zeros), base_sum)
+            self.assertEqual(sim.inspect(self.out_ones), base_sum + pow(2, shifts[i]) - 1)
 
     def test_shift_right(self):
         random.seed(777906374)
@@ -55,5 +55,5 @@ class TestBarrel(unittest.TestCase):
             base_sum = int(vals[i] / pow(2, shifts[i]))
             self.assertEqual(sim.inspect(self.out_zeros), base_sum, "failed on value %d" % vals[i])
             extra_sum = sum([pow(2, len(self.inp_val) - b - 1) for b in range(shifts[i])])
-            self.assertEquals(sim.inspect(self.out_ones), base_sum + extra_sum,
-                              "failed on value %d" % vals[i])
+            self.assertEqual(sim.inspect(self.out_ones), base_sum + extra_sum,
+                             "failed on value %d" % vals[i])

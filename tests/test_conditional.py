@@ -525,7 +525,7 @@ class TestSuperWireConditionalBlock(unittest.TestCase):
             t0, t1, t2, t3, t4 = 0, 0, 0, 0, 0
 
             def v(var):
-                return sim_trace.trace[var][cycle]
+                return sim_trace.trace[var.name][cycle]
 
             if v(a):
                 t0 = 1

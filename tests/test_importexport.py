@@ -387,11 +387,11 @@ class TestInputFromBlif(unittest.TestCase):
         self.assertIsNotNone(sumw)
         self.assertIsNotNone(cout)
         self.assertIsNone(bad)
-        self.assertEquals(len(x), 1)
-        self.assertEquals(len(y), 1)
-        self.assertEquals(len(cin), 1)
-        self.assertEquals(len(sumw), 1)
-        self.assertEquals(len(cout), 1)
+        self.assertEqual(len(x), 1)
+        self.assertEqual(len(y), 1)
+        self.assertEqual(len(cin), 1)
+        self.assertEqual(len(sumw), 1)
+        self.assertEqual(len(cout), 1)
         io_input = pyrtl.working_block().wirevector_subset(pyrtl.Input)
         self.assertIn(x, io_input)
         self.assertIn(y, io_input)
@@ -409,9 +409,9 @@ class TestInputFromBlif(unittest.TestCase):
         self.assertIsNotNone(inw)
         self.assertIsNotNone(reset)
         self.assertIsNotNone(out)
-        self.assertEquals(len(inw), 1)
-        self.assertEquals(len(reset), 1)
-        self.assertEquals(len(out), 4)
+        self.assertEqual(len(inw), 1)
+        self.assertEqual(len(reset), 1)
+        self.assertEqual(len(out), 4)
         io_input = pyrtl.working_block().wirevector_subset(pyrtl.Input)
         self.assertIn(inw, io_input)
         self.assertIn(reset, io_input)
@@ -427,9 +427,9 @@ class TestInputFromBlif(unittest.TestCase):
         self.assertIsNotNone(rst)
         self.assertIsNotNone(en)
         self.assertIsNotNone(count)
-        self.assertEquals(len(rst), 1)
-        self.assertEquals(len(en), 1)
-        self.assertEquals(len(count), 4)
+        self.assertEqual(len(rst), 1)
+        self.assertEqual(len(en), 1)
+        self.assertEqual(len(count), 4)
         io_input = pyrtl.working_block().wirevector_subset(pyrtl.Input)
         self.assertIn(rst, io_input)
         self.assertIn(en, io_input)
@@ -442,14 +442,14 @@ class TestInputFromBlif(unittest.TestCase):
             pyrtl.working_block().get_wirevector_by_name(s)
             for s in ['a[0]', 'a[1]', 'a[2]', 'a[3]', 'b[0]', 'b[1]']
         ]
-        self.assertEquals(len(a0), 1)
-        self.assertEquals(len(a1), 1)
-        self.assertEquals(len(a2), 1)
-        self.assertEquals(len(a3), 1)
-        self.assertEquals(len(b0), 1)
-        self.assertEquals(len(b1), 1)
-        self.assertEquals({a0, a1, a2, a3}, pyrtl.working_block().wirevector_subset(pyrtl.Input))
-        self.assertEquals({b0, b1}, pyrtl.working_block().wirevector_subset(pyrtl.Output))
+        self.assertEqual(len(a0), 1)
+        self.assertEqual(len(a1), 1)
+        self.assertEqual(len(a2), 1)
+        self.assertEqual(len(a3), 1)
+        self.assertEqual(len(b0), 1)
+        self.assertEqual(len(b1), 1)
+        self.assertEqual({a0, a1, a2, a3}, pyrtl.working_block().wirevector_subset(pyrtl.Input))
+        self.assertEqual({b0, b1}, pyrtl.working_block().wirevector_subset(pyrtl.Output))
 
     def test_blif_input_simulates_correctly_with_merged_outputs(self):
         # The 'counter_blif' string contains a model of a standard 4-bit synchronous-reset
@@ -485,10 +485,10 @@ class TestInputFromBlif(unittest.TestCase):
             pyrtl.working_block().get_wirevector_by_name(s)
             for s in ['count[0]', 'count[1]', 'count[2]', 'count[3]']
         ]
-        self.assertEquals(len(count0), 1)
-        self.assertEquals(len(count1), 1)
-        self.assertEquals(len(count2), 1)
-        self.assertEquals(len(count3), 1)
+        self.assertEqual(len(count0), 1)
+        self.assertEqual(len(count1), 1)
+        self.assertEqual(len(count2), 1)
+        self.assertEqual(len(count3), 1)
         io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
         sim_trace = pyrtl.SimulationTrace(wires_to_track=io_vectors)
         sim = pyrtl.Simulation(sim_trace)
@@ -529,8 +529,8 @@ class TestInputFromBlif(unittest.TestCase):
         ]
         self.assertIsNotNone(inw)
         self.assertIsNotNone(outw)
-        self.assertEquals(len(inw), 2)
-        self.assertEquals(len(outw), 1)
+        self.assertEqual(len(inw), 2)
+        self.assertEqual(len(outw), 1)
         io_input = pyrtl.working_block().wirevector_subset(pyrtl.Input)
         self.assertIn(inw, io_input)
         io_output = pyrtl.working_block().wirevector_subset(pyrtl.Output)
@@ -562,11 +562,11 @@ class TestInputFromBlif(unittest.TestCase):
 
         res = utils.sim_and_ret_outws([a, b, cin], [avals, bvals, cinvals])
         self.assertEqual(
-            res[s],
+            res[s.name],
             [(av + bv + cinv) & 0xf for av, bv, cinv in zip(avals, bvals, cinvals)]
         )
         self.assertEqual(
-            res[cout],
+            res[cout.name],
             [((av + bv + cinv) & 0x10) >> 4 for av, bv, cinv in zip(avals, bvals, cinvals)]
         )
 
@@ -641,7 +641,7 @@ class TestInputFromBlif(unittest.TestCase):
             'a': [0, 3, 1, 1, 1, 1, 0],
             'b': [1, 7, 9, 9, 9, 9, 0],
         })
-        cvals = sim.tracer.trace[c]
+        cvals = sim.tracer.trace[c.name]
         self.assertEqual(cvals, [0, 0, 0, 1, 1, 1, 0])
 
 
@@ -1903,7 +1903,7 @@ class TestInputISCASBench(unittest.TestCase):
             wire = block.get_wirevector_by_name(name)
             self.assertIsNotNone(wire)
             self.assertIsInstance(wire, cls)
-            self.assertEquals(len(wire), 1)
+            self.assertEqual(len(wire), 1)
         self.assertEqual(
             len(block.wirevector_subset(cls)),
             len(names)
@@ -1968,7 +1968,7 @@ class TestInputISCASBench(unittest.TestCase):
         pyrtl.input_from_iscas_bench(example_bench_with_io_same_name)
         sys.stdout = sys.__stdout__
 
-        self.assertEquals(
+        self.assertEqual(
             output.getvalue(),
             "Found input and output wires with the same name. "
             "Output 'G3' has now been renamed to 'tmp3'.\n"
