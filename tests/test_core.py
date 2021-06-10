@@ -476,8 +476,8 @@ class TestSanityCheck(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def sanity_error(self, msg):
-        with self.assertRaisesRegexp(pyrtl.PyrtlError, msg):
+    def sanity_error(self, msg, error_type=pyrtl.PyrtlError):
+        with self.assertRaisesRegexp(error_type, msg):
             pyrtl.working_block().sanity_check()
 
     def test_missing_bitwidth(self):
@@ -509,6 +509,26 @@ class TestSanityCheck(unittest.TestCase):
         out = pyrtl.Output(8, 'out')
         out <<= w
         self.sanity_error("used but never driven")
+
+    def test_inconsistent_wirevector_by_name(self):
+        c = pyrtl.Const(42)
+        inp = pyrtl.Input(8, 'inp')
+        out = pyrtl.Output(8, 'out')
+        out <<= inp & c
+        pyrtl.working_block().wirevector_by_name['inp'] = c
+        self.sanity_error("inconsistent entry in wirevector_by_name", pyrtl.PyrtlInternalError)
+
+    def test_missing_wire_in_wirevector_by_name(self):
+        inp = pyrtl.Input(8, 'inp')
+        out = pyrtl.Output(8, 'out')
+        out <<= inp
+        del pyrtl.working_block().wirevector_by_name['inp']
+        self.sanity_error("Missing entries in wirevector_by_name", pyrtl.PyrtlInternalError)
+
+    def test_extra_wire_in_wirevector_by_name(self):
+        inp = pyrtl.Input(8, 'inp')
+        pyrtl.working_block().wirevector_set.discard(inp)
+        self.sanity_error("Unknown wires found in wirevector_by_name", pyrtl.PyrtlInternalError)
 
 
 class TestLogicNets(unittest.TestCase):
