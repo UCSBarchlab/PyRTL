@@ -1281,55 +1281,52 @@ endmodule
 """
 
 
-verilog_test_bench = """\
-module tb();
-    reg clk;
-    reg[1:0] a100;
-    reg[3:0] w1;
-    reg[2:0] w12;
-    wire[1:0] out1;
-    wire[8:0] out10;
+verilog_custom_reset = """\
+// Generated automatically via PyRTL
+// As one initial test of synthesis, map to FPGA with:
+//   yosys -p "synth_xilinx -top toplevel" thisfile.v
 
-    integer tb_iter;
-    toplevel block(.clk(clk), .a100(a100), .w1(w1), .w12(w12), .out1(out1), .out10(out10));
+module toplevel(clk, rst);
+    input clk;
+    input rst;
 
-    always
-        #5 clk = ~clk;
+    reg[3:0] r;
 
-    initial begin
-        $dumpfile ("waveform.vcd");
-        $dumpvars;
+    wire const_0_1;
+    wire const_1_0;
+    wire const_2_0;
+    wire const_3_0;
+    wire[2:0] tmp0;
+    wire[3:0] tmp1;
+    wire[4:0] tmp2;
+    wire[3:0] tmp3;
+    wire[4:0] tmp4;
+    wire[4:0] tmp5;
+    wire[3:0] tmp6;
 
-        clk = 0;
-        block.r1 = 2;
-        block.r2 = 3;
-        block.tmp13 = 0;
-        for (tb_iter = 0; tb_iter < 32; tb_iter++) begin block.mem_0[tb_iter] = 0; end
-        block.mem_0[2] = 9;
-        block.mem_0[9] = 12;
-        a100 = 2'd0;
-        w1 = 4'd0;
-        w12 = 3'd0;
+    // Combinational
+    assign const_0_1 = 1;
+    assign const_1_0 = 0;
+    assign const_2_0 = 0;
+    assign const_3_0 = 0;
+    assign tmp0 = {const_1_0, const_1_0, const_1_0};
+    assign tmp1 = {tmp0, const_0_1};
+    assign tmp2 = r + tmp1;
+    assign tmp3 = {const_3_0, const_3_0, const_3_0, const_3_0};
+    assign tmp4 = {tmp3, const_2_0};
+    assign tmp5 = rst ? tmp4 : tmp2;
+    assign tmp6 = {tmp5[3], tmp5[2], tmp5[1], tmp5[0]};
 
-        #10
-        a100 = 2'd1;
-        w1 = 4'd4;
-        w12 = 3'd1;
-
-        #10
-        a100 = 2'd3;
-        w1 = 4'd2;
-        w12 = 3'd7;
-
-        #10
-        a100 = 2'd2;
-        w1 = 4'd3;
-        w12 = 3'd4;
-
-        #10
-        $finish;
+    // Registers
+    always @(posedge clk)
+    begin
+        begin
+            r <= tmp6;
+        end
     end
+
 endmodule
+
 """
 
 
@@ -1452,10 +1449,156 @@ class TestVerilog(unittest.TestCase):
         with self.assertRaisesRegex(pyrtl.PyrtlError, "Invalid add_reset option"):
             pyrtl.output_to_verilog(buffer, add_reset='foobar')
 
+    def test_error_existing_reset_wire(self):
+        buffer = io.StringIO()
+        _rst = pyrtl.Input(1, 'rst')
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Found a user-defined wire named 'rst'."):
+            pyrtl.output_to_verilog(buffer)
+
+    def test_existing_reset_wire_without_add_reset(self):
+        buffer = io.StringIO()
+        rst = pyrtl.Input(1, 'rst')
+        r = pyrtl.Register(4, 'r')
+        r.next <<= pyrtl.select(rst, 0, r + 1)
+        pyrtl.output_to_verilog(buffer, add_reset=False)
+        self.assertEqual(buffer.getvalue(), verilog_custom_reset)
+
+
+verilog_testbench = """\
+module tb();
+    reg clk;
+    reg rst;
+    reg[1:0] a100;
+    reg[3:0] w1;
+    reg[2:0] w12;
+    wire[1:0] out1;
+    wire[8:0] out10;
+
+    integer tb_iter;
+    toplevel block(.clk(clk), .rst(rst), .a100(a100), .w1(w1), .w12(w12), .out1(out1), .out10(out10));
+
+    always
+        #5 clk = ~clk;
+
+    initial begin
+        $dumpfile ("waveform.vcd");
+        $dumpvars;
+
+        clk = 0;
+        rst = 0;
+        block.r1 = 2;
+        block.r2 = 3;
+        block.tmp0 = 0;
+        for (tb_iter = 0; tb_iter < 32; tb_iter++) begin block.mem_0[tb_iter] = 0; end
+        block.mem_0[2] = 9;
+        block.mem_0[9] = 12;
+        a100 = 2'd0;
+        w1 = 4'd0;
+        w12 = 3'd0;
+
+        #10
+        a100 = 2'd1;
+        w1 = 4'd4;
+        w12 = 3'd1;
+
+        #10
+        a100 = 2'd3;
+        w1 = 4'd2;
+        w12 = 3'd7;
+
+        #10
+        a100 = 2'd2;
+        w1 = 4'd3;
+        w12 = 3'd4;
+
+        #10
+        $finish;
+    end
+endmodule
+"""  # noqa
+
+verilog_testbench_no_reset = """\
+module tb();
+    reg clk;
+    reg[1:0] a100;
+    reg[3:0] w1;
+    reg[2:0] w12;
+    wire[1:0] out1;
+    wire[8:0] out10;
+
+    integer tb_iter;
+    toplevel block(.clk(clk), .a100(a100), .w1(w1), .w12(w12), .out1(out1), .out10(out10));
+
+    always
+        #5 clk = ~clk;
+
+    initial begin
+        $dumpfile ("waveform.vcd");
+        $dumpvars;
+
+        clk = 0;
+        block.r1 = 2;
+        block.r2 = 3;
+        block.tmp0 = 0;
+        for (tb_iter = 0; tb_iter < 32; tb_iter++) begin block.mem_0[tb_iter] = 0; end
+        block.mem_0[2] = 9;
+        block.mem_0[9] = 12;
+        a100 = 2'd0;
+        w1 = 4'd0;
+        w12 = 3'd0;
+
+        #10
+        a100 = 2'd1;
+        w1 = 4'd4;
+        w12 = 3'd1;
+
+        #10
+        a100 = 2'd3;
+        w1 = 4'd2;
+        w12 = 3'd7;
+
+        #10
+        a100 = 2'd2;
+        w1 = 4'd3;
+        w12 = 3'd4;
+
+        #10
+        $finish;
+    end
+endmodule
+"""
+
+verilog_testbench_custom_reset = """\
+module tb();
+    reg clk;
+    reg rst;
+
+    integer tb_iter;
+    toplevel block(.clk(clk), .rst(rst));
+
+    always
+        #5 clk = ~clk;
+
+    initial begin
+        $dumpfile ("waveform.vcd");
+        $dumpvars;
+
+        clk = 0;
+        block.r = 0;
+        $finish;
+    end
+endmodule
+"""
+
 
 class TestOutputTestbench(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
+        # To compare textual consistency, need to make
+        # sure we're starting at the same index for all
+        # automatically created names.
+        pyrtl.wire._reset_wire_indexers()
+        pyrtl.memory._reset_memory_indexer()
 
     def test_verilog_testbench_does_not_throw_error(self):
         zero = pyrtl.Input(1, 'zero')
@@ -1470,7 +1613,7 @@ class TestOutputTestbench(unittest.TestCase):
         with io.StringIO() as tbfile:
             pyrtl.output_verilog_testbench(tbfile, sim_trace)
 
-    def test_verilog_testbench_consistency(self):
+    def create_design(self):
         # Various wire names so we can verify they are printed
         # in deterministic order each time
         i1, i2, i3 = pyrtl.input_list('w1/4 w12/3 a100/2')
@@ -1499,9 +1642,38 @@ class TestOutputTestbench(unittest.TestCase):
             'w12': [0, 1, 7, 4],
             'a100': [0, 1, 3, 2],
         })
+        return sim_trace
+
+    def test_verilog_testbench_consistency(self):
+        sim_trace = self.create_design()
         with io.StringIO() as tbfile:
             pyrtl.output_verilog_testbench(tbfile, sim_trace)
-            self.assertEqual(tbfile.getvalue(), verilog_test_bench)
+            self.assertEqual(tbfile.getvalue(), verilog_testbench)
+
+    def test_verilog_testbench_no_reset_consistency(self):
+        sim_trace = self.create_design()
+        with io.StringIO() as tbfile:
+            pyrtl.output_verilog_testbench(tbfile, sim_trace, add_reset=False)
+            self.assertEqual(tbfile.getvalue(), verilog_testbench_no_reset)
+
+    def test_error_verilog_testbench_invalid_add_reset(self):
+        tbfile = io.StringIO()
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Invalid add_reset option"):
+            pyrtl.output_verilog_testbench(tbfile, add_reset='foobar')
+
+    def test_error_verilog_testbench_existing_reset_wire(self):
+        tbfile = io.StringIO()
+        _rst = pyrtl.Input(1, 'rst')
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Found a user-defined wire named 'rst'."):
+            pyrtl.output_verilog_testbench(tbfile)
+
+    def test_verilog_testbench_existing_reset_wire_without_add_reset(self):
+        buffer = io.StringIO()
+        rst = pyrtl.Input(1, 'rst')
+        r = pyrtl.Register(4, 'r')
+        r.next <<= pyrtl.select(rst, 0, r + 1)
+        pyrtl.output_verilog_testbench(buffer, add_reset=False)
+        self.assertEqual(buffer.getvalue(), verilog_testbench_custom_reset)
 
 
 firrtl_output_concat_test = """\
