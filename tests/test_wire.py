@@ -225,6 +225,29 @@ class TestRegister(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             a = (self.r.next or True)
 
+    def test_reset_value_is_none(self):
+        self.assertIsNone(self.r.reset_value)
+
+    def test_reset_value_is_correct(self):
+        r = pyrtl.Register(4, reset_value=1)
+        self.assertEqual(r.reset_value, 1)
+
+    def test_reset_value_as_string(self):
+        r = pyrtl.Register(4, reset_value="2'd1")
+        self.assertEqual(r.reset_value, 1)
+
+    def test_invalid_reset_value_too_large(self):
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "cannot fit in the specified"):
+            r = pyrtl.Register(4, reset_value=16)
+
+    def test_invalid_reset_value_too_large_as_string(self):
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "cannot fit in the specified"):
+            r = pyrtl.Register(4, reset_value="5'd16")
+
+    def test_invalid_reset_value_not_an_integer(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            r = pyrtl.Register(4, reset_value='hello')
+
 
 # -------------------------------------------------------------------
 class TestConst(unittest.TestCase):

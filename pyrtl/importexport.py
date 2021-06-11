@@ -630,7 +630,10 @@ def _to_verilog_sequential(file, block, varname, add_reset):
                     rval = 0
                 print('            {:s} <= {:d};'.format(dest, rval), file=file)
         print('        end', file=file)
-    print('        else begin', file=file)
+        print('        else begin', file=file)
+    else:
+        print('        begin', file=file)
+
     for net in _net_sorted(block.logic, varname):
         if net.op == 'r':
             dest, src = (varname(net.dests[0]), varname(net.args[0]))
