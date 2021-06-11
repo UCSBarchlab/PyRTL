@@ -311,6 +311,11 @@ def output_to_graphviz(file, block=None, namer=_graphviz_default_namer,
     :param maintain_arg_order: If True, will add ordering constraints so that that incoming edges
         are ordered left-to-right for nets where argument order matters (e.g. '<'). Keeping this
         as False results in a cleaner, though less visually precise, graphical output.
+
+    The file written by the this function should be a directed graph in the format expected
+    by the graphviz package (https://graphviz.org/), specifically in the "dot" format.  Once
+    graphviz is installed, the resulting graph file can be rendered to a .png file with
+    "dot -Tps output.dot > output.ps".
     """
     print(block_to_graphviz_string(block, namer, split_state, maintain_arg_order), file=file)
 
