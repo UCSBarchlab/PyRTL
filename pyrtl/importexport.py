@@ -432,6 +432,11 @@ def output_to_verilog(dest_file, add_reset=True, block=None):
     file = dest_file
     internal_names = _VerilogSanitizer('_ver_out_tmp_')
 
+    if add_reset:  # True or 'asynchronous'
+        if block.get_wirevector_by_name('rst') is not None:
+            raise PyrtlError("Found a user-defined wire named 'rst'. Pass in "
+                             "'add_reset=False' to use your existing reset logic.")
+
     for wire in block.wirevector_set:
         internal_names.make_valid_string(wire.name)
 
@@ -672,7 +677,7 @@ def _to_verilog_footer(file):
 
 
 def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=None,
-                             vcd="waveform.vcd", cmd=None, block=None):
+                             vcd="waveform.vcd", cmd=None, add_reset=True, block=None):
     """ Output a Verilog testbench for the block/inputs used in the simulation trace.
 
     :param dest_file: an open file to which the test bench will be printed.
@@ -692,6 +697,16 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
         specific values out during testbench evaluation (e.g. cmd='$display("%d", out);'
         will instruct the testbench to print the value of 'out' every cycle which can then
         be compared easy with a reference).
+    :param add_reset: If reset logic should be added. Allowable options are:
+        False (meaning no reset logic is added), True (default, for adding synchronous
+        reset logic), and 'asynchronous' (for adding asynchronous reset logic).
+        The value passed in here should match the argument passed to `output_to_verilog()`.
+    :param block: Block containing design to test.
+
+    If `add_reset` is not False, a `rst` wire is added and will passed as an input to the
+    instantiated toplevel module. The `rst` wire will be held low in the testbench, because
+    initialization here occurs via the `initial` block. It is provided for consistency with
+    `output_to_verilog()`.
 
     The test bench does not return any values.
 
@@ -707,7 +722,17 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
             output_verilog_testbench(fp, sim.tracer, vcd=None, cmd='$display("%d", out);')
 
     """
+    if not isinstance(add_reset, bool):
+        if add_reset != 'asynchronous':
+            raise PyrtlError("Invalid add_reset option %s. Acceptable options are "
+                             "False, True, and 'asynchronous'")
+
     block = working_block(block)
+
+    if add_reset:  # True or 'asynchronous'
+        if block.get_wirevector_by_name('rst') is not None:
+            raise PyrtlError("Found a user-defined wire named 'rst'. Pass in "
+                             "'add_reset=False' to use your existing reset logic.")
 
     inputs, outputs, registers, wires, memories = _verilog_block_parts(block)
 
@@ -760,6 +785,8 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     # Declare all block inputs as reg
     print('    reg clk;', file=dest_file)
+    if add_reset:
+        print('    reg rst;', file=dest_file)
     for w in name_sorted(inputs):
         print('    reg{:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
               file=dest_file)
@@ -775,6 +802,8 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     # Instantiate logic block
     io_list = ['clk'] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
+    if add_reset:
+        io_list.insert(1, 'rst')
     io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
     print('    toplevel block({:s});\n'.format(', '.join(io_list_str)), file=dest_file)
 
@@ -792,6 +821,8 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     # Initialize clk, and all the registers and memories
     print('        clk = 0;', file=dest_file)
+    if add_reset:
+        print('        rst = 0;', file=dest_file)
     for r in name_sorted(registers):
         print('        block.%s = %d;' % (ver_name[r.name], init_regvalue(r)), file=dest_file)
     for m in sorted(memories, key=lambda m: m.id):
