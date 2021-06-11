@@ -183,7 +183,7 @@ def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=Non
                 dst_nets[arg].append(net_)
         if len(net_.dests) == 1:
             src_nets[net_.dests[0]] = net_
-        block.add_net(new_net)
+        block.add_net(net_)
 
     # src and dst in this function are all relative to wires
     block = working_block(block)

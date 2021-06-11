@@ -5,6 +5,7 @@ ways to change a block.
 """
 
 from __future__ import print_function, unicode_literals
+import collections
 
 from .core import working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock
 from .helperfuncs import _NetCount
@@ -45,6 +46,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
         if (not skip_sanity_check) or _get_debug_mode():
             block.sanity_check()
         _remove_wire_nets(block)
+        _remove_slice_nets(block)
         constant_propagation(block, True)
         _remove_unlistened_nets(block)
         common_subexp_elimination(block)
@@ -89,6 +91,66 @@ def _remove_wire_nets(block):
     new_logic = set()
     for net in block.logic:
         if net.op != 'w' or isinstance(net.dests[0], Output):
+            new_args = tuple(wire_src_dict.find_producer(x) for x in net.args)
+            new_net = LogicNet(net.op, net.op_param, new_args, net.dests)
+            new_logic.add(new_net)
+
+    # now update the block with the new logic and remove wirevectors
+    block.logic = new_logic
+    for dead_wirevector in wire_removal_set:
+        block.remove_wirevector(dead_wirevector)
+
+    block.sanity_check()
+
+
+def _remove_slice_nets(block):
+    """ Remove all unneeded slice nodes from the block.
+
+    Unneeded here means that the source and destination wires of a slice net are exactly
+    the same, because the slice takes all the bits, in order, from the source.
+    """
+    # Turns a net of form on the left into the one on the right:
+    #
+    #  w1
+    #   |
+    # [3:0]
+    #   |
+    # [3:0]     ===>  w1
+    #   |             |
+    # [3:0] w2      [3:0] w2
+    #  / \ /         / \ /
+    # ~   +         ~   +
+    # |   |         |   |
+
+    wire_src_dict = _ProducerList()
+    wire_removal_set = set()  # set of all wirevectors to be removed
+
+    def is_net_slicing_entire_wire(net):
+        if net.op != 's':
+            return False
+
+        src_wire = net.args[0]
+        dst_wire = net.dests[0]
+        if len(src_wire) != len(dst_wire):
+            return False
+
+        selLower = net.op_param[0]
+        selUpper = net.op_param[-1]
+        # Check if getting all bits from the src_wire (i.e. consecutive bits, MSB to LSB)
+        return net.op_param == tuple(range(selLower, selUpper + 1))
+
+    # one pass to build the map of value producers and
+    # all of the nets and wires to be removed
+    for net in block.logic:
+        if is_net_slicing_entire_wire(net):
+            wire_src_dict[net.dests[0]] = net.args[0]
+            if not isinstance(net.dests[0], Output):
+                wire_removal_set.add(net.dests[0])
+
+    # second full pass to create the new logic without the wire nets
+    new_logic = set()
+    for net in block.logic:
+        if not is_net_slicing_entire_wire(net) or isinstance(net.dests[0], Output):
             new_args = tuple(wire_src_dict.find_producer(x) for x in net.args)
             new_net = LogicNet(net.op, net.op_param, new_args, net.dests)
             new_logic.add(new_net)
@@ -383,6 +445,7 @@ def _remove_unused_wires(block, keep_inputs=True):
             PyrtlInternalError("Output wire, " + removed_wire.name + " not driven")
 
     block.wirevector_set = valid_wires
+    block.wirevector_by_name = {wire.name: wire for wire in valid_wires}
 
 # --------------------------------------------------------------------
 #    __           ___       ___  __     __
@@ -696,3 +759,134 @@ def one_bit_selects(net):
     catlist = [net.args[0][i] for i in net.op_param]
     dest = net.dests[0]
     dest <<= concat_list(catlist)
+
+
+def direct_connect_outputs(block=None):
+    """ Remove 'w' nets immediately before outputs, if possible.
+
+    :param block: block to update (defaults to working block)
+
+    The 'w' nets that are eligible for removal with this pass
+    meet the following requirements:
+        * The destination wirevector of the net is an Output
+        * The source wirevector of the net doesn't go to any other nets.
+    """
+    # Turns a netlist of the form (where [] denote nets and o is an Output):
+    #
+    #  w1 w2
+    #   | |
+    #   [*]
+    #    |
+    #    w3
+    #    |
+    #   [w]
+    #    |
+    #    o
+    #
+    # into:
+    #
+    #  w1 w2
+    #   | |
+    #   [*]
+    #    |
+    #    o
+
+    # NOTE: would use transform.all_nets(), but it becomes tricky when
+    # we want to remove more than just the current net on a single pass
+    block = working_block(block)
+    _, dst_nets = block.net_connections()
+
+    nets_to_remove = set()
+    nets_to_add = set()
+    wirevectors_to_remove = set()
+
+    for net in block.logic:
+        if net.op == '@':
+            continue
+
+        dest_wire = net.dests[0]
+        if dest_wire not in dst_nets or len(dst_nets[dest_wire]) > 1:
+            continue
+
+        dst_net = dst_nets[dest_wire][0]
+        if dst_net.op != 'w' or not isinstance(dst_net.dests[0], Output):
+            continue
+
+        new_net = LogicNet(
+            op=net.op,
+            op_param=net.op_param,
+            args=net.args,
+            dests=dst_net.dests,
+        )
+        nets_to_remove.add(net)
+        nets_to_remove.add(dst_net)
+        wirevectors_to_remove.add(dst_net.args[0])
+        nets_to_add.add(new_net)
+
+    block.logic.difference_update(nets_to_remove)
+    block.logic.update(nets_to_add)
+    for w in wirevectors_to_remove:
+        block.remove_wirevector(w)
+
+
+def _make_tree(wire, block, curr_fanout):
+    def f(w, n):
+        if n == 1:
+            return (w,)
+        else:
+            l_fanout = n // 2
+            r_fanout = n - l_fanout
+            o = WireVector(len(w), block=block)
+            split_net = LogicNet(
+                op='w',
+                op_param=None,
+                args=(w,),
+                dests=(o,),
+            )
+            block.add_net(split_net)
+            return f(o, l_fanout) + f(o, r_fanout)
+    return f(wire, curr_fanout)
+
+
+def two_way_fanout(block=None):
+    """ Update the block such that no wire goes to more than 2 destination nets
+
+    :param block: block to update (defaults to working block)
+    """
+    from .analysis import fanout
+    block = working_block(block)
+
+    _, dst_map = block.net_connections()
+    # Two-pass approach: Remember which nets will need to change, in case
+    # there are multiple arguments which will be changing along the way.
+    nets_to_update = collections.defaultdict(list)
+    for wire in block.wirevector_subset(exclude=(Output)):
+        curr_fanout = fanout(wire)
+        if curr_fanout > 1:
+            s = _make_tree(wire, block, curr_fanout)
+            curr_ix = 0
+            for dst_net in dst_map[wire]:
+                for i, arg in enumerate(dst_net.args):
+                    if arg is wire:
+                        nets_to_update[dst_net].append((wire, i, s[curr_ix]))
+                        curr_ix += 1
+            if curr_ix != curr_fanout:
+                raise PyrtlInternalError("Calculated fanout does not equal number of wires found")
+
+    for old_net, args in nets_to_update.items():
+        def get_arg(i, a):
+            for orig, ix, from_tree in args:
+                # Checking index as well because the same wire could be
+                # used as multiple arguments to the same net.
+                if i == ix and a is orig:
+                    return from_tree
+            return a
+
+        new_net = LogicNet(
+            op=old_net.op,
+            op_param=old_net.op_param,
+            args=tuple(get_arg(ix, a) for ix, a in enumerate(old_net.args)),
+            dests=old_net.dests
+        )
+        block.add_net(new_net)
+        block.logic.remove(old_net)

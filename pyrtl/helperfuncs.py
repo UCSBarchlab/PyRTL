@@ -307,6 +307,9 @@ def bitpattern_to_val(bitpattern, *ordered_fields, **named_fields):
         # evaluates to   0b00000000001100100010000010100011
     """
 
+    if not bitpattern:
+        raise PyrtlError('bitpattern must be nonempty')
+
     if len(ordered_fields) > 0 and len(named_fields) > 0:
         raise PyrtlError('named and ordered fields cannot be mixed')
 
@@ -812,7 +815,7 @@ def find_loop(block=None):
 
     # now making a map to quickly look up nets
     dest_nets = {dest_w: net_ for net_ in logic_left for dest_w in net_.dests}
-    initial_w = random.sample(wires_left, 1)[0]
+    initial_w = random.sample(list(wires_left), 1)[0]
 
     current_wires = set()
     checking_stack = [_FilteringState(initial_w)]

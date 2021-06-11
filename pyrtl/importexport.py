@@ -12,7 +12,7 @@ import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, _NameSanitizer
-from .wire import WireVector, Input, Output, Const, Register
+from .wire import WireVector, Input, Output, Const, Register, next_tempvar_name
 from .corecircuits import concat_list
 from .memory import RomBlock
 from .passes import two_way_concat, one_bit_selects
@@ -127,7 +127,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
         if isinstance(blif, six.string_types):
             blif_string = blif
         else:
-            raise PyrtlError('input_blif expecting either open file or string')
+            raise PyrtlError('input_from_blif expecting either open file or string')
 
     def SKeyword(x):
         return Suppress(Keyword(x))
@@ -157,7 +157,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
     dffas_def = Group(SKeyword('.subckt') + dffas_keyword + dffas_formal)('dffas_def')
 
     # synchronous Flip-flop
-    dffs_init_val = Optional(oneOf("0 1 2 3"), default=Literal("0"))
+    dffs_init_val = Optional(oneOf('0 1 2 3'), default='0')
     # TODO I think <type> and <control> ('re' and 'C') below are technically optional too
     dffs_def = Group(SKeyword('.latch')
                      + signal_id('D')
@@ -345,19 +345,14 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
             ff_clk_set.add(command['C'])
 
         # Create register and assign next state to D and output to Q
+        # We ignore initialization values of 2 (don't care) and 3 (unknown).
         regname = command['Q'] + '_reg'
-        flop = Register(bitwidth=1)
+        init_val = command['I']
+        rval = {'0': 0, '1': 1, '2': None, '3': None}[init_val]
+        flop = Register(bitwidth=1, reset_value=rval)
         subckt.add_reg(regname, flop)
         flop.next <<= twire(command['D'])
         flop_output = twire(command['Q'])
-        init_val = command['I']
-        if init_val == "1":
-            # e.g. in Verilog: `initial reg <= 1;`
-            raise PyrtlError("Initializing latches to 1 is not supported. "
-                             "Acceptable values are: 0, 2 (don't care), and 3 (unknown); "
-                             "in any case, PyRTL will ensure all stateful elements come up 0. "
-                             "For finer control over the initial value, use specialized reset "
-                             "logic.")
         flop_output <<= flop
 
     def extract_model_reference(parent, command):
@@ -416,8 +411,22 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
 #
 
 
-def output_to_verilog(dest_file, block=None):
-    """ A function to walk the block and output it in verilog format to the open file. """
+def output_to_verilog(dest_file, add_reset=True, block=None):
+    """ A function to walk the block and output it in Verilog format to the open file.
+
+    :param dest_file: Open file where the Verilog output will be written
+    :param add_reset: If reset logic should be added. Allowable options are:
+        False (meaning no reset logic is added), True (default, for adding synchronous
+        reset logic), and 'asynchronous' (for adding asynchronous reset logic).
+    :param block: Block to be walked and exported
+
+    The registers will be set to their reset_value, if specified, otherwise 0.
+    """
+
+    if not isinstance(add_reset, bool):
+        if add_reset != 'asynchronous':
+            raise PyrtlError("Invalid add_reset option %s. Acceptable options are "
+                             "False, True, and 'asynchronous'")
 
     block = working_block(block)
     file = dest_file
@@ -429,15 +438,15 @@ def output_to_verilog(dest_file, block=None):
     def varname(wire):
         return internal_names[wire.name]
 
-    _to_verilog_header(file, block, varname)
+    _to_verilog_header(file, block, varname, add_reset)
     _to_verilog_combinational(file, block, varname)
-    _to_verilog_sequential(file, block, varname)
+    _to_verilog_sequential(file, block, varname, add_reset)
     _to_verilog_memories(file, block, varname)
     _to_verilog_footer(file)
 
 
 def OutputToVerilog(dest_file, block=None):
-    """ A deprecated function to output verilog, use "output_to_verilog" instead. """
+    """ A deprecated function to output Verilog, use "output_to_verilog" instead. """
     return output_to_verilog(dest_file, block)
 
 
@@ -487,7 +496,7 @@ def _verilog_block_parts(block):
     return inputs, outputs, registers, wires, memories
 
 
-def _to_verilog_header(file, block, varname):
+def _to_verilog_header(file, block, varname, add_reset):
     """ Print the header of the verilog implementation. """
 
     def name_sorted(wires):
@@ -504,6 +513,8 @@ def _to_verilog_header(file, block, varname):
 
     # module name
     io_list = ['clk'] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
+    if add_reset:
+        io_list.insert(1, 'rst')
     if any(w.startswith('tmp') for w in io_list):
         raise PyrtlError('input or output with name starting with "tmp" indicates unnamed IO')
     io_list_str = ', '.join(io_list)
@@ -511,6 +522,8 @@ def _to_verilog_header(file, block, varname):
 
     # inputs and outputs
     print('    input clk;', file=file)
+    if add_reset:
+        print('    input rst;', file=file)
     for w in name_sorted(inputs):
         print('    input{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
     for w in name_sorted(outputs):
@@ -596,18 +609,33 @@ def _to_verilog_combinational(file, block, varname):
     print('', file=file)
 
 
-def _to_verilog_sequential(file, block, varname):
+def _to_verilog_sequential(file, block, varname, add_reset):
     """ Print the sequential logic of the verilog implementation. """
     if not block.logic_subset(op='r'):
         return
 
     print('    // Registers', file=file)
-    print('    always @( posedge clk )', file=file)
+    if add_reset == 'asynchronous':
+        print('    always @(posedge clk or posedge rst)', file=file)
+    else:
+        print('    always @(posedge clk)', file=file)
     print('    begin', file=file)
+    if add_reset:
+        print('        if (rst) begin', file=file)
+        for net in _net_sorted(block.logic, varname):
+            if net.op == 'r':
+                dest = varname(net.dests[0])
+                rval = net.dests[0].reset_value
+                if rval is None:
+                    rval = 0
+                print('            {:s} <= {:d};'.format(dest, rval), file=file)
+        print('        end', file=file)
+    print('        else begin', file=file)
     for net in _net_sorted(block.logic, varname):
         if net.op == 'r':
             dest, src = (varname(net.dests[0]), varname(net.args[0]))
-            print('        {:s} <= {:s};'.format(dest, src), file=file)
+            print('            {:s} <= {:s};'.format(dest, src), file=file)
+    print('        end', file=file)
     print('    end', file=file)
     print('', file=file)
 
@@ -617,14 +645,14 @@ def _to_verilog_memories(file, block, varname):
     memories = {n.op_param[1] for n in block.logic_subset('m@')}
     for m in sorted(memories, key=lambda m: m.id):
         print('    // Memory mem_{}: {}'.format(m.id, m.name), file=file)
-        print('    always @( posedge clk )', file=file)
+        print('    always @(posedge clk)', file=file)
         print('    begin', file=file)
         for net in _net_sorted(block.logic_subset('@'), varname):
             if net.op_param[1] == m:
                 t = (varname(net.args[2]), net.op_param[0],
                      varname(net.args[0]), varname(net.args[1]))
                 print(('        if (%s) begin\n'
-                       '                mem_%s[%s] <= %s;\n'
+                       '            mem_%s[%s] <= %s;\n'
                        '        end') % t, file=file)
         print('    end', file=file)
         for net in _net_sorted(block.logic_subset('m'), varname):
@@ -646,19 +674,21 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     :param dest_file: an open file to which the test bench will be printed.
     :param simulation_trace: a simulation trace from which the inputs will be extracted
-        for inclusion in the test bench.  The test bench generated will just replay the
-        inputs played to the simulation cycle by cycle.
+        for inclusion in the test bench. The test bench generated will just replay the
+        inputs played to the simulation cycle by cycle. The default values for all
+        registers and memories will be based on the trace, otherwise they will be initialized
+        to 0.
     :param toplevel_include: name of the file containing the toplevel module this testbench
-        is testing.  If not None, an `include` directive will be added to the top.
+        is testing. If not None, an `include` directive will be added to the top.
     :param vcd: By default the testbench generator will include a command in the testbench
         to write the output of the testbench execution to a .vcd file (via $dumpfile), and
-        this parameter is the string of the name of the file to use.  If None is specified
+        this parameter is the string of the name of the file to use. If None is specified
         instead, then no dumpfile will be used.
-    :param cmd: The string passed as cmd will be copied verbatim into the testbench at the
+    :param cmd: The string passed as cmd will be copied verbatim into the testbench
         just before the end of each cycle. This is useful for doing things like printing
         specific values out during testbench evaluation (e.g. cmd='$display("%d", out);'
         will instruct the testbench to print the value of 'out' every cycle which can then
-        be compared easy with a reference.
+        be compared easy with a reference).
 
     The test bench does not return any values.
 
@@ -682,6 +712,41 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
     for wire in block.wirevector_set:
         ver_name.make_valid_string(wire.name)
 
+    def name_sorted(wires):
+        return _name_sorted(wires, name_mapper=lambda w: ver_name[w.name])
+
+    def name_list(wires):
+        return [ver_name[w.name] for w in wires]
+
+    def init_regvalue(r):
+        if simulation_trace:
+            rval = simulation_trace.init_regvalue.get(r)
+            # Currently, the simulation stores the initial value for all registers
+            # in init_regvalue, so rval should not be None at this point.
+            # For the strange case where the trace was made by hand/other special use
+            # cases, check it against None anyway.
+            if rval is None:
+                rval = r.reset_value
+            if rval is None:
+                rval = simulation_trace.default_value
+            return rval
+        else:
+            return 0
+
+    def init_memvalue(m, ix):
+        # Return None if not present, or if already equal to default value, so we know not to
+        # emit any additional Verilog initing this mem address.
+        if simulation_trace:
+            if m not in simulation_trace.init_memvalue:
+                return None
+            v = simulation_trace.init_memvalue[m].get(ix, simulation_trace.default_value)
+            return None if v == simulation_trace.default_value else v
+        else:
+            return None
+
+    def default_value():
+        return simulation_trace.default_value if simulation_trace else 0
+
     # Output an include, if given
     if toplevel_include:
         print('`include "{:s}"'.format(toplevel_include), file=dest_file)
@@ -692,13 +757,13 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     # Declare all block inputs as reg
     print('    reg clk;', file=dest_file)
-    for w in inputs:
-        print('    reg {:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
+    for w in name_sorted(inputs):
+        print('    reg{:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
               file=dest_file)
 
     # Declare all block outputs as wires
-    for w in outputs:
-        print('    wire {:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
+    for w in name_sorted(outputs):
+        print('    wire{:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
               file=dest_file)
     print('', file=dest_file)
 
@@ -706,8 +771,7 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
     print('    integer tb_iter;', file=dest_file)
 
     # Instantiate logic block
-    io_list = [ver_name[w.name] for w in block.wirevector_subset((Input, Output))]
-    io_list.append('clk')
+    io_list = ['clk'] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
     io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
     print('    toplevel block({:s});\n'.format(', '.join(io_list_str)), file=dest_file)
 
@@ -725,20 +789,27 @@ def output_verilog_testbench(dest_file, simulation_trace=None, toplevel_include=
 
     # Initialize clk, and all the registers and memories
     print('        clk = 0;', file=dest_file)
-    for r in registers:
-        print('        block.%s = 0;' % ver_name[r.name], file=dest_file)
-    for m in memories:
-        print('        for(tb_iter=0;tb_iter<%d;tb_iter++) begin block.mem_%s[tb_iter] = 0; end' %
-              (1 << m.addrwidth, m.id), file=dest_file)
+    for r in name_sorted(registers):
+        print('        block.%s = %d;' % (ver_name[r.name], init_regvalue(r)), file=dest_file)
+    for m in sorted(memories, key=lambda m: m.id):
+        max_iter = 1 << m.addrwidth
+        print('        for (tb_iter = 0; tb_iter < %d; tb_iter++) '
+              'begin block.mem_%s[tb_iter] = %d; end' % (max_iter, m.id, default_value()),
+              file=dest_file)
+        for ix in range(max_iter):
+            # Now just individually update the memory values that aren't the default
+            val = init_memvalue(m.id, ix)
+            if val is not None:
+                print('        block.mem_%s[%d] = %d;' % (m.id, ix, val), file=dest_file)
 
     if simulation_trace:
         tracelen = max(len(t) for t in simulation_trace.trace.values())
         for i in range(tracelen):
-            for w in inputs:
+            for w in name_sorted(inputs):
                 print('        {:s} = {:s}{:d};'.format(
                     ver_name[w.name],
                     "{:d}'d".format(len(w)),
-                    simulation_trace.trace[w][i]), file=dest_file)
+                    simulation_trace.trace[w.name][i]), file=dest_file)
             if cmd:
                 print('        %s' % cmd, file=dest_file)
             print('\n        #10', file=dest_file)
@@ -913,3 +984,128 @@ def output_to_firrtl(open_file, rom_blocks=None, block=None):
             pass
 
     return 0
+
+# -----------------------------------------------------------------
+#       __   __       __     __   ___       __
+#    | /__` /    /\  /__`   |__) |__  |\ | /   |__|
+#    | .__/ \__ /~~\ .__/   |__) |___ | \| \__ |  |
+
+
+def input_from_iscas_bench(bench, block=None):
+    ''' Import an ISCAS .bench file
+
+    :param file bench: an open ISCAS .bench file to read
+    :param block: block to add the imported logic (defaults to current working block)
+    '''
+
+    import pyparsing
+    import six
+    from pyparsing import (Word, Literal, OneOrMore, ZeroOrMore, Suppress, Group, Keyword, oneOf)
+
+    block = working_block(block)
+
+    try:
+        bench_string = bench.read()
+    except AttributeError:
+        if isinstance(bench, six.string_types):
+            bench_string = bench
+        else:
+            raise PyrtlError('input_from_bench expecting either open file or string')
+
+    def SKeyword(x):
+        return Suppress(Keyword(x))
+
+    def SLiteral(x):
+        return Suppress(Literal(x))
+
+    # NOTE: The acceptable signal characters are based on viewing the I/O names
+    # in the available ISCAS benchmark files, and may not be complete.
+    signal_start = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\/?'
+    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\/.?-'
+    signal_id = Word(signal_start, signal_middle)
+
+    gate_names = "AND OR NAND NOR XOR NOT BUFF DFF"
+
+    src_list = Group(signal_id + ZeroOrMore(SLiteral(",") + signal_id))("src_list")
+    net_def = Group(signal_id("dst") + SLiteral("=") + oneOf(gate_names)("gate")
+                    + SLiteral("(") + src_list + SLiteral(")"))("net_def")
+
+    input_def = Group(SKeyword("INPUT") + SLiteral("(")
+                      + signal_id + SLiteral(")"))("input_def")
+    output_def = Group(SKeyword("OUTPUT") + SLiteral("(")
+                       + signal_id + SLiteral(")"))("output_def")
+    command_def = input_def | output_def | net_def
+
+    commands = OneOrMore(command_def)("command_list")
+    parser = commands.ignore(pyparsing.pythonStyleComment)
+
+    # Begin actually reading and parsing the BENCH file
+    result = parser.parseString(bench_string, parseAll=True)
+
+    output_to_internal = {}  # dict: name -> wire
+
+    def twire(name):
+        """ Find or make wire named 'name' and return it. """
+        w = output_to_internal.get(name)
+        if w is None:
+            w = block.wirevector_by_name.get(name)
+            if w is None:
+                w = WireVector(bitwidth=1, name=name)
+        return w
+
+    for cmd in result["command_list"]:
+        if cmd.getName() == "input_def":
+            _wire_in = Input(bitwidth=1, name=str(cmd[0]), block=block)
+        elif cmd.getName() == "output_def":
+            # Create internal wire for indirection, since Outputs can't be inputs to nets in PyRTL
+            wire_internal = WireVector(bitwidth=1, block=block)
+            wire_out = Output(bitwidth=1, name=str(cmd[0]), block=block)
+            wire_out <<= wire_internal
+            output_to_internal[cmd[0]] = wire_internal
+        elif cmd.getName() == "net_def":
+            srcs = cmd["src_list"]
+            if cmd["gate"] == "AND":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= twire(srcs[0]) & twire(srcs[1])
+            elif cmd["gate"] == "OR":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= twire(srcs[0]) | twire(srcs[1])
+            elif cmd["gate"] == "NAND":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= twire(srcs[0]).nand(twire(srcs[1]))
+            elif cmd["gate"] == "NOR":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= ~(twire(srcs[0]) | twire(srcs[1]))
+            elif cmd["gate"] == "XOR":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= twire(srcs[0]) ^ twire(srcs[1])
+            elif cmd["gate"] == "NOT":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= ~twire(srcs[0])
+            elif cmd["gate"] == "BUFF":
+                dst_wire = twire(cmd["dst"])
+                dst_wire <<= twire(srcs[0])
+            elif cmd["gate"] == "DFF":
+                dst_wire = twire(cmd["dst"])
+                reg = Register(bitwidth=1)
+                reg.next <<= twire(srcs[0])
+                dst_wire <<= reg
+            else:
+                raise PyrtlError("Unexpected gate {%s}" % cmd["gate"])
+
+    # Benchmarks like c1196, b18, etc. have inputs and outputs by the
+    # same name, that are therefore directly connected. This pass will
+    # rename the outputs so that this is still okay.
+    for o in block.wirevector_subset(Output):
+        inputs = [i for i in block.wirevector_subset(Input) if i.name == o.name]
+        if inputs:
+            if len(inputs) > 1:
+                raise PyrtlError("More than one input found with the name %s" % inputs[0].name)
+            i = inputs[0]
+            o_internal = twire(o.name)
+            o_internal <<= i
+            o.name = next_tempvar_name()
+            # Ensure the input is the one mapped by the original name
+            block.wirevector_by_name[i.name] = i
+            print("Found input and output wires with the same name. "
+                  "Output '%s' has now been renamed to '%s'." % (i.name, o.name))

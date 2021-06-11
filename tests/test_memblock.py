@@ -109,8 +109,8 @@ class MemIndexedTests(unittest.TestCase):
         self.mem = pyrtl.MemBlock(8, 8)
         x = self.mem[2]
         x.name = 'test_name'
-        self.assertEquals(x.name, 'test_name')
-        self.assertEquals(x.wire.name, 'test_name')
+        self.assertEqual(x.name, 'test_name')
+        self.assertEqual(x.wire.name, 'test_name')
 
     def test_read_memindexed_ilshift(self):
         self.mem = pyrtl.MemBlock(8, 8)
@@ -377,7 +377,7 @@ class RTLRomGetReadData(unittest.TestCase):
         for romNet in pyrtl.working_block().logic_subset('m'):
             curr_rom = romNet.op_param[1]
             roms.add(curr_rom)
-        self.assertEquals(len(roms), 3)
+        self.assertEqual(len(roms), 3)
 
 
 if __name__ == "__main__":

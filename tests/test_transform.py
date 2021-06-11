@@ -18,11 +18,11 @@ class NetWireNumTestCases(unittest.TestCase):
 
     def num_net_of_type(self, netOp, num, block=None):
         block = pyrtl.working_block(block)
-        self.assertEquals(len([net for net in block.logic if net.op == netOp]), num)
+        self.assertEqual(len([net for net in block.logic if net.op == netOp]), num)
 
     def num_wire_of_type(self, wiretype, num, block=None):
         block = pyrtl.working_block(block)
-        self.assertEquals(len(block.wirevector_subset(wiretype)), num)
+        self.assertEqual(len(block.wirevector_subset(wiretype)), num)
 
 
 class WireMemoryNameTestCases(unittest.TestCase):

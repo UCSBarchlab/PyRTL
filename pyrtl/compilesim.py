@@ -86,9 +86,21 @@ class CompiledSimulation(object):
         self._remove_untraceable()
 
         self.default_value = default_value
-        self._regmap, self._memmap = register_value_map, memory_value_map
+        self._regmap = {}  # Updated below
+        self._memmap = memory_value_map
         self._uid_counter = 0
         self.varname = {}  # mapping from wires and memories to C variables
+
+        for r in self.block.wirevector_subset(Register):
+            rval = register_value_map.get(r, r.reset_value)
+            if rval is None:
+                rval = self.default_value
+            self._regmap[r] = rval
+
+        # Passing the dictionary objects themselves since they aren't updated anywhere.
+        # If that's ever not the case, will need to pass in deep copies of them like done
+        # for the normal Simulation so we retain the initial values that had.
+        self.tracer._set_initial_values(default_value, self._regmap, self._memmap)
 
         self._create_dll()
         self._initialize_mems()
@@ -427,9 +439,11 @@ class CompiledSimulation(object):
             write('const uint64_t {name}[{limbs}] = {val};'.format(
                 limbs=self._limbs(w), name=vn, val=self._makeini(w, w.val)))
         elif isinstance(w, Register):
+            rval = self._regmap.get(w, w.reset_value)
+            if rval is None:
+                rval = self.default_value
             write('static uint64_t {name}[{limbs}] = {val};'.format(
-                limbs=self._limbs(w), name=vn,
-                val=self._makeini(w, self._regmap.get(w, self.default_value))))
+                limbs=self._limbs(w), name=vn, val=self._makeini(w, rval)))
         else:
             write('uint64_t {name}[{limbs}];'.format(limbs=self._limbs(w), name=vn))
 

@@ -6,6 +6,7 @@ import sys
 import re
 import numbers
 import collections
+import copy
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -51,7 +52,7 @@ class Simulation(object):
     }
 
     def __init__(
-            self, tracer=True, register_value_map=None, memory_value_map=None,
+            self, tracer=True, register_value_map={}, memory_value_map={},
             default_value=0, block=None):
         """ Creates a new circuit simulator.
 
@@ -60,14 +61,15 @@ class Simulation(object):
             passed, no tracer is instantiated (which is good for long running simulations).
             If the default (true) is passed, Simulation will create a new tracer automatically
             which can be referenced by the member variable .tracer
-        :param register_value_map: Defines the initial value for
-            the registers specified. Format: {Register: value}.
+        :param register_value_map: Defines the initial value for the registers specified;
+            overrides the registers's reset_value. Format: {Register: value}.
         :param memory_value_map: Defines initial values for many
             addresses in a single or multiple memory. Format: {Memory: {address: Value}}.
             Memory is a memory block, address is the address of a value
-        :param default_value: is the value that all unspecified registers and
-            memories will initialize to. If no default_value is specified, it will
-            use the value stored in the object (default to 0)
+        :param default_value: The value that all unspecified registers and
+            memories will initialize to (default 0). For registers, this is the value that
+            will be used if the particular register doesn't have a specified reset_value,
+            and isn't found in the register_value_map.
         :param block: the hardware block to be traced (which might be of type PostSynthesisBlock).
             defaults to the working block
 
@@ -93,24 +95,23 @@ class Simulation(object):
         self.tracer = tracer
         self._initialize(register_value_map, memory_value_map)
 
-    def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
+    def _initialize(self, register_value_map={}, memory_value_map={}):
         """ Sets the wire, register, and memory values to default or as specified.
 
         :param register_value_map: is a map of {Register: value}.
         :param memory_value_map: is a map of maps {Memory: {address: Value}}.
-        :param default_value: is the value that all unspecified registers and memories will
-            default to. If no default_value is specified, it will use the value stored in the
-            object (default to 0)
+        :param default_value: is the value that all unspecified registers and
+            memories will initialize to (default 0). For registers, this is the value that
+            will be used if the particular register doesn't have a specified reset_value,
+            and isn't found in the register_value_map.
         """
-
-        if default_value is None:
-            default_value = self.default_value
-
         # set registers to their values
         reg_set = self.block.wirevector_subset(Register)
-        if register_value_map is not None:
-            for r in reg_set:
-                self.value[r] = self.regvalue[r] = register_value_map.get(r, default_value)
+        for r in reg_set:
+            rval = register_value_map.get(r, r.reset_value)
+            if rval is None:
+                rval = self.default_value
+            self.value[r] = self.regvalue[r] = rval
 
         # set constants to their set values
         for w in self.block.wirevector_subset(Const):
@@ -118,36 +119,37 @@ class Simulation(object):
             assert isinstance(w.val, numbers.Integral)  # for now
 
         # set memories to their passed values
-
         for mem_net in self.block.logic_subset('m@'):
             memid = mem_net.op_param[1].id
             if memid not in self.memvalue:
                 self.memvalue[memid] = {}
 
-        if memory_value_map is not None:
-            for (mem, mem_map) in memory_value_map.items():
-                if isinstance(mem, RomBlock):
-                    raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
-                if isinstance(self.block, PostSynthBlock):
-                    mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
-                self.memvalue[mem.id] = mem_map
-                max_addr_val, max_bit_val = 2**mem.addrwidth, 2**mem.bitwidth
-                for (addr, val) in mem_map.items():
-                    if addr < 0 or addr >= max_addr_val:
-                        raise PyrtlError('error, address %s in %s outside of bounds' %
-                                         (str(addr), mem.name))
-                    if val < 0 or val >= max_bit_val:
-                        raise PyrtlError('error, %s at %s in %s outside of bounds' %
-                                         (str(val), str(addr), mem.name))
+        for (mem, mem_map) in memory_value_map.items():
+            if isinstance(mem, RomBlock):
+                raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
+            if isinstance(self.block, PostSynthBlock):
+                mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
+            self.memvalue[mem.id] = mem_map
+            max_addr_val, max_bit_val = 2**mem.addrwidth, 2**mem.bitwidth
+            for (addr, val) in mem_map.items():
+                if addr < 0 or addr >= max_addr_val:
+                    raise PyrtlError('error, address %s in %s outside of bounds' %
+                                     (str(addr), mem.name))
+                if val < 0 or val >= max_bit_val:
+                    raise PyrtlError('error, %s at %s in %s outside of bounds' %
+                                     (str(val), str(addr), mem.name))
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
             if w not in self.value:
-                self.value[w] = default_value
+                self.value[w] = self.default_value
 
         self.ordered_nets = tuple((i for i in self.block))
         self.reg_update_nets = tuple((self.block.logic_subset('r')))
         self.mem_update_nets = tuple((self.block.logic_subset('@')))
+
+        self.tracer._set_initial_values(self.default_value, self.regvalue.copy(),
+                                        copy.deepcopy(self.memvalue))
 
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle.
@@ -438,7 +440,7 @@ class FastSimulation(object):
     #  when put into the generated code
 
     def __init__(
-            self, register_value_map=None, memory_value_map=None,
+            self, register_value_map={}, memory_value_map={},
             default_value=0, tracer=True, block=None, code_file=None):
         """ Instantiates a Fast Simulation instance.
 
@@ -470,22 +472,17 @@ class FastSimulation(object):
         self.internal_names = _PythonSanitizer('_fastsim_tmp_')
         self._initialize(register_value_map, memory_value_map)
 
-    def _initialize(self, register_value_map=None, memory_value_map=None, default_value=None):
-        if default_value is None:
-            default_value = self.default_value
-        if register_value_map is None:
-            register_value_map = {}
-
+    def _initialize(self, register_value_map={}, memory_value_map={}):
         for wire in self.block.wirevector_set:
             self.internal_names.make_valid_string(wire.name)
 
         # set registers to their values
         reg_set = self.block.wirevector_subset(Register)
         for r in reg_set:
-            if r in register_value_map:
-                self.regs[r.name] = register_value_map[r]
-            else:
-                self.regs[r.name] = default_value
+            rval = register_value_map.get(r, r.reset_value)
+            if rval is None:
+                rval = self.default_value
+            self.regs[r.name] = rval
 
         self._initialize_mems(memory_value_map)
 
@@ -494,17 +491,20 @@ class FastSimulation(object):
             with open(self.code_file, 'w') as file:
                 file.write(s)
 
+        self.tracer._set_initial_values(self.default_value, self.regs.copy(),
+                                        copy.deepcopy(self.mems))
+
         context = {}
         logic_creator = compile(s, '<string>', 'exec')
         exec(logic_creator, context)
         self.sim_func = context['sim_func']
 
     def _initialize_mems(self, memory_value_map):
-        if memory_value_map is not None:
-            for (mem, mem_map) in memory_value_map.items():
-                if isinstance(mem, RomBlock):
-                    raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
-                self.mems[self._mem_varname(mem)] = mem_map
+        for (mem, mem_map) in memory_value_map.items():
+            if isinstance(mem, RomBlock):
+                raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
+            name = self._mem_varname(mem)
+            self.mems[name] = mem_map
 
         for net in self.block.logic_subset('m@'):
             mem = net.op_param[1]
@@ -1008,6 +1008,10 @@ class SimulationTrace(object):
         self.wires_to_track = wires_to_track
         self.trace = TraceStorage(wires_to_track)
         self._wires = {wv.name: wv for wv in wires_to_track}
+        # remember for initializing during Verilog testbench output
+        self.default_value = 0
+        self.init_regvalue = {}
+        self.init_memvalue = {}
 
     def __len__(self):
         """ Return the current length of the trace in cycles. """
@@ -1023,15 +1027,15 @@ class SimulationTrace(object):
             raise PyrtlError('error, simulation trace needs at least 1 signal to track '
                              '(by default, unnamed signals are not traced -- try either passing '
                              'a name to a WireVector or setting a "wirevector_subset" option)')
-        for wire in self.trace:
-            tracelist = self.trace[wire]
-            wirevec = self._wires[wire]
+        for wire_name in self.trace:
+            tracelist = self.trace[wire_name]
+            wirevec = self._wires[wire_name]
             tracelist.append(value_map[wirevec])
 
     def add_step_named(self, value_map):
-        for wire in value_map:
-            if wire in self.trace:
-                self.trace[wire].append(value_map[wire])
+        for wire_name in value_map:
+            if wire_name in self.trace:
+                self.trace[wire_name].append(value_map[wire_name])
 
     def add_fast_step(self, fastsim):
         """ Add the fastsim context to the trace. """
@@ -1219,3 +1223,18 @@ class SimulationTrace(object):
             print(formatted_trace_line(w, self.trace[w]), file=file)
         if extra_line:
             print(file=file)
+
+    def _set_initial_values(self, default_value, init_regvalue, init_memvalue):
+        """ Remember the default values that were used when starting the trace.
+
+        :param default_value: Default value to be used for all registers and
+            memory locations if not found in the other passed in maps
+        :param init_regvalue: Default value for all the registers
+        :param init_memvvalue: Default value for memory locations of given maps
+
+        This is needed when using this trace for outputting a Verilog testbench,
+        and is automatically called during simulation.
+        """
+        self.default_value = default_value
+        self.init_regvalue = init_regvalue
+        self.init_memvalue = init_memvalue
