@@ -1271,7 +1271,7 @@ module toplevel(clk, o);
     // Registers
     always @(posedge clk)
     begin
-        else begin
+        begin
             tmp0 <= tmp4;
         end
     end
