@@ -128,9 +128,9 @@ class TestMatrixInit(MatrixTestBase):
             self.init_int_matrix([[0]], 1, 1, -1)
 
     def test_init_wirevector_mismatch(self):
+        matrix_input = pyrtl.Input(1 * 1, 'matrix_input')
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix_input = pyrtl.Input(1 * 1, 'matrix_input')
-            matrix = Matrix.Matrix(1, 1, 3, value=matrix_input)
+            _matrix = Matrix.Matrix(1, 1, 3, value=matrix_input)
 
     def test_init_random(self):
         rows, columns, bits = random.randint(
@@ -207,18 +207,18 @@ class TestMatrixBits(MatrixTestBase):
         self.check_against_expected(matrix, int_matrix)
 
     def test_bits_fail_change_bits_zero(self):
+        matrix = Matrix.Matrix(3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
             matrix.bits = 0
 
     def test_bits_fail_change_bits_negative(self):
+        matrix = Matrix.Matrix(3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
             matrix.bits = -1
 
     def test_bits_fail_change_bits_string(self):
+        matrix = Matrix.Matrix(3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 4, value=[[0, 1, 2], [3, 4, 5], [6, 7, 8]])
             matrix.bits = "1"
 
 
@@ -259,54 +259,54 @@ class TestMatrixGetItem(MatrixTestBase):
     '''
 
     def test_getitem_fail_string_rows(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = matrix["2", 3]
+            _output = matrix["2", 3]
 
     def test_getitem_fail_string_columns(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = matrix[2, "2"]
+            _output = matrix[2, "2"]
 
     def test_getitem_fail_out_of_bounds_rows(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = matrix[4, 2]
+            _output = matrix[4, 2]
 
     def test_getitem_fail_out_of_bounds_row_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = matrix[-4]
+            _output = matrix[-4]
 
     def test_getitem_fail_out_of_bounds_rows_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = matrix[-4, 2]
+            _output = matrix[-4, 2]
 
     def test_getitem_fail_out_of_bounds_columns(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = matrix[1, 4]
+            _output = matrix[1, 4]
 
     def test_getitem_fail_out_of_bounds_columns_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = matrix[1, -4]
+            _output = matrix[1, -4]
 
     def test_getitem_fail_out_of_bounds_rows_slice(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = matrix[1:4, 1]
+            _output = matrix[1:4, 1]
 
     def test_getitem_fail_out_of_bounds_columns_slice(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = matrix[1, 1:4]
+            _output = matrix[1, 1:4]
 
     def test_getitem_fail_string_column_only(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = matrix["1"]
+            _output = matrix["1"]
 
     def get_item(self, value_array, rows, columns, bits, x_slice, y_slice, expected_output):
         matrix = Matrix.Matrix(rows, columns, bits, value=value_array)
@@ -488,65 +488,65 @@ class TestMatrixSetItem(MatrixTestBase):
     '''
 
     def test_setitem_fail_string_row(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
             matrix["2", 3] = pyrtl.Const(0)
 
     def test_setitem_fail_string_column(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
             matrix[2, "2"] = pyrtl.Const(0)
 
     def test_setitem_fail_out_of_bounds_rows(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
             matrix[4, 2] = pyrtl.Const(0)
 
     def test_setitem_fail_out_of_bounds_rows_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
             matrix[-4, 2] = pyrtl.Const(0)
 
     def test_setitem_fail_out_of_bounds_columns(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
             matrix[1, 4] = pyrtl.Const(0)
 
     def test_setitem_fail_out_of_bounds_columns_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
             matrix[1, -4] = pyrtl.Const(0)
 
     def test_setitem_fail_out_of_bounds_rows_slice(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
             matrix[1:4, 2] = pyrtl.Const(0, bitwidth=9)
 
     def test_setitem_fail_out_of_bounds_columns_slice(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
             matrix[1:4, 2] = pyrtl.Const(0, bitwidth=9)
 
     def test_setitem_fail_string_rows_only(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
             matrix["1"] = pyrtl.Const(0, bitwidth=9)
 
     def test_setitem_fail_wire_for_matrix(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
             matrix[1, 0:2] = pyrtl.Const(0, bitwidth=3)
 
     def test_setitem_fail_value_matrix_incorrect_rows(self):
+        matrix = Matrix.Matrix(3, 3, 3)
+        value_matrix = Matrix.Matrix(2, 1, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            value_matrix = Matrix.Matrix(2, 1, 3)
             matrix[0:1, 0:1] = value_matrix
 
     def test_setitem_fail_value_matrix_incorrect_columns(self):
+        matrix = Matrix.Matrix(3, 3, 3)
+        value_matrix = Matrix.Matrix(1, 2, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            value_matrix = Matrix.Matrix(1, 2, 3)
             matrix[0:1, 0:1] = value_matrix
 
     def set_item(self, int_matrix, rows, columns, bits,
@@ -857,10 +857,9 @@ class TestMatrixAdd(MatrixTestBase):
                      [[0, 1], [0, 1], [1, 1]], 3, 2, 4, [[]])
 
     def test_add_fail_add_one(self):
+        first_matrix = Matrix.Matrix(1, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(
-                1, 3, 3)
-            result = first_matrix + 1
+            _result = first_matrix + 1
 
     '''
     def test_add_random_case(self):
@@ -964,9 +963,9 @@ class TestMatrixSub(MatrixTestBase):
                  [[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3, 4, [[2, 3, 1], [2, 0, 2], [-4, -2, -7]])
 
     def test_sub_fail_int(self):
+        first_matrix = Matrix.Matrix(1, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(1, 3, 3)
-            result = first_matrix - 1
+            _result = first_matrix - 1
 
     def test_sub_fail_3_by_3_sub_3_by_2(self):
         with self.assertRaises(pyrtl.PyrtlError):
@@ -1186,9 +1185,9 @@ class TestMatrixMultiply(MatrixTestBase):
         self.check_against_expected(result_matrix, expected_output)
 
     def test_multiply_fail_int(self):
+        first_matrix = Matrix.Matrix(3, 2, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(3, 2, 3)
-            result = first_matrix * 1
+            _result = first_matrix * 1
 
 
 class TestMatrixInplaceMultiply(MatrixTestBase):
@@ -1274,9 +1273,9 @@ class TestMatrixMatrixMultiply(MatrixTestBase):
                                                                  [21, 29, 37]])
 
     def test_mat_mul_fail_int(self):
+        first_matrix = Matrix.Matrix(3, 2, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(3, 2, 3)
-            result = first_matrix.__matmul__(1)
+            _result = first_matrix.__matmul__(1)
 
     def test_mat_mul_fail_3_by_3_multiply_2_by_2(self):
         with self.assertRaises(pyrtl.PyrtlError):
@@ -1289,10 +1288,10 @@ class TestMatrixMatrixMultiply(MatrixTestBase):
                         [[0, 1, 1], [0, 1, 1]], 2, 3, 4, [[]])
 
     def test_mat_mul_fail_3_by_2_multiply_3_by_2(self):
+        first_matrix = Matrix.Matrix(3, 2, 3)
+        second_matrix = Matrix.Matrix(3, 2, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(3, 2, 3)
-            second_matrix = Matrix.Matrix(3, 2, 3)
-            result = first_matrix.__matmul__(second_matrix)
+            _result = first_matrix.__matmul__(second_matrix)
 
     '''
     def test_mat_mul_random_case(self):
@@ -1420,15 +1419,13 @@ class TestMatrixMatrixPower(MatrixTestBase):
             self.matrix_power([[0, 0, 0, 0]], 1, 4, 4, 3, [[]])
 
     def test_matrix_power_fail_string(self):
+        first_matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(
-                3, 3, 3)
-            result = first_matrix ** "1"
+            _result = first_matrix ** "1"
 
     def test_matrix_power_fail_negative_power(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            self.matrix_power(
-                [[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3, 4, -1, [[]])
+            self.matrix_power([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3, 4, -1, [[]])
 
     '''
     def test_matrix_power_random_case(self):
@@ -1496,10 +1493,10 @@ class TestMultiply(MatrixTestBase):
         self.check_against_expected(result_matrix, expected_output)
 
     def test_multiply_fail_string(self):
+        int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        second_matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
         with self.assertRaises(pyrtl.PyrtlError):
-            int_matrix = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-            second_matrix = Matrix.Matrix(3, 3, 4, value=int_matrix)
-            result_matrix = Matrix.multiply(1, second_matrix)
+            _result_matrix = Matrix.multiply(1, second_matrix)
 
 
 class TestReshape(MatrixTestBase):
@@ -1643,8 +1640,8 @@ class TestReshape(MatrixTestBase):
                            [[0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]], order='F')
 
     def check_raises_bad_shape(self, shape, order='C'):
+        matrix = Matrix.Matrix(2, 3, 4, value=[[0, 1, 2], [3, 4, 5]])
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(2, 3, 4, value=[[0, 1, 2], [3, 4, 5]])
             matrix.reshape(shape, order=order)
 
     def test_reshape_bad_tuple_shape_1(self):
@@ -1711,10 +1708,10 @@ class TestFlatten(MatrixTestBase):
                              [[0, 1, 2, 3, 4, 5, 6, 7]], order='F')
 
     def test_flatten_invalid_order(self):
+        value = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+        matrix = Matrix.Matrix(3, 3, 4, value=value)
         with self.assertRaises(pyrtl.PyrtlError):
-            value = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-            matrix = Matrix.Matrix(3, 3, 4, value=value)
-            flattened = matrix.flatten(order='Z')
+            _flattened = matrix.flatten(order='Z')
 
 
 class TestPut(MatrixTestBase):
@@ -1853,37 +1850,37 @@ class TestSum(MatrixTestBase):
 
     def test_sum_fail_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            output = Matrix.sum("1", 0)
+            _output = Matrix.sum("1", 0)
 
     def test_sum_fail_negative_axis(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.sum(matrix, -1)
+            _output = Matrix.sum(matrix, -1)
 
     def test_sum_fail_axis_out_of_bounds(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.sum(matrix, 2)
+            _output = Matrix.sum(matrix, 2)
 
     def test_sum_fail_string_axis(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.sum(matrix, "0")
+            _output = Matrix.sum(matrix, "0")
 
     def test_sum_fail_string_bits(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.sum(matrix, axis=0, bits="0")
+            _output = Matrix.sum(matrix, axis=0, bits="0")
 
     def test_sum_fail_negative_bits(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.sum(matrix, axis=0, bits=-1)
+            _output = Matrix.sum(matrix, axis=0, bits=-1)
 
     def test_sum_fail_zero_bits(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.sum(matrix, axis=0, bits=0)
+            _output = Matrix.sum(matrix, axis=0, bits=0)
 
     def sum(self, int_matrix, rows, columns, bits, axis, expected_output):
         matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix, max_bits=bits * rows)
@@ -1954,38 +1951,37 @@ class TestMin(MatrixTestBase):
 
     def test_min_fail_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            output = Matrix.min("1", 0)
+            _output = Matrix.min("1", 0)
 
     def test_min_fail_axis_out_of_bounds(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.min(matrix, 4)
+            _output = Matrix.min(matrix, 4)
 
     def test_min_fail_axis_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.min(matrix, -1)
+            _output = Matrix.min(matrix, -1)
 
     def test_min_fail_axis_string(self):
-
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.min(matrix, "0")
+            _output = Matrix.min(matrix, "0")
 
     def test_min_fail_bits_string(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.min(matrix, axis=0, bits="1")
+            _output = Matrix.min(matrix, axis=0, bits="1")
 
     def test_min_fail_bits_zero(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.min(matrix, axis=0, bits=0)
+            _output = Matrix.min(matrix, axis=0, bits=0)
 
     def test_min_fail_bits_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.min(matrix, axis=0, bits=-2)
+            _output = Matrix.min(matrix, axis=0, bits=-2)
 
     def min(self, int_matrix, rows, columns, bits, axis, expected_output):
         matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix, max_bits=bits * rows)
@@ -2056,37 +2052,37 @@ class TestMax(MatrixTestBase):
 
     def test_max_fail_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            output = Matrix.max("1", 0)
+            _output = Matrix.max("1", 0)
 
     def test_max_fail_axis_out_of_bounds(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.max(matrix, 4)
+            _output = Matrix.max(matrix, 4)
 
     def test_max_fail_axis_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.max(matrix, -1)
+            _output = Matrix.max(matrix, -1)
 
     def test_max_fail_axis_string(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.max(matrix, "0")
+            _output = Matrix.max(matrix, "0")
 
     def test_max_fail_bits_string(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.max(matrix, axis=0, bits="1")
+            _output = Matrix.max(matrix, axis=0, bits="1")
 
     def test_max_fail_bits_zero(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.max(matrix, axis=0, bits=0)
+            _output = Matrix.max(matrix, axis=0, bits=0)
 
     def test_max_fail_bits_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.max(matrix, axis=0, bits=-1)
+            _output = Matrix.max(matrix, axis=0, bits=-1)
 
     def max(self, int_matrix, rows, columns, bits, axis, expected_output):
         matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix, max_bits=bits * rows)
@@ -2157,37 +2153,37 @@ class TestArgMax(MatrixTestBase):
 
     def test_argument_max_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            output = Matrix.argmax("1", axis=0)
+            _output = Matrix.argmax("1", axis=0)
 
     def test_argument_max_axis_out_of_bounds(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.argmax(matrix, axis=4)
+            _output = Matrix.argmax(matrix, axis=4)
 
     def test_argument_max_axis_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.argmax(matrix, axis=-1)
+            _output = Matrix.argmax(matrix, axis=-1)
 
     def test_argument_max_axis_string(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.argmax(matrix, "1")
+            _output = Matrix.argmax(matrix, "1")
 
     def test_argument_max_bits_string(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.argmax(matrix, axis=1, bits="1")
+            _output = Matrix.argmax(matrix, axis=1, bits="1")
 
     def test_argument_max_bits_negative(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.argmax(matrix, axis=1, bits=-1)
+            _output = Matrix.argmax(matrix, axis=1, bits=-1)
 
     def test_argument_max_bits_zero(self):
+        matrix = Matrix.Matrix(3, 3, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            matrix = Matrix.Matrix(3, 3, 3)
-            output = Matrix.argmax(matrix, axis=1, bits=0)
+            _output = Matrix.argmax(matrix, axis=1, bits=0)
 
     def argument_max(self, int_matrix, rows, columns, bits, axis, expected_output):
         matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix, max_bits=bits * rows)
@@ -2248,14 +2244,14 @@ class TestDot(MatrixTestBase):
         self.check_against_expected(dot_product, 15)
 
     def test_dot_fail_int_second(self):
+        first_matrix = Matrix.Matrix(3, 2, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(3, 2, 3)
-            result = Matrix.dot(first_matrix, 1)
+            _result = Matrix.dot(first_matrix, 1)
 
     def test_dot_fail_int_first(self):
+        first_matrix = Matrix.Matrix(3, 2, 3)
         with self.assertRaises(pyrtl.PyrtlError):
-            first_matrix = Matrix.Matrix(3, 2, 3)
-            result = Matrix.dot(1, first_matrix)
+            _result = Matrix.dot(1, first_matrix)
 
     def test_dot_fail_1_by_2_multiply_1_by_3(self):
         with self.assertRaises(pyrtl.PyrtlError):
@@ -2373,9 +2369,9 @@ class TestHStack(MatrixTestBase):
             _v = Matrix.hstack()
 
     def test_hstack_on_non_matrices_fails(self):
+        w = pyrtl.WireVector(1)
+        m = Matrix.Matrix(1, 2, bits=2, value=[[0, 1]])
         with self.assertRaises(pyrtl.PyrtlError):
-            w = pyrtl.WireVector(1)
-            m = Matrix.Matrix(1, 2, bits=2, value=[[0, 1]])
             _v = Matrix.hstack(w, m)
 
 
@@ -2439,9 +2435,9 @@ class TestVStack(MatrixTestBase):
             _v = Matrix.vstack()
 
     def test_vstack_on_non_matrices_fails(self):
+        w = pyrtl.WireVector(1)
+        m = Matrix.Matrix(2, 1, bits=2, value=[[0], [1]])
         with self.assertRaises(pyrtl.PyrtlError):
-            w = pyrtl.WireVector(1)
-            m = Matrix.Matrix(2, 1, bits=2, value=[[0], [1]])
             _v = Matrix.vstack(w, m)
 
 
