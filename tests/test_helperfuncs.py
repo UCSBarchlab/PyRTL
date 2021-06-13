@@ -541,8 +541,6 @@ class TestBitField_Update(unittest.TestCase):
             return (i & ~mask) | ((u << s) & mask)
         inp, inp_vals = utils.an_input_and_vals(input_width, test_vals=test_amt, name='inp')
         upd, upd_vals = utils.an_input_and_vals(update_width, test_vals=test_amt, name='upd')
-        # inp_vals = [1,1,0,0]
-        # upd_vals = [0x7,0x6,0x7,0x6]
         out = pyrtl.Output(input_width, "out")
         bfu_out = pyrtl.bitfield_update(inp, range_start, range_end, upd)
         self.assertEqual(len(out), len(bfu_out))  # output should have width of input
@@ -553,6 +551,34 @@ class TestBitField_Update(unittest.TestCase):
 
     def test_bitfield(self):
         self.bitfield_update_checker(10, 3, 6, 3)
+
+    def test_bitfield_msb(self):
+        a = pyrtl.Const(0, 8)
+        pyrtl.probe(pyrtl.bitfield_update(a, -1, None, 1), 'out')
+        sim = pyrtl.Simulation()
+        sim.step({})
+        self.assertEqual(sim.inspect('out'), 0b10000000)
+
+    def test_bitfield_all_but_msb(self):
+        a = pyrtl.Const(0, 8)
+        pyrtl.probe(pyrtl.bitfield_update(a, None, -1, 0b101110), 'out')
+        sim = pyrtl.Simulation()
+        sim.step({})
+        self.assertEqual(sim.inspect('out'), 0b0101110)
+
+    def test_bitfield_lsb(self):
+        a = pyrtl.Const(0, 8)
+        pyrtl.probe(pyrtl.bitfield_update(a, None, 1, 1), 'out')
+        sim = pyrtl.Simulation()
+        sim.step({})
+        self.assertEqual(sim.inspect('out'), 0b00000001)
+
+    def test_bitfield_all_but_lsb(self):
+        a = pyrtl.Const(0, 8)
+        pyrtl.probe(pyrtl.bitfield_update(a, 1, None, 0b1011101), 'out')  # TODO
+        sim = pyrtl.Simulation()
+        sim.step({})
+        self.assertEqual(sim.inspect('out'), 0b10111010)
 
 
 class TestBitField_Update_Set(unittest.TestCase):
@@ -597,25 +623,43 @@ class TestBitField_Update_Set(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError):
             o = pyrtl.bitfield_update_set(a, {(None, 3): b, (0, 1): c}, truncating=True)
 
-    def bitfield_update_checker(self, input_width, range_start, range_end,
-                                update_width, test_amt=20):
+    def bitfield_update_set_checker(self, input_width, update_set_constraints, test_amt=20):
+        from functools import reduce
+        from collections import namedtuple
+        Update_Info = namedtuple('Update_Info', ['range_start', 'range_end',
+                                                 'update_wire', 'update_vals'])
+
         def ref(i, s, e, u):
             mask = ((1 << (e)) - 1) - ((1 << s) - 1)
             return (i & ~mask) | ((u << s) & mask)
         inp, inp_vals = utils.an_input_and_vals(input_width, test_vals=test_amt, name='inp')
-        upd, upd_vals = utils.an_input_and_vals(update_width, test_vals=test_amt, name='upd')
-        # inp_vals = [1,1,0,0]
-        # upd_vals = [0x7,0x6,0x7,0x6]
+        update_set_list = []
+        for ix, (range_start, range_end, update_width) in enumerate(update_set_constraints):
+            upd, upd_vals = utils.an_input_and_vals(update_width, test_vals=test_amt,
+                                                    name='upd%d' % ix)
+            update_set_list.append(Update_Info(range_start, range_end, upd, upd_vals))
         out = pyrtl.Output(input_width, "out")
-        bfu_out = pyrtl.bitfield_update_set(inp, {(range_start, range_end): upd})
+        bfu_out = pyrtl.bitfield_update_set(
+            inp,
+            {(ui.range_start, ui.range_end): ui.update_wire for ui in update_set_list}
+        )
         self.assertEqual(len(out), len(bfu_out))  # output should have width of input
         out <<= bfu_out
-        true_result = [ref(i, range_start, range_end, u) for i, u in zip(inp_vals, upd_vals)]
-        upd_result = utils.sim_and_ret_out(out, [inp, upd], [inp_vals, upd_vals])
+        true_result = []
+        for ix, iv in enumerate(inp_vals):
+            true_result.append(
+                reduce(lambda w, ui: ref(w, ui.range_start, ui.range_end, ui.update_vals[ix]),
+                       update_set_list, iv)
+            )
+        upd_result = utils.sim_and_ret_out(
+            out,
+            [inp] + [ui.update_wire for ui in update_set_list],
+            [inp_vals] + [ui.update_vals for ui in update_set_list],
+        )
         self.assertEqual(upd_result, true_result)
 
     def test_bitfield(self):
-        self.bitfield_update_checker(10, 3, 6, 3)
+        self.bitfield_update_set_checker(10, [(3, 6, 3), (0, 2, 2)])
 
 
 class TestAnyAll(unittest.TestCase):
