@@ -904,10 +904,10 @@ class _WaveRendererBase(object):
         """
         def to_str(v):
             f = repr_per_name.get(w.name)
-            if f is None:
-                return str(repr_func(v))
-            else:
+            if f is not None:
                 return str(f(v))
+            else:
+                return str(repr_func(v))
 
         sl = symbol_len - 1
         if len(w) > 1:
@@ -1231,10 +1231,10 @@ class SimulationTrace(object):
 
             def to_str(v, name):
                 f = repr_per_name.get(name)
-                if f is None:
-                    return str(repr_func(v))
-                else:
+                if f is not None:
                     return str(f(v))
+                else:
+                    return str(repr_func(v))
 
             maxvallen = 0
             for name, trace in self.trace.items():

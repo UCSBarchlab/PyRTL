@@ -517,10 +517,10 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex, repr_p
 
         def to_str(v, name):
             f = repr_per_name.get(name)
-            if f is None:
-                return str(repr_func(v))
-            else:
+            if f is not None:
                 return str(f(v))
+            else:
+                return str(repr_func(v))
 
         wavestring = ''.join(wavelist)
         datastring = ', '.join(['"%s"' % to_str(data, name) for data, name in datalist])
