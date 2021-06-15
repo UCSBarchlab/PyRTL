@@ -13,7 +13,7 @@ import collections
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, _NameSanitizer
 from .wire import WireVector, Input, Output, Const, Register, next_tempvar_name
-from .corecircuits import concat_list
+from .corecircuits import concat_list, rtl_all, rtl_any
 from .memory import RomBlock
 from .passes import two_way_concat, one_bit_selects
 
@@ -315,26 +315,42 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
         elif command['cover_list'].asList() == ['11', '1']:
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) & twire(netio[1])  # and gate
-        elif command['cover_list'].asList() == ['00', '1']:
-            output_wire = twire(netio[2])
-            output_wire <<= ~ (twire(netio[0]) | twire(netio[1]))  # nor gate
         elif command['cover_list'].asList() == ['1-', '1', '-1', '1']:
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) | twire(netio[1])  # or gate
+        elif command['cover_list'].asList() == ['0-', '1', '-0', '1']:
+            output_wire = twire(netio[2])
+            output_wire <<= twire(netio[0]).nand(twire(netio[1]))  # nand gate
         elif command['cover_list'].asList() == ['10', '1', '01', '1']:
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) ^ twire(netio[1])  # xor gate
-        elif command['cover_list'].asList() == ['1-0', '1', '-11', '1']:
-            output_wire = twire(netio[3])
-            output_wire <<= (twire(netio[0]) & ~ twire(netio[2])) \
-                | (twire(netio[1]) & twire(netio[2]))   # mux
-        elif command['cover_list'].asList() == ['-00', '1', '0-0', '1']:
-            output_wire = twire(netio[3])
-            output_wire <<= (~twire(netio[1]) & ~twire(netio[2])) \
-                | (~twire(netio[0]) & ~twire(netio[2]))
         else:
-            raise PyrtlError('Blif file with unknown logic cover set "%s" '
-                             '(currently gates are hard coded)' % command['cover_list'])
+            # Although the following is fully generic and thus encompasses all of the
+            # special cases after the simple wire case above, we leave the above in because
+            # they are commonly found and lead to a slightly cleaner (though equivalent) netlist,
+            # because we can use nand/xor primitives, or avoid the extra fluff of concat/select
+            # wires that might be created implicitly as part of rtl_all/rtl_any.
+            def convert_val(ix, val):
+                wire = twire(netio[ix])
+                if val == '0':
+                    wire = ~wire
+                return wire
+
+            cover = command['cover_list'].asList()
+            output_wire = twire(netio[-1])
+            conjunctions = []
+            while cover:
+                if len(cover) < 2:
+                    raise PyrtlError('BLIF file with malformed cover set "%s" '
+                                     % command['cover_list'])
+                input_plane, output_plane, cover = cover[0], cover[1], cover[2:]
+                if output_plane != '1':
+                    raise PyrtlError('Off-set found in the output plane of BLIF cover set "%s" '
+                                     '(only on-sets are supported)' % command['cover_list'])
+                conj = rtl_all(*[convert_val(ix, val) for ix, val
+                                 in enumerate(input_plane) if val != '-'])
+                conjunctions.append(conj)
+            output_wire <<= rtl_any(*conjunctions)
 
     def extract_flop(subckt, command):
 
