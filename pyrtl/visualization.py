@@ -459,12 +459,18 @@ def block_to_svg(block=None, split_state=True, maintain_arg_order=False):
 #    |__|  |  |\/| |
 #    |  |  |  |  | |___
 
-def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex):
+def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex, repr_per_name={}):
     """ Return a HTML block showing the trace.
 
     :param simtrace: A SimulationTrace object
     :param trace_list: (optional) A list of wires to display
     :param sortkey: (optional) The key with which to sort the trace_list
+    :param repr_func: function to use for representing the current_val;
+        examples are 'hex', 'oct', 'bin', 'str' (for decimal), or even the name
+        of an IntEnum class you know the value will belong to. Defaults to 'hex'.
+    :param repr_per_name: Map from signal name to a function that takes in the signal's
+        value and returns a user-defined representation. If a signal name is
+        not found in the map, the argument `repr_func` will be used instead.
     :return: An HTML block showing the trace
     """
 
@@ -506,16 +512,23 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex):
                     wavelist.append(str(value))
                 else:
                     wavelist.append('=')
-                    datalist.append(value)
+                    datalist.append((value, w))
                 last = value
 
+        def to_str(v, name):
+            f = repr_per_name.get(name)
+            if f is None:
+                return str(repr_func(v))
+            else:
+                return str(f(v))
+
         wavestring = ''.join(wavelist)
-        datastring = ', '.join(['"%s"' % repr_func(data) for data in datalist])
+        datastring = ', '.join(['"%s"' % to_str(data, name) for data, name in datalist])
         if len(simtrace._wires[w]) == 1:
             vallens.append(1)  # all are the same length
             return bool_signal_template % (w, wavestring)
         else:
-            vallens.extend([len(repr_func(data)) for data in datalist])
+            vallens.extend([len(to_str(data, name)) for data, name in datalist])
             return int_signal_template % (w, wavestring, datastring)
 
     bool_signal_template = '    { name: "%s",  wave: "%s" },'

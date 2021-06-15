@@ -382,26 +382,50 @@ class TestOutputIPynb(unittest.TestCase):
         )
         self.assertEqual(htmlstring, expected)
 
-    def test_trace_to_html_repr_func_2(self):
-        i = pyrtl.Input(1, 'i')
-        o = pyrtl.Output(2, 'o')
-        o <<= i + 1
+    def test_trace_to_html_repr_per_name(self):
+        from enum import IntEnum
+
+        class Foo(IntEnum):
+            A = 0
+            B = 1
+            C = 2
+            D = 3
+
+        i = pyrtl.Input(4, 'i')
+        state = pyrtl.Register(max(Foo).bit_length(), name='state')
+        o = pyrtl.Output(name='o')
+        o <<= state
+
+        with pyrtl.conditional_assignment:
+            with i == 0b0001:
+                state.next |= Foo.A
+            with i == 0b0010:
+                state.next |= Foo.B
+            with i == 0b0100:
+                state.next |= Foo.C
+            with i == 0b1000:
+                state.next |= Foo.D
 
         sim = pyrtl.Simulation()
-        sim.step_multiple({'i': '0100110'})
-        htmlstring = pyrtl.trace_to_html(sim.tracer, repr_func=bin)
+        sim.step_multiple({
+            'i': [1, 2, 4, 8, 0]
+        })
+
+        htmlstring = pyrtl.trace_to_html(sim.tracer, repr_per_name={'state': Foo})
         expected = (
             '<script type="WaveDrom">\n'
             '{\n'
             '  signal : [\n'
-            '    { name: "i",  wave: "010.1.0" },\n'
-            '    { name: "o",  wave: "===.=.=", data: ["0b1", "0b10", "0b1", "0b10", "0b1"] },\n'
+            '    { name: "i",  wave: "=====", data: ["0x1", "0x2", "0x4", "0x8", "0x0"] },\n'
+            '    { name: "o",  wave: "=.===", data: ["0x0", "0x1", "0x2", "0x3"] },\n'
+            '    { name: "state",  wave: "=.===", data: ["Foo.A", "Foo.B", "Foo.C", "Foo.D"] },\n'
             '  ],\n'
-            '  config: { hscale: 1 }\n'
+            '  config: { hscale: 2 }\n'
             '}\n'
             '</script>\n'
         )
         self.assertEqual(htmlstring, expected)
+
 
 if __name__ == "__main__":
     unittest.main()

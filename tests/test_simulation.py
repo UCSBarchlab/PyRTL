@@ -180,6 +180,50 @@ class RenderTraceBase(unittest.TestCase):
         self.check_rendered_trace(expected, repr_func=str, symbol_len=None)
 
 
+class RenderTraceCustomBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_custom_repr_per_wire(self):
+        from enum import IntEnum
+
+        class Foo(IntEnum):
+            A = 0
+            B = 1
+            C = 2
+            D = 3
+
+        i = pyrtl.Input(4, 'i')
+        state = pyrtl.Register(max(Foo).bit_length(), name='state')
+        o = pyrtl.Output(name='o')
+        o <<= state
+
+        with pyrtl.conditional_assignment:
+            with i == 0b0001:
+                state.next |= Foo.A
+            with i == 0b0010:
+                state.next |= Foo.B
+            with i == 0b0100:
+                state.next |= Foo.C
+            with i == 0b1000:
+                state.next |= Foo.D
+
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'i': [1, 2, 4, 8, 0]
+        })
+        buff = io.StringIO()
+        sim.tracer.render_trace(file=buff, render_cls=pyrtl.simulation.AsciiWaveRenderer,
+                                extra_line=None, repr_per_name={'state': Foo}, symbol_len=None)
+        expected = (
+            "      -0                            \n"
+            "    i  0x1     x0x2    x0x4    x0x8    x0x0   \n"
+            "    o  0x0             x0x1    x0x2    x0x3   \n"
+            "state  Foo.A           xFoo.B  xFoo.C  xFoo.D \n"
+        )
+        self.assertEqual(buff.getvalue(), expected)
+
+
 class PrintTraceBase(unittest.TestCase):
     # note: doesn't include tests for compact=True because all the tests test that
     def setUp(self):
