@@ -333,7 +333,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
             output_wire <<= (~twire(netio[1]) & ~twire(netio[2])) \
                 | (~twire(netio[0]) & ~twire(netio[2]))
         else:
-            raise PyrtlError('Blif file with unknown logic cover set "%s"'
+            raise PyrtlError('Blif file with unknown logic cover set "%s" '
                              '(currently gates are hard coded)' % command['cover_list'])
 
     def extract_flop(subckt, command):
