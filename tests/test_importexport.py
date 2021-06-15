@@ -581,6 +581,149 @@ class TestInputFromBlif(unittest.TestCase):
         cvals = sim.tracer.trace[c.name]
         self.assertEqual(cvals, [0, 0, 0, 1, 1, 1, 0])
 
+    def test_blif_error_zeroes_in_offset(self):
+        zeroes_in_offset = """\
+        .model Top
+        .inputs clk in[0] in[1]
+        .outputs out
+        .names in[0] in[1] out
+        10 0
+        .end
+        """
+
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Off-set found"):
+            pyrtl.input_from_blif(zeroes_in_offset)
+
+    def test_blif_error_bad_coverset(self):
+        bad_coverset = """\
+        .model Top
+        .inputs clk in[0] in[1]
+        .outputs out
+        .names in[0] in[1] out
+        10 1 1
+        .end
+        """
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "malformed cover set"):
+            pyrtl.input_from_blif(bad_coverset)
+
+    def test_blif_not_gate_correct(self):
+        blif = """\
+        .model Top
+        .inputs a
+        .outputs o
+        .names a o
+        0 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('~')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '01',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [1, 0])
+
+    def test_blif_and_gate_correct(self):
+        blif = """\
+        .model Top
+        .inputs a b
+        .outputs o
+        .names a b o
+        11 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('&')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '0011',
+            'b': '0101',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [0, 0, 0, 1])
+
+    def test_blif_or_gate_correct(self):
+        blif = """\
+        .model Top
+        .inputs a b
+        .outputs o
+        .names a b o
+        1- 1
+        -1 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('|')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '0011',
+            'b': '0101',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 1])
+
+    def test_blif_nand_gate_correct(self):
+        blif = """\
+        .model Top
+        .inputs a b
+        .outputs o
+        .names a b o
+        0- 1
+        -0 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('n')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '0011',
+            'b': '0101',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [1, 1, 1, 0])
+
+    def test_blif_xor_gate_correct(self):
+        blif = """\
+        .model Top
+        .inputs a b
+        .outputs o
+        .names a b o
+        10 1
+        01 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('^')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '0011',
+            'b': '0101',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 0])
+
+    def test_blif_nor_gate_correct(self):
+        # This is a non-primitive, so tests the last branch of cover list parsing
+        blif = """\
+        .model Top
+        .inputs a b
+        .outputs o
+        .names a b o
+        00 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('~')), 2)
+        self.assertEqual(len(block.logic_subset('&')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '0011',
+            'b': '0101',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [1, 0, 0, 0])
+
 
 verilog_output_small = """\
 // Generated automatically via PyRTL
