@@ -1,5 +1,6 @@
 import unittest
 import six
+import io
 
 import pyrtl
 from pyrtl.corecircuits import _basic_add
@@ -126,6 +127,101 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.r.next <<= self.r2
         self.r2.next <<= self.r + pyrtl.Const(2, bitwidth=self.bitwidth)
         self.check_trace(' r 00224466\nr2 02244660\n')
+
+
+class RenderTraceBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        a, b = pyrtl.input_list('a/8 b/8')
+        o = pyrtl.Output()
+        o <<= a + b
+
+    def check_rendered_trace(self, expected, **kwargs):
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': [1, 4, 9, 11, 12],
+            'b': [2, 23, 43, 120, 0],
+        })
+        buff = io.StringIO()
+        sim.tracer.render_trace(file=buff, render_cls=pyrtl.simulation.AsciiWaveRenderer,
+                                extra_line=False, **kwargs)
+        self.assertEqual(buff.getvalue(), expected)
+
+    def test_hex_trace(self):
+        expected = (
+            "  -0                       \n"
+            "a  0x1    x0x4   x0x9   x0xb   x0xc  \n"
+            "b  0x2    x0x17  x0x2b  x0x78  x0x0  \n"
+        )
+        self.check_rendered_trace(expected)
+
+    def test_hex_trace(self):
+        expected = (
+            "  -0                            \n"
+            "a  0o1     x0o4    x0o11   x0o13   x0o14  \n"
+            "b  0o2     x0o27   x0o53   x0o170  x0o0   \n"
+        )
+        self.check_rendered_trace(expected, repr_func=oct, symbol_len=None)
+
+    def test_bin_trace(self):
+        expected = (
+            "  -0                                                \n"
+            "a  0b1         x0b100      x0b1001     x0b1011     x0b1100    \n"
+            "b  0b10        x0b10111    x0b101011   x0b1111000  x0b0       \n"
+        )
+        self.check_rendered_trace(expected, repr_func=bin, symbol_len=None)
+
+    def test_decimal_trace(self):
+        expected = (
+            "  -0                  \n"
+            "a  1     x4    x9    x11   x12  \n"
+            "b  2     x23   x43   x120  x0   \n"
+        )
+        self.check_rendered_trace(expected, repr_func=str, symbol_len=None)
+
+
+class RenderTraceCustomBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_custom_repr_per_wire(self):
+        from enum import IntEnum
+
+        class Foo(IntEnum):
+            A = 0
+            B = 1
+            C = 2
+            D = 3
+
+        i = pyrtl.Input(4, 'i')
+        state = pyrtl.Register(max(Foo).bit_length(), name='state')
+        o = pyrtl.Output(name='o')
+        o <<= state
+
+        with pyrtl.conditional_assignment:
+            with i == 0b0001:
+                state.next |= Foo.A
+            with i == 0b0010:
+                state.next |= Foo.B
+            with i == 0b0100:
+                state.next |= Foo.C
+            with i == 0b1000:
+                state.next |= Foo.D
+
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'i': [1, 2, 4, 8, 0]
+        })
+        buff = io.StringIO()
+        sim.tracer.render_trace(file=buff, render_cls=pyrtl.simulation.AsciiWaveRenderer,
+                                extra_line=None, repr_per_name={'state': Foo}, symbol_len=None)
+        expected = (
+            "      -0                            \n"
+            "    i  0x1     x0x2    x0x4    x0x8    x0x0   \n"
+            "    o  0x0             x0x1    x0x2    x0x3   \n"
+            "state  Foo.A           xFoo.B  xFoo.C  xFoo.D \n"
+        )
+        self.assertEqual(buff.getvalue(), expected)
 
 
 class PrintTraceBase(unittest.TestCase):
