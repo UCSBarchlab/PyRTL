@@ -340,6 +340,68 @@ class TestOutputIPynb(unittest.TestCase):
 
         htmlstring = pyrtl.trace_to_html(sim_trace)  # tests if it compiles or not
 
+    def test_trace_to_html(self):
+        i = pyrtl.Input(1, 'i')
+        o = pyrtl.Output(2, 'o')
+        o <<= i + 1
+
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'i': '0100110'})
+        htmlstring = pyrtl.trace_to_html(sim.tracer)
+        expected = (
+            '<script type="WaveDrom">\n'
+            '{\n'
+            '  signal : [\n'
+            '    { name: "i",  wave: "010.1.0" },\n'
+            '    { name: "o",  wave: "===.=.=", data: ["0x1", "0x2", "0x1", "0x2", "0x1"] },\n'
+            '  ],\n'
+            '  config: { hscale: 1 }\n'
+            '}\n'
+            '</script>\n'
+        )
+        self.assertEqual(htmlstring, expected)
+
+    def test_trace_to_html_repr_func(self):
+        i = pyrtl.Input(1, 'i')
+        o = pyrtl.Output(2, 'o')
+        o <<= i + 1
+
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'i': '0100110'})
+        htmlstring = pyrtl.trace_to_html(sim.tracer, repr_func=bin)
+        expected = (
+            '<script type="WaveDrom">\n'
+            '{\n'
+            '  signal : [\n'
+            '    { name: "i",  wave: "010.1.0" },\n'
+            '    { name: "o",  wave: "===.=.=", data: ["0b1", "0b10", "0b1", "0b10", "0b1"] },\n'
+            '  ],\n'
+            '  config: { hscale: 1 }\n'
+            '}\n'
+            '</script>\n'
+        )
+        self.assertEqual(htmlstring, expected)
+
+    def test_trace_to_html_repr_func_2(self):
+        i = pyrtl.Input(1, 'i')
+        o = pyrtl.Output(2, 'o')
+        o <<= i + 1
+
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'i': '0100110'})
+        htmlstring = pyrtl.trace_to_html(sim.tracer, repr_func=bin)
+        expected = (
+            '<script type="WaveDrom">\n'
+            '{\n'
+            '  signal : [\n'
+            '    { name: "i",  wave: "010.1.0" },\n'
+            '    { name: "o",  wave: "===.=.=", data: ["0b1", "0b10", "0b1", "0b10", "0b1"] },\n'
+            '  ],\n'
+            '  config: { hscale: 1 }\n'
+            '}\n'
+            '</script>\n'
+        )
+        self.assertEqual(htmlstring, expected)
 
 if __name__ == "__main__":
     unittest.main()

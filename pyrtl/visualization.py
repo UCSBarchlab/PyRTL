@@ -481,14 +481,15 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex):
 
     wave_template = (
         """\
-        <script type="WaveDrom">
-        { signal : [
-        %s
-        ],
-        config: {hscale: %d }}
-        </script>
-
-        """
+<script type="WaveDrom">
+{
+  signal : [
+%s
+  ],
+  config: { hscale: %d }
+}
+</script>
+"""
     )
 
     vallens = []  # For determining longest value length
@@ -501,7 +502,7 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex):
             if last == value:
                 wavelist.append('.')
             else:
-                if len(w) == 1:
+                if len(simtrace._wires[w]) == 1:
                     wavelist.append(str(value))
                 else:
                     wavelist.append('=')
@@ -510,14 +511,15 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex):
 
         wavestring = ''.join(wavelist)
         datastring = ', '.join(['"%s"' % repr_func(data) for data in datalist])
-        vallens.extend([len(repr_func(data)) for data in datalist])
-        if len(w) == 1:
+        if len(simtrace._wires[w]) == 1:
+            vallens.append(1)  # all are the same length
             return bool_signal_template % (w, wavestring)
         else:
+            vallens.extend([len(repr_func(data)) for data in datalist])
             return int_signal_template % (w, wavestring, datastring)
 
-    bool_signal_template = '{ name: "%s",  wave: "%s" },'
-    int_signal_template = '{ name: "%s",  wave: "%s", data: [%s] },'
+    bool_signal_template = '    { name: "%s",  wave: "%s" },'
+    int_signal_template = '    { name: "%s",  wave: "%s", data: [%s] },'
     signals = [extract(w) for w in trace_list]
     all_signals = '\n'.join(signals)
     maxvallen = max(vallens)
