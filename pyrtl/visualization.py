@@ -459,7 +459,7 @@ def block_to_svg(block=None, split_state=True, maintain_arg_order=False):
 #    |__|  |  |\/| |
 #    |  |  |  |  | |___
 
-def trace_to_html(simtrace, trace_list=None, sortkey=None):
+def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex):
     """ Return a HTML block showing the trace.
 
     :param simtrace: A SimulationTrace object
@@ -484,11 +484,14 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
         <script type="WaveDrom">
         { signal : [
         %s
-        ]}
+        ],
+        config: {hscale: %d }}
         </script>
 
         """
     )
+
+    vallens = []  # For determining longest value length
 
     def extract(w):
         wavelist = []
@@ -506,7 +509,8 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
                 last = value
 
         wavestring = ''.join(wavelist)
-        datastring = ', '.join(['"%d"' % data for data in datalist])
+        datastring = ', '.join(['"%s"' % repr_func(data) for data in datalist])
+        vallens.extend([len(repr_func(data)) for data in datalist])
         if len(w) == 1:
             return bool_signal_template % (w, wavestring)
         else:
@@ -516,6 +520,8 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
     int_signal_template = '{ name: "%s",  wave: "%s", data: [%s] },'
     signals = [extract(w) for w in trace_list]
     all_signals = '\n'.join(signals)
-    wave = wave_template % all_signals
+    maxvallen = max(vallens)
+    scale = (maxvallen // 5) + 1
+    wave = wave_template % (all_signals, scale)
     # print(wave)
     return wave

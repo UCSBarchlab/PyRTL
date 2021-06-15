@@ -876,21 +876,23 @@ class _WaveRendererBase(object):
         num_tick = self._tick + str(n)
         return num_tick.ljust(symbol_len * segment_size)
 
-    def render_val(self, w, n, current_val, symbol_len):
+    def render_val(self, w, n, current_val, symbol_len, repr_func):
         if w is not self.prev_wire:
             self.prev_wire = w
             self.prior_val = current_val
-        out = self._render_val_with_prev(w, n, current_val, symbol_len)
+        out = self._render_val_with_prev(w, n, current_val, symbol_len, repr_func)
         self.prior_val = current_val
         return out
 
-    def _render_val_with_prev(self, w, n, current_val, symbol_len):
+    def _render_val_with_prev(self, w, n, current_val, symbol_len, repr_func):
         """Return a string encoding the given value in a waveform.
 
         :param w: The WireVector we are rendering to a waveform
         :param n: An integer from 0 to segment_len-1
         :param current_val: the value to be rendered
         :param symbol_len: and integer for how big to draw the current value
+        :param repr_func: function to use for representing the current_val;
+            examples are 'hex', 'oct', 'bin', and 'str' (for decimal). Defaults to 'hex'.
 
         Returns a string of printed length symbol_len that will draw the
         representation of current_val.  The input prior_val is used to
@@ -900,9 +902,9 @@ class _WaveRendererBase(object):
         if len(w) > 1:
             out = self._revstart
             if current_val != self.prior_val:
-                out += self._x + hex(current_val).rstrip('L').ljust(sl)[:sl]
+                out += self._x + repr_func(current_val).rstrip('L').ljust(sl)[:sl]
             elif n == 0:
-                out += hex(current_val).rstrip('L').ljust(symbol_len)[:symbol_len]
+                out += repr_func(current_val).rstrip('L').ljust(symbol_len)[:symbol_len]
             else:
                 out += ' ' * symbol_len
             out += self._revstop
@@ -1130,7 +1132,7 @@ class SimulationTrace(object):
 
     def render_trace(
             self, trace_list=None, file=sys.stdout, render_cls=default_renderer(),
-            symbol_len=5, segment_size=5, segment_delim=' ', extra_line=True):
+            symbol_len=5, repr_func=hex, segment_size=5, segment_delim=' ', extra_line=True):
 
         """ Render the trace to a file using unicode and ASCII escape sequences.
 
@@ -1138,6 +1140,10 @@ class SimulationTrace(object):
         :param file: The place to write output, default to stdout.
         :param render_cls: A class that translates traces into output bytes.
         :param symbol_len: The "length" of each rendered cycle in characters.
+            If None, the length will be automatically set such that the largest
+            represented value fits.
+        :param repr_func: Function to use for representing each value in the trace;
+            examples are 'hex', 'oct', 'bin', and 'str' (for decimal). Defaults to 'hex'.
         :param segment_size: Traces are broken in the segments of this number of cycles.
         :param segment_delim: The character to be output between segments.
         :param extra_line: A Boolean to determine if we should print a blank line between signals.
@@ -1166,12 +1172,12 @@ class SimulationTrace(object):
         else:
             self.render_trace_to_text(
                 trace_list=trace_list, file=file, render_cls=render_cls,
-                symbol_len=symbol_len, segment_size=segment_size,
+                symbol_len=symbol_len, repr_func=repr_func, segment_size=segment_size,
                 segment_delim=segment_delim, extra_line=extra_line)
 
     def render_trace_to_text(
             self, trace_list, file, render_cls,
-            symbol_len, segment_size, segment_delim, extra_line):
+            symbol_len, repr_func, segment_size, segment_delim, extra_line):
 
         renderer = render_cls()
 
@@ -1185,7 +1191,8 @@ class SimulationTrace(object):
                     self._wires[wire],
                     i % segment_size,
                     trace[i],
-                    symbol_len)
+                    symbol_len,
+                    repr_func)
             return heading + trace_line
 
         # default to printing all signals in sorted order
@@ -1203,6 +1210,12 @@ class SimulationTrace(object):
                 "Empty trace list. This may have occurred because "
                 "untraceable wires were removed prior to simulation, "
                 "if a CompiledSimulation was used.")
+
+        if symbol_len is None:
+            maxvallen = 0
+            for trace in self.trace.values():
+                maxvallen = max(maxvallen, max(len(repr_func(v)) for v in trace))
+            symbol_len = maxvallen + 1
 
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map

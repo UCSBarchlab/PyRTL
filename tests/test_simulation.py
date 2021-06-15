@@ -1,5 +1,6 @@
 import unittest
 import six
+import io
 
 import pyrtl
 from pyrtl.corecircuits import _basic_add
@@ -126,6 +127,57 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.r.next <<= self.r2
         self.r2.next <<= self.r + pyrtl.Const(2, bitwidth=self.bitwidth)
         self.check_trace(' r 00224466\nr2 02244660\n')
+
+
+class RenderTraceBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        a, b = pyrtl.input_list('a/8 b/8')
+        o = pyrtl.Output()
+        o <<= a + b
+
+    def check_rendered_trace(self, expected, **kwargs):
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': [1, 4, 9, 11, 12],
+            'b': [2, 23, 43, 120, 0],
+        })
+        buff = io.StringIO()
+        sim.tracer.render_trace(file=buff, render_cls=pyrtl.simulation.AsciiWaveRenderer,
+                                extra_line=False, **kwargs)
+        self.assertEqual(buff.getvalue(), expected)
+
+    def test_hex_trace(self):
+        expected = (
+            "  -0                       \n"
+            "a  0x1    x0x4   x0x9   x0xb   x0xc  \n"
+            "b  0x2    x0x17  x0x2b  x0x78  x0x0  \n"
+        )
+        self.check_rendered_trace(expected)
+
+    def test_hex_trace(self):
+        expected = (
+            "  -0                            \n"
+            "a  0o1     x0o4    x0o11   x0o13   x0o14  \n"
+            "b  0o2     x0o27   x0o53   x0o170  x0o0   \n"
+        )
+        self.check_rendered_trace(expected, repr_func=oct, symbol_len=None)
+
+    def test_bin_trace(self):
+        expected = (
+            "  -0                                                \n"
+            "a  0b1         x0b100      x0b1001     x0b1011     x0b1100    \n"
+            "b  0b10        x0b10111    x0b101011   x0b1111000  x0b0       \n"
+        )
+        self.check_rendered_trace(expected, repr_func=bin, symbol_len=None)
+
+    def test_decimal_trace(self):
+        expected = (
+            "  -0                  \n"
+            "a  1     x4    x9    x11   x12  \n"
+            "b  2     x23   x43   x120  x0   \n"
+        )
+        self.check_rendered_trace(expected, repr_func=str, symbol_len=None)
 
 
 class PrintTraceBase(unittest.TestCase):
