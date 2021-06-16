@@ -1648,6 +1648,11 @@ endmodule
 
 class TestVerilogInput(unittest.TestCase):
     def setUp(self):
+        import subprocess
+        try:
+            version = subprocess.check_output(['yosys', '--version'])
+        except OSError:
+            raise unittest.SkipTest('Testing Verilog input requires yosys')
         pyrtl.reset_working_block()
 
     def test_import_counter(self):
