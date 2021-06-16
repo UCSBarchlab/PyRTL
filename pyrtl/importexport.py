@@ -446,7 +446,7 @@ def input_from_verilog(verilog, clock_name='clk', toplevel=None, leave_in_dir=No
 
     Note: This function is essentially a wrapper for `input_from_blif()`, with the added convenience
     of turning the Verilog into BLIF for import for you. This function passes a set of commands to
-    Yosys as a script that is normally produces BLIF files that can be successuflly imported into
+    Yosys as a script that normally produces BLIF files that can be successuflly imported into
     PyRTL via `input_from_blif()`. If the Yosys conversion fails here, we recommend you create your
     own custom Yosys script to try and produce BLIF yourself.  Then you can import BLIF directly via
     `input_from_blif()`.
@@ -469,15 +469,6 @@ def input_from_verilog(verilog, clock_name='clk', toplevel=None, leave_in_dir=No
         else:
             raise PyrtlError('input_from_verilog expecting either open file or string')
 
-    if toplevel is None:
-        module_lines = [line
-                        for line in verilog_string.split('\n')
-                        if ('module ' in line) and ('endmodule' not in line)]
-        if module_lines:
-            toplevel = re.match(r'\s*module\s+([^;(]*)', module_lines[0]).group(1).strip()
-        if toplevel is None:
-            raise PyrtlError('No module found in verilog file')
-
     block = working_block(block)
 
     # Create a temporary Verilog file
@@ -493,15 +484,15 @@ def input_from_verilog(verilog, clock_name='clk', toplevel=None, leave_in_dir=No
     yosys_arg_template = (
         "-p "
         "read_verilog %s; "
-        "hierarchy -check -top %s; "
-        "proc; opt; memory; opt; fsm; opt; "
-        "techmap; opt; "
+        "synth %s; "
         "setundef -zero -undriven; "
         "opt; "
         "write_blif %s; "
     )
 
-    yosys_arg = yosys_arg_template % (tmp_verilog_path, toplevel, tmp_blif_path)
+    yosys_arg = yosys_arg_template % (tmp_verilog_path,
+                                      ('-top ' + toplevel) if toplevel is not None else '-auto-top',
+                                      tmp_blif_path)
 
     try:
         os.close(temp_vd)

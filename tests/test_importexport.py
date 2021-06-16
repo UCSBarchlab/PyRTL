@@ -1668,22 +1668,18 @@ class TestVerilogInput(unittest.TestCase):
         sim.step_multiple({'rst': '1000'})
         self.assertEqual(sim.tracer.trace['o'], [0, 2, 3, 4])
 
-    def test_import_multi_module_top_most_module(self):
+    def test_import_multi_module_specified_module(self):
         # Import foo module because occurs first in file
-        pyrtl.input_from_verilog(verilog_input_multi_module)
+        pyrtl.input_from_verilog(verilog_input_multi_module, toplevel="foo")
         sim = pyrtl.Simulation()
         sim.step_multiple({'a': '0011', 'b': '0101'})
         self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 2])
 
-    def test_import_multi_module_specified_module(self):
-        pyrtl.input_from_verilog(verilog_input_multi_module, toplevel='top')
+    def test_import_multi_module_auto_select_top_module(self):
+        pyrtl.input_from_verilog(verilog_input_multi_module)
         sim = pyrtl.Simulation()
         sim.step_multiple(nsteps=5)
         self.assertEqual(sim.tracer.trace['o'], [0, 2, 0, 2, 0])
-
-    def test_error_import_no_module(self):
-        with self.assertRaisesRegex(pyrtl.PyrtlError, "No module found in verilog file"):
-            pyrtl.input_from_verilog("")
 
     def test_error_import_bad_file(self):
         with self.assertRaisesRegex(pyrtl.PyrtlError,
