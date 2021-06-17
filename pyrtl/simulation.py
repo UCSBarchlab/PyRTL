@@ -7,6 +7,7 @@ import re
 import numbers
 import collections
 import copy
+import six
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -627,9 +628,18 @@ class FastSimulation(object):
                 "any expected outputs must have a supplied value "
                 "each step of simulation")
 
+        def to_num(v):
+            if isinstance(v, six.string_types):
+                # Don't use infer_val_and_bitwidth because they aren't in
+                # Verilog-style format, but are instead in plain decimal.
+                return int(v)
+            # Don't just call int(v) on all of them since it's nice
+            # to retain class info if they were a subclass of int.
+            return v
+
         failed = []
         for i in range(nsteps):
-            self.step({w: int(v[i]) for w, v in provided_inputs.items()})
+            self.step({w: to_num(v[i]) for w, v in provided_inputs.items()})
 
             for expvar in expected_outputs.keys():
                 expected = int(expected_outputs[expvar][i])
