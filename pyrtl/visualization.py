@@ -504,31 +504,31 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex, repr_p
         wavelist = []
         datalist = []
         last = None
+
         for i, value in enumerate(trace[w]):
             if last == value:
                 wavelist.append('.')
             else:
-                if len(simtrace._wires[w]) == 1:
-                    wavelist.append(str(value))
+                f = repr_per_name.get(w)
+                if f is not None:
+                    wavelist.append('=')
+                    datalist.append(str(f(value)))
+                elif len(simtrace._wires[w]) == 1:
+                    # int() to convert True/False to 0/1
+                    wavelist.append(str(int(value)))
                 else:
                     wavelist.append('=')
-                    datalist.append((value, w))
+                    datalist.append(str(repr_func(value)))
+
                 last = value
 
-        def to_str(v, name):
-            f = repr_per_name.get(name)
-            if f is not None:
-                return str(f(v))
-            else:
-                return str(repr_func(v))
-
         wavestring = ''.join(wavelist)
-        datastring = ', '.join(['"%s"' % to_str(data, name) for data, name in datalist])
-        if len(simtrace._wires[w]) == 1:
+        datastring = ', '.join(['"%s"' % data for data in datalist])
+        if repr_per_name.get(w) is None and len(simtrace._wires[w]) == 1:
             vallens.append(1)  # all are the same length
             return bool_signal_template % (w, wavestring)
         else:
-            vallens.extend([len(to_str(data, name)) for data, name in datalist])
+            vallens.extend([len(data) for data in datalist])
             return int_signal_template % (w, wavestring, datastring)
 
     bool_signal_template = '    { name: "%s",  wave: "%s" },'
