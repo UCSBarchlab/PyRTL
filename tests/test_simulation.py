@@ -547,7 +547,7 @@ class SimStepMultipleBase(unittest.TestCase):
         out2 <<= in1 | in2
         self.inputs = {
             'in1': [0, 1, 3, 15, 14],
-            'in2': [6, 6, 6, 6, 6],
+            'in2': '66666',  # When a string, assumes each input is a single digit integer
         }
 
     def test_step_multiple_nsteps_no_inputs(self):
@@ -659,6 +659,25 @@ class SimStepMultipleBase(unittest.TestCase):
                           "in2   6  6  6  6  6\n"
                           "out1  7  8  6 10  9\n"
                           "out2  6  7  7 15 14\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_dont_care_expected(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        expected = {
+            'out1': [7, '?', 6, 10],
+            'out2': '6?7?',
+        }
+        sim.step_multiple(self.inputs, expected, nsteps=4)
+
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1   0  1  3 15\n"
+                          "in2   6  6  6  6\n"
+                          "out1  7  8  6 10\n"
+                          "out2  6  7  7 15\n")
         output = six.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
