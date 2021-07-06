@@ -1650,7 +1650,7 @@ class TestVerilogInput(unittest.TestCase):
     def setUp(self):
         import subprocess
         try:
-            version = subprocess.check_output(['yosys', '--version'])
+            version = subprocess.check_output(['yosys', '-V'])
         except OSError:
             raise unittest.SkipTest('Testing Verilog input requires yosys')
         pyrtl.reset_working_block()
