@@ -148,13 +148,12 @@ class RenderTraceBase(unittest.TestCase):
                                 extra_line=False, **kwargs)
         self.assertEqual(buff.getvalue(), expected)
 
-    # TODO replace 'x' with something else (a little confusing since hex repr also uses it)
     def test_hex_trace(self):
         expected = (
             "  -0                       \n"
             "a 0x1  x0x4 x0x9 x0xb x0xc \n"
             "b 0x2  x0x17x0x2bx0x78x0x0 \n"
-            "c _____/---------\____/----\n"
+            "c _____/---------\\____/----\n"  # escaped backslash
         )
         self.check_rendered_trace(expected)
 
@@ -163,7 +162,7 @@ class RenderTraceBase(unittest.TestCase):
             "  -0                            \n"
             "a 0o1   x0o4  x0o11 x0o13 x0o14 \n"
             "b 0o2   x0o27 x0o53 x0o170x0o0  \n"
-            "c ______/-----------\_____/-----\n"
+            "c ______/-----------\\_____/-----\n"  # escaped backslash
         )
         self.check_rendered_trace(expected, repr_func=oct, symbol_len=None)
 
@@ -172,7 +171,7 @@ class RenderTraceBase(unittest.TestCase):
             "  -0                                                \n"
             "a 0b1       x0b100    x0b1001   x0b1011   x0b1100   \n"
             "b 0b10      x0b10111  x0b101011 x0b1111000x0b0      \n"
-            "c __________/-------------------\_________/---------\n"
+            "c __________/-------------------\\_________/---------\n"  # escaped backslash
         )
         self.check_rendered_trace(expected, repr_func=bin, symbol_len=None)
 
@@ -181,7 +180,7 @@ class RenderTraceBase(unittest.TestCase):
             "  -0                  \n"
             "a 1   x4  x9  x11 x12 \n"
             "b 2   x23 x43 x120x0  \n"
-            "c ____/-------\___/---\n"
+            "c ____/-------\\___/---\n"  # escaped backslash
         )
         self.check_rendered_trace(expected, repr_func=str, symbol_len=None)
 
