@@ -958,7 +958,7 @@ class AsciiWaveRenderer(_WaveRendererBase):
     _tick = '-'
     _up, _down = '/', '\\'
     _x, _low, _high = 'x', '_', '-'
-    _revstart, _revstop = ' ', ' '
+    _revstart, _revstop = '', ''
 
 
 def default_renderer():
