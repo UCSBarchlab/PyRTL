@@ -581,6 +581,149 @@ class TestInputFromBlif(unittest.TestCase):
         cvals = sim.tracer.trace[c.name]
         self.assertEqual(cvals, [0, 0, 0, 1, 1, 1, 0])
 
+    def test_blif_error_zeroes_in_offset(self):
+        zeroes_in_offset = """\
+        .model Top
+        .inputs clk in[0] in[1]
+        .outputs out
+        .names in[0] in[1] out
+        10 0
+        .end
+        """
+
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Off-set found"):
+            pyrtl.input_from_blif(zeroes_in_offset)
+
+    def test_blif_error_bad_coverset(self):
+        bad_coverset = """\
+        .model Top
+        .inputs clk in[0] in[1]
+        .outputs out
+        .names in[0] in[1] out
+        10 1 1
+        .end
+        """
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "malformed cover set"):
+            pyrtl.input_from_blif(bad_coverset)
+
+    def test_blif_not_gate_correct(self):
+        blif = """\
+        .model Top
+        .inputs a
+        .outputs o
+        .names a o
+        0 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('~')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '01',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [1, 0])
+
+    def test_blif_and_gate_correct(self):
+        blif = """\
+        .model Top
+        .inputs a b
+        .outputs o
+        .names a b o
+        11 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('&')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '0011',
+            'b': '0101',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [0, 0, 0, 1])
+
+    def test_blif_or_gate_correct(self):
+        blif = """\
+        .model Top
+        .inputs a b
+        .outputs o
+        .names a b o
+        1- 1
+        -1 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('|')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '0011',
+            'b': '0101',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 1])
+
+    def test_blif_nand_gate_correct(self):
+        blif = """\
+        .model Top
+        .inputs a b
+        .outputs o
+        .names a b o
+        0- 1
+        -0 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('n')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '0011',
+            'b': '0101',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [1, 1, 1, 0])
+
+    def test_blif_xor_gate_correct(self):
+        blif = """\
+        .model Top
+        .inputs a b
+        .outputs o
+        .names a b o
+        10 1
+        01 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('^')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '0011',
+            'b': '0101',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 0])
+
+    def test_blif_nor_gate_correct(self):
+        # This is a non-primitive, so tests the last branch of cover list parsing
+        blif = """\
+        .model Top
+        .inputs a b
+        .outputs o
+        .names a b o
+        00 1
+        .end
+        """
+        pyrtl.input_from_blif(blif)
+        block = pyrtl.working_block()
+        self.assertEqual(len(block.logic_subset('~')), 2)
+        self.assertEqual(len(block.logic_subset('&')), 1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': '0011',
+            'b': '0101',
+        })
+        self.assertEqual(sim.tracer.trace['o'], [1, 0, 0, 0])
+
 
 verilog_output_small = """\
 // Generated automatically via PyRTL
@@ -1281,55 +1424,52 @@ endmodule
 """
 
 
-verilog_test_bench = """\
-module tb();
-    reg clk;
-    reg[1:0] a100;
-    reg[3:0] w1;
-    reg[2:0] w12;
-    wire[1:0] out1;
-    wire[8:0] out10;
+verilog_custom_reset = """\
+// Generated automatically via PyRTL
+// As one initial test of synthesis, map to FPGA with:
+//   yosys -p "synth_xilinx -top toplevel" thisfile.v
 
-    integer tb_iter;
-    toplevel block(.clk(clk), .a100(a100), .w1(w1), .w12(w12), .out1(out1), .out10(out10));
+module toplevel(clk, rst);
+    input clk;
+    input rst;
 
-    always
-        #5 clk = ~clk;
+    reg[3:0] r;
 
-    initial begin
-        $dumpfile ("waveform.vcd");
-        $dumpvars;
+    wire const_0_1;
+    wire const_1_0;
+    wire const_2_0;
+    wire const_3_0;
+    wire[2:0] tmp0;
+    wire[3:0] tmp1;
+    wire[4:0] tmp2;
+    wire[3:0] tmp3;
+    wire[4:0] tmp4;
+    wire[4:0] tmp5;
+    wire[3:0] tmp6;
 
-        clk = 0;
-        block.r1 = 2;
-        block.r2 = 3;
-        block.tmp13 = 0;
-        for (tb_iter = 0; tb_iter < 32; tb_iter++) begin block.mem_0[tb_iter] = 0; end
-        block.mem_0[2] = 9;
-        block.mem_0[9] = 12;
-        a100 = 2'd0;
-        w1 = 4'd0;
-        w12 = 3'd0;
+    // Combinational
+    assign const_0_1 = 1;
+    assign const_1_0 = 0;
+    assign const_2_0 = 0;
+    assign const_3_0 = 0;
+    assign tmp0 = {const_1_0, const_1_0, const_1_0};
+    assign tmp1 = {tmp0, const_0_1};
+    assign tmp2 = r + tmp1;
+    assign tmp3 = {const_3_0, const_3_0, const_3_0, const_3_0};
+    assign tmp4 = {tmp3, const_2_0};
+    assign tmp5 = rst ? tmp4 : tmp2;
+    assign tmp6 = {tmp5[3], tmp5[2], tmp5[1], tmp5[0]};
 
-        #10
-        a100 = 2'd1;
-        w1 = 4'd4;
-        w12 = 3'd1;
-
-        #10
-        a100 = 2'd3;
-        w1 = 4'd2;
-        w12 = 3'd7;
-
-        #10
-        a100 = 2'd2;
-        w1 = 4'd3;
-        w12 = 3'd4;
-
-        #10
-        $finish;
+    // Registers
+    always @(posedge clk)
+    begin
+        begin
+            r <= tmp6;
+        end
     end
+
 endmodule
+
 """
 
 
@@ -1365,7 +1505,7 @@ class TestVerilogNames(unittest.TestCase):
         self.assert_invalid_name('a' * 2000)
 
 
-class TestVerilog(unittest.TestCase):
+class TestVerilogOutput(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         # To compare textual consistency, need to make
@@ -1452,10 +1592,241 @@ class TestVerilog(unittest.TestCase):
         with self.assertRaisesRegex(pyrtl.PyrtlError, "Invalid add_reset option"):
             pyrtl.output_to_verilog(buffer, add_reset='foobar')
 
+    def test_error_existing_reset_wire(self):
+        buffer = io.StringIO()
+        _rst = pyrtl.Input(1, 'rst')
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Found a user-defined wire named 'rst'."):
+            pyrtl.output_to_verilog(buffer)
+
+    def test_existing_reset_wire_without_add_reset(self):
+        buffer = io.StringIO()
+        rst = pyrtl.Input(1, 'rst')
+        r = pyrtl.Register(4, 'r')
+        r.next <<= pyrtl.select(rst, 0, r + 1)
+        pyrtl.output_to_verilog(buffer, add_reset=False)
+        self.assertEqual(buffer.getvalue(), verilog_custom_reset)
+
+
+verilog_input_counter = """\
+module counter (clk, rst, en, count);
+
+    input clk, rst, en;
+    output reg [3:0] count;
+
+    always @(posedge clk)
+        if (rst)
+            count <= 4'd0;
+        else if (en)
+            count <= count + 4'd1;
+
+endmodule
+"""
+
+verilog_input_multi_module = """\
+module foo (a, b, o);
+
+    input a, b;
+    output [1:0] o;
+    assign o = a + b;
+
+endmodule
+
+module top (clk, o);
+    input clk;
+    reg a, b;
+    output [1:0] o;
+    foo f1(a, b, o);
+
+    always @(posedge clk)
+    begin
+        a <= ~a;
+        b <= ~b;
+    end
+endmodule
+"""
+
+
+class TestVerilogInput(unittest.TestCase):
+    def setUp(self):
+        import subprocess
+        try:
+            version = subprocess.check_output(['yosys', '-V'])
+        except OSError:
+            raise unittest.SkipTest('Testing Verilog input requires yosys')
+        pyrtl.reset_working_block()
+
+    def test_import_counter(self):
+        pyrtl.input_from_verilog(verilog_input_counter)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'rst': '10000', 'en': '01111'})
+        self.assertEqual(sim.tracer.trace['count'], [0, 0, 1, 2, 3])
+
+    def test_import_small(self):
+        pyrtl.input_from_verilog(verilog_output_small)
+        sim = pyrtl.Simulation()
+        sim.step({})
+        self.assertEqual(sim.tracer.trace['o'][0], 0b1100011100110)
+
+    def test_import_counter_with_reset(self):
+        pyrtl.input_from_verilog(verilog_output_counter_sync_reset)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'rst': '1000'})
+        self.assertEqual(sim.tracer.trace['o'], [0, 2, 3, 4])
+
+    def test_import_multi_module_specified_module(self):
+        # Import foo module because occurs first in file
+        pyrtl.input_from_verilog(verilog_input_multi_module, toplevel="foo")
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'a': '0011', 'b': '0101'})
+        self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 2])
+
+    def test_import_multi_module_auto_select_top_module(self):
+        pyrtl.input_from_verilog(verilog_input_multi_module)
+        sim = pyrtl.Simulation()
+        sim.step_multiple(nsteps=5)
+        self.assertEqual(sim.tracer.trace['o'], [0, 2, 0, 2, 0])
+
+    def test_error_import_bad_file(self):
+        with self.assertRaisesRegex(pyrtl.PyrtlError,
+                                    "input_from_verilog expecting either open file or string"):
+            pyrtl.input_from_verilog(3)
+
+
+verilog_testbench = """\
+module tb();
+    reg clk;
+    reg rst;
+    reg[1:0] a100;
+    reg[3:0] w1;
+    reg[2:0] w12;
+    wire[1:0] out1;
+    wire[8:0] out10;
+
+    integer tb_iter;
+    toplevel block(.clk(clk), .rst(rst), .a100(a100), .w1(w1), .w12(w12), .out1(out1), .out10(out10));
+
+    always
+        #5 clk = ~clk;
+
+    initial begin
+        $dumpfile ("waveform.vcd");
+        $dumpvars;
+
+        clk = 0;
+        rst = 0;
+        block.r1 = 2;
+        block.r2 = 3;
+        block.tmp0 = 0;
+        for (tb_iter = 0; tb_iter < 32; tb_iter++) begin block.mem_0[tb_iter] = 0; end
+        block.mem_0[2] = 9;
+        block.mem_0[9] = 12;
+        a100 = 2'd0;
+        w1 = 4'd0;
+        w12 = 3'd0;
+
+        #10
+        a100 = 2'd1;
+        w1 = 4'd4;
+        w12 = 3'd1;
+
+        #10
+        a100 = 2'd3;
+        w1 = 4'd2;
+        w12 = 3'd7;
+
+        #10
+        a100 = 2'd2;
+        w1 = 4'd3;
+        w12 = 3'd4;
+
+        #10
+        $finish;
+    end
+endmodule
+"""  # noqa
+
+verilog_testbench_no_reset = """\
+module tb();
+    reg clk;
+    reg[1:0] a100;
+    reg[3:0] w1;
+    reg[2:0] w12;
+    wire[1:0] out1;
+    wire[8:0] out10;
+
+    integer tb_iter;
+    toplevel block(.clk(clk), .a100(a100), .w1(w1), .w12(w12), .out1(out1), .out10(out10));
+
+    always
+        #5 clk = ~clk;
+
+    initial begin
+        $dumpfile ("waveform.vcd");
+        $dumpvars;
+
+        clk = 0;
+        block.r1 = 2;
+        block.r2 = 3;
+        block.tmp0 = 0;
+        for (tb_iter = 0; tb_iter < 32; tb_iter++) begin block.mem_0[tb_iter] = 0; end
+        block.mem_0[2] = 9;
+        block.mem_0[9] = 12;
+        a100 = 2'd0;
+        w1 = 4'd0;
+        w12 = 3'd0;
+
+        #10
+        a100 = 2'd1;
+        w1 = 4'd4;
+        w12 = 3'd1;
+
+        #10
+        a100 = 2'd3;
+        w1 = 4'd2;
+        w12 = 3'd7;
+
+        #10
+        a100 = 2'd2;
+        w1 = 4'd3;
+        w12 = 3'd4;
+
+        #10
+        $finish;
+    end
+endmodule
+"""
+
+verilog_testbench_custom_reset = """\
+module tb();
+    reg clk;
+    reg rst;
+
+    integer tb_iter;
+    toplevel block(.clk(clk), .rst(rst));
+
+    always
+        #5 clk = ~clk;
+
+    initial begin
+        $dumpfile ("waveform.vcd");
+        $dumpvars;
+
+        clk = 0;
+        block.r = 0;
+        $finish;
+    end
+endmodule
+"""
+
 
 class TestOutputTestbench(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
+        # To compare textual consistency, need to make
+        # sure we're starting at the same index for all
+        # automatically created names.
+        pyrtl.wire._reset_wire_indexers()
+        pyrtl.memory._reset_memory_indexer()
 
     def test_verilog_testbench_does_not_throw_error(self):
         zero = pyrtl.Input(1, 'zero')
@@ -1470,7 +1841,7 @@ class TestOutputTestbench(unittest.TestCase):
         with io.StringIO() as tbfile:
             pyrtl.output_verilog_testbench(tbfile, sim_trace)
 
-    def test_verilog_testbench_consistency(self):
+    def create_design(self):
         # Various wire names so we can verify they are printed
         # in deterministic order each time
         i1, i2, i3 = pyrtl.input_list('w1/4 w12/3 a100/2')
@@ -1499,9 +1870,38 @@ class TestOutputTestbench(unittest.TestCase):
             'w12': [0, 1, 7, 4],
             'a100': [0, 1, 3, 2],
         })
+        return sim_trace
+
+    def test_verilog_testbench_consistency(self):
+        sim_trace = self.create_design()
         with io.StringIO() as tbfile:
             pyrtl.output_verilog_testbench(tbfile, sim_trace)
-            self.assertEqual(tbfile.getvalue(), verilog_test_bench)
+            self.assertEqual(tbfile.getvalue(), verilog_testbench)
+
+    def test_verilog_testbench_no_reset_consistency(self):
+        sim_trace = self.create_design()
+        with io.StringIO() as tbfile:
+            pyrtl.output_verilog_testbench(tbfile, sim_trace, add_reset=False)
+            self.assertEqual(tbfile.getvalue(), verilog_testbench_no_reset)
+
+    def test_error_verilog_testbench_invalid_add_reset(self):
+        tbfile = io.StringIO()
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Invalid add_reset option"):
+            pyrtl.output_verilog_testbench(tbfile, add_reset='foobar')
+
+    def test_error_verilog_testbench_existing_reset_wire(self):
+        tbfile = io.StringIO()
+        _rst = pyrtl.Input(1, 'rst')
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Found a user-defined wire named 'rst'."):
+            pyrtl.output_verilog_testbench(tbfile)
+
+    def test_verilog_testbench_existing_reset_wire_without_add_reset(self):
+        buffer = io.StringIO()
+        rst = pyrtl.Input(1, 'rst')
+        r = pyrtl.Register(4, 'r')
+        r.next <<= pyrtl.select(rst, 0, r + 1)
+        pyrtl.output_verilog_testbench(buffer, add_reset=False)
+        self.assertEqual(buffer.getvalue(), verilog_testbench_custom_reset)
 
 
 firrtl_output_concat_test = """\

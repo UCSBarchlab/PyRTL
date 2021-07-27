@@ -137,7 +137,7 @@ class CompiledSimulation(object):
 
         :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
         :param expected_outputs: a dictionary mapping wirevectors to their expected values
-            for N steps
+            for N steps; use '?' to indicate you don't care what the value at that step is
         :param nsteps: number of steps to take (defaults to None, meaning step for each
             supplied input value)
         :param file: where to write the output (if there are unexpected outputs detected)
@@ -214,7 +214,10 @@ class CompiledSimulation(object):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
             for expvar in expected_outputs.keys():
-                expected = int(expected_outputs[expvar][i])
+                expected = expected_outputs[expvar][i]
+                if expected == '?':
+                    continue
+                expected = int(expected)
                 actual = self.inspect(expvar)
                 if expected != actual:
                     failed.append((i, expvar, expected, actual))

@@ -464,12 +464,18 @@ def block_to_svg(block=None, split_state=True, maintain_arg_order=False):
 #    |__|  |  |\/| |
 #    |  |  |  |  | |___
 
-def trace_to_html(simtrace, trace_list=None, sortkey=None):
+def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex, repr_per_name={}):
     """ Return a HTML block showing the trace.
 
     :param simtrace: A SimulationTrace object
     :param trace_list: (optional) A list of wires to display
     :param sortkey: (optional) The key with which to sort the trace_list
+    :param repr_func: function to use for representing the current_val;
+        examples are 'hex', 'oct', 'bin', 'str' (for decimal), or even the name
+        of an IntEnum class you know the value will belong to. Defaults to 'hex'.
+    :param repr_per_name: Map from signal name to a function that takes in the signal's
+        value and returns a user-defined representation. If a signal name is
+        not found in the map, the argument `repr_func` will be used instead.
     :return: An HTML block showing the trace
     """
 
@@ -486,41 +492,56 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None):
 
     wave_template = (
         """\
-        <script type="WaveDrom">
-        { signal : [
-        %s
-        ]}
-        </script>
-
-        """
+<script type="WaveDrom">
+{
+  signal : [
+%s
+  ],
+  config: { hscale: %d }
+}
+</script>
+"""
     )
+
+    vallens = []  # For determining longest value length
 
     def extract(w):
         wavelist = []
         datalist = []
         last = None
+
         for i, value in enumerate(trace[w]):
             if last == value:
                 wavelist.append('.')
             else:
-                if len(w) == 1:
-                    wavelist.append(str(value))
+                f = repr_per_name.get(w)
+                if f is not None:
+                    wavelist.append('=')
+                    datalist.append(str(f(value)))
+                elif len(simtrace._wires[w]) == 1:
+                    # int() to convert True/False to 0/1
+                    wavelist.append(str(int(value)))
                 else:
                     wavelist.append('=')
-                    datalist.append(value)
+                    datalist.append(str(repr_func(value)))
+
                 last = value
 
         wavestring = ''.join(wavelist)
-        datastring = ', '.join(['"%d"' % data for data in datalist])
-        if len(w) == 1:
+        datastring = ', '.join(['"%s"' % data for data in datalist])
+        if repr_per_name.get(w) is None and len(simtrace._wires[w]) == 1:
+            vallens.append(1)  # all are the same length
             return bool_signal_template % (w, wavestring)
         else:
+            vallens.extend([len(data) for data in datalist])
             return int_signal_template % (w, wavestring, datastring)
 
-    bool_signal_template = '{ name: "%s",  wave: "%s" },'
-    int_signal_template = '{ name: "%s",  wave: "%s", data: [%s] },'
+    bool_signal_template = '    { name: "%s",  wave: "%s" },'
+    int_signal_template = '    { name: "%s",  wave: "%s", data: [%s] },'
     signals = [extract(w) for w in trace_list]
     all_signals = '\n'.join(signals)
-    wave = wave_template % all_signals
+    maxvallen = max(vallens)
+    scale = (maxvallen // 5) + 1
+    wave = wave_template % (all_signals, scale)
     # print(wave)
     return wave

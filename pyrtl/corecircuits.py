@@ -436,7 +436,10 @@ def bitfield_update(w, range_start, range_end, newvalue, truncating=False):
         w = bitfield_update(w, 20, 23, 0x7)  # sets bits 20, 21, 22 to 1
         w = bitfield_update(w, 20, 23, 0x6)  # sets bit 20 to 0, bits 21 and 22 to 1
         w = bitfield_update(w, 20, None, 0x7)  # assuming w is 32 bits, sets bits 31..20 = 0x7
-        w = bitfield_update(w, -1, None, 0x1)  # set the LSB (bit) to 1
+        w = bitfield_update(w, -1, None, 0x1)  # set the MSB (bit) to 1
+        w = bitfield_update(w, None, -1, 0x9)  # set the bits before the MSB (bit) to 9
+        w = bitfield_update(w, None, 1, 0x1)  # set the LSB (bit) to 1
+        w = bitfield_update(w, 1, None, 0x9)  # set the bits after the LSB (bit) to 9
     """
     from .corecircuits import concat_list
 
@@ -482,8 +485,8 @@ def bitfield_update_set(w, update_set, truncating=False):
         w = bitfield_update_set(w, {
                 (20, 23):    0x6,      # sets bit 20 to 0, bits 21 and 22 to 1
                 (26, None):  0x7,      # assuming w is 32 bits, sets bits 31..26 to 0x7
-                (-1, None):  0x0       # set the LSB (bit) to 0
-                })
+                (None, 1):   0x0,      # set the LSB (bit) to 0
+            })
     """
     w = as_wires(w)
     # keep a list of bits that are updated to find overlaps

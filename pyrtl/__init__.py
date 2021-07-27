@@ -92,6 +92,7 @@ from .visualization import trace_to_html
 from .visualization import net_graph
 
 # import from and export to file format routines
+from .importexport import input_from_verilog
 from .importexport import output_to_verilog
 from .importexport import OutputToVerilog
 from .importexport import output_verilog_testbench
