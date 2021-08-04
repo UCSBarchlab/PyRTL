@@ -758,16 +758,18 @@ def _to_verilog_memories(file, block, varname):
     memories = {n.op_param[1] for n in block.logic_subset('m@')}
     for m in sorted(memories, key=lambda m: m.id):
         print('    // Memory mem_{}: {}'.format(m.id, m.name), file=file)
-        print('    always @(posedge clk)', file=file)
-        print('    begin', file=file)
-        for net in _net_sorted(block.logic_subset('@'), varname):
-            if net.op_param[1] == m:
-                t = (varname(net.args[2]), net.op_param[0],
-                     varname(net.args[0]), varname(net.args[1]))
-                print(('        if (%s) begin\n'
-                       '            mem_%s[%s] <= %s;\n'
-                       '        end') % t, file=file)
-        print('    end', file=file)
+        writes = _net_sorted(block.logic_subset('@'), varname)
+        if writes:
+            print('    always @(posedge clk)', file=file)
+            print('    begin', file=file)
+            for net in writes:
+                if net.op_param[1] == m:
+                    t = (varname(net.args[2]), net.op_param[0],
+                         varname(net.args[0]), varname(net.args[1]))
+                    print(('        if (%s) begin\n'
+                           '            mem_%s[%s] <= %s;\n'
+                           '        end') % t, file=file)
+            print('    end', file=file)
         for net in _net_sorted(block.logic_subset('m'), varname):
             if net.op_param[1] == m:
                 dest = varname(net.dests[0])
