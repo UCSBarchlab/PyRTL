@@ -1384,6 +1384,56 @@ endmodule
 """
 
 
+verilog_output_mems_with_no_writes = """\
+// Generated automatically via PyRTL
+// As one initial test of synthesis, map to FPGA with:
+//   yosys -p "synth_xilinx -top toplevel" thisfile.v
+
+module toplevel(clk, rst, in1, out1);
+    input clk;
+    input rst;
+    input[2:0] in1;
+    output[7:0] out1;
+
+    reg[7:0] mem_0[7:0]; //tmp0
+    reg[7:0] mem_1[255:0]; //tmp1
+
+    wire const_0_1;
+    wire[7:0] const_1_42;
+    wire[7:0] tmp2;
+
+    initial begin
+        mem_0[0]=8'ha;
+        mem_0[1]=8'h14;
+        mem_0[2]=8'h1e;
+        mem_0[3]=8'h28;
+        mem_0[4]=8'h32;
+        mem_0[5]=8'h3c;
+        mem_0[6]=8'h0;
+        mem_0[7]=8'h0;
+    end
+
+    // Combinational
+    assign const_0_1 = 1;
+    assign const_1_42 = 42;
+    assign out1 = tmp2;
+
+    // Memory mem_0: tmp0
+    assign tmp2 = mem_0[in1];
+
+    // Memory mem_1: tmp1
+    always @(posedge clk)
+    begin
+        if (const_0_1) begin
+            mem_1[tmp2] <= const_1_42;
+        end
+    end
+
+endmodule
+
+"""
+
+
 verilog_output_counter_no_reset = """\
 // Generated automatically via PyRTL
 // As one initial test of synthesis, map to FPGA with:
@@ -1567,6 +1617,21 @@ class TestVerilogOutput(unittest.TestCase):
         pyrtl.output_to_verilog(buffer)
 
         self.assertEqual(buffer.getvalue(), verilog_output_large)
+
+    def test_mems_with_no_writes(self):
+        rdata = {0: 10, 1: 20, 2: 30, 3: 40, 4: 50, 5: 60}
+        rom = pyrtl.RomBlock(8, 3, rdata, pad_with_zeros=True)
+        mem = pyrtl.MemBlock(8, 8)
+        in1 = pyrtl.Input(3, 'in1')
+        out1 = pyrtl.Output(8, 'out1')
+        w = rom[in1]
+        out1 <<= w
+        mem[w] <<= 42
+
+        buffer = io.StringIO()
+        pyrtl.output_to_verilog(buffer)
+
+        self.assertEqual(buffer.getvalue(), verilog_output_mems_with_no_writes)
 
     def check_counter_text(self, add_reset, expected):
         r = pyrtl.Register(4, reset_value=2)
