@@ -663,7 +663,9 @@ class TestInputFromBlif(unittest.TestCase):
         })
         self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 1])
 
-    def test_blif_nand_gate_correct(self):
+    def test_blif_nand_gate_to_primitives_correct(self):
+        # This tests that there should be no NAND gates generated during BLIF import;
+        # they should be converted to AND+NOT.
         blif = """\
         .model Top
         .inputs a b
@@ -675,7 +677,9 @@ class TestInputFromBlif(unittest.TestCase):
         """
         pyrtl.input_from_blif(blif)
         block = pyrtl.working_block()
-        self.assertEqual(len(block.logic_subset('n')), 1)
+        self.assertEqual(len(block.logic_subset('n')), 0)
+        self.assertEqual(len(block.logic_subset('&')), 1)
+        self.assertEqual(len(block.logic_subset('~')), 1)
         sim = pyrtl.Simulation()
         sim.step_multiple({
             'a': '0011',

@@ -325,8 +325,11 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) | twire(netio[1])  # or gate
         elif command['cover_list'].asList() == ['0-', '1', '-0', '1']:
+            # nand is not really a PyRTL primitive and so should only be added to a netlist
+            # via a call to nand_synth(). We instead convert it to ~(a & b) rather than
+            # (~a | ~b) as would be generated if handled by the else case below.
             output_wire = twire(netio[2])
-            output_wire <<= twire(netio[0]).nand(twire(netio[1]))  # nand gate
+            output_wire <<= ~(twire(netio[0]) & twire(netio[1]))  # nand gate -> not+and gates
         elif command['cover_list'].asList() == ['10', '1', '01', '1']:
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) ^ twire(netio[1])  # xor gate
@@ -334,8 +337,9 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
             # Although the following is fully generic and thus encompasses all of the
             # special cases after the simple wire case above, we leave the above in because
             # they are commonly found and lead to a slightly cleaner (though equivalent) netlist,
-            # because we can use nand/xor primitives, or avoid the extra fluff of concat/select
-            # wires that might be created implicitly as part of rtl_all/rtl_any.
+            # because we can use the xor primitive/save a gate when converting the nand, or avoid
+            # the extra fluff of concat/select wires that might be created implicitly as part of
+            # rtl_all/rtl_any.
             def convert_val(ix, val):
                 wire = twire(netio[ix])
                 if val == '0':
