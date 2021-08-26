@@ -325,8 +325,11 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) | twire(netio[1])  # or gate
         elif command['cover_list'].asList() == ['0-', '1', '-0', '1']:
+            # nand is not really a PyRTL primitive and so should only be added to a netlist
+            # via a call to nand_synth(). We instead convert it to ~(a & b) rather than
+            # (~a | ~b) as would be generated if handled by the else case below.
             output_wire = twire(netio[2])
-            output_wire <<= twire(netio[0]).nand(twire(netio[1]))  # nand gate
+            output_wire <<= ~(twire(netio[0]) & twire(netio[1]))  # nand gate -> not+and gates
         elif command['cover_list'].asList() == ['10', '1', '01', '1']:
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) ^ twire(netio[1])  # xor gate
@@ -334,8 +337,9 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
             # Although the following is fully generic and thus encompasses all of the
             # special cases after the simple wire case above, we leave the above in because
             # they are commonly found and lead to a slightly cleaner (though equivalent) netlist,
-            # because we can use nand/xor primitives, or avoid the extra fluff of concat/select
-            # wires that might be created implicitly as part of rtl_all/rtl_any.
+            # because we can use the xor primitive/save a gate when converting the nand, or avoid
+            # the extra fluff of concat/select wires that might be created implicitly as part of
+            # rtl_all/rtl_any.
             def convert_val(ix, val):
                 wire = twire(netio[ix])
                 if val == '0':
@@ -758,22 +762,25 @@ def _to_verilog_memories(file, block, varname):
     memories = {n.op_param[1] for n in block.logic_subset('m@')}
     for m in sorted(memories, key=lambda m: m.id):
         print('    // Memory mem_{}: {}'.format(m.id, m.name), file=file)
-        print('    always @(posedge clk)', file=file)
-        print('    begin', file=file)
-        for net in _net_sorted(block.logic_subset('@'), varname):
-            if net.op_param[1] == m:
+        writes = [net for net in _net_sorted(block.logic_subset('@'), varname)
+                  if net.op_param[1] == m]
+        if writes:
+            print('    always @(posedge clk)', file=file)
+            print('    begin', file=file)
+            for net in writes:
                 t = (varname(net.args[2]), net.op_param[0],
                      varname(net.args[0]), varname(net.args[1]))
                 print(('        if (%s) begin\n'
                        '            mem_%s[%s] <= %s;\n'
                        '        end') % t, file=file)
-        print('    end', file=file)
-        for net in _net_sorted(block.logic_subset('m'), varname):
-            if net.op_param[1] == m:
-                dest = varname(net.dests[0])
-                m_id = net.op_param[0]
-                index = varname(net.args[0])
-                print('    assign {:s} = mem_{}[{:s}];'.format(dest, m_id, index), file=file)
+            print('    end', file=file)
+        reads = [net for net in _net_sorted(block.logic_subset('m'), varname)
+                 if net.op_param[1] == m]
+        for net in reads:
+            dest = varname(net.dests[0])
+            m_id = net.op_param[0]
+            index = varname(net.args[0])
+            print('    assign {:s} = mem_{}[{:s}];'.format(dest, m_id, index), file=file)
         print('', file=file)
 
 
