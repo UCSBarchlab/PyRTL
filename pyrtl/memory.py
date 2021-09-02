@@ -166,6 +166,10 @@ class MemBlock(object):
         self.num_write_ports = 0
         self.writeport_nets = []
 
+    @property
+    def read_ports(self):
+        raise PyrtlError('read_ports now called num_read_ports for clarity')
+
     def __getitem__(self, item):
         """ Builds circuitry to retrieve an item from the memory """
         item = as_wires(item, bitwidth=self.addrwidth, truncating=False)

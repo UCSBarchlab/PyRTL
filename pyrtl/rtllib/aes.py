@@ -4,27 +4,30 @@ Currently this class only supports 128 bit AES encryption/decryption
 
 Example::
 
+    import pyrtl
+    from pyrtl.rtllib.aes import AES
+
     aes = AES()
     plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
     key = pyrtl.Input(bitwidth=128, name='aes_key')
     aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
-    reset = pyrtl.Input(1)
+    reset = pyrtl.Input(1, name='reset')
     ready = pyrtl.Output(1, name='ready')
-    ready_out, aes_cipher = aes.encryption_statem(plaintext, key, reset)
+    ready_out, aes_cipher = aes.encrypt_state_m(plaintext, key, reset)
     ready <<= ready_out
     aes_ciphertext <<= aes_cipher
     sim_trace = pyrtl.SimulationTrace()
     sim = pyrtl.Simulation(tracer=sim_trace)
     sim.step ({
-        aes_plaintext: 0x00112233445566778899aabbccddeeff,
-        aes_key: 0x000102030405060708090a0b0c0d0e0f,
-        reset: 1
+        'aes_plaintext': 0x00112233445566778899aabbccddeeff,
+        'aes_key': 0x000102030405060708090a0b0c0d0e0f,
+        'reset': 1
     })
     for cycle in range(1,10):
         sim.step ({
-            aes_plaintext: 0x00112233445566778899aabbccddeeff,
-            aes_key: 0x000102030405060708090a0b0c0d0e0f,
-            reset: 0
+            'aes_plaintext': 0x00112233445566778899aabbccddeeff,
+            'aes_key': 0x000102030405060708090a0b0c0d0e0f,
+            'reset': 0
         })
     sim_trace.render_trace(symbol_len=40, segment_size=1)
 

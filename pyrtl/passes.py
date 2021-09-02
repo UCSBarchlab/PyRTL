@@ -31,9 +31,12 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     """
     Return an optimized version of a synthesized hardware block.
 
-    :param Boolean update_working_block: Don't copy the block and optimize the
-        new block
+    :param bool update_working_block: Don't copy the block and optimize the
+        new block (defaults to True)
     :param Block block: the block to optimize (defaults to working block)
+    :param bool skip_sanity_check: Don't perform sanity checks on the block
+        before/during/after the optimization passes (defaults to False).
+        Sanity checks will always be performed if in debug mode.
 
     Note:
     optimize works on all hardware designs, both synthesized and non synthesized
@@ -45,8 +48,8 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     with set_working_block(block, no_sanity_check=True):
         if (not skip_sanity_check) or _get_debug_mode():
             block.sanity_check()
-        _remove_wire_nets(block)
-        _remove_slice_nets(block)
+        _remove_wire_nets(block, skip_sanity_check)
+        _remove_slice_nets(block, skip_sanity_check)
         constant_propagation(block, True)
         _remove_unlistened_nets(block)
         common_subexp_elimination(block)
@@ -73,7 +76,7 @@ class _ProducerList(object):
             return item
 
 
-def _remove_wire_nets(block):
+def _remove_wire_nets(block, skip_sanity_check=False):
     """ Remove all wire nodes from the block. """
 
     wire_src_dict = _ProducerList()
@@ -98,13 +101,13 @@ def _remove_wire_nets(block):
     # now update the block with the new logic and remove wirevectors
     block.logic = new_logic
     for dead_wirevector in wire_removal_set:
-        del block.wirevector_by_name[dead_wirevector.name]
-        block.wirevector_set.remove(dead_wirevector)
+        block.remove_wirevector(dead_wirevector)
 
-    block.sanity_check()
+    if (not skip_sanity_check) or _get_debug_mode():
+        block.sanity_check()
 
 
-def _remove_slice_nets(block):
+def _remove_slice_nets(block, skip_sanity_check=False):
     """ Remove all unneeded slice nodes from the block.
 
     Unneeded here means that the source and destination wires of a slice net are exactly
@@ -162,7 +165,8 @@ def _remove_slice_nets(block):
         del block.wirevector_by_name[dead_wirevector.name]
         block.wirevector_set.remove(dead_wirevector)
 
-    block.sanity_check()
+    if (not skip_sanity_check) or _get_debug_mode():
+        block.sanity_check()
 
 
 def constant_propagation(block, silence_unexpected_net_warnings=False):
@@ -446,6 +450,7 @@ def _remove_unused_wires(block, keep_inputs=True):
             PyrtlInternalError("Output wire, " + removed_wire.name + " not driven")
 
     block.wirevector_set = valid_wires
+    block.wirevector_by_name = {wire.name: wire for wire in valid_wires}
 
 # --------------------------------------------------------------------
 #    __           ___       ___  __     __
@@ -825,7 +830,8 @@ def direct_connect_outputs(block=None):
 
     block.logic.difference_update(nets_to_remove)
     block.logic.update(nets_to_add)
-    block.wirevector_set.difference_update(wirevectors_to_remove)
+    for w in wirevectors_to_remove:
+        block.remove_wirevector(w)
 
 
 def _make_tree(wire, block, curr_fanout):

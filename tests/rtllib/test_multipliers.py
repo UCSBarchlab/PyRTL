@@ -32,7 +32,7 @@ class TestSimpleMult(unittest.TestCase):
         m_prod, m_done = multipliers.simple_mult(a, b, reset)
         product <<= m_prod
         done <<= m_done
-        self.assertEquals(len(product), len_a + len_b)
+        self.assertEqual(len(product), len_a + len_b)
 
         xvals = [int(random.uniform(0, 2 ** len_a - 1)) for i in range(20)]
         yvals = [int(random.uniform(0, 2 ** len_b - 1)) for i in range(20)]
@@ -89,7 +89,7 @@ class TestComplexMult(unittest.TestCase):
         m_prod, m_done = multipliers.complex_mult(a, b, shifts, reset)
         product <<= m_prod
         done <<= m_done
-        self.assertEquals(len(product), len_a + len_b)
+        self.assertEqual(len(product), len_a + len_b)
 
         xvals = [int(random.uniform(0, 2 ** len_a - 1)) for i in range(20)]
         yvals = [int(random.uniform(0, 2 ** len_b - 1)) for i in range(20)]
@@ -129,7 +129,7 @@ class TestWallace(unittest.TestCase):
         product = pyrtl.Output(name="product")
         product <<= multipliers.tree_multiplier(a, b, **mult_args)
 
-        self.assertEquals(len(product), len_a + len_b)
+        self.assertEqual(len(product), len_a + len_b)
 
         # creating the testing values and the correct results
         xvals = [int(random.uniform(0, 2 ** len_a - 1)) for i in range(20)]
@@ -143,7 +143,7 @@ class TestWallace(unittest.TestCase):
             sim.step({a: xvals[cycle], b: yvals[cycle]})
 
         # Extracting the values and verifying correctness
-        multiplier_result = sim_trace.trace[product]
+        multiplier_result = sim_trace.trace[product.name]
         self.assertEqual(multiplier_result, true_result)
 
     def test_trivial_case(self):
@@ -211,7 +211,7 @@ class TestSignedTreeMult(unittest.TestCase):
         product = pyrtl.Output(name="product")
         product <<= multipliers.signed_tree_multiplier(a, b, **mult_args)
 
-        self.assertEquals(len(product), len_a + len_b)
+        self.assertEqual(len(product), len_a + len_b)
 
         # creating the testing values and the correct results
         bound_a = 2 ** (len_a - 1) - 1
@@ -231,7 +231,7 @@ class TestSignedTreeMult(unittest.TestCase):
 
         # Extracting the values and verifying correctness
         multiplier_result = [libutils.rev_twos_comp_repr(p, len(product))
-                             for p in sim_trace.trace[product]]
+                             for p in sim_trace.trace[product.name]]
         self.assertEqual(multiplier_result, true_result)
 
     def test_small_bitwidth_error(self):

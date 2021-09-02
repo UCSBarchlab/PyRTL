@@ -302,7 +302,7 @@ class SimStepMultipleBase(unittest.TestCase):
         out2 <<= in1 | in2
         self.inputs = {
             'in1': [0, 1, 3, 15, 14],
-            'in2': [6, 6, 6, 6, 6],
+            'in2': '66666',  # When a string, assumes each input is a single digit integer
         }
 
     def test_step_multiple_nsteps_no_inputs(self):
@@ -412,6 +412,25 @@ class SimStepMultipleBase(unittest.TestCase):
                           "in2   6  6  6  6  6\n"
                           "out1  7  8  6 10  9\n"
                           "out2  6  7  7 15 14\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_dont_care_expected(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        expected = {
+            'out1': [7, '?', 6, 10],
+            'out2': '6?7?',
+        }
+        sim.step_multiple(self.inputs, expected, nsteps=4)
+
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1   0  1  3 15\n"
+                          "in2   6  6  6  6\n"
+                          "out1  7  8  6 10\n"
+                          "out2  6  7  7 15\n")
         output = six.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
@@ -734,7 +753,7 @@ class MemBlockBase(unittest.TestCase):
                 self.write_data: 2 + i
             })
         # check consistency of memory_value_map assignment, insertion, and modification
-        self.assertEquals(sim.inspect_mem(self.mem1), {0: 0, 1: 2, 2: 3, 3: 3, 4: 4, 5: 5})
+        self.assertEqual(sim.inspect_mem(self.mem1), {0: 0, 1: 2, 2: 3, 3: 3, 4: 4, 5: 5})
 
     def test_mem_val_map_defaults(self):
         read_addr3 = pyrtl.Input(self.addrwidth)
@@ -829,7 +848,7 @@ class RegisterDefaultsBase(unittest.TestCase):
         pyrtl.reset_working_block()
         self.i = pyrtl.Input(bitwidth=3)
         self.r1 = pyrtl.Register(name='r1', bitwidth=3)
-        self.r2 = pyrtl.Register(name='r2', bitwidth=3)
+        self.r2 = pyrtl.Register(name='r2', bitwidth=3, reset_value=7)
         self.o = pyrtl.Output(name='o', bitwidth=3)
         self.r1.next <<= self.i
         self.r2.next <<= self.r1
@@ -845,17 +864,20 @@ class RegisterDefaultsBase(unittest.TestCase):
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
-    def test_default_value(self):
-        self.check_trace('o 55012345\n', default_value=5)
+    def test_reset_value(self):
+        self.check_trace('o 70012345\n')
 
-    def test_register_map(self):
+    def test_register_map_overrides_reset_value(self):
         self.check_trace('o 36012345\n', register_value_map={self.r1: 6, self.r2: 3})
 
     def test_partial_map(self):
-        self.check_trace('o 06012345\n', register_value_map={self.r1: 6})
+        self.check_trace('o 76012345\n', register_value_map={self.r1: 6})
 
-    def test_map_and_default(self):
-        self.check_trace('o 56012345\n', default_value=5, register_value_map={self.r1: 6})
+    def test_partial_map_overrides_default(self):
+        self.check_trace('o 76012345\n', default_value=5, register_value_map={self.r1: 6})
+
+    def test_default_used_for_non_reset_value(self):
+        self.check_trace('o 75012345\n', default_value=5)
 
 
 class RomBlockSimBase(unittest.TestCase):
@@ -1012,7 +1034,7 @@ class TraceErrorBase(unittest.TestCase):
         sim.step_multiple(provided_inputs={}, nsteps=10)
         with self.assertRaises(pyrtl.PyrtlError) as ex:
             sim.tracer.render_trace()
-        self.assertEquals(
+        self.assertEqual(
             str(ex.exception),
             "Empty trace list. This may have occurred because "
             "untraceable wires were removed prior to simulation, "

@@ -1,5 +1,6 @@
 import unittest
 import six
+import io
 
 import pyrtl
 from pyrtl.corecircuits import _basic_add
@@ -126,6 +127,106 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.r.next <<= self.r2
         self.r2.next <<= self.r + pyrtl.Const(2, bitwidth=self.bitwidth)
         self.check_trace(' r 00224466\nr2 02244660\n')
+
+
+class RenderTraceBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        a, b, c = pyrtl.input_list('a/8 b/8 c/1')
+        o = pyrtl.Output()
+        o <<= a + b - c
+
+    def check_rendered_trace(self, expected, **kwargs):
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'a': [1, 4, 9, 11, 12],
+            'b': [2, 23, 43, 120, 0],
+            'c': [0, 1, 1, 0, 1]
+        })
+        buff = io.StringIO()
+        sim.tracer.render_trace(file=buff, render_cls=pyrtl.simulation.AsciiWaveRenderer,
+                                extra_line=False, **kwargs)
+        self.assertEqual(buff.getvalue(), expected)
+
+    def test_hex_trace(self):
+        expected = (
+            "  -0                       \n"
+            "a 0x1  x0x4 x0x9 x0xb x0xc \n"
+            "b 0x2  x0x17x0x2bx0x78x0x0 \n"
+            "c _____/---------\\____/----\n"  # escaped backslash
+        )
+        self.check_rendered_trace(expected)
+
+    def test_oct_trace(self):
+        expected = (
+            "  -0                            \n"
+            "a 0o1   x0o4  x0o11 x0o13 x0o14 \n"
+            "b 0o2   x0o27 x0o53 x0o170x0o0  \n"
+            "c ______/-----------\\_____/-----\n"  # escaped backslash
+        )
+        self.check_rendered_trace(expected, repr_func=oct, symbol_len=None)
+
+    def test_bin_trace(self):
+        expected = (
+            "  -0                                                \n"
+            "a 0b1       x0b100    x0b1001   x0b1011   x0b1100   \n"
+            "b 0b10      x0b10111  x0b101011 x0b1111000x0b0      \n"
+            "c __________/-------------------\\_________/---------\n"  # escaped backslash
+        )
+        self.check_rendered_trace(expected, repr_func=bin, symbol_len=None)
+
+    def test_decimal_trace(self):
+        expected = (
+            "  -0                  \n"
+            "a 1   x4  x9  x11 x12 \n"
+            "b 2   x23 x43 x120x0  \n"
+            "c ____/-------\\___/---\n"  # escaped backslash
+        )
+        self.check_rendered_trace(expected, repr_func=str, symbol_len=None)
+
+
+class RenderTraceCustomBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_custom_repr_per_wire(self):
+        from enum import IntEnum
+
+        class Foo(IntEnum):
+            A = 0
+            B = 1
+            C = 2
+            D = 3
+
+        i = pyrtl.Input(4, 'i')
+        state = pyrtl.Register(max(Foo).bit_length(), name='state')
+        o = pyrtl.Output(name='o')
+        o <<= state
+
+        with pyrtl.conditional_assignment:
+            with i == 0b0001:
+                state.next |= Foo.A
+            with i == 0b0010:
+                state.next |= Foo.B
+            with i == 0b0100:
+                state.next |= Foo.C
+            with i == 0b1000:
+                state.next |= Foo.D
+
+        sim = pyrtl.Simulation()
+        sim.step_multiple({
+            'i': [1, 2, 4, 8, 0]
+        })
+        buff = io.StringIO()
+        sim.tracer.render_trace(file=buff, render_cls=pyrtl.simulation.AsciiWaveRenderer,
+                                extra_line=None, repr_per_name={'state': Foo}, symbol_len=None)
+        expected = (
+            "      -0                            \n"
+            "    i 0x1   x0x2  x0x4  x0x8  x0x0  \n"
+            "    o 0x0         x0x1  x0x2  x0x3  \n"
+            "state Foo.A       xFoo.BxFoo.CxFoo.D\n"
+        )
+        self.assertEqual(buff.getvalue(), expected)
 
 
 class PrintTraceBase(unittest.TestCase):
@@ -319,6 +420,48 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_outp)
 
+    def test_reset_value_in_reg(self):
+        r = pyrtl.Register(2, reset_value=2)
+        r.next <<= r + 1
+        o = pyrtl.Output(4, 'o')
+        o <<= r
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        sim.step_multiple(nsteps=7)
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), 'o 2301230\n')
+
+    def test_reset_value_overridden_in_simulation(self):
+        r = pyrtl.Register(2, reset_value=2)
+        r.next <<= r + 1
+        o = pyrtl.Output(4, 'o')
+        o <<= r
+
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace, register_value_map={r: 1})
+        sim.step_multiple(nsteps=7)
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), 'o 1230123\n')
+
+    def test_default_value_for_registers_without_reset_value(self):
+        r = pyrtl.Register(2, name='r', reset_value=3)
+        s = pyrtl.Register(2, name='s')
+        r.next <<= r + 1
+        s.next <<= s - 1
+        o = pyrtl.Output(4, 'o')
+        o <<= r + s
+
+        sim_trace = pyrtl.SimulationTrace()
+        # Should set default value for s only (since r has specified 'reset_value')
+        sim = self.sim(tracer=sim_trace, default_value=3)
+        sim.step_multiple(nsteps=7)
+        output = six.StringIO()
+        sim_trace.print_trace(output, compact=True)
+        self.assertEqual(output.getvalue(), 'o 6222622\nr 3012301\ns 3210321\n')
+
 
 class SimInputValidationBase(unittest.TestCase):
     def setUp(self):
@@ -409,7 +552,7 @@ class SimStepMultipleBase(unittest.TestCase):
         out2 <<= in1 | in2
         self.inputs = {
             'in1': [0, 1, 3, 15, 14],
-            'in2': [6, 6, 6, 6, 6],
+            'in2': '66666',  # When a string, assumes each input is a single digit integer
         }
 
     def test_step_multiple_nsteps_no_inputs(self):
@@ -521,6 +664,25 @@ class SimStepMultipleBase(unittest.TestCase):
                           "in2   6  6  6  6  6\n"
                           "out1  7  8  6 10  9\n"
                           "out2  6  7  7 15 14\n")
+        output = six.StringIO()
+        sim_trace.print_trace(output)
+        self.assertEqual(output.getvalue(), correct_output)
+
+    def test_step_multiple_dont_care_expected(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+
+        expected = {
+            'out1': [7, '?', 6, 10],
+            'out2': '6?7?',
+        }
+        sim.step_multiple(self.inputs, expected, nsteps=4)
+
+        correct_output = (" --- Values in base 10 ---\n"
+                          "in1   0  1  3 15\n"
+                          "in2   6  6  6  6\n"
+                          "out1  7  8  6 10\n"
+                          "out2  6  7  7 15\n")
         output = six.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
@@ -840,7 +1002,7 @@ class MemBlockBase(unittest.TestCase):
                 self.write_data: 2 + i
             })
         # check consistency of memory_value_map assignment, insertion, and modification
-        self.assertEquals(sim.inspect_mem(self.mem1), {0: 0, 1: 2, 2: 3, 3: 3, 4: 4, 5: 5})
+        self.assertEqual(sim.inspect_mem(self.mem1), {0: 0, 1: 2, 2: 3, 3: 3, 4: 4, 5: 5})
 
     def test_mem_val_map_defaults(self):
         read_addr3 = pyrtl.Input(self.addrwidth)

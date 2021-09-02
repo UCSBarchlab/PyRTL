@@ -89,7 +89,7 @@ def sim_and_ret_out(outwire, inwires, invals):
     :return: a list of values from the output wire simulation result
     """
     # Pulling the value of outwire straight from the log
-    return sim_and_ret_outws(inwires, invals)[outwire]
+    return sim_and_ret_outws(inwires, invals)[outwire.name]
 
 
 def sim_and_ret_outws(inwires, invals):

@@ -279,7 +279,7 @@ class Block(object):
         self.wirevector_by_name[wirevector.name] = wirevector
 
     def remove_wirevector(self, wirevector):
-        """ Remove a wirevector object to the block."""
+        """ Remove a wirevector object from the block."""
         self.wirevector_set.remove(wirevector)
         del self.wirevector_by_name[wirevector.name]
 
@@ -505,7 +505,6 @@ class Block(object):
         built according to the assumptions stated in the Block comments.
         """
 
-        # TODO: check that the wirevector_by_name is sane
         from .wire import Input, Const, Output
         from .helperfuncs import get_stack, get_stacks
 
@@ -529,9 +528,6 @@ class Block(object):
                              'or "const_" as a signal name because those are reserved for '
                              'internal use)' % repr(wirevector_names_list))
 
-        # check for dead input wires (not connected to anything)
-        all_input_and_consts = self.wirevector_subset((Input, Const))
-
         # The following line also checks for duplicate wire drivers
         wire_src_dict, wire_dst_dict = self.net_connections()
         dest_set = set(wire_src_dict.keys())
@@ -542,9 +538,12 @@ class Block(object):
             bad_wire_names = '\n    '.join(str(x) for x in connected_minus_allwires)
             raise PyrtlError('Unknown wires found in net:\n %s \n\n %s' % (bad_wire_names,
                              get_stacks(*connected_minus_allwires)))
+
+        all_input_and_consts = self.wirevector_subset((Input, Const))
+
+        # Check for wires that aren't connected to anything (inputs and consts can be unconnected)
         allwires_minus_connected = self.wirevector_set.difference(full_set)
         allwires_minus_connected = allwires_minus_connected.difference(all_input_and_consts)
-        #   ^ allow inputs and consts to be unconnected
         if len(allwires_minus_connected) > 0:
             bad_wire_names = '\n    '.join(str(x) for x in allwires_minus_connected)
             raise PyrtlError('Wires declared but not connected:\n %s \n\n %s' % (bad_wire_names,
@@ -560,6 +559,24 @@ class Block(object):
 
         # Check for async memories not specified as such
         self.sanity_check_memory_sync(wire_src_dict)
+
+        # Check that all mappings in wirevector_by_name are consistent
+        bad_wv_by_name = [w for n, w in self.wirevector_by_name.items() if n != w.name]
+        if bad_wv_by_name:
+            raise PyrtlInternalError('Wires with inconsistent entry in wirevector_by_name '
+                                     'dict: %s' % [w.name for w in bad_wv_by_name])
+
+        # Check that all wires are in wirevector_by_name
+        wv_by_name_set = set(self.wirevector_by_name.keys())
+        missing_wires = wirevector_names_set.difference(wv_by_name_set)
+        if missing_wires:
+            raise PyrtlInternalError('Missing entries in wirevector_by_name for the '
+                                     'following wires: %s' % missing_wires)
+
+        unknown_wires = wv_by_name_set.difference(wirevector_names_set)
+        if unknown_wires:
+            raise PyrtlInternalError('Unknown wires found in wirevector_by_name: %s'
+                                     % unknown_wires)
 
         if debug_mode:
             # Check for wires that are destinations of a logicNet, but are not outputs and are never

@@ -9,7 +9,7 @@ exclude_lines =
     pragma: no cover
 
     # ignore pass statements that are not run:
-    # sometimes you need them to make a block (especially for unittetsts)
+    # sometimes you need them to make a block (especially for unittests)
     # need to be really careful with this one because 'pass' shows up in other places as well
     \spass\s
     \spass$
@@ -28,4 +28,9 @@ exclude_lines =
 
 ignore_errors = True
 
-omit = .tox/*
+omit =
+    .tox/*
+    */tests/*
+    */ctypes/*
+    six.py
+    pyparsing.py

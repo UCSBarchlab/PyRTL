@@ -7,6 +7,7 @@ import re
 import numbers
 import collections
 import copy
+import six
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -52,7 +53,7 @@ class Simulation(object):
     }
 
     def __init__(
-            self, tracer=True, register_value_map=None, memory_value_map=None,
+            self, tracer=True, register_value_map={}, memory_value_map={},
             default_value=0, block=None):
         """ Creates a new circuit simulator.
 
@@ -61,14 +62,15 @@ class Simulation(object):
             passed, no tracer is instantiated (which is good for long running simulations).
             If the default (true) is passed, Simulation will create a new tracer automatically
             which can be referenced by the member variable .tracer
-        :param register_value_map: Defines the initial value for
-            the registers specified. Format: {Register: value}.
+        :param register_value_map: Defines the initial value for the registers specified;
+            overrides the registers's reset_value. Format: {Register: value}.
         :param memory_value_map: Defines initial values for many
             addresses in a single or multiple memory. Format: {Memory: {address: Value}}.
             Memory is a memory block, address is the address of a value
-        :param default_value: is the value that all unspecified registers and
-            memories will initialize to. If no default_value is specified, it will
-            use the value stored in the object (default to 0)
+        :param default_value: The value that all unspecified registers and
+            memories will initialize to (default 0). For registers, this is the value that
+            will be used if the particular register doesn't have a specified reset_value,
+            and isn't found in the register_value_map.
         :param block: the hardware block to be traced (which might be of type PostSynthesisBlock).
             defaults to the working block
 
@@ -94,20 +96,23 @@ class Simulation(object):
         self.tracer = tracer
         self._initialize(register_value_map, memory_value_map)
 
-    def _initialize(self, register_value_map=None, memory_value_map=None):
+    def _initialize(self, register_value_map={}, memory_value_map={}):
         """ Sets the wire, register, and memory values to default or as specified.
 
         :param register_value_map: is a map of {Register: value}.
         :param memory_value_map: is a map of maps {Memory: {address: Value}}.
-        :param default_value: is the value that all unspecified registers and memories will
-            default to. If no default_value is specified, it will use the value stored in the
-            object (default to 0)
+        :param default_value: is the value that all unspecified registers and
+            memories will initialize to (default 0). For registers, this is the value that
+            will be used if the particular register doesn't have a specified reset_value,
+            and isn't found in the register_value_map.
         """
         # set registers to their values
         reg_set = self.block.wirevector_subset(Register)
-        if register_value_map is not None:
-            for r in reg_set:
-                self.value[r] = self.regvalue[r] = register_value_map.get(r, self.default_value)
+        for r in reg_set:
+            rval = register_value_map.get(r, r.reset_value)
+            if rval is None:
+                rval = self.default_value
+            self.value[r] = self.regvalue[r] = rval
 
         # set constants to their set values
         for w in self.block.wirevector_subset(Const):
@@ -120,21 +125,20 @@ class Simulation(object):
             if memid not in self.memvalue:
                 self.memvalue[memid] = {}
 
-        if memory_value_map is not None:
-            for (mem, mem_map) in memory_value_map.items():
-                if isinstance(mem, RomBlock):
-                    raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
-                if isinstance(self.block, PostSynthBlock):
-                    mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
-                self.memvalue[mem.id] = mem_map
-                max_addr_val, max_bit_val = 2**mem.addrwidth, 2**mem.bitwidth
-                for (addr, val) in mem_map.items():
-                    if addr < 0 or addr >= max_addr_val:
-                        raise PyrtlError('error, address %s in %s outside of bounds' %
-                                         (str(addr), mem.name))
-                    if val < 0 or val >= max_bit_val:
-                        raise PyrtlError('error, %s at %s in %s outside of bounds' %
-                                         (str(val), str(addr), mem.name))
+        for (mem, mem_map) in memory_value_map.items():
+            if isinstance(mem, RomBlock):
+                raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
+            if isinstance(self.block, PostSynthBlock):
+                mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
+            self.memvalue[mem.id] = mem_map
+            max_addr_val, max_bit_val = 2**mem.addrwidth, 2**mem.bitwidth
+            for (addr, val) in mem_map.items():
+                if addr < 0 or addr >= max_addr_val:
+                    raise PyrtlError('error, address %s in %s outside of bounds' %
+                                     (str(addr), mem.name))
+                if val < 0 or val >= max_bit_val:
+                    raise PyrtlError('error, %s at %s in %s outside of bounds' %
+                                     (str(val), str(addr), mem.name))
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
@@ -224,7 +228,7 @@ class Simulation(object):
 
         :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
         :param expected_outputs: a dictionary mapping wirevectors to their expected values
-            for N steps
+            for N steps; use '?' to indicate you don't care what the value at that step is
         :param nsteps: number of steps to take (defaults to None, meaning step for each
             supplied input value)
         :param file: where to write the output (if there are unexpected outputs detected)
@@ -301,7 +305,10 @@ class Simulation(object):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
             for expvar in expected_outputs.keys():
-                expected = int(expected_outputs[expvar][i])
+                expected = expected_outputs[expvar][i]
+                if expected == '?':
+                    continue
+                expected = int(expected)
                 actual = self.inspect(expvar)
                 if expected != actual:
                     failed.append((i, expvar, expected, actual))
@@ -437,7 +444,7 @@ class FastSimulation(object):
     #  when put into the generated code
 
     def __init__(
-            self, register_value_map=None, memory_value_map=None,
+            self, register_value_map={}, memory_value_map={},
             default_value=0, tracer=True, block=None, code_file=None):
         """ Instantiates a Fast Simulation instance.
 
@@ -469,17 +476,17 @@ class FastSimulation(object):
         self.internal_names = _PythonSanitizer('_fastsim_tmp_')
         self._initialize(register_value_map, memory_value_map)
 
-    def _initialize(self, register_value_map=None, memory_value_map=None):
-        if register_value_map is None:
-            register_value_map = {}
-
+    def _initialize(self, register_value_map={}, memory_value_map={}):
         for wire in self.block.wirevector_set:
             self.internal_names.make_valid_string(wire.name)
 
         # set registers to their values
         reg_set = self.block.wirevector_subset(Register)
         for r in reg_set:
-            self.regs[r.name] = register_value_map.get(r, self.default_value)
+            rval = register_value_map.get(r, r.reset_value)
+            if rval is None:
+                rval = self.default_value
+            self.regs[r.name] = rval
 
         self._initialize_mems(memory_value_map)
 
@@ -497,12 +504,11 @@ class FastSimulation(object):
         self.sim_func = context['sim_func']
 
     def _initialize_mems(self, memory_value_map):
-        if memory_value_map is not None:
-            for (mem, mem_map) in memory_value_map.items():
-                if isinstance(mem, RomBlock):
-                    raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
-                name = self._mem_varname(mem)
-                self.mems[name] = mem_map
+        for (mem, mem_map) in memory_value_map.items():
+            if isinstance(mem, RomBlock):
+                raise PyrtlError('error, one or more of the memories in the map is a RomBlock')
+            name = self._mem_varname(mem)
+            self.mems[name] = mem_map
 
         for net in self.block.logic_subset('m@'):
             mem = net.op_param[1]
@@ -553,7 +559,7 @@ class FastSimulation(object):
 
         :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
         :param expected_outputs: a dictionary mapping wirevectors to their expected values
-            for N steps
+            for N steps; use '?' to indicate you don't care what the value at that step is
         :param nsteps: number of steps to take (defaults to None, meaning step for each
             supplied input value)
         :param file: where to write the output (if there are unexpected outputs detected)
@@ -625,12 +631,24 @@ class FastSimulation(object):
                 "any expected outputs must have a supplied value "
                 "each step of simulation")
 
+        def to_num(v):
+            if isinstance(v, six.string_types):
+                # Don't use infer_val_and_bitwidth because they aren't in
+                # Verilog-style format, but are instead in plain decimal.
+                return int(v)
+            # Don't just call int(v) on all of them since it's nice
+            # to retain class info if they were a subclass of int.
+            return v
+
         failed = []
         for i in range(nsteps):
-            self.step({w: int(v[i]) for w, v in provided_inputs.items()})
+            self.step({w: to_num(v[i]) for w, v in provided_inputs.items()})
 
             for expvar in expected_outputs.keys():
-                expected = int(expected_outputs[expvar][i])
+                expected = expected_outputs[expvar][i]
+                if expected == '?':
+                    continue
+                expected = int(expected)
                 actual = self.inspect(expvar)
                 if expected != actual:
                     failed.append((i, expvar, expected, actual))
@@ -874,33 +892,46 @@ class _WaveRendererBase(object):
         num_tick = self._tick + str(n)
         return num_tick.ljust(symbol_len * segment_size)
 
-    def render_val(self, w, n, current_val, symbol_len):
+    def render_val(self, w, n, current_val, symbol_len, repr_func, repr_per_name):
         if w is not self.prev_wire:
             self.prev_wire = w
             self.prior_val = current_val
-        out = self._render_val_with_prev(w, n, current_val, symbol_len)
+        out = self._render_val_with_prev(w, n, current_val, symbol_len, repr_func, repr_per_name)
         self.prior_val = current_val
         return out
 
-    def _render_val_with_prev(self, w, n, current_val, symbol_len):
+    def _render_val_with_prev(self, w, n, current_val, symbol_len, repr_func, repr_per_name):
         """Return a string encoding the given value in a waveform.
 
         :param w: The WireVector we are rendering to a waveform
         :param n: An integer from 0 to segment_len-1
         :param current_val: the value to be rendered
         :param symbol_len: and integer for how big to draw the current value
+        :param repr_func: function to use for representing the current_val;
+            examples are 'hex', 'oct', 'bin', 'str' (for decimal), or even the name
+            of an IntEnum class you know the value will belong to. Defaults to 'hex'.
+        :param repr_per_name: Map from signal name to a function that takes in the signal's
+            value and returns a user-defined representation. If a signal name is
+            not found in the map, the argument `repr_func` will be used instead.
 
         Returns a string of printed length symbol_len that will draw the
         representation of current_val.  The input prior_val is used to
         render transitions.
         """
+        def to_str(v):
+            f = repr_per_name.get(w.name)
+            if f is not None:
+                return str(f(v))
+            else:
+                return str(repr_func(v))
+
         sl = symbol_len - 1
         if len(w) > 1:
             out = self._revstart
             if current_val != self.prior_val:
-                out += self._x + hex(current_val).rstrip('L').ljust(sl)[:sl]
+                out += self._x + to_str(current_val).rstrip('L').ljust(sl)[:sl]
             elif n == 0:
-                out += hex(current_val).rstrip('L').ljust(symbol_len)[:symbol_len]
+                out += to_str(current_val).rstrip('L').ljust(symbol_len)[:symbol_len]
             else:
                 out += ' ' * symbol_len
             out += self._revstop
@@ -927,7 +958,7 @@ class AsciiWaveRenderer(_WaveRendererBase):
     _tick = '-'
     _up, _down = '/', '\\'
     _x, _low, _high = 'x', '_', '-'
-    _revstart, _revstop = ' ', ' '
+    _revstart, _revstop = '', ''
 
 
 def default_renderer():
@@ -1025,15 +1056,15 @@ class SimulationTrace(object):
             raise PyrtlError('error, simulation trace needs at least 1 signal to track '
                              '(by default, unnamed signals are not traced -- try either passing '
                              'a name to a WireVector or setting a "wirevector_subset" option)')
-        for wire in self.trace:
-            tracelist = self.trace[wire]
-            wirevec = self._wires[wire]
+        for wire_name in self.trace:
+            tracelist = self.trace[wire_name]
+            wirevec = self._wires[wire_name]
             tracelist.append(value_map[wirevec])
 
     def add_step_named(self, value_map):
-        for wire in value_map:
-            if wire in self.trace:
-                self.trace[wire].append(value_map[wire])
+        for wire_name in value_map:
+            if wire_name in self.trace:
+                self.trace[wire_name].append(value_map[wire_name])
 
     def add_fast_step(self, fastsim):
         """ Add the fastsim context to the trace. """
@@ -1128,7 +1159,8 @@ class SimulationTrace(object):
 
     def render_trace(
             self, trace_list=None, file=sys.stdout, render_cls=default_renderer(),
-            symbol_len=5, segment_size=5, segment_delim=' ', extra_line=True):
+            symbol_len=5, repr_func=hex, repr_per_name={}, segment_size=5,
+            segment_delim=' ', extra_line=True):
 
         """ Render the trace to a file using unicode and ASCII escape sequences.
 
@@ -1136,6 +1168,13 @@ class SimulationTrace(object):
         :param file: The place to write output, default to stdout.
         :param render_cls: A class that translates traces into output bytes.
         :param symbol_len: The "length" of each rendered cycle in characters.
+            If None, the length will be automatically set such that the largest
+            represented value fits.
+        :param repr_func: Function to use for representing each value in the trace;
+            examples are 'hex', 'oct', 'bin', and 'str' (for decimal). Defaults to 'hex'.
+        :param repr_per_name: Map from signal name to a function that takes in the signal's
+            value and returns a user-defined representation. If a signal name is
+            not found in the map, the argument `repr_func` will be used instead.
         :param segment_size: Traces are broken in the segments of this number of cycles.
         :param segment_delim: The character to be output between segments.
         :param extra_line: A Boolean to determine if we should print a blank line between signals.
@@ -1164,12 +1203,12 @@ class SimulationTrace(object):
         else:
             self.render_trace_to_text(
                 trace_list=trace_list, file=file, render_cls=render_cls,
-                symbol_len=symbol_len, segment_size=segment_size,
-                segment_delim=segment_delim, extra_line=extra_line)
+                symbol_len=symbol_len, repr_func=repr_func, repr_per_name=repr_per_name,
+                segment_size=segment_size, segment_delim=segment_delim, extra_line=extra_line)
 
     def render_trace_to_text(
             self, trace_list, file, render_cls,
-            symbol_len, segment_size, segment_delim, extra_line):
+            symbol_len, repr_func, repr_per_name, segment_size, segment_delim, extra_line):
 
         renderer = render_cls()
 
@@ -1183,7 +1222,9 @@ class SimulationTrace(object):
                     self._wires[wire],
                     i % segment_size,
                     trace[i],
-                    symbol_len)
+                    symbol_len,
+                    repr_func,
+                    repr_per_name)
             return heading + trace_line
 
         # default to printing all signals in sorted order
@@ -1201,6 +1242,20 @@ class SimulationTrace(object):
                 "Empty trace list. This may have occurred because "
                 "untraceable wires were removed prior to simulation, "
                 "if a CompiledSimulation was used.")
+
+        if symbol_len is None:
+
+            def to_str(v, name):
+                f = repr_per_name.get(name)
+                if f is not None:
+                    return str(f(v))
+                else:
+                    return str(repr_func(v))
+
+            maxvallen = 0
+            for name, trace in self.trace.items():
+                maxvallen = max(maxvallen, max(len(to_str(v, name)) for v in trace))
+            symbol_len = maxvallen + 1
 
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map
@@ -1227,7 +1282,7 @@ class SimulationTrace(object):
 
         :param default_value: Default value to be used for all registers and
             memory locations if not found in the other passed in maps
-        :param init_regvalue: Default value for registers
+        :param init_regvalue: Default value for all the registers
         :param init_memvvalue: Default value for memory locations of given maps
 
         This is needed when using this trace for outputting a Verilog testbench,

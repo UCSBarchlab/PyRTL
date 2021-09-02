@@ -37,7 +37,7 @@ class TestAreaEstimate(unittest.TestCase):
         atimesb <<= a * b
         memread <<= mem[0]
         mem[1] <<= a
-        self.assertEquals(pyrtl.area_estimation(), (0.00734386752, 0.01879779717361501))
+        self.assertEqual(pyrtl.area_estimation(), (0.00734386752, 0.01879779717361501))
 
     def test_area_est_unchanged_with_rom(self):
         a = pyrtl.Const(2, 8)
@@ -66,7 +66,7 @@ class TestAreaEstimate(unittest.TestCase):
         bminusa <<= a - b
         atimesb <<= a * b
         memread <<= mem[reg]
-        self.assertEquals(pyrtl.area_estimation(), (0.00734386752, 0.001879779717361501))
+        self.assertEqual(pyrtl.area_estimation(), (0.00734386752, 0.001879779717361501))
 
 
 class TestTimingEstimate(unittest.TestCase):
@@ -104,7 +104,7 @@ class TestTimingEstimate(unittest.TestCase):
         mem[1] <<= a
         timing = pyrtl.TimingAnalysis()
         self.assertEqual(timing.max_freq(), 610.2770657878676)
-        self.assertEquals(timing.max_length(), 1255.6000000000001)
+        self.assertEqual(timing.max_length(), 1255.6000000000001)
 
 
 class TestYosysInterface(unittest.TestCase):

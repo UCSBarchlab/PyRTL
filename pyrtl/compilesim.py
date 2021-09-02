@@ -86,14 +86,21 @@ class CompiledSimulation(object):
         self._remove_untraceable()
 
         self.default_value = default_value
-        self._regmap, self._memmap = register_value_map, memory_value_map
+        self._regmap = {}  # Updated below
+        self._memmap = memory_value_map
         self._uid_counter = 0
         self.varname = {}  # mapping from wires and memories to C variables
+
+        for r in self.block.wirevector_subset(Register):
+            rval = register_value_map.get(r, r.reset_value)
+            if rval is None:
+                rval = self.default_value
+            self._regmap[r] = rval
 
         # Passing the dictionary objects themselves since they aren't updated anywhere.
         # If that's ever not the case, will need to pass in deep copies of them like done
         # for the normal Simulation so we retain the initial values that had.
-        self.tracer._set_initial_values(default_value, register_value_map, memory_value_map)
+        self.tracer._set_initial_values(default_value, self._regmap, self._memmap)
 
         self._create_dll()
         self._initialize_mems()
@@ -130,7 +137,7 @@ class CompiledSimulation(object):
 
         :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
         :param expected_outputs: a dictionary mapping wirevectors to their expected values
-            for N steps
+            for N steps; use '?' to indicate you don't care what the value at that step is
         :param nsteps: number of steps to take (defaults to None, meaning step for each
             supplied input value)
         :param file: where to write the output (if there are unexpected outputs detected)
@@ -207,7 +214,10 @@ class CompiledSimulation(object):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
             for expvar in expected_outputs.keys():
-                expected = int(expected_outputs[expvar][i])
+                expected = expected_outputs[expvar][i]
+                if expected == '?':
+                    continue
+                expected = int(expected)
                 actual = self.inspect(expvar)
                 if expected != actual:
                     failed.append((i, expvar, expected, actual))
@@ -432,9 +442,11 @@ class CompiledSimulation(object):
             write('const uint64_t {name}[{limbs}] = {val};'.format(
                 limbs=self._limbs(w), name=vn, val=self._makeini(w, w.val)))
         elif isinstance(w, Register):
+            rval = self._regmap.get(w, w.reset_value)
+            if rval is None:
+                rval = self.default_value
             write('static uint64_t {name}[{limbs}] = {val};'.format(
-                limbs=self._limbs(w), name=vn,
-                val=self._makeini(w, self._regmap.get(w, self.default_value))))
+                limbs=self._limbs(w), name=vn, val=self._makeini(w, rval)))
         else:
             write('uint64_t {name}[{limbs}];'.format(limbs=self._limbs(w), name=vn))
 
