@@ -162,6 +162,25 @@ class TestPaths(unittest.TestCase):
         path_to_o2 = paths_from_a[o2]
         self.assertEqual(len(path_to_o2), 1)
 
+    def test_subset_of_all_paths(self):
+        i, j, k = pyrtl.input_list('i/2 j/3 k/4')
+        o, p = pyrtl.Output(), pyrtl.Output()
+        o <<= i & j
+        p <<= k - i
+
+        # Make sure passing in both set and list works
+        paths = pyrtl.paths([i, k], {o})
+        paths_from_i = paths[i]
+        self.assertNotIn(p, paths_from_i)  # Because p was not provided as target output
+        self.assertEqual(len(paths_from_i[o]), 1)  # One path from i to o
+        self.assertEqual(paths_from_i[o][0][0].op, 'c')
+        self.assertEqual(paths_from_i[o][0][1].op, '&')
+        self.assertEqual(paths_from_i[o][0][2].op, 'w')
+
+        paths_from_k = paths[k]
+        self.assertNotIn(p, paths_from_k)  # Because p was not provided as target output
+        self.assertEqual(len(paths_from_k[o]), 0)  # 0 paths from k to o
+
     def test_all_paths(self):
         a, b, c = pyrtl.input_list('a/2 b/4 c/1')
         o, p = pyrtl.output_list('o/4 p/2')
