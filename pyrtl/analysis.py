@@ -410,10 +410,10 @@ def yosys_area_delay(library, abc_cmd=None, leave_in_dir=None, block=None):
 def paths(src=None, dst=None, dst_nets=None, block=None):
     """ Get the list of paths from src to dst.
 
-    :param WireVector src: source wire(s) from which to trace your paths;
-        if None, will get paths from all Inputs
-    :param WireVector dst: destination wire(s) to which to trace your paths
-        if None, will get paths to all Outputs
+    :param Union[WireVector, Iterable[WireVector]] src: source wire(s) from which to
+        trace your paths; if None, will get paths from all Inputs
+    :param Union[WireVector, Iterable[WireVector]] dst: destination wire(s) to which to
+        trace your paths; if None, will get paths to all Outputs
     :param {WireVector: {LogicNet}} dst_nets: map from wire to set of nets where the
         wire is an argument; will compute it internally if not given via a
         call to pyrtl.net_connections()
@@ -448,10 +448,21 @@ def paths(src=None, dst=None, dst_nets=None, block=None):
         for output in block.wirevector_subset(cls=Output):
             dst_nets.pop(output, None)
 
-    src = block.wirevector_subset(cls=Input) if src is None else {src}
-    dst = block.wirevector_subset(cls=Output) if dst is None else {dst}
+    if src is None:
+        src = block.wirevector_subset(cls=Input)
+    elif isinstance(src, WireVector):
+        src = {src}
+    else:
+        src = set(src)
 
-    def paths_src_dst(src, dst, block=None):
+    if dst is None:
+        dst = block.wirevector_subset(cls=Output)
+    elif isinstance(dst, WireVector):
+        dst = {dst}
+    else:
+        dst = set(dst)
+
+    def paths_src_dst(src, dst):
         paths = []
 
         # Use DFS to get the paths [each a list of nets] from src wire to dst wire
