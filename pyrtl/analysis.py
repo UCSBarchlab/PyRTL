@@ -407,8 +407,34 @@ def yosys_area_delay(library, abc_cmd=None, leave_in_dir=None, block=None):
     return area, delay
 
 
+class PathsResult(dict):
+    def print(self, file=sys.stdout):
+        """ Pretty print the result of calling paths()
+
+        :param f: the open file to print to (defaults to stdout)
+        :return: None
+        """
+        # All this work, to make sure it's determinstic
+        def path_sort_key(path):
+            dst_names = [net.dests[0].name if net.dests else '' for net in path]
+            return (len(path), dst_names)
+
+        for start in sorted(self.keys(), key=lambda w: w.name):
+            print("From %s" % start.name, file=file)
+            for end in sorted(self[start].keys(), key=lambda w: w.name):
+                print("  To %s" % end.name, file=file)
+                paths = self[start][end]
+                if len(paths) > 0:
+                    for i, paths in enumerate(sorted(paths, key=path_sort_key)):
+                        print("    Path %d" % i, file=file)
+                        for path in paths:
+                            print("      %s" % str(path), file=file)
+                else:
+                    print("    (No paths)", file=file)
+
+
 def paths(src=None, dst=None, dst_nets=None, block=None):
-    """ Get the list of paths from src to dst.
+    """ Get the list of all paths from src to dst.
 
     :param Union[WireVector, Iterable[WireVector]] src: source wire(s) from which to
         trace your paths; if None, will get paths from all Inputs
@@ -420,7 +446,8 @@ def paths(src=None, dst=None, dst_nets=None, block=None):
     :param Block block: block to use (defaults to working block)
     :return: a map of the form {src_wire: {dst_wire: [path]}} for each src_wire in src
         (or all inputs if src is None), dst_wire in dst (or all outputs if dst is None),
-        where path is a list of nets
+        where path is a list of nets. This map is also an instance of PathsResult,
+        so you can call `print()` on it to pretty print it.
 
     You can provide dst_nets (the result of calling pyrtl.net_connections()), if you plan
     on calling this function repeatedly on a block that hasn't changed, to speed things up.
@@ -434,6 +461,11 @@ def paths(src=None, dst=None, dst_nets=None, block=None):
     to a given dst wire.
 
     If src and dst are both single wires, you still need to access the result via paths[src][dst].
+
+    This also finds and returns the loop paths in the case of registers or memories that feed into
+    themselves, i.e. paths[src][src] is not necessarily empty.
+
+    It does not distinguish between loops that include synchronous vs asynchronous memories.
     """
     block = working_block(block)
 
@@ -472,17 +504,36 @@ def paths(src=None, dst=None, dst_nets=None, block=None):
                 paths.append(curr_path)
             for dst_net in dst_nets.get(w, []):
                 # Avoid loops and the mem net (has no output wire)
-                if (dst_net not in curr_path) and (dst_net.op != '@'):
-                    dfs(dst_net.dests[0], curr_path + [dst_net])
+                if dst_net not in curr_path:
+                    if dst_net.op == '@':  # dests will be the read ports
+                        for read_net in dst_net.op_param[1].readport_nets:
+                            dfs(read_net.dests[0], curr_path + [dst_net, read_net])
+                    else:
+                        dfs(dst_net.dests[0], curr_path + [dst_net])
         dfs(src, [])
         return paths
 
     all_paths = collections.defaultdict(dict)
     for src_wire in src:
         for dst_wire in dst:
-            all_paths[src_wire][dst_wire] = paths_src_dst(src_wire, dst_wire)
+            paths = paths_src_dst(src_wire, dst_wire)
+            # Remove empty paths...
+            paths = list(filter(lambda x: len(x) > 0, paths))
+            # ...and those that are supersets of others (resulting from an inner loop).
+            if src_wire is not dst_wire:
+                paths = sorted(paths, key=lambda p: len(p), reverse=True)
+                keep = []
+                for i in range(len(paths)):
+                    # Check if there is a path in paths[i+1:] that is the suffix
+                    # of paths[i] (paths[i] is at least as large as each path in
+                    # paths[i+1:]). If so, paths[i] contains a loop since both start
+                    # at src_wire, so don't keep it.
+                    if not any(paths[i][-len(p):] == p for p in paths[i + 1:]):
+                        keep.append(paths[i])
+                paths = keep
+            all_paths[src_wire][dst_wire] = paths
 
-    return all_paths
+    return PathsResult(all_paths)
 
 
 def distance(src, dst, f, block=None):

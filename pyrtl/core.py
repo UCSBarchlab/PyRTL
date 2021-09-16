@@ -123,7 +123,8 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
 
         else:  # not in ipython
             if self.op in 'w~&|^n+-*<>=xcsr':
-                return "{} <-- {} -- {} {}".format(lhs, self.op, rhs, options)
+                options = ' ' + options if options else ''
+                return "{} <-- {} -- {}{}".format(lhs, self.op, rhs, options)
             elif self.op in 'm@':
                 memid, memblock = self.op_param
                 extrainfo = 'memid=' + str(memid)
