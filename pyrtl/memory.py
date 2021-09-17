@@ -43,7 +43,7 @@ class _MemIndexed(WireVector):
 
     The normal PyRTL user should never need to be aware that this class exists,
     hence the underscore in the name.  It presents a very similar interface to
-    wiresVectors (all of the normal wirevector operations should still work),
+    WireVectors (all of the normal wirevector operations should still work),
     but if you try to *set* the value with <<= or |= then it will generate a
     _MemAssignment object rather than the normal wire assignment.
     """
