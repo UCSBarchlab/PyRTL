@@ -1,6 +1,7 @@
 from __future__ import print_function, unicode_literals, absolute_import
 
 import unittest
+import io
 import pyrtl
 
 
@@ -113,10 +114,50 @@ class TestYosysInterface(unittest.TestCase):
         pyrtl.reset_working_block()
 
 
+paths_print_output = """\
+From i
+  To o
+    Path 0
+      tmp5/3W <-- - -- i/2I, tmp4/2W
+      tmp6/3W <-- | -- tmp2/3W, tmp5/3W
+      o/3O <-- w -- tmp6/3W
+    Path 1
+      tmp1/3W <-- c -- tmp0/1W, i/2I
+      tmp2/3W <-- & -- tmp1/3W, j/3I
+      tmp6/3W <-- | -- tmp2/3W, tmp5/3W
+      o/3O <-- w -- tmp6/3W
+  To p
+    Path 0
+      tmp8/4W <-- c -- tmp7/2W, i/2I
+      tmp9/5W <-- - -- k/4I, tmp8/4W
+      p/5O <-- w -- tmp9/5W
+From j
+  To o
+    Path 0
+      tmp2/3W <-- & -- tmp1/3W, j/3I
+      tmp6/3W <-- | -- tmp2/3W, tmp5/3W
+      o/3O <-- w -- tmp6/3W
+  To p
+    (No paths)
+From k
+  To o
+    (No paths)
+  To p
+    Path 0
+      tmp9/5W <-- - -- k/4I, tmp8/4W
+      p/5O <-- w -- tmp9/5W
+"""
+
+
 class TestPaths(unittest.TestCase):
 
     def setUp(self):
         pyrtl.reset_working_block()
+        # To compare textual consistency, need to make
+        # sure we're starting at the same index for all
+        # automatically created names.
+        pyrtl.wire._reset_wire_indexers()
+        pyrtl.memory._reset_memory_indexer()
 
     def test_one_path_to_one_output(self):
         a = pyrtl.Input(4, 'a')
@@ -181,6 +222,83 @@ class TestPaths(unittest.TestCase):
         self.assertNotIn(p, paths_from_k)  # Because p was not provided as target output
         self.assertEqual(len(paths_from_k[o]), 0)  # 0 paths from k to o
 
+    def test_paths_empty_src_and_dst_equal_with_no_other_logic(self):
+        i = pyrtl.Input(4, 'i')
+        paths = pyrtl.paths(i, i)
+        self.assertEqual(len(paths[i][i]), 0)
+
+    def test_paths_with_loop(self):
+        r = pyrtl.Register(1, 'r')
+        r.next <<= r & ~r
+        paths = pyrtl.paths(r, r)
+        self.assertEqual(len(paths[r][r]), 2)
+        p1, p2 = sorted(paths[r][r], key=lambda p: len(p), reverse=True)
+        self.assertEqual(len(p1), 3)
+        self.assertEqual(p1[0].op, '~')
+        self.assertEqual(p1[1].op, '&')
+        self.assertEqual(p1[2].op, 'r')
+        self.assertEqual(len(p2), 2)
+        self.assertEqual(p2[0].op, '&')
+        self.assertEqual(p2[1].op, 'r')
+
+    def test_paths_loop_and_input(self):
+        i = pyrtl.Input(1, 'i')
+        o = pyrtl.Output(1, 'o')
+        r = pyrtl.Register(1, 'r')
+        r.next <<= i & r
+        o <<= r
+        paths = pyrtl.paths(r, o)
+        self.assertEqual(len(paths[r][o]), 1)
+
+    def test_paths_loop_get_arbitrary_inner_wires(self):
+        w = pyrtl.WireVector(1, 'w')
+        y = w & pyrtl.Const(1)
+        w <<= ~y
+        paths = pyrtl.paths(w, y)
+        self.assertEqual(len(paths[w][y]), 1)
+        self.assertEqual(paths[w][y][0][0].op, '&')
+
+    def test_paths_no_path_exists(self):
+        i = pyrtl.Input(1, 'i')
+        o = pyrtl.Output(1, 'o')
+        o <<= ~i
+
+        w = pyrtl.WireVector(1, 'w')
+        y = w & pyrtl.Const(1)
+        w <<= ~y
+
+        paths = pyrtl.paths(w, o)
+        self.assertEqual(len(paths[w][o]), 0)
+
+    def test_paths_with_memory(self):
+        i = pyrtl.Input(4, 'i')
+        o = pyrtl.Output(8, 'o')
+        mem = pyrtl.MemBlock(8, 32, 'mem')
+        waddr = pyrtl.Input(32, 'waddr')
+        raddr = pyrtl.Input(32, 'raddr')
+        data = mem[raddr]
+        mem[waddr] <<= (i + ~data).truncate(8)
+        o <<= data
+
+        paths = pyrtl.paths(i, o)
+        path = paths[i][o][0]
+        self.assertEqual(path[0].op, 'c')
+        self.assertEqual(path[1].op, '+')
+        self.assertEqual(path[2].op, 's')
+        self.assertEqual(path[3].op, '@')
+        self.assertEqual(path[4].op, 'm')
+        self.assertEqual(path[5].op, 'w')
+
+        # TODO Once issue with _MemIndexed lookups is resolved,
+        #      these should be `data` instead of `data.wire`.
+        paths = pyrtl.paths(data.wire, data.wire)
+        path = paths[data.wire][data.wire][0]
+        self.assertEqual(path[0].op, '~')
+        self.assertEqual(path[1].op, '+')
+        self.assertEqual(path[2].op, 's')
+        self.assertEqual(path[3].op, '@')
+        self.assertEqual(path[4].op, 'm')
+
     def test_all_paths(self):
         a, b, c = pyrtl.input_list('a/2 b/4 c/1')
         o, p = pyrtl.output_list('o/4 p/2')
@@ -217,6 +335,17 @@ class TestPaths(unittest.TestCase):
         self.assertEqual(len(paths_c_to_o), 0)
         paths_c_to_p = paths[c][p]
         self.assertEqual(len(paths_c_to_p), 1)
+
+    def test_pretty_print(self):
+        i, j, k = pyrtl.input_list('i/2 j/3 k/4')
+        o, p = pyrtl.Output(name='o'), pyrtl.Output(name='p')
+        o <<= (i & j) | (i - 1)
+        p <<= k - i
+
+        paths = pyrtl.paths()
+        output = io.StringIO()
+        paths.print(file=output)
+        self.assertEqual(output.getvalue(), paths_print_output)
 
 
 class TestDistance(unittest.TestCase):
