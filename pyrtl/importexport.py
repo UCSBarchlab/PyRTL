@@ -14,13 +14,17 @@ import os
 import subprocess
 import six
 import sys
+import json
+import jsonschema
+import math
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, _NameSanitizer
+from .core import working_block, _NameSanitizer, LogicNet
 from .wire import WireVector, Input, Output, Const, Register, next_tempvar_name
 from .corecircuits import concat_list, rtl_all, rtl_any
-from .memory import RomBlock
+from .memory import RomBlock, MemBlock
 from .passes import two_way_concat, one_bit_selects
+from .hardwareSchema import hardwareSchema
 
 
 def _natural_sort_key(key):
@@ -428,6 +432,332 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
 
     top = Subcircuit(models[top_model], is_top=True, clk_set={clock_name}, block=block)
     instantiate(top)
+
+
+# ----------------------------------------------------------------
+#             __   __
+#          | |__  /  \  /\  /
+#        __|  __| \__/ /  \/
+#
+
+def input_from_json(jsonIn, block=None):
+    """ Read an open JSON file or string as input, updating the block
+        appropriately
+
+    :param jsonIn: An open JSON file or string to read
+    :param block: The block where the logic wil be added
+
+    This uses the json schema presented in hardwareSchema.py to validate
+    that the json being parsed is legal
+    Clarifications and other requirements are also documented in
+    hardwareSchema.py
+    """
+
+    block = working_block(block)
+    isString = isinstance(jsonIn, str)
+    if isString:
+        hardware = json.loads(jsonIn)
+    else:
+        hardware = json.load(jsonIn)
+
+    try:
+        jsonschema.validate(hardware, hardwareSchema())
+    except jsonschema.exceptions.ValidationError as e:
+        raise PyrtlError('Imported JSON failed validation')
+        return
+
+    _declare_components(hardware['module'], block)
+    _populate_block_logic(hardware['module'], block)
+    _populate_mem_ops(hardware['module']['memories'], block)
+
+
+def _declare_components(module, block=None):
+    for component in module['inputs']:
+        block.add_wirevector(Input(bitwidth=component['bitwidth'],
+                                   name=component['name']))
+    for component in module['outputs']:
+        block.add_wirevector(Output(bitwidth=component['bitwidth'],
+                                    name=component['name']))
+    for component in module['wires']:
+        if 'Constant value' in component.keys():
+            block.add_wirevector(Const(val=component['Constant value'],
+                                       bitwidth=component['bitwidth'],
+                                       name=component['name']))
+        else:
+            block.add_wirevector(WireVector(bitwidth=component['bitwidth'],
+                                            name=component['name']))
+    for component in module['registers']:
+        if 'rst val' in component['driver'].keys():
+            reset = component['driver']['rst val']
+        else:
+            reset = None
+        block.add_wirevector(Register(bitwidth=component['bitwidth'],
+                                      name=component['name'],
+                                      reset_value=reset))
+    _declare_memories(module['memories'], block)
+
+
+def _declare_memories(memList, block=None):
+    def _get_wire(name):
+        return block.get_wirevector_by_name(name)
+
+    for mem in memList:
+        addrwidth = int(math.log2(mem['size']))
+        if 'initial values' in mem.keys():
+            # Declare a ROM memory block
+            memblock = RomBlock(bitwidth=mem['bitwidth'],
+                                addrwidth=addrwidth,
+                                romdata=mem['initial values'],
+                                name=mem['name'],
+                                block=block)
+        else:
+            memblock = MemBlock(bitwidth=mem['bitwidth'],
+                                addrwidth=addrwidth,
+                                name=mem['name'],
+                                block=block)
+
+
+def _populate_block_logic(module, block=None):
+    def _get_wire(name):
+        return block.get_wirevector_by_name(name)
+
+    def _parse_op(dest, driver):
+        if "args" in driver.keys():
+            args = []
+            for name in driver['args']:
+                args.append(_get_wire(name))
+            op = driver['op'] if 'op' in driver.keys() else 'w'
+            if op == '?':
+                op = 'x'
+                net = LogicNet(op=op, op_param=None,
+                               args=(args[0], args[2], args[1]),
+                               dests=(_get_wire(dest),))
+            elif op == 'select bits':
+                op = 's'
+                args = _get_wire(driver['args'][0].split('[')[0])
+                op_param = []
+                for name in driver['args']:
+                    op_param.append(int(name.split('[')[1][0]) if
+                                    '[' in name else 0)
+                net = LogicNet(op=op, op_param=tuple(reversed(op_param)),
+                               args=(args,),
+                               dests=(_get_wire(dest),))
+            else:
+                if op == '==':
+                    op = '='
+                elif op == 'concat':
+                    op = 'c'
+                net = LogicNet(op=op, op_param=None, args=tuple(args),
+                               dests=(_get_wire(dest),))
+        else:
+            net = LogicNet(op='r', op_param=None,
+                           args=(_get_wire(driver['src']),),
+                           dests=(_get_wire(dest),))
+        block.add_net(net)
+
+    block = working_block(block)
+    # Skip inputs since they should not be driven
+    for component in module['outputs']:
+        _parse_op(component['name'], component['driver'])
+    for component in module['wires']:
+        if 'driver' in component.keys():
+            _parse_op(component['name'], component['driver'])
+    for component in module['registers']:
+        _parse_op(component['name'], component['driver'])
+
+
+def _populate_mem_ops(memList, block=None):
+    def _get_name(name):
+        return block.get_memblock_by_name(name)
+
+    def _get_wire(name):
+        return block.get_wirevector_by_name(name)
+
+    for mem in memList:
+        memblock = _get_name(mem['name'])
+        for read in mem['reads']:
+            net = LogicNet(op='m', op_param=(memblock.id, memblock),
+                           args=(_get_wire(read['addr']),),
+                           dests=(_get_wire(read['destination']),))
+            block.add_net(net)
+        for write in mem['writes']:
+            args = (_get_wire(write['addr']),
+                    _get_wire(write['data src']),
+                    _get_wire(write['w.e']) if 'w.e' in write.keys() else None)
+            net = LogicNet(op='@', op_param=(memblock.id, memblock),
+                           args=args, dests=())
+            block.add_net(net)
+
+
+def output_to_json(dest_file, block=None):
+    """ A function to walk the block and output simple JSON to an open file
+
+    :param dest_file: Open file where the JSON output will be written
+    :param block: Block to be walked and exported
+
+    For a detailed description of the JSON hardware description view the
+    hardwareSchema.py file
+    This file also provides a simple function that returns a schema for
+    validating JSON hardware descriptions using the jsonschema library
+    """
+    block = working_block(block)
+    file = dest_file
+    # Define the basic structure of the JSON here
+    output = {
+        "module": {
+            "name": "TopLevel",
+            "inputs": None,
+            "outputs": None,
+            "wires": None,
+            "registers": None,
+            "memories": None,
+        }
+    }
+    _populate_json_components(output['module'], block)
+    json.dump(output, file)
+
+
+def _populate_json_components(module, block):
+    def _extract_component_info(subset):
+        result = []
+        for component in _name_sorted(subset):
+            wire = {}
+            wire['name'] = component.name
+            wire["bitwidth"] = component.bitwidth
+            if component in block.wirevector_subset(Const):
+                wire["Constant value"] = component.val
+            elif component not in block.wirevector_subset(Register):
+                _populate_json_combinational(wire, block)
+            else:
+                _populate_json_sequential(wire, block)
+                pass
+            result.append(wire)
+        return result
+
+    def _extract_mem_info(memories):
+        result = []
+        usedMemNames = []
+        for m in sorted(memories, key=lambda m: m.id):
+            memInfo = {}
+            # Handles multiple memories with the same name
+            name = (m.name if m.name not in usedMemNames else
+                    m.name + '_%s' % m.id)
+            memInfo['name'] = name
+            usedMemNames.append(name)
+            memInfo['bitwidth'] = m.bitwidth
+            memInfo['size'] = 1 << m.addrwidth
+            if isinstance(m, RomBlock):
+                memInfo['initial values'] = []
+                for i in range(1 << m.addrwidth):
+                    memInfo['initial values'].append(m._get_read_data(i))
+            reads = [net for net in _net_sorted(block.logic_subset('m'))
+                     if net.op_param[1] == m]
+            readsList = []
+            for net in reads:
+                readOp = {}
+                readOp['destination'] = net.dests[0].name
+                readOp['addr'] = net.args[0].name
+                readsList.append(readOp)
+            memInfo['reads'] = readsList
+            writes = [net for net in _net_sorted(block.logic_subset('@'))
+                      if net.op_param[1] == m]
+            writesList = []
+            for net in writes:
+                writeOp = {}
+                writeOp['addr'] = net.args[0].name
+                writeOp['data src'] = net.args[1].name
+                if net.args[2].name is not None:
+                    writeOp['w.e'] = net.args[2].name
+                writesList.append(writeOp)
+            memInfo['writes'] = writesList
+            result.append(memInfo)
+            # Use the same naming convention as verilog
+        return result
+
+    components = _json_block_parts(block)
+    module["inputs"] = _extract_component_info(components[0])
+    module["outputs"] = _extract_component_info(components[1])
+    module["wires"] = _extract_component_info(components[2])
+    module["registers"] = _extract_component_info(components[3])
+    module["memories"] = _extract_mem_info(components[4])
+
+
+def _populate_json_combinational(component, block):
+    for net in _net_sorted(block.logic):
+        if not net.dests:
+            continue
+        elif net.dests[0].name == component['name']:
+            if net.op in 'w~':  # Unary op
+                opstr = '' if net.op == 'w' else net.op
+                logicOp = {}
+                if opstr != '':
+                    logicOp['op'] = opstr
+                logicOp['args'] = [net.args[0].name]
+                component['driver'] = logicOp
+            elif net.op in '&|^+-*<>':  # binary ops
+                logicOp = {}
+                logicOp['op'] = net.op
+                logicOp['args'] = (net.args[0].name, net.args[1].name)
+                component['driver'] = logicOp
+            elif net.op == '=':
+                logicOp = {}
+                logicOp['op'] = "=="
+                logicOp['args'] = (net.args[0].name, net.args[1].name)
+                component['driver'] = logicOp
+            elif net.op == 'x':
+                # note that the argument order for 'x' is reversed
+                # from the ternary operator
+                logicOp = {}
+                logicOp['op'] = "?"
+                logicOp['args'] = [net.args[0].name, net.args[2].name,
+                                   net.args[1].name]
+                component['driver'] = logicOp
+            elif net.op == 'c':
+                logicOp = {}
+                logicOp['op'] = "concat"
+                args = []
+                for w in net.args:
+                    args.append(w.name)
+                logicOp['args'] = args
+                component['driver'] = logicOp
+            elif net.op == 's':
+                # Using the same handling of scalars as the verilog export
+                logicOp = {}
+                logicOp['op'] = "select bits"
+                args = []
+                for j in reversed(net.op_param):
+                    args.append(net.args[0].name + '[%s]' % str(j) if
+                                len(net.args[0]) > 1 else net.args[0].name)
+                logicOp['args'] = args
+                component['driver'] = logicOp
+            elif net.op in 'rm@':
+                pass  # do nothing for registers and memories
+            else:
+                raise PyrtlInternalError("nets with op '{}' not supported".
+                                         format(net.op))
+
+
+def _populate_json_sequential(component, block):
+    if not block.logic_subset(op='r'):
+        return
+
+    for net in _net_sorted(block.logic):
+        if net.op == 'r' and net.dests[0].name == component['name']:
+            logicOp = {}
+            logicOp['src'] = net.args[0].name
+            # Implicitly add a reset value to all sequential logic
+            logicOp['rst val'] = (net.dests[0].reset_value if
+                                  net.dests[0].reset_value is not None else 0)
+            component['driver'] = logicOp
+
+
+def _json_block_parts(block):
+    inputs = block.wirevector_subset(Input)
+    outputs = block.wirevector_subset(Output)
+    registers = block.wirevector_subset(Register)
+    wires = block.wirevector_subset() - (inputs | outputs | registers)
+    memories = {n.op_param[1] for n in block.logic_subset('m@')}
+    return inputs, outputs, wires, registers, memories
 
 
 # ----------------------------------------------------------------

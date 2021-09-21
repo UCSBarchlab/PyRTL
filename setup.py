@@ -9,7 +9,7 @@ setup(
     author_email =  'sherwood@cs.ucsb.edu',
     url =  'http://ucsbarchlab.github.io/PyRTL/',
     download_url = 'https://github.com/UCSBarchlab/PyRTL/tarball/0.10.1',  #VERSION
-    install_requires =  ['six'],
+    install_requires =  ['six', 'jsonschema'],
     tests_require =  ['tox','nose'],
     extras_require =  {
         'blif parsing': ['pyparsing']
