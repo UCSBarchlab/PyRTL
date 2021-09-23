@@ -656,5 +656,83 @@ class TestMemAsyncCheck(unittest.TestCase):
             pyrtl.working_block().sanity_check()
 
 
+class TestNetConnections(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_net_connections_should_be_empty_at_start(self):
+        src_nets, dst_nets = pyrtl.working_block().net_connections()
+        self.assertDictEqual(src_nets, {})
+        self.assertDictEqual(dst_nets, {})
+
+    def test_net_connections_normal(self):
+        i, j = pyrtl.input_list('i/3 j/4')
+        r = pyrtl.Register(8, 'r')
+        o = pyrtl.Output(name='o')
+        r.next <<= i * 2 + j
+        o <<= r - 1
+
+        for include_virtual in (False, True):
+            src_nets, dst_nets = pyrtl.working_block().net_connections(
+                include_virtual_nodes=include_virtual)
+            if include_virtual:
+                self.assertIn(i, src_nets)
+                self.assertIn(j, src_nets)
+                self.assertIn(o, dst_nets)
+            else:
+                self.assertNotIn(i, src_nets)
+                self.assertNotIn(j, src_nets)
+                self.assertNotIn(o, dst_nets)
+
+            self.assertIn(o, src_nets)
+            self.assertIn(r, src_nets)
+            self.assertIn(i, dst_nets)
+            self.assertIn(j, dst_nets)
+            self.assertIn(r, dst_nets)
+
+    def test_net_connections_with_memblock(self):
+        waddr = pyrtl.Input(32, 'waddr')
+        raddr = pyrtl.Input(32, 'raddr')
+        mem = pyrtl.MemBlock(8, 32, 'mem')
+        data = mem[raddr]
+        mem[waddr] <<= (data + pyrtl.Const(1, 8)).truncate(8)
+
+        src_nets, dst_nets = pyrtl.working_block().net_connections()
+        self.assertNotIn(data, src_nets)
+        self.assertNotIn(data, dst_nets)
+        self.assertIn(data.wire, src_nets)
+        self.assertIn(data.wire, dst_nets)
+        self.assertEqual(src_nets[data.wire].op, 'm')
+        self.assertEqual(dst_nets[data.wire][0].op, '+')
+
+        with self.assertRaises(pyrtl.PyrtlError) as ex:
+            _s = src_nets[data]
+        self.assertEqual(
+            str(ex.exception),
+            "Cannot look up a _MemIndexed object's source or destination net. "
+            "Try using its '.wire' attribute as the lookup key instead."
+        )
+
+        with self.assertRaises(pyrtl.PyrtlError) as ex:
+            _s = dst_nets[data]
+        self.assertEqual(
+            str(ex.exception),
+            "Cannot look up a _MemIndexed object's source or destination net. "
+            "Try using its '.wire' attribute as the lookup key instead."
+        )
+
+    def test_wire_not_in_net_connections(self):
+        w = pyrtl.WireVector()
+        i = pyrtl.Input(4, 'i')
+        o = pyrtl.Output(name='o')
+        o <<= i * 2
+        src_nets, dst_nets = pyrtl.working_block().net_connections()
+        with self.assertRaises(KeyError):
+            src_nets[w]
+
+        with self.assertRaises(KeyError):
+            dst_nets[w]
+
+
 if __name__ == "__main__":
     unittest.main()

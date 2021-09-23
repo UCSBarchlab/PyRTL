@@ -407,6 +407,23 @@ class Block(object):
         else:
             return None
 
+    class _NetConnectionsDict(dict):
+        """ Dictionary wrapper for returning the results of the enclosing function.
+
+        User doesn't need to know about this class; it's only for delivering a
+        nice error message when _MemIndexed is used as a lookup key.
+        """
+        def __missing__(self, key):
+            from .memory import _MemIndexed
+
+            if isinstance(key, _MemIndexed):
+                raise PyrtlError(
+                    "Cannot look up a _MemIndexed object's source or destination net. "
+                    "Try using its '.wire' attribute as the lookup key instead."
+                )
+            else:
+                raise KeyError(key)
+
     def net_connections(self, include_virtual_nodes=False):
         """ Returns a representation of the current block useful for creating a graph.
 
@@ -457,7 +474,8 @@ class Block(object):
                 add_wire_dst(arg, net)
             for dest in net.dests:
                 add_wire_src(dest, net)
-        return src_list, dst_list
+
+        return Block._NetConnectionsDict(src_list), Block._NetConnectionsDict(dst_list)
 
     def _repr_svg_(self):
         """ IPython display support for Block. """
