@@ -4,6 +4,7 @@ import io
 import sys
 import six
 import pyrtl
+import json
 from pyrtl.importexport import _VerilogSanitizer
 from pyrtl.rtllib import testingutils as utils
 
@@ -2542,6 +2543,282 @@ class TestInputISCASBench(unittest.TestCase):
 
         self.check_io(pyrtl.Input, ['G1', 'G2', 'G3'])
         self.check_io(pyrtl.Output, ['tmp3', 'G4'])
+
+
+json_empty_block = \
+    """
+    {
+        "module": {
+            "name": "TopLevel",
+            "inputs": [],
+            "outputs": [],
+            "wires": [],
+            "registers": [],
+            "memories": []
+        }
+    }
+    """
+
+json_simple_add = \
+    """
+    {
+        "module": {
+            "name": "TopLevel",
+            "inputs": [
+                {
+                    "name": "in1",
+                    "bitwidth": 1
+                },
+                {
+                    "name": "in2",
+                    "bitwidth": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "out1",
+                    "bitwidth": 2,
+                    "driver": {
+                        "op": "+",
+                        "args": [
+                            "in1",
+                            "in2"
+                        ]
+                    }
+                }
+            ],
+            "wires": [],
+            "registers": [],
+            "memories": []
+        }
+    }
+    """
+
+json_mem_ops = \
+    """
+{
+    "module": {
+        "name": "TopLevel",
+        "inputs": [
+            {
+                "name": "rom_in",
+                "bitwidth": 4
+            },
+            {
+                "name": "rom_in_2",
+                "bitwidth": 4
+            }
+        ],
+        "outputs": [
+            {
+                "name": "cmp_out",
+                "bitwidth": 1,
+                "driver": {
+                    "op": "w",
+                    "args": [
+                        "tmp15"
+                    ]
+                }
+            },
+            {
+                "name": "rom_out_1",
+                "bitwidth": 5,
+                "driver": {
+                    "op": "w",
+                    "args": [
+                        "tmp13"
+                    ]
+                }
+            },
+            {
+                "name": "rom_out_2",
+                "bitwidth": 5,
+                "driver": {
+                    "op": "w",
+                    "args": [
+                        "tmp14"
+                    ]
+                }
+            },
+            {
+                "name": "rom_out_3",
+                "bitwidth": 5,
+                "driver": {
+                    "op": "w",
+                    "args": [
+                        "tmp12"
+                    ]
+                }
+            }
+        ],
+        "wires": [
+            {
+                "name": "tmp12",
+                "bitwidth": 5
+            },
+            {
+                "name": "tmp13",
+                "bitwidth": 5
+            },
+            {
+                "name": "tmp14",
+                "bitwidth": 5
+            },
+            {
+                "name": "tmp15",
+                "bitwidth": 1,
+                "driver": {
+                    "op": "==",
+                    "args": [
+                        "tmp13",
+                        "tmp14"
+                    ]
+                }
+            }
+        ],
+        "registers": [],
+        "memories": [
+            {
+                "name": "mem",
+                "bitwidth": 5,
+                "size": 16,
+                "initial values": [
+                    {
+                        "start addr": 0,
+                        "values": [
+                            31,
+                            29,
+                            27,
+                            25,
+                            23,
+                            21,
+                            19,
+                            17,
+                            15,
+                            13,
+                            11,
+                            9,
+                            7,
+                            5,
+                            3,
+                            1
+                        ]
+                    }
+                ],
+                "reads": [
+                    {
+                        "destination": "tmp13",
+                        "addr": "rom_in"
+                    }
+                ],
+                "writes": []
+            },
+            {
+                "name": "mem_1",
+                "bitwidth": 5,
+                "size": 16,
+                "initial values": [
+                    {
+                        "start addr": 0,
+                        "values": [
+                            31,
+                            29,
+                            27,
+                            25,
+                            23,
+                            21,
+                            19,
+                            17,
+                            15,
+                            13,
+                            11,
+                            9,
+                            7,
+                            5,
+                            3,
+                            1
+                        ]
+                    }
+                ],
+                "reads": [
+                    {
+                        "destination": "tmp12",
+                        "addr": "rom_in_2"
+                    },
+                    {
+                        "destination": "tmp14",
+                        "addr": "rom_in"
+                    }
+                ],
+                "writes": []
+            }
+        ]
+    }
+}
+"""
+
+
+class testJSONImportExport(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        pyrtl.wire._reset_wire_indexers()
+        pyrtl.memory._reset_memory_indexer()
+
+    def test_empty_module(self):
+        pyrtl.input_from_json(json_empty_block)
+        block = pyrtl.working_block()
+        # Check wirevectors is an empty set
+        self.assertEqual(block.wirevector_subset(), set())
+
+    def test_simple_add(self):
+        pyrtl.input_from_json(json_simple_add)
+        block = pyrtl.working_block()
+        input1 = block.get_wirevector_by_name('in1')
+        self.assertIsNotNone(input1)
+        self.assertEquals(input1.bitwidth, 1)
+        self.assertIn(input1, block.wirevector_subset(pyrtl.Input))
+        input2 = block.get_wirevector_by_name('in2')
+        self.assertIsNotNone(input2)
+        self.assertEquals(input2.bitwidth, 1)
+        self.assertIn(input2, block.wirevector_subset(pyrtl.Input))
+        output = block.get_wirevector_by_name('out1')
+        self.assertIsNotNone(output)
+        self.assertEquals(output.bitwidth, 2)
+        self.assertIn(output, block.wirevector_subset(pyrtl.Output))
+        logic = block.logic_subset()
+        self.assertEqual(len(logic), 1)
+        for net in logic:
+            self.assertEqual(net.op, '+')
+
+    def test_import_export_match(self):
+        # Check that the import and export functions match
+        pyrtl.input_from_json(json_mem_ops)
+        tbfile = io.StringIO()
+        pyrtl.output_to_json(tbfile)
+        self.assertEqual(json.loads(tbfile.getvalue()), json.loads(json_mem_ops))
+
+    def test_export_mem(self):
+        mem = pyrtl.MemBlock(bitwidth=32, addrwidth=3, name='mem')
+        out = pyrtl.Output(32, 'out')
+        raddr = pyrtl.Input(3, 'raddr')
+        waddr = pyrtl.Input(3, 'waddr')
+        we = pyrtl.Input(1, 'we')
+        wdata = pyrtl.Input(32, 'wdata')
+        out <<= mem[raddr]
+        mem[waddr] <<= pyrtl.MemBlock.EnabledWrite(wdata, we)
+        tbfile = io.StringIO()
+        pyrtl.output_to_json(tbfile)
+        jsonOut = json.loads(tbfile.getvalue())
+        self.assertIsNotNone(jsonOut['module']['memories'][0])
+        memory = jsonOut['module']['memories'][0]
+        self.assertEquals(memory['name'], 'mem')
+        self.assertIsNotNone(memory['reads'][0])
+        readOp = memory['reads'][0]
+        self.assertEquals(readOp['addr'], 'raddr')
+        self.assertIsNotNone(memory['writes'][0])
+        writeOp = memory['writes'][0]
+        self.assertEquals(writeOp['addr'], 'waddr')
+        self.assertEquals(writeOp['w.e'], 'we')
 
 
 if __name__ == "__main__":
