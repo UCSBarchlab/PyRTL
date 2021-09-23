@@ -1,9 +1,11 @@
 
-def hardwareSchema():
+def hardware_schema():
     ''' This function holds the schemas to check that any json hardware
         representation conforms to the same requirements
 
-        All components except for inputs should have some driving logic
+        All components except for inputs should have some driver
+        If the driving logic comes from a memory operation it is listed
+        under the memory's read operations
         If the driving logic does not list an operation it is a simple
         assignment operation (destination = argument)
 
@@ -29,7 +31,12 @@ def hardwareSchema():
         "type": "integer"
     }
 
-    componentSchema = {
+    inputSchema = {
+        "name": nameSchema,
+        "bitwidth": bitwidthSchema
+    }
+
+    wireSchema = {
         "name": nameSchema,
         "bitwidth": bitwidthSchema,
         "Constant value": {
@@ -53,16 +60,26 @@ def hardwareSchema():
                         "type": "string"
                     }
                 },
-                "src": {
-                    "description": "The component input into a register",
-                    "type": "string"
-                },
-                "rst val": {
-                    "description": "If this is a register, this lists what it should be reset to",
-                    "type": "integer"
-                }
-            }
+            },
+            "required": ["op", "args"]
         }
+    }
+
+    regSchema = {
+        "name": nameSchema,
+        "bitwidth": bitwidthSchema,
+        "Constant value": {
+            "description": "If this is a constant this field holds its constant value",
+            "type": "integer"
+        },
+        "src": {
+            "description": "The component input into a register",
+            "type": "string"
+        },
+        "rst val": {
+            "description": "If this is a register, this lists what it should be reset to",
+            "type": "integer"
+        },
     }
 
     memorySchema = {
@@ -78,7 +95,24 @@ def hardwareSchema():
             "items": {
                 "description": """The index in the list is the memory address each
                                   intial value maps to""",
-                "type": "integer"
+                "type": "object",
+                "properties": {
+                    "start addr": {
+                        "description": "Beginning address for the list of initial values",
+                        "type": "integer"
+                    },
+                    "values": {
+                        "description": """"list of the initial values, each index is
+                                           an offset from the start addr""",
+                        "type": "array",
+                        "items": {
+                            "description": """Inital value for memory address
+                                              [start addr + list index]""",
+                            "type": "integer"
+                        }
+                    }
+                },
+                "required": ["start addr", "values"]
             }
         },
         "reads": {
@@ -147,7 +181,7 @@ def hardwareSchema():
                         "items": {
                             "description": "An input into the module",
                             "type": "object",
-                            "properties": componentSchema,
+                            "properties": inputSchema,
                             "required": ["name", "bitwidth"]
                         },
                         "uniqueItems": True
@@ -158,7 +192,7 @@ def hardwareSchema():
                         "items": {
                             "description": "An output of the module",
                             "type": "object",
-                            "properties": componentSchema,
+                            "properties": wireSchema,
                             "required": ["name", "bitwidth", "driver"]
                         },
                         "uniqueItems": True
@@ -169,7 +203,7 @@ def hardwareSchema():
                         "items": {
                             "description": "A wire in the module",
                             "type": "object",
-                            "properties": componentSchema,
+                            "properties": wireSchema,
                             "required": ["name", "bitwidth"]
                         },
                         "uniqueItems": True
@@ -180,8 +214,8 @@ def hardwareSchema():
                         "items": {
                             "description": "A register in the module",
                             "type": "object",
-                            "properties": componentSchema,
-                            "required": ["name", "bitwidth", "driver"]
+                            "properties": regSchema,
+                            "required": ["name", "bitwidth", "src"]
                         },
                         "uniqueItems": True
                     },

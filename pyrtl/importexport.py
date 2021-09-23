@@ -24,7 +24,7 @@ from .wire import WireVector, Input, Output, Const, Register, next_tempvar_name
 from .corecircuits import concat_list, rtl_all, rtl_any
 from .memory import RomBlock, MemBlock
 from .passes import two_way_concat, one_bit_selects
-from .hardwareSchema import hardwareSchema
+from .hardwareschema import hardware_schema
 
 
 def _natural_sort_key(key):
@@ -447,10 +447,10 @@ def input_from_json(jsonIn, block=None):
     :param jsonIn: An open JSON file or string to read
     :param block: The block where the logic wil be added
 
-    This uses the json schema presented in hardwareSchema.py to validate
+    This uses the json schema presented in hardwareschema.py to validate
     that the json being parsed is legal
     Clarifications and other requirements are also documented in
-    hardwareSchema.py
+    hardwareschema.py
     """
 
     block = working_block(block)
@@ -461,7 +461,7 @@ def input_from_json(jsonIn, block=None):
         hardware = json.load(jsonIn)
 
     try:
-        jsonschema.validate(hardware, hardwareSchema())
+        jsonschema.validate(hardware, hardware_schema())
     except jsonschema.exceptions.ValidationError as e:
         raise PyrtlError('Imported JSON failed validation')
         return
@@ -487,8 +487,8 @@ def _declare_components(module, block=None):
             block.add_wirevector(WireVector(bitwidth=component['bitwidth'],
                                             name=component['name']))
     for component in module['registers']:
-        if 'rst val' in component['driver'].keys():
-            reset = component['driver']['rst val']
+        if 'rst val' in component.keys():
+            reset = component['rst val']
         else:
             reset = None
         block.add_wirevector(Register(bitwidth=component['bitwidth'],
@@ -504,10 +504,16 @@ def _declare_memories(memList, block=None):
     for mem in memList:
         addrwidth = int(math.log2(mem['size']))
         if 'initial values' in mem.keys():
+            valueDict = {}
+            for group in mem['initial values']:
+                offset = 0
+                for i in group['values']:
+                    valueDict[group['start addr'] + offset] = i
+                    offset = offset + 1
             # Declare a ROM memory block
             memblock = RomBlock(bitwidth=mem['bitwidth'],
                                 addrwidth=addrwidth,
-                                romdata=mem['initial values'],
+                                romdata=valueDict,
                                 name=mem['name'],
                                 block=block)
         else:
@@ -549,10 +555,13 @@ def _populate_block_logic(module, block=None):
                     op = 'c'
                 net = LogicNet(op=op, op_param=None, args=tuple(args),
                                dests=(_get_wire(dest),))
-        else:
-            net = LogicNet(op='r', op_param=None,
-                           args=(_get_wire(driver['src']),),
-                           dests=(_get_wire(dest),))
+
+        block.add_net(net)
+
+    def _parse_reg(dest, component):
+        net = LogicNet(op='r', op_param=None,
+                       args=(_get_wire(component['src']),),
+                       dests=(_get_wire(dest),))
         block.add_net(net)
 
     block = working_block(block)
@@ -563,7 +572,7 @@ def _populate_block_logic(module, block=None):
         if 'driver' in component.keys():
             _parse_op(component['name'], component['driver'])
     for component in module['registers']:
-        _parse_op(component['name'], component['driver'])
+        _parse_reg(component['name'], component)
 
 
 def _populate_mem_ops(memList, block=None):
@@ -596,7 +605,7 @@ def output_to_json(dest_file, block=None):
     :param block: Block to be walked and exported
 
     For a detailed description of the JSON hardware description view the
-    hardwareSchema.py file
+    hardwareschema.py file
     This file also provides a simple function that returns a schema for
     validating JSON hardware descriptions using the jsonschema library
     """
@@ -648,8 +657,13 @@ def _populate_json_components(module, block):
             memInfo['size'] = 1 << m.addrwidth
             if isinstance(m, RomBlock):
                 memInfo['initial values'] = []
+                init = {}
+                # Reading from pyrtl, start all initial values from 0
+                init['start addr'] = 0
+                init['values'] = []
                 for i in range(1 << m.addrwidth):
-                    memInfo['initial values'].append(m._get_read_data(i))
+                    init['values'].append(m._get_read_data(i))
+                memInfo['initial values'].append(init)
             reads = [net for net in _net_sorted(block.logic_subset('m'))
                      if net.op_param[1] == m]
             readsList = []
@@ -688,10 +702,8 @@ def _populate_json_combinational(component, block):
             continue
         elif net.dests[0].name == component['name']:
             if net.op in 'w~':  # Unary op
-                opstr = '' if net.op == 'w' else net.op
                 logicOp = {}
-                if opstr != '':
-                    logicOp['op'] = opstr
+                logicOp['op'] = net.op
                 logicOp['args'] = [net.args[0].name]
                 component['driver'] = logicOp
             elif net.op in '&|^+-*<>':  # binary ops
@@ -743,12 +755,10 @@ def _populate_json_sequential(component, block):
 
     for net in _net_sorted(block.logic):
         if net.op == 'r' and net.dests[0].name == component['name']:
-            logicOp = {}
-            logicOp['src'] = net.args[0].name
+            component['src'] = net.args[0].name
             # Implicitly add a reset value to all sequential logic
-            logicOp['rst val'] = (net.dests[0].reset_value if
-                                  net.dests[0].reset_value is not None else 0)
-            component['driver'] = logicOp
+            component['rst val'] = (net.dests[0].reset_value if
+                                    net.dests[0].reset_value is not None else 0)
 
 
 def _json_block_parts(block):
