@@ -56,3 +56,6 @@ docs/_build
 
 # ipynb	
 ipynb-examples/.ipynb_checkpoints
+
+# VS Code
+.vscode
