@@ -26,6 +26,25 @@ from .importexport import _VerilogSanitizer
 class Simulation(object):
     """A class for simulating blocks of logic step by step.
 
+    A Simulation step works as follows:
+
+    1. Registers are updated:
+        a. (If this is the first step) With the default values passed in
+           to the Simulation during instantiation and/or any reset values
+           specified in the individual registers.
+        a. (Otherwise) With their next values calculated in the previous step
+           (`r` logic nets).
+    2. The new values of these registers as well as the values of block inputs
+       are propagated through the combinational logic.
+    3. Memory writes are performed (`@` logic nets).
+    4. The current values of all wires are recorded in the trace.
+    5. The next values for the registers are saved, ready to be applied at the
+       beginning of the next step.
+
+    Note that the register values saved in the trace after each simulation step
+    are from *before* the register has latched in its newly calculated values,
+    since that latching in occurs at the beginning of the *next* step.
+
     In addition to the functions methods listed below, it is sometimes
     useful to reach into this class and access internal state directly.
     Of particular usefulness are:
@@ -155,10 +174,15 @@ class Simulation(object):
     def step(self, provided_inputs):
         """ Take the simulation forward one cycle.
 
-        :param provided_inputs: a dictionary mapping wirevectors to their values for this step
+        :param provided_inputs: a dictionary mapping WireVectors to their values for this step
+
+        A step causes the block to be updated as follows, in order: (1) registers are updated
+        with their `next` values computed in the previous cycle; (2) block inputs and these new
+        register values propagate through the combinational logic; (3) memories are updated; and
+        (4) the `next` values of the registers are saved for use in step 1 of the next cycle.
 
         All input wires must be in the provided_inputs in order for the simulation
-        to accept these values
+        to accept these values.
 
         Example: if we have inputs named 'a' and 'x', we can call: ::
 
@@ -431,7 +455,27 @@ class Simulation(object):
 
 
 class FastSimulation(object):
-    """A class for running JIT-to-python implementations of blocks."""
+    """A class for running JIT-to-python implementations of blocks.
+
+    A Simulation step works as follows:
+
+    1. Registers are updated:
+        a. (If this is the first step) With the default values passed in
+           to the Simulation during instantiation and/or any reset values
+           specified in the individual registers.
+        a. (Otherwise) With their next values calculated in the previous step
+           (`r` logic nets).
+    2. The new values of these registers as well as the values of block inputs
+       are propagated through the combinational logic.
+    3. Memory writes are performed (`@` logic nets).
+    4. The current values of all wires are recorded in the trace.
+    5. The next values for the registers are saved, ready to be applied at the
+       beginning of the next step.
+
+    Note that the register values saved in the trace after each simulation step
+    are from *before* the register has latched in its newly calculated values,
+    since that latching in occurs at the beginning of the *next* step.
+    """
 
     # Dev Notes:
     #  Wire name processing:
@@ -454,11 +498,11 @@ class FastSimulation(object):
         :param code_file: The file in which to store a copy of the generated
             python code. Defaults to no code being stored.
 
-        Look at Simulation.__init__ for descriptions for the other parameters
+        Look at Simulation.__init__ for descriptions for the other parameters.
 
         This builds the Fast Simulation compiled Python code, so all changes
         to the circuit after calling this function will not be reflected in
-        the simulation
+        the simulation.
         """
 
         block = working_block(block)
@@ -519,11 +563,15 @@ class FastSimulation(object):
                     self.mems[self._mem_varname(mem)] = {}
 
     def step(self, provided_inputs):
-        """ Run the simulation for a cycle
+        """ Run the simulation for a cycle.
 
         :param provided_inputs: a dictionary mapping WireVectors (or their names)
-          to their values for this step
-          eg: {wire: 3, "wire_name": 17}
+          to their values for this step (eg: `{wire: 3, "wire_name": 17}`)
+
+        A step causes the block to be updated as follows, in order: (1) registers are updated
+        with their `next` values computed in the previous cycle; (2) block inputs and these new
+        register values propagate through the combinational logic; (3) memories are updated; and
+        (4) the `next` values of the registers are saved for use in step 1 of the next cycle.
         """
         # validate_inputs
         for wire, value in provided_inputs.items():

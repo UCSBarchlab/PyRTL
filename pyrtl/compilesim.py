@@ -71,6 +71,25 @@ class CompiledSimulation(object):
         - mips64 (untested)
 
     default_value is currently only implemented for registers, not memories.
+
+    A Simulation step works as follows:
+
+    1. Registers are updated:
+        a. (If this is the first step) With the default values passed in
+           to the Simulation during instantiation and/or any reset values
+           specified in the individual registers.
+        a. (Otherwise) With their next values calculated in the previous step
+           (`r` logic nets).
+    2. The new values of these registers as well as the values of block inputs
+       are propagated through the combinational logic.
+    3. Memory writes are performed (`@` logic nets).
+    4. The current values of all wires are recorded in the trace.
+    5. The next values for the registers are saved, ready to be applied at the
+       beginning of the next step.
+
+    Note that the register values saved in the trace after each simulation step
+    are from *before* the register has latched in its newly calculated values,
+    since that latching in occurs at the beginning of the *next* step.
     """
 
     def __init__(
@@ -126,7 +145,12 @@ class CompiledSimulation(object):
     def step(self, inputs):
         """Run one step of the simulation.
 
-        The argument is a mapping from input names to the values for the step.
+        :param inputs: A mapping from input names to the values for the step.
+
+        A step causes the block to be updated as follows, in order: (1) registers are updated
+        with their `next` values computed in the previous cycle; (2) block inputs and these new
+        register values propagate through the combinational logic; (3) memories are updated; and
+        (4) the `next` values of the registers are saved for use in step 1 of the next cycle.
         """
         self.run([inputs])
 
