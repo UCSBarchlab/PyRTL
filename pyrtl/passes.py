@@ -187,8 +187,8 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
     valid_net_ops = '~&|^nrwcsm@'
     no_optimization_ops = 'wcsm@'
     one_var_ops = {
-        '~': lambda x: 1 - x,
-        'r': lambda x: x   # This is only valid for constant folding purposes
+        '~': lambda x, mask: ~x & mask,
+        'r': lambda x, _: x   # This is only valid for constant folding purposes
     }
     two_var_ops = {
         '&': lambda l, r: l & r,
@@ -207,7 +207,8 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
             nets_to_add.add(new_net)
 
         def replace_net_with_const(const_val):
-            new_const_wire = Const(bitwidth=1, val=const_val, block=block)
+            bitwidth = len(net_checking.dests[0])
+            new_const_wire = Const(bitwidth=bitwidth, val=const_val, block=block)
             wire_add_set.add(new_const_wire)
             replace_net_with_wire(new_const_wire)
 
@@ -257,7 +258,8 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
                 output = two_var_ops[net_checking.op](net_checking.args[0].val,
                                                       net_checking.args[1].val)
             else:
-                output = one_var_ops[net_checking.op](net_checking.args[0].val)
+                output = one_var_ops[net_checking.op](net_checking.args[0].val,
+                                                      net_checking.args[0].bitmask)
             replace_net_with_const(output)
 
     new_wire_src = _ProducerList()
