@@ -501,6 +501,17 @@ class TestConstFolding(NetWireNumTestCases):
         self.assert_num_wires(7)
         self.num_wire_of_type(Const, 0)
 
+    def test_unsynthesized_inversion(self):
+        constwire = pyrtl.Const(0b1101, bitwidth=4)
+        outwire = pyrtl.Output(name='out')
+
+        outwire <<= ~constwire
+        pyrtl.optimize()
+
+        sim = pyrtl.Simulation()
+        sim.step({})
+        self.assertEqual(sim.inspect('out'), 0b0010)
+
 
 class TestSubexpElimination(NetWireNumTestCases):
 
