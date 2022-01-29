@@ -10,12 +10,8 @@ Types defined in this file include:
 * `Register` -- a wire vector that is latched each cycle
 """
 
-from __future__ import print_function, unicode_literals
-
 import numbers
-import six
 import re
-import sys
 
 from . import core  # needed for _setting_keep_wirevector_call_stack
 
@@ -134,7 +130,7 @@ class WireVector(object):
 
     @name.setter
     def name(self, value):
-        if not isinstance(value, six.string_types):
+        if not isinstance(value, str):
             raise PyrtlError('WireVector names must be strings')
         self._block.wirevector_by_name.pop(self._name, None)
         self._name = value

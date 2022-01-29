@@ -1,5 +1,5 @@
 import unittest
-import six
+
 import pyrtl
 from pyrtl import wire
 

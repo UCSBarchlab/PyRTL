@@ -1,14 +1,12 @@
-from __future__ import print_function, unicode_literals
-
-import ctypes
-import subprocess
-import tempfile
-import shutil
 import collections
-from os import path
+import ctypes
 import platform
+import shutil
+import subprocess
 import sys
+import tempfile
 import _ctypes
+from os import path
 
 from .core import working_block
 from .wire import Input, Output, Const, WireVector, Register

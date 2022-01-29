@@ -32,5 +32,4 @@ omit =
     .tox/*
     */tests/*
     */ctypes/*
-    six.py
     pyparsing.py

@@ -1,13 +1,10 @@
 """Classes for executing and tracing circuit simulations."""
 
-from __future__ import print_function, unicode_literals
-
-import sys
-import re
-import numbers
 import collections
 import copy
-import six
+import numbers
+import sys
+import re
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -680,7 +677,7 @@ class FastSimulation(object):
                 "each step of simulation")
 
         def to_num(v):
-            if isinstance(v, six.string_types):
+            if isinstance(v, str):
                 # Don't use infer_val_and_bitwidth because they aren't in
                 # Verilog-style format, but are instead in plain decimal.
                 return int(v)

@@ -1,5 +1,6 @@
+import io
 import unittest
-import six
+
 import pyrtl
 
 
@@ -19,7 +20,7 @@ class TestComparisonBasicOperationsMSB1(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         spaced_output = '  '.join(output.getvalue())  # add spaces to string
         self.assertEqual(spaced_output, correct_string)
@@ -81,7 +82,7 @@ class TestComparisonBasicOperations_MSB0(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         spaced_output = '  '.join(output.getvalue())  # add spaces to string
         self.assertEqual(spaced_output, correct_string)

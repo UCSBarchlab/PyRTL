@@ -1,8 +1,6 @@
 """ Some useful hardware generators (e.g. muxes, signed multipliers, etc.)  """
 
-from __future__ import division
-
-import six
+import itertools
 import math
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
@@ -389,7 +387,7 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
     from .memory import _MemIndexed
     block = working_block(block)
 
-    if isinstance(val, (int, six.string_types)):
+    if isinstance(val, (int, str)):
         # note that this case captures bool as well (as bools are instances of ints)
         return Const(val, bitwidth=bitwidth, block=block)
     elif isinstance(val, _MemIndexed):
@@ -692,8 +690,7 @@ def _basic_mult(A, B):
                 deferred[i].extend(w_array)
         bits = deferred[:result_bitwidth]
 
-    import six
-    add_wires = tuple(six.moves.zip_longest(*bits, fillvalue=Const(0)))
+    add_wires = tuple(itertools.zip_longest(*bits, fillvalue=Const(0)))
     adder_result = concat_list(add_wires[0]) + concat_list(add_wires[1])
     return adder_result[:result_bitwidth]
 
