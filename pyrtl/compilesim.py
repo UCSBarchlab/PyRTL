@@ -4,7 +4,6 @@ import ctypes
 import subprocess
 import tempfile
 import shutil
-import collections
 from os import path
 import platform
 import sys
@@ -16,11 +15,16 @@ from .memory import MemBlock, RomBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .simulation import SimulationTrace, _trace_sort_key
 
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
+
 
 __all__ = ['CompiledSimulation']
 
 
-class DllMemInspector(collections.Mapping):
+class DllMemInspector(Mapping):
     """ Dictionary-like access to a hashmap in a CompiledSimulation. """
 
     def __init__(self, sim, mem):

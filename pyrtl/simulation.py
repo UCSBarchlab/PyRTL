@@ -5,7 +5,6 @@ from __future__ import print_function, unicode_literals
 import sys
 import re
 import numbers
-import collections
 import copy
 import six
 
@@ -15,6 +14,11 @@ from .wire import Input, Register, Const, Output, WireVector
 from .memory import RomBlock
 from .helperfuncs import check_rtl_assertions, _currently_in_jupyter_notebook
 from .importexport import _VerilogSanitizer
+
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -1028,7 +1032,7 @@ def _trace_sort_key(w):
     return [tryint(c) for c in re.split('([0-9]+)', w)]
 
 
-class TraceStorage(collections.Mapping):
+class TraceStorage(Mapping):
     __slots__ = ('__data',)
 
     def __init__(self, wvs):
