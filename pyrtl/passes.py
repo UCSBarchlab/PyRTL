@@ -57,7 +57,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     return block
 
 
-class _ProducerList(object):
+class _ProducerList:
     """  Maps from wire to its immediate producer and finds ultimate producers. """
     def __init__(self):
         self.dict = {}  # map from wirevector to its direct producer wirevector

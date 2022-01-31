@@ -10,7 +10,7 @@ import pyrtl
 # stages, and new members with names not starting with "_" are to be registered
 # for the next stage.
 
-class SimplePipeline(object):
+class SimplePipeline:
     """ Pipeline builder with auto generation of pipeline registers. """
 
     def __init__(self):

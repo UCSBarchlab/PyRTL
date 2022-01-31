@@ -133,7 +133,7 @@ def _bits_ports_and_isrom_from_memory(mem):
 #    |  |  |  | | | \| \__>     /    \| \| /~~\ |_  |   .__/ |  .__/
 #
 
-class TimingAnalysis(object):
+class TimingAnalysis:
     """
     Timing analysis estimates the timing delays in the block
 

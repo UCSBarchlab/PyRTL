@@ -796,7 +796,7 @@ def find_loop(block=None):
     wires_left, logic_left = result
     import random
 
-    class _FilteringState(object):
+    class _FilteringState:
         def __init__(self, dst_w):
             self.dst_w = dst_w
             self.arg_num = -1
@@ -892,7 +892,7 @@ def _print_netlist_latex(netlist):
     display(Latex(out))
 
 
-class _NetCount(object):
+class _NetCount:
     """ Helper class to track when to stop an iteration that depends on number of nets
 
     Mainly useful for iterations that are for optimization

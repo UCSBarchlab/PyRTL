@@ -49,7 +49,7 @@ class DllMemInspector(collections.Mapping):
         return all(self[x] == other.get(x, 0) for x in self)
 
 
-class CompiledSimulation(object):
+class CompiledSimulation:
     """Simulate a block, compiling to C for efficiency.
 
     This module provides significant speed improvements over FastSimulation,

@@ -172,7 +172,7 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
     __ge__ = _compare_error
 
 
-class Block(object):
+class Block:
     """ Block encapsulates a netlist.
 
     A Block in PyRTL is the class that stores a netlist and provides basic access
@@ -863,7 +863,7 @@ def reset_working_block():
     _singleton_block = Block()
 
 
-class set_working_block(object):
+class set_working_block:
     """ Set the working block to be the block passed as argument.
     Compatible with the 'with' statement.
 
@@ -923,7 +923,7 @@ def set_debug_mode(debug=True):
 _py_regex = r'^[^\d\W]\w*\Z'
 
 
-class _NameIndexer(object):
+class _NameIndexer:
     """ Provides internal names that are based on a prefix and an index. """
     def __init__(self, internal_prefix='_sani_temp'):
         self.internal_prefix = internal_prefix

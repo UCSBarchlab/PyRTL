@@ -20,7 +20,7 @@ from .importexport import _VerilogSanitizer
 #
 
 
-class Simulation(object):
+class Simulation:
     """A class for simulating blocks of logic step by step.
 
     A Simulation step works as follows:
@@ -451,7 +451,7 @@ class Simulation(object):
 #
 
 
-class FastSimulation(object):
+class FastSimulation:
     """A class for running JIT-to-python implementations of blocks.
 
     A Simulation step works as follows:
@@ -925,7 +925,7 @@ class FastSimulation(object):
 #
 
 
-class _WaveRendererBase(object):
+class _WaveRendererBase:
     _tick, _up, _down, _x, _low, _high, _revstart, _revstop = ('' for i in range(8))
 
     def __init__(self):
@@ -1051,7 +1051,7 @@ class TraceStorage(collections.Mapping):
         return self.__data[key]
 
 
-class SimulationTrace(object):
+class SimulationTrace:
     """ Storage and presentation of simulation waveforms. """
 
     def __init__(self, wires_to_track=None, block=None):

@@ -90,7 +90,7 @@ def currently_under_condition():
 # conditional_assignment and otherwise, both visible in the pyrtl module, are defineded as
 # instances (hopefully the only and unchanging instances) of the following two types.
 
-class _ConditionalAssignment(object):
+class _ConditionalAssignment:
     def __init__(self):
         self.defaults = {}
 
@@ -113,7 +113,7 @@ class _ConditionalAssignment(object):
             _reset_conditional_state()  # sets _depth back to 0
 
 
-class _Otherwise(object):
+class _Otherwise:
     """ Context providing functionality of pyrtl "otherwise". """
     def __enter__(self):
         _push_condition(otherwise)

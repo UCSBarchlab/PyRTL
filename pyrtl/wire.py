@@ -50,7 +50,7 @@ def next_tempvar_name(name=""):
         return name
 
 
-class WireVector(object):
+class WireVector:
     """ The main class for describing the connections between operators.
 
     WireVectors act much like a list of wires, except that there is no
@@ -674,7 +674,7 @@ class Register(WireVector):
     # a <<= r.next  -- error
     # r.next = 5    -- error
 
-    class _Next(object):
+    class _Next:
         """ This is the type returned by "r.next". """
 
         def __init__(self, reg):
@@ -695,7 +695,7 @@ class Register(WireVector):
 
         __nonzero__ = __bool__  # for Python 2 and 3 compatibility
 
-    class _NextSetter(object):
+    class _NextSetter:
         """ This is the type returned by __ilshift__ which r.next will be assigned. """
 
         def __init__(self, rhs, is_conditional):

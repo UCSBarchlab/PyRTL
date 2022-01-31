@@ -86,7 +86,7 @@ class _MemIndexed(WireVector):
         as_wires(self).name = n
 
 
-class MemBlock(object):
+class MemBlock:
     """ MemBlock is the object for specifying block memories.  It can be
     indexed like an array for both reading and writing.  Writes under a conditional
     are automatically converted to enabled writes.   For example, consider the following
