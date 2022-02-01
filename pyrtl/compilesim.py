@@ -1,4 +1,3 @@
-import collections
 import ctypes
 import platform
 import shutil
@@ -7,6 +6,11 @@ import sys
 import tempfile
 import _ctypes
 from os import path
+
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 from .core import working_block
 from .wire import Input, Output, Const, WireVector, Register
@@ -18,7 +22,7 @@ from .simulation import SimulationTrace, _trace_sort_key
 __all__ = ['CompiledSimulation']
 
 
-class DllMemInspector(collections.Mapping):
+class DllMemInspector(Mapping):
     """ Dictionary-like access to a hashmap in a CompiledSimulation. """
 
     def __init__(self, sim, mem):

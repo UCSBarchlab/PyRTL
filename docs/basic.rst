@@ -54,7 +54,7 @@ Registers
 
 The class ``Register`` is derived from ``WireVector``, and so can be used just like any other 
 `WireVector`.  A read from the register is the value that is available in the current clock
-period, and the value for the follow cycle can be set by assinging to property ``next`` with
+period, and the value for the follow cycle can be set by assigning to property ``next`` with
 the ``<<=`` operator.  Registers all, by default, reset to 0, and all reside in the same clock
 domain.
 
