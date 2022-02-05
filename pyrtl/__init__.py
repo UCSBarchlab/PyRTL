@@ -99,6 +99,8 @@ from .importexport import output_verilog_testbench
 from .importexport import input_from_blif
 from .importexport import output_to_firrtl
 from .importexport import input_from_iscas_bench
+from .importexport import output_to_json
+from .importexport import input_from_json
 
 # different transform passes
 from .passes import common_subexp_elimination

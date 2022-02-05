@@ -8,3 +8,4 @@ nose
 pyparsing
 six
 coverage
+jsonschema
