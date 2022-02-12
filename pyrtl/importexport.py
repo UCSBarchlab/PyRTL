@@ -14,11 +14,13 @@ import os
 import subprocess
 import six
 import sys
+import functools
+import operator
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, _NameSanitizer
 from .wire import WireVector, Input, Output, Const, Register, next_tempvar_name
-from .corecircuits import concat_list, rtl_all, rtl_any
+from .corecircuits import concat_list, rtl_all, rtl_any, select
 from .memory import RomBlock
 from .passes import two_way_concat, one_bit_selects
 
@@ -154,23 +156,45 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
     namesignal_list = Group(OneOrMore(signal_id))('namesignal_list')
     name_def = Group(SKeyword('.names') + namesignal_list + cover_list)('name_def')
 
-    # asynchronous Flip-flop
-    dffas_formal = (SLiteral('C=') + signal_id('C')
-                    + SLiteral('R=') + signal_id('R')
-                    + SLiteral('D=') + signal_id('D')
-                    + SLiteral('Q=') + signal_id('Q'))
-    dffas_keyword = SKeyword('$_DFF_PN0_') | SKeyword('$_DFF_PP0_')
-    dffas_def = Group(SKeyword('.subckt') + dffas_keyword + dffas_formal)('dffas_def')
+    def make_dff_parsers(formals, names):
+        defs = functools.reduce(operator.__or__, (
+            Group(SKeyword('.subckt') + SKeyword(name) + formals)(name) for name in names)
+        )
+        return defs
 
-    # synchronous Flip-flop
-    dffs_init_val = Optional(oneOf('0 1 2 3'), default='0')
+    # This is purposefully not supporting any DFFs that use negedges in the sensitivity list.
+    # Currently don't have the '$_ALDFF*' dffs (with load signal).
+    # Also, we may want to look into doing something similar for the $_DLATCH* types.
+    # NOTE: Unfortunately, this list needs to be kept consistent with the
+    # flop_next function in extract_flops().
+    dff_names = [
+        '$_DFF_P_', '$_DFFE_PN_', '$_DFFE_PP_', '$_DFF_PP0_', '$_DFF_PP1_',
+        '$_DFFE_PP0N_', '$_DFFE_PP0P_', '$_DFFE_PP1N_', '$_DFFE_PP1P_', '$_DFFSR_PPP',
+        '$_DFFSRE_PPPN_', '$_DFFSRE_PPPP_', '$_SDFF_PN0_', '$_SDFF_PN1_', '$_SDFF_PP0_',
+        '$_SDFF_PP1_', '$_SDFFE_PN0N_', '$_SDFFE_PN0P_', '$_SDFFE_PN1N_', '$_SDFFE_PN1P_',
+        '$_SDFFE_PP0N_', '$_SDFFE_PP0P_', '$_SDFFE_PP1N_', '$_SDFFE_PP1P_', '$_SDFFCE_PN0N_',
+        '$_SDFFCE_PN0P_', '$_SDFFCE_PN1N_', '$_SDFFCE_PN1P_', '$_SDFFCE_PP0N_', '$_SDFFCE_PP0P_',
+        '$_SDFFCE_PP1N_', '$_SDFFCE_PP1P_',
+    ]
+
+    # (a)synchronous Flip-flop (positive/negative polarity reset/set/enable)
+    dffs_formal = (SLiteral('C=') + signal_id('C')
+                   + SLiteral('D=') + signal_id('D')
+                   + Optional(SLiteral('E=') + signal_id('E'))
+                   + SLiteral('Q=') + signal_id('Q')
+                   + Optional(SLiteral('S=') + signal_id('S'))
+                   + Optional(SLiteral('R=') + signal_id('R')))
+    dffs_def = make_dff_parsers(dffs_formal, dff_names)
+
+    # synchronous Flip-flop (using .latch format)
+    latches_init_val = Optional(oneOf('0 1 2 3'), default='0')
     # TODO I think <type> and <control> ('re' and 'C') below are technically optional too
-    dffs_def = Group(SKeyword('.latch')
-                     + signal_id('D')
-                     + signal_id('Q')
-                     + SLiteral('re')
-                     + signal_id('C')
-                     + dffs_init_val('I'))('dffs_def')
+    latches_def = Group(SKeyword('.latch')
+                        + signal_id('D')
+                        + signal_id('Q')
+                        + SLiteral('re')
+                        + signal_id('C')
+                        + latches_init_val('I'))('latches_def')
 
     # model reference
     formal_actual = Group(signal_id('formal') + SLiteral('=')
@@ -179,7 +203,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
     model_name = signal_id('model_name')
     model_ref = Group(SKeyword('.subckt') + model_name + formal_actual_list)('model_ref')
 
-    command_def = name_def | dffas_def | dffs_def | model_ref
+    command_def = name_def | dffs_def | latches_def | model_ref
     command_list = Group(OneOrMore(command_def))('command_list')
 
     footer = SKeyword('.end')
@@ -286,8 +310,12 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
             if command.getName() == 'name_def':
                 extract_cover(subckt, command)
             # else if the command is a d flop flop
-            elif command.getName() == 'dffas_def' or command.getName() == 'dffs_def':
+            elif command.getName() in dff_names:
                 extract_flop(subckt, command)
+            # same as dff, but using different .latch format
+            elif command.getName() == 'latches_def':
+                extract_latch(subckt, command)
+            # a subckt
             elif command.getName() == 'model_ref':
                 extract_model_reference(subckt, command)
             else:
@@ -362,7 +390,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
                 conjunctions.append(conj)
             output_wire <<= rtl_any(*conjunctions)
 
-    def extract_flop(subckt, command):
+    def extract_latch(subckt, command):
 
         def twire(w):
             return subckt.twire(w)
@@ -378,6 +406,65 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
         flop = Register(bitwidth=1, reset_value=rval)
         subckt.add_reg(regname, flop)
         flop.next <<= twire(command['D'])
+        flop_output = twire(command['Q'])
+        flop_output <<= flop
+
+    def extract_flop(subckt, command):
+        # Generate a register like extract_latch, only we're doing
+        # so because of a .subckt rather than a .latch
+        def twire(w):
+            return subckt.twire(w)
+
+        def opt_twire(w):
+            return twire(w) if w is not None else None
+
+        if(command['C'] not in ff_clk_set):
+            ff_clk_set.add(command['C'])
+
+        regname = command['Q'] + '_reg'
+
+        def flop_next(data, enable, set, reset, prev):
+            return {
+                '$_DFF_P_': lambda: data,
+                '$_DFFE_PN_': lambda: select(~enable, data, prev),
+                '$_DFFE_PP_': lambda: select(enable, data, prev),
+                '$_DFF_PP0_': lambda: select(reset, 0, data),
+                '$_DFF_PP1_': lambda: select(reset, 1, data),
+                '$_DFFE_PP0N_': lambda: select(reset, 0, select(~enable, data, prev)),
+                '$_DFFE_PP0P_': lambda: select(reset, 0, select(enable, data, prev)),
+                '$_DFFE_PP1N_': lambda: select(reset, 1, select(~enable, data, prev)),
+                '$_DFFE_PP1P_': lambda: select(reset, 1, select(enable, data, prev)),
+                '$_DFFSR_PPP': lambda: select(reset, 0, select(set, 1, data)),
+                '$_DFFSRE_PPPN_': lambda: select(reset, 0, select(set, 1, select(~enable, data, prev))),  # noqa
+                '$_DFFSRE_PPPP_': lambda: select(reset, 0, select(set, 1, select(enable, data, prev))),   # noqa
+                '$_SDFF_PN0_': lambda: select(~reset, 0, data),
+                '$_SDFF_PN1_': lambda: select(~reset, 1, data),
+                '$_SDFF_PP0_': lambda: select(reset, 0, data),
+                '$_SDFF_PP1_': lambda: select(reset, 1, data),
+                '$_SDFFE_PN0N_': lambda: select(~reset, 0, select(~enable, data, prev)),
+                '$_SDFFE_PN0P_': lambda: select(~reset, 0, select(enable, data, prev)),
+                '$_SDFFE_PN1N_': lambda: select(~reset, 1, select(~enable, data, prev)),
+                '$_SDFFE_PN1P_': lambda: select(~reset, 1, select(enable, data, prev)),
+                '$_SDFFE_PP0N_': lambda: select(reset, 0, select(~enable, data, prev)),
+                '$_SDFFE_PP0P_': lambda: select(reset, 0, select(enable, data, prev)),
+                '$_SDFFE_PP1N_': lambda: select(reset, 1, select(~enable, data, prev)),
+                '$_SDFFE_PP1P_': lambda: select(reset, 1, select(enable, data, prev)),
+                '$_SDFFCE_PN0N_': lambda: select(~enable, select(~reset, 0, data), prev),
+                '$_SDFFCE_PN0P_': lambda: select(enable, select(~reset, 0, data), prev),
+                '$_SDFFCE_PN1N_': lambda: select(~enable, select(~reset, 1, data), prev),
+                '$_SDFFCE_PN1P_': lambda: select(enable, select(~reset, 1, data), prev),
+                '$_SDFFCE_PP0N_': lambda: select(~enable, select(reset, 0, data), prev),
+                '$_SDFFCE_PP0P_': lambda: select(enable, select(reset, 0, data), prev),
+                '$_SDFFCE_PP1N_': lambda: select(~enable, select(reset, 1, data), prev),
+                '$_SDFFCE_PP1P_': lambda: select(enable, select(reset, 1, data), prev),
+            }[command.getName()]()
+        # TODO May want to consider setting reset_value in the Register.
+        # Right now it's mainly used to signal how we want to *output* Verilog
+        # from PyRTL, and not how we want to interpret *input* to PyRTL.
+        flop = Register(bitwidth=1)
+        subckt.add_reg(regname, flop)
+        flop.next <<= flop_next(twire(command['D']), opt_twire(command.get('E')),
+                                opt_twire(command.get('S')), opt_twire(command.get('R')), flop)
         flop_output = twire(command['Q'])
         flop_output <<= flop
 
