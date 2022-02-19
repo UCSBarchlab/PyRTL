@@ -57,7 +57,7 @@ performance or optimization is the overarching goal.  Features include:</p>
 <li>Batteries included means many useful components are already available and more are coming every week</li>
 </ul>
 
-  <p><b>New in 0.8.7:</b> (July 2019) SimCompiled provides seamless JIT to C for simulation performance, new hardware
+  <p><b>New in 0.8.7:</b> SimCompiled provides seamless JIT to C for simulation performance, new hardware
     modules for PRNG, fixes for lots of issues with Verilog generation (support for memory and testbench generation both improved
     significantly), convenience functions for integer log2 and truncate, and
     even more examples in the documentation.</p>
@@ -319,12 +319,12 @@ consistency, although it does make writing signed arithmetic operations more tex
 <h3>
 <a id="related-projects" class="anchor" href="#related-projects" aria-hidden="true"><span class="octicon octicon-link"></span></a>Related Projects</h3>
 
-<p><a href="http://www.myhdl.org/">MyHDL</a> is a neat Python hardware project built around generators and decorators.  The semantics of this embedded language
-are close to Verilog and unlike PyRTL, MyHDL allows asynchronous logic and higher level modeling.  Much like Verilog, only a structural
-"convertible subset" of the language can be automatically synthesized into real hardware.  PyRTL requires all logic to be both synchronous
-and synthesizable which avoids a common trap for beginners, it elaborates the design during execution allowing the full power of Python
-in describing recursive or complex hardware structures, and it allows for hardware synthesis, simulation, test bench creation, and optimization
-all in the same framework.</p>
+<p><a href="https://github.com/amaranth-lang/amaranth">Amaranth (previously nMigen)</a> </a> is another python hardware project providing an open-source toolchain
+that has a lot of wonderful stuff for working with FPGAs in particular.  It has support for evaluation board definitions, a System-on-Chip toolkit, and more.
+I think it has a similar philosophy of trying to be easy to learn and use and simplify the design of complex hardware with reusable components.  Amaranth
+(at the time of writing) has much better support on the back end for a variety of real devices and low level stuff like managing clock domains, but pyrtl
+I think it provides some value in getting going right in the command line and how it handles memories etc.  I would be eager to see the power of these tools
+combined in some way!
 
 <p><a href="https://chisel.eecs.berkeley.edu/">Chisel</a> is a project with similar goals to PyRTL but is based instead in Scala.  Scala
 provides some very helpful embedded language features and a rich type system. Chisel is (like PyRTL) a elaborate-through-execution hardware design language.  With support
@@ -333,7 +333,18 @@ conditional contexts, Chisel is a powerful tool used in some great research proj
 concentrated on a simple to use and complete tool chain which is useful for instructional projects, and provides a clearly defined and relatively easy-to-manipulate
 intermediate structure in the class Block (often times call pyrtl.core) which allows rapid prototyping of hardware analysis
 routines which can then be codesigned with the architecture.</p>
+  
+<p><a href="https://github.com/SpinalHDL/SpinalHDL">SpinalHDL</a> is a different approach to HDL in Scala and is very much aligned with the way
+PyRTL is built (invented independently it is neat to see the convergent evolution which, I think, points to something deeper about hardware
+design).  It has a lot of support and really well thought out structures.  
 
+<p><a href="http://www.myhdl.org/">MyHDL</a> is another neat Python hardware project built around generators and decorators.  The semantics of this embedded language
+are close to Verilog and unlike PyRTL, MyHDL allows asynchronous logic and higher level modeling.  Much like Verilog, only a structural
+"convertible subset" of the language can be automatically synthesized into real hardware.  PyRTL requires all logic to be both synchronous
+and synthesizable which avoids a common trap for beginners, it elaborates the design during execution allowing the full power of Python
+in describing recursive or complex hardware structures, and it allows for hardware synthesis, simulation, test bench creation, and optimization
+all in the same framework.</p>
+  
 <p><a href="http://www.clifford.at/yosys/">Yosys</a> is an open source tool for Verilog RTL synthesis. It supports a huge subset of the Verilog-2005
 semantics and provides a basic set of synthesis algorithms.  The goals of this tool are quite different from PyRTL, but the two
 play very nicely together in that PyRTL can output Verilog that can then be synthesized through Yosys.  Likewise Yosys can take
