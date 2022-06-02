@@ -411,7 +411,7 @@ class WireVector(object):
         else:  # slice
             selectednums = tuple(allindex[item])
         if not selectednums:
-            raise PyrtlError('selection %s must have at least select one wire' % str(item))
+            raise PyrtlError('selection %s must have at least one selected wire' % str(item))
         outwire = WireVector(bitwidth=len(selectednums))
         net = LogicNet(
             op='s',
