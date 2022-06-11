@@ -452,8 +452,16 @@ def block_to_svg(block=None, split_state=True, maintain_arg_order=False):
     """
     try:
         from graphviz import Source
-        return Source(block_to_graphviz_string(block, split_state=split_state,
-                                               maintain_arg_order=maintain_arg_order))._repr_svg_()
+        src = Source(block_to_graphviz_string(block, split_state=split_state,
+                                              maintain_arg_order=maintain_arg_order))
+        try:
+            svg = src._repr_image_svg_xml()
+        except AttributeError:
+            # py-graphviz 0.18.3 or earlier
+            return src._repr_svg_()
+        else:
+            # py-graphviz 0.19 or later
+            return svg
     except ImportError:
         raise PyrtlError('need graphviz installed (try "pip install graphviz")')
 

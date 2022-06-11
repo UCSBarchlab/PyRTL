@@ -273,18 +273,28 @@ class Block:
             return '\n'.join(str(net) for net in self)
 
     def add_wirevector(self, wirevector):
-        """ Add a wirevector object to the block."""
+        """ Add a wirevector object to the block.
+
+        :param wirevector: WireVector object added to block
+
+        """
         self.sanity_check_wirevector(wirevector)
         self.wirevector_set.add(wirevector)
         self.wirevector_by_name[wirevector.name] = wirevector
 
     def remove_wirevector(self, wirevector):
-        """ Remove a wirevector object from the block."""
+        """ Remove a wirevector object from the block.
+
+        :param wirevector: WireVector object removed from block
+
+        """
         self.wirevector_set.remove(wirevector)
         del self.wirevector_by_name[wirevector.name]
 
     def add_net(self, net):
         """ Add a net to the logic of the block.
+
+        :param LogicNet net: LogicNet object added to block
 
         The passed net, which must be of type LogicNet, is checked and then
         added to the block.  No wires are added by this member, they must be
@@ -307,6 +317,11 @@ class Block:
     def get_memblock_by_name(self, name, strict=False):
         """ Get a reference to a memory stored in this block by name.
 
+        :param String name: name of memblock object
+        :param strict: Determines if PyrtlError or None is thrown on no match.
+            Defaults to False.
+        :return: a memblock object with specified name
+
         By fallthrough, if a matching memblock cannot be found the value None is
         returned.  However, if the argument strict is set to True, then this will
         instead throw a PyrtlError when no match is found.
@@ -320,7 +335,7 @@ class Block:
         Note that this requires you know the name of the memory block, meaning that
         you most likely need to have named it yourself.
 
-        For example:
+        Example::
 
             def special_memory(read_addr, write_addr, data, wen):
                 mem = pyrtl.MemBlock(bitwidth=32, addrwidth=5, name='special_mem')
@@ -367,10 +382,21 @@ class Block:
     def wirevector_subset(self, cls=None, exclude=tuple()):
         """Return set of wirevectors, filtered by the type or tuple of types provided as cls.
 
+        :param cls: Type of returned wirevectors objects
+        :param exclude: Type of wirevectors objects to exclude
+        :return: Set of wirevector objects that are both a cls type and not a excluded type
+
         If no cls is specified, the full set of wirevectors associated with the Block are
         returned.  If cls is a single type, or a tuple of types, only those wirevectors of
         the matching types will be returned.  This is helpful for getting all inputs, outputs,
         or registers of a block for example.
+
+        Examples::
+
+            inputs = pyrtl.working_block().wirevector_subset(pyrtl.Input)
+            outputs = pyrtl.working_block().wirevector_subset(pyrtl.Output)
+            non_inputs = pyrtl.working_block().wirevector_subset(exclude = pyrtl.Input)
+                #returns set of all non-input wirevectors
         """
         if cls is None:
             initial_set = self.wirevector_set
@@ -384,6 +410,9 @@ class Block:
     def logic_subset(self, op=None):
         """Return set of logicnets, filtered by the type(s) of logic op provided as op.
 
+        :param op: Operation of logicnet to filter by. Defaults to None.
+        :return: set of logicnets with corresponding op
+
         If no op is specified, the full set of logicnets associated with the Block are
         returned.  This is helpful for getting all memories of a block for example.
         """
@@ -394,6 +423,11 @@ class Block:
 
     def get_wirevector_by_name(self, name, strict=False):
         """Return the wirevector matching name.
+
+        :param String name: name of wirevector object
+        :param strict: Determines if PyrtlError or None is thrown on no match.
+            Defaults to False.
+        :return: a wirevector object with specified name
 
         By fallthrough, if a matching wirevector cannot be found the value None is
         returned.  However, if the argument strict is set to True, then this will
@@ -429,7 +463,7 @@ class Block:
         :param include_virtual_nodes: if enabled, the wire itself will be used to
           signal an external source or sink (such as the source for an Input net).
           If disabled, these nodes will be excluded from the adjacency dictionaries
-        :return wire_src_dict, wire_sink_dict
+        :return: wire_src_dict, wire_sink_dict
           Returns two dictionaries: one that maps WireVectors to the logic
           net that creates their signal and one that maps WireVectors to
           a list of logic nets that use the signal
