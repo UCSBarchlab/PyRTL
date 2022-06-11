@@ -1,5 +1,5 @@
-from functools import reduce
-from six.moves import builtins
+import builtins
+import functools
 
 from pyrtl.rtllib import multipliers as mult
 
@@ -9,7 +9,7 @@ from ..pyrtlexceptions import PyrtlError
 from ..helperfuncs import formatted_str_to_val
 
 
-class Matrix(object):
+class Matrix:
     ''' Class for making a Matrix using PyRTL.
 
     Provides the ability to perform different matrix operations.
@@ -671,7 +671,7 @@ class Matrix(object):
 
             def pow_2(first, second):
                 return first.__matmul__(second)
-            return reduce(pow_2, inputs)
+            return functools.reduce(pow_2, inputs)
 
         raise PyrtlError('Power must be greater than or equal to 0')
 
@@ -894,7 +894,7 @@ def sum(matrix, axis=None, bits=None):
         for i in range(matrix.rows):
             for j in range(matrix.columns):
                 inputs.append(matrix[i, j])
-        return reduce(sum_2, inputs)
+        return functools.reduce(sum_2, inputs)
 
     if axis == 0:
         result = Matrix(1, matrix.columns, signed=matrix.signed, bits=bits)
@@ -903,7 +903,7 @@ def sum(matrix, axis=None, bits=None):
             inputs = []
             for j in range(matrix.rows):
                 inputs.append(matrix[j, i])
-            result[0, i] = reduce(sum_2, inputs)
+            result[0, i] = functools.reduce(sum_2, inputs)
         return result
 
     if axis == 1:
@@ -912,7 +912,7 @@ def sum(matrix, axis=None, bits=None):
             inputs = []
             for j in range(matrix.columns):
                 inputs.append(matrix[i, j])
-            result[0, i] = reduce(sum_2, inputs)
+            result[0, i] = functools.reduce(sum_2, inputs)
         return result
 
     raise PyrtlError('Axis invalid: expected (None, 0, or 1), got %s' % axis)
@@ -958,7 +958,7 @@ def min(matrix, axis=None, bits=None):
         for i in range(matrix.rows):
             for j in range(matrix.columns):
                 inputs.append(matrix[i, j])
-        return reduce(min_2, inputs)
+        return functools.reduce(min_2, inputs)
 
     if axis == 0:
         result = Matrix(1, matrix.columns, signed=matrix.signed, bits=bits)
@@ -967,7 +967,7 @@ def min(matrix, axis=None, bits=None):
             inputs = []
             for j in range(matrix.rows):
                 inputs.append(matrix[j, i])
-            result[0, i] = reduce(min_2, inputs)
+            result[0, i] = functools.reduce(min_2, inputs)
         return result
 
     if axis == 1:
@@ -976,7 +976,7 @@ def min(matrix, axis=None, bits=None):
             inputs = []
             for j in range(matrix.columns):
                 inputs.append(matrix[i, j])
-            result[0, i] = reduce(min_2, inputs)
+            result[0, i] = functools.reduce(min_2, inputs)
         return result
 
     raise PyrtlError('Axis invalid: expected (None, 0, or 1), got %s' % axis)
@@ -1023,7 +1023,7 @@ def max(matrix, axis=None, bits=None):
         for i in range(matrix.rows):
             for j in range(matrix.columns):
                 inputs.append(matrix[i, j])
-        return reduce(max_2, inputs)
+        return functools.reduce(max_2, inputs)
 
     if axis == 0:
         result = Matrix(
@@ -1033,7 +1033,7 @@ def max(matrix, axis=None, bits=None):
             inputs = []
             for j in range(matrix.rows):
                 inputs.append(matrix[j, i])
-            result[0, i] = reduce(max_2, inputs)
+            result[0, i] = functools.reduce(max_2, inputs)
         return result
 
     if axis == 1:
@@ -1043,7 +1043,7 @@ def max(matrix, axis=None, bits=None):
             inputs = []
             for j in range(matrix.columns):
                 inputs.append(matrix[i, j])
-            result[0, i] = reduce(max_2, inputs)
+            result[0, i] = functools.reduce(max_2, inputs)
         return result
 
     raise PyrtlError('Axis invalid: expected (None, 0, or 1), got %s' % axis)

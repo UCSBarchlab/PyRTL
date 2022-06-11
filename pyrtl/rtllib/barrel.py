@@ -1,8 +1,3 @@
-from __future__ import absolute_import
-import pyrtl
-import math
-
-
 def barrel_shifter(bits_to_shift, bit_in, direction, shift_dist, wrap_around=0):
     """ Create a barrel shifter that operates on data based on the wire width.
 

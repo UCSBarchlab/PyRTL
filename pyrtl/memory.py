@@ -12,7 +12,6 @@ Based on the number of reads and writes a memory will be inferred
 with the correct number of ports to support that
 """
 
-from __future__ import print_function, unicode_literals
 import collections
 
 from .pyrtlexceptions import PyrtlError
@@ -87,7 +86,7 @@ class _MemIndexed(WireVector):
         as_wires(self).name = n
 
 
-class MemBlock(object):
+class MemBlock:
     """ MemBlock is the object for specifying block memories.  It can be
     indexed like an array for both reading and writing.  Writes under a conditional
     are automatically converted to enabled writes.   For example, consider the following

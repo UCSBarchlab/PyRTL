@@ -1,4 +1,5 @@
-from __future__ import absolute_import
+import itertools
+
 import pyrtl
 from . import libutils
 
@@ -244,9 +245,8 @@ def _sparse_adder(wire_array_2, adder):
             break
         result.append(wire_array_2[single_w_index][0])
 
-    import six
     wires_to_zip = wire_array_2[single_w_index:]
-    add_wires = tuple(six.moves.zip_longest(*wires_to_zip, fillvalue=pyrtl.Const(0)))
+    add_wires = tuple(itertools.zip_longest(*wires_to_zip, fillvalue=pyrtl.Const(0)))
     adder_result = adder(pyrtl.concat_list(add_wires[0]), pyrtl.concat_list(add_wires[1]))
     return pyrtl.concat(adder_result, *reversed(result))
 

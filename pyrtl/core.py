@@ -8,10 +8,9 @@ Included in this file you will find:
 * `modes` -- access methods for "modes" such as debug
 
 """
-from __future__ import print_function, unicode_literals
 import collections
-import re
 import keyword
+import re
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 
@@ -173,7 +172,7 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
     __ge__ = _compare_error
 
 
-class Block(object):
+class Block:
     """ Block encapsulates a netlist.
 
     A Block in PyRTL is the class that stores a netlist and provides basic access
@@ -543,8 +542,7 @@ class Block(object):
                             if gate.op != 'r':
                                 to_clear.update(gate.dests)
         except KeyError as e:
-            import six
-            six.raise_from(PyrtlError("Cannot Iterate through malformed block"), e)
+            raise PyrtlError("Cannot Iterate through malformed block") from e
 
         if len(remaining) != 0:
             from pyrtl.helperfuncs import find_and_print_loop
@@ -899,7 +897,7 @@ def reset_working_block():
     _singleton_block = Block()
 
 
-class set_working_block(object):
+class set_working_block:
     """ Set the working block to be the block passed as argument.
     Compatible with the 'with' statement.
 
@@ -959,7 +957,7 @@ def set_debug_mode(debug=True):
 _py_regex = r'^[^\d\W]\w*\Z'
 
 
-class _NameIndexer(object):
+class _NameIndexer:
     """ Provides internal names that are based on a prefix and an index. """
     def __init__(self, internal_prefix='_sani_temp'):
         self.internal_prefix = internal_prefix

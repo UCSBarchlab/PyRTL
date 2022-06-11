@@ -1,12 +1,14 @@
 """Classes for executing and tracing circuit simulations."""
 
-from __future__ import print_function, unicode_literals
-
+import copy
+import numbers
 import sys
 import re
-import numbers
-import copy
-import six
+
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -15,10 +17,6 @@ from .memory import RomBlock
 from .helperfuncs import check_rtl_assertions, _currently_in_jupyter_notebook
 from .importexport import _VerilogSanitizer
 
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -27,7 +25,7 @@ except ImportError:
 #
 
 
-class Simulation(object):
+class Simulation:
     """A class for simulating blocks of logic step by step.
 
     A Simulation step works as follows:
@@ -458,7 +456,7 @@ class Simulation(object):
 #
 
 
-class FastSimulation(object):
+class FastSimulation:
     """A class for running JIT-to-python implementations of blocks.
 
     A Simulation step works as follows:
@@ -684,7 +682,7 @@ class FastSimulation(object):
                 "each step of simulation")
 
         def to_num(v):
-            if isinstance(v, six.string_types):
+            if isinstance(v, str):
                 # Don't use infer_val_and_bitwidth because they aren't in
                 # Verilog-style format, but are instead in plain decimal.
                 return int(v)
@@ -932,7 +930,7 @@ class FastSimulation(object):
 #
 
 
-class _WaveRendererBase(object):
+class _WaveRendererBase:
     _tick, _up, _down, _x, _low, _high, _revstart, _revstop = ('' for i in range(8))
 
     def __init__(self):
@@ -1058,7 +1056,7 @@ class TraceStorage(Mapping):
         return self.__data[key]
 
 
-class SimulationTrace(object):
+class SimulationTrace:
     """ Storage and presentation of simulation waveforms. """
 
     def __init__(self, wires_to_track=None, block=None):

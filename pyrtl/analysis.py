@@ -1,18 +1,15 @@
-
 """
 Contains functions to estimate aspects of blocks (like area and delay)
 by either using internal models or by making calls out to external tool chains.
 """
 
-from __future__ import print_function, unicode_literals
-
-import re
-import os
+import collections
 import math
-import tempfile
+import os
+import re
 import subprocess
 import sys
-import collections
+import tempfile
 
 from .core import working_block
 from .wire import Input, Output, Const, Register, WireVector
@@ -136,7 +133,7 @@ def _bits_ports_and_isrom_from_memory(mem):
 #    |  |  |  | | | \| \__>     /    \| \| /~~\ |_  |   .__/ |  .__/
 #
 
-class TimingAnalysis(object):
+class TimingAnalysis:
     """
     Timing analysis estimates the timing delays in the block
 

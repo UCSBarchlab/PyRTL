@@ -33,7 +33,6 @@ Example::
 
 """
 
-from __future__ import division, absolute_import
 import pyrtl
 from pyrtl.rtllib import libutils
 
@@ -47,7 +46,7 @@ from pyrtl.rtllib import libutils
 #    full independent hardware units) would be a plus as well
 
 
-class AES(object):
+class AES:
     def __init__(self):
         self.memories_built = False
         self._key_len = 128

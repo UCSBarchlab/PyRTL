@@ -4,7 +4,6 @@ lowering of the design to single wire gates (synthesis), along with other
 ways to change a block.
 """
 
-from __future__ import print_function, unicode_literals
 import collections
 
 from .core import working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock
@@ -58,7 +57,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     return block
 
 
-class _ProducerList(object):
+class _ProducerList:
     """  Maps from wire to its immediate producer and finds ultimate producers. """
     def __init__(self):
         self.dict = {}  # map from wirevector to its direct producer wirevector

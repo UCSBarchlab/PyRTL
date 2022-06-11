@@ -1,8 +1,9 @@
-import random
-import unittest
-import six
+import functools
+import io
 import os
+import random
 import sys
+import unittest
 
 import pyrtl
 import pyrtl.corecircuits
@@ -155,7 +156,7 @@ class TestMatchBitpattern(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -288,7 +289,7 @@ class TestMatchBitpattern(unittest.TestCase):
     def check_all_accesses_valid(self):
         sim = pyrtl.Simulation()
         sim.step_multiple({'i': [0b11010, 0b00011, 0b01101]})
-        output = six.StringIO()
+        output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(
             output.getvalue(),
@@ -469,7 +470,7 @@ class TestChop(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -513,7 +514,7 @@ class TestBitField_Update(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -591,7 +592,7 @@ class TestBitField_Update_Set(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -671,7 +672,7 @@ class TestAnyAll(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -724,11 +725,10 @@ class TestTreeReduce(unittest.TestCase):
         outwire = pyrtl.Output(name="test")
 
         import operator
-        from six.moves import reduce
         outwire <<= pyrtl.tree_reduce(operator.xor, wires)
 
         out_vals = utils.sim_and_ret_out(outwire, wires, vals)
-        true_result = [reduce(operator.xor, v) for v in zip(*vals)]
+        true_result = [functools.reduce(operator.xor, v) for v in zip(*vals)]
         self.assertEqual(out_vals, true_result)
 
     def test_empty(self):
@@ -746,7 +746,7 @@ class TestXorAllBits(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -918,7 +918,7 @@ class TestRtlProbe(unittest.TestCase):
         pyrtl.set_debug_mode()
         i = pyrtl.Input(1)
         o = pyrtl.Output(1)
-        output = six.StringIO()
+        output = io.StringIO()
         sys.stdout = output
         o <<= pyrtl.probe(i + 1, name="probe0")
         sys.stdout = sys.__stdout__

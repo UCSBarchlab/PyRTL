@@ -3,7 +3,6 @@
 Multipliers contains various PyRTL sample multipliers for people to use
 
 """
-from __future__ import absolute_import
 import pyrtl
 from . import adders, libutils
 

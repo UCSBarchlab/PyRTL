@@ -1,6 +1,6 @@
-from __future__ import print_function
+import io
 import unittest
-import six
+
 import pyrtl
 
 
@@ -77,7 +77,7 @@ class TestBlock(unittest.TestCase):
 
         block = pyrtl.working_block()
 
-        output = six.StringIO()
+        output = io.StringIO()
         i = 0
         for net in block:
             self.assertFalse(i > 100, "Too many iterations happened")
