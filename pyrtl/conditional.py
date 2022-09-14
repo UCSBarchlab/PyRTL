@@ -263,7 +263,7 @@ def _current_select():
 
     # helper to create the conjuction of predicates
     def and_with_possible_none(a, b):
-        assert(a is not None or b is not None)
+        assert a is not None or b is not None
         if a is None:
             return b
         if b is None:

@@ -71,7 +71,7 @@ print('\n')
 # verify the correctness of the first adder
 
 for i in range(len(vals1)):
-    assert(sim_trace.trace['debug_out'][i] == sim_trace.trace['in1'][i] + sim_trace.trace['in2'][i])
+    assert sim_trace.trace['debug_out'][i] == sim_trace.trace['in1'][i] + sim_trace.trace['in2'][i]
 
 
 # --- Probe ----

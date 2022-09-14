@@ -736,7 +736,7 @@ class Matrix(object):
             col = mat_ix % self.columns
             self[row, col] = get_value(v_ix)
 
-    def reshape(self, *newshape, order='C'):
+    def reshape(self, *newshape, **order):
         ''' Create a matrix of the given shape from the current matrix.
 
         :param int/ints/tuple[int] newshape: shape of the matrix to return;
@@ -767,6 +767,9 @@ class Matrix(object):
             matrix.reshape(-1, 2) == [[0, 1], [2, 3], [4, 5], [6, 7]]
             matrix.reshape(4, -1) == [[0, 1], [2, 3], [4, 5], [6, 7]]
         '''
+        # python2 does not support named arguments after *args, so we use
+        # **kwargs for 'order' and set the default here.
+        order = order.get('order', 'C')
         count = self.rows * self.columns
         if isinstance(newshape, int):
             if newshape == -1:

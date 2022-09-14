@@ -395,7 +395,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
         def twire(w):
             return subckt.twire(w)
 
-        if(command['C'] not in ff_clk_set):
+        if command['C'] not in ff_clk_set:
             ff_clk_set.add(command['C'])
 
         # Create register and assign next state to D and output to Q
@@ -418,7 +418,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
         def opt_twire(w):
             return twire(w) if w is not None else None
 
-        if(command['C'] not in ff_clk_set):
+        if command['C'] not in ff_clk_set:
             ff_clk_set.add(command['C'])
 
         regname = command['Q'] + '_reg'
@@ -487,7 +487,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
             formal = fa['formal']
             actual = fa['actual']
             if actual in parent.clk_set:
-                assert(formal in subckt.clk_set)
+                assert formal in subckt.clk_set
                 # We didn't create an input wire corresponding to this.
                 continue
             elif formal in subckt.inputs:
@@ -675,9 +675,9 @@ class _VerilogSanitizer(_NameSanitizer):
                                                 map_valid_vals, self._extra_checks)
 
     def _extra_checks(self, str):
-        return(str not in self._verilog_reserved_set  # is not a Verilog reserved keyword
-               and str != 'clk'                       # not the clock signal
-               and len(str) <= 1024)                  # not too long to be a Verilog id
+        return (str not in self._verilog_reserved_set  # is not a Verilog reserved keyword
+                and str != 'clk'                       # not the clock signal
+                and len(str) <= 1024)                  # not too long to be a Verilog id
 
 
 def _verilog_vector_size_decl(n):

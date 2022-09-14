@@ -199,5 +199,5 @@ def demux(select):
 
 
 def _demux_2(select):
-    assert(len(select) == 1)
+    assert len(select) == 1
     return ~select, select

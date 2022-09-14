@@ -143,7 +143,7 @@ class RenderTraceBase(unittest.TestCase):
             'b': [2, 23, 43, 120, 0],
             'c': [0, 1, 1, 0, 1]
         })
-        buff = io.StringIO()
+        buff = six.StringIO()
         sim.tracer.render_trace(file=buff, render_cls=pyrtl.simulation.AsciiWaveRenderer,
                                 extra_line=False, **kwargs)
         self.assertEqual(buff.getvalue(), expected)
@@ -164,7 +164,13 @@ class RenderTraceBase(unittest.TestCase):
             "b 0o2   x0o27 x0o53 x0o170x0o0  \n"
             "c ______/-----------\\_____/-----\n"  # escaped backslash
         )
-        self.check_rendered_trace(expected, repr_func=oct, symbol_len=None)
+
+        # The oct() builtin prints leading '0o' in python3 but not in python2,
+        # so we define our own.
+        def my_oct(n):
+            return '0o{0:o}'.format(n)
+
+        self.check_rendered_trace(expected, repr_func=my_oct, symbol_len=None)
 
     def test_bin_trace(self):
         expected = (
@@ -173,7 +179,13 @@ class RenderTraceBase(unittest.TestCase):
             "b 0b10      x0b10111  x0b101011 x0b1111000x0b0      \n"
             "c __________/-------------------\\_________/---------\n"  # escaped backslash
         )
-        self.check_rendered_trace(expected, repr_func=bin, symbol_len=None)
+
+        # The bin() builtin prints leading '0b' in python3 but not in python2,
+        # so we define our own.
+        def my_bin(n):
+            return '0b{0:b}'.format(n)
+
+        self.check_rendered_trace(expected, repr_func=my_bin, symbol_len=None)
 
     def test_decimal_trace(self):
         expected = (
@@ -217,7 +229,7 @@ class RenderTraceCustomBase(unittest.TestCase):
         sim.step_multiple({
             'i': [1, 2, 4, 8, 0]
         })
-        buff = io.StringIO()
+        buff = six.StringIO()
         sim.tracer.render_trace(file=buff, render_cls=pyrtl.simulation.AsciiWaveRenderer,
                                 extra_line=None, repr_per_name={'state': Foo}, symbol_len=None)
         expected = (

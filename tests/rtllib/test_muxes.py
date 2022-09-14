@@ -36,7 +36,7 @@ class TestPrioritizedMuxTrivial(unittest.TestCase):
 
 def pri_mux_actual(sels, vals):
     # python version of the pri mux hardware
-    assert(len(sels) == len(vals))
+    assert len(sels) == len(vals)
     for index, s in enumerate(sels):
         if s:
             return vals[index]

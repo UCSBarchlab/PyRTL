@@ -110,9 +110,9 @@ def _one_cycle_mult(areg, breg, rem_bits, sum_sf=0, curr_bit=0):
     else:
         a_curr_val = areg[curr_bit].sign_extended(len(breg))
         if curr_bit == 0:  # if no shift
-            return(_one_cycle_mult(areg, breg, rem_bits - 1,  # areg, breg, rem_bits
-                                   sum_sf + (a_curr_val & breg),  # sum_sf
-                                   curr_bit + 1))  # curr_bit
+            return (_one_cycle_mult(areg, breg, rem_bits - 1,  # areg, breg, rem_bits
+                                    sum_sf + (a_curr_val & breg),  # sum_sf
+                                    curr_bit + 1))  # curr_bit
         else:
             return _one_cycle_mult(
                 areg, breg, rem_bits - 1,  # areg, breg, rem_bits
