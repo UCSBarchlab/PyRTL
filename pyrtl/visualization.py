@@ -369,13 +369,15 @@ digraph g {
     from .importexport import _natural_sort_key
 
     def _node_sort_key(node):
+        # If a LogicNet and a wire share the same name, we want the LogicNet
+        # to sort first, so we arbitrarily 'A' and 'B' suffixes to break ties.
         if isinstance(node, LogicNet):
             if node.op == '@':
-                key = str(node.args[2])
+                key = str(node.args[2]) + 'A'
             else:
-                key = node.dests[0].name
+                key = node.dests[0].name + 'A'
         else:
-            key = node.name
+            key = node.name + 'B'
         return _natural_sort_key(key)
 
     # print the list of nodes

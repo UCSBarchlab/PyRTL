@@ -121,7 +121,7 @@ def _cla_adder_unit(a, b, cin):
     """
     gen = a & b
     prop = a ^ b
-    assert(len(prop) == len(gen))
+    assert len(prop) == len(gen)
 
     carry = [gen[0] | prop[0] & cin]
     sum_bit = prop[0] ^ cin

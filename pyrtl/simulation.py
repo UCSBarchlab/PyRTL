@@ -1,6 +1,6 @@
 """Classes for executing and tracing circuit simulations."""
 
-from __future__ import print_function, unicode_literals
+from __future__ import print_function
 
 import sys
 import re
