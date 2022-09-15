@@ -71,7 +71,7 @@ class CompiledSimulation(object):
         - A 64-bit build of Python
     If using the multiplication operand, only some architectures are supported:
         - x86-64 / amd64
-        - arm64 / aarch64 (untested)
+        - arm64 / aarch64
         - mips64 (untested)
 
     default_value is currently only implemented for registers, not memories.
@@ -361,9 +361,12 @@ class CompiledSimulation(object):
             self._create_code(lambda s: f.write(s + '\n'))
         if platform.system() == 'Darwin':
             shared = '-dynamiclib'
+            march = ''
         else:
             shared = '-shared'
-        subprocess.check_call(['gcc', '-O0', '-march=native', '-std=c99', '-m64',
+            march = '-march=native'
+
+        subprocess.check_call(['gcc', '-O0', march, '-std=c99', '-m64',
                                shared, '-fPIC',
                                path.join(self._dir, 'pyrtlsim.c'),
                                '-o', path.join(self._dir, 'pyrtlsim.so'), ],
@@ -732,10 +735,11 @@ class CompiledSimulation(object):
         machine = machine_alias.get(machine, machine)
         mulinstr = {
             'x86_64': '"mulq %q3":"=a"(pl),"=d"(ph):"%0"(t0),"r"(t1):"cc"',
-            'arm64': '"mul %0, %2, %3\n\tumulh %1, %2, %3":'
-                     '"=&r"(*pl),"=r"(*ph):"r"(t0),"r"(t1):"cc"',
-            'mips64': '"dmultu %2, %3\n\tmflo %0\n\tmfhi %1":'
-                      '"=r"(*pl),"=r"(*ph):"r"(t0),"r"(t1)',
+            'arm64': '"mul %0, %2, %3\\n\\t" \\\n'
+                     '"umulh %1, %2, %3":"=&r"(pl),"=r"(ph):"r"(t0),"r"(t1):"cc"',
+            'mips64': '"dmultu %2, %3\\n\\t" \\\n'
+                      '"tmflo %0\\n\\t" \\\n'
+                      '"mfhi %1":"=r"(pl),"=r"(ph):"r"(t0),"r"(t1)',
         }
         if machine in mulinstr:
             write('#define mul128(t0, t1, pl, ph) __asm__({})'.format(mulinstr[machine]))
