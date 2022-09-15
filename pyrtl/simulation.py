@@ -1211,7 +1211,7 @@ class SimulationTrace(object):
 
     def render_trace(
             self, trace_list=None, file=sys.stdout, render_cls=default_renderer(),
-            symbol_len=5, repr_func=hex, repr_per_name={}, segment_size=5,
+            symbol_len=None, repr_func=hex, repr_per_name={}, segment_size=5,
             segment_delim=' ', extra_line=True):
 
         """ Render the trace to a file using unicode and ASCII escape sequences.
