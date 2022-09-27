@@ -111,7 +111,7 @@ print()
 
 print("--- Verilog for the Counter ---")
 with io.StringIO() as vfile:
-    pyrtl.output_to_verilog(vfile)
+    pyrtl.output_to_verilog(vfile, moduleName='toplevel')
     print(vfile.getvalue())
 
 print("--- Simulation Results ---")
@@ -145,5 +145,5 @@ pyrtl.synthesize()
 pyrtl.optimize()
 
 with io.StringIO() as vfile:
-    pyrtl.output_to_verilog(vfile)
+    pyrtl.output_to_verilog(vfile, moduleName='toplevel')
     print(vfile.getvalue())

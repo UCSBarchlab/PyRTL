@@ -607,7 +607,7 @@ def input_from_verilog(verilog, clock_name='clk', toplevel=None, leave_in_dir=No
             os.remove(tmp_blif_path)
 
 
-def output_to_verilog(dest_file, add_reset=True, block=None):
+def output_to_verilog(dest_file, add_reset=True, block=None, moduleName='toplevel'):
     """ A function to walk the block and output it in Verilog format to the open file.
 
     :param dest_file: Open file where the Verilog output will be written
@@ -639,16 +639,16 @@ def output_to_verilog(dest_file, add_reset=True, block=None):
     def varname(wire):
         return internal_names[wire.name]
 
-    _to_verilog_header(file, block, varname, add_reset)
+    _to_verilog_header(file, block, varname, add_reset, moduleName)
     _to_verilog_combinational(file, block, varname)
     _to_verilog_sequential(file, block, varname, add_reset)
     _to_verilog_memories(file, block, varname)
     _to_verilog_footer(file)
 
 
-def OutputToVerilog(dest_file, block=None):
+def OutputToVerilog(dest_file, block=None, moduleName='toplevel'):
     """ A deprecated function to output Verilog, use "output_to_verilog" instead. """
-    return output_to_verilog(dest_file, block)
+    return output_to_verilog(dest_file, block, moduleName)
 
 
 class _VerilogSanitizer(_NameSanitizer):
@@ -697,7 +697,7 @@ def _verilog_block_parts(block):
     return inputs, outputs, registers, wires, memories
 
 
-def _to_verilog_header(file, block, varname, add_reset):
+def _to_verilog_header(file, block, varname, add_reset, moduleName):
     """ Print the header of the verilog implementation. """
 
     def name_sorted(wires):
@@ -719,7 +719,7 @@ def _to_verilog_header(file, block, varname, add_reset):
     if any(w.startswith('tmp') for w in io_list):
         raise PyrtlError('input or output with name starting with "tmp" indicates unnamed IO')
     io_list_str = ', '.join(io_list)
-    print('module toplevel({:s});'.format(io_list_str), file=file)
+    print('module {:s}]({:s});'.format(moduleName, io_list_str), file=file)
 
     # inputs and outputs
     print('    input clk;', file=file)
