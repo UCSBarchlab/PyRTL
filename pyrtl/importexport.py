@@ -719,7 +719,7 @@ def _to_verilog_header(file, block, varname, add_reset, moduleName):
     if any(w.startswith('tmp') for w in io_list):
         raise PyrtlError('input or output with name starting with "tmp" indicates unnamed IO')
     io_list_str = ', '.join(io_list)
-    print('module {:s}]({:s});'.format(moduleName, io_list_str), file=file)
+    print('module {:s}({:s});'.format(moduleName, io_list_str), file=file)
 
     # inputs and outputs
     print('    input clk;', file=file)
