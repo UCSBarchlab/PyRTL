@@ -2,11 +2,12 @@
 
 from __future__ import print_function
 
-import sys
-import re
-import numbers
 import copy
+import math
+import numbers
+import re
 import six
+import sys
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -933,26 +934,50 @@ class FastSimulation(object):
 
 
 class _WaveRendererBase(object):
-    _tick, _up, _down, _x, _low, _high, _revstart, _revstop = ('' for i in range(8))
+    _tick, _minor_tick, _up, _down, _x, _low, _high, _revstart, _revstop = (
+        '' for i in range(9))
 
     def __init__(self):
         super(_WaveRendererBase, self).__init__()
         self.prior_val = None
         self.prev_wire = None
 
-    def tick_segment(self, n, symbol_len, segment_size):
-        num_tick = self._tick + str(n)
-        return num_tick.ljust(symbol_len * segment_size)
+    def tick_segment(self, n, symbol_len, segment_size, maxtracelen):
+        """Render a major tick mark followed by minor tick marks.
 
-    def render_val(self, w, n, current_val, symbol_len, repr_func, repr_per_name):
+        :param n: Cycle number for the major tick mark.
+        :param symbol_len: Rendered length of each cycle (in characters).
+        :param segment_size: Length between major tick marks (in cycles).
+        :param maxtracelen: Length of the longest trace (in cycles).
+        """
+        # Render a major tick mark followed by its label (n).
+        major_tick = self._tick + str(n)
+        # Number of cycles occupied by major_tick.
+        major_tick_cycles = math.ceil(len(major_tick) / symbol_len)
+        # If major_tick can't fit in segment_size, drop most significant digits
+        # until it fits.
+        if major_tick_cycles > segment_size:
+            major_tick = self._tick + major_tick[:segment_size - 1]
+        else:
+            # Pad major_tick out to major_tick_cycles.
+            ticks = major_tick.ljust(symbol_len * major_tick_cycles)
+        # Fill any remaining space with minor ticks. Do not render minor tick
+        # marks beyond maxtracelen.
+        if n + segment_size >= maxtracelen:
+            segment_size = maxtracelen - n
+        ticks += (self._minor_tick.ljust(symbol_len)
+                  * (segment_size - major_tick_cycles))
+        return ticks
+
+    def render_val(self, w, current_val, symbol_len, repr_func, repr_per_name):
         if w is not self.prev_wire:
             self.prev_wire = w
-            self.prior_val = current_val
-        out = self._render_val_with_prev(w, n, current_val, symbol_len, repr_func, repr_per_name)
+            self.prior_val = None
+        out = self._render_val_with_prev(w, current_val, symbol_len, repr_func, repr_per_name)
         self.prior_val = current_val
         return out
 
-    def _render_val_with_prev(self, w, n, current_val, symbol_len, repr_func, repr_per_name):
+    def _render_val_with_prev(self, w, current_val, symbol_len, repr_func, repr_per_name):
         """Return a string encoding the given value in a waveform.
 
         :param w: The WireVector we are rendering to a waveform
@@ -980,15 +1005,18 @@ class _WaveRendererBase(object):
         sl = symbol_len - 1
         if len(w) > 1:
             out = self._revstart
+
             if current_val != self.prior_val:
-                out += self._x + to_str(current_val).rstrip('L').ljust(sl)[:sl]
-            elif n == 0:
-                out += to_str(current_val).rstrip('L').ljust(symbol_len)[:symbol_len]
+                if self.prior_val is not None:
+                    out += self._x
+                out += to_str(current_val).rstrip('L').ljust(sl)[:sl]
             else:
                 out += ' ' * symbol_len
             out += self._revstop
         else:
             pretty_map = {
+                (None, 0): self._low * sl,
+                (None, 1): self._high * sl,
                 (0, 0): self._low + self._low * sl,
                 (0, 1): self._up + self._high * sl,
                 (1, 0): self._down + self._low * sl,
@@ -999,17 +1027,33 @@ class _WaveRendererBase(object):
 
 
 class Utf8WaveRenderer(_WaveRendererBase):
-    _tick = u'\u258f'
-    _up, _down = u'\u2571', u'\u2572'
-    _x, _low, _high = u'\u2573', u'\u005f', u'\u203e'
-    _revstart, _revstop = '\x1B[7m', '\x1B[0m'
+    # U+250A: BOX DRAWINGS LIGHT QUADRUPLE DASH VERTICAL
+    _tick = u'\u250a'
+    # U+2577: BOX DRAWINGS LIGHT DOWN
+    _minor_tick = u'\u2577'
+    # U+2571: BOX DRAWINGS LIGHT DIAGONAL UPPER RIGHT TO LOWER LEFT
+    _up = u'\u2571'
+    # U+2572: BOX DRAWINGS LIGHT DIAGONAL UPPER LEFT TO LOWER RIGHT
+    _down = u'\u2572'
+    # U+2503: BOX DRAWINGS HEAVY VERTICAL
+    _x = u'\u2503'
+    # U+2581: LOWER ONE EIGHTH BLOCK
+    _low = u'\u2581'
+    # U+2594: UPPER ONE EIGHTH BLOCK
+    _high = u'\u2594'
+
+    # Start reverse-video
+    _revstart = '\x1B[7m'
+    # Reset all attributes
+    _revstop = '\x1B[0m'
 
 
 class AsciiWaveRenderer(_WaveRendererBase):
     """ Poor Man's wave renderer (for windows cmd compatibility)"""
-    _tick = '-'
-    _up, _down = '/', '\\'
-    _x, _low, _high = 'x', '_', '-'
+    _tick = '|'
+    _minor_tick = '.'
+    _up, _down = ',', '.'
+    _x, _low, _high = '|', '_', '-'
     _revstart, _revstop = '', ''
 
 
@@ -1212,7 +1256,7 @@ class SimulationTrace(object):
     def render_trace(
             self, trace_list=None, file=sys.stdout, render_cls=default_renderer(),
             symbol_len=None, repr_func=hex, repr_per_name={}, segment_size=5,
-            segment_delim=' ', extra_line=True):
+            segment_delim='', extra_line=True):
 
         """ Render the trace to a file using unicode and ASCII escape sequences.
 
@@ -1265,14 +1309,13 @@ class SimulationTrace(object):
         renderer = render_cls()
 
         def formatted_trace_line(wire, trace):
-            heading = wire.rjust(maxnamelen) + ' '
+            heading = wire.rjust(maxnamelen) + renderer._tick
             trace_line = ''
             for i in range(len(trace)):
                 if (i % segment_size == 0) and i > 0:
                     trace_line += segment_delim
                 trace_line += renderer.render_val(
                     self._wires[wire],
-                    i % segment_size,
                     trace[i],
                     symbol_len,
                     repr_func,
@@ -1316,18 +1359,20 @@ class SimulationTrace(object):
         maxtracelen = max(len(v) for v in self.trace.values())
         if segment_size is None:
             segment_size = maxtracelen
-        spaces = ' ' * (maxnamelen + 1)
-        ticks = [renderer.tick_segment(n, symbol_len, segment_size)
+        spaces = ' ' * (maxnamelen)
+        ticks = [renderer.tick_segment(n, symbol_len, segment_size, maxtracelen)
                  for n in range(0, maxtracelen, segment_size)]
         print(spaces + segment_delim.join(ticks), file=file)
 
         # now all the traces
-        for w in trace_list:
+        print(formatted_trace_line(trace_list[0], self.trace[trace_list[0]]),
+              file=file)
+        for w in trace_list[1:]:
             if extra_line:
-                print(file=file)
+                ticks = [renderer._tick.ljust(symbol_len * segment_size)
+                         for n in range(0, maxtracelen, segment_size)]
+                print(spaces + segment_delim.join(ticks), file=file)
             print(formatted_trace_line(w, self.trace[w]), file=file)
-        if extra_line:
-            print(file=file)
 
     def _set_initial_values(self, default_value, init_regvalue, init_memvalue):
         """ Remember the default values that were used when starting the trace.
