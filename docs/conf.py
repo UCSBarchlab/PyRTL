@@ -18,11 +18,11 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'PyRTL'
-copyright = '2021, Timothy Sherwood'
+copyright = '2023, Timothy Sherwood'
 author = 'Timothy Sherwood'
 
 # The full version, including alpha/beta/rc tags
-release = '0.10.1'
+release = '0.10.2'
 
 
 # -- General configuration ---------------------------------------------------
