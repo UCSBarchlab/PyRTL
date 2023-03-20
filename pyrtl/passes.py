@@ -191,10 +191,10 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
         'r': lambda x, _: x   # This is only valid for constant folding purposes
     }
     two_var_ops = {
-        '&': lambda l, r: l & r,
-        '|': lambda l, r: l | r,
-        '^': lambda l, r: l ^ r,
-        'n': lambda l, r: 1 - (l & r),
+        '&': lambda left, right: left & right,
+        '|': lambda left, right: left | right,
+        '^': lambda left, right: left ^ right,
+        'n': lambda left, right: 1 - (left & right),
     }
 
     def _constant_prop_error(net, error_str):
@@ -602,10 +602,10 @@ def _decompose(net, wv_map, mems, block_out):
         '~': lambda w: ~w,
     }
     c_two_var_ops = {
-        '&': lambda l, r: l & r,
-        '|': lambda l, r: l | r,
-        '^': lambda l, r: l ^ r,
-        'n': lambda l, r: l.nand(r),
+        '&': lambda left, right: left & right,
+        '|': lambda left, right: left | right,
+        '^': lambda left, right: left ^ right,
+        'n': lambda left, right: left.nand(right),
     }
 
     if net.op in one_var_ops:
