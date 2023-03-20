@@ -1105,6 +1105,24 @@ class Utf8RendererConstants(RendererConstants):
     _chars_between_cycles = 2
 
 
+class Utf8AltRendererConstants(RendererConstants):
+    """Alternative UTF-8 renderer constants.."""
+    # Start reverse-video, reset all attributes
+    _bus_start, _bus_stop = '\x1B[7m', '\x1B[0m'
+
+    _tick = '│'
+
+    _up, _down = '╱', '╲'
+    _low, _high = '▁', '▔'
+
+    _x = '┃'
+
+    # Number of characters needed between cycles. The cycle changes halfway
+    # between this width (1), so the first character belongs to the previous
+    # cycle and the second character belongs to the next cycle.
+    _chars_between_cycles = 1
+
+
 class PowerlineRendererConstants(Utf8RendererConstants):
     """Powerline renderer constants. Font must include powerline glyphs.
 
@@ -1133,10 +1151,6 @@ class Cp437RendererConstants(RendererConstants):
 
     _x = '│'
 
-    # Number of characters needed between cycles. The cycle changes halfway
-    # between this width (1), so the first half of the character belongs to the
-    # previous cycle and the second half of the character belongs to the next
-    # cycle.
     _chars_between_cycles = 1
 
 
@@ -1149,10 +1163,6 @@ class AsciiRendererConstants(RendererConstants):
 
     _x = '|'
 
-    # Number of characters needed between cycles. The cycle changes halfway
-    # between this width (1), so the first half of the character belongs to the
-    # previous cycle and the second half of the character belongs to the next
-    # cycle.
     _chars_between_cycles = 1
 
 
@@ -1172,6 +1182,7 @@ def default_renderer():
     renderer_map = {
         'powerline': PowerlineRendererConstants(),
         'utf-8': Utf8RendererConstants(),
+        'utf-8-alt': Utf8AltRendererConstants(),
         'cp437': Cp437RendererConstants(),
         'ascii': AsciiRendererConstants()
     }
