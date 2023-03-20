@@ -227,12 +227,14 @@ class CompiledSimulation(object):
         if nsteps < 1:
             raise PyrtlError("must simulate at least one step")
 
-        if list(filter(lambda l: len(l) < nsteps, provided_inputs.values())):
+        if list(filter(lambda value: len(value) < nsteps,
+                       provided_inputs.values())):
             raise PyrtlError(
                 "must supply a value for each provided wire "
                 "for each step of simulation")
 
-        if list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
+        if list(filter(lambda value: len(value) < nsteps,
+                       expected_outputs.values())):
             raise PyrtlError(
                 "any expected outputs must have a supplied value "
                 "each step of simulation")

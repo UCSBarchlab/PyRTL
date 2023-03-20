@@ -5,6 +5,7 @@ from __future__ import print_function
 import copy
 import math
 import numbers
+import os
 import re
 import six
 import sys
@@ -63,16 +64,16 @@ class Simulation(object):
     simple_func = {  # OPS
         'w': lambda x: x,
         '~': lambda x: ~x,
-        '&': lambda l, r: l & r,
-        '|': lambda l, r: l | r,
-        '^': lambda l, r: l ^ r,
-        'n': lambda l, r: ~(l & r),
-        '+': lambda l, r: l + r,
-        '-': lambda l, r: l - r,
-        '*': lambda l, r: l * r,
-        '<': lambda l, r: int(l < r),
-        '>': lambda l, r: int(l > r),
-        '=': lambda l, r: int(l == r),
+        '&': lambda left, right: left & right,
+        '|': lambda left, right: left | right,
+        '^': lambda left, right: left ^ right,
+        'n': lambda left, right: ~(left & right),
+        '+': lambda left, right: left + right,
+        '-': lambda left, right: left - right,
+        '*': lambda left, right: left * right,
+        '<': lambda left, right: int(left < right),
+        '>': lambda left, right: int(left > right),
+        '=': lambda left, right: int(left == right),
         'x': lambda sel, f, t: f if (sel == 0) else t
     }
 
@@ -319,12 +320,14 @@ class Simulation(object):
         if nsteps < 1:
             raise PyrtlError("must simulate at least one step")
 
-        if list(filter(lambda l: len(l) < nsteps, provided_inputs.values())):
+        if list(filter(lambda value: len(value) < nsteps,
+                       provided_inputs.values())):
             raise PyrtlError(
                 "must supply a value for each provided wire "
                 "for each step of simulation")
 
-        if list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
+        if list(filter(lambda value: len(value) < nsteps,
+                       expected_outputs.values())):
             raise PyrtlError(
                 "any expected outputs must have a supplied value "
                 "each step of simulation")
@@ -674,12 +677,14 @@ class FastSimulation(object):
         if nsteps < 1:
             raise PyrtlError("must simulate at least one step")
 
-        if list(filter(lambda l: len(l) < nsteps, provided_inputs.values())):
+        if list(filter(lambda value: len(value) < nsteps,
+                       provided_inputs.values())):
             raise PyrtlError(
                 "must supply a value for each provided wire "
                 "for each step of simulation")
 
-        if list(filter(lambda l: len(l) < nsteps, expected_outputs.values())):
+        if list(filter(lambda value: len(value) < nsteps,
+                       expected_outputs.values())):
             raise PyrtlError(
                 "any expected outputs must have a supplied value "
                 "each step of simulation")
@@ -831,16 +836,16 @@ class FastSimulation(object):
             'w': lambda x: x,
             'r': lambda x: x,
             '~': lambda x: '(~' + x + ')',
-            '&': lambda l, r: '(' + l + '&' + r + ')',
-            '|': lambda l, r: '(' + l + '|' + r + ')',
-            '^': lambda l, r: '(' + l + '^' + r + ')',
-            'n': lambda l, r: '(~(' + l + '&' + r + '))',
-            '+': lambda l, r: '(' + l + '+' + r + ')',
-            '-': lambda l, r: '(' + l + '-' + r + ')',
-            '*': lambda l, r: '(' + l + '*' + r + ')',
-            '<': lambda l, r: 'int(' + l + '<' + r + ')',
-            '>': lambda l, r: 'int(' + l + '>' + r + ')',
-            '=': lambda l, r: 'int(' + l + '==' + r + ')',
+            '&': lambda left, right: '(' + left + '&' + right + ')',
+            '|': lambda left, right: '(' + left + '|' + right + ')',
+            '^': lambda left, right: '(' + left + '^' + right + ')',
+            'n': lambda left, right: '(~(' + left + '&' + right + '))',
+            '+': lambda left, right: '(' + left + '+' + right + ')',
+            '-': lambda left, right: '(' + left + '-' + right + ')',
+            '*': lambda left, right: '(' + left + '*' + right + ')',
+            '<': lambda left, right: 'int(' + left + '<' + right + ')',
+            '>': lambda left, right: 'int(' + left + '>' + right + ')',
+            '=': lambda left, right: 'int(' + left + '==' + right + ')',
             'x': lambda sel, f, t: '({}) if ({}==0) else ({})'.format(f, sel, t),
         }
 
@@ -933,57 +938,39 @@ class FastSimulation(object):
 #
 
 
-class _WaveRendererBase(object):
-    _tick, _minor_tick, _up, _down, _x, _low, _high, _revstart, _revstop = (
-        '' for i in range(9))
+class WaveRenderer(object):
+    def __init__(self, constants):
+        self.constants = constants
 
-    def __init__(self):
-        super(_WaveRendererBase, self).__init__()
-        self.prior_val = None
-        self.prev_wire = None
-
-    def tick_segment(self, n, symbol_len, segment_size, maxtracelen):
-        """Render a major tick mark followed by minor tick marks.
+    def render_ruler_segment(self, n, cycle_len, segment_size, maxtracelen):
+        """Render a major tick padded to segment_size.
 
         :param n: Cycle number for the major tick mark.
-        :param symbol_len: Rendered length of each cycle (in characters).
-        :param segment_size: Length between major tick marks (in cycles).
-        :param maxtracelen: Length of the longest trace (in cycles).
+        :param cycle_len: Rendered length of each cycle, in characters.
+        :param segment_size: Length between major tick marks, in cycles.
+        :param maxtracelen: Length of the longest trace, in cycles.
         """
         # Render a major tick mark followed by its label (n).
-        major_tick = self._tick + str(n)
+        major_tick = self.constants._tick + str(n)
         # Number of cycles occupied by major_tick.
-        major_tick_cycles = math.ceil(len(major_tick) / symbol_len)
+        major_tick_cycles = math.ceil(len(major_tick) / cycle_len)
         # If major_tick can't fit in segment_size, drop most significant digits
         # until it fits.
         if major_tick_cycles > segment_size:
-            major_tick = self._tick + major_tick[:segment_size - 1]
-        else:
-            # Pad major_tick out to major_tick_cycles.
-            ticks = major_tick.ljust(symbol_len * major_tick_cycles)
-        # Fill any remaining space with minor ticks. Do not render minor tick
-        # marks beyond maxtracelen.
+            major_tick = self.constants._tick + major_tick[:segment_size - 1]
+
+        # Do not render past maxtracelen.
         if n + segment_size >= maxtracelen:
             segment_size = maxtracelen - n
-        ticks += (self._minor_tick.ljust(symbol_len)
-                  * (segment_size - major_tick_cycles))
+        # Pad major_tick out to segment_size.
+        ticks = major_tick.ljust(cycle_len * segment_size)
         return ticks
 
-    def render_val(self, w, current_val, symbol_len, repr_func, repr_per_name):
-        if w is not self.prev_wire:
-            self.prev_wire = w
-            self.prior_val = None
-        out = self._render_val_with_prev(w, current_val, symbol_len, repr_func, repr_per_name)
-        self.prior_val = current_val
-        return out
+    def val_to_str(self, value, wire_name, repr_func, repr_per_name):
+        """Return a string representing 'value'.
 
-    def _render_val_with_prev(self, w, current_val, symbol_len, repr_func, repr_per_name):
-        """Return a string encoding the given value in a waveform.
-
-        :param w: The WireVector we are rendering to a waveform
-        :param n: An integer from 0 to segment_len-1
-        :param current_val: the value to be rendered
-        :param symbol_len: and integer for how big to draw the current value
+        :param value: The value to convert to string.
+        :param wire_name: Name of the wire that produced this value.
         :param repr_func: function to use for representing the current_val;
             examples are 'hex', 'oct', 'bin', 'str' (for decimal), or even the name
             of an IntEnum class you know the value will belong to. Defaults to 'hex'.
@@ -991,80 +978,213 @@ class _WaveRendererBase(object):
             value and returns a user-defined representation. If a signal name is
             not found in the map, the argument `repr_func` will be used instead.
 
+        :return: a string representing 'value'.
+
+        """
+        f = repr_per_name.get(wire_name)
+        if f is not None:
+            return str(f(value))
+        else:
+            return str(repr_func(value))
+
+    def render_val(self, w, prior_val, current_val, symbol_len, cycle_len,
+                   repr_func, repr_per_name, prev_line):
+        """Return a string encoding the given value in a waveform.
+
+        :param w: The WireVector we are rendering to a waveform
+        :param n: An integer from 0 to segment_len-1
+        :param prior_val: Last value rendered. None if there was no last value.
+        :param current_val: the value to be rendered
+        :param symbol_len: Width of each value, in characters.
+        :param cycle_len: Width of each cycle, in characters.
+        :param repr_func: function to use for representing the current_val;
+            examples are 'hex', 'oct', 'bin', 'str' (for decimal), or even the name
+            of an IntEnum class you know the value will belong to. Defaults to 'hex'.
+        :param repr_per_name: Map from signal name to a function that takes in the signal's
+            value and returns a user-defined representation. If a signal name is
+            not found in the map, the argument `repr_func` will be used instead.
+        :param prev_line: If True, render the gap between signals. If False,
+            render the main signal. This is useful for rendering signals across
+            two lines, see the _prev_line* fields in RendererConstants.
+
         Returns a string of printed length symbol_len that will draw the
         representation of current_val.  The input prior_val is used to
         render transitions.
         """
-        def to_str(v):
-            f = repr_per_name.get(w.name)
-            if f is not None:
-                return str(f(v))
-            else:
-                return str(repr_func(v))
-
-        sl = symbol_len - 1
         if len(w) > 1:
-            out = self._revstart
+            if prev_line:
+                # Bus wires are currently never rendered across multiple lines.
+                return ''
 
-            if current_val != self.prior_val:
-                if self.prior_val is not None:
-                    out += self._x
-                out += to_str(current_val).rstrip('L').ljust(sl)[:sl]
+            out = ''
+            if current_val != prior_val:
+                if prior_val is not None:
+                    out += self.constants._x
+                out += (self.val_to_str(current_val, w.name, repr_func,
+                                        repr_per_name).rstrip('L')
+                        .ljust(symbol_len)[:symbol_len])
             else:
-                out += ' ' * symbol_len
-            out += self._revstop
+                out += ' ' * cycle_len
         else:
+            if prev_line:
+                low = self.constants._prev_line_low
+                high = self.constants._prev_line_high
+                up = self.constants._prev_line_up
+                down = self.constants._prev_line_down
+            else:
+                low = self.constants._low
+                high = self.constants._high
+                up = self.constants._up
+                down = self.constants._down
+
             pretty_map = {
-                (None, 0): self._low * sl,
-                (None, 1): self._high * sl,
-                (0, 0): self._low + self._low * sl,
-                (0, 1): self._up + self._high * sl,
-                (1, 0): self._down + self._low * sl,
-                (1, 1): self._high + self._high * sl,
+                (None, 0): low * symbol_len,
+                (None, 1): high * symbol_len,
+                (0, 0): low * cycle_len,
+                (0, 1): up + high * symbol_len,
+                (1, 0): down + low * symbol_len,
+                (1, 1): high * cycle_len,
             }
-            out = pretty_map[(self.prior_val, current_val)]
+            out = pretty_map[(prior_val, current_val)]
         return out
 
 
-class Utf8WaveRenderer(_WaveRendererBase):
-    # U+250A: BOX DRAWINGS LIGHT QUADRUPLE DASH VERTICAL
-    _tick = u'\u250a'
-    # U+2577: BOX DRAWINGS LIGHT DOWN
-    _minor_tick = u'\u2577'
-    # U+2571: BOX DRAWINGS LIGHT DIAGONAL UPPER RIGHT TO LOWER LEFT
-    _up = u'\u2571'
-    # U+2572: BOX DRAWINGS LIGHT DIAGONAL UPPER LEFT TO LOWER RIGHT
-    _down = u'\u2572'
-    # U+2503: BOX DRAWINGS HEAVY VERTICAL
-    _x = u'\u2503'
-    # U+2581: LOWER ONE EIGHTH BLOCK
-    _low = u'\u2581'
-    # U+2594: UPPER ONE EIGHTH BLOCK
-    _high = u'\u2594'
+class RendererConstants():
+    # Print _tick before rendering a ruler segment. Must have a display length
+    # of 1 character.
+    _tick = ''
 
-    # Start reverse-video
-    _revstart = '\x1B[7m'
-    # Reset all attributes
-    _revstop = '\x1B[0m'
+    # Print _up when a binary wire transitions from low to high. Print _down
+    # when a binary wire transitions from high to low. _up and _down must have
+    # display length of _chars_between_cycles characters.
+    _up, _down = '', ''
+
+    # Print _low when a binary wire maintains a low value, and print _high when
+    # a binary wire maintains a high value. _low and _high must have display
+    # length of 1 character.
+    _low, _high = '', ''
+
+    # These are like _up, _down, _low, _high, except they are printed on the
+    # previous line. These are useful for displaying a binary wire across two
+    # lines.
+    _prev_line_up, _prev_line_down = '', ''
+    _prev_line_low, _prev_line_high = '', ''
+
+    # Print _bus_start before rendering a bus wire, and print _bus_stop after
+    # rendering a bus wire. _bus_start and _bus_stop must have zero display
+    # length characters. Escape codes never count towards display length.
+    _bus_start, _bus_stop = '', ''
+    # Print _x when a bus wire changes value. _low must have display length
+    # of _chars_between_cycles characters.
+    _x = ''
+
+    # Number of characters between cycles. The cycle changes halfway between
+    # this width. The first half of this width belongs to the previous cycle and
+    # the second half of this width belongs to the next cycle.
+    _chars_between_cycles = 0
 
 
-class AsciiWaveRenderer(_WaveRendererBase):
-    """ Poor Man's wave renderer (for windows cmd compatibility)"""
+class Utf8RendererConstants(RendererConstants):
+    """UTF-8 renderer constants. These should work in most terminals."""
+    # Start reverse-video, reset all attributes
+    _bus_start, _bus_stop = '\x1B[7m', '\x1B[0m'
+
+    _tick = '▕'
+
+    _up, _down = '▁▏', '▕▁'
+    _low, _high = '▁', ' '
+
+    _prev_line_up, _prev_line_down = ' ▁', '▁ '
+    _prev_line_low, _prev_line_high = ' ', '▁'
+
+    _x = '▕ '
+
+    # Number of characters needed between cycles. The cycle changes halfway
+    # between this width (2), so the first character belongs to the previous
+    # cycle and the second character belongs to the next cycle.
+    _chars_between_cycles = 2
+
+
+class PowerlineRendererConstants(Utf8RendererConstants):
+    """Powerline renderer constants. Font must include powerline glyphs.
+
+    https://github.com/powerline/fonts
+
+    """
+    # Start reverse-video, reset all attributes
+    _bus_start, _bus_stop = '\x1B[7m', '\x1B[0m'
+
+    _x = _bus_stop + '' + _bus_start
+
+
+class Cp437RendererConstants(RendererConstants):
+    """Code page 437 renderer constants (for windows cmd compatibility)
+
+    Also known as 8-bit ASCII. https://en.wikipedia.org/wiki/Code_page_437
+
+    """
+    _tick = '│'
+
+    _up, _down = '┘', '└'
+    _low, _high = '─', ' '
+
+    _prev_line_up, _prev_line_down = '┌', '┐'
+    _prev_line_low, _prev_line_high = ' ', '─'
+
+    _x = '│'
+
+    # Number of characters needed between cycles. The cycle changes halfway
+    # between this width (1), so the first half of the character belongs to the
+    # previous cycle and the second half of the character belongs to the next
+    # cycle.
+    _chars_between_cycles = 1
+
+
+class AsciiRendererConstants(RendererConstants):
+    """7-bit ASCII renderer constants. These should work anywhere."""
     _tick = '|'
-    _minor_tick = '.'
+
     _up, _down = ',', '.'
-    _x, _low, _high = '|', '_', '-'
-    _revstart, _revstop = '', ''
+    _low, _high = '_', '-'
+
+    _x = '|'
+
+    # Number of characters needed between cycles. The cycle changes halfway
+    # between this width (1), so the first half of the character belongs to the
+    # previous cycle and the second half of the character belongs to the next
+    # cycle.
+    _chars_between_cycles = 1
 
 
 def default_renderer():
-    import sys
-    try:
-        if str(sys.stdout.encoding).lower() == "utf-8":
-            return Utf8WaveRenderer
-    except Exception:
-        pass
-    return AsciiWaveRenderer
+    """Select renderer constants based on $PYRTL_RENDERER or auto-detection."""
+    renderer = ''
+    if 'PYRTL_RENDERER' in os.environ:
+        # Use user-specified renderer constants.
+        renderer = os.environ['PYRTL_RENDERER']
+    elif 'PROMPT' in os.environ:
+        # Windows Command Prompt, use code page 437 renderer constants.
+        renderer = 'cp437'
+    else:
+        # Use UTF-8 renderer constants by default.
+        renderer = 'utf-8'
+
+    renderer_map = {
+        'powerline': PowerlineRendererConstants(),
+        'utf-8': Utf8RendererConstants(),
+        'cp437': Cp437RendererConstants(),
+        'ascii': AsciiRendererConstants()
+    }
+
+    if renderer in renderer_map:
+        constants = renderer_map[renderer]
+    else:
+        print(f"WARNING: Unsupported $PYRTL_RENDERER value '{renderer}' "
+              f"supported values are ({' '.join(renderer_map.keys())}). "
+              'Defaulting to utf-8')
+        constants = Utf8RendererConstants()
+
+    return WaveRenderer(constants)
 
 
 def _trace_sort_key(w):
@@ -1254,16 +1374,15 @@ class SimulationTrace(object):
         file.flush()
 
     def render_trace(
-            self, trace_list=None, file=sys.stdout, render_cls=default_renderer(),
-            symbol_len=None, repr_func=hex, repr_per_name={}, segment_size=5,
-            segment_delim='', extra_line=True):
+            self, trace_list=None, file=sys.stdout, renderer=default_renderer(),
+            symbol_len=None, repr_func=hex, repr_per_name={}, segment_size=1):
 
         """ Render the trace to a file using unicode and ASCII escape sequences.
 
         :param trace_list: A list of signal names to be output in the specified order.
         :param file: The place to write output, default to stdout.
-        :param render_cls: A class that translates traces into output bytes.
-        :param symbol_len: The "length" of each rendered cycle in characters.
+        :param renderer: An object that translates traces into output bytes.
+        :param symbol_len: The "length" of each rendered value in characters.
             If None, the length will be automatically set such that the largest
             represented value fits.
         :param repr_func: Function to use for representing each value in the trace;
@@ -1272,8 +1391,6 @@ class SimulationTrace(object):
             value and returns a user-defined representation. If a signal name is
             not found in the map, the argument `repr_func` will be used instead.
         :param segment_size: Traces are broken in the segments of this number of cycles.
-        :param segment_delim: The character to be output between segments.
-        :param extra_line: A Boolean to determine if we should print a blank line between signals.
 
         The resulting output can be viewed directly on the terminal or looked
         at with "more" or "less -R" which both should handle the ASCII escape
@@ -1298,29 +1415,44 @@ class SimulationTrace(object):
             display(Javascript(js_stuff))
         else:
             self.render_trace_to_text(
-                trace_list=trace_list, file=file, render_cls=render_cls,
+                trace_list=trace_list, file=file, renderer=renderer,
                 symbol_len=symbol_len, repr_func=repr_func, repr_per_name=repr_per_name,
-                segment_size=segment_size, segment_delim=segment_delim, extra_line=extra_line)
+                segment_size=segment_size)
 
     def render_trace_to_text(
-            self, trace_list, file, render_cls,
-            symbol_len, repr_func, repr_per_name, segment_size, segment_delim, extra_line):
-
-        renderer = render_cls()
+            self, trace_list, file, renderer,
+            symbol_len, repr_func, repr_per_name, segment_size):
 
         def formatted_trace_line(wire, trace):
-            heading = wire.rjust(maxnamelen) + renderer._tick
-            trace_line = ''
+            first_trace_line = ''
+            second_trace_line = ''
+            prior_val = None
+            is_bus = len(self._wires[wire]) > 1
+            if is_bus:
+                second_trace_line += renderer.constants._bus_start
             for i in range(len(trace)):
-                if (i % segment_size == 0) and i > 0:
-                    trace_line += segment_delim
-                trace_line += renderer.render_val(
-                    self._wires[wire],
-                    trace[i],
-                    symbol_len,
-                    repr_func,
-                    repr_per_name)
-            return heading + trace_line
+                additional_symbol_len = 0
+                if i == 0 or i == len(trace) - 1:
+                    # There is no cycle change before the first cycle or after
+                    # the last cycle, so the first and last cycles may have
+                    # additional width.
+                    additional_symbol_len = (
+                        math.floor(renderer.constants._chars_between_cycles / 2))
+                first_trace_line += renderer.render_val(
+                    self._wires[wire], prior_val, trace[i],
+                    symbol_len + additional_symbol_len, cycle_len, repr_func,
+                    repr_per_name, prev_line=True)
+                second_trace_line += renderer.render_val(
+                    self._wires[wire], prior_val, trace[i],
+                    symbol_len + additional_symbol_len, cycle_len, repr_func,
+                    repr_per_name, prev_line=False)
+                prior_val = trace[i]
+            if is_bus:
+                second_trace_line += renderer.constants._bus_stop
+            heading_gap = ' ' * (maxnamelen + 1)
+            heading = wire.rjust(maxnamelen) + ' '
+            return (heading_gap + first_trace_line + '\n'
+                    + heading + second_trace_line)
 
         # default to printing all signals in sorted order
         if trace_list is None:
@@ -1339,19 +1471,13 @@ class SimulationTrace(object):
                 "if a CompiledSimulation was used.")
 
         if symbol_len is None:
-
-            def to_str(v, name):
-                f = repr_per_name.get(name)
-                if f is not None:
-                    return str(f(v))
-                else:
-                    return str(repr_func(v))
-
             maxvallen = 0
             for name, trace in self.trace.items():
-                maxvallen = max(maxvallen, max(len(to_str(v, name)) for v in trace))
-            symbol_len = maxvallen + 1
+                maxvallen = max(maxvallen, max(len(renderer.val_to_str(
+                    v, name, repr_func, repr_per_name)) for v in trace))
+            symbol_len = maxvallen
 
+        cycle_len = symbol_len + renderer.constants._chars_between_cycles
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map
 
@@ -1360,18 +1486,15 @@ class SimulationTrace(object):
         if segment_size is None:
             segment_size = maxtracelen
         spaces = ' ' * (maxnamelen)
-        ticks = [renderer.tick_segment(n, symbol_len, segment_size, maxtracelen)
+        ticks = [renderer.render_ruler_segment(n, cycle_len, segment_size,
+                                               maxtracelen)
                  for n in range(0, maxtracelen, segment_size)]
-        print(spaces + segment_delim.join(ticks), file=file)
+        print(spaces + ''.join(ticks), file=file)
 
         # now all the traces
         print(formatted_trace_line(trace_list[0], self.trace[trace_list[0]]),
               file=file)
         for w in trace_list[1:]:
-            if extra_line:
-                ticks = [renderer._tick.ljust(symbol_len * segment_size)
-                         for n in range(0, maxtracelen, segment_size)]
-                print(spaces + segment_delim.join(ticks), file=file)
             print(formatted_trace_line(w, self.trace[w]), file=file)
 
     def _set_initial_values(self, default_value, init_regvalue, init_memvalue):

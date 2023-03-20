@@ -135,6 +135,8 @@ class RenderTraceBase(unittest.TestCase):
         a, b, c = pyrtl.input_list('a/8 b/8 c/1')
         o = pyrtl.Output()
         o <<= a + b - c
+        self.renderer = pyrtl.simulation.WaveRenderer(
+            pyrtl.simulation.AsciiRendererConstants)
 
     def check_rendered_trace(self, expected, **kwargs):
         sim = pyrtl.Simulation()
@@ -144,25 +146,30 @@ class RenderTraceBase(unittest.TestCase):
             'c': [0, 1, 1, 0, 1]
         })
         buff = six.StringIO()
-        sim.tracer.render_trace(file=buff, render_cls=pyrtl.simulation.AsciiWaveRenderer,
-                                extra_line=False, **kwargs)
+        sim.tracer.render_trace(file=buff, renderer=self.renderer, **kwargs)
         self.assertEqual(buff.getvalue(), expected)
 
     def test_hex_trace(self):
         expected = (
-            " |0   .    .    .    .    \n"
-            "a|0x1 |0x4 |0x9 |0xb |0xc \n"
-            "b|0x2 |0x17|0x2b|0x78|0x0 \n"
-            "c|____,---------.____,----\n"
+            " |0   |1   |2   |3   |4   \n"
+            "  \n"
+            "a 0x1 |0x4 |0x9 |0xb |0xc \n"
+            "  \n"
+            "b 0x2 |0x17|0x2b|0x78|0x0 \n"
+            "  \n"
+            "c ____,---------.____,----\n"
         )
         self.check_rendered_trace(expected)
 
     def test_oct_trace(self):
         expected = (
-            " |0    .     .     .     .     \n"
-            "a|0o1  |0o4  |0o11 |0o13 |0o14 \n"
-            "b|0o2  |0o27 |0o53 |0o170|0o0  \n"
-            "c|_____,-----------._____,-----\n"
+            " |0    |1    |2    |3    |4    \n"
+            "  \n"
+            "a 0o1  |0o4  |0o11 |0o13 |0o14 \n"
+            "  \n"
+            "b 0o2  |0o27 |0o53 |0o170|0o0  \n"
+            "  \n"
+            "c _____,-----------._____,-----\n"
         )
 
         # The oct() builtin prints leading '0o' in python3 but not in python2,
@@ -174,10 +181,13 @@ class RenderTraceBase(unittest.TestCase):
 
     def test_bin_trace(self):
         expected = (
-            " |0        .         .         .         .         \n"
-            "a|0b1      |0b100    |0b1001   |0b1011   |0b1100   \n"
-            "b|0b10     |0b10111  |0b101011 |0b1111000|0b0      \n"
-            "c|_________,-------------------._________,---------\n"
+            " |0        |1        |2        |3        |4        \n"
+            "  \n"
+            "a 0b1      |0b100    |0b1001   |0b1011   |0b1100   \n"
+            "  \n"
+            "b 0b10     |0b10111  |0b101011 |0b1111000|0b0      \n"
+            "  \n"
+            "c _________,-------------------._________,---------\n"
         )
 
         # The bin() builtin prints leading '0b' in python3 but not in python2,
@@ -189,10 +199,13 @@ class RenderTraceBase(unittest.TestCase):
 
     def test_decimal_trace(self):
         expected = (
-            " |0  .   .   .   .   \n"
-            "a|1  |4  |9  |11 |12 \n"
-            "b|2  |23 |43 |120|0  \n"
-            "c|___,-------.___,---\n"
+            " |0  |1  |2  |3  |4  \n"
+            "  \n"
+            "a 1  |4  |9  |11 |12 \n"
+            "  \n"
+            "b 2  |23 |43 |120|0  \n"
+            "  \n"
+            "c ___,-------.___,---\n"
         )
         self.check_rendered_trace(expected, repr_func=str, symbol_len=None)
 
@@ -200,6 +213,8 @@ class RenderTraceBase(unittest.TestCase):
 class RenderTraceCustomBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
+        self.renderer = pyrtl.simulation.WaveRenderer(
+            pyrtl.simulation.AsciiRendererConstants)
 
     def test_custom_repr_per_wire(self):
         from enum import IntEnum
@@ -230,13 +245,16 @@ class RenderTraceCustomBase(unittest.TestCase):
             'i': [1, 2, 4, 8, 0]
         })
         buff = six.StringIO()
-        sim.tracer.render_trace(file=buff, render_cls=pyrtl.simulation.AsciiWaveRenderer,
-                                extra_line=None, repr_per_name={'state': Foo}, symbol_len=None)
+        sim.tracer.render_trace(file=buff, renderer=self.renderer,
+                                repr_per_name={'state': Foo})
         expected = (
-            "     |0    .     .     .     .     \n"
-            "    i|0x1  |0x2  |0x4  |0x8  |0x0  \n"
-            "    o|0x0        |0x1  |0x2  |0x3  \n"
-            "state|Foo.A      |Foo.B|Foo.C|Foo.D\n"
+            "     |0    |1    |2    |3    |4    \n"
+            "      \n"
+            "    i 0x1  |0x2  |0x4  |0x8  |0x0  \n"
+            "      \n"
+            "    o 0x0        |0x1  |0x2  |0x3  \n"
+            "      \n"
+            "state Foo.A      |Foo.B|Foo.C|Foo.D\n"
         )
         self.assertEqual(buff.getvalue(), expected)
 
