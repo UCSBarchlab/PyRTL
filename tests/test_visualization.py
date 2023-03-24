@@ -392,6 +392,7 @@ class TestOutputIPynb(unittest.TestCase):
             B = 1
             C = 2
             D = 3
+
             def __str__(self):
                 '''Changed in version 3.11: __str__() is now int.__str__()'''
                 cls_name = self.__class__.__name__
@@ -438,6 +439,7 @@ class TestOutputIPynb(unittest.TestCase):
         class Foo(IntEnum):
             A = 0
             B = 1
+
             def __str__(self):
                 '''Changed in version 3.11: __str__() is now int.__str__()'''
                 cls_name = self.__class__.__name__
