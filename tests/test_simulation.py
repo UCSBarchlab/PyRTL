@@ -224,6 +224,10 @@ class RenderTraceCustomBase(unittest.TestCase):
             B = 1
             C = 2
             D = 3
+            def __str__(self):
+                '''Changed in version 3.11: __str__() is now int.__str__()'''
+                cls_name = self.__class__.__name__
+                return f'{cls_name}.{self.name}'
 
         i = pyrtl.Input(4, 'i')
         state = pyrtl.Register(max(Foo).bit_length(), name='state')
