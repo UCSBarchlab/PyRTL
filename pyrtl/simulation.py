@@ -1442,20 +1442,27 @@ class SimulationTrace(object):
             if is_bus:
                 second_trace_line += renderer.constants._bus_start
             for i in range(len(trace)):
+                # There is no cycle change before the first cycle or after the
+                # last cycle, so the first and last cycles may have additional
+                # width. These additional widths make each cycle line up under
+                # the ruler, and appear the same length.
                 additional_symbol_len = 0
+                additional_cycle_len = 0
+                half_chars_between_cycles = (
+                    math.floor(renderer.constants._chars_between_cycles / 2))
+                if i == len(trace) - 1:
+                    additional_cycle_len = half_chars_between_cycles
                 if i == 0 or i == len(trace) - 1:
-                    # There is no cycle change before the first cycle or after
-                    # the last cycle, so the first and last cycles may have
-                    # additional width.
-                    additional_symbol_len = (
-                        math.floor(renderer.constants._chars_between_cycles / 2))
+                    additional_symbol_len = half_chars_between_cycles
                 first_trace_line += renderer.render_val(
                     self._wires[wire], prior_val, trace[i],
-                    symbol_len + additional_symbol_len, cycle_len, repr_func,
+                    symbol_len + additional_symbol_len,
+                    cycle_len + additional_cycle_len, repr_func,
                     repr_per_name, prev_line=True)
                 second_trace_line += renderer.render_val(
                     self._wires[wire], prior_val, trace[i],
-                    symbol_len + additional_symbol_len, cycle_len, repr_func,
+                    symbol_len + additional_symbol_len,
+                    cycle_len + additional_cycle_len, repr_func,
                     repr_per_name, prev_line=False)
                 prior_val = trace[i]
             if is_bus:
