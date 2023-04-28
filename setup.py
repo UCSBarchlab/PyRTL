@@ -10,7 +10,7 @@ setup(
     url =  'http://ucsbarchlab.github.io/PyRTL/',
     download_url = 'https://github.com/UCSBarchlab/PyRTL/tarball/0.10.2',  #VERSION
     install_requires =  ['six'],
-    tests_require =  ['tox','nose'],
+    tests_require =  ['tox','pytest'],
     extras_require =  {
         'blif parsing': ['pyparsing']
         },
