@@ -1,10 +1,10 @@
+astroid
 pep8
 pylint
-astroid
-sphinx
-sphinx_rtd_theme
-sphinx-hoverxref
-nose
 pyparsing
+pytest
+pytest-cov
 six
-coverage
+sphinx
+sphinx-hoverxref
+sphinx_rtd_theme

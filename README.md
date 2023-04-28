@@ -37,10 +37,10 @@ In the package you should find the following files and Directories
 * **pyrtl/**  The src directory for the module
 * **pyrtl/rtllib/** Finished PyRTL libraries which are hopefully both useful and documented
 * **examples/** A set of hardware design examples that show the main idea behind pyrtl
-* **tests/**    A set of unit tests for PyRTL which you can run with nosetests
+* **tests/**    A set of unit tests for PyRTL which you can run with `pytest`
 * **docs/** Location of the sphinx documentation
 
-Testing requires the packages `tox` and `nose`.  Once installed a complete test of the system should be possible with the simple command `tox` and nothing more.
+Testing requires the packages `tox` and `pytest`.  Once installed a complete test of the system should be possible with the simple command `tox` and nothing more.
 
 ### Contributing to PyRTL
 

@@ -100,15 +100,15 @@ class TestAESDecrypt(unittest.TestCase):
             sim.step({
                 self.in_vector: 0x0, aes_key: 0x1, reset: 0
             })
-            circuit_out = sim_trace.trace[self.out_vector][cycle]
+            circuit_out = sim_trace.trace['out_vector'][cycle]
             self.assertEqual(circuit_out, true_vals[cycle], "\nAssertion failed on cycle: "
                              + str(cycle) + " Gotten value: " + hex(circuit_out))
 
-        for ready_signal in sim_trace.trace[ready][:11]:
-            self.assertEquals(ready_signal, 0)
+        for ready_signal in sim_trace.trace['ready'][:11]:
+            self.assertEqual(ready_signal, 0)
 
-        for ready_signal in sim_trace.trace[ready][11:]:
-            self.assertEquals(ready_signal, 1)
+        for ready_signal in sim_trace.trace['ready'][11:]:
+            self.assertEqual(ready_signal, 1)
 
 
 class TestAESEncrypt(unittest.TestCase):
@@ -205,13 +205,13 @@ class TestAESEncrypt(unittest.TestCase):
             sim.step({
                 self.in_vector: 0x0, aes_key: 0x1, reset: 0
             })
-            circuit_out = sim_trace.trace[self.out_vector][cycle]
+            circuit_out = sim_trace.trace['out_vector'][cycle]
             # sim_trace.render_trace(symbol_len=40)
             self.assertEqual(circuit_out, true_vals[cycle], "\nAssertion failed on cycle: "
                              + str(cycle) + " Gotten value: " + hex(circuit_out))
 
-        for ready_signal in sim_trace.trace[ready][:11]:
-            self.assertEquals(ready_signal, 0)
+        for ready_signal in sim_trace.trace['ready'][:11]:
+            self.assertEqual(ready_signal, 0)
 
-        for ready_signal in sim_trace.trace[ready][11:]:
-            self.assertEquals(ready_signal, 1)
+        for ready_signal in sim_trace.trace['ready'][11:]:
+            self.assertEqual(ready_signal, 1)
