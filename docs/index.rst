@@ -7,9 +7,9 @@
 PYRTL
 =====
 
-A collection of classes providing simple RTL specification, simulation, tracing, and testing suitable for 
-teaching and research. Simplicity, usability, clarity, and extendibility rather than performance or 
-optimization is the overarching goal.  With PyRTL you can use the full power of python to describe complex 
+A collection of classes providing simple RTL specification, simulation, tracing, and testing suitable for
+teaching and research. Simplicity, usability, clarity, and extendibility rather than performance or
+optimization is the overarching goal.  With PyRTL you can use the full power of python to describe complex
 synthesizable digital designs, simulate and test them, and export them to verilog.
 
 Quick links
@@ -28,9 +28,9 @@ Installation
 
 PyRTL is listed in `PyPI <http://pypi.python.org/pypi/pyrtl>`_ and
 can be installed with ``pip`` or ``pip3``.  If the above
-command fails due to insufficient permissions, you may need to do 
+command fails due to insufficient permissions, you may need to do
 ``sudo pip install pyrtl`` (to install as superuser) or ``pip install --user pyrtl``
-(to install as a normal user). 
+(to install as a normal user).
 
 PyRTL is tested to work with Python 2.7 and 3.7+.
 
@@ -41,7 +41,7 @@ Design, Simulate, and Inspect in 15 lines
 
 .. code-block::
     :linenos:
-   
+
     import pyrtl
 
     a = pyrtl.Input(8,'a')  # input "pins"
@@ -56,32 +56,32 @@ Design, Simulate, and Inspect in 15 lines
     # simulate and output the resulting waveform to the terminal
     sim = pyrtl.Simulation()
     sim.step_multiple({'a':[0,1,2,3,4], 'b':[2,2,3,3,4]})
-    sim.tracer.render_trace() 
+    sim.tracer.render_trace()
 
-After you have PyRTL installed, you should be able to cut and paste the above into a file and run it with 
-Python.  The result you should see, drawn right into the terminal, is the output of the simulation.  While a 
-great deal of work has gone into making hardware design in PyRTL as friendly a process as possible, please 
-don't mistake that for a lack of depth.  You can just as easily export to Verilog or other hardware formats, 
-view results with your favorite waveform viewer, build hardware transformation passes, run JIT-accelerated 
-simulations, design, test, and even verify hugely complex digital systems, and much more.  Most critically of 
+After you have PyRTL installed, you should be able to cut and paste the above into a file and run it with
+Python.  The result you should see, drawn right into the terminal, is the output of the simulation.  While a
+great deal of work has gone into making hardware design in PyRTL as friendly a process as possible, please
+don't mistake that for a lack of depth.  You can just as easily export to Verilog or other hardware formats,
+view results with your favorite waveform viewer, build hardware transformation passes, run JIT-accelerated
+simulations, design, test, and even verify hugely complex digital systems, and much more.  Most critically of
 all it is easy to extend with your own approaches to digital hardware development as you find necessary.
 
 
 Overview of PyRTL
 =================
 
-If you are brand new to PyRTL we recommend that you start with going through the 
-`Examples of PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/master/examples>`_ which will show you 
-most of the core functionality in the context of a complete design.  
+If you are brand new to PyRTL we recommend that you start with going through the
+`Examples of PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/master/examples>`_ which will show you
+most of the core functionality in the context of a complete design.
 
 PyRTL Classes:
 --------------
 
-Perhaps the most important class to understand is ``WireVector``, which is the basic type from which you build 
-all hardware.  If you are coming to PyRTL from Verilog, a `WireVector` is closest to a multi-bit `wire`.  
-Every new `WireVector` builds a set of wires which you can then connect with other `WireVector` through 
-overloaded operations such as `addition` or `bitwise or`. A bunch of other related classes, including 
-``Input``, ``Output``, ``Const``, and ``Register`` are all derived from `WireVector`. Coupled with 
+Perhaps the most important class to understand is ``WireVector``, which is the basic type from which you build
+all hardware.  If you are coming to PyRTL from Verilog, a `WireVector` is closest to a multi-bit `wire`.
+Every new `WireVector` builds a set of wires which you can then connect with other `WireVector` through
+overloaded operations such as `addition` or `bitwise or`. A bunch of other related classes, including
+``Input``, ``Output``, ``Const``, and ``Register`` are all derived from `WireVector`. Coupled with
 ``MemBlock`` (and ``RomBlock``), this is all a user needs to create a functional hardware design.
 
 * :py:class:`~pyrtl.wire.WireVector`
@@ -94,20 +94,20 @@ After specifying a hardware design, there are then options to simulate your desi
 synthesize it down to primitive 1-bit operations, optimize it, and export it to Verilog (along with
 a testbench),.
 
-To simulate your hardware design one needs to do a simulation, and to view the output we need to capture a 
-"trace".  Simulation is how your hardware is "executed" for the purposes of testing, and three different 
-classes help you do that: ``Simulation``, ``FastSimulation`` and ``CompiledSimulation``.  All three have 
-`almost` the same interface and, except for a few debugging cases, can be used interchangeably.  Typically one 
-starts with `Simulation` and then moves up to `FastSimulation` when performance begins to matter.  
+To simulate your hardware design one needs to do a simulation, and to view the output we need to capture a
+"trace".  Simulation is how your hardware is "executed" for the purposes of testing, and three different
+classes help you do that: ``Simulation``, ``FastSimulation`` and ``CompiledSimulation``.  All three have
+`almost` the same interface and, except for a few debugging cases, can be used interchangeably.  Typically one
+starts with `Simulation` and then moves up to `FastSimulation` when performance begins to matter.
 
-Both `Simulation` and `FastSimulation` take an instance of `SimulationTrace` as an argument (or make a new 
-blank one by default), which stores a list of the signals as they are simulated.  This trace can then be 
-rendered to the terminal using one of the Renderer classes, although unless there are some problems with the 
-default configurations, most end users should not need to even be aware of these Renderer classes.  The 
-examples describe other ways that the trace may be handled, including extraction as a test bench and export to 
+Both `Simulation` and `FastSimulation` take an instance of `SimulationTrace` as an argument (or make a new
+blank one by default), which stores a list of the signals as they are simulated.  This trace can then be
+rendered to the terminal using one of the Renderer classes, although unless there are some problems with the
+default configurations, most end users should not need to even be aware of these Renderer classes.  The
+examples describe other ways that the trace may be handled, including extraction as a test bench and export to
 a VCD file.
 
-* :py:class:`~pyrtl.simulation.Simulation` 
+* :py:class:`~pyrtl.simulation.Simulation`
 * :py:class:`~pyrtl.simulation.FastSimulation`
 * :py:class:`~pyrtl.compilesim.CompiledSimulation`
 * :py:class:`~pyrtl.simulation.SimulationTrace`
@@ -121,17 +121,17 @@ keeps incrementally updating a graph of those primitives which, when complete, r
 `WireVectors` connect to "primitives" which connect to other `WireVectors` and the class that stores
 a primitive is `LogicNet`.  The class `Block` is then a wrapper for a set of these `LogicNet`s.  Typically
 a full and complete design is stored in a single `Block`.  The function `working_block()` will return
-back the block on which we are implicitly working.  When we write hardware transforms we may wish to make a new 
+back the block on which we are implicitly working.  When we write hardware transforms we may wish to make a new
 `Block` from an old one and augment the information kept with my hardware block and `PostSynthBlock` is
 one example of this pattern in action.
 
-* :py:class:`~pyrtl.core.LogicNet` 
-* :py:class:`~pyrtl.core.Block` 
-    * :py:class:`~pyrtl.core.PostSynthBlock` (Block) 
+* :py:class:`~pyrtl.core.LogicNet`
+* :py:class:`~pyrtl.core.Block`
+    * :py:class:`~pyrtl.core.PostSynthBlock` (Block)
 
 Finally, when things go wrong you may hit on one of two Exceptions, neither of which is likely recoverable
 automatically (which is why we limited them to only two).  The intention is that PyrtlError is intended
-to capture end user errors such as invalid constant strings and mis-matched bitwidths.  In contrast, 
+to capture end user errors such as invalid constant strings and mis-matched bitwidths.  In contrast,
 PyrtlInternalError captures internal invariants and assertions over the core logic graph which should never
 be hit when constructing designs in the normal ways.  If you hit a confusing `PyrtlError` or any
 `PyrtlInternalError` feel free to file an issue.
@@ -142,7 +142,7 @@ PyRTL Functionality:
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-   
+
    basic
    simtest
    blocks
@@ -150,7 +150,7 @@ PyRTL Functionality:
    analysis
    export
    rtllib
-   
+
 
 Indices and tables
 ==================
@@ -158,5 +158,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
-
