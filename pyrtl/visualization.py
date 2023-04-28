@@ -22,7 +22,8 @@ def net_graph(block=None, split_state=False):
         'r' nets (i.e. the logic for setting a register's next value) will
         be treated as sink nodes of the network.
 
-    The graph has the following form:
+    The graph has the following form::
+
         { node1: { nodeA: [edge1A_1, edge1A_2], nodeB: [edge1B]},
           node2: { nodeB: [edge2B],             nodeC: [edge2C_1, edge2C_2]},
           ...

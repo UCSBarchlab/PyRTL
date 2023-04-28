@@ -35,11 +35,13 @@ class Simulation(object):
     A Simulation step works as follows:
 
     1. Registers are updated:
-        a. (If this is the first step) With the default values passed in
+
+        1. (If this is the first step) With the default values passed in
            to the Simulation during instantiation and/or any reset values
            specified in the individual registers.
-        a. (Otherwise) With their next values calculated in the previous step
+        2. (Otherwise) With their next values calculated in the previous step
            (`r` logic nets).
+
     2. The new values of these registers as well as the values of block inputs
        are propagated through the combinational logic.
     3. Memory writes are performed (`@` logic nets).
@@ -468,11 +470,13 @@ class FastSimulation(object):
     A Simulation step works as follows:
 
     1. Registers are updated:
-        a. (If this is the first step) With the default values passed in
+
+        1. (If this is the first step) With the default values passed in
            to the Simulation during instantiation and/or any reset values
            specified in the individual registers.
-        a. (Otherwise) With their next values calculated in the previous step
+        2. (Otherwise) With their next values calculated in the previous step
            (`r` logic nets).
+
     2. The new values of these registers as well as the values of block inputs
        are propagated through the combinational logic.
     3. Memory writes are performed (`@` logic nets).

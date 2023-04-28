@@ -567,7 +567,7 @@ def and_all_bits(vector):
 
     :param vector: Takes a single arbitrary length WireVector
     :return: Returns a 1 bit result, the bitwise `and` of all of
-    the bits in the vector to a single bit.
+        the bits in the vector to a single bit.
     """
     return tree_reduce(lambda a, b: a & b, vector)
 
@@ -577,7 +577,7 @@ def or_all_bits(vector):
 
     :param vector: Takes a single arbitrary length WireVector
     :return: Returns a 1 bit result, the bitwise `or` of all of
-    the bits in the vector to a single bit.
+        the bits in the vector to a single bit.
     """
     return tree_reduce(lambda a, b: a | b, vector)
 
@@ -587,7 +587,7 @@ def xor_all_bits(vector):
 
     :param vector: Takes a single arbitrary length WireVector
     :return: Returns a 1 bit result, the bitwise `xor` of all of
-    the bits in the vector to a single bit.
+        the bits in the vector to a single bit.
     """
     return tree_reduce(lambda a, b: a ^ b, vector)
 

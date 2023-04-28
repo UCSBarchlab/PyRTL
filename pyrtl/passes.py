@@ -475,7 +475,7 @@ def synthesize(update_working_block=True, merge_io_vectors=True, block=None):
     block which is identical in function but uses only single bit gates
     and excludes many of the more complicated primitives.  The new block
     should consist *almost* exclusively of the combination elements
-    of w, &, |, ^, and ~ and sequential elements of registers (which are
+    of w, &, \\|, ^, and ~ and sequential elements of registers (which are
     one bit as well).  The two exceptions are for inputs/outputs (so that
     we can keep the same interface) which are immediately broken down into
     the individual bits and memories (read and write ports) which
@@ -775,8 +775,8 @@ def direct_connect_outputs(block=None):
 
     The 'w' nets that are eligible for removal with this pass
     meet the following requirements:
-        * The destination wirevector of the net is an Output
-        * The source wirevector of the net doesn't go to any other nets.
+    * The destination wirevector of the net is an Output
+    * The source wirevector of the net doesn't go to any other nets.
     """
     # Turns a netlist of the form (where [] denote nets and o is an Output):
     #

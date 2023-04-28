@@ -11,7 +11,7 @@ Exporting Hardware Designs
 .. autofunction:: pyrtl.importexport.output_to_firrtl
 
 Exporting Testbenches
-------------------------
+---------------------
 
 .. autofunction:: pyrtl.importexport.output_verilog_testbench
 
@@ -23,7 +23,7 @@ Importing Verilog
 
 
 Outputting for Visualization
----------------------------
+----------------------------
 
 .. autofunction:: pyrtl.visualization.output_to_trivialgraph
 .. autofunction:: pyrtl.visualization.output_to_graphviz

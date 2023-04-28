@@ -150,6 +150,7 @@ PyRTL Functionality:
    analysis
    export
    rtllib
+   advanced
 
 
 Indices and tables
