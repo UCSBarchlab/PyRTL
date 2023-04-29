@@ -32,3 +32,17 @@ Simulation Trace
     :members:
     :show-inheritance:
     :special-members: __init__
+
+Wave Renderer
+-------------
+
+.. autoclass:: pyrtl.simulation.WaveRenderer
+    :members:
+    :special-members: __init__
+    :exclude-members: render_ruler_segment, render_val, val_to_str
+.. autoclass:: pyrtl.simulation.RendererConstants
+.. autoclass:: pyrtl.simulation.Utf8RendererConstants
+.. autoclass:: pyrtl.simulation.Utf8AltRendererConstants
+.. autoclass:: pyrtl.simulation.PowerlineRendererConstants
+.. autoclass:: pyrtl.simulation.Cp437RendererConstants
+.. autoclass:: pyrtl.simulation.AsciiRendererConstants

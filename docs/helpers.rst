@@ -4,10 +4,10 @@ Helper Functions
 Cutting and Extending WireVectors
 ---------------------------------
 
-The functions below provide ways of combining, slicing, and extending WireVectors in
+The functions below provide ways of combining, slicing, and extending :class:`WireVectors<.WireVector>` in
 ways that are often useful in hardware design.  The functions below extend those member
-functions of the WireVector class iself (which provides support for the python builtin
-``len``, slicing as just as in a python list e.g. ``wire[3:6]``, ``zero_extend``, ``sign_extend``,
+functions of the :class:`.WireVector` class iself (which provides support for the python builtin
+``len``, slicing as just as in a python list e.g. ``wire[3:6]``, :meth:`~pyrtl.wire.WireVector.zero_extended`, :meth:`~pyrtl.wire.WireVector.sign_extended`,
 and many operators such as addition and multiplication).
 
 .. autofunction:: pyrtl.corecircuits.concat
@@ -19,8 +19,8 @@ and many operators such as addition and multiplication).
 Coercion to WireVector
 ----------------------
 
-In PyRTL there is only one function in charge of coercing values into WireVectors, and that is
-``as_wires``.  This function is called in almost all helper functions and classes to manage
+In PyRTL there is only one function in charge of coercing values into :class:`WireVectors<.WireVector>`, and that is
+:func:`.as_wires`.  This function is called in almost all helper functions and classes to manage
 the mixture of constants and WireVectors that naturally occur in hardware development.
 
 .. autofunction:: pyrtl.corecircuits.as_wires
@@ -82,9 +82,9 @@ Reductions
 Extended Logic and Arithmetic
 -----------------------------
 
-The functions below provide ways of comparing and arithmetically combining WireVectors
+The functions below provide ways of comparing and arithmetically combining :class:`WireVectors<.WireVector>`
 in ways that are often useful in hardware design.  The functions below extend those member
-functions of the WireVector class iself (which provides support for addition, unsigned
+functions of the :class:`.WireVector` class iself (which provides support for addition, unsigned
 multiplication, unsigned comparison, and many others).
 
 .. autofunction:: pyrtl.corecircuits.signed_add

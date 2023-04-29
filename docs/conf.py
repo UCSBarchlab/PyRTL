@@ -33,15 +33,17 @@ master_doc = 'index'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.extlinks",
-    "sphinx.ext.viewcode",
-    "sphinx.ext.intersphinx",
-    "hoverxref.extension",
-    "sphinx_rtd_theme"
+    'hoverxref.extension',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.extlinks',
+    'sphinx.ext.inheritance_diagram',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.viewcode',
+    'sphinx_rtd_theme',
 ]
 
-pygments_style = "sphinx"
+pygments_style = 'sphinx'
+graphviz_output_format = 'svg'
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
@@ -55,6 +57,7 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+primary_domain = 'py'
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -63,15 +66,15 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 #
 html_theme = 'sphinx_rtd_theme'
 
-htmlhelp_basename = "PyRTLdoc"
+htmlhelp_basename = 'PyRTLdoc'
 
 html_theme_options = {'logo_only': True}
 
-#html_favicon = "../../brand/favicon.ico"
+#html_favicon = '../../brand/favicon.ico'
 
-html_logo = "brand/pyrtl_logo.png"
+html_logo = 'brand/pyrtl_logo.png'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
+# so a file named 'default.css' will overwrite the builtin 'default.css'.
 # html_static_path = ['_static']

@@ -1,5 +1,8 @@
-# Minimal makefile for Sphinx documentation
+# Minimal makefile for Sphinx documentation.
 #
+# To build local documentation:
+#
+# $ make html
 
 # You can set these variables from the command line, and also
 # from the environment for the first two.

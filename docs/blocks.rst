@@ -35,3 +35,5 @@ Blocks
 .. autofunction:: pyrtl.core.Block.get_wirevector_by_name
 
 .. autofunction:: pyrtl.core.Block.net_connections
+
+.. autoclass:: pyrtl.core.PostSynthBlock

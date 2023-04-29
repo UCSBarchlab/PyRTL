@@ -943,7 +943,22 @@ class FastSimulation(object):
 
 
 class WaveRenderer(object):
+    """Render a SimulationTrace to the terminal.
+
+    See `examples/renderer-demo.py`, which renders traces with various
+    options. You can choose a default renderer by exporting the
+    ``PYRTL_RENDERER`` environment variable. See the documentation for subclasses
+    of :py:class:`RendererConstants`.
+
+    """
     def __init__(self, constants):
+        """Instantiate a WaveRenderer.
+
+        :param constants: Subclass of :py:class:`RendererConstants` that
+            specifies the ASCII/Unicode characters to use for rendering
+            waveforms.
+
+        """
         self.constants = constants
 
     def render_ruler_segment(self, n, cycle_len, segment_size, maxtracelen):
@@ -1054,6 +1069,19 @@ class WaveRenderer(object):
 
 
 class RendererConstants():
+    """Abstract base class for renderer constants.
+
+    These constants determine which characters are used to render waveforms in
+    a terminal.
+
+    .. inheritance-diagram:: pyrtl.simulation.Utf8RendererConstants
+                             pyrtl.simulation.Utf8AltRendererConstants
+                             pyrtl.simulation.PowerlineRendererConstants
+                             pyrtl.simulation.Cp437RendererConstants
+                             pyrtl.simulation.AsciiRendererConstants
+        :parts: 1
+
+    """
     # Print _tick before rendering a ruler segment. Must have a display length
     # of 1 character.
     _tick = ''
@@ -1089,7 +1117,20 @@ class RendererConstants():
 
 
 class Utf8RendererConstants(RendererConstants):
-    """UTF-8 renderer constants. These should work in most terminals."""
+    """UTF-8 renderer constants. These should work in most terminals.
+
+    Single-bit WireVectors are rendered as square waveforms, with vertical
+    rising and falling edges. Multi-bit WireVector values are rendered in
+    reverse-video rectangles.
+
+    This is the default renderer on non-Windows platforms.
+
+    Enable this renderer by default by setting the ``PYRTL_RENDERER``
+    environment variable to ``utf-8``.
+
+    .. image:: ../docs/screenshots/pyrtl-statemachine-utf-8.png
+
+    """
     # Start reverse-video, reset all attributes
     _bus_start, _bus_stop = '\x1B[7m', '\x1B[0m'
 
@@ -1110,7 +1151,21 @@ class Utf8RendererConstants(RendererConstants):
 
 
 class Utf8AltRendererConstants(RendererConstants):
-    """Alternative UTF-8 renderer constants.."""
+    """Alternative UTF-8 renderer constants.
+
+    Single-bit WireVectors are rendered as waveforms with sloped rising and
+    falling edges. Multi-bit WireVector values are rendered in reverse-video
+    rectangles.
+
+    Compared to Utf8RendererConstants, this renderer is more compact because it
+    uses one character between cycles instead of two.
+
+    Enable this renderer by default by setting the ``PYRTL_RENDERER``
+    environment variable to ``utf-8-alt``.
+
+    .. image:: ../docs/screenshots/pyrtl-statemachine-utf-8-alt.png
+
+    """
     # Start reverse-video, reset all attributes
     _bus_start, _bus_stop = '\x1B[7m', '\x1B[0m'
 
@@ -1130,7 +1185,18 @@ class Utf8AltRendererConstants(RendererConstants):
 class PowerlineRendererConstants(Utf8RendererConstants):
     """Powerline renderer constants. Font must include powerline glyphs.
 
-    https://github.com/powerline/fonts
+    This render is closest to a traditional logic analyzer. Single-bit
+    WireVectors are rendered as square waveforms, with vertical rising and
+    falling edges. Multi-bit WireVector values are rendered in reverse-video
+    hexagons.
+
+    This renderer requires a `terminal font that supports Powerline glyphs
+    <https://github.com/powerline/fonts>`_
+
+    Enable this renderer by default by setting the ``PYRTL_RENDERER``
+    environment variable to ``powerline``.
+
+    .. image:: ../docs/screenshots/pyrtl-statemachine.png
 
     """
     # Start reverse-video, reset all attributes
@@ -1140,9 +1206,23 @@ class PowerlineRendererConstants(Utf8RendererConstants):
 
 
 class Cp437RendererConstants(RendererConstants):
-    """Code page 437 renderer constants (for windows cmd compatibility)
+    """Code page 437 renderer constants (for windows ``cmd`` compatibility).
 
-    Also known as 8-bit ASCII. https://en.wikipedia.org/wiki/Code_page_437
+    Single-bit WireVectors are rendered as square waveforms, with vertical
+    rising and falling edges. Multi-bit WireVector values are rendered between
+    vertical bars.
+
+    `Code page 437 <https://en.wikipedia.org/wiki/Code_page_437>`_ is also
+    known as 8-bit ASCII. This is the default renderer on Windows platforms.
+
+    Compared to Utf8RendererConstants, this renderer is more compact because it
+    uses one character between cycles instead of two, but the wire names are
+    vertically aligned at the bottom of each waveform.
+
+    Enable this renderer by default by setting the ``PYRTL_RENDERER``
+    environment variable to ``cp437``.
+
+    .. image:: ../docs/screenshots/pyrtl-statemachine-cp437.png
 
     """
     _tick = '│'
@@ -1159,7 +1239,18 @@ class Cp437RendererConstants(RendererConstants):
 
 
 class AsciiRendererConstants(RendererConstants):
-    """7-bit ASCII renderer constants. These should work anywhere."""
+    """7-bit ASCII renderer constants. These should work anywhere.
+
+    Single-bit WireVectors are rendered as waveforms with sloped rising and
+    falling edges. Multi-bit WireVector values are rendered between vertical
+    bars.
+
+    Enable this renderer by default by setting the ``PYRTL_RENDERER``
+    environment variable to ``ascii``.
+
+    .. image:: ../docs/screenshots/pyrtl-statemachine-ascii.png
+
+    """
     _tick = '|'
 
     _up, _down = ',', '.'
@@ -1171,7 +1262,7 @@ class AsciiRendererConstants(RendererConstants):
 
 
 def default_renderer():
-    """Select renderer constants based on $PYRTL_RENDERER or auto-detection."""
+    """Select renderer constants based on environment or auto-detection."""
     renderer = ''
     if 'PYRTL_RENDERER' in os.environ:
         # Use user-specified renderer constants.
