@@ -6,7 +6,6 @@ Simulation
 
 .. autoclass:: pyrtl.simulation.Simulation
     :members:
-    :show-inheritance:
     :special-members: __init__
 
 Fast (JIT to Python) Simulation
@@ -14,7 +13,6 @@ Fast (JIT to Python) Simulation
 
 .. autoclass:: pyrtl.simulation.FastSimulation
     :members:
-    :show-inheritance:
     :special-members: __init__
 
 Compiled (JIT to C) Simulation
@@ -22,7 +20,6 @@ Compiled (JIT to C) Simulation
 
 .. autoclass:: pyrtl.compilesim.CompiledSimulation
     :members:
-    :show-inheritance:
     :special-members: __init__
 
 Simulation Trace
@@ -30,7 +27,6 @@ Simulation Trace
 
 .. autoclass:: pyrtl.simulation.SimulationTrace
     :members:
-    :show-inheritance:
     :special-members: __init__
 
 Wave Renderer
@@ -42,7 +38,12 @@ Wave Renderer
     :exclude-members: render_ruler_segment, render_val, val_to_str
 .. autoclass:: pyrtl.simulation.RendererConstants
 .. autoclass:: pyrtl.simulation.Utf8RendererConstants
+    :show-inheritance:
 .. autoclass:: pyrtl.simulation.Utf8AltRendererConstants
+    :show-inheritance:
 .. autoclass:: pyrtl.simulation.PowerlineRendererConstants
+    :show-inheritance:
 .. autoclass:: pyrtl.simulation.Cp437RendererConstants
+    :show-inheritance:
 .. autoclass:: pyrtl.simulation.AsciiRendererConstants
+    :show-inheritance:

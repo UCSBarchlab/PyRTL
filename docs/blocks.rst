@@ -37,3 +37,4 @@ Blocks
 .. autofunction:: pyrtl.core.Block.net_connections
 
 .. autoclass:: pyrtl.core.PostSynthBlock
+    :show-inheritance:

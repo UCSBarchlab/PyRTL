@@ -18,7 +18,6 @@ WireVector
 
 .. autoclass:: pyrtl.wire.WireVector
     :members:
-    :show-inheritance:
     :special-members: __init__, __add__, __sub__, __mul__, __getitem___,
                       __len__, __ilshift__
 
@@ -70,7 +69,6 @@ Memories
 
 .. autoclass:: pyrtl.memory.MemBlock
     :members:
-    :show-inheritance:
     :special-members: __init__
 
 ROMs
