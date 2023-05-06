@@ -5,6 +5,3 @@ pyparsing
 pytest
 pytest-cov
 six
-sphinx
-sphinx-hoverxref
-sphinx_rtd_theme
