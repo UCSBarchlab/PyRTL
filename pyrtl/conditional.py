@@ -1,11 +1,9 @@
-""" Conditional assignment of registers and WireVectors based on a predicate.
+"""Conditional assignment of registers and WireVectors based on a predicate.
 
 The management of selected assignments is expected to happen through
 the "with" blocks which will ensure that the region of execution for
 which the condition should apply is well defined.  It is easiest
-to see with an example:
-
-Example::
+to see with an example::
 
    r1 = Register()
    r2 = Register()
@@ -30,16 +28,18 @@ This is equivalent to::
     r2.next <<= select(a, select(b, j, default), select(c, k, l))
     w3 <<= select(d, m, 0)
 
-This functionality is provided through two instances: "conditional_update", which
-is a context manager (under which conditional assignements can be made), and "otherwise",
-which is an instance that stands in for a 'fall through' case.  The details of how these
-should be used, and the difference between normal assignments and condtional assignments,
-described in more detail in the state machine example in examples/example3-statemachine.py.
+This functionality is provided through two instances: ``conditional_update``,
+which is a context manager (under which conditional assignements can be made),
+and ``otherwise``, which is an instance that stands in for a 'fall through'
+case.  The details of how these should be used, and the difference between
+normal assignments and condtional assignments, described in more detail in the
+state machine example in ``examples/example3-statemachine.py``.
 
-There are instances where you might want a wirevector to be set to a certain value in all
-but certain with blocks. For example, say you have a processor with a PC register that is
-normally updated to PC + 1 after each cycle, except when the current instruction is
-a branch or jump. You could represent that as follows::
+There are instances where you might want a wirevector to be set to a certain
+value in all but certain with blocks. For example, say you have a processor
+with a PC register that is normally updated to PC + 1 after each cycle, except
+when the current instruction is a branch or jump. You could represent that as
+follows::
 
     pc = pyrtl.Register(32)
     instr = pyrtl.WireVector(32)
@@ -62,9 +62,9 @@ a branch or jump. You could represent that as follows::
             pc.next |= pc + instr[7:]
             # res will be set to 0
 
-In addition to the conditional context, there is a helper function "currently_under_condition"
-which will test if the code where it is called is currently elaborating hardware
-under a condition.
+In addition to the conditional context, there is a helper function
+:func:`~.currently_under_condition` which will test if the code where it is
+called is currently elaborating hardware under a condition.
 
 """
 # Access should be done through instances "conditional_update" and "otherwise",
@@ -84,7 +84,7 @@ from .wire import WireVector, Const, Register
 
 
 def currently_under_condition():
-    """ Returns True if execution is currently in the context of a _ConditionalAssignment. """
+    """ Returns True if execution is currently in the context of a ``_ConditionalAssignment.`` """
     return _depth > 0
 
 
@@ -100,7 +100,7 @@ class _ConditionalAssignment(object):
         self.defaults = defaults
         return self
 
-    """ Context providing funcitionality of "conditional_assignment". """
+    """ Context providing functionality of "conditional_assignment". """
     def __enter__(self):
         global _depth
         _check_no_nesting()
@@ -116,7 +116,7 @@ class _ConditionalAssignment(object):
 
 
 class _Otherwise(object):
-    """ Context providing functionality of pyrtl "otherwise". """
+    """ Context providing functionality of PyRTL ``otherwise``. """
     def __enter__(self):
         _push_condition(otherwise)
 

@@ -11,11 +11,12 @@ from . import adders, libutils
 def simple_mult(A, B, start):
     """ Builds a slow, small multiplier using the simple shift-and-add algorithm.
     Requires very small area (it uses only a single adder), but has long delay
-    (worst case is len(A) cycles). start is a one-bit input to indicate inputs are ready.
-    done is a one-bit output signal raised when the multiplication is finished.
+    (worst case is `len(A)` cycles). `start` is a one-bit input to indicate inputs are ready.
+    `done` is a one-bit output signal raised when the multiplication is finished.
 
-    :param WireVector A, B: two input wires for the multiplication
-    :returns: Register containing the product; the "done" signal
+    :param WireVector A: input wire for the multiplication
+    :param WireVector B: input wire for the multiplication
+    :return [Register, bool]: Register containing the product and the `done` signal
 
     """
     triv_result = _trivial_mult(A, B)
@@ -66,13 +67,14 @@ def _trivial_mult(A, B):
 
 def complex_mult(A, B, shifts, start):
     """ Generate shift-and-add multiplier that can shift and add multiple bits per clock cycle.
-    Uses substantially more space than `simple_mult()` but is much faster.
+    Uses substantially more space than :py:func:`.simple_mult` but is much faster.
 
-    :param WireVector A, B: two input wires for the multiplication
-    :param int shifts: number of spaces Register is to be shifted per clk cycle
+    :param WireVector A: input wire for the multiplication
+    :param WireVector B: input wire for the multiplication
+    :param int shifts: number of spaces Register is to be shifted per clock cycle
         (cannot be greater than the length of `A` or `B`)
     :param bool start: start signal
-    :returns: Register containing the product; the "done" signal
+    :return [Register, bool]: Register containing the product and the `done` signal
     """
 
     alen = len(A)
@@ -125,13 +127,14 @@ def _one_cycle_mult(areg, breg, rem_bits, sum_sf=0, curr_bit=0):
 def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
     """ Build an fast unclocked multiplier for inputs A and B using a Wallace or Dada Tree.
 
-    :param WireVector A, B: two input wires for the multiplication
-    :param function reducer: Reduce the tree using either a Dada recuder or a Wallace reducer
+    :param WireVector A: input wire for the multiplication
+    :param WireVector B: input wire for the multiplication
+    :param Callable reducer: Reduce the tree using either a Dada reducer or a Wallace reducer
       determines whether it is a Wallace tree multiplier or a Dada tree multiplier
-    :param function adder_func: an adder function that will be used to do the last addition
+    :param Callable adder_func: an adder function that will be used to do the last addition
     :return WireVector: The multiplied result
 
-    Delay is order logN, while area is order N^2.
+    Delay is `O(log(N))`, while area is `O(N^2)`.
     """
 
     """
@@ -183,12 +186,11 @@ def _twos_comp_conditional(orig_wire, sign_bit, bw=None):
 
 def fused_multiply_adder(mult_A, mult_B, add, signed=False, reducer=adders.wallace_reducer,
                          adder_func=adders.kogge_stone):
-    """ Generate efficient hardware for a*b+c.
+    """Generate efficient hardware for ``a * b + c``.
 
-    Multiplies two wirevectors together and adds a third wirevector to the
-    multiplication result, all in
-    one step. By doing it this way (instead of separately), one reduces both
-    the area and the timing delay of the circuit.
+    Multiplies two WireVectors together and adds a third WireVector to the
+    multiplication result, all in one step. By doing it this way (instead of
+    separately), one reduces both the area and the timing delay of the circuit.
 
 
     :param Bool signed: Currently not supported (will be added in the future)
@@ -209,21 +211,20 @@ def generalized_fma(mult_pairs, add_wires, signed=False, reducer=adders.wallace_
                     adder_func=adders.kogge_stone):
     """Generated an opimitized fused multiply adder.
 
-    A generalized FMA unit that multiplies each pair of numbers in mult_pairs,
-    then adds the resulting numbers and and the values of the add wires all
-    together to form an answer. This is faster than separate adders and
-    multipliers because you avoid unnecessary adder structures for intermediate
-    representations.
+    A generalized FMA unit that multiplies each pair of numbers in
+    `mult_pairs`, then adds the resulting numbers and the values of the
+    `add_wires` all together to form an answer. This is faster than separate
+    adders and multipliers because you avoid unnecessary adder structures for
+    intermediate representations.
 
-    :param mult_pairs: Either None (if there are no pairs to multiply) or
-      a list of pairs of wires to multiply:
-      [(mult1_1, mult1_2), ...]
-    :param add_wires: Either None (if there are no individual
-      items to add other than the mult_pairs), or a list of wires for adding on
-      top of the result of the pair multiplication.
-    :param Bool signed: Currently not supported (will be added in the future)
-      The default will likely be changed to True, so if you want the smallest
-      set of wires in the future, specify this as False
+    :param mult_pairs: Either None (if there are no pairs to multiply) or a
+        list of pairs of wires to multiply: `[(mult1_1, mult1_2), ...]`
+    :param add_wires: Either None (if there are no individual items to add
+        other than the `mult_pairs`), or a list of wires for adding on top of
+        the result of the pair multiplication.
+    :param bool signed: Currently not supported (will be added in the future)
+        The default will likely be changed to True, so if you want the smallest
+        set of wires in the future, specify this as False
     :param reducer: (advanced) The tree reducer to use
     :param adder_func: (advanced) The adder to use to add the two results at the end
     :return WireVector: The result WireVector

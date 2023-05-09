@@ -10,7 +10,7 @@ def prioritized_mux(selects, vals):
         value is 1
     :return: WireVector
 
-    If none of the items are high, the last val is returned
+    If none of the `selects` are high, the last `val` is returned
     """
     if len(selects) != len(vals):
         raise pyrtl.PyrtlError("Number of select and val signals must match")
@@ -38,7 +38,7 @@ def sparse_mux(sel, vals):
     """ Mux that avoids instantiating unnecessary mux_2s when possible.
 
     :param WireVector sel: Select wire, determines what is selected on a given cycle
-    :param dictionary vals: dictionary of values at mux inputs (of type `{int:WireVector}`)
+    :param dict[int, WireVector] vals: dictionary of values at mux inputs
     :return: WireVector that signifies the change
 
     This mux supports not having a full specification. Indices that are not
@@ -119,8 +119,8 @@ class MultiSelector(object):
             ms.option(val1, data0, data1, data2, ...)
             ms.option(val2, data0_2, data1_2, data2_2, ...)
 
-    This means that when the select wire equals the val1 wire
-    the results will have the values in the coresponding data wires
+    This means that when the ``select`` wire equals the ``val1`` wire
+    the results will have the values in ``data0, data1, data2, ...``
     (all ints are converted to wires)
     """
     def __init__(self, signal_wire, *dest_wires):

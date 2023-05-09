@@ -65,8 +65,6 @@ Debugging
 .. autofunction:: pyrtl.helperfuncs.probe
 .. autofunction:: pyrtl.helperfuncs.rtl_assert
 .. autofunction:: pyrtl.helperfuncs.check_rtl_assertions
-.. autofunction:: pyrtl.helperfuncs.find_loop
-.. autofunction:: pyrtl.helperfuncs.find_and_print_loop
 
 Reductions
 ----------
@@ -77,7 +75,6 @@ Reductions
 .. autofunction:: pyrtl.corecircuits.parity
 .. autofunction:: pyrtl.corecircuits.rtl_any
 .. autofunction:: pyrtl.corecircuits.rtl_all
-.. autofunction:: pyrtl.corecircuits.tree_reduce
 
 Extended Logic and Arithmetic
 -----------------------------

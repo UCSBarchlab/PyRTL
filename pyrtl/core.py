@@ -25,51 +25,76 @@ from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'dests'])):
     """ The basic immutable datatype for storing a "net" in a netlist.
 
-    This is used for the Internal representation that Python stores
-    Knowledge of what this is, and how it is used is only required for
+    This is used for the internal representation that Python stores
+    knowledge of what this is, and how it is used is only required for
     advanced users of PyRTL.
 
     A 'net' is a structure in Python that is representative of hardware
-    logic operations. These include binary operations, such as 'and'
-    'or' and 'not', arithmetic operations such as '+' and '-', as well
+    logic operations. These include binary operations, such as `and`
+    `or` and `not`, arithmetic operations such as `+` and `-`, as well
     as other operations such as Memory ops, and concat, split, wire,
     and reg logic.
 
     The details of what is allowed in each of these fields is defined
-    in the comments of Block, and is checked by `block.sanity_check`
+    in the comments of :class:`.Block`, and is checked by :func:`.Block.sanity_check`
 
+    Logical Operations:
 
-    `Logical Operations`::
+    ===== ======== ======== ====== ====
+    op    op_param args     dests
+    ===== ======== ======== ====== ====
+    ``&`` `None`   `a1, a2` `out`  AND two wires together, put result into `out`
+    ``|`` `None`   `a1, a2` `out`  OR two wires together, put result into `out`
+    ``^`` `None`   `a1, a2` `out`  XOR two wires together, put result into `out`
+    ``n`` `None`   `a1, a2` `out`  NAND two wires together, put result into `out`
+    ``~`` `None`   `a1`     `out`  invert one wire, put result into `out`
+    ``+`` `None`   `a1, a2` `out`  add `a1` and `a2`, put result into `out`
 
-        ('&', None, (a1, a2), (out)) => AND two wires together, put result into out
-        ('|', None, (a1, a2), (out)) => OR two wires together, put result into out
-        ('^', None, (a1, a2), (out)) => XOR two wires together, put result into out
-        ('n', None, (a1, a2), (out)) => NAND two wires together, put result into out
-        ('~', None, (a1), (out)) => invert one wire, put result into out
-        ('+', None, (a1, a2), (out)) => add a1 and a2, put result into out
-                                        len(out) = max(len(a1), len(a2)) + 1
-                                        works with both unsigned and two's complement
-        ('-', None, (a1, a2), (out)) => subtract a2 from a1, put result into out
-                                        len(out) = max(len(a1), len(a2)) + 1
-                                        works with both unsigned and two's complement
-        ('*', None, (a1, a2), (out)) => multiply a1 & a2, put result into out
-                                        len(out) = len(a1) + len(a2)
-                                        assumes unsigned, but "signed_mult" provides wrapper
-        ('=', None, (a1, a2), (out)) => check a1 & a2 equal, put result into out (0 | 1)
-        ('<', None, (a1, a2), (out)) => check a2 greater than a1, put result into out (0 | 1)
-        ('>', None, (a1, a2), (out)) => check a1 greater than a2, put result into out (0 | 1)
-        ('w', None, (w1), (w2) => directional wire w/ no logical operation: connects w1 to w2
-        ('x', None, (x, a1, a2), (out)) => mux: connect a1 (x=0), a2 (x=1) to out;
-                                           x must be one bit; len(a1) = len(a2)
-        ('c', None, (*args), (out)) => concatenates *args (wires) into single WireVector;
-                                       puts first arg at MSB, last arg at LSB
-        ('s', (sel), (wire), (out)) => selects bits from wire based on sel (std slicing syntax),
-                                       puts into out
-        ('r', None, (next), (r1)) => on positive clock edge: copies next to r1
-        ('m', (memid, mem), (addr), (data)) => read address addr of mem (w/ id memid),
-                                               put it into data
-        ('@', (memid, mem), (addr, data, wr_en), ()) => write data to mem (w/ id memid) at
-                                                        address addr; req. write enable (wr_en)
+                                   ``len(out) == max(len(a1), len(a2)) + 1``
+
+                                   works with both unsigned and two's complement
+    ``-`` `None`   `a1, a2` `out`  subtract `a2` from `a1`, put result into `out`
+
+                                   ``len(out) == max(len(a1), len(a2)) + 1``
+
+                                   works with both unsigned and two's complement
+    ``*`` `None`   `a1, a2` `out`  multiply `a1` & `a2`, put result into `out`
+
+                                   ``len(out) == len(a1) + len(a2)``
+
+                                   assumes unsigned, but :func:`.signed_mult` provides wrapper
+    ``=`` `None`   `a1, a2` `out`  check `a1` & `a2` equal, put result into `out` (0 | 1)
+    ``<`` `None`   `a1, a2` `out`  check `a2` greater than `a1`, put result into `out` (0 | 1)
+    ``>`` `None`   `a1, a2` `out`  check `a1` greater than `a2`, put result into `out` (0 | 1)
+    ``w`` `None`   `w1`     `w2`   connects `w1` to `w2`
+
+                                    directional wire with no logical operation
+    ``x`` `None`   `x`,     `out`  multiplexer:
+
+                                   when `x` == 0 connect `a1` to `out`
+
+                                   when `x` == 1 connect `a2` to `out`
+
+                                   `x` must be one bit and ``len(a1) == len(a2)``
+                   `a1, a2`
+    ``c`` `None`   `\\*args` `out`  concatenates `\\*args` (wires) into single WireVector
+
+                                    puts first arg at MSB, last arg at LSB
+    ``s`` `sel`    `wire`   `out`  selects bits from wire based on `sel` (slicing syntax)
+
+                                    puts selected bits into `out`
+    ``r`` `None`   `next`   `r1`   on positive clock edge: copies `next` to `r1`
+    ``m`` `memid`, `addr`   `data` read address addr of mem (w/ id `memid`), put it into `data`
+
+          `mem`
+    ``@`` `memid`, `addr`          write data to mem (w/ id `memid`) at address `addr`
+
+                                   request write enable (`wr_en`)
+
+          `mem`    `data`,
+
+                   `wr_en`
+    ===== ======== ======== ====== ====
 
     """
 
@@ -174,93 +199,105 @@ class LogicNet(collections.namedtuple('LogicNet', ['op', 'op_param', 'args', 'de
 
 
 class Block(object):
-    """ Block encapsulates a netlist.
+    """Block encapsulates a netlist.
 
-    A Block in PyRTL is the class that stores a netlist and provides basic access
-    and error checking members.  Each block has well defined inputs and outputs,
-    and contains both the basic logic elements and references to the wires and
-    memories that connect them together.
+    A Block in PyRTL is the class that stores a netlist and provides basic
+    access and error checking members.  Each block has well defined inputs and
+    outputs, and contains both the basic logic elements and references to the
+    wires and memories that connect them together.
 
-    The logic structure is primarily contained in self.logic which holds a set of
-    "LogicNet"s. Each LogicNet describes a primitive operation (such as an adder
-    or memory).  The primitive is described by a 4-tuple of:
+    The logic structure is primarily contained in :attr:`.Block.logic` which
+    holds a set of :class:`LogicNets <.LogicNet>`. Each :class:`~.LogicNet`
+    describes a primitive operation (such as an adder or memory).  The
+    primitive is described by a 4-tuple of:
 
-    1) the op (a single character describing the operation such as '+' or 'r'),
-    2) a set of hard parameters to that primitives (such as the constants to
-       select from the "selection" op).
-    3) the tuple "args" which list the wirevectors hooked up as inputs to
+    1) the op (a single character describing the operation such as ``+`` or
+       ``r``),
+    2) a set of hard-wired `op_params` (such as the constants to select from
+       the "selection" op).
+    3) the tuple `args` which list the WireVectors hooked up as inputs to
        this particular net.
-    4) the tuple "dests" which list the wirevectors hooked up as output for
+    4) the tuple `dests` which list the WireVectors hooked up as output for
        this particular net.
 
     Below is a list of the basic operations.  These properties (more formally
-    specified) should all be checked by the class method 'sanity_check'.
+    specified) should all be checked by the class method
+    :func:`.Block.sanity_check`.
 
     * Most logical and arithmetic ops are pretty self explanatory. Each takes
       exactly two arguments, and they should perform the arithmetic or logical
-      operation specified. OPS: ('&','|','^','n','~','+','-','*').  All inputs must
-      be the same bitwidth.  Logical operations produce as many bits as are in
-      the input, while '+' and '-' produce n+1 bits, and '*' produces 2n bits.
+      operation specified.
+
+      OPS: ``&``, ``|``, ``^``, ``n``, ``~``, ``+``, ``-``, ``*``.
+
+      All inputs must be the same bitwidth.  Logical operations produce as many
+      bits as are in the input, while ``+`` and ``-`` produce n+1 bits, and
+      ``*`` produces 2n bits.
 
     * In addition there are some operations for performing comparisons
-      that should perform the operation specified.  The '=' op is checking
-      to see if the bits of the vectors are equal, while '<' and '>' do
+      that should perform the operation specified.  The ``=`` op is checking
+      to see if the bits of the vectors are equal, while ``<`` and ``>`` do
       unsigned arithmetic comparison.  All comparisons generate a single bit
       of output (1 for true, 0 for false).
 
-    * The 'w' operator is simply a directional wire and has no logic function.
+    * The ``w`` operator is simply a directional wire and has no logic function.
 
-    * The 'x' operator is a mux which takes a select bit and two signals.
-      If the value of the select bit is 0 it selects the second argument; if
-      it is 1 it selects the third argument.  Select must be a single bit, while
-      the other two arguments must be the same length.
+    * The ``x`` operator is a multiplexer which takes a select bit and two
+      signals.  If the value of the select bit is 0 it selects the second
+      argument; if it is 1 it selects the third argument.  Select must be a
+      single bit, while the other two arguments must be the same length.
 
-    * The 'c' operator is the concatenation operator and combines any number of
-      wirevectors (a,b,...,z) into a single new wirevector with "a" in the MSB
-      and "z" (or whatever is last) in the LSB position.
+    * The ``c`` operator is the concatenation operator and combines any number
+      of WireVectors (``a``, ``b``, ..., ``z``) into a single new WireVector
+      with ``a`` in the MSB and ``z`` (or whatever is last) in the LSB
+      position.
 
-    * The 's' operator is the selection operator and chooses, based on the
-      op_param specified, a subset of the logic bits from a WireVector to
+    * The ``s`` operator is the selection operator and chooses, based on the
+      `op_param` specified, a subset of the logic bits from a WireVector to
       select.  Repeats are accepted.
 
-    * The 'r' operator is a register and on posedge, simply copies the value
+    * The ``r`` operator is a register and on posedge, simply copies the value
       from the input to the output of the register.
 
-    * The 'm' operator is a memory block read port, which supports async reads (acting
-      like combinational logic). Multiple read (and write) ports are possible to
-      the same memory but each 'm' defines only one of those. The op_param
-      is a tuple containing two references: the mem id, and a reference to the
-      MemBlock containing this port. The MemBlock should only be used for debug and
-      sanity checks. Each read port has one addr (an arg) and one data (a dest).
+    * The ``m`` operator is a memory block read port, which supports async
+      reads (acting like combinational logic). Multiple read (and write) ports
+      are possible to the same memory but each ``m`` defines only one of
+      those. The `op_param` is a tuple containing two references: the mem id,
+      and a reference to the MemBlock containing this port. The MemBlock should
+      only be used for debug and sanity checks. Each read port has one `addr`
+      (an arg) and one `data` (a dest).
 
-    * The '@' (update) operator is a memory block write port, which supports synchronous writes
-      (writes are "latched" at posedge).  Multiple write (and read) ports are possible
-      to the same memory but each '@' defines only one of those. The op_param
-      is a tuple containing two references: the mem id, and a reference to the MemoryBlock.
-      Writes have three args (addr, data, and write enable).  The dests should be an
-      empty tuple.  You will not see a written value change until the following cycle.
-      If multiple writes happen to the same address in the same cycle the behavior is currently
-      undefined.
+    * The ``@`` (update) operator is a memory block write port, which supports
+      synchronous writes (writes are "latched" at positive edge).  Multiple
+      write (and read) ports are possible to the same memory but each ``@``
+      defines only one of those. The `op_param` is a tuple containing two
+      references: the mem id, and a reference to the MemoryBlock.  Writes have
+      three args (`addr`, `data`, and write enable `we_en`).  The dests should
+      be an empty tuple.  You will not see a written value change until the
+      following cycle.  If multiple writes happen to the same address in the
+      same cycle the behavior is currently undefined.
 
     The connecting elements (args and dests) should be WireVectors or derived
     from WireVector, and should be registered with the block using
-    the method 'add_wirevector'.  Nets should be registered using 'add_net'.
+    :func:`.Block.add_wirevector`.  Nets should be registered using
+    :func:`.Block.add_net`.
 
-    In addition, there is a member 'legal_ops' which defines the set of operations
-    that can be legally added to the block.  By default it is set to all of the above
-    defined operations, but it can be useful in certain cases to only allow a
-    subset of operations (such as when transforms are being done that are "lowering"
-    the blocks to more primitive ops).
+    In addition, there is a member :attr:`.Block.legal_ops` which defines the
+    set of operations that can be legally added to the block.  By default it is
+    set to all of the above defined operations, but it can be useful in certain
+    cases to only allow a subset of operations (such as when transforms are
+    being done that are "lowering" the blocks to more primitive ops).
+
     """
 
     def __init__(self):
         """Creates an empty hardware block."""
         self.logic = set()  # set of nets, each is a LogicNet named tuple
-        self.wirevector_set = set()  # set of all wirevectors
-        self.wirevector_by_name = {}  # map from name->wirevector, used for performance
-        # pre-synthesis wirevectors to post-synthesis vectors
+        self.wirevector_set = set()  # set of all WireVectors
+        self.wirevector_by_name = {}  # map from name->WireVector, used for performance
+        # pre-synthesis WireVectors to post-synthesis vectors
         self.legal_ops = set('w~&|^n+-*<>=xcsrm@')  # set of legal OPS
-        self.rtl_assert_dict = {}   # map from wirevectors -> exceptions, used by rtl_assert
+        self.rtl_assert_dict = {}   # map from WireVectors -> exceptions, used by rtl_assert
         self.memblock_by_name = {}  # map from name->memblock, for easy access to memblock objs
 
     def __str__(self):
@@ -274,9 +311,9 @@ class Block(object):
             return '\n'.join(str(net) for net in self)
 
     def add_wirevector(self, wirevector):
-        """ Add a wirevector object to the block.
+        """ Add a WireVector object to the block.
 
-        :param wirevector: WireVector object added to block
+        :param WireVector wirevector: WireVector object added to block
 
         """
         self.sanity_check_wirevector(wirevector)
@@ -284,9 +321,9 @@ class Block(object):
         self.wirevector_by_name[wirevector.name] = wirevector
 
     def remove_wirevector(self, wirevector):
-        """ Remove a wirevector object from the block.
+        """ Remove a WireVector object from the block.
 
-        :param wirevector: WireVector object removed from block
+        :param WireVector wirevector: WireVector object removed from block
 
         """
         self.wirevector_set.remove(wirevector)
@@ -299,7 +336,7 @@ class Block(object):
 
         The passed net, which must be of type LogicNet, is checked and then
         added to the block.  No wires are added by this member, they must be
-        added seperately with add_wirevector."""
+        added seperately with :func:`.Block.add_wirevector`."""
 
         self.sanity_check_net(net)
         self.logic.add(net)
@@ -318,12 +355,12 @@ class Block(object):
     def get_memblock_by_name(self, name, strict=False):
         """ Get a reference to a memory stored in this block by name.
 
-        :param String name: name of memblock object
-        :param strict: Determines if PyrtlError or None is thrown on no match.
+        :param str name: name of MemBlock object
+        :param bool strict: Determines if PyrtlError or None is thrown on no match.
             Defaults to False.
-        :return: a memblock object with specified name
+        :return: a MemBlock object with specified name
 
-        By fallthrough, if a matching memblock cannot be found the value None is
+        By fallthrough, if a matching MemBlock cannot be found the value None is
         returned.  However, if the argument strict is set to True, then this will
         instead throw a PyrtlError when no match is found.
 
@@ -381,14 +418,14 @@ class Block(object):
             return None
 
     def wirevector_subset(self, cls=None, exclude=tuple()):
-        """Return set of wirevectors, filtered by the type or tuple of types provided as cls.
+        """Return set of WireVectors, filtered by the type or tuple of types provided as `cls`.
 
-        :param cls: Type of returned wirevectors objects
-        :param exclude: Type of wirevectors objects to exclude
-        :return: Set of wirevector objects that are both a cls type and not a excluded type
+        :param cls: Type of returned WireVector objects
+        :param exclude: Type of WireVector objects to exclude
+        :return: Set of WireVector objects that are both a cls type and not a excluded type
 
-        If no cls is specified, the full set of wirevectors associated with the Block are
-        returned.  If cls is a single type, or a tuple of types, only those wirevectors of
+        If no `cls` is specified, the full set of WireVectors associated with the Block are
+        returned.  If `cls` is a single type, or a tuple of types, only those WireVectors of
         the matching types will be returned.  This is helpful for getting all inputs, outputs,
         or registers of a block for example.
 
@@ -396,8 +433,9 @@ class Block(object):
 
             inputs = pyrtl.working_block().wirevector_subset(pyrtl.Input)
             outputs = pyrtl.working_block().wirevector_subset(pyrtl.Output)
-            non_inputs = pyrtl.working_block().wirevector_subset(exclude = pyrtl.Input)
-                #returns set of all non-input wirevectors
+
+            # returns set of all non-input WireVectors
+            non_inputs = pyrtl.working_block().wirevector_subset(exclude=pyrtl.Input)
         """
         if cls is None:
             initial_set = self.wirevector_set
@@ -409,12 +447,12 @@ class Block(object):
             return set(x for x in initial_set if not isinstance(x, exclude))
 
     def logic_subset(self, op=None):
-        """Return set of logicnets, filtered by the type(s) of logic op provided as op.
+        """Return set of LogicNets, filtered by the type(s) of logic op provided as op.
 
-        :param op: Operation of logicnet to filter by. Defaults to None.
-        :return: set of logicnets with corresponding op
+        :param op: Operation of LogicNet to filter by. Defaults to None.
+        :return: set of LogicNets with corresponding op
 
-        If no op is specified, the full set of logicnets associated with the Block are
+        If no `op` is specified, the full set of LogicNets associated with the Block are
         returned.  This is helpful for getting all memories of a block for example.
         """
         if op is None:
@@ -423,21 +461,21 @@ class Block(object):
             return set(x for x in self.logic if x.op in op)
 
     def get_wirevector_by_name(self, name, strict=False):
-        """Return the wirevector matching name.
+        """Return the WireVector matching name.
 
-        :param String name: name of wirevector object
-        :param strict: Determines if PyrtlError or None is thrown on no match.
+        :param str name: name of WireVector object
+        :param bool strict: Determines if PyrtlError or None is thrown on no match.
             Defaults to False.
-        :return: a wirevector object with specified name
+        :return: a WireVector object with specified name
 
-        By fallthrough, if a matching wirevector cannot be found the value None is
+        By fallthrough, if a matching WireVector cannot be found the value None is
         returned.  However, if the argument strict is set to True, then this will
         instead throw a PyrtlError when no match is found.
         """
         if name in self.wirevector_by_name:
             return self.wirevector_by_name[name]
         elif strict:
-            raise PyrtlError('error, block does not have a wirevector named %s' % name)
+            raise PyrtlError('error, block does not have a WireVector named %s' % name)
         else:
             return None
 
@@ -459,22 +497,25 @@ class Block(object):
                 raise KeyError(key)
 
     def net_connections(self, include_virtual_nodes=False):
-        """ Returns a representation of the current block useful for creating a graph.
+        """Returns a representation of the current block useful for creating a
+        graph.
 
-        :param include_virtual_nodes: if enabled, the wire itself will be used to
-          signal an external source or sink (such as the source for an Input net).
-          If disabled, these nodes will be excluded from the adjacency dictionaries
-        :return: wire_src_dict, wire_sink_dict
-          Returns two dictionaries: one that maps WireVectors to the logic
-          net that creates their signal and one that maps WireVectors to
-          a list of logic nets that use the signal
+        :param bool include_virtual_nodes: if enabled, the wire itself will be
+            used to signal an external source or sink (such as the source for
+            an Input net).  If disabled, these nodes will be excluded from the
+            adjacency dictionaries
+        :return: Two dictionaries: one that maps WireVectors to the logic net
+            that creates their signal (`wire_src_dict`) and one that maps
+            WireVectors to a list of logic nets that use the signal
+            (`wire_sink_dict`).
 
         These dictionaries make the creation of a graph much easier, as
         well as facilitate other places in which one would need wire source
         and wire sink information.
 
-        Look at inputoutput.net_graph for one such graph that uses the information
+        Look at :func:`.net_graph` for one such graph that uses the information
         from this function.
+
         """
         src_list = {}
         dst_list = {}
@@ -678,7 +719,7 @@ class Block(object):
                         % (net.op_param[1].name, net.args[0].name, str(src_net)))
 
     def sanity_check_wirevector(self, w):
-        """ Check that w is a valid wirevector type. """
+        """ Check that w is a valid WireVector type. """
         from .wire import WireVector
         if not isinstance(w, WireVector):
             raise PyrtlError(
@@ -712,7 +753,7 @@ class Block(object):
             if w not in self.wirevector_set:
                 raise PyrtlInternalError('error, net with unknown source "%s"' % w.name)
 
-        # checks that input and output wirevectors are not misused
+        # checks that input and output WireVectors are not misused
         bad_dests = set(filter(lambda w: isinstance(w, (Input, Const)), net.dests))
         if bad_dests:
             raise PyrtlInternalError('error, Inputs, Consts cannot be destinations to a net (%s)' %
@@ -803,12 +844,16 @@ class PostSynthBlock(Block):
 
     It currently holds the following instance attributes:
 
-    * *.io_map*: a map from old IO wirevector to a list of new IO wirevectors it maps to;
-        this is a list because for unmerged io vectors, each old N-bit IO wirevector maps
-        to N new 1-bit IO wirevectors.
-    * *.reg_map*: a map from old register to a list of new registers; a list because post-synthesis,
-        each N-bit register has been mapped to N 1-bit registers
-    * *.mem_map*: a map from old memory block to the new memory block
+    `io_map`:
+        a map from old IO WireVector to a list of new IO WireVectors it maps
+        to; this is a list because for unmerged IO vectors, each old N-bit IO
+        WireVector maps to N new 1-bit IO WireVectors.
+    `reg_map`:
+        a map from old register to a list of new registers; a list because
+        post-synthesis, each N-bit register has been mapped to N 1-bit
+        registers
+    `mem_map`:
+        a map from old memory block to the new memory block
     """
 
     def __init__(self):
@@ -901,7 +946,7 @@ def reset_working_block():
 
 class set_working_block(object):
     """ Set the working block to be the block passed as argument.
-    Compatible with the 'with' statement.
+    Compatible with the `with` statement.
 
     Sanity checks will only be run if the new block is different
     from the original block.
@@ -931,7 +976,7 @@ class set_working_block(object):
 def temp_working_block():
     """ Set the working block to be new temporary block.
 
-    If used with the 'with' statement the block will be reset to the
+    If used with the `with` statement the block will be reset to the
     original value (at the time of call) at exit of the context.
     """
     return set_working_block(Block())
@@ -940,7 +985,7 @@ def temp_working_block():
 def set_debug_mode(debug=True):
     """ Set the global debug mode.
 
-    :param debug: Optional boolean paramter to which debug mode will be set
+    :param bool debug: Optional boolean paramter to which debug mode will be set
 
     This function will set the debug mode to the specified value.  Debug mode
     is, by default, set to off to keep the performance of the system.  With debug

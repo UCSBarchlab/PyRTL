@@ -14,29 +14,31 @@ from .wire import WireVector, Input, Output, Const, Register
 
 
 def net_graph(block=None, split_state=False):
-    """ Return a graph representation of the given block.
+    """Return a graph representation of the given block.
 
-    :param block: block to use (defaults to current working block)
-    :param split_state: if True, split connections to/from a register update net; this
-        means that registers will be appear as source nodes of the network, and
-        'r' nets (i.e. the logic for setting a register's next value) will
-        be treated as sink nodes of the network.
+    :param Block block: block to use (defaults to current working block)
+    :param bool split_state: if True, split connections to/from a register
+        update net; this means that registers will be appear as source nodes of
+        the network, and ``r`` nets (i.e. the logic for setting a register's
+        next value) will be treated as sink nodes of the network.
 
     The graph has the following form::
 
-        { node1: { nodeA: [edge1A_1, edge1A_2], nodeB: [edge1B]},
+        {
+          node1: { nodeA: [edge1A_1, edge1A_2], nodeB: [edge1B]},
           node2: { nodeB: [edge2B],             nodeC: [edge2C_1, edge2C_2]},
           ...
         }
 
-    aka: edges = graph[source][dest]
+    aka: ``edges = graph[source][dest]``
 
-    Each node can be either a logic net or a WireVector (e.g. an Input, an Output, a
-    Const or even an undriven WireVector (which acts as a source or sink in the network).
-    Each edge is a WireVector or derived type (Input, Output, Register, etc.).
-    Note that inputs, consts, and outputs will be both "node" and "edge".
-    WireVectors that are not connected to any nets are not returned as part
-    of the graph.
+    Each node can be either a LogicNet or a WireVector (e.g. an Input, an
+    Output, a Const or even an undriven WireVector (which acts as a source or
+    sink in the network).  Each edge is a WireVector or derived type (Input,
+    Output, Register, etc.).  Note that inputs, consts, and outputs will be
+    both "node" and "edge".  WireVectors that are not connected to any nets are
+    not returned as part of the graph.
+
     """
     # FIXME: make it not try to add unused wires (issue #204)
     block = working_block(block)
@@ -102,17 +104,20 @@ def _trivialgraph_default_namer(thing, is_edge=True):
 
 
 def output_to_trivialgraph(file, namer=_trivialgraph_default_namer, block=None, split_state=False):
-    """ Walk the block and output it in trivial graph format to the open file.
+    """Walk the block and output it in `trivial graph format
+    <https://en.wikipedia.org/wiki/Trivial_Graph_Format>`_ to the open file.
 
     :param file: Open file to write to
-    :param namer: A function that takes in an object (a wire or logicnet) as the first argument and
-        a boolean `is_edge` as the second that is set True if the object is a wire, and returns
-        a string representing that object.
-    :param block: Block to use (defaults to current working block)
-    :param split_state: if True, split connections to/from a register update net; this
-        means that registers will be appear as source nodes of the network, and
-        'r' nets (i.e. the logic for setting a register's next value) will
-        be treated as sink nodes of the network.
+    :param namer: A function that takes in an object (a wire or LogicNet) as
+        the first argument and a boolean `is_edge` as the second that is set
+        True if the object is a wire, and returns a string representing that
+        object.
+    :param Block block: Block to use (defaults to current working block)
+    :param bool split_state: if True, split connections to/from a register
+        update net; this means that registers will be appear as source nodes of
+        the network, and ``r`` nets (i.e. the logic for setting a register's
+        next value) will be treated as sink nodes of the network.
+
     """
     graph = net_graph(block, split_state)
     node_index_map = {}  # map node -> index
@@ -281,7 +286,7 @@ def graphviz_detailed_namer(
     :param extra_edge_info: A dict from edge to some object about that edge
         (its string representation will be printed next to the edge's label)
     :return: A function that knows how to label each element in the graph, which
-        can be passed to 'output_to_graphviz' or 'block_to_graphviz_string'
+        can be passed to :func:`.output_to_graphviz` or :func:`.block_to_graphviz_string`
 
     If both dict arguments are None, the returned namer behaves identically
     to the default Graphviz namer.
@@ -302,59 +307,71 @@ def graphviz_detailed_namer(
 
 def output_to_graphviz(file, block=None, namer=_graphviz_default_namer,
                        split_state=True, maintain_arg_order=False):
-    """ Walk the block and output it in Graphviz format to the open file.
+    """Walk the block and output it in `Graphviz <https://graphviz.org/>`_
+    format to the open file.
 
     :param file: Open file to write to
-    :param block: Block to use (defaults to current working block)
-    :param namer: Function used to label each edge and node; see 'block_to_graphviz_string'
-        for more information.
-    :param split_state: If True, visually split the connections to/from a register update net.
-    :param maintain_arg_order: If True, will add ordering constraints so that that incoming edges
-        are ordered left-to-right for nets where argument order matters (e.g. '<'). Keeping this
-        as False results in a cleaner, though less visually precise, graphical output.
+    :param Block block: Block to use (defaults to current working block)
+    :param namer: Function used to label each edge and node; see
+        :func:`block_to_graphviz_string` for more information.
+    :param bool split_state: If True, visually split the connections to/from a
+        register update net.
+    :param bool maintain_arg_order: If True, will add ordering constraints so
+        that that incoming edges are ordered left-to-right for nets where
+        argument order matters (e.g. ``<``). Keeping this as False results in a
+        cleaner, though less visually precise, graphical output.
 
-    The file written by the this function should be a directed graph in the format expected
-    by the graphviz package (https://graphviz.org/), specifically in the "dot" format.  Once
-    graphviz is installed, the resulting graph file can be rendered to a .png file with
-    "dot -Tps output.dot > output.ps".
+    The file written by the this function should be a directed graph in the
+    format expected by the `Graphviz package <https://graphviz.org/>`_,
+    specifically in the :command:`dot` format.  Once Graphviz is installed, the
+    resulting graph file can be rendered to a .png file with::
+
+        dot -Tps output.dot > output.ps
+
     """
     print(block_to_graphviz_string(block, namer, split_state, maintain_arg_order), file=file)
 
 
 def block_to_graphviz_string(block=None, namer=_graphviz_default_namer,
                              split_state=True, maintain_arg_order=False):
-    """ Return a Graphviz string for the block.
+    """Return a Graphviz string for the block.
 
     :param namer: A function mapping graph objects (wires/logic nets) to labels.
-        If you want a more detailed namer, pass in a call to `graphviz_detailed_namer` (see below).
-    :param block: Block to use (defaults to current working block)
-    :param split_state: If True, split connections to/from a register update net; this
-        means that registers will be appear as source nodes of the network, and
-        'r' nets (i.e. the logic for setting a register's next value) will
-        be treated as sink nodes of the network.
-    :param maintain_arg_order: If True, will add ordering constraints so that that incoming edges
-        are ordered left-to-right for nets where argument order matters (e.g. '<'). Keeping this
-        as False results in a cleaner, though less visually precise, graphical output.
+        If you want a more detailed namer, pass in a call to
+        :func:`.graphviz_detailed_namer` (see below).
+    :param Block block: Block to use (defaults to current working block)
+    :param bool split_state: If True, split connections to/from a register
+        update net; this means that registers will be appear as source nodes of
+        the network, and ``r`` nets (i.e. the logic for setting a register's
+        next value) will be treated as sink nodes of the network.
+    :param bool maintain_arg_order: If True, will add ordering constraints so
+        that that incoming edges are ordered left-to-right for nets where
+        argument order matters (e.g. ``<``). Keeping this as False results in a
+        cleaner, though less visually precise, graphical output.
 
-    The normal namer function will label user-named wires with their names and label the nodes
-    (logic nets or Input/Output/Const terminals) with their operator symbol or name/value,
-    respectively. If custom information about each node in the graph is desired, you can pass
-    in a custom namer function which must have the same signature as the default namer,
-    `_graphviz_default_namer`. However, we recommend you instead pass in a call to
-    `graphviz_detailed_namer`, supplying it with your own dicts mapping wires and nodes to labels.
-    For any wire/node found in these maps, that additional information will be printed in
-    parentheses alongside the node in the graphviz graph.
+    The normal namer function will label user-named wires with their names and
+    label the nodes (logic nets or Input/Output/Const terminals) with their
+    operator symbol or name/value, respectively. If custom information about
+    each node in the graph is desired, you can pass in a custom namer function
+    which must have the same signature as the default namer,
+    :func:`._graphviz_default_namer`. However, we recommend you instead pass in
+    a call to :func:`.graphviz_detailed_namer`, supplying it with your own
+    dicts mapping wires and nodes to labels.  For any wire/node found in these
+    maps, that additional information will be printed in parentheses alongside
+    the node in the graphviz graph.
 
-    For example, if you wanted to print the delay of each wire and the fanout of each
-    gate, you could pass in two maps to the `graphviz_detailed_namer` call, which returns a namer
-    function that can subsequently be passed to 'output_to_graphviz' or
-    'block_to_graphviz_string'. ::
+    For example, if you wanted to print the delay of each wire and the fanout
+    of each gate, you could pass in two maps to the
+    :func:`.graphviz_detailed_namer` call, which returns a namer function that
+    can subsequently be passed to :func:`.output_to_graphviz` or
+    :func:`.block_to_graphviz_string`. ::
 
         node_fanout = {n: "Fanout: %d" % my_fanout_func(n) for n in working_block().logic}
         wire_delay = {w: "Delay: %.2f" % my_delay_func(w) for w in working_block().wirevector_set}
 
         with open("out.gv", "w") as f:
             output_to_graphviz(f, namer=graphviz_detailed_namer(node_fanout, wire_delay))
+
     """
     graph = net_graph(block, split_state)
     node_index_map = {}  # map node -> index
@@ -438,21 +455,24 @@ def output_to_svg(file, block=None, split_state=True):
     """ Output the block as an SVG to the open file.
 
     :param file: Open file to write to
-    :param block: Block to use (defaults to current working block)
-    :param split_state: If True, visually split the connections to/from a register update net.
+    :param Block block: Block to use (defaults to current working block)
+    :param bool split_state: If True, visually split the connections to/from a register update net.
     """
     print(block_to_svg(block, split_state), file=file)
 
 
 def block_to_svg(block=None, split_state=True, maintain_arg_order=False):
-    """ Return an SVG for the block.
+    """Return an SVG for the block.
 
-    :param block: Block to use (defaults to current working block)
-    :param split_state: If True, visually split the connections to/from a register update net.
-    :param maintain_arg_order: If True, will add ordering constraints so that that incoming edges
-        are ordered left-to-right for nets where argument order matters (e.g. '<'). Keeping this
-        as False results in a cleaner, though less visually precise, graphical output.
+    :param Block block: Block to use (defaults to current working block)
+    :param bool split_state: If True, visually split the connections to/from a
+        register update net.
+    :param bool maintain_arg_order: If True, will add ordering constraints so
+        that that incoming edges are ordered left-to-right for nets where
+        argument order matters (e.g. ``<``). Keeping this as False results in a
+        cleaner, though less visually precise, graphical output.
     :return: The SVG representation of the block
+
     """
     try:
         from graphviz import Source
@@ -478,12 +498,12 @@ def block_to_svg(block=None, split_state=True, maintain_arg_order=False):
 def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex, repr_per_name={}):
     """ Return a HTML block showing the trace.
 
-    :param simtrace: A SimulationTrace object
-    :param trace_list: (optional) A list of wires to display
+    :param SimulationTrace simtrace: A SimulationTrace object
+    :param list[str] trace_list: (optional) A list of wires to display
     :param sortkey: (optional) The key with which to sort the trace_list
     :param repr_func: function to use for representing the current_val;
-        examples are 'hex', 'oct', 'bin', 'str' (for decimal), or even the name
-        of an IntEnum class you know the value will belong to. Defaults to 'hex'.
+        examples are ``hex``, ``oct``, ``bin``, ``str`` (for decimal), or even the name
+        of an IntEnum class you know the value will belong to. Defaults to ``hex``.
     :param repr_per_name: Map from signal name to a function that takes in the signal's
         value and returns a user-defined representation. If a signal name is
         not found in the map, the argument `repr_func` will be used instead.

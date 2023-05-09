@@ -6,7 +6,7 @@ MemBlocks supports any number of the following operations:
 
 * read: `d = mem[address]`
 * write: `mem[address] <<= d`
-* write with an enable: `mem[address] <<= MemBlock.EnabledWrite(d,enable=we)`
+* write with an enable: `mem[address] <<= MemBlock.EnabledWrite(d, enable=we)`
 
 Based on the number of reads and writes a memory will be inferred
 with the correct number of ports to support that
@@ -91,15 +91,13 @@ class MemBlock(object):
     """ MemBlock is the object for specifying block memories.  It can be
     indexed like an array for both reading and writing.  Writes under a conditional
     are automatically converted to enabled writes.   For example, consider the following
-    examples where `addr`, `data`, and `we` are all WireVectors.
+    examples where ``addr``, ``data``, and ``we`` are all WireVectors::
 
-    Usage::
+        data = memory[addr]  # infer read port
+        memory[addr] <<= data  # infer write port
+        mem[address] <<= MemBlock.EnabledWrite(data, enable=we)
 
-        data = memory[addr]  (infer read port)
-        memory[addr] <<= data  (infer write port)
-        mem[address] <<= MemBlock.EnabledWrite(data,enable=we)
-
-    When the address of a memory is assigned to using a EnableWrite object
+    When the address of a memory is assigned to using an :class:`~.MemBlock.EnabledWrite` object
     items will only be written to the memory when the enable WireVector is
     set to high (1).
     """
@@ -132,9 +130,9 @@ class MemBlock(object):
         operations start on a clock edge if you want them to synthesize into efficient hardware.
         MemBlocks will enforce this by making sure that
         you only address them with a register or input, unless you explicitly declare
-        the memory as asynchronous with `asynchronous=True` flag.  Note that asynchronous mems
+        the memory as asynchronous with ``asynchronous=True`` flag.  Note that asynchronous mems
         are, while sometimes very convenient and tempting, rarely a good idea.
-        They can't be mapped to block rams in FPGAs and will be converted to registers by most
+        They can't be mapped to block RAMs in FPGAs and will be converted to registers by most
         design tools even though PyRTL can handle them with no problem.  For any memory beyond
         a few hundred entries it is not a realistic option.
 
@@ -142,7 +140,7 @@ class MemBlock(object):
         port respectively).  By default memories are limited to 2-read and 1-write port, but
         to keep designs efficient by default, but those values can be set as options.  Note
         that memories with high numbers of ports may not be possible to map to physical memories
-        such as block rams or existing memory hardware macros.
+        such as block RAMs or existing memory hardware macros.
         """
         self.max_read_ports = max_read_ports
         self.num_read_ports = 0
@@ -260,7 +258,7 @@ class RomBlock(MemBlock):
     RomBlocks are the read only memory block for PyRTL.  They support the same read interface
     and normal memories, but they are cannot be written to (i.e. there are no write ports).
     The ROM must be initialized with some values and construction through the use of the
-    `romdata` which is the memory for the system.
+    ``romdata`` which is the memory for the system.
     """
     def __init__(self, bitwidth, addrwidth, romdata, name='', max_read_ports=2,
                  build_new_roms=False, asynchronous=False, pad_with_zeros=False, block=None):
@@ -272,9 +270,9 @@ class RomBlock(MemBlock):
             an address as an input to a result as an output
         :param str name: The identifier for the memory
         :param max_read_ports: limits the number of read ports each block can create;
-            passing `None` indicates there is no limit
+            passing ``None`` indicates there is no limit
         :param bool build_new_roms: indicates whether to create and pass new RomBlocks during
-            `__getitem__` to avoid exceeding `max_read_ports`
+            ``__getitem__`` to avoid exceeding `max_read_ports`
         :param bool asynchronous: If false make sure that memory reads are only done
             using values straight from a register. (aka make sure that reads
             are synchronous)

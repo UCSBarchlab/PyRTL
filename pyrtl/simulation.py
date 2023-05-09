@@ -40,11 +40,11 @@ class Simulation(object):
            to the Simulation during instantiation and/or any reset values
            specified in the individual registers.
         2. (Otherwise) With their next values calculated in the previous step
-           (`r` logic nets).
+           (``r`` logic nets).
 
     2. The new values of these registers as well as the values of block inputs
        are propagated through the combinational logic.
-    3. Memory writes are performed (`@` logic nets).
+    3. Memory writes are performed (``@`` logic nets).
     4. The current values of all wires are recorded in the trace.
     5. The next values for the registers are saved, ready to be applied at the
        beginning of the next step.
@@ -57,10 +57,10 @@ class Simulation(object):
     useful to reach into this class and access internal state directly.
     Of particular usefulness are:
 
-    * *.tracer*: stores the SimulationTrace in which results are stored
-    * *.value*: a map from every signal in the block to its current simulation value
-    * *.regvalue*: a map from register to its value on the next tick
-    * *.memvalue*: a map from memid to a dictionary of address: value
+    * ``.tracer``: stores the :class:`.SimulationTrace` in which results are stored
+    * ``.value``: a map from every signal in the block to its current simulation value
+    * ``.regvalue``: a map from register to its value on the next tick
+    * ``.memvalue``: a map from memid to a dictionary of address: value
     """
 
     simple_func = {  # OPS
@@ -82,28 +82,32 @@ class Simulation(object):
     def __init__(
             self, tracer=True, register_value_map={}, memory_value_map={},
             default_value=0, block=None):
-        """ Creates a new circuit simulator.
+        """Creates a new circuit simulator.
 
-        :param tracer: an instance of SimulationTrace used to store execution results.
-            Defaults to a new SimulationTrace with no params passed to it.  If None is
-            passed, no tracer is instantiated (which is good for long running simulations).
-            If the default (true) is passed, Simulation will create a new tracer automatically
-            which can be referenced by the member variable .tracer
-        :param register_value_map: Defines the initial value for the registers specified;
-            overrides the registers's reset_value. Format: {Register: value}.
+        :param SimulationTrace tracer: Stores execution results.  Defaults to a
+            new :class:`.SimulationTrace` with no params passed to it.  If None
+            is passed, no tracer is instantiated (which is good for long
+            running simulations).  If the default (true) is passed, Simulation
+            will create a new tracer automatically which can be referenced by
+            the member variable ``.tracer``
+        :param dict[Register, int] register_value_map: Defines the initial
+            value for the registers specified; overrides the registers's
+            ``reset_value``.
         :param memory_value_map: Defines initial values for many
             addresses in a single or multiple memory. Format: {Memory: {address: Value}}.
             Memory is a memory block, address is the address of a value
-        :param default_value: The value that all unspecified registers and
-            memories will initialize to (default 0). For registers, this is the value that
-            will be used if the particular register doesn't have a specified reset_value,
-            and isn't found in the register_value_map.
-        :param block: the hardware block to be traced (which might be of type PostSynthesisBlock).
-            defaults to the working block
+        :param int default_value: The value that all unspecified registers and
+            memories will initialize to (default 0). For registers, this is the
+            value that will be used if the particular register doesn't have a
+            specified ``reset_value``, and isn't found in the
+            `register_value_map`.
+        :param Block block: the hardware block to be traced (which might be of
+            type :class:`.PostSynthBlock`).  Defaults to the working block
 
-        Warning: Simulation initializes some things when called with __init__,
-        so changing items in the block for Simulation will likely break
-        the simulation.
+        Warning: Simulation initializes some things when called with
+        :meth:`~.Simulation.__init__`, so changing items in the block for
+        Simulation will likely break the simulation.
+
         """
 
         """ Creates object and initializes it with self._initialize.
@@ -180,23 +184,30 @@ class Simulation(object):
                                         copy.deepcopy(self.memvalue))
 
     def step(self, provided_inputs):
-        """ Take the simulation forward one cycle.
+        """Take the simulation forward one cycle.
 
-        :param provided_inputs: a dictionary mapping WireVectors to their values for this step
+        :param provided_inputs: a dictionary mapping WireVectors to their
+            values for this step
 
-        A step causes the block to be updated as follows, in order: (1) registers are updated
-        with their `next` values computed in the previous cycle; (2) block inputs and these new
-        register values propagate through the combinational logic; (3) memories are updated; and
-        (4) the `next` values of the registers are saved for use in step 1 of the next cycle.
+        A step causes the block to be updated as follows, in order:
 
-        All input wires must be in the provided_inputs in order for the simulation
-        to accept these values.
+        1. Registers are updated with their :attr:`~.Register.next` values
+           computed in the previous cycle
+        2. Block inputs and these new register values propagate through the
+           combinational logic
+        3. Memories are updated
+        4. The :attr:`~.Register.next` values of the registers are saved for
+           use in step 1 of the next cycle.
 
-        Example: if we have inputs named 'a' and 'x', we can call: ::
+        All input wires must be in the `provided_inputs` in order for the
+        simulation to accept these values.
+
+        Example: if we have inputs named ``a`` and ``x``, we can call::
 
             sim.step({'a': 1, 'x': 23})
 
         to simulate a cycle with values 1 and 23 respectively.
+
         """
 
         # Check that all Input have a corresponding provided_input
@@ -256,39 +267,53 @@ class Simulation(object):
 
     def step_multiple(self, provided_inputs={}, expected_outputs={}, nsteps=None,
                       file=sys.stdout, stop_after_first_error=False):
-        """ Take the simulation forward N cycles, based on the number of values for each input
+        """Take the simulation forward N cycles, based on the number of values
+        for each input
 
-        :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
-        :param expected_outputs: a dictionary mapping wirevectors to their expected values
-            for N steps; use '?' to indicate you don't care what the value at that step is
-        :param nsteps: number of steps to take (defaults to None, meaning step for each
-            supplied input value)
-        :param file: where to write the output (if there are unexpected outputs detected)
-        :param stop_after_first_error: a boolean flag indicating whether to stop the simulation
-            after encountering the first error (defaults to False)
+        :param provided_inputs: a dictionary mapping WireVectors to their
+            values for N steps
+        :param expected_outputs: a dictionary mapping WireVectors to their
+            expected values for N steps; use ``?`` to indicate you don't care
+            what the value at that step is
+        :param nsteps: number of steps to take (defaults to None, meaning step
+            for each supplied input value)
+        :param file: where to write the output (if there are unexpected outputs
+            detected)
+        :param stop_after_first_error: a boolean flag indicating whether to
+            stop the simulation after encountering the first error (defaults to
+            False)
 
-        All input wires must be in the provided_inputs in order for the simulation
-        to accept these values. Additionally, the length of the array of provided values for each
-        input must be the same.
+        All input wires must be in the `provided_inputs` in order for the
+        simulation to accept these values. Additionally, the length of the
+        array of provided values for each input must be the same.
 
-        When 'nsteps' is specified, then it must be *less than or equal* to the number of values
-        supplied for each input when 'provided_inputs' is non-empty. When 'provided_inputs' is
-        empty (which may be a legitimate case for a design that takes no inputs), then 'nsteps'
-        will be used.  When 'nsteps' is not specified, then the simulation will take the number
-        of steps equal to the number of values supplied for each input.
+        When `nsteps` is specified, then it must be *less than or equal* to the
+        number of values supplied for each input when `provided_inputs` is
+        non-empty. When `provided_inputs` is empty (which may be a legitimate
+        case for a design that takes no inputs), then `nsteps` will be used.
+        When `nsteps` is not specified, then the simulation will take the
+        number of steps equal to the number of values supplied for each input.
 
-        Example: if we have inputs named 'a' and 'b' and output 'o', we can call:
-        sim.step_multiple({'a': [0,1], 'b': [23,32]}, {'o': [42, 43]}) to simulate 2 cycles,
-        where in the first cycle 'a' and 'b' take on 0 and 23, respectively, and 'o' is expected to
-        have the value 42, and in the second cycle 'a' and 'b' take on 1 and 32, respectively, and
-        'o' is expected to have the value 43.
+        Example: if we have inputs named ``a`` and ``b`` and output ``o``, we
+        can call::
 
-        If your values are all single digit, you can also specify them in a single string, e.g.
-        sim.step_multiple({'a': '01', 'b': '01'}) will simulate 2 cycles, with 'a' and 'b' taking on
-        0 and 0, respectively, on the first cycle and '1' and '1', respectively, on the second
-        cycle.
+            sim.step_multiple({'a': [0,1], 'b': [23,32]}, {'o': [42, 43]})
 
-        Example: if the design had no inputs, like so: ::
+        to simulate 2 cycles, where in the first cycle ``a`` and ``b`` take on
+        0 and 23, respectively, and ``o`` is expected to have the value 42, and
+        in the second cycle ``a`` and ``b`` take on 1 and 32, respectively, and
+        ``o`` is expected to have the value 43.
+
+        If your values are all single digit, you can also specify them in a
+        single string, e.g.::
+
+            sim.step_multiple({'a': '01', 'b': '01'})
+
+        will simulate 2 cycles, with ``a`` and ``b`` taking on 0 and 0,
+        respectively, on the first cycle and 1 and 1, respectively, on the
+        second cycle.
+
+        Example: if the design had no inputs, like so::
 
             a = pyrtl.Register(8)
             b = pyrtl.Output(8, 'b')
@@ -299,8 +324,8 @@ class Simulation(object):
             sim = pyrtl.Simulation()
             sim.step_multiple(nsteps=3)
 
-        Using sim.step_multiple(nsteps=3) simulates 3 cycles, after which we would expect the value
-        of 'b' to be 2.
+        Using ``sim.step_multiple(nsteps=3)`` simulates 3 cycles, after which
+        we would expect the value of ``b`` to be 2.
 
         """
 
@@ -369,15 +394,16 @@ class Simulation(object):
             file.flush()
 
     def inspect(self, w):
-        """ Get the value of a wirevector in the last simulation cycle.
+        """ Get the value of a WireVector in the last simulation cycle.
 
-        :param w: the name of the WireVector to inspect
+        :param str w: the name of the WireVector to inspect
             (passing in a WireVector instead of a name is deprecated)
         :return: value of w in the current step of simulation
 
         Will throw KeyError if w does not exist in the simulation.
 
-        Examples ::
+        Example::
+
             sim.inspect('a') == 10  # returns value of wire 'a' at current step
         """
         wire = self.block.wirevector_by_name.get(w, w)
@@ -475,11 +501,11 @@ class FastSimulation(object):
            to the Simulation during instantiation and/or any reset values
            specified in the individual registers.
         2. (Otherwise) With their next values calculated in the previous step
-           (`r` logic nets).
+           (``r`` logic nets).
 
     2. The new values of these registers as well as the values of block inputs
        are propagated through the combinational logic.
-    3. Memory writes are performed (`@` logic nets).
+    3. Memory writes are performed (``@`` logic nets).
     4. The current values of all wires are recorded in the trace.
     5. The next values for the registers are saved, ready to be applied at the
        beginning of the next step.
@@ -505,12 +531,12 @@ class FastSimulation(object):
         """ Instantiates a Fast Simulation instance.
 
         The interface for FastSimulation and Simulation should be almost identical.
-        In addition to the Simualtion arguments, FastSimulation additional takes:
+        In addition to the Simulation arguments, FastSimulation additionally takes:
 
         :param code_file: The file in which to store a copy of the generated
-            python code. Defaults to no code being stored.
+            Python code. Defaults to no code being stored.
 
-        Look at Simulation.__init__ for descriptions for the other parameters.
+        Look at :meth:`.Simulation.__init__` for descriptions for the other parameters.
 
         This builds the Fast Simulation compiled Python code, so all changes
         to the circuit after calling this function will not be reflected in
@@ -577,13 +603,19 @@ class FastSimulation(object):
     def step(self, provided_inputs):
         """ Run the simulation for a cycle.
 
-        :param provided_inputs: a dictionary mapping WireVectors (or their names)
-          to their values for this step (eg: `{wire: 3, "wire_name": 17}`)
+        :param provided_inputs: a dictionary mapping WireVectors (or their
+                                names) to their values for this step (eg:
+                                `{wire: 3, "wire_name": 17}`)
 
-        A step causes the block to be updated as follows, in order: (1) registers are updated
-        with their `next` values computed in the previous cycle; (2) block inputs and these new
-        register values propagate through the combinational logic; (3) memories are updated; and
-        (4) the `next` values of the registers are saved for use in step 1 of the next cycle.
+        A step causes the block to be updated as follows, in order:
+
+        1. Registers are updated with their :attr:`~.Register.next` values
+           computed in the previous cycle
+        2. Block inputs and these new register values propagate through the
+           combinational logic
+        3. Memories are updated
+        4. The :attr:`~.Register.next` values of the registers are saved for
+           use in step 1 of the next cycle.
         """
         # validate_inputs
         for wire, value in provided_inputs.items():
@@ -614,40 +646,53 @@ class FastSimulation(object):
 
     def step_multiple(self, provided_inputs={}, expected_outputs={}, nsteps=None,
                       file=sys.stdout, stop_after_first_error=False):
-        """ Take the simulation forward N cycles, where N is the number of values
-         for each provided input.
+        """Take the simulation forward N cycles, where N is the number of
+         values for each provided input.
 
-        :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
-        :param expected_outputs: a dictionary mapping wirevectors to their expected values
-            for N steps; use '?' to indicate you don't care what the value at that step is
-        :param nsteps: number of steps to take (defaults to None, meaning step for each
-            supplied input value)
-        :param file: where to write the output (if there are unexpected outputs detected)
-        :param stop_after_first_error: a boolean flag indicating whether to stop the simulation
-            after the step where the first errors are encountered (defaults to False)
+        :param provided_inputs: a dictionary mapping WireVectors to their
+            values for N steps
+        :param expected_outputs: a dictionary mapping WireVectors to their
+            expected values for N steps; use ``?`` to indicate you don't care
+            what the value at that step is
+        :param nsteps: number of steps to take (defaults to None, meaning step
+            for each supplied input value)
+        :param file: where to write the output (if there are unexpected outputs
+            detected)
+        :param stop_after_first_error: a boolean flag indicating whether to
+            stop the simulation after the step where the first errors are
+            encountered (defaults to False)
 
-        All input wires must be in the provided_inputs in order for the simulation
-        to accept these values. Additionally, the length of the array of provided values for each
-        input must be the same.
+        All input wires must be in the `provided_inputs` in order for the
+        simulation to accept these values. Additionally, the length of the
+        array of provided values for each input must be the same.
 
-        When 'nsteps' is specified, then it must be *less than or equal* to the number of values
-        supplied for each input when 'provided_inputs' is non-empty. When 'provided_inputs' is
-        empty (which may be a legitimate case for a design that takes no inputs), then 'nsteps'
-        will be used.  When 'nsteps' is not specified, then the simulation will take the number
-        of steps equal to the number of values supplied for each input.
+        When `nsteps` is specified, then it must be *less than or equal* to the
+        number of values supplied for each input when `provided_inputs` is
+        non-empty. When `provided_inputs` is empty (which may be a legitimate
+        case for a design that takes no inputs), then `nsteps` will be used.
+        When `nsteps` is not specified, then the simulation will take the
+        number of steps equal to the number of values supplied for each input.
 
-        Example: if we have inputs named 'a' and 'b' and output 'o', we can call:
-        sim.step_multiple({'a': [0,1], 'b': [23,32]}, {'o': [42, 43]}) to simulate 2 cycles,
-        where in the first cycle 'a' and 'b' take on 0 and 23, respectively, and 'o' is expected to
-        have the value 42, and in the second cycle 'a' and 'b' take on 1 and 32, respectively, and
-        'o' is expected to have the value 43.
+        Example: if we have inputs named ``a`` and ``b`` and output ``o``, we
+        can call::
 
-        If your values are all single digit, you can also specify them in a single string, e.g.
-        sim.step_multiple({'a': '01', 'b': '01'}) will simulate 2 cycles, with 'a' and 'b' taking on
-        0 and 0, respectively, on the first cycle and '1' and '1', respectively, on the second
-        cycle.
+            sim.step_multiple({'a': [0,1], 'b': [23,32]}, {'o': [42, 43]})
 
-        Example: if the design had no inputs, like so:
+        to simulate 2 cycles, where in the first cycle ``a`` and ``b`` take on
+        0 and 23, respectively, and ``o`` is expected to have the value 42, and
+        in the second cycle ``a`` and ``b`` take on 1 and 32, respectively, and
+        ``o`` is expected to have the value 43.
+
+        If your values are all single digit, you can also specify them in a
+        single string, e.g.::
+
+            sim.step_multiple({'a': '01', 'b': '01'})
+
+        will simulate 2 cycles, with ``a`` and ``b`` taking on 0 and 0,
+        respectively, on the first cycle and 1 and 1, respectively, on the
+        second cycle.
+
+        Example: if the design had no inputs, like so::
 
             a = pyrtl.Register(8)
             b = pyrtl.Output(8, 'b')
@@ -658,8 +703,8 @@ class FastSimulation(object):
             sim = pyrtl.Simulation()
             sim.step_multiple(nsteps=3)
 
-        Using sim.step_multiple(nsteps=3) simulates 3 cycles, after which we would expect the value
-        of 'b' to be 2.
+        Using ``sim.step_multiple(nsteps=3)`` simulates 3 cycles, after which
+        we would expect the value of ``b`` to be 2.
 
         """
 
@@ -737,13 +782,13 @@ class FastSimulation(object):
             file.flush()
 
     def inspect(self, w):
-        """ Get the value of a wirevector in the last simulation cycle.
+        """ Get the value of a WireVector in the last simulation cycle.
 
-        :param w: the name of the WireVector to inspect
+        :param str w: the name of the WireVector to inspect
             (passing in a WireVector instead of a name is deprecated)
-        :return: value of w in the current step of simulation
+        :return: value of `w` in the current step of simulation
 
-        Will throw KeyError if w is not being tracked in the simulation.
+        Will throw KeyError if `w` is not being tracked in the simulation.
         """
         try:
             return self.context[self._to_name(w)]
@@ -945,7 +990,7 @@ class FastSimulation(object):
 class WaveRenderer(object):
     """Render a SimulationTrace to the terminal.
 
-    See `examples/renderer-demo.py`, which renders traces with various
+    See ``examples/renderer-demo.py``, which renders traces with various
     options. You can choose a default renderer by exporting the
     ``PYRTL_RENDERER`` environment variable. See the documentation for subclasses
     of :py:class:`RendererConstants`.
@@ -1337,7 +1382,7 @@ class SimulationTrace(object):
 
         :param wires_to_track: The wires that the tracer should track.
             If unspecified, will track all explicitly-named wires.
-            If set to 'all', will track all wires, including internal wires.
+            If set to ``'all'``, will track all wires, including internal wires.
         :param block: Block containing logic to trace
         """
         self.block = working_block(block)
@@ -1373,7 +1418,7 @@ class SimulationTrace(object):
         return len(value_list)
 
     def add_step(self, value_map):
-        """ Add the values in value_map to the end of the trace. """
+        """ Add the values in `value_map` to the end of the trace. """
         if len(self.trace) == 0:
             raise PyrtlError('error, simulation trace needs at least 1 signal to track '
                              '(by default, unnamed signals are not traced -- try either passing '
@@ -1389,13 +1434,14 @@ class SimulationTrace(object):
                 self.trace[wire_name].append(value_map[wire_name])
 
     def add_fast_step(self, fastsim):
-        """ Add the fastsim context to the trace. """
+        """ Add the `fastsim` context to the trace. """
         for wire_name in self.trace:
             self.trace[wire_name].append(fastsim.context[wire_name])
 
     def print_trace(self, file=sys.stdout, base=10, compact=False):
         """
         Prints a list of wires and their current values.
+
         :param int base: the base the values are to be printed in
         :param bool compact: whether to omit spaces in output lines
         """
@@ -1422,18 +1468,22 @@ class SimulationTrace(object):
         file.flush()
 
     def print_vcd(self, file=sys.stdout, include_clock=False):
-        """ Print the trace out as a VCD File for use in other tools.
+        """Print the trace out as a VCD File for use in other tools.
 
         :param file: file to open and output vcd dump to.
-        :param include_clock: boolean specifying if the implicit clk should be included.
+        :param include_clock: boolean specifying if the implicit clk should be
+                              included.
 
-        Dumps the current trace to file as a "value change dump" file.  The file parameter
-        defaults to _stdout_ and the include_clock defaults to False.
+        Dumps the current trace to file as a `value change dump
+        <https://en.wikipedia.org/wiki/Value_change_dump>`_ file.  The file
+        parameter defaults to ``stdout`` and the `include_clock` defaults to
+        False.
 
-        Examples ::
+        Examples::
 
             sim_trace.print_vcd()
             sim_trace.print_vcd("my_waveform.vcd", include_clock=True)
+
         """
         # dump header info
         # file_timestamp = time.strftime("%a, %d %b %Y %H:%M:%S (UTC/GMT)", time.gmtime())
@@ -1485,21 +1535,21 @@ class SimulationTrace(object):
 
         """ Render the trace to a file using unicode and ASCII escape sequences.
 
-        :param trace_list: A list of signal names to be output in the specified order.
+        :param list[str] trace_list: A list of signal names to be output in the specified order.
         :param file: The place to write output, default to stdout.
-        :param renderer: An object that translates traces into output bytes.
-        :param symbol_len: The "length" of each rendered value in characters.
+        :param WaveRenderer renderer: An object that translates traces into output bytes.
+        :param int symbol_len: The "length" of each rendered value in characters.
             If None, the length will be automatically set such that the largest
             represented value fits.
         :param repr_func: Function to use for representing each value in the trace;
-            examples are 'hex', 'oct', 'bin', and 'str' (for decimal). Defaults to 'hex'.
+            examples are ``hex``, ``oct``, ``bin``, and ``str`` (for decimal). Defaults to ``hex``.
         :param repr_per_name: Map from signal name to a function that takes in the signal's
             value and returns a user-defined representation. If a signal name is
             not found in the map, the argument `repr_func` will be used instead.
-        :param segment_size: Traces are broken in the segments of this number of cycles.
+        :param int segment_size: Traces are broken in the segments of this number of cycles.
 
         The resulting output can be viewed directly on the terminal or looked
-        at with "more" or "less -R" which both should handle the ASCII escape
+        at with :program:`more` or :program:`less -R` which both should handle the ASCII escape
         sequences used in rendering.
         """
         if _currently_in_jupyter_notebook():

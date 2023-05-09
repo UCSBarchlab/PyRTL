@@ -7,13 +7,14 @@ def kogge_stone(a, b, cin=0):
     """
     Creates a Kogge-Stone adder given two inputs
 
-    :param WireVector a, b: The two WireVectors to add up (bitwidths don't need to match)
+    :param WireVector a: A WireVector to add up (bitwidths don't need to match)
+    :param WireVector b: A WireVector to add up (bitwidths don't need to match)
     :param cin: An optimal carry in WireVector or value
-    :return: a Wirevector representing the output of the adder
+    :return: a WireVector representing the output of the adder
 
-    The Kogge-Stone adder is a fast tree-based adder with O(log(n))
+    The Kogge-Stone adder is a fast tree-based adder with `O(log(n))`
     propagation delay, useful for performance critical designs. However,
-    it has O(n log(n)) area usage, and large fan out.
+    it has `O(n log(n))` area usage, and large fan out.
     """
     a, b = libutils.match_bitwidth(a, b)
 
@@ -84,9 +85,12 @@ def ripple_half_add(a, cin=0):
 def carrysave_adder(a, b, c, final_adder=ripple_add):
     """
     Adds three wirevectors up in an efficient manner
-    :param WireVector a, b, c : the three wires to add up
-    :param function final_adder : The adder to use to do the final addition
-    :return: a wirevector with length 2 longer than the largest input
+
+    :param WireVector a: a wire to add up
+    :param WireVector b: a wire to add up
+    :param WireVector c: a wire to add up
+    :param Callable final_adder: The adder to use to do the final addition
+    :return: a WireVector with length 2 longer than the largest input
     """
     a, b, c = libutils.match_bitwidth(a, b, c)
     partial_sum = a ^ b ^ c
@@ -97,6 +101,7 @@ def carrysave_adder(a, b, c, final_adder=ripple_add):
 def cla_adder(a, b, cin=0, la_unit_len=4):
     """
     Carry Lookahead Adder
+
     :param int la_unit_len: the length of input that every unit processes
 
     A Carry LookAhead Adder is an adder that is faster than
@@ -145,9 +150,9 @@ def wallace_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
     :param [[Wirevector]] wire_array_2: An array of arrays of single bitwidth
         wirevectors
     :param int result_bitwidth: The bitwidth you want for the resulting wire.
-        Used to eliminate unnessary wires.
+        Used to eliminate unnecessary wires.
     :param final_adder: The adder used for the final addition
-    :return: wirevector of length result_wirevector
+    :return: WireVector of length `result_bitwidth`
     """
     # verification that the wires are actually wirevectors of length 1
     for wire_set in wire_array_2:
@@ -190,9 +195,9 @@ def dada_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
     :param [[Wirevector]] wire_array_2: An array of arrays of single bitwidth
         wirevectors
     :param int result_bitwidth: The bitwidth you want for the resulting wire.
-        Used to eliminate unnessary wires.
+        Used to eliminate unnecessary wires.
     :param final_adder: The adder used for the final addition
-    :return: wirevector of length result_wirevector
+    :return: WireVector of length `result_bitwidth`
     """
     import math
     # verification that the wires are actually wirevectors of length 1
@@ -263,12 +268,14 @@ def fast_group_adder(wires_to_add, reducer=wallace_reducer, final_adder=kogge_st
     to achieve this performance
 
 
-    :param [WireVector] wires_to_add: an array of wirevectors to add
+    :param [WireVector] wires_to_add: an array of WireVectors to add
     :param reducer: the tree reducer to use
     :param final_adder: The two value adder to use at the end
     :return: a wirevector with the result of the addition
-      The length of the result is:
-      max(len(w) for w in wires_to_add) + ceil(len(wires_to_add))
+
+    The length of the result is::
+
+        max(len(w) for w in wires_to_add) + ceil(len(wires_to_add))
     """
     import math
     longest_wire_len = max(len(w) for w in wires_to_add)

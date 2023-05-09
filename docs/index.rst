@@ -9,13 +9,13 @@ PYRTL
 
 A collection of classes providing simple RTL specification, simulation, tracing, and testing suitable for
 teaching and research. Simplicity, usability, clarity, and extendibility rather than performance or
-optimization is the overarching goal.  With PyRTL you can use the full power of python to describe complex
-synthesizable digital designs, simulate and test them, and export them to verilog.
+optimization is the overarching goal.  With PyRTL you can use the full power of Python to describe complex
+synthesizable digital designs, simulate and test them, and export them to Verilog.
 
 Quick links
 ===========
 * Get an overview from the `PyRTL Project Webpage <http://ucsbarchlab.github.io/PyRTL/>`_
-* Read through `Example PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/master/examples>`_
+* Read through `Example PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/development/examples>`_
 * File a `Bug or Issue Report <https://github.com/UCSBarchlab/PyRTL/issues>`_
 * Contribute to project on `GitHub <https://github.com/UCSBarchlab/PyRTL>`_
 
@@ -71,7 +71,7 @@ Overview of PyRTL
 =================
 
 If you are brand new to PyRTL we recommend that you start with going through the
-`Examples of PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/master/examples>`_ which will show you
+`Examples of PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/development/examples>`_ which will show you
 most of the core functionality in the context of a complete design.
 
 PyRTL Classes:
@@ -84,11 +84,12 @@ overloaded operations such as `addition` or `bitwise or`. A bunch of other relat
 :class:`.Input`, :class:`.Output`, :class:`.Const`, and :class:`.Register` are all derived from :class:`.WireVector`. Coupled with
 :class:`.MemBlock` (and :class:`.RomBlock`), this is all a user needs to create a functional hardware design.
 
-* :class:`.WireVector`
-    * :class:`.Input` (WireVector)
-    * :class:`.Output` (WireVector)
-    * :class:`.Const` (WireVector)
-    * :class:`.Register` (WireVector)
+.. inheritance-diagram:: pyrtl.wire.WireVector
+                         pyrtl.wire.Input
+                         pyrtl.wire.Output
+                         pyrtl.wire.Const
+                         pyrtl.wire.Register
+    :parts: 1
 
 After specifying a hardware design, there are then options to simulate your design right in PyRTL,
 synthesize it down to primitive 1-bit operations, optimize it, and export it to Verilog (along with
@@ -124,8 +125,10 @@ back the block on which we are implicitly working.  When we write hardware trans
 one example of this pattern in action.
 
 * :class:`.LogicNet`
-* :class:`.Block`
-    * :class:`.PostSynthBlock` (Block)
+
+.. inheritance-diagram:: pyrtl.core.Block
+                         pyrtl.core.PostSynthBlock
+    :parts: 1
 
 Finally, when things go wrong you may hit on one of two ``Exceptions``, neither of which is likely recoverable
 automatically (which is why we limited them to only two).  The intention is that ``PyrtlError`` is intended
@@ -148,7 +151,6 @@ PyRTL Functionality:
    analysis
    export
    rtllib
-   advanced
 
 
 Indices and tables

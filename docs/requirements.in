@@ -1,3 +1,4 @@
+pip-tools
 six
 sphinx
 sphinx-hoverxref

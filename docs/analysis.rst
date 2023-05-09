@@ -33,10 +33,9 @@ Synthesis
 ---------
 
 .. autofunction:: pyrtl.passes.synthesize
-   :noindex:
 
 .. autoclass:: pyrtl.core.PostSynthBlock
-   :noindex:
+   :show-inheritance:
 
 Individual Passes
 -----------------

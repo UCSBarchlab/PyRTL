@@ -173,9 +173,9 @@ def constant_propagation(block, silence_unexpected_net_warnings=False):
     """ Removes excess constants in the block.
 
     Note on resulting block:
-    The output of the block can have wirevectors that are driven but not
-    listened to. This is to be expected. These are to be removed by the
-    _remove_unlistened_nets function
+    The output of the block can have WireVectors that are driven but not
+    listened to. This is to be expected. These are to be removed by
+    :py:func:`._remove_unlistened_nets`
     """
     net_count = _NetCount(block)
     while net_count.shrinking():
@@ -287,9 +287,9 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
 def common_subexp_elimination(block=None, abs_thresh=1, percent_thresh=0):
     """ Common Subexpression Elimination for PyRTL blocks.
 
-    :param block: the block to run the subexpression elimination on
-    :param abs_thresh: absolute threshold for stopping optimization
-    :param percent_thresh: percent threshold for stopping optimization
+    :param Block block: the block to run the subexpression elimination on
+    :param float abs_thresh: absolute threshold for stopping optimization
+    :param float percent_thresh: percent threshold for stopping optimization
     """
     block = working_block(block)
     net_count = _NetCount(block)
@@ -462,36 +462,37 @@ def _remove_unused_wires(block, keep_inputs=True):
 
 
 def synthesize(update_working_block=True, merge_io_vectors=True, block=None):
-    """ Lower the design to just single-bit "and", "or", "xor", and "not" gates.
+    """Lower the design to just single-bit "and", "or", "xor", and "not" gates.
 
-    :param update_working_block: Boolean specifying if working block should
-        be set to the newly synthesized block.
-    :param merge_io_wirevectors: if False, turn all N-bit IO wirevectors
+    :param bool update_working_block: Boolean specifying if working block
+        should be set to the newly synthesized block.
+    :param bool merge_io_wirevectors: if False, turn all N-bit IO wirevectors
         into N 1-bit IO wirevectors (i.e. don't maintain interface).
-    :param block: The block you want to synthesize.
-    :return: The newly synthesized block (of type PostSynthesisBlock).
+    :param Block block: The block you want to synthesize.
+    :return: The newly synthesized block (of type :py:class:`.PostSynthBlock`).
 
-    Takes as input a block (default to working block) and creates a new
-    block which is identical in function but uses only single bit gates
-    and excludes many of the more complicated primitives.  The new block
-    should consist *almost* exclusively of the combination elements
-    of w, &, \\|, ^, and ~ and sequential elements of registers (which are
-    one bit as well).  The two exceptions are for inputs/outputs (so that
-    we can keep the same interface) which are immediately broken down into
-    the individual bits and memories (read and write ports) which
-    require the reassembly and disassembly of the wirevectors immediately
-    before and after. These are the only two places where 'c' and 's' ops
-    should exist. If merge_io_vectors is False, then these individual
-    bits are not reassembled and disassembled before and after, and so no
-    'c' and 's' ops will exist. Instead, they will be named <name>[n],
-    where n is the bit number of original wire to which it corresponds.
+    Takes as input a block (default to working block) and creates a new block
+    which is identical in function but uses only single bit gates and excludes
+    many of the more complicated primitives.  The new block should consist
+    *almost* exclusively of the combination elements of ``w``, ``&``, ``\\|``,
+    ``^``, and ``~`` and sequential elements of registers (which are one bit as
+    well).  The two exceptions are for inputs/outputs (so that we can keep the
+    same interface) which are immediately broken down into the individual bits
+    and memories (read and write ports) which require the reassembly and
+    disassembly of the wirevectors immediately before and after. These are the
+    only two places where ``c`` and ``s`` ops should exist. If
+    `merge_io_vectors` is False, then these individual bits are not reassembled
+    and disassembled before and after, and so no ``c`` and ``s`` ops will
+    exist. Instead, they will be named `<name>[n]`, where `n` is the bit number
+    of original wire to which it corresponds.
 
     The block that results from synthesis is actually of type
-    "PostSynthesisBlock" which contains a mapping from the original inputs
-    and outputs to the inputs and outputs of this block.  This is used during
-    simulation to map the input/outputs so that the same testbench can be
-    used both pre and post synthesis (see documentation for Simulation for
-    more details).
+    :py:class:`.PostSynthBlock` which contains a mapping from the original
+    inputs and outputs to the inputs and outputs of this block.  This is used
+    during simulation to map the input/outputs so that the same testbench can
+    be used both pre and post synthesis (see documentation for
+    :py:class:`.Simulation` for more details).
+
     """
 
     block_pre = working_block(block)
@@ -655,10 +656,11 @@ def _decompose(net, wv_map, mems, block_out):
 
 @transform.all_nets
 def nand_synth(net):
-    """
-    Synthesizes an Post-Synthesis block into one consisting of nands and inverters in place
+    """Synthesizes a :py:class:`.PostSynthBlock` into one consisting of nands
+    and inverters in place
 
-    :param block: The block to synthesize.
+    :param PostSynthBlock block: The block to synthesize.
+
     """
     if net.op in '~nrwcsm@':
         return True
@@ -683,7 +685,7 @@ def and_inverter_synth(net):
     """
     Transforms a decomposed block into one consisting of ands and inverters in place
 
-    :param block: The block to synthesize
+    :param Block block: The block to synthesize
     """
     if net.op in '~&rwcsm@':
         return True
@@ -706,13 +708,16 @@ def and_inverter_synth(net):
 
 @transform.all_nets
 def two_way_concat(net):
-    """ Transforms a block so all n-way (n > 2) concats are replaced with series of 2-way concats.
+    """Transforms a block so all n-way (n > 2) :py:func:`concats<.concat>` are
+    replaced with series of 2-way :py:func:`concats<.concat>`.
 
-    :param block: The block to transform
+    :param Block block: The block to transform
 
     This is useful for preparing the netlist for output to other formats, like
-    FIRRTL or BTOR2, whose 'concatenate' operation ('cat' and 'concat', respectively),
-    only allow two arguments (most-significant wire and least-significant wire).
+    FIRRTL or BTOR2, whose `concatenate` operation (`cat` and `concat`,
+    respectively), only allow two arguments (most-significant wire and
+    least-significant wire).
+
     """
 
     # Turns a netlist of the form (where [] denote nets):
@@ -750,15 +755,18 @@ def two_way_concat(net):
 
 @transform.all_nets
 def one_bit_selects(net):
-    """ Converts arbitrary-sliced selects to concatenations of 1-bit selects.
+    """Converts arbitrary-sliced :py:func:`selects<.select>` to concatenations
+    of 1-bit :py:func:`selects<.select>`.
 
-    :param block: The block to transform
+    :param Block block: The block to transform
 
     This is useful for preparing the netlist for output to other formats, like
-    FIRRTL or BTOR2, whose 'select' operation ('bits' and 'slice', respectively)
-    require contiguous ranges. Python slices are not necessarily contiguous ranges,
-    e.g. the range [::2] (syntactic sugar for slice(None, None, 2)) produces indices
-    0, 2, 4, etc. up to the length of the list on which it is used.
+    FIRRTL or BTOR2, whose `select` operation (`bits` and `slice`,
+    respectively) require contiguous ranges. Python slices are not necessarily
+    contiguous ranges, e.g. the range `[::2]` (syntactic sugar for `slice(None,
+    None, 2)`) produces indices 0, 2, 4, etc. up to the length of the list on
+    which it is used.
+
     """
     if net.op != 's':
         return True

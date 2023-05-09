@@ -82,9 +82,9 @@ class AES(object):
         Builds a multiple cycle AES Encryption state machine circuit
 
         :param reset: a one bit signal telling the state machine
-          to reset and accept the current plaintext and key
+            to reset and accept the current plaintext and key
         :return ready, cipher_text: ready is a one bit signal showing
-          that the encryption result (cipher_text) has been calculated.
+            that the encryption result (`cipher_text`) has been calculated.
 
         """
         if len(key_in) != len(plaintext_in):
@@ -157,7 +157,7 @@ class AES(object):
         :param reset: a one bit signal telling the state machine
           to reset and accept the current plaintext and key
         :return ready, plain_text: ready is a one bit signal showing
-          that the decryption result (plain_text) has been calculated.
+          that the decryption result (`plain_text`) has been calculated.
 
         """
         if len(key_in) != len(ciphertext_in):

@@ -42,7 +42,6 @@ AES-128
 
 .. automodule:: pyrtl.rtllib.aes
    :members:
-   :special-members:
    :undoc-members:
    :exclude-members: __dict__,__weakref__,__module__
 
@@ -107,7 +106,7 @@ Matrix
 
 .. automodule:: pyrtl.rtllib.matrix
    :members:
-   :special-members:
+   :special-members: __init__
    :undoc-members:
    :exclude-members: __dict__,__weakref__,__module__
 
@@ -121,7 +120,6 @@ Testing Utilities
 .. automodule:: pyrtl.rtllib.testingutils
    :members:
    :special-members:
-   :undoc-members:
    :exclude-members: __dict__,__weakref__,__module__
 
 :ref:`Back to top of page <top-of-page-rtllib>`

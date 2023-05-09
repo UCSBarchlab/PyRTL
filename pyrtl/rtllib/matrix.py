@@ -23,15 +23,15 @@ class Matrix(object):
 
         :param int rows: the number of rows in the matrix.  Must be greater than 0
         :param int columns: the number of columns in the matrix.  Must be greater than 0
-        :param int bits: The amount of bits per wirevector. Must be greater than 0
+        :param int bits: The amount of bits per WireVector. Must be greater than 0
         :param bool signed: Currently not supported (will be added in the future)
         :param (WireVector/list) value: The value you want to initialize the Matrix with.
             If a WireVector, must be of size `rows * columns * bits`. If a list, must have
             `rows` rows and `columns` columns, and every element must fit in `bits` size.
             If not given, the matrix initializes to 0
-        :param int max_bits: The maximum number of bits each wirevector can have, even
+        :param int max_bits: The maximum number of bits each WireVector can have, even
             after operations like adding two matrices together results in larger
-            resulting wirevectors
+            resulting WireVectors
         :return: a constructed Matrix object
         '''
         if not isinstance(rows, int):
@@ -139,17 +139,17 @@ class Matrix(object):
 
         :return: an integer representing the output WireVector bitwidth
 
-        Used with default `len()` function
+        Used with default ``len()`` function
         '''
         return self.bits * self.rows * self.columns
 
     def to_wirevector(self):
-        ''' Outputs the PyRTL Matrix as a singular concatenated Wirevector.
+        ''' Outputs the PyRTL Matrix as a singular concatenated WireVector.
 
         :return: a Wirevector representing the whole PyRTL matrix
 
-        For instance, if we had a 2 x 1 matrix `[[wire_a, wire_b]]` it would
-        return the concatenated wire: `wire = wire_a.wire_b`
+        For instance, if we had a 2 x 1 matrix ``[[wire_a, wire_b]]`` it would
+        return the concatenated wire: ``wire = wire_a.wire_b``
         '''
         result = []
 
@@ -175,7 +175,7 @@ class Matrix(object):
 
         :return: a Matrix object representing the reverse
 
-        Used with the reversed() method
+        Used with the ``reversed()`` method
         '''
         result = Matrix(self.rows, self.columns, self.bits, max_bits=self.max_bits)
         for i in range(self.rows):
@@ -189,7 +189,7 @@ class Matrix(object):
         :param (int/slice row, int/slice column) key: The key value to get
         :return: WireVector or Matrix containing the value of key
 
-        Called when using square brackets ([]).
+        Called when using square brackets (``matrix[...]``).
 
         Examples::
 
@@ -315,9 +315,9 @@ class Matrix(object):
         :param (slice/int rows, slice/int columns) key: The key value to set
         :param Wirevector/int/Matrix value: The value in which to set the key
 
-        Called when setting a value using square brackets (e.g. `matrix[a, b] = value`).
+        Called when setting a value using square brackets (e.g. ``matrix[a, b] = value``).
 
-        The value given will be truncated to match the bitwidth of all the elements
+        The `value` given will be truncated to match the bitwidth of all the elements
         in the matrix.
         '''
 
@@ -435,7 +435,7 @@ class Matrix(object):
 
         :return: a Matrix object with the elementwise addition being preformed
 
-        Is used with `a += b`. Performs an elementwise addition.
+        Is used with ``a += b``. Performs an elementwise addition.
         '''
         new_value = (self + other)
         self._matrix = new_value._matrix
@@ -479,7 +479,7 @@ class Matrix(object):
         :Matrix other: the PyRTL Matrix to subtract
         :return: a Matrix object with the element wise subtraction being performed
 
-        Is used with `a -= b`. Performs an elementwise subtraction.
+        Is used with ``a -= b``. Performs an elementwise subtraction.
         '''
         new_value = self - other
         self._matrix = new_value._matrix
@@ -492,7 +492,7 @@ class Matrix(object):
         :Matrix other: the PyRTL Matrix to subtract
         :return: a Matrix object with the elementwise subtraction being performed
 
-        Is used with `a - b`. Performs an elementwise subtraction.
+        Is used with ``a - b``. Performs an elementwise subtraction.
 
         Note: If using unsigned numbers, the result will be floored at 0.
         '''
@@ -546,7 +546,7 @@ class Matrix(object):
         :param Matrix/Wirevector other: the Matrix to multiply
         :return: a Matrix object with the resulting multiplication operation being performed
 
-        Is used with `a * b`.
+        Is used with ``a * b``.
         '''
 
         if isinstance(other, Matrix):
@@ -582,10 +582,10 @@ class Matrix(object):
         :param Matrix other: the second matrix.
         :return: a PyRTL Matrix that contains the matrix multiplication product of this and other
 
-        Is used with `a @= b`.
+        Is used with ``a @= b``.
 
-        Note: The matmul symbol (@) only works in python 3.5+. Otherwise you must
-        call `__imatmul__(other)`.
+        Note: The matmul symbol (``@``) only works in Python 3.5+. Otherwise you must
+        call ``__imatmul__(other)``.
         '''
         new_value = self.__matmul__(other)
         self.columns = new_value.columns
@@ -600,10 +600,10 @@ class Matrix(object):
         :param Matrix other: the second matrix.
         :return: a PyRTL Matrix that contains the matrix multiplication product of this and other
 
-        Is used with `a @ b`.
+        Is used with ``a @ b``.
 
-        Note: The matmul symbol (@) only works in python 3.5+. Otherwise you must
-        call `__matmul__(other)`.
+        Note: The matmul symbol (`@`) only works in Python 3.5+. Otherwise you must
+        call ``__matmul__(other)``.
         '''
         if not isinstance(other, Matrix):
             raise PyrtlError('error: expecting a Matrix, '
@@ -632,7 +632,7 @@ class Matrix(object):
         :param int power: the power to perform the matrix on
         :return: a PyRTL Matrix that contains the matrix power product
 
-        Is used with `a **= b`.
+        Is used with ``a **= b``.
         '''
         new_value = self ** power
         self._matrix = new_value._matrix
@@ -645,7 +645,7 @@ class Matrix(object):
         :param int power: the power to perform the matrix on
         :return: a PyRTL Matrix that contains the matrix power product
 
-        Is used with `a ** b`.
+        Is used with ``a ** b``.
         '''
         if not isinstance(power, int):
             raise PyrtlError('Unexpected power given. Type int expected, '
@@ -680,9 +680,9 @@ class Matrix(object):
 
         :param int/list[int]/tuple[int] ind: target indices
         :param int/list[int]/tuple[int]/Matrix row-vector v: values to place in
-            matrix at target indices; if v is shorter than ind, it is repeated as necessary
-        :param str mode: how out-of-bounds indices behave; 'raise' raises an
-            error, 'wrap' wraps aoround, and 'clip' clips to the range
+            matrix at target indices; if `v` is shorter than `ind`, it is repeated as necessary
+        :param str mode: how out-of-bounds indices behave; ``raise`` raises an
+            error, ``wrap`` wraps around, and ``clip`` clips to the range
 
         Note that the index is on the flattened matrix.
         '''
@@ -743,8 +743,8 @@ class Matrix(object):
             if a single int, will result in a 1-D row-vector of that length;
             if a tuple, will use values for number of rows and cols. Can also
             be a varargs.
-        :param str order: 'C' means to read from self using
-            row-major order (C-style), and 'F' means to read from self
+        :param str order: ``C`` means to read from self using
+            row-major order (C-style), and ``F`` means to read from self
             using column-major order (Fortran-style).
         :return: A copy of the matrix with same data, with a new number of rows/cols
 
@@ -837,8 +837,8 @@ class Matrix(object):
     def flatten(self, order='C'):
         ''' Flatten the matrix into a single row.
 
-        :param str order: 'C' means row-major order (C-style), and
-            'F' means column-major order (Fortran-style)
+        :param str order: ``C`` means row-major order (C-style), and
+            ``F`` means column-major order (Fortran-style)
         :return: A copy of the matrix flattened in to a row vector matrix
         '''
         return self.reshape(self.rows * self.columns, order=order)
@@ -849,7 +849,7 @@ def multiply(first, second):
 
     :param Matrix first: first matrix
     :param Matrix/Wirevector second: second matrix
-    :return: a Matrix object with the element wise or scaler multiplication being performed
+    :return: a Matrix object with the element wise or scalar multiplication being performed
     '''
     if not isinstance(first, Matrix):
         raise PyrtlError('error: expecting a Matrix, '
@@ -865,7 +865,7 @@ def sum(matrix, axis=None, bits=None):
     :param None/int axis: The axis to perform the operation on
         None refers to sum of all item. 0 is sum of column. 1 is sum of rows. Defaults to None
     :param int bits: The bits per value of the sum. Defaults to bits of old matrix
-    :return: A wirevector or Matrix representing sum
+    :return: A WireVector or Matrix representing sum
     '''
     def sum_2(first, second):
         return first + second
@@ -989,7 +989,7 @@ def max(matrix, axis=None, bits=None):
     ''' Returns the max value in a matrix.
 
     :param Matrix/Wirevector matrix: the matrix to perform max operation on.
-        If it is a wirevector, it will return itself
+        If it is a WireVector, it will return itself
     :param None/int axis: The axis to perform the operation on
         None refers to max of all items. 0 is max of the columns. 1 is max of rows.
         Defaults to None
@@ -1133,12 +1133,13 @@ def dot(first, second):
     :param Matrix second: the second matrix
     :return: a PyRTL Matrix that contains the dot product of the two PyRTL Matrices
 
-    Specifically, the dot product on two matrices is
-        * If either first or second are WireVectors/have both rows and columns
-          equal to 1, it is equivalent to multiply
-        * If both first and second are both arrays (have rows or columns equal to 1),
+    Specifically, the dot product on two matrices is:
+
+        * If either `first` or `second` are WireVectors/have both rows and columns
+          equal to 1, it is equivalent to :py:meth:`.Matrix.__mul__`
+        * If both `first` and `second` are both arrays (have rows or columns equal to 1),
           it is inner product of vectors.
-        * Otherwise it is the matrix multiplaction between first and second
+        * Otherwise it is :py:meth:`.Matrix.__matmul__` between `first` and `second`
 
     NOTE: Row vectors and column vectors are both treated as arrays
     '''
@@ -1193,7 +1194,7 @@ def hstack(*matrices):
                                           [23]]])
         m3 = hstack(m1, m2)
 
-    m3 looks like::
+    ``m3`` looks like::
 
         [[1,2,3,17],
          [4,5,6,23]]
@@ -1246,7 +1247,7 @@ def vstack(*matrices):
         m2 = Matrix(1, 3, bits=10, value=[[7,8,9]])
         m3 = vstack(m1, m2)
 
-    m3 looks like::
+    ``m3`` looks like::
 
         [[1,2,3],
          [4,5,6],
@@ -1289,7 +1290,7 @@ def concatenate(matrices, axis=0):
     """ Join a sequence of matrices along an existing axis.
 
     :param list[Matrix] matrices: a list of matrices to concatenate one after another
-    :param int axix: axis along which to join; 0 is horizontally, 1 is vertically (defaults to 0)
+    :param int axis: axis along which to join; 0 is horizontally, 1 is vertically (defaults to 0)
     :return: a new Matrix composed of the given matrices joined together
 
     This function essentially wraps hstack/vstack.
@@ -1306,9 +1307,9 @@ def matrix_wv_to_list(matrix_wv, rows, columns, bits):
     ''' Convert a wirevector representing a matrix into a Python list of lists.
 
     :param WireVector matrix_wv: result of calling to_wirevector() on a Matrix object
-    :param int rows: number of rows in the matrix matrix_wv represents
-    :param int columns: number of columns in the matrix matrix_wv represents
-    :param int bits: number of bits in each element of the matrix matrix_wv represents
+    :param int rows: number of rows in the matrix `matrix_wv` represents
+    :param int columns: number of columns in the matrix `matrix_wv` represents
+    :param int bits: number of bits in each element of the matrix `matrix_wv` represents
     :return list[list[int]]: a Python list of lists
 
     This is useful when printing the value of a wire you've inspected
@@ -1353,15 +1354,15 @@ def list_to_int(matrix, n_bits):
 
     :param list[list[int]] matrix: a pure Python list of lists representing a matrix
     :param int n_bits: number of bits to be used to represent each element; if an
-        element doesn't fit in n_bits, it truncates the most significant bits
-    :return int: a N*n_bits wide wirevector containing the elements of `matrix`,
-        where N is the number of elements in `matrix`
+        element doesn't fit in `n_bits`, it truncates the most significant bits
+    :return int: a `N * n_bits` wide WireVector containing the elements of `matrix`,
+        where `N` is the number of elements in `matrix`
 
     Integers that are signed will automatically be converted to their two's complement form.
 
     This function is helpful for turning a pure Python list of lists
-    into a integer suitable for creating a Constant wirevector that can
-    be passed in to as a Matrix intializer's `value` argument, or for
+    into a integer suitable for creating a Constant WireVector that can
+    be passed in to as a Matrix constructor's `value` argument, or for
     passing into a Simulation's step function for a particular input wire.
 
     For example, calling Matrix.list_to_int([3, 5], [7, 9], 4) produces 13,689,
