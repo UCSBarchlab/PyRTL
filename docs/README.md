@@ -2,13 +2,16 @@
 
 PyRTL's documentation is published to [Read the Docs](https://readthedocs.org/)
 at https://pyrtl.readthedocs.io/ . There is a
-[build dashboard](https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#signatures)
-and the main configuration file is `.readthedocs.yaml` in the repository's root
-directory.
+[build dashboard](https://readthedocs.org/projects/pyrtl/builds/)
+and the main configuration file is
+[`.readthedocs.yaml`](https://github.com/UCSBarchlab/PyRTL/blob/development/.readthedocs.yaml)
+in the repository's root directory.
 
 PyRTL's documentation is in this `docs` directory. It is built with
 [Sphinx](https://www.sphinx-doc.org/en/master/), and written in
-[reStructuredText](https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html). The main Sphinx configuration file is `docs/conf.py`.
+[reStructuredText](https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html).
+The main Sphinx configuration file is
+[`docs/conf.py`](https://github.com/UCSBarchlab/PyRTL/blob/development/docs/conf.py).
 
 Most of PyRTL's documentation is automatically extracted from Python docstrings, see
 [docstring formating](https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#signatures) for supported directives and fields.
@@ -32,7 +35,8 @@ This avoids problems where documentation builds randomly fail due to bugs or
 incompatibilities in the newest version of Sphinx or one of its
 dependencies.
 
-Use of an environment manager like `conda` or `virtualenv` is strongly
+Use of an environment manager like [`conda`](https://docs.conda.io/en/latest/)
+or [`virtualenv`](https://virtualenv.pypa.io/en/latest/) is strongly
 recommended. To install Sphinx locally, run the following commands from the
 repository root:
 
@@ -44,12 +48,14 @@ $ pip install -r docs/requirements.txt
 ## Installing Graphviz
 
 [Install graphviz](https://www.graphviz.org/download/#executable-packages). Use
-of a package manager like `apt` or `brew` is strongly recommended. Instructions
-vary depending on your operating system, see the installation link for details.
+of a package manager like
+[`apt`](https://ubuntu.com/server/docs/package-management) or
+[`brew`](https://brew.sh/) is strongly recommended. Instructions vary depending
+on your operating system, see the installation link for details.
 
 ## Running Sphinx
 
-Run Sphinx with the provided `Makefile`:
+Run Sphinx with the provided [`docs/Makefile`](https://github.com/UCSBarchlab/PyRTL/blob/development/docs/Makefile):
 
 ```shell
 # Run Sphinx to build PyRTL's documentation.
@@ -64,7 +70,7 @@ A local copy of PyRTL's documentation should be available in
 To update the pinned version of Sphinx, run
 
 ```shell
-# Run pip-compile to update requirements.txt.
+# Run pip-compile to generate docs/requirements.txt from docs/requirements.in.
 $ make -C docs requirements.txt
 ```
 
