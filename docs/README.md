@@ -1,27 +1,63 @@
-# Building PyRTL's Documentation
+# PyRTL's Documentation
 
-## Install Sphinx
+PyRTL's documentation is published to [Read the Docs](https://readthedocs.org/)
+at https://pyrtl.readthedocs.io/ . There is a
+[build dashboard](https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#signatures)
+and the main configuration file is `.readthedocs.yaml` in the repository's root
+directory.
 
-Sphinx and its dependencies are all pinned to specific versions for [reproducible documentation builds](https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html). Use of an environment manager like `conda` or `virtualenv` is strongly recommende. Run the following commands from the repository root:
+PyRTL's documentation is in this `docs` directory. It is built with
+[Sphinx](https://www.sphinx-doc.org/en/master/), and written in
+[reStructuredText](https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html). The main Sphinx configuration file is `docs/conf.py`.
+
+Most of PyRTL's documentation is automatically extracted from Python docstrings, see
+[docstring formating](https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#signatures) for supported directives and fields.
+
+Follow the instructions on this page to build a local copy of PyRTL's
+documentation. This is useful for verifying that PyRTL's documentation still
+renders correctly after making a local change.
+
+There is additional PyRTL documentation in the
+[`gh-pages` branch](https://github.com/UCSBarchlab/PyRTL/tree/gh-pages).
+This additional documentation is pushed to https://ucsbarchlab.github.io/PyRTL/
+by the `pages-build-deployment` GitHub Action. The additional documentation is
+written in [GitHub MarkDown](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax),
+and is not described further in this README.
+
+## Installing Sphinx
+
+Sphinx and its dependencies are all pinned to specific versions for
+[reproducible documentation builds](https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html).
+This avoids problems where documentation builds randomly fail due to bugs or
+incompatibilities in the newest version of Sphinx or one of its
+dependencies.
+
+Use of an environment manager like `conda` or `virtualenv` is strongly
+recommended. To install Sphinx locally, run the following commands from the
+repository root:
 
 ```shell
 # Install Sphinx.
 $ pip install -r docs/requirements.txt
 ```
 
-## Install Graphviz
+## Installing Graphviz
 
-[Install graphviz](https://www.graphviz.org/download/#executable-packages). Instructions vary depending on your operating system, see the installation link
-for details.
+[Install graphviz](https://www.graphviz.org/download/#executable-packages). Use
+of a package manager like `apt` or `brew` is strongly recommended. Instructions
+vary depending on your operating system, see the installation link for details.
 
-## Run Sphinx
+## Running Sphinx
+
+Run Sphinx with the provided `Makefile`:
 
 ```shell
 # Run Sphinx to build PyRTL's documentation.
 $ make -C docs
 ```
 
-The documentation should be available in `docs/_build/html`.
+A local copy of PyRTL's documentation should be available in
+`docs/_build/html`. `docs/_build/html/index.html` is the home page.
 
 ## Updating Sphinx
 
@@ -31,3 +67,6 @@ To update the pinned version of Sphinx, run
 # Run pip-compile to update requirements.txt.
 $ make -C docs requirements.txt
 ```
+
+It's a good idea to update the pinned version of Sphinx whenever you update the
+documentation.
