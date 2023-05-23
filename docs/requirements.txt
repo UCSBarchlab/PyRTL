@@ -38,7 +38,7 @@ pygments==2.15.1
     # via sphinx
 pyproject-hooks==1.0.0
     # via build
-requests==2.30.0
+requests==2.31.0
     # via sphinx
 six==1.16.0
     # via -r requirements.in
