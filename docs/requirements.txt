@@ -10,11 +10,11 @@ babel==2.12.1
     # via sphinx
 build==0.10.0
     # via pip-tools
-certifi==2023.5.7
+certifi==2023.7.22
     # via requests
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
     # via requests
-click==8.1.3
+click==8.1.6
     # via pip-tools
 docutils==0.18.1
     # via
@@ -26,13 +26,13 @@ imagesize==1.4.1
     # via sphinx
 jinja2==3.1.2
     # via sphinx
-markupsafe==2.1.2
+markupsafe==2.1.3
     # via jinja2
 packaging==23.1
     # via
     #   build
     #   sphinx
-pip-tools==6.13.0
+pip-tools==7.1.0
     # via -r requirements.in
 pygments==2.15.1
     # via sphinx
@@ -52,7 +52,7 @@ sphinx==6.2.1
     #   sphinxcontrib-jquery
 sphinx-hoverxref==1.3.0
     # via -r requirements.in
-sphinx-rtd-theme==1.2.0
+sphinx-rtd-theme==1.2.2
     # via -r requirements.in
 sphinxcontrib-applehelp==1.0.4
     # via sphinx
@@ -70,9 +70,9 @@ sphinxcontrib-qthelp==1.0.3
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.5
     # via sphinx
-urllib3==2.0.2
+urllib3==2.0.4
     # via requests
-wheel==0.40.0
+wheel==0.41.0
     # via pip-tools
 
 # The following packages are considered to be unsafe in a requirements file:
