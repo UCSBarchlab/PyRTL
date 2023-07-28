@@ -69,7 +69,7 @@ class WireVector(object):
     Operation        Syntax            Function
     ===============  ================  =======================================================
     Addition         ``a + b``         Creates an adder, returns WireVector
-    Subtraction      ``a - b``         Subtraction (twos complement)
+    Subtraction      ``a - b``         Subtraction (two's complement)
     Multiplication   ``a * b``         Creates an multiplier, returns WireVector
     Xor              ``a ^ b``         Bitwise XOR, returns WireVector
     Or               ``a | b``         Bitwise OR, returns WireVector
@@ -607,7 +607,7 @@ class Const(WireVector):
 
         :param int, bool, or str val: the value for the const WireVector
         :param int bitwidth: the desired bitwidth of the resulting const
-        :param bool signed: specify if bits should be used for twos complement
+        :param bool signed: specify if bits should be used for two's complement
         :return: a WireVector object representing a const wire
 
         Descriptions for all parameters not listed above can be found at

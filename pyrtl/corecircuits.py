@@ -175,7 +175,7 @@ def signed_add(a, b):
 
         max(n, m) + 1
 
-    The inputs are twos complement sign extended to the same length before
+    The inputs are two's complement sign extended to the same length before
     adding.  If an integer is passed to either `a` or `b`, it will be converted
     automatically to a two's complement constant
 
@@ -347,7 +347,7 @@ def match_bitwidth(*args, **opt):
     :return: tuple of args in order with extended bits
 
     Example of matching the bitwidths of two WireVectors ``a`` and ``b`` with
-    with zero extension: ::
+    zero extension: ::
 
         a, b = match_bitwidth(a, b)
 

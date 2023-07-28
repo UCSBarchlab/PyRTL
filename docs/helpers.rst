@@ -6,8 +6,8 @@ Cutting and Extending WireVectors
 
 The functions below provide ways of combining, slicing, and extending :class:`WireVectors<.WireVector>` in
 ways that are often useful in hardware design.  The functions below extend those member
-functions of the :class:`.WireVector` class iself (which provides support for the python builtin
-``len``, slicing as just as in a python list e.g. ``wire[3:6]``, :meth:`~pyrtl.wire.WireVector.zero_extended`, :meth:`~pyrtl.wire.WireVector.sign_extended`,
+functions of the :class:`.WireVector` class itself (which provides support for the Python builtin
+``len``, slicing as just as in a Python list e.g. ``wire[3:6]``, :meth:`~pyrtl.wire.WireVector.zero_extended`, :meth:`~pyrtl.wire.WireVector.sign_extended`,
 and many operators such as addition and multiplication).
 
 .. autofunction:: pyrtl.corecircuits.concat
