@@ -345,6 +345,32 @@ class PrintTraceBase(unittest.TestCase):
         self.assertEqual(output.getvalue(), correct_outp)
 
 
+class PrintPerfCountersBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.a = pyrtl.Input(bitwidth=1, name='a')
+        self.b = pyrtl.Input(bitwidth=1, name='b')
+        self.c = pyrtl.Input(bitwidth=1, name='c')
+
+    def test_print_perf_counters(self):
+        sim_trace = pyrtl.SimulationTrace()
+        sim = self.sim(tracer=sim_trace)
+        for i in range(16):
+            sim.step({
+                self.a: i % 2 == 0,
+                self.b: i % 4 == 0,
+                self.c: i % 8 == 0,
+            })
+        output = six.StringIO()
+        sim_trace.print_perf_counters('a', 'b', 'c', file=output)
+        # a is high for 8 cycles.
+        self.assertTrue('8' in output.getvalue())
+        # b is high for 4 cycles.
+        self.assertTrue('4' in output.getvalue())
+        # c is high for 2 cycles.
+        self.assertTrue('2' in output.getvalue())
+
+
 class SimWithSpecialWiresBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
