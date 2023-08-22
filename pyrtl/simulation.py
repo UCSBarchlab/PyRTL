@@ -1674,3 +1674,32 @@ class SimulationTrace(object):
         self.default_value = default_value
         self.init_regvalue = init_regvalue
         self.init_memvalue = init_memvalue
+
+    def print_perf_counters(self, *trace_names, file=sys.stdout):
+        """Print performance counter statistics for `trace_names`.
+
+        :param str trace_names: List of trace names. Each trace must be a
+            single-bit wire.
+        :param file: The place to write output, defaults to stdout.
+
+        This function prints the number of cycles where each trace's value is
+        one. This is useful for counting the number of times important events
+        occur in a simulation, such as cache misses and branch mispredictions.
+
+        """
+        name_values = []
+        for trace_name in trace_names:
+            wire_length = len(self._wires[trace_name])
+            if wire_length != 1:
+                raise PyrtlError(
+                    'print_perf_counters can only be used with single-bit '
+                    f'wires but wire {trace_name} has bitwidth {wire_length}')
+
+            name_values.append([trace_name, str(sum(self.trace[trace_name]))])
+
+        max_name_length = max(len(name) for name, value in name_values)
+        max_value_length = max(len(value) for name, value in name_values)
+        for name, value in name_values:
+            print(name.rjust(max_name_length),
+                  value.rjust(max_value_length),
+                  file=file)
