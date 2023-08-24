@@ -1,10 +1,8 @@
-from __future__ import print_function, absolute_import
-
-import unittest
-import six
+import io
 import operator
 import os
 import sys
+import unittest
 
 import pyrtl
 from pyrtl.wire import Const, Output
@@ -27,7 +25,7 @@ class TestSynthesis(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -126,7 +124,7 @@ class TestIOInterfaceSynthesis(unittest.TestCase):
             'a': [4, 6, 2, 3],
             'b': [2, 9, 11, 4],
         })
-        output = six.StringIO()
+        output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(
             output.getvalue(),
@@ -734,7 +732,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         tempwire2 <<= ~(inwire2 & tempwire)
         outwire <<= tempwire
 
-        output = six.StringIO()
+        output = io.StringIO()
         sys.stdout = output
         with self.assertRaises(pyrtl.PyrtlError):
             pyrtl.synthesize()

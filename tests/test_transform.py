@@ -1,7 +1,8 @@
-from pyrtl.core import set_working_block
 import unittest
+
 import pyrtl
 from pyrtl import transform
+from pyrtl.core import set_working_block
 
 
 class NetWireNumTestCases(unittest.TestCase):

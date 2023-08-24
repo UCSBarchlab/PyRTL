@@ -1,8 +1,8 @@
-import unittest
-import random
 import io
+import random
 import sys
-import six
+import unittest
+
 import pyrtl
 from pyrtl.importexport import _VerilogSanitizer
 from pyrtl.rtllib import testingutils as utils
@@ -416,7 +416,7 @@ class TestInputFromBlif(unittest.TestCase):
                           "count  0  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15  0  1  2  3\n"
                           "en     1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1\n"
                           "rst    1  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
@@ -454,7 +454,7 @@ class TestInputFromBlif(unittest.TestCase):
                           "count[3] 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 0 0 0 0\n"
                           "en       1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1\n"
                           "rst      1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
@@ -591,7 +591,7 @@ class TestInputFromBlif(unittest.TestCase):
         .end
         """
 
-        with six.assertRaisesRegex(self, pyrtl.PyrtlError, "Off-set found"):
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Off-set found"):
             pyrtl.input_from_blif(zeroes_in_offset)
 
     def test_blif_error_bad_coverset(self):
@@ -603,7 +603,7 @@ class TestInputFromBlif(unittest.TestCase):
         10 1 1
         .end
         """
-        with six.assertRaisesRegex(self, pyrtl.PyrtlError, "malformed cover set"):
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "malformed cover set"):
             pyrtl.input_from_blif(bad_coverset)
 
     def test_blif_not_gate_correct(self):
@@ -1658,14 +1658,14 @@ class TestVerilogOutput(unittest.TestCase):
 
     def test_error_invalid_add_reset(self):
         buffer = io.StringIO()
-        with six.assertRaisesRegex(self, pyrtl.PyrtlError, "Invalid add_reset option"):
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Invalid add_reset option"):
             pyrtl.output_to_verilog(buffer, add_reset='foobar')
 
     def test_error_existing_reset_wire(self):
         buffer = io.StringIO()
         _rst = pyrtl.Input(1, 'rst')
-        with six.assertRaisesRegex(self, pyrtl.PyrtlError,
-                                   "Found a user-defined wire named 'rst'."):
+        with self.assertRaisesRegex(pyrtl.PyrtlError,
+                                    "Found a user-defined wire named 'rst'."):
             pyrtl.output_to_verilog(buffer)
 
     def test_existing_reset_wire_without_add_reset(self):
@@ -1757,8 +1757,9 @@ class TestVerilogInput(unittest.TestCase):
         self.assertEqual(sim.tracer.trace['o'], [0, 2, 0, 2, 0])
 
     def test_error_import_bad_file(self):
-        with six.assertRaisesRegex(self, pyrtl.PyrtlError,
-                                   "input_from_verilog expecting either open file or string"):
+        with self.assertRaisesRegex(
+                pyrtl.PyrtlError,
+                "input_from_verilog expecting either open file or string"):
             pyrtl.input_from_verilog(3)
 
 
@@ -1956,14 +1957,14 @@ class TestOutputTestbench(unittest.TestCase):
 
     def test_error_verilog_testbench_invalid_add_reset(self):
         tbfile = io.StringIO()
-        with six.assertRaisesRegex(self, pyrtl.PyrtlError, "Invalid add_reset option"):
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "Invalid add_reset option"):
             pyrtl.output_verilog_testbench(tbfile, add_reset='foobar')
 
     def test_error_verilog_testbench_existing_reset_wire(self):
         tbfile = io.StringIO()
         _rst = pyrtl.Input(1, 'rst')
-        with six.assertRaisesRegex(self, pyrtl.PyrtlError,
-                                   "Found a user-defined wire named 'rst'."):
+        with self.assertRaisesRegex(pyrtl.PyrtlError,
+                                    "Found a user-defined wire named 'rst'."):
             pyrtl.output_verilog_testbench(tbfile)
 
     def test_verilog_testbench_existing_reset_wire_without_add_reset(self):
@@ -2525,12 +2526,12 @@ class TestInputISCASBench(unittest.TestCase):
             'G3': '11001100',
         })
         correct_output = ('G17 11110001\n')
-        output = six.StringIO()
+        output = io.StringIO()
         trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_output)
 
     def test_bench_with_same_io_name(self):
-        output = six.StringIO()
+        output = io.StringIO()
         sys.stdout = output
         pyrtl.input_from_iscas_bench(example_bench_with_io_same_name)
         sys.stdout = sys.__stdout__

@@ -70,8 +70,6 @@ called is currently elaborating hardware under a condition.
 # Access should be done through instances "conditional_update" and "otherwise",
 # as described above, not through the classes themselves.
 
-from __future__ import print_function, unicode_literals
-
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Const, Register
 

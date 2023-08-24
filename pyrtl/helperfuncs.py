@@ -1,12 +1,9 @@
 """ Helper functions that make constructing hardware easier.
 """
 
-from __future__ import print_function, unicode_literals
-
 import collections
 import math
 import numbers
-import six
 import sys
 from functools import reduce
 
@@ -248,7 +245,7 @@ def match_bitpattern(w, bitpattern, field_map=None):
 
     """
     w = as_wires(w)
-    if not isinstance(bitpattern, six.string_types):
+    if not isinstance(bitpattern, str):
         raise PyrtlError('bitpattern must be a string')
     nospace_string = ''.join(bitpattern.replace('_', '').split())
     if len(w) != len(nospace_string):
@@ -696,7 +693,7 @@ def infer_val_and_bitwidth(rawinput, bitwidth=None, signed=False):
         return _convert_bool(rawinput, bitwidth, signed)
     elif isinstance(rawinput, numbers.Integral):
         return _convert_int(rawinput, bitwidth, signed)
-    elif isinstance(rawinput, six.string_types):
+    elif isinstance(rawinput, str):
         return _convert_verilog_str(rawinput, bitwidth, signed)
     else:
         raise PyrtlError('error, the value provided is of an improper type, "%s"'

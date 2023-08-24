@@ -1,5 +1,5 @@
 from functools import reduce
-from six.moves import builtins
+import builtins
 
 from pyrtl.rtllib import multipliers as mult
 

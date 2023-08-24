@@ -33,7 +33,6 @@ Example::
 
 """
 
-from __future__ import division, absolute_import
 import pyrtl
 from pyrtl.rtllib import libutils
 

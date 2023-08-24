@@ -1,5 +1,5 @@
 import unittest
-import six
+
 import pyrtl
 from pyrtl import wire
 
@@ -237,11 +237,11 @@ class TestRegister(unittest.TestCase):
         self.assertEqual(r.reset_value, 1)
 
     def test_invalid_reset_value_too_large(self):
-        with six.assertRaisesRegex(self, pyrtl.PyrtlError, "cannot fit in the specified"):
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "cannot fit in the specified"):
             r = pyrtl.Register(4, reset_value=16)
 
     def test_invalid_reset_value_too_large_as_string(self):
-        with six.assertRaisesRegex(self, pyrtl.PyrtlError, "cannot fit in the specified"):
+        with self.assertRaisesRegex(pyrtl.PyrtlError, "cannot fit in the specified"):
             r = pyrtl.Register(4, reset_value="5'd16")
 
     def test_invalid_reset_value_not_an_integer(self):

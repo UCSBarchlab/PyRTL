@@ -4,4 +4,3 @@ pylint
 pyparsing
 pytest
 pytest-cov
-six

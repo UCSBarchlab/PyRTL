@@ -5,7 +5,6 @@ Each of the functions in visualization take a block and a file descriptor.
 The functions provided write the block as a given visual format to the file.
 """
 
-from __future__ import print_function, unicode_literals
 import collections
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError

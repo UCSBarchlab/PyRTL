@@ -1,5 +1,5 @@
+import io
 import unittest
-import six
 
 import pyrtl
 from pyrtl.corecircuits import _basic_add
@@ -29,7 +29,7 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -155,7 +155,7 @@ class PrintTraceBase(unittest.TestCase):
                         "in1_probe 0 1 2 3 4\n"
                         "in2       5 4 3 2 1\n"
                         "out       5 5 5 5 5\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_outp)
 
@@ -173,7 +173,7 @@ class PrintTraceBase(unittest.TestCase):
                         "in1_probe     0   100  1000  1100 10000\n"
                         "in2       10100 10000  1100  1000   100\n"
                         "out       10100 10100 10100 10100 10100\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, base=2)
         self.assertEqual(output.getvalue(), correct_outp)
 
@@ -191,7 +191,7 @@ class PrintTraceBase(unittest.TestCase):
                         "in1_probe  0  6 14 22 30\n"
                         "in2       36 30 22 14  6\n"
                         "out       36 36 36 36 36\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, base=8)
         self.assertEqual(output.getvalue(), correct_outp)
 
@@ -209,7 +209,7 @@ class PrintTraceBase(unittest.TestCase):
                         "in1_probe   0   9  12  1b  24\n"
                         "in2        2d  24  1b  12   9\n"
                         "out         0 144 1e6 1e6 144\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, base=16)
         self.assertEqual(output.getvalue(), correct_outp)
 
@@ -269,7 +269,7 @@ class SimWithSpecialWiresBase(unittest.TestCase):
                         "in3  40 38 36 34 32 30 28 26 24 22\n"
                         "out2  0  5 10 15 20 25 30 35 40 45\n"
                         "out3 41 39 37 35 33 31 29 27 25 23\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_outp)
 
@@ -318,7 +318,7 @@ class SimStepMultipleBase(unittest.TestCase):
 
         correct_output = ("--- Values in base 10 ---\n"
                           "b 0 1 2 3 4\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
@@ -393,7 +393,7 @@ class SimStepMultipleBase(unittest.TestCase):
                           "in2   6  6  6  6  6\n"
                           "out1  7  8  6 10  9\n"
                           "out2  6  7  7 15 14\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
@@ -412,7 +412,7 @@ class SimStepMultipleBase(unittest.TestCase):
                           "in2   6  6  6  6  6\n"
                           "out1  7  8  6 10  9\n"
                           "out2  6  7  7 15 14\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
@@ -431,7 +431,7 @@ class SimStepMultipleBase(unittest.TestCase):
                           "in2   6  6  6  6\n"
                           "out1  7  8  6 10\n"
                           "out2  6  7  7 15\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
@@ -450,7 +450,7 @@ class SimStepMultipleBase(unittest.TestCase):
                           "in2  6 6 6\n"
                           "out1 7 8 6\n"
                           "out2 6 7 7\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
@@ -462,7 +462,7 @@ class SimStepMultipleBase(unittest.TestCase):
             'out1': [7, 9, 4, 10, 9],
             'out2': [6, 2, 7, 8, 14],
         }
-        output = six.StringIO()
+        output = io.StringIO()
         sim.step_multiple(self.inputs, expected, file=output, stop_after_first_error=True)
 
         # Test the output about unexpected values
@@ -478,7 +478,7 @@ class SimStepMultipleBase(unittest.TestCase):
                           "in2  6 6\n"
                           "out1 7 8\n"
                           "out2 6 7\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
@@ -490,7 +490,7 @@ class SimStepMultipleBase(unittest.TestCase):
             'out1': [7, 9, 4, 10, 9],
             'out2': [6, 2, 7, 8, 14],
         }
-        output = six.StringIO()
+        output = io.StringIO()
         sim.step_multiple(self.inputs, expected, file=output)
 
         # Test the output about unexpected values
@@ -508,7 +508,7 @@ class SimStepMultipleBase(unittest.TestCase):
                           "in2   6  6  6  6  6\n"
                           "out1  7  8  6 10  9\n"
                           "out2  6  7  7 15 14\n")
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
@@ -533,9 +533,9 @@ class TraceWithAdderBase(unittest.TestCase):
         for i in range(15):
             sim.step({})
 
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
-        file = six.StringIO()
+        file = io.StringIO()
         sim_trace.render_trace(file=file)  # want to make sure the code at least runs
         self.assertEqual(output.getvalue(), 'o 012345670123456\n')
 
@@ -616,7 +616,7 @@ b110 o
         for i in range(15):
             sim.step({})
 
-        test_output = six.StringIO()
+        test_output = io.StringIO()
         sim_trace.print_vcd(test_output)
         self.assertEqual(self.VCD_OUTPUT, test_output.getvalue())
 
@@ -645,7 +645,7 @@ class SimTraceWithMuxBase(unittest.TestCase):
         for i in range(6):
             self.sim.step(input_signals[i])
 
-        output = six.StringIO()
+        output = io.StringIO()
         self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'muxout 120120\n')
 
@@ -683,7 +683,7 @@ class MemBlockBase(unittest.TestCase):
             sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
                       self.write_addr: signals[2], self.write_data: signals[3]})
 
-        output = six.StringIO()
+        output = io.StringIO()
         self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
@@ -704,7 +704,7 @@ class MemBlockBase(unittest.TestCase):
         for signal in input_signals:
             sim.step(signal)
 
-        output = six.StringIO()
+        output = io.StringIO()
         self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'o1 0077653107\no2 0076452310\n')
 
@@ -722,7 +722,7 @@ class MemBlockBase(unittest.TestCase):
             sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
                       self.write_addr: signals[2], self.write_data: signals[3]})
 
-        output = six.StringIO()
+        output = io.StringIO()
         self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'o1 05560\no2 00560\n')
 
@@ -771,7 +771,7 @@ class MemBlockBase(unittest.TestCase):
                 self.write_addr: 0,
                 self.write_data: 0
             })
-        output = six.StringIO()
+        output = io.StringIO()
         self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'o1 000000\n'
                                             'o2 000000\n'
@@ -793,7 +793,7 @@ class MemBlockBase(unittest.TestCase):
                 self.write_addr: 0,
                 self.write_data: 0
             })
-        output = six.StringIO()
+        output = io.StringIO()
         self.sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), 'o1 000000\n'
                                             'o2 000000\n'
@@ -834,7 +834,7 @@ class MemBlockLargeBase(unittest.TestCase):
             sim.step({self.read_addr1: signals[0], self.read_addr2: signals[1],
                       self.write_addr: signals[2], self.write_data: signals[3]})
 
-        output = six.StringIO()
+        output = io.StringIO()
         correct_outp = ("--- Values in base 10 ---\n"
                         "o1                    0 %d %d                    6                    0\n"
                         "o2                    0                    0 %d                    6                    0\n"  # noqa
@@ -860,7 +860,7 @@ class RegisterDefaultsBase(unittest.TestCase):
         sim = self.sim(tracer=sim_trace, **kwargs)
         for i in range(8):
             sim.step({self.i: i})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -898,7 +898,7 @@ class RomBlockSimBase(unittest.TestCase):
         return out_string
 
     def compareIO(self, sim_trace_a, expected_output):
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace_a.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), expected_output)
 

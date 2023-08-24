@@ -1,7 +1,7 @@
-import unittest
-import pyrtl
 import io
-import six
+import unittest
+
+import pyrtl
 
 
 class TestConditional(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestConditional(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -199,7 +199,7 @@ class TestMemConditionalBlock(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -271,7 +271,7 @@ class TestWireConditionalBlock(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
@@ -389,7 +389,7 @@ class TestNonExclusiveBlocks(unittest.TestCase):
         sim = pyrtl.Simulation(tracer=sim_trace)
         for i in range(8):
             sim.step({})
-        output = six.StringIO()
+        output = io.StringIO()
         sim_trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 

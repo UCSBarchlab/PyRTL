@@ -4,7 +4,6 @@ lowering of the design to single wire gates (synthesis), along with other
 ways to change a block.
 """
 
-from __future__ import print_function, unicode_literals
 import collections
 
 from .core import working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock

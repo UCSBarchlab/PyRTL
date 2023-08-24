@@ -1,6 +1,7 @@
-import unittest
-import pyrtl
 from random import randint
+import unittest
+
+import pyrtl
 
 
 # -------------------------------------------------------------------

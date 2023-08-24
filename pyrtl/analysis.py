@@ -4,8 +4,6 @@ Contains functions to estimate aspects of blocks (like area and delay)
 by either using internal models or by making calls out to external tool chains.
 """
 
-from __future__ import print_function, unicode_literals
-
 import re
 import os
 import math

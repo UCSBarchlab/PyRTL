@@ -6,13 +6,11 @@ The functions provided either read the file and update the Block
 accordingly, or write information from the Block out to the file.
 """
 
-from __future__ import print_function, unicode_literals
 import re
 import collections
 import tempfile
 import os
 import subprocess
-import six
 import sys
 import functools
 import operator
@@ -124,7 +122,6 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
     It currently ignores the reset signal (which it assumes is input only to the flip flops).
     """
     import pyparsing
-    import six
     from pyparsing import (Word, Literal, OneOrMore, ZeroOrMore,
                            Suppress, Group, Keyword, Opt, one_of)
 
@@ -133,7 +130,7 @@ def input_from_blif(blif, block=None, merge_io_vectors=True, clock_name='clk', t
     try:
         blif_string = blif.read()
     except AttributeError:
-        if isinstance(blif, six.string_types):
+        if isinstance(blif, str):
             blif_string = blif
         else:
             raise PyrtlError('input_from_blif expecting either open file or string')
@@ -556,7 +553,7 @@ def input_from_verilog(verilog, clock_name='clk', toplevel=None, leave_in_dir=No
     try:
         verilog_string = verilog.read()
     except AttributeError:
-        if isinstance(verilog, six.string_types):
+        if isinstance(verilog, str):
             verilog_string = verilog
         else:
             raise PyrtlError('input_from_verilog expecting either open file or string')
@@ -1241,7 +1238,6 @@ def input_from_iscas_bench(bench, block=None):
     '''
 
     import pyparsing
-    import six
     from pyparsing import (Word, Literal, OneOrMore, ZeroOrMore,
                            Suppress, Group, Keyword, one_of)
 
@@ -1250,7 +1246,7 @@ def input_from_iscas_bench(bench, block=None):
     try:
         bench_string = bench.read()
     except AttributeError:
-        if isinstance(bench, six.string_types):
+        if isinstance(bench, str):
             bench_string = bench
         else:
             raise PyrtlError('input_from_bench expecting either open file or string')

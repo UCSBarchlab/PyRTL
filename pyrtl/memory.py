@@ -12,7 +12,6 @@ Based on the number of reads and writes a memory will be inferred
 with the correct number of ports to support that
 """
 
-from __future__ import print_function, unicode_literals
 import collections
 
 from .pyrtlexceptions import PyrtlError

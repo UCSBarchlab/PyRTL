@@ -1,6 +1,7 @@
-import unittest
-import random
 import io
+import random
+import unittest
+
 import pyrtl
 
 

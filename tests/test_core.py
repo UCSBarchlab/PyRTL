@@ -1,6 +1,6 @@
-from __future__ import print_function
+import io
 import unittest
-import six
+
 import pyrtl
 
 
@@ -77,7 +77,7 @@ class TestBlock(unittest.TestCase):
 
         block = pyrtl.working_block()
 
-        output = six.StringIO()
+        output = io.StringIO()
         i = 0
         for net in block:
             self.assertFalse(i > 100, "Too many iterations happened")
@@ -122,7 +122,7 @@ class TestSanityCheckNet(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def invalid_net(self, exp_message, *args):
-        with six.assertRaisesRegex(self, pyrtl.PyrtlInternalError, exp_message):
+        with self.assertRaisesRegex(pyrtl.PyrtlInternalError, exp_message):
             pyrtl.working_block().add_net(*args)
 
     @staticmethod
@@ -477,7 +477,7 @@ class TestSanityCheck(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def sanity_error(self, msg, error_type=pyrtl.PyrtlError):
-        with six.assertRaisesRegex(self, error_type, msg):
+        with self.assertRaisesRegex(error_type, msg):
             pyrtl.working_block().sanity_check()
 
     def test_missing_bitwidth(self):
