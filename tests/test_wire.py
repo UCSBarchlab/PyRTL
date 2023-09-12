@@ -66,6 +66,32 @@ class TestWireVectorNames(unittest.TestCase):
         self.assertTrue(self.is_valid_str(' '))
         self.assertTrue(self.is_valid_str('#$)(*&#@_+!#)('))
 
+    def check_name_setter(self, ns):
+        """test name setter in wire.py.
+
+        Keyword arguments:
+
+        ns -- new name of WireVector to be set
+        """
+        test = pyrtl.WireVector(1, 'test')
+        test.name = ns
+        self.assertTrue(test.name == ns)
+
+    def test_invalid_name_setter(self):
+        """test invalid name data types and expect PyrtlError."""
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.check_name_setter(24)
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.check_name_setter(True)
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.check_name_setter(3.14)
+
+    def test_valid_name_setter(self):
+        """test string names and expect no error."""
+        self.check_name_setter('24')
+        self.check_name_setter(str(24))
+        self.check_name_setter('twenty_four')
+
 
 class TestWireVectorFail(unittest.TestCase):
     def setUp(self):
