@@ -78,7 +78,7 @@ class TestWireVectorNames(unittest.TestCase):
         self.assertTrue(test.name == ns)
 
     def test_invalid_name_setter(self):
-        """test invalid names and expect PyrtlError."""
+        """test invalid name data types and expect PyrtlError."""
         with self.assertRaises(pyrtl.PyrtlError):
             self.check_name_setter(24)
         with self.assertRaises(pyrtl.PyrtlError):
@@ -87,7 +87,7 @@ class TestWireVectorNames(unittest.TestCase):
             self.check_name_setter(3.14)
 
     def test_valid_name_setter(self):
-        """test valid names and expect no error."""
+        """test string names and expect no error."""
         self.check_name_setter('24')
         self.check_name_setter(str(24))
         self.check_name_setter('twenty_four')
