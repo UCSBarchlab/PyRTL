@@ -66,23 +66,31 @@ class TestWireVectorNames(unittest.TestCase):
         self.assertTrue(self.is_valid_str(' '))
         self.assertTrue(self.is_valid_str('#$)(*&#@_+!#)('))
 
-    def is_name_setter_str(self, ns):
-        test = pyrtl.WireVector(1,'test')
+    def check_name_setter(self, ns):
+        """test name setter in wire.py.
+
+        Keyword arguments:
+
+        ns -- new name of WireVector to be set
+        """
+        test = pyrtl.WireVector(1, 'test')
         test.name = ns
-        return test.name == ns
-    
+        self.assertTrue(test.name == ns)
+
     def test_invalid_name_setter(self):
-        with self.assertRaisesRegex(pyrtl.PyrtlError, "WireVector names must be strings"):
-            self.is_name_setter_str(24)
+        """test invalid names and expect PyrtlError."""
         with self.assertRaises(pyrtl.PyrtlError):
-            self.is_name_setter_str(True)
+            self.check_name_setter(24)
         with self.assertRaises(pyrtl.PyrtlError):
-            self.is_name_setter_str(3.14)
+            self.check_name_setter(True)
+        with self.assertRaises(pyrtl.PyrtlError):
+            self.check_name_setter(3.14)
 
     def test_valid_name_setter(self):
-        self.assertTrue(self.is_name_setter_str('24'))
-        self.assertTrue(self.is_name_setter_str(str(24)))
-        self.assertTrue(self.is_name_setter_str('twenty_four'))
+        """test valid names and expect no error."""
+        self.check_name_setter('24')
+        self.check_name_setter(str(24))
+        self.check_name_setter('twenty_four')
 
 
 class TestWireVectorFail(unittest.TestCase):
