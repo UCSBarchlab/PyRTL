@@ -16,7 +16,7 @@ def software_fibonacci(n):
         a, b = b, a + b
     return a
 
-# Interative implementation of Fibonacci, just iteratively adds a and b to
+# Iterative implementation of Fibonacci, just iteratively adds a and b to
 # calculate the nth number in the sequence.
 # >> [software_fibonacci(x) for x in range(10)]
 # [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
@@ -84,21 +84,21 @@ def attempt2_hardware_fibonacci(n, bitwidth):
 # to build an adder with inputs of "a" and "b" from the current cycle and assign the value
 # to "b" in the next cycle.  A visual representation of the hardware built is as such:
 #
-#       +-----+      +---------+
-#       |     |      |         |
-#   +===V==+  |  +===V==+      |
-#   |      |  |  |      |      |
-#   |   a  |  |  |   b  |      |
-#   |      |  |  |      |      |
-#   +===V==+  |  +==V===+      |
-#       |     |     |          |
-#       |     +-----+          |
-#       |           |          |
-#   +===V===========V==+       |
-#    \      adder     /        |
-#     +==============+         |
-#              |               |
-#              +---------------+
+#      ┌─────┐     ┌─────┐
+#      │     │     │     │
+#      ▼     │     ▼     │
+#   ▕▔▔▔▔▔▏  │  ▕▔▔▔▔▔▏  │
+#   ▕  a  ▏  │  ▕  b  ▏  │
+#   ▕▁▁▁▁▁▏  │  ▕▁▁▁▁▁▏  │
+#      │     │     │     │
+#      │     └─────┤     │
+#      │           │     │
+#      ▼           ▼     │
+#    ╲▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔╱   │
+#     ╲    adder    ╱    │
+#      ╲▁▁▁▁▁▁▁▁▁▁▁╱     │
+#            │           │
+#            └───────────┘
 #
 # Note that in the picture the register "a" and "b" each have a WireVector which is
 # the current value (shown flowing out of the bottom of the register) and an "input"
