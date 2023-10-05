@@ -33,17 +33,16 @@ master_doc = 'index'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'hoverxref.extension',
     'sphinx.ext.autodoc',
-    'sphinx.ext.extlinks',
     'sphinx.ext.inheritance_diagram',
-    'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
-    'sphinx_rtd_theme',
+    'sphinx_autodoc_typehints',
+    'sphinx_copybutton',
 ]
 
 pygments_style = 'sphinx'
 graphviz_output_format = 'svg'
+toc_object_entries_show_parents = 'hide'
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
@@ -64,17 +63,17 @@ primary_domain = 'py'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
-
-htmlhelp_basename = 'PyRTLdoc'
-
-html_theme_options = {'logo_only': True}
-
-#html_favicon = '../../brand/favicon.ico'
-
+html_theme = "furo"
+html_theme_options = {
+    'sidebar_hide_name': True,
+}
 html_logo = 'brand/pyrtl_logo.png'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named 'default.css' will overwrite the builtin 'default.css'.
-# html_static_path = ['_static']
+html_static_path = ['_static']
+
+# These paths are either relative to html_static_path or fully qualified paths
+# (eg. https://...)
+html_css_files = ['custom.css']

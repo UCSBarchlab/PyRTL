@@ -12,5 +12,7 @@ BUILDDIR      = _build
 html: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-requirements.txt: requirements.in
+requirements.txt: requirements.in FORCE
 	pip-compile requirements.in
+
+FORCE:

@@ -142,9 +142,9 @@ PyRTL Functionality:
 ====================
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
    basic
+   regmem
    simtest
    blocks
    helpers

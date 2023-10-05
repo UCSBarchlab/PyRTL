@@ -1,0 +1,4 @@
+/* Force white background on inheritance diagrams. Needed for dark mode. */
+.graphviz {
+    background-color: white;
+}
