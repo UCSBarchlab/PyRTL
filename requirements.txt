@@ -4,3 +4,4 @@ pylint
 pyparsing
 pytest
 pytest-cov
+tox

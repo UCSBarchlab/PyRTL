@@ -1,31 +1,24 @@
 *.py[cod]
 
 # coverage
-htmlcov/
 .coverage/
+coverage.xml
 
 # C extensions
 *.so
 
 # Packages
-*.egg
 *.egg-info
 dist
 build
-eggs
-.eggs
 parts
 bin
 var
 sdist
-develop-eggs
 .installed.cfg
 lib
 lib64
 __pycache__
-
-# Installer logs
-pip-log.txt
 
 # Unit test / coverage reports
 .coverage
@@ -53,7 +46,7 @@ docs/_build
 # There must be a very good reason for someone to add a verilog file to the repo
 .v
 
-# ipynb	
+# ipynb
 ipynb-examples/.ipynb_checkpoints
 
 # VS Code
