@@ -1,5 +1,4 @@
-pip-tools
-six
+furo
 sphinx
-sphinx-hoverxref
-sphinx_rtd_theme
+sphinx-autodoc-typehints
+sphinx-copybutton
