@@ -1,7 +1,0 @@
-/* Dark mode overrides */
-.graphviz {
-    /* Force light blue background color (transparent background by default) */
-    background-color: #cfe2f3;
-    /* Reduce block width to fit content (full column width by default) */
-    display: inline-block;
-}

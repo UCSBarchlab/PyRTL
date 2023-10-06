@@ -66,11 +66,8 @@ html_theme_options = {
 }
 html_logo = 'brand/pyrtl_logo.png'
 
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named 'default.css' will overwrite the builtin 'default.css'.
-html_static_path = ['_static']
-
-# These paths are either relative to html_static_path or fully qualified paths
-# (eg. https://...)
-html_css_files = ['custom.css']
+# Force a light blue background color for inheritance-diagrams. The default is
+# transparent, which does not work well with Furo's dark mode.
+inheritance_graph_attrs = {
+    'bgcolor': 'aliceblue',
+}
