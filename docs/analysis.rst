@@ -2,21 +2,14 @@
 
 .. default-domain:: pyrtl.rtllib
 
-.. _top-of-page-analysis:
-
-
 =========================
 Analysis and Optimization
 =========================
 
-Provides tools for analyzing ad optimizing aspects of PyRTL designs
+Tools for analyzing and optimizing aspects of PyRTL designs.
 
 Estimation
 ----------
-
-.. | :ref:`estimate-ref`
-
-.. .. _estimate-ref:
 
 .. automodule:: pyrtl.analysis
    :members:
@@ -46,5 +39,3 @@ Individual Passes
 .. autofunction:: pyrtl.passes.and_inverter_synth
 .. autofunction:: pyrtl.passes.one_bit_selects
 .. autofunction:: pyrtl.passes.two_way_concat
-
-:ref:`Back to top of page <top-of-page-analysis>`

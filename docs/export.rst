@@ -1,7 +1,5 @@
-
 Exporting and Importing Designs
 ===============================
-
 
 Exporting Hardware Designs
 --------------------------
@@ -15,12 +13,10 @@ Exporting Testbenches
 
 .. autofunction:: pyrtl.importexport.output_verilog_testbench
 
-
 Importing Verilog
 -----------------
 
 .. autofunction:: pyrtl.importexport.input_from_blif
-
 
 Outputting for Visualization
 ----------------------------
@@ -33,4 +29,3 @@ Outputting for Visualization
 .. autofunction:: pyrtl.visualization.block_to_svg
 .. autofunction:: pyrtl.visualization.trace_to_html
 .. autofunction:: pyrtl.visualization.net_graph
-

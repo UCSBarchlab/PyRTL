@@ -40,13 +40,10 @@ extensions = [
     'sphinx_copybutton',
 ]
 
-pygments_style = 'sphinx'
 graphviz_output_format = 'svg'
-toc_object_entries_show_parents = 'hide'
 
-# If true, the current module name will be prepended to all description
-# unit titles (such as .. function::).
-add_module_names = False
+# Omit redundant method names in right sidebar (step() instead of Simulation.step()).
+toc_object_entries_show_parents = 'hide'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

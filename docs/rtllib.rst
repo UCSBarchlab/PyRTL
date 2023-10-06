@@ -2,27 +2,11 @@
 
 .. default-domain:: pyrtl.rtllib
 
-.. _top-of-page-rtllib:
-
-
 ===========
 RTL Library
 ===========
 
-This is a set of files that contain useful miscellaneous functions and classes
-
-
-| :ref:`adders-ref`
-| :ref:`aes-ref`
-| :ref:`barrel-ref`
-| :ref:`libutils-ref`
-| :ref:`multipliers-ref`
-| :ref:`muxes-ref`
-| :ref:`matrix-ref`
-| :ref:`testingutils-ref`
-
-
-.. _adders-ref:
+Useful circuits, functions, and testing utilities.
 
 Adders
 ------
@@ -33,10 +17,6 @@ Adders
    :undoc-members:
    :exclude-members: __dict__,__weakref__,__module__
 
-:ref:`Back to top of page <top-of-page-rtllib>`
-
-.. _aes-ref:
-
 AES-128
 -------
 
@@ -44,10 +24,6 @@ AES-128
    :members:
    :undoc-members:
    :exclude-members: __dict__,__weakref__,__module__
-
-:ref:`Back to top of page <top-of-page-rtllib>`
-
-.. _barrel-ref:
 
 Barrel
 ------
@@ -58,10 +34,6 @@ Barrel
    :undoc-members:
    :exclude-members: __dict__,__weakref__,__module__
 
-:ref:`Back to top of page <top-of-page-rtllib>`
-
-.. _libutils-ref:
-
 Library Utilities
 -----------------
 
@@ -70,10 +42,6 @@ Library Utilities
    :special-members:
    :undoc-members:
    :exclude-members: __dict__,__weakref__,__module__
-
-:ref:`Back to top of page <top-of-page-rtllib>`
-
-.. _multipliers-ref:
 
 Multipliers
 -----------
@@ -84,10 +52,6 @@ Multipliers
    :undoc-members:
    :exclude-members: __dict__,__weakref__,__module__
 
-:ref:`Back to top of page <top-of-page-rtllib>`
-
-.. _muxes-ref:
-
 Muxes
 -----
 
@@ -96,10 +60,6 @@ Muxes
    :special-members:
    :undoc-members:
    :exclude-members: __dict__,__weakref__,__module__,__exit__
-
-:ref:`Back to top of page <top-of-page-rtllib>`
-
-.. _matrix-ref:
 
 Matrix
 ------
@@ -110,10 +70,6 @@ Matrix
    :undoc-members:
    :exclude-members: __dict__,__weakref__,__module__
 
-:ref:`Back to top of page <top-of-page-rtllib>`
-
-.. _testingutils-ref:
-
 Testing Utilities
 -----------------
 
@@ -121,5 +77,3 @@ Testing Utilities
    :members:
    :special-members:
    :exclude-members: __dict__,__weakref__,__module__
-
-:ref:`Back to top of page <top-of-page-rtllib>`
