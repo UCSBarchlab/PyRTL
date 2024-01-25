@@ -1632,17 +1632,19 @@ class SimulationTrace(object):
 
         if symbol_len is None:
             maxvallen = 0
-            for name, trace in self.trace.items():
+            for trace_name in trace_list:
+                trace = self.trace[trace_name]
                 maxvallen = max(maxvallen, max(len(renderer.val_to_str(
-                    v, name, repr_func, repr_per_name)) for v in trace))
+                    v, trace_name, repr_func, repr_per_name)) for v in trace))
             symbol_len = maxvallen
 
         cycle_len = symbol_len + renderer.constants._chars_between_cycles
+
         # print the 'ruler' which is just a list of 'ticks'
         # mapped by the pretty map
-
-        maxnamelen = max(len(w) for w in trace_list)
-        maxtracelen = max(len(v) for v in self.trace.values())
+        maxnamelen = max(len(trace_name) for trace_name in trace_list)
+        maxtracelen = max(len(self.trace[trace_name])
+                          for trace_name in trace_list)
         if segment_size is None:
             segment_size = maxtracelen
         spaces = ' ' * (maxnamelen)
@@ -1652,10 +1654,9 @@ class SimulationTrace(object):
         print(spaces + ''.join(ticks), file=file)
 
         # now all the traces
-        print(formatted_trace_line(trace_list[0], self.trace[trace_list[0]]),
-              file=file)
-        for w in trace_list[1:]:
-            print(formatted_trace_line(w, self.trace[w]), file=file)
+        for trace_name in trace_list:
+            print(formatted_trace_line(trace_name, self.trace[trace_name]),
+                  file=file)
 
     def _set_initial_values(self, default_value, init_regvalue, init_memvalue):
         """ Remember the default values that were used when starting the trace.
