@@ -18,6 +18,8 @@ addition and multiplication).
 .. autofunction:: pyrtl.corecircuits.match_bitwidth
 .. autofunction:: pyrtl.helperfuncs.truncate
 .. autofunction:: pyrtl.helperfuncs.chop
+.. autofunction:: pyrtl.helperfuncs.wire_struct
+.. autofunction:: pyrtl.helperfuncs.wire_matrix
 
 Coercion to WireVector
 ----------------------

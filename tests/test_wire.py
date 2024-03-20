@@ -430,5 +430,162 @@ class TestKeepingCallStack(unittest.TestCase):
         self.assertIsInstance(call_stack, list)
 
 
+class TestWrappedWireVector(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_attr(self):
+        reg = pyrtl.Register(bitwidth=1, name='reg')
+        wrapped_reg = pyrtl.wire.WrappedWireVector(reg)
+        # Check __setattr__ forwarding.
+        wrapped_reg.next <<= True
+
+        # Check __getattr__ forwarding.
+        self.assertEqual(wrapped_reg.bitwidth, 1)
+        self.assertEqual(wrapped_reg.name, 'reg')
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('reg'), False)
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('reg'), True)
+
+    def test_ops(self):
+        # Check special method forwarding.
+        for a_val in range(16):
+            for b_val in range(16):
+                pyrtl.reset_working_block()
+
+                a = pyrtl.Const(bitwidth=4, val=a_val)
+                wrapped_a = pyrtl.wire.WrappedWireVector(a)
+                b = pyrtl.Const(bitwidth=4, val=b_val)
+                wrapped_b = pyrtl.wire.WrappedWireVector(b)
+
+                self.assertEqual(hash(a), hash(wrapped_a))
+                self.assertEqual(str(a), str(wrapped_a))
+                self.assertEqual(len(a), len(wrapped_a))
+
+                a_and_b = pyrtl.wire.WireVector(name='a_and_b', bitwidth=4)
+                a_and_b <<= wrapped_a & wrapped_b
+                a_rand_b = pyrtl.wire.WireVector(name='a_rand_b', bitwidth=4)
+                a_rand_b <<= wrapped_a.val & wrapped_b
+                a_or_b = pyrtl.wire.WireVector(name='a_or_b', bitwidth=4)
+                a_or_b <<= wrapped_a | wrapped_b
+                a_ror_b = pyrtl.wire.WireVector(name='a_ror_b', bitwidth=4)
+                a_ror_b <<= wrapped_a.val | wrapped_b
+                a_xor_b = pyrtl.wire.WireVector(name='a_xor_b', bitwidth=4)
+                a_xor_b <<= wrapped_a ^ wrapped_b
+                a_rxor_b = pyrtl.wire.WireVector(name='a_rxor_b', bitwidth=4)
+                a_rxor_b <<= wrapped_a.val ^ wrapped_b
+                a_add_b = pyrtl.wire.WireVector(name='a_add_b', bitwidth=5)
+                a_add_b <<= wrapped_a + wrapped_b
+                a_radd_b = pyrtl.wire.WireVector(name='a_radd_b', bitwidth=5)
+                a_radd_b <<= wrapped_a.val + wrapped_b
+                a_sub_b = pyrtl.wire.WireVector(name='a_sub_b', bitwidth=4)
+                a_sub_b <<= wrapped_a - wrapped_b
+                a_rsub_b = pyrtl.wire.WireVector(name='a_rsub_b', bitwidth=4)
+                a_rsub_b <<= wrapped_a.val - wrapped_b
+                a_mul_b = pyrtl.wire.WireVector(name='a_mul_b', bitwidth=8)
+                a_mul_b <<= wrapped_a * wrapped_b
+                a_rmul_b = pyrtl.wire.WireVector(name='a_rmul_b', bitwidth=8)
+                a_rmul_b <<= wrapped_a.val * wrapped_b
+                a_lt_b = pyrtl.wire.WireVector(name='a_lt_b', bitwidth=1)
+                a_lt_b <<= wrapped_a < wrapped_b
+                a_le_b = pyrtl.wire.WireVector(name='a_le_b', bitwidth=1)
+                a_le_b <<= wrapped_a <= wrapped_b
+                a_eq_b = pyrtl.wire.WireVector(name='a_eq_b', bitwidth=1)
+                a_eq_b <<= wrapped_a == wrapped_b
+                a_ne_b = pyrtl.wire.WireVector(name='a_ne_b', bitwidth=1)
+                a_ne_b <<= wrapped_a != wrapped_b
+                a_gt_b = pyrtl.wire.WireVector(name='a_gt_b', bitwidth=1)
+                a_gt_b <<= wrapped_a > wrapped_b
+                a_ge_b = pyrtl.wire.WireVector(name='a_ge_b', bitwidth=1)
+                a_ge_b <<= wrapped_a >= wrapped_b
+                a_invert = pyrtl.wire.WireVector(name='a_invert', bitwidth=4)
+                a_invert <<= ~wrapped_a
+                a_high = pyrtl.wire.WireVector(name='a_high', bitwidth=2)
+                a_high <<= wrapped_a[2:4]
+                a_low = pyrtl.wire.WireVector(name='a_low', bitwidth=2)
+                a_low <<= wrapped_a[0:2]
+
+                x = pyrtl.WireVector(name='x', bitwidth=4)
+                wrapped_x = pyrtl.wire.WrappedWireVector(x)
+                wrapped_x <<= a_val
+                self.assertEqual(type(wrapped_x), pyrtl.wire.WrappedWireVector)
+
+                sim = pyrtl.Simulation()
+                sim.step(provided_inputs={})
+                self.assertEqual(sim.inspect('a_and_b'), a.val & b.val)
+                self.assertEqual(sim.inspect('a_rand_b'), a.val & b.val)
+                self.assertEqual(sim.inspect('a_or_b'), a.val | b.val)
+                self.assertEqual(sim.inspect('a_ror_b'), a.val | b.val)
+                self.assertEqual(sim.inspect('a_xor_b'), a.val ^ b.val)
+                self.assertEqual(sim.inspect('a_rxor_b'), a.val ^ b.val)
+                self.assertEqual(sim.inspect('a_add_b'), a.val + b.val)
+                self.assertEqual(sim.inspect('a_radd_b'), a.val + b.val)
+                # Mask with 0xF to convert from signed to unsigned value.
+                self.assertEqual(sim.inspect('a_sub_b'), (a.val - b.val) & 0xF)
+                self.assertEqual(sim.inspect('a_rsub_b'), (a.val - b.val) & 0xF)
+                self.assertEqual(sim.inspect('a_mul_b'), a.val * b.val)
+                self.assertEqual(sim.inspect('a_rmul_b'), a.val * b.val)
+                self.assertEqual(sim.inspect('a_lt_b'), a.val < b.val)
+                self.assertEqual(sim.inspect('a_le_b'), a.val <= b.val)
+                self.assertEqual(sim.inspect('a_eq_b'), a.val == b.val)
+                self.assertEqual(sim.inspect('a_ne_b'), a.val != b.val)
+                self.assertEqual(sim.inspect('a_gt_b'), a.val > b.val)
+                self.assertEqual(sim.inspect('a_ge_b'), a.val >= b.val)
+                # Mask with 0xF to convert from signed to unsigned value.
+                self.assertEqual(sim.inspect('a_invert'), ~a.val & 0xF)
+                self.assertEqual(sim.inspect('a_high'), a.val >> 2)
+                self.assertEqual(sim.inspect('a_low'), a.val & 0x3)
+
+                self.assertEqual(sim.inspect('x'), a.val)
+
+    def test_conditional_assignment(self):
+        # Check forwarding for __ior__, __enter__, __exit__.
+        select = pyrtl.Input(name='select', bitwidth=1)
+        wrapped_select = pyrtl.wire.WrappedWireVector(select)
+        x = pyrtl.WireVector(name='x', bitwidth=4)
+        wrapped_x = pyrtl.wire.WrappedWireVector(x)
+        with pyrtl.conditional_assignment:
+            with wrapped_select:
+                wrapped_x |= 0xA
+            with ~wrapped_select:
+                wrapped_x |= 0xB
+        self.assertEqual(type(wrapped_x), pyrtl.wire.WrappedWireVector)
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={select: True})
+        self.assertEqual(sim.inspect('x'), 0xA)
+        sim.step(provided_inputs={select: False})
+        self.assertEqual(sim.inspect('x'), 0xB)
+
+    def test_exceptions(self):
+        # Check forwarding for special methods that throw exceptions.
+        a = pyrtl.Const(bitwidth=4, val=0xA)
+        wrapped_a = pyrtl.wire.WrappedWireVector(a)
+        b = pyrtl.Const(bitwidth=4, val=0xB)
+        wrapped_b = pyrtl.wire.WrappedWireVector(b)
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            bool(wrapped_a)
+        with self.assertRaises(pyrtl.PyrtlError):
+            wrapped_a &= wrapped_b
+        with self.assertRaises(pyrtl.PyrtlError):
+            wrapped_a ^= wrapped_b
+        with self.assertRaises(pyrtl.PyrtlError):
+            wrapped_a += wrapped_b
+        with self.assertRaises(pyrtl.PyrtlError):
+            wrapped_a -= wrapped_b
+        with self.assertRaises(pyrtl.PyrtlError):
+            wrapped_a *= wrapped_b
+        with self.assertRaises(pyrtl.PyrtlError):
+            wrapped_a << wrapped_b
+        with self.assertRaises(pyrtl.PyrtlError):
+            wrapped_a >> wrapped_b
+        with self.assertRaises(pyrtl.PyrtlError):
+            wrapped_a % wrapped_b
+
+
 if __name__ == "__main__":
     unittest.main()

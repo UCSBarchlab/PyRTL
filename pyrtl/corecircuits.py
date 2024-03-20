@@ -5,7 +5,7 @@ import math
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import LogicNet, working_block
-from .wire import Const, WireVector
+from .wire import Const, WireVector, WrappedWireVector
 from pyrtl.rtllib import barrel
 from pyrtl.rtllib import muxes
 from .conditional import otherwise
@@ -405,6 +405,8 @@ def as_wires(val, bitwidth=None, truncating=True, block=None):
         # convert to a memory read when the value is actually used
         if val.wire is None:
             val.wire = as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)
+        return val.wire
+    elif isinstance(val, WrappedWireVector):
         return val.wire
     elif not isinstance(val, WireVector):
         raise PyrtlError('error, expecting a wirevector, int, or verilog-style '

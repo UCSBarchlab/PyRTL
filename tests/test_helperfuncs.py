@@ -1277,5 +1277,431 @@ class TestLoopDetection(unittest.TestCase):
         self.assert_no_loop()
 
 
+@pyrtl.wire_struct
+class Byte:
+    # A Byte can be decomposed into high and low nibbles, or composed from
+    # high and low nibbles.
+    high: 4
+    low: 4
+
+
+@pyrtl.wire_struct
+class Pixel:
+    # A Pixel can be decomposed into red, green and blue bytes, or composed
+    # from red, green and blue bytes.
+    red: Byte
+    green: Byte
+    blue: Byte
+
+
+class TestWireStruct(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_concatenate(self):
+        '''Drive high and low, observe concatenated high+low.'''
+        # Concatenates to 'byte'.
+        byte = Byte(name='byte', high=0xA, low=0xB)
+        self.assertEqual(len(byte), 2)
+        self.assertEqual(byte.bitwidth, 8)
+        self.assertEqual(len(pyrtl.as_wires(byte)), 8)
+        self.assertEqual(len(byte.high), 4)
+        self.assertEqual(len(byte.low), 4)
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        # Because the Byte has the name 'byte', its components are
+        # automatically assigned the names 'byte.high' and 'byte.low'.
+        self.assertEqual(sim.inspect('byte'), 0xAB)
+        self.assertEqual(sim.inspect('byte.high'), 0xA)
+        self.assertEqual(sim.inspect('byte.low'), 0xB)
+
+    def test_slice(self):
+        '''Drive concatenated high+low, observe high and low.'''
+        # Slices to 'byte.high' and 'byte.low'.
+        byte = Byte(name='byte', Byte=0xCD)
+
+        # Constants are sliced immediately.
+        self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Const))
+        self.assertEqual(byte.val, 0xCD)
+        self.assertTrue(isinstance(byte.high, pyrtl.Const))
+        self.assertEqual(byte.high.val, 0xC)
+        self.assertTrue(isinstance(byte.low, pyrtl.Const))
+        self.assertEqual(byte.low.val, 0xD)
+
+    def test_input_slice(self):
+        '''Given Input concatenated high+low, observe high and low.'''
+        byte = Byte(name='byte', concatenated_type=pyrtl.Input)
+
+        self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Input))
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={'byte': 0xAB})
+        self.assertEqual(sim.inspect('byte'), 0xAB)
+        self.assertEqual(sim.inspect('byte.high'), 0xA)
+        self.assertEqual(sim.inspect('byte.low'), 0xB)
+
+    def test_input_concatenate(self):
+        '''Given Input high and low, observe concatenated high+low.'''
+        byte = Byte(name='byte', component_type=pyrtl.Input)
+
+        self.assertTrue(isinstance(byte.high, pyrtl.Input))
+        self.assertTrue(isinstance(byte.low, pyrtl.Input))
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={'byte.low': 0xB, 'byte.high': 0xA})
+        self.assertEqual(sim.inspect('byte'), 0xAB)
+        self.assertEqual(sim.inspect('byte.high'), 0xA)
+        self.assertEqual(sim.inspect('byte.low'), 0xB)
+
+    def test_output_slice(self):
+        '''Drive concatenated high+low, observe high and low as Outputs.'''
+        byte = Byte(name='byte', component_type=pyrtl.Output, Byte=0xCD)
+
+        self.assertTrue(isinstance(byte.high, pyrtl.Output))
+        self.assertTrue(isinstance(byte.low, pyrtl.Output))
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('byte'), 0xCD)
+        self.assertEqual(sim.inspect('byte.high'), 0xC)
+        self.assertEqual(sim.inspect('byte.low'), 0xD)
+
+    def test_output_concatenate(self):
+        '''Drive high and low, observe concatenated high+low as Output.'''
+        byte = Byte(name='byte', concatenated_type=pyrtl.Output,
+                    high=0xA, low=0xB)
+
+        self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Output))
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('byte'), 0xAB)
+        self.assertEqual(sim.inspect('byte.high'), 0xA)
+        self.assertEqual(sim.inspect('byte.low'), 0xB)
+
+    def test_register_slice(self):
+        '''Given Register concatenated high+low, observe high and low.'''
+        byte = Byte(name='byte', concatenated_type=pyrtl.Register)
+        next_value = pyrtl.Input(name='next_value', bitwidth=8)
+        byte.next <<= next_value
+
+        self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Register))
+
+        sim = pyrtl.Simulation()
+        # On the first cycle, set the register's value to 0xAB, but it will
+        # take one cycle for that value to propagate to the register's outputs.
+        sim.step(provided_inputs={'next_value': 0xAB})
+        self.assertEqual(sim.inspect('byte'), 0x0)
+        self.assertEqual(sim.inspect('byte.high'), 0x0)
+        self.assertEqual(sim.inspect('byte.low'), 0x0)
+
+        # On the second cycle, the register's output is visible.
+        sim.step(provided_inputs={'next_value': 0x00})
+        self.assertEqual(sim.inspect('byte'), 0xAB)
+        self.assertEqual(sim.inspect('byte.high'), 0xA)
+        self.assertEqual(sim.inspect('byte.low'), 0xB)
+
+    def test_anonymous_concatenate(self):
+        '''Drive high and low, observe concatenated high+low, without names.'''
+        byte = Byte(low=0xB, high=0xA)
+
+        out = pyrtl.WireVector(bitwidth=8, name='out')
+        out <<= byte
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('out'), 0xAB)
+
+        # The other wires are not named, so 'out' should be the only traced
+        # wire.
+        self.assertEqual(list(sim.tracer.trace.keys()), ['out'])
+
+    def test_anonymous_slice(self):
+        '''Drive concatenated high+low, observe high and low, without names.'''
+        byte = Byte(Byte=0xCD)
+
+        low = pyrtl.WireVector(bitwidth=4, name='l')
+        low <<= byte.low
+        high = pyrtl.WireVector(bitwidth=4, name='h')
+        high <<= byte.high
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('h'), 0xC)
+        self.assertEqual(sim.inspect('l'), 0xD)
+
+        # The other wires are not named, so 'h' and 'l' should be the only
+        # traced wires.
+        self.assertEqual(list(sorted(sim.tracer.trace.keys())), ['h', 'l'])
+
+    def test_pixel_slice(self):
+        pixel = Pixel(name='pixel', Pixel=0xABCDEF)
+        self.assertEqual(len(pixel), 3)
+        self.assertEqual(pixel.bitwidth, 24)
+        self.assertEqual(len(pyrtl.as_wires(pixel)), 24)
+
+        # Constants are sliced immediately.
+        self.assertTrue(isinstance(pyrtl.as_wires(pixel), pyrtl.Const))
+        self.assertEqual(pixel.val, 0xABCDEF)
+
+        self.assertTrue(isinstance(pyrtl.as_wires(pixel.red), pyrtl.Const))
+        self.assertEqual(pixel.red.val, 0xAB)
+        self.assertTrue(isinstance(pixel.red.high, pyrtl.Const))
+        self.assertEqual(pixel.red.high.val, 0xA)
+        self.assertTrue(isinstance(pixel.red.low, pyrtl.Const))
+        self.assertEqual(pixel.red.low.val, 0xB)
+
+        self.assertTrue(isinstance(pyrtl.as_wires(pixel.green), pyrtl.Const))
+        self.assertEqual(pixel.green.val, 0xCD)
+        self.assertTrue(isinstance(pixel.green.high, pyrtl.Const))
+        self.assertEqual(pixel.green.high.val, 0xC)
+        self.assertTrue(isinstance(pixel.green.low, pyrtl.Const))
+        self.assertEqual(pixel.green.low.val, 0xD)
+
+        self.assertTrue(isinstance(pyrtl.as_wires(pixel.blue), pyrtl.Const))
+        self.assertEqual(pixel.blue.val, 0xEF)
+        self.assertTrue(isinstance(pixel.blue.high, pyrtl.Const))
+        self.assertEqual(pixel.blue.high.val, 0xE)
+        self.assertTrue(isinstance(pixel.blue.low, pyrtl.Const))
+        self.assertEqual(pixel.blue.low.val, 0xF)
+
+    def test_pixel_concatenate(self):
+        pixel = Pixel(name='pixel',
+                      red=Byte(name='foo', high=0xA, low=0xB),
+                      green=0xCD,
+                      blue=0xEF)
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('pixel'), 0xABCDEF)
+        self.assertEqual(sim.inspect('pixel.red'), 0xAB)
+        self.assertEqual(sim.inspect('pixel.red.high'), 0xA)
+        self.assertEqual(sim.inspect('pixel.red.low'), 0xB)
+        self.assertEqual(sim.inspect('pixel.green'), 0xCD)
+        self.assertEqual(sim.inspect('pixel.green.high'), 0xC)
+        self.assertEqual(sim.inspect('pixel.green.low'), 0xD)
+        self.assertEqual(sim.inspect('pixel.blue'), 0xEF)
+        self.assertEqual(sim.inspect('pixel.blue.high'), 0xE)
+        self.assertEqual(sim.inspect('pixel.blue.low'), 0xF)
+
+    def test_anonymous_pixel_slice(self):
+        pixel = Pixel(Pixel=0xABCDEF)
+        rh = pyrtl.WireVector(bitwidth=4, name='rh')
+        rh <<= pixel.red.high
+        rl = pyrtl.WireVector(bitwidth=4, name='rl')
+        rl <<= pixel.red.low
+        gh = pyrtl.WireVector(bitwidth=4, name='gh')
+        gh <<= pixel.green.high
+        gl = pyrtl.WireVector(bitwidth=4, name='gl')
+        gl <<= pixel.green.low
+        bh = pyrtl.WireVector(bitwidth=4, name='bh')
+        bh <<= pixel.blue.high
+        bl = pyrtl.WireVector(bitwidth=4, name='bl')
+        bl <<= pixel.blue.low
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('rh'), 0xA)
+        self.assertEqual(sim.inspect('rl'), 0xB)
+        self.assertEqual(sim.inspect('gh'), 0xC)
+        self.assertEqual(sim.inspect('gl'), 0xD)
+        self.assertEqual(sim.inspect('bh'), 0xE)
+        self.assertEqual(sim.inspect('bl'), 0xF)
+
+        self.assertEqual(list(sorted(sim.tracer.trace.keys())),
+                         ['bh', 'bl', 'gh', 'gl', 'rh', 'rl'])
+
+    def test_anonymous_pixel_concatenate(self):
+        pixel = Pixel(red=Byte(high=0xA, low=0xB),
+                      green=0xCD,
+                      blue=0xEF)
+        out = pyrtl.WireVector(bitwidth=24, name='out')
+        out <<= pixel
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('out'), 0xABCDEF)
+
+        # The other wires are not named, so 'out' should be the only traced
+        # wire.
+        self.assertEqual(list(sim.tracer.trace.keys()), ['out'])
+
+
+# BitPair is an array of two single wires.
+BitPair = pyrtl.wire_matrix(component_schema=1, size=2)
+
+
+# Word is an array of two Bytes. This checks that a @wire_struct (Byte) can be a
+# component of a wire_matrix (Word).
+Word = pyrtl.wire_matrix(component_schema=Byte, size=2)
+
+
+# DWord is an array of two Words, or effectively a 2x2 array of Bytes. This
+# check that a wire_matrix (Word) can be a component of a wire_matrix (DWord).
+DWord = pyrtl.wire_matrix(component_schema=Word, size=2)
+
+
+# CachedData is valid bit paired with some data. This checks that a wire_matrix
+# (Word) can be a component of a @wire_struct (CachedData).
+@pyrtl.wire_struct
+class CachedData:
+    valid: 1
+    data: Word
+
+
+class TestWireMatrix(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_wire_matrix_slice(self):
+        bitpair = BitPair(name='bitpair', values=[2])
+        self.assertEqual(len(bitpair), 2)
+        self.assertEqual(bitpair.bitwidth, 2)
+        self.assertEqual(len(pyrtl.as_wires(bitpair)), 2)
+        self.assertEqual(len(bitpair[0]), 1)
+        self.assertEqual(len(bitpair[1]), 1)
+
+        # Constants are sliced immediately.
+        self.assertEqual(bitpair.val, 2)
+        self.assertEqual(bitpair[0].val, 1)
+        self.assertEqual(bitpair[1].val, 0)
+
+    def test_wire_matrix_concatenate(self):
+        bitpair = BitPair(name='bitpair', values=[1, 0])
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('bitpair'), 2)
+        self.assertEqual(sim.inspect('bitpair[0]'), 1)
+        self.assertEqual(sim.inspect('bitpair[1]'), 0)
+
+    def test_wire_matrix_word_slice(self):
+        word = Word(name='word', values=[0xABCD])
+        self.assertEqual(len(word), 2)
+        self.assertEqual(word.bitwidth, 16)
+        self.assertEqual(len(pyrtl.as_wires(word)), 16)
+
+        # Constants are sliced immediately.
+        self.assertEqual(word.val, 0xABCD)
+        self.assertEqual(word[0].val, 0xAB)
+        self.assertEqual(word[0].high.val, 0xA)
+        self.assertEqual(word[0].low.val, 0xB)
+        self.assertEqual(word[1].val, 0xCD)
+        self.assertEqual(word[1].high.val, 0xC)
+        self.assertEqual(word[1].low.val, 0xD)
+
+    def test_wire_matrix_word_concatenate(self):
+        word = Word(name='word', values=[0xAB, 0xCD])
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('word'), 0xABCD)
+        self.assertEqual(sim.inspect('word[0]'), 0xAB)
+        self.assertEqual(sim.inspect('word[0].high'), 0xA)
+        self.assertEqual(sim.inspect('word[0].low'), 0xB)
+        self.assertEqual(sim.inspect('word[1]'), 0xCD)
+        self.assertEqual(sim.inspect('word[1].high'), 0xC)
+        self.assertEqual(sim.inspect('word[1].low'), 0xD)
+
+    def test_anonymous_wire_matrix_slice(self):
+        word = Word(values=[0xABCD])
+        w0 = pyrtl.WireVector(bitwidth=8, name='w0')
+        w0 <<= word[0]
+        w0h = pyrtl.WireVector(bitwidth=4, name='w0h')
+        w0h <<= word[0].high
+        w1 = pyrtl.WireVector(bitwidth=8, name='w1')
+        w1 <<= word[1]
+        w1l = pyrtl.WireVector(bitwidth=4, name='w1l')
+        w1l <<= word[1].low
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('w0'), 0xAB)
+        self.assertEqual(sim.inspect('w0h'), 0xA)
+        self.assertEqual(sim.inspect('w1'), 0xCD)
+        self.assertEqual(sim.inspect('w1l'), 0xD)
+
+        self.assertEqual(list(sorted(sim.tracer.trace.keys())),
+                         ['w0', 'w0h', 'w1', 'w1l'])
+
+    def test_anonymous_wire_matrix_concatenate(self):
+        word = Word(values=[0xAB, Byte(high=0xC, low=0xD)])
+        w = pyrtl.WireVector(bitwidth=16, name='w')
+        w <<= word
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('w'), 0xABCD)
+
+        self.assertEqual(list(sorted(sim.tracer.trace.keys())), ['w'])
+
+    def test_wire_matrix_input(self):
+        word = Word(name='word', component_type=pyrtl.Input)
+
+        self.assertTrue(isinstance(pyrtl.as_wires(word[0]), pyrtl.Input))
+        self.assertTrue(isinstance(pyrtl.as_wires(word[1]), pyrtl.Input))
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={'word[0]': 0xAB, 'word[1]': 0xCD})
+        self.assertEqual(sim.inspect('word'), 0xABCD)
+        self.assertEqual(sim.inspect('word[0]'), 0xAB)
+        self.assertEqual(sim.inspect('word[0].high'), 0xA)
+        self.assertEqual(sim.inspect('word[0].low'), 0xB)
+        self.assertEqual(sim.inspect('word[1]'), 0xCD)
+        self.assertEqual(sim.inspect('word[1].high'), 0xC)
+        self.assertEqual(sim.inspect('word[1].low'), 0xD)
+
+    def test_wire_matrix_register(self):
+        word = Word(name='word', concatenated_type=pyrtl.Register)
+        word.next <<= 0xABCD
+
+        self.assertTrue(isinstance(pyrtl.as_wires(word), pyrtl.Register))
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('word'), 0)
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('word'), 0xABCD)
+        self.assertEqual(sim.inspect('word[0]'), 0xAB)
+        self.assertEqual(sim.inspect('word[1]'), 0xCD)
+
+    def test_wire_matrix_composition_dword(self):
+        dword = DWord(name='dword', values=[0x89ABCDEF])
+
+        # Constants are sliced immediately.
+        self.assertEqual(dword.val, 0x89ABCDEF)
+        self.assertEqual(dword[0].val, 0x89AB)
+        self.assertEqual(dword[0][0].val, 0x89)
+        self.assertEqual(dword[0][0].high.val, 0x8)
+        self.assertEqual(dword[0][0].low.val, 0x9)
+        self.assertEqual(dword[0][1].val, 0xAB)
+        self.assertEqual(dword[0][1].high.val, 0xA)
+        self.assertEqual(dword[0][1].low.val, 0xB)
+        self.assertEqual(dword[1].val, 0xCDEF)
+        self.assertEqual(dword[1][0].val, 0xCD)
+        self.assertEqual(dword[1][0].high.val, 0xC)
+        self.assertEqual(dword[1][0].low.val, 0xD)
+        self.assertEqual(dword[1][1].val, 0xEF)
+        self.assertEqual(dword[1][1].high.val, 0xE)
+        self.assertEqual(dword[1][1].low.val, 0xF)
+
+    def test_wire_matrix_composition_cached_data(self):
+        cached_data = CachedData(name='cached_data', valid=True, data=0xABCD)
+        self.assertTrue(isinstance(cached_data, CachedData))
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={})
+        self.assertEqual(sim.inspect('cached_data'), 0x1ABCD)
+        self.assertEqual(sim.inspect('cached_data.valid'), 1)
+        self.assertEqual(sim.inspect('cached_data.data'), 0xABCD)
+        self.assertEqual(sim.inspect('cached_data.data[0]'), 0xAB)
+        self.assertEqual(sim.inspect('cached_data.data[0].high'), 0xA)
+        self.assertEqual(sim.inspect('cached_data.data[0].low'), 0xB)
+        self.assertEqual(sim.inspect('cached_data.data[1]'), 0xCD)
+        self.assertEqual(sim.inspect('cached_data.data[1].high'), 0xC)
+        self.assertEqual(sim.inspect('cached_data.data[1].low'), 0xD)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,16 +1,18 @@
 """ Helper functions that make constructing hardware easier.
 """
 
+from __future__ import annotations
+
 import collections
 import math
 import numbers
 import sys
 from functools import reduce
 
-from .core import working_block, _NameIndexer, _get_debug_mode
+from .core import working_block, _NameIndexer, _get_debug_mode, Block
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .wire import WireVector, Input, Output, Const, Register
-from .corecircuits import as_wires, rtl_all, rtl_any, concat_list
+from .wire import WireVector, Input, Output, Const, Register, WrappedWireVector
+from .corecircuits import as_wires, rtl_all, rtl_any, concat, concat_list
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -961,3 +963,637 @@ class _NetCount(object):
         return less_nets
 
     shrinking = shrank
+
+
+# _ComponentMeta holds the component's name, bitwidth, and type. If the
+# _ComponentMeta's type is None, then the default component_type should be used
+# instead.
+_ComponentMeta = collections.namedtuple('_ComponentMeta',
+                                        ['name', 'bitwidth', 'type'])
+
+
+def _make_component(component_meta: _ComponentMeta, block: Block, name: str,
+                    component_type, component_value):
+    '''Determine the component's type, instantiate it, and set its value.'''
+    # Determine the component's actual type.
+    #
+    # If the _ComponentMeta specifies a type, then the component is a
+    # wire_struct or a wire_matrix. The _ComponentMeta's type must be used as
+    # the component's primary type, and the default_component_type becomes the
+    # component's concatenated_type.
+    #
+    # If the _ComponentMeta does not specify a type, the component uses the
+    # default component_type.
+    if component_meta.type is None:
+        actual_component_type = component_type
+    else:
+        actual_component_type = component_meta.type
+
+    component_name = ''
+    if len(name) > 0:
+        if isinstance(component_meta.name, str):
+            # wire_struct components are named with strings and printed with
+            # dots, like `struct.component`.
+            component_name = name + '.' + component_meta.name
+        else:
+            # wire_matrix components are numbered with integers and printed
+            # with brackets, like `matrix[0]`.
+            component_name = name + '[' + str(component_meta.name) + ']'
+
+    # The logic below always creates a new wire_struct, wire_matrix, or
+    # WireVector for each component. If the component_value already has the
+    # appropriate type and name, we could use the component_value directly and
+    # we don't need a new struct/matrix/Vector. Correctly detecting these
+    # opportunities is complicated, so we keep things simple for now.
+    #
+    # Components are always initialized with one concatenated component_value,
+    # which provides values for all its wires. This implies that component
+    # wire_structs and wire_matricies always call _split().
+    if hasattr(actual_component_type, '_is_wire_struct'):
+        # Make a wire_struct component. component_value may be None.
+        component_kwargs = {
+            actual_component_type._class_name: component_value
+        }
+        component = actual_component_type(
+            name=component_name,
+            block=block,
+            concatenated_type=component_type,
+            **component_kwargs)
+    elif hasattr(actual_component_type, '_is_wire_matrix'):
+        # Make a wire_matrix component. component_value may be None.
+        component = actual_component_type(
+            name=component_name,
+            block=block,
+            concatenated_type=component_type,
+            values=[component_value])
+    elif (isinstance(component_value, int)
+          and actual_component_type is WireVector):
+        # Special case: simplify the component type to Const.
+        component = Const(
+            bitwidth=component_meta.bitwidth, name=component_name,
+            block=block, val=component_value)
+    else:
+        # Make a WireVector component.
+        component = actual_component_type(
+            bitwidth=component_meta.bitwidth,
+            name=component_name,
+            block=block)
+        if component_value is not None:
+            component <<= component_value
+
+    return component
+
+
+def _bitslice(value: int, start: int, end: int) -> int:
+    '''Slice an integer value bitwise, from start to end.'''
+    mask = (1 << (end - start)) - 1
+    return (value >> start) & mask
+
+
+def _slice(block: Block,
+           schema: list[_ComponentMeta],
+           bitwidth: int,
+           component_type: type,
+           name: str,
+           concatenated,
+           components,
+           concatenated_value):
+    '''Slice ``concatenated`` into components.
+
+    ``concatenated_value`` is the driver for ``concatenated``. Some
+    optimizations are possible by inspecting ``concatenated_value``, for
+    example we immediately slice Consts rather than generating slicing logic.
+
+    '''
+    if concatenated_value is not None and not isinstance(concatenated, Const):
+        concatenated <<= concatenated_value
+
+    end_index = bitwidth
+    for component_meta in schema:
+        if isinstance(concatenated_value, int):
+            # Special case: immediately slice Const values.
+            component_value = _bitslice(concatenated_value,
+                                        end_index - component_meta.bitwidth,
+                                        end_index)
+        else:
+            component_value = concatenated[
+                end_index - component_meta.bitwidth:end_index]
+
+        end_index -= component_meta.bitwidth
+
+        component = _make_component(component_meta=component_meta, block=block,
+                                    name=name, component_type=component_type,
+                                    component_value=component_value)
+
+        components[component_meta.name] = component
+
+
+def _concatenate(block: Block,
+                 schema: list[_ComponentMeta],
+                 component_type: type,
+                 name: str,
+                 concatenated,
+                 components,
+                 component_map):
+    '''Concatenate components from ``component_map`` to ``concatenated``.'''
+    all_components = []
+    for component_meta in schema:
+        component_value = component_map[component_meta.name]
+
+        component = _make_component(component_meta=component_meta, block=block,
+                                    name=name, component_type=component_type,
+                                    component_value=component_value)
+
+        components[component_meta.name] = component
+        all_components.append(component)
+
+    concatenated <<= concat(*all_components)
+
+
+def wire_struct(wire_struct_spec):
+    '''Decorator that assigns names to ``WireVector`` slices.
+
+    ``@wire_struct`` assigns names to *non-overlapping* ``WireVector`` slices.
+    Suppose we have an 8-bit wide ``WireVector`` called ``byte``. We can refer
+    to all 8 bits with the name ``byte``, but ``@wire_struct`` lets us refer to
+    slices by name, for example we could name the high 4 bits ``byte.high`` and
+    the low 4 bits ``byte.low``. Without ``@wire_struct``, we would refer to
+    these slices as ``byte[4:8]`` and ``byte[0:4]``, which are prone to
+    off-by-one errors and harder to read.
+
+    The example ``Byte`` ``@wire_struct`` can be defined as::
+
+        @wire_struct
+        class Byte:
+            high: 4  # 'high' is name for the 4 most significant bits.
+            low: 4   # 'low' is name for the 4 least significant bits.
+
+    ------------
+    Construction
+    ------------
+
+    Once a ``@wire_struct`` class is defined, it can be instantiated by
+    providing drivers for all of its wires. This can be done in two ways:
+
+    1. Provide a driver for *each* component wire, for example::
+
+            byte = Byte(high=0xA, low=0xB)
+
+       Note how the component names (``high``, ``low``) are used as keyword
+       args for the constructor. Drivers must be provided for *all* components.
+
+    2. Provide a driver for the entire ``@wire_struct``, for example::
+
+            byte = Byte(Byte=0xAB)
+
+       Note how the class name (``Byte``) is used as a keyword arg for the
+       constructor.
+
+    ----------------
+    Accessing Slices
+    ----------------
+
+    After instantiating a ``@wire_struct``, the instance functions as a
+    ``WireVector`` containing all the wires. For example, ``byte`` functions as
+    a ``WireVector`` with bitwidth 8::
+
+        byte = Byte(Byte=0xAB)
+        print(byte.bitwidth)  # Prints 8.
+
+    The named slice can be accessed through the ``.`` operator
+    (``__getattr__``), for example ``byte.high`` and ``byte.low``, which both
+    function as ``WireVector`` with bitwidth 4::
+
+        byte = Byte(Byte=0xAB)
+        print(byte.high.bitwidth)  # Prints 4.
+        print(byte.low.bitwidth)  # Prints 4.
+
+    Both the instance and the slices are first-class ``WireVector``, so they
+    can be manipulated with all the usual PyRTL operators.
+
+    .. NOTE::
+        ``len(byte)`` returns the number of components in the ``@wire_struct``
+        (2), not the total bitwidth (8 == 4 + 4). To get the total bitwidth,
+        use ``byte.bitwidth`` or ``len(as_wires(byte))``.
+
+    ------
+    Naming
+    ------
+
+    A ``@wire_struct`` can be assigned a name in the usual way::
+
+        byte = Byte(name='b', high=0xC, low=0xD)
+        byte = Byte(name='b', Byte=0xCD)
+
+    When a ``@wire_struct`` is assigned a name (``b``), its components will be
+    assigned dotted names (``b.high``, ``b.low``)::
+
+        print(byte.high.name)  # Prints 'b.high'.
+        print(byte.low.name)  # Prints 'b.low'.
+
+    .. WARNING::
+        All ``@wire_struct`` names are only set during construction. You can
+        later rename a ``@wire_struct`` or its components, but those changes
+        are local, and will not propagate to other ``@wire_struct`` components.
+        Renaming a ``@wire_struct`` or its components is strongly discouraged.
+
+    -----------
+    Composition
+    -----------
+
+    ``@wire_struct`` can be composed with itself, and with ``wire_matrix``. For
+    example, we can define a ``Pixel`` that contains three ``Byte``::
+
+        @wire_struct
+        class Pixel:
+            red: Byte
+            green: Byte
+            blue: Byte
+
+    Drivers must be specified for all components, but they can be specified at
+    any level. All these examples construct an equivalent ``@wire_struct``::
+
+        pixel = Pixel(Pixel=0xABCDEF)
+        pixel = Pixel(red=0xAB, green=0xCD, blue=0xEF)
+        pixel = Pixel(red=Byte(high=0xA, low=0xB), green=0xCD, blue=0xEF)
+        pixel = Pixel(red=Byte(high=0xA, low=0xB),
+                      green=Byte(high=0xC, low=0xD),
+                      blue=0xEF)
+
+    Hierarchical ``@wire_struct`` components are accessed by composing ``.``
+    operators::
+
+        pixel
+        pixel.red
+        pixel.red.high
+        pixel.red.low
+        pixel.green
+        pixel.green.high
+        pixel.green.low
+        pixel.blue
+        pixel.blue.high
+        pixel.blue.low
+
+    ``@wire_struct`` can be composed with ``wire_matrix``::
+
+        Word = wire_matrix(component_schema=8, size=4)
+
+        @wire_struct
+        class CacheLine:
+            address: Word
+            data: Word
+            valid: 1
+
+        cache_line = CacheLine(address=0x01234567, data=0x89ABCDEF, valid=1)
+
+    Leaf-level components can be accessed by combining the ``.`` and ``[]``
+    operators, for example ``cache_line.address[3]``.
+
+    -----
+    Types
+    -----
+
+    You can change the type of a ``@wire_struct``'s components to a
+    ``WireVector`` subclass like :py:class:`Input` or :py:class:`Output` with
+    the ``component_type`` constructor argument::
+
+        # Generates Outputs named ``output_byte.low`` and ``output_byte.high``.
+        output_byte = Byte(name='output_byte', component_type=pyrtl.Output,
+                           Byte=0xCD)
+
+    You can also change the type of the ``@wire_struct`` itself with the
+    ``concatenated_type`` cnstructor argument::
+
+        # Generates an Input named ``input_byte``.
+        input_byte = Byte(name='input_byte', concatenated_type=pyrtl.Input)
+
+    .. NOTE::
+        No values are specified for ``input_byte`` because its value is not
+        known until simulation time.
+
+    '''
+    # Convert the decorated class' annotations (dict of attr_name: attr_value)
+    # to a list of _ComponentMetas.
+    #
+    # dict iteration order is guaranteed to be insertion order in Python 3.7+.
+    schema = []
+    for component_name, component_bitwidth in (
+            wire_struct_spec.__annotations__.items()):
+        if isinstance(component_bitwidth, int):
+            # An ordinary component ("foo: 4") that should use the default
+            # component_type.
+            schema.append(_ComponentMeta(
+                name=component_name, bitwidth=component_bitwidth,
+                type=None))
+        else:
+            # A nested component ("bar: Byte") that must use the nested
+            # component's type.
+            schema.append(_ComponentMeta(
+                name=component_name, bitwidth=component_bitwidth._bitwidth,
+                type=component_bitwidth))
+
+    total_bitwidth = sum([component.bitwidth for component in schema])
+
+    # Name of the decorated class.
+    class_name = wire_struct_spec.__name__
+
+    class _WireStruct(WrappedWireVector):
+        '''``wire_struct`` implementation: Concatenate or slice ``WireVector``.
+
+        ``wire_struct`` works by either concatenating component ``WireVector``
+        to create the ``wire_struct``'s full value, *or* slicing a
+        ``wire_struct``s value to create component ``WireVectors``. A
+        ``wire_struct`` can only concatenate or slice, not both. The decision
+        to concatenate or slice is made in __init__.
+
+        '''
+        _bitwidth = total_bitwidth
+        _class_name = class_name
+        _is_wire_struct = True
+
+        def __init__(self, name='', block=None,
+                     concatenated_type=WireVector, component_type=WireVector,
+                     **kwargs):
+            '''Concatenate or slice ``WireVector`` components.
+
+            :param str name: The name of the concatenated wire. Must be unique.
+                If none is provided, one will be autogenerated. If a name is
+                provided, components will be assigned names of the form
+                "{name}.{component_name}".
+            :param Block block: The block containing the concatenated and
+                component wires. Defaults to the working block.
+            :param type concatenated_type: Type for the concatenated
+                ``WireVector``.
+            :param type component_type: Type for each component.
+
+            The remaining keyword args specify values for all wires. If the
+            concatenated value is provided, its value must be provided with the
+            keyword arg matching the decorated class name. For example, if the
+            decorated class is::
+                @wire_struct
+                class Byte:
+                    high: 4  # high is the 4 most significant bits.
+                    low: 4   # low is the 4 least significant bits.
+
+            then the concatenated value must be provided like this::
+
+                byte = Byte(Byte=0xAB)
+
+            And if the component values are provided instead, their values are
+            set by keyword args matching the component names::
+
+                byte = Byte(low=0xA, high=0xB)
+
+            '''
+            # The concatenated WireVector contains all the _WireStruct's wires.
+            # WrappedWireVector (base class) will forward all attribute and
+            # method accesses on this _WireStruct to the concatenated
+            # WireVector.
+            if ((class_name in kwargs and isinstance(kwargs[class_name], int)
+                 and concatenated_type is WireVector)):
+                # Special case: simplify the concatenated type to Const.
+                concatenated = Const(
+                    bitwidth=self._bitwidth, name=name, block=block,
+                    val=kwargs[class_name])
+            else:
+                concatenated = concatenated_type(
+                    bitwidth=self._bitwidth, name=name, block=block)
+            super().__init__(wire=concatenated)
+
+            # self._components maps from component name to each component's
+            # WireVector.
+            components = {}
+            self.__dict__['_components'] = components
+
+            # Handle Input and Register special cases.
+            if concatenated_type is Input or concatenated_type is Register:
+                kwargs = {class_name: None}
+            elif component_type is Input or component_type is Register:
+                kwargs = {component_meta.name: None
+                          for component_meta in schema}
+
+            if class_name in kwargs:
+                # Concatenated value was provided. Slice it into components.
+                _slice(block=block, schema=schema, bitwidth=self._bitwidth,
+                       component_type=component_type, name=name,
+                       concatenated=concatenated, components=components,
+                       concatenated_value=kwargs[class_name])
+            else:
+                # Component values were provided; concatenate them.
+                _concatenate(block=block, schema=schema,
+                             component_type=component_type, name=name,
+                             concatenated=concatenated, components=components,
+                             component_map=kwargs)
+
+        def __getattr__(self, component_name: str):
+            '''Retrieve a component by name.
+
+            Components are concatenated to form the concatenated
+            ``WireVector``, or sliced from the concatenated ``WireVector``.
+
+            :param component_name: The name of the component wire.
+
+            '''
+            components = self.__dict__['_components']
+            if component_name in components:
+                return components[component_name]
+            return super().__getattr__(component_name)
+
+        def __len__(self):
+            components = self.__dict__['_components']
+            return len(components)
+
+    return _WireStruct
+
+
+def wire_matrix(component_schema, size: int):
+    '''Returns a class that assigns numbered indices to ``WireVector`` slices.
+
+    ``wire_matrix`` assigns numbered indices to *non-overlapping*
+    ``WireVector`` slices. ``wire_matrix`` is very similar to
+    :py:func:`wire_struct`, so read :py:func:`wire_struct`'s documentation
+    first.
+
+    An example 32-bit ``Word`` ``wire_matrix``, which represents a group of
+    four bytes, can be defined as::
+
+        Word = wire_matrix(component_schema=8, size=4)
+
+    .. NOTE::
+        ``wire_matrix`` returns a class, like ``namedtuple``.
+
+    ------------
+    Construction
+    ------------
+
+    Once a ``wire_matrix`` class is defined, it can be instantiated by
+    providing drivers for all of its wires. This can be done in two ways::
+
+        # Provide a driver for each component, most significant bits first.
+        word = Word(values=[0x89, 0xAB, 0xCD, 0xEF])
+
+        # Provide a driver for all components.
+        word = Word(values=[0x89ABCDEF])
+
+    .. NOTE::
+        When specifying drivers for each component, the most significant bits
+        are specified first.
+
+    After instantiating a ``wire_matrix``, regardless of how it was
+    constructed, the instance functions as a ``WireVector`` containing all the
+    wires, so ``word`` functions as a ``WireVector`` with bitwidth 32. The
+    named slice can be accessed with square brackets (``__getitem__``), for
+    example ``word[0]`` and ``word[3]``, which both function as ``WireVector``
+    with bitwidth 8. ``word[0]`` refers to the most significant byte, and
+    ``word[3]`` refers to the least significant byte. Both the instance and the
+    slices are first-class ``WireVector``, so they can be manipulated with all
+    the usual PyRTL operators.
+
+    ------
+    Naming
+    ------
+
+    A ``wire_matrix`` can be assigned a name in the usual way::
+
+        # The whole Word is named 'w', so the components will have names
+        # w[0], w[1], ...
+        word = Word(name='w', values=[0x89, 0xAB, 0xCD, 0xEF])
+        word = Word(name='w', values=[0x89ABCDEF])
+
+    -----------
+    Composition
+    -----------
+
+    ``wire_matrix`` can be composed with itself and ``@wire_struct``. For
+    example, we can define some multi-dimensional byte arrays::
+
+        Array1D = wire_matrix(component_schema=8, size=2)
+        Array2D = wire_matrix(component_schema=Array1D, size=2)
+
+    Drivers must be specified for all components, but they can be specified at
+    any level. All these examples construct an equivalent ``wire_matrix``::
+
+        array_2d = Array2D(values=[0x89AB, 0xCDEF])
+        array_2d = Array2D(values=[Array1D(values=[0x89, 0xAB]),
+                                   0xCDEF])
+        array_2d = Array2D(values=[Array1D(values=[0x89, 0xAB]),
+                                   Array1D(values=[0xCD, 0xEF])])
+
+    ----------------
+    Accessing Slices
+    ----------------
+
+    Hierarchical components are accessed by composing ``[]`` operators, for
+    example::
+
+        print(array_2d[0][0].bitwidth)  # Prints 8.
+        print(array_2d[0][1].bitwidth)  # Prints 8.
+
+    When ``wire_matrix`` is composed with ``@wire_struct``, components can be
+    accessed by combining the ``[]`` and ``.`` operators::
+
+        @wire_struct
+        class Byte:
+            high: 4
+            low: 4
+        Array1D = wire_matrix(component_schema=Byte, size=2)
+        array_1d = Array1D(values=[0xAB, 0xCD])
+
+        print(array_1d[0].high.bitwidth)  # Prints 4.
+
+    .. NOTE::
+        ``len(array_1d)`` returns the number of components in the
+        ``wire_matrix`` (2), not the total bitwidth (16 == 2 * 8). To get the
+        total bitwidth, use ``array_1d.bitwidth`` or
+        ``len(as_wires(array_1d))``.
+
+    -----
+    Types
+    -----
+
+    You can change the type of a ``wire_matrix``'s components with the
+    ``component_type`` constructor argument::
+
+        # Generates Outputs named ``output_word[0]``, ``output_word[1]``, ...
+        word = Word(name='output_word',
+                    component_type=pyrtl.Output,
+                    values=[0x89ABCDEF])
+
+    You can change the type of the ``wire_matrix`` itself with the
+    ``concatenated_type`` cnstructor argument::
+
+        # Generates an Input named ``input_word``.
+        word = Word(name='input_word', concatenated_type=pyrtl.Input)
+
+    .. NOTE::
+        No values are specified for ``input_word`` because its value is not
+        known until simulation time.
+
+    '''
+    # Determine each component's bitwidth.
+    if ((hasattr(component_schema, '_is_wire_struct')
+         or hasattr(component_schema, '_is_wire_matrix'))):
+        component_bitwidth = component_schema._bitwidth
+    else:
+        component_bitwidth = component_schema
+        component_schema = None
+
+    class _WireMatrix(WrappedWireVector):
+        _component_bitwidth = component_bitwidth
+        _component_schema = component_schema
+        _size = size
+
+        _bitwidth = component_bitwidth * size
+        _is_wire_matrix = True
+
+        def __init__(self, name: str = '', block: Block = None,
+                     concatenated_type=WireVector, component_type=WireVector,
+                     values: list = []):
+            # The concatenated WireVector contains all the _WireMatrix's wires.
+            # WrappedWireVector (base class) will forward all attribute and
+            # method accesses on this _WireMatrix to the concatenated
+            # WireVector.
+            if ((len(values) == 1 and isinstance(values[0], int)
+                 and concatenated_type is WireVector)):
+                # Special case: simplify the concatenated type to Const.
+                concatenated = Const(
+                    bitwidth=self._bitwidth, name=name, block=block,
+                    val=values[0])
+            else:
+                concatenated = concatenated_type(
+                    bitwidth=self._bitwidth, name=name, block=block)
+            super().__init__(wire=concatenated)
+
+            schema = []
+            for component_name in range(self._size):
+                schema.append(_ComponentMeta(
+                    name=component_name, bitwidth=self._component_bitwidth,
+                    type=component_schema))
+
+            # Handle Input and Register special cases.
+            if concatenated_type is Input or concatenated_type is Register:
+                values = [None]
+            elif component_type is Input or component_type is Register:
+                values = [None for _ in range(self._size)]
+
+            self._components = [None for i in range(len(schema))]
+            if len(values) == 1:
+                # Concatenated value was provided. Slice it into components.
+                _slice(block=block, schema=schema, bitwidth=self._bitwidth,
+                       component_type=component_type, name=name,
+                       concatenated=concatenated, components=self._components,
+                       concatenated_value=values[0])
+            else:
+                # Component values were provided; concatenate them.
+                _concatenate(block=block, schema=schema,
+                             component_type=component_type, name=name,
+                             concatenated=concatenated,
+                             components=self._components, component_map=values)
+
+        def __getitem__(self, key):
+            return self._components[key]
+
+        def __len__(self):
+            return len(self._components)
+
+    return _WireMatrix
