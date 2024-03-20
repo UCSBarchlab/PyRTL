@@ -13,6 +13,6 @@ html: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 requirements.txt: requirements.in FORCE
-	pip-compile requirements.in
+	pip-compile --upgrade requirements.in
 
 FORCE:
