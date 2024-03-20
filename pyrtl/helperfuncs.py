@@ -1373,6 +1373,13 @@ def wire_struct(wire_struct_spec):
                           for component_meta in schema}
 
             if class_name in kwargs:
+                # Check for unused kwargs.
+                for component_name in kwargs:
+                    if component_name != class_name:
+                        raise PyrtlError(
+                            'Do not pass additional kwargs to @wire_struct '
+                            f'when slicing. ("{class_name}" was passed so '
+                            f'don\'t pass "{component_name}")')
                 # Concatenated value was provided. Slice it into components.
                 _slice(block=block, schema=schema, bitwidth=self._bitwidth,
                        component_type=component_type, name=name,
@@ -1380,6 +1387,23 @@ def wire_struct(wire_struct_spec):
                        concatenated_value=kwargs[class_name])
             else:
                 # Component values were provided; concatenate them.
+                # Check that values were provided for all components.
+                expected_component_names = (
+                    [component_meta.name for component_meta in schema])
+                for expected_component_name in expected_component_names:
+                    if expected_component_name not in kwargs:
+                        raise PyrtlError(
+                            'You must provide kwargs for all @wire_struct '
+                            'components when concatenating (missing kwarg '
+                            f'"{expected_component_name}")')
+                # Check for unused kwargs.
+                for component_name in kwargs:
+                    if component_name not in expected_component_names:
+                        raise PyrtlError(
+                            'Do not pass additional kwargs to @wire_struct '
+                            'when concatenating (don\'t pass '
+                            f'"{component_name}")')
+
                 _concatenate(block=block, schema=schema,
                              component_type=component_type, name=name,
                              concatenated=concatenated, components=components,
@@ -1584,6 +1608,11 @@ def wire_matrix(component_schema, size: int):
                        concatenated=concatenated, components=self._components,
                        concatenated_value=values[0])
             else:
+                if len(values) != len(schema):
+                    raise PyrtlError(
+                        'wire_matrix constructor expects 1 value to slice, or '
+                        f'{len(schema)} values to concatenate (received '
+                        f'{len(values)} values)')
                 # Component values were provided; concatenate them.
                 _concatenate(block=block, schema=schema,
                              component_type=component_type, name=name,

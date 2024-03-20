@@ -1316,6 +1316,23 @@ class TestWireStruct(unittest.TestCase):
         self.assertEqual(sim.inspect('byte.high'), 0xA)
         self.assertEqual(sim.inspect('byte.low'), 0xB)
 
+    def test_exceptions(self):
+        # Slicing exceptions.
+        with self.assertRaises(pyrtl.PyrtlError):
+            bad_byte = Byte(Byte=0xAB, high=0xC)
+        with self.assertRaises(pyrtl.PyrtlError):
+            bad_byte = Byte(Byte=0xAB, foo=0xC)
+
+        # Concatenating exceptions.
+        with self.assertRaises(pyrtl.PyrtlError):
+            bad_byte = Byte()
+        with self.assertRaises(pyrtl.PyrtlError):
+            bad_byte = Byte(high=0xA)
+        with self.assertRaises(pyrtl.PyrtlError):
+            bad_byte = Byte(low=0xB)
+        with self.assertRaises(pyrtl.PyrtlError):
+            bad_byte = Byte(high=0xA, low=0xB, foo=0xC)
+
     def test_slice(self):
         '''Drive concatenated high+low, observe high and low.'''
         # Slices to 'byte.high' and 'byte.low'.
@@ -1575,6 +1592,14 @@ class TestWireMatrix(unittest.TestCase):
         self.assertEqual(sim.inspect('bitpair'), 2)
         self.assertEqual(sim.inspect('bitpair[0]'), 1)
         self.assertEqual(sim.inspect('bitpair[1]'), 0)
+
+    def test_wire_matrix_exceptions(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            bad_bitpair = BitPair()
+        with self.assertRaises(pyrtl.PyrtlError):
+            bad_bitpair = BitPair(values=[])
+        with self.assertRaises(pyrtl.PyrtlError):
+            bad_bitpair = BitPair(values=[99, 100, 101])
 
     def test_wire_matrix_word_slice(self):
         word = Word(name='word', values=[0xABCD])
