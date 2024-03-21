@@ -36,6 +36,7 @@ Wave Renderer
     :members:
     :special-members: __init__
     :exclude-members: render_ruler_segment, render_val, val_to_str
+.. autofunction:: pyrtl.simulation.enum_name
 .. autoclass:: pyrtl.simulation.RendererConstants
 .. autoclass:: pyrtl.simulation.Utf8RendererConstants
     :show-inheritance:

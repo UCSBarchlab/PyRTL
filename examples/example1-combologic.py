@@ -89,7 +89,7 @@ for cycle in range(15):
 # Now all we need to do is print the trace results to the screen. Here we use
 # "render_trace" with some size information.
 print('--- One Bit Adder Simulation ---')
-sim_trace.render_trace(symbol_len=5, segment_size=5)
+sim_trace.render_trace(symbol_len=2)
 
 a_value = sim.inspect(a)
 print("The latest value of 'a' was: " + str(a_value))

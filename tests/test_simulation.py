@@ -1,3 +1,4 @@
+import enum
 import io
 import unittest
 
@@ -171,12 +172,7 @@ class RenderTraceBase(unittest.TestCase):
             "c _____,-----------._____,-----\n"
         )
 
-        # The oct() builtin prints leading '0o' in python3 but not in python2,
-        # so we define our own.
-        def my_oct(n):
-            return '0o{0:o}'.format(n)
-
-        self.check_rendered_trace(expected, repr_func=my_oct, symbol_len=None)
+        self.check_rendered_trace(expected, repr_func=oct)
 
     def test_bin_trace(self):
         expected = (
@@ -189,12 +185,7 @@ class RenderTraceBase(unittest.TestCase):
             "c _________,-------------------._________,---------\n"
         )
 
-        # The bin() builtin prints leading '0b' in python3 but not in python2,
-        # so we define our own.
-        def my_bin(n):
-            return '0b{0:b}'.format(n)
-
-        self.check_rendered_trace(expected, repr_func=my_bin, symbol_len=None)
+        self.check_rendered_trace(expected, repr_func=bin)
 
     def test_decimal_trace(self):
         expected = (
@@ -206,7 +197,37 @@ class RenderTraceBase(unittest.TestCase):
             "  \n"
             "c ___,-------.___,---\n"
         )
-        self.check_rendered_trace(expected, repr_func=str, symbol_len=None)
+        self.check_rendered_trace(expected, repr_func=str)
+
+
+class RenderTraceBase(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+        a = pyrtl.Input(name='a', bitwidth=4)
+        o = pyrtl.Output()
+        o <<= a
+        self.renderer = pyrtl.simulation.WaveRenderer(
+            pyrtl.simulation.AsciiRendererConstants)
+
+    def check_rendered_trace(self, expected, **kwargs):
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'a': list(reversed(range(10))) * 2})
+        buff = io.StringIO()
+        sim.tracer.render_trace(file=buff, renderer=self.renderer, **kwargs)
+        self.assertEqual(buff.getvalue(), expected)
+
+    def test_long_decimal_trace(self):
+        '''Check that long cycle names are truncated.
+
+        The most significant digits should be omitted.
+
+        '''
+        expected = (
+            " |0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9\n"
+            "  \n"
+            "a 9|8|7|6|5|4|3|2|1|0|9|8|7|6|5|4|3|2|1|0\n"
+        )
+        self.check_rendered_trace(expected, repr_func=int)
 
 
 class RenderTraceCustomBase(unittest.TestCase):
@@ -215,19 +236,30 @@ class RenderTraceCustomBase(unittest.TestCase):
         self.renderer = pyrtl.simulation.WaveRenderer(
             pyrtl.simulation.AsciiRendererConstants)
 
-    def test_custom_repr_per_wire(self):
-        from enum import IntEnum
+    def test_enum_name(self):
+        class State(enum.IntEnum):
+            FOO = 0
+            BAR = 1
+        state = pyrtl.Input(name='state', bitwidth=1)
+        sim = pyrtl.Simulation()
+        sim.step_multiple({'state': [State.FOO, State.BAR]})
+        buff = io.StringIO()
+        sim.tracer.render_trace(
+            file=buff, renderer=self.renderer,
+            repr_per_name={'state': pyrtl.enum_name(State)})
+        expected = (
+            "     |0  |1  \n"
+            "      \n"
+            "state FOO|BAR\n"
+        )
+        self.assertEqual(buff.getvalue(), expected)
 
-        class Foo(IntEnum):
+    def test_custom_repr_per_wire(self):
+        class Foo(enum.IntEnum):
             A = 0
             B = 1
             C = 2
             D = 3
-
-            def __str__(self):
-                '''Changed in version 3.11: __str__() is now int.__str__()'''
-                cls_name = self.__class__.__name__
-                return f'{cls_name}.{self.name}'
 
         i = pyrtl.Input(4, 'i')
         state = pyrtl.Register(max(Foo).bit_length(), name='state')
@@ -250,15 +282,15 @@ class RenderTraceCustomBase(unittest.TestCase):
         })
         buff = io.StringIO()
         sim.tracer.render_trace(file=buff, renderer=self.renderer,
-                                repr_per_name={'state': Foo})
+                                repr_per_name={'state': pyrtl.enum_name(Foo)})
         expected = (
-            "     |0    |1    |2    |3    |4    \n"
+            "     |0  |1  |2  |3  |4  \n"
             "      \n"
-            "    i 0x1  |0x2  |0x4  |0x8  |0x0  \n"
+            "    i 0x1|0x2|0x4|0x8|0x0\n"
             "      \n"
-            "    o 0x0        |0x1  |0x2  |0x3  \n"
+            "    o 0x0    |0x1|0x2|0x3\n"
             "      \n"
-            "state Foo.A      |Foo.B|Foo.C|Foo.D\n"
+            "state A      |B  |C  |D  \n"
         )
         self.assertEqual(buff.getvalue(), expected)
 
@@ -436,9 +468,7 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         self.assertEqual(output.getvalue(), correct_outp)
 
     def test_consts_from_int_enums(self):
-        from enum import IntEnum
-
-        class MyEnum(IntEnum):
+        class MyEnum(enum.IntEnum):
             A = 0
             B = 1
             C = 3
