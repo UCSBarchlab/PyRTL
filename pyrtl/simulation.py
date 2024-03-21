@@ -1072,6 +1072,16 @@ class WaveRenderer(object):
         render transitions.
         """
         if len(w) > 1 or w.name in repr_per_name:
+            # Render values in boxes for multi-bit wires ("bus"), or single-bit
+            # wires with a specific representation.
+            #
+            # We display multi-wire zero values as a centered horizontal line
+            # when a specific `repr_per_name` is not requested for this trace,
+            # and a standard numeric format is requested.
+            flat_zero = (w.name not in repr_per_name
+                         and (repr_func is hex or repr_func is oct
+                              or repr_func is int or repr_func is str
+                              or repr_func is bin))
             if prev_line:
                 # Bus wires are currently never rendered across multiple lines.
                 return ''
@@ -1079,13 +1089,33 @@ class WaveRenderer(object):
             out = ''
             if current_val != prior_val:
                 if prior_val is not None:
-                    out += self.constants._x
-                out += (self.val_to_str(current_val, w.name, repr_func,
-                                        repr_per_name).rstrip('L')
-                        .ljust(symbol_len)[:symbol_len])
+                    if flat_zero and prior_val == 0:
+                        # Value changed from zero to non-zero.
+                        out += self.constants._zero_x
+                    elif flat_zero and current_val == 0:
+                        # Value changed from non-zero to zero.
+                        out += self.constants._x_zero
+                    else:
+                        # Value changed from non-zero to non-zero.
+                        out += self.constants._x
+                if flat_zero and current_val == 0:
+                    # Display the current zero value.
+                    out += self.constants._zero * symbol_len
+                else:
+                    if prior_val is None:
+                        out += self.constants._bus_start
+                    # Display the current non-zero value.
+                    out += (self.val_to_str(current_val, w.name, repr_func,
+                                            repr_per_name).rstrip('L')
+                            .ljust(symbol_len)[:symbol_len])
+            elif flat_zero and current_val == 0:
+                # Extend an unchanged zero value into the current cycle.
+                out += self.constants._zero * cycle_len
             else:
+                # Extend an unchanged non-zero value into the current cycle.
                 out += ' ' * cycle_len
         else:
+            # Render lines for single-bit wires.
             if prev_line:
                 low = self.constants._prev_line_low
                 high = self.constants._prev_line_high
@@ -1147,13 +1177,29 @@ class RendererConstants():
     # rendering a bus wire. _bus_start and _bus_stop must have zero display
     # length characters. Escape codes never count towards display length.
     _bus_start, _bus_stop = '', ''
-    # Print _x when a bus wire changes value. _low must have display length
-    # of _chars_between_cycles characters.
+
+    # Print _x when a bus wire changes from one non-zero value to another
+    # non-zero value. _x must have display length of _chars_between_cycles
+    # characters.
     _x = ''
 
+    # Print _zero_x when a bus wire changes from a zero value to a non-zero
+    # value. _zero_x must have display length of _chars_between_cycles
+    # characters.
+    _zero_x = ''
+
+    # Print _x_zero when a bus wire changes from a non-zero value to a zero
+    # value. _x_zero must have display length of _chars_between_cycles
+    # characters.
+    _x_zero = ''
+
+    # Print _zero when a bus wire maintains a zero value. _zero must have
+    # display length of 1 character.
+    _zero = ''
+
     # Number of characters between cycles. The cycle changes halfway between
-    # this width. The first half of this width belongs to the previous cycle and
-    # the second half of this width belongs to the next cycle.
+    # this width. The first half of this width belongs to the previous cycle
+    # and the second half of this width belongs to the next cycle.
     _chars_between_cycles = 0
 
 
@@ -1169,7 +1215,7 @@ class Utf8RendererConstants(RendererConstants):
     Enable this renderer by default by setting the ``PYRTL_RENDERER``
     environment variable to ``utf-8``.
 
-    .. image:: ../docs/screenshots/pyrtl-statemachine-utf-8.png
+    .. image:: ../docs/screenshots/pyrtl-renderer-demo-utf-8.png
 
     """
     # Start reverse-video, reset all attributes
@@ -1184,6 +1230,9 @@ class Utf8RendererConstants(RendererConstants):
     _prev_line_low, _prev_line_high = ' ', '▁'
 
     _x = '▕ '
+    _zero_x = '─' + _bus_start + '▏'
+    _x_zero = '▕' + _bus_stop + '─'
+    _zero = '─'
 
     # Number of characters needed between cycles. The cycle changes halfway
     # between this width (2), so the first character belongs to the previous
@@ -1198,13 +1247,13 @@ class Utf8AltRendererConstants(RendererConstants):
     falling edges. Multi-bit WireVector values are rendered in reverse-video
     rectangles.
 
-    Compared to Utf8RendererConstants, this renderer is more compact because it
-    uses one character between cycles instead of two.
+    Compared to :py:class:`Utf8RendererConstants`, this renderer is more
+    compact because it uses one character between cycles instead of two.
 
     Enable this renderer by default by setting the ``PYRTL_RENDERER``
     environment variable to ``utf-8-alt``.
 
-    .. image:: ../docs/screenshots/pyrtl-statemachine-utf-8-alt.png
+    .. image:: ../docs/screenshots/pyrtl-renderer-demo-utf-8-alt.png
 
     """
     # Start reverse-video, reset all attributes
@@ -1215,7 +1264,10 @@ class Utf8AltRendererConstants(RendererConstants):
     _up, _down = '╱', '╲'
     _low, _high = '▁', '▔'
 
-    _x = '┃'
+    _x = _bus_stop + ' ' + _bus_start
+    _zero_x = ' ' + _bus_start
+    _x_zero = _bus_stop + ' '
+    _zero = '─'
 
     # Number of characters needed between cycles. The cycle changes halfway
     # between this width (1), so the first character belongs to the previous
@@ -1237,13 +1289,16 @@ class PowerlineRendererConstants(Utf8RendererConstants):
     Enable this renderer by default by setting the ``PYRTL_RENDERER``
     environment variable to ``powerline``.
 
-    .. image:: ../docs/screenshots/pyrtl-statemachine.png
+    .. image:: ../docs/screenshots/pyrtl-renderer-demo-powerline.png
 
     """
     # Start reverse-video, reset all attributes
     _bus_start, _bus_stop = '\x1B[7m', '\x1B[0m'
 
     _x = _bus_stop + '' + _bus_start
+    _zero_x = '─' + _bus_start
+    _x_zero = _bus_stop + '─'
+    _zero = '─'
 
 
 class Cp437RendererConstants(RendererConstants):
@@ -1256,14 +1311,14 @@ class Cp437RendererConstants(RendererConstants):
     `Code page 437 <https://en.wikipedia.org/wiki/Code_page_437>`_ is also
     known as 8-bit ASCII. This is the default renderer on Windows platforms.
 
-    Compared to Utf8RendererConstants, this renderer is more compact because it
-    uses one character between cycles instead of two, but the wire names are
-    vertically aligned at the bottom of each waveform.
+    Compared to :py:class:`Utf8RendererConstants`, this renderer is more
+    compact because it uses one character between cycles instead of two, but
+    the wire names are vertically aligned at the bottom of each waveform.
 
     Enable this renderer by default by setting the ``PYRTL_RENDERER``
     environment variable to ``cp437``.
 
-    .. image:: ../docs/screenshots/pyrtl-statemachine-cp437.png
+    .. image:: ../docs/screenshots/pyrtl-renderer-demo-cp437.png
 
     """
     _tick = '│'
@@ -1275,6 +1330,9 @@ class Cp437RendererConstants(RendererConstants):
     _prev_line_low, _prev_line_high = ' ', '─'
 
     _x = '│'
+    _zero_x = '┤'
+    _x_zero = '├'
+    _zero = '─'
 
     _chars_between_cycles = 1
 
@@ -1289,7 +1347,7 @@ class AsciiRendererConstants(RendererConstants):
     Enable this renderer by default by setting the ``PYRTL_RENDERER``
     environment variable to ``ascii``.
 
-    .. image:: ../docs/screenshots/pyrtl-statemachine-ascii.png
+    .. image:: ../docs/screenshots/pyrtl-renderer-demo-ascii.png
 
     """
     _tick = '|'
@@ -1298,6 +1356,9 @@ class AsciiRendererConstants(RendererConstants):
     _low, _high = '_', '-'
 
     _x = '|'
+    _zero_x = '|'
+    _x_zero = '|'
+    _zero = '-'
 
     _chars_between_cycles = 1
 
@@ -1581,8 +1642,6 @@ class SimulationTrace(object):
             second_trace_line = ''
             prior_val = None
             is_bus = len(self._wires[wire]) > 1
-            if is_bus:
-                second_trace_line += renderer.constants._bus_start
             for i in range(len(trace)):
                 # There is no cycle change before the first cycle or after the
                 # last cycle, so the first and last cycles may have additional
