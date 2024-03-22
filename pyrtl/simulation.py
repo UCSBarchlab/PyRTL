@@ -6,6 +6,7 @@ import numbers
 import os
 import re
 import sys
+import typing
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer
@@ -983,7 +984,6 @@ class FastSimulation(object):
 #     |  |  \ /~~\ \__, |___
 #
 
-
 class WaveRenderer(object):
     """Render a SimulationTrace to the terminal.
 
@@ -1011,14 +1011,13 @@ class WaveRenderer(object):
         :param segment_size: Length between major tick marks, in cycles.
         :param maxtracelen: Length of the longest trace, in cycles.
         """
-        # Render a major tick mark followed by its label (n).
+        # Render a major tick mark followed by the cycle number (n).
         major_tick = self.constants._tick + str(n)
-        # Number of cycles occupied by major_tick.
-        major_tick_cycles = math.ceil(len(major_tick) / cycle_len)
-        # If major_tick can't fit in segment_size, drop most significant digits
-        # until it fits.
-        if major_tick_cycles > segment_size:
-            major_tick = self.constants._tick + major_tick[:segment_size - 1]
+        # If the cycle number can't fit in this segment, drop most significant
+        # digits of the cycle number until it fits.
+        excess_characters = len(major_tick) - cycle_len * segment_size
+        if excess_characters > 0:
+            major_tick = self.constants._tick + str(n)[excess_characters:]
 
         # Do not render past maxtracelen.
         if n + segment_size >= maxtracelen:
@@ -1033,8 +1032,8 @@ class WaveRenderer(object):
         :param value: The value to convert to string.
         :param wire_name: Name of the wire that produced this value.
         :param repr_func: function to use for representing the current_val;
-            examples are 'hex', 'oct', 'bin', 'str' (for decimal), or even the name
-            of an IntEnum class you know the value will belong to. Defaults to 'hex'.
+            examples are 'hex', 'oct', 'bin', 'str' (for decimal), or
+            the function returned by :py:func:`enum_name`. Defaults to 'hex'.
         :param repr_per_name: Map from signal name to a function that takes in the signal's
             value and returns a user-defined representation. If a signal name is
             not found in the map, the argument `repr_func` will be used instead.
@@ -1059,8 +1058,8 @@ class WaveRenderer(object):
         :param symbol_len: Width of each value, in characters.
         :param cycle_len: Width of each cycle, in characters.
         :param repr_func: function to use for representing the current_val;
-            examples are 'hex', 'oct', 'bin', 'str' (for decimal), or even the name
-            of an IntEnum class you know the value will belong to. Defaults to 'hex'.
+            examples are 'hex', 'oct', 'bin', 'str' (for decimal), or
+            the function returned by :py:func:`enum_name`. Defaults to 'hex'.
         :param repr_per_name: Map from signal name to a function that takes in the signal's
             value and returns a user-defined representation. If a signal name is
             not found in the map, the argument `repr_func` will be used instead.
@@ -1072,7 +1071,7 @@ class WaveRenderer(object):
         representation of current_val.  The input prior_val is used to
         render transitions.
         """
-        if len(w) > 1:
+        if len(w) > 1 or w.name in repr_per_name:
             if prev_line:
                 # Bus wires are currently never rendered across multiple lines.
                 return ''
@@ -1539,7 +1538,8 @@ class SimulationTrace(object):
             If None, the length will be automatically set such that the largest
             represented value fits.
         :param repr_func: Function to use for representing each value in the trace;
-            examples are ``hex``, ``oct``, ``bin``, and ``str`` (for decimal). Defaults to ``hex``.
+            examples are ``hex``, ``oct``, ``bin``, and ``str`` (for decimal), or
+            the function returned by :py:func:`enum_name`. Defaults to 'hex'.
         :param repr_per_name: Map from signal name to a function that takes in the signal's
             value and returns a user-defined representation. If a signal name is
             not found in the map, the argument `repr_func` will be used instead.
@@ -1701,3 +1701,35 @@ class SimulationTrace(object):
             print(name.rjust(max_name_length),
                   value.rjust(max_value_length),
                   file=file)
+
+
+def enum_name(EnumClass: type) -> typing.Callable[[int], str]:
+    '''Returns a function that returns the name of an enum value as a string.
+
+    Use ``enum_name`` as a ``repr_func`` or ``repr_per_name`` for
+    :py:meth:`SimulationTrace.render_trace` to display enum names, instead of
+    their numeric value, in traces. Example::
+
+        class State(enum.IntEnum):
+            FOO = 0
+            BAR = 1
+        state = Input(name='state', bitwidth=1)
+        sim = Simulation()
+        sim.step_multiple({'state': [State.FOO, State.BAR]})
+
+        # Generates a trace like:
+        #      │0  │1
+        #
+        # state FOO│BAR
+        sim.tracer.render_trace(repr_per_name={'state': enum_name(State)})
+
+    :param EnumClass: ``enum`` to convert. This is the enum class, like
+                      ``State``, not an enum value, like ``State.FOO`` or
+                      ``1``.
+    :return: A function that accepts an enum value, like ``State.FOO`` or
+             ``1``, and returns the value's name as a string, like ``'FOO'``.
+
+    '''
+    def value_to_name(value: int) -> str:
+        return EnumClass(value).name
+    return value_to_name

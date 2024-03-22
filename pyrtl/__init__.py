@@ -81,6 +81,7 @@ from .conditional import currently_under_condition
 from .simulation import Simulation
 from .simulation import FastSimulation
 from .simulation import SimulationTrace
+from .simulation import enum_name
 from .compilesim import CompiledSimulation
 
 # block visualization output formats

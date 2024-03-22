@@ -7,43 +7,50 @@ Run this demo to see which options work well in your terminal.
 """
 
 
-def make_clock(n: int):
-    """Make a clock signal that inverts every 'n' cycles."""
-    assert n > 0
-    first_state = pyrtl.Register(bitwidth=1, name=f'clock_0_{n}',
-                                 reset_value=1)
-    last_state = first_state
-    for i in range(1, n):
-        state = pyrtl.Register(bitwidth=1, name=f'clock_{i}_{n}')
-        state.next <<= last_state
-        last_state = state
+def make_clock(period: int):
+    """Make a clock signal that inverts every `period` cycles."""
+    assert period > 0
 
-    first_state.next <<= ~last_state
-    return last_state
+    # Build a chain of registers.
+    first_reg = pyrtl.Register(bitwidth=1, name=f'clock_0_{period}',
+                               reset_value=1)
+    last_reg = first_reg
+    for offset in range(1, period):
+        reg = pyrtl.Register(bitwidth=1, name=f'clock_{offset}_{period}')
+        reg.next <<= last_reg
+        last_reg = reg
 
-
-def make_counter(n: int):
-    """Make a counter that increments every 'n' cycles."""
-    assert n > 0
-    first_state = pyrtl.Register(bitwidth=8, name=f'counter_0_{n}')
-    last_state = first_state
-    for i in range(1, n):
-        state = pyrtl.Register(bitwidth=8, name=f'counter_{i}_{n}')
-        state.next <<= last_state
-        last_state = state
-
-    first_state.next <<= last_state + pyrtl.Const(1)
-    return last_state
+    # The first register's input is the inverse of the last register's output.
+    first_reg.next <<= ~last_reg
+    return last_reg
 
 
-make_clock(n=1)
-make_clock(n=2)
-make_counter(n=1)
-make_counter(n=2)
+def make_counter(period: int, bitwidth=2):
+    """Make a counter that increments every `period` cycles."""
+    assert period > 0
 
-# Simulate 10 cycles.
+    # Build a chain of registers.
+    first_reg = pyrtl.Register(bitwidth=bitwidth, name=f'counter_0_{period}')
+    last_reg = first_reg
+    for offset in range(1, period):
+        reg = pyrtl.Register(bitwidth=bitwidth,
+                             name=f'counter_{offset}_{period}')
+        reg.next <<= last_reg
+        last_reg = reg
+
+    # The first register's input is the last register's output plus 1.
+    first_reg.next <<= last_reg + pyrtl.Const(1)
+    return last_reg
+
+
+make_clock(period=1)
+make_clock(period=2)
+make_counter(period=1)
+make_counter(period=2)
+
+# Simulate 20 cycles.
 sim = pyrtl.Simulation()
-sim.step_multiple(nsteps=10)
+sim.step_multiple(nsteps=20)
 
 # Render the trace with a variety of rendering options.
 renderers = {
@@ -62,7 +69,7 @@ renderers = {
 for i, name in enumerate(renderers):
     constants, notes = renderers[name]
     print(f'# {notes}')
-    print(f'export PYRTL_RENDERER={name}')
+    print(f'export PYRTL_RENDERER={name}\n')
     sim.tracer.render_trace(
         renderer=pyrtl.simulation.WaveRenderer(constants),
         repr_func=int)

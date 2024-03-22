@@ -1,3 +1,4 @@
+import enum
 import io
 import random
 import unittest
@@ -386,18 +387,11 @@ class TestOutputIPynb(unittest.TestCase):
         self.assertEqual(htmlstring, expected)
 
     def test_trace_to_html_repr_per_name(self):
-        from enum import IntEnum
-
-        class Foo(IntEnum):
+        class Foo(enum.IntEnum):
             A = 0
             B = 1
             C = 2
             D = 3
-
-            def __str__(self):
-                '''Changed in version 3.11: __str__() is now int.__str__()'''
-                cls_name = self.__class__.__name__
-                return f'{cls_name}.{self.name}'
 
         i = pyrtl.Input(4, 'i')
         state = pyrtl.Register(max(Foo).bit_length(), name='state')
@@ -419,32 +413,27 @@ class TestOutputIPynb(unittest.TestCase):
             'i': [1, 2, 4, 8, 0]
         })
 
-        htmlstring = pyrtl.trace_to_html(sim.tracer, repr_per_name={'state': Foo})
+        htmlstring = pyrtl.trace_to_html(
+            sim.tracer,
+            repr_per_name={'state': pyrtl.enum_name(Foo)})
         expected = (
             '<script type="WaveDrom">\n'
             '{\n'
             '  signal : [\n'
             '    { name: "i",  wave: "=====", data: ["0x1", "0x2", "0x4", "0x8", "0x0"] },\n'
             '    { name: "o",  wave: "=.===", data: ["0x0", "0x1", "0x2", "0x3"] },\n'
-            '    { name: "state",  wave: "=.===", data: ["Foo.A", "Foo.B", "Foo.C", "Foo.D"] },\n'
+            '    { name: "state",  wave: "=.===", data: ["A", "B", "C", "D"] },\n'
             '  ],\n'
-            '  config: { hscale: 2 }\n'
+            '  config: { hscale: 1 }\n'
             '}\n'
             '</script>\n'
         )
         self.assertEqual(htmlstring, expected)
 
     def test_trace_to_html_repr_per_name_enum_is_bool(self):
-        from enum import IntEnum
-
-        class Foo(IntEnum):
+        class Foo(enum.IntEnum):
             A = 0
             B = 1
-
-            def __str__(self):
-                '''Changed in version 3.11: __str__() is now int.__str__()'''
-                cls_name = self.__class__.__name__
-                return f'{cls_name}.{self.name}'
 
         i = pyrtl.Input(2, 'i')
         state = pyrtl.Register(max(Foo).bit_length(), name='state')
@@ -462,16 +451,17 @@ class TestOutputIPynb(unittest.TestCase):
             'i': [1, 2, 1, 2, 2]
         })
 
-        htmlstring = pyrtl.trace_to_html(sim.tracer, repr_per_name={'state': Foo})
+        htmlstring = pyrtl.trace_to_html(
+            sim.tracer, repr_per_name={'state': pyrtl.enum_name(Foo)})
         expected = (
             '<script type="WaveDrom">\n'
             '{\n'
             '  signal : [\n'
             '    { name: "i",  wave: "====.", data: ["0x1", "0x2", "0x1", "0x2"] },\n'
             '    { name: "o",  wave: "0.101" },\n'
-            '    { name: "state",  wave: "=.===", data: ["Foo.A", "Foo.B", "Foo.A", "Foo.B"] },\n'
+            '    { name: "state",  wave: "=.===", data: ["A", "B", "A", "B"] },\n'
             '  ],\n'
-            '  config: { hscale: 2 }\n'
+            '  config: { hscale: 1 }\n'
             '}\n'
             '</script>\n'
         )
