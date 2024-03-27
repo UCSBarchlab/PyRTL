@@ -155,7 +155,7 @@ class RenderTraceBase(unittest.TestCase):
             "  \n"
             "a 0x1 |0x4 |0x9 |0xb |0xc \n"
             "  \n"
-            "b 0x2 |0x17|0x2b|0x78|0x0 \n"
+            "b 0x2 |0x17|0x2b|0x78|----\n"
             "  \n"
             "c ____,---------.____,----\n"
         )
@@ -225,7 +225,7 @@ class RenderTraceBase(unittest.TestCase):
         expected = (
             " |0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9\n"
             "  \n"
-            "a 9|8|7|6|5|4|3|2|1|0|9|8|7|6|5|4|3|2|1|0\n"
+            "a 9|8|7|6|5|4|3|2|1|-|9|8|7|6|5|4|3|2|1|-\n"
         )
         self.check_rendered_trace(expected, repr_func=int)
 
@@ -286,9 +286,9 @@ class RenderTraceCustomBase(unittest.TestCase):
         expected = (
             "     |0  |1  |2  |3  |4  \n"
             "      \n"
-            "    i 0x1|0x2|0x4|0x8|0x0\n"
+            "    i 0x1|0x2|0x4|0x8|---\n"
             "      \n"
-            "    o 0x0    |0x1|0x2|0x3\n"
+            "    o -------|0x1|0x2|0x3\n"
             "      \n"
             "state A      |B  |C  |D  \n"
         )
