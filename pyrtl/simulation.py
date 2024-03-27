@@ -1048,7 +1048,7 @@ class WaveRenderer(object):
             return str(repr_func(value))
 
     def render_val(self, w, prior_val, current_val, symbol_len, cycle_len,
-                   repr_func, repr_per_name, prev_line):
+                   repr_func, repr_per_name, prev_line, is_last):
         """Return a string encoding the given value in a waveform.
 
         :param w: The WireVector we are rendering to a waveform
@@ -1108,12 +1108,16 @@ class WaveRenderer(object):
                     out += (self.val_to_str(current_val, w.name, repr_func,
                                             repr_per_name).rstrip('L')
                             .ljust(symbol_len)[:symbol_len])
+                    if is_last:
+                        out += self.constants._bus_stop
             elif flat_zero and current_val == 0:
                 # Extend an unchanged zero value into the current cycle.
                 out += self.constants._zero * cycle_len
             else:
                 # Extend an unchanged non-zero value into the current cycle.
                 out += ' ' * cycle_len
+                if is_last:
+                    out += self.constants._bus_stop
         else:
             # Render lines for single-bit wires.
             if prev_line:
@@ -1641,7 +1645,6 @@ class SimulationTrace(object):
             first_trace_line = ''
             second_trace_line = ''
             prior_val = None
-            is_bus = len(self._wires[wire]) > 1
             for i in range(len(trace)):
                 # There is no cycle change before the first cycle or after the
                 # last cycle, so the first and last cycles may have additional
@@ -1651,23 +1654,23 @@ class SimulationTrace(object):
                 additional_cycle_len = 0
                 half_chars_between_cycles = (
                     math.floor(renderer.constants._chars_between_cycles / 2))
-                if i == len(trace) - 1:
+                is_first = i == 0
+                is_last = i == len(trace) - 1
+                if is_last:
                     additional_cycle_len = half_chars_between_cycles
-                if i == 0 or i == len(trace) - 1:
+                if is_first or is_last:
                     additional_symbol_len = half_chars_between_cycles
                 first_trace_line += renderer.render_val(
                     self._wires[wire], prior_val, trace[i],
                     symbol_len + additional_symbol_len,
                     cycle_len + additional_cycle_len, repr_func,
-                    repr_per_name, prev_line=True)
+                    repr_per_name, prev_line=True, is_last=is_last)
                 second_trace_line += renderer.render_val(
                     self._wires[wire], prior_val, trace[i],
                     symbol_len + additional_symbol_len,
                     cycle_len + additional_cycle_len, repr_func,
-                    repr_per_name, prev_line=False)
+                    repr_per_name, prev_line=False, is_last=is_last)
                 prior_val = trace[i]
-            if is_bus:
-                second_trace_line += renderer.constants._bus_stop
             heading_gap = ' ' * (maxnamelen + 1)
             heading = wire.rjust(maxnamelen) + ' '
             return (heading_gap + first_trace_line + '\n'
