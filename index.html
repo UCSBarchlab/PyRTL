@@ -39,11 +39,11 @@
 <a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true"><span class="octicon octicon-link"></span></a>Getting Started</h3>
 
 <p><code>pip3 install pyrtl</code> &nbsp; or &nbsp; <code>pip install pyrtl</code></p>
-  
+
 <h3>
 <a id="pyrtl-features" class="anchor" href="#pyrtl-features" aria-hidden="true"><span class="octicon octicon-link"></span></a>PyRTL Features</h3>
 
-<p>PyRTL provides a collection of classes for Pythonic <a href="https://en.wikipedia.org/wiki/Register-transfer_level">register-transfer level</a> design, simulation, tracing, and testing 
+<p>PyRTL provides a collection of classes for Pythonic <a href="https://en.wikipedia.org/wiki/Register-transfer_level">register-transfer level</a> design, simulation, tracing, and testing
 suitable for teaching and research. Simplicity, usability, clarity, and extensibility rather than
 performance or optimization is the overarching goal.  Features include:</p>
 
@@ -61,11 +61,11 @@ performance or optimization is the overarching goal.  Features include:</p>
     modules for PRNG, fixes for lots of issues with Verilog generation (support for memory and testbench generation both improved
     significantly), convenience functions for integer log2 and truncate, and
     even more examples in the documentation.</p>
-  
+
 <p>Here are some simple examples of PyRTL in action.  These examples implement the same functionality as those highlighted in the
   wonderful related work <a href="https://chisel.eecs.berkeley.edu/">Chisel</a>, which in turn allows us to see the stylistic differences
   between the approaches.</p>
-  
+
 <!-- Tab links -->
 <div class="tab">
   <button class="tablinks" onclick="openCode(event, 'FIR')" id="defaultOpen"> FIR </button>
@@ -79,7 +79,7 @@ performance or optimization is the overarching goal.  Features include:</p>
 <div id="FIR" class="tabcontent">
   <p>A finite impulse response filter  -- this function generates a sequential curcuit that grabs input <code>x</code> and a list of coefficients<code>bs</code>. If one looks to the
     <a href="https://en.wikipedia.org/wiki/Finite_impulse_response">Wikipedia FIR description</a> you can see that list <code>zs</code> is the registers required
-    to implement the delay.  The function returns an output "y" which is the resulting sum of products and is valid every cycle (since the design is naturally fully
+    to implement the delay.  The function returns an output <code>y</code> which is the resulting sum of products and is valid every cycle (since the design is naturally fully
     pipelined).  The code below the <code>fir</code> function is everything needed to instantiate, simulate, and visualize the resulting design.</p>
 <pre><code class="has-line-data" data-line-start="1" data-line-end="22" class="language-python"><span class="hljs-keyword">import</span> pyrtl
 
@@ -104,10 +104,9 @@ sim.tracer.render_trace()
 </code></pre>
 </div>
 
-  
 <div id="GCD" class="tabcontent">
-  <p>A greatest common demoninator calculator -- this function generates a sequential curcuit that grabs inputs <code>a</code> and <code>b</code> when <code>e</code> goes high, 
-  and then, while <code>e</code> is low, calculates the GCD through iterative subtraction.  The function returns two "wires", one which will hold the value 
+  <p>A greatest common demoninator calculator -- this function generates a sequential curcuit that grabs inputs <code>a</code> and <code>b</code> when <code>e</code> goes high,
+  and then, while <code>e</code> is low, calculates the GCD through iterative subtraction.  The function returns two "wires", one which will hold the value
   when it is ready, and the other which is a boolean ready signal.</p>
 <pre><code class="has-line-data" data-line-start="1" data-line-end="20" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
 
@@ -132,7 +131,7 @@ sim.tracer.render_trace()
 
 <div id="MaxN" class="tabcontent">
   <p>MaxN generates hardware that take N inputs and calculates the max of them.  This example makes use of Python's notation
-  for handling multiple inputs which packs them nicely into a list for you.  It is also a nice demonstration that the full power of 
+  for handling multiple inputs which packs them nicely into a list for you.  It is also a nice demonstration that the full power of
   Python is available to you in PyRTL including functional tools like reduce (here chaining together multiple <code>max2</code> elements into a
   bigger maxN), map, recursion, lambdas, etc.</p>
 <pre><code class="has-line-data" data-line-start="1" data-line-end="9" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
@@ -162,7 +161,7 @@ sim.tracer.render_trace()
 
 <div id="Adder" class="tabcontent">
   <p>The classic ripple-carry adder -- this function generates a ripple carry adder of abitrary length including both carry in and carry out.
-    The full adder ("fa") takes 1-bit inputs and produces 1-bit outputs.  We iteratively generate full adders and link the carry in of each
+    The full adder (<code>fa</code>) takes 1-bit inputs and produces 1-bit outputs.  We iteratively generate full adders and link the carry in of each
     new adder to the carry out of the prior.  A Python dictionary keeps track of the wires carrying the sum bits as we iterate through.  The final
     sum is then just the concatenation of the wires in that dictionary.</p>
 <pre><code class="has-line-data" data-line-start="2" data-line-end="21" class="language-python"><span class="hljs-keyword">from</span> pyrtl <span class="hljs-keyword">import</span> *
@@ -210,29 +209,29 @@ function openCode(evt, codeName) {
 document.getElementById("defaultOpen").click();
 </script>
 
-<p> PyRTL can also produce visualizations of your design, such as this graph of the GCD sequential circuit described previously:</p>
-<p><img src="https://raw.githubusercontent.com/UCSBarchlab/PyRTL/master/docs/images/gcd-graph.png?raw=true" alt="GraphViz visualization of the GCD circuit" title="GCD GraphViz Image"></p>
+<p> PyRTL can also produce visualizations of your design with <code>block_to_svg()</code>, such as this graph of the GCD sequential circuit described previously:</p>
+<p><img src="https://github.com/UCSBarchlab/PyRTL/blob/development/docs/images/gcd-graph.png?raw=true" alt="GraphViz visualization of the GCD circuit" title="GCD GraphViz Image"></p>
 
 <h3>
 <a id="the-10000-foot-overview" class="anchor" href="#the-10000-foot-overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>The 10,000 Foot Overview</h3>
 
-<p>At a high level PyRTL builds the hardware structure that you <em>explicitly define</em>.  If you are looking for a 
-tool to take your random Python code and turn it into hardware, you will have to look elsewhere 
+<p>At a high level PyRTL builds the hardware structure that you <em>explicitly define</em>.  If you are looking for a
+tool to take your random Python code and turn it into hardware, you will have to look elsewhere
 -- this is <b>not</b> <a href="https://en.wikipedia.org/wiki/High-level_synthesis">HLS</a>.
-Instead PyRTL is designed to help you concisely and precisely describe a digital hardware structure (that you already have 
+Instead PyRTL is designed to help you concisely and precisely describe a digital hardware structure (that you already have
 worked out in detail) in Python.  PyRTL restricts you to a set of reasonable digital designs practices -- the clock and resets
 are implicit, block memories are synchronous by default, there are no "undriven" states, and no weird un-registered feedbacks are
 allowed.  Instead, of worrying about these "analog-ish" tricks that are horrible ideas in modern processes anyways, PyRTL lets
 you treat hardware design like a software problem -- build recursive hardware, write instrospective containers,
 and have fun building digital designs again!</p>
 
-<p>To the user it provides a set of Python classes that allow them to express their 
-hardware designs reasonably Pythonically.  For example, with WireVector you get a structure that acts very 
-much like a Python list of 1-bit wires, so that <code>mywire[0:-1]</code> selects everything except the 
+<p>To the user it provides a set of Python classes that allow them to express their
+hardware designs reasonably Pythonically.  For example, with WireVector you get a structure that acts very
+much like a Python list of 1-bit wires, so that <code>mywire[0:-1]</code> selects everything except the
 most-significant-bit.  Of course you can add, subtract, and multiply these WireVectors or concat multiple
-bit-vectors end-to-end as well.  You can then even make normal Python collections of those WireVectors and 
-do operations on them in bulk. For example, if you have a list of <em>n</em> different k-bit WireVectors (called "x") and you 
-want to multiply each of them by 2 and put the sum of the result in a WireVector "y", it looks like
+bit-vectors end-to-end as well.  You can then even make normal Python collections of those WireVectors and
+do operations on them in bulk. For example, if you have a list of <em>n</em> different k-bit WireVectors (called <code>x</code>) and you
+want to multiply each of them by 2 and put the sum of the result in a WireVector <code>y</code>, it looks like
 the following:  <code>y = sum([elem * 2 for elem in x])</code>. Hardware comprehensions are surprisingly useful.  Below we get into
 an example in more detail, but if you just want to play around with PyRTL
 <a href="https://mybinder.org/v2/gh/UCSBarchlab/PyRTL/development?filepath=%2Fipynb-examples%2F"> try Jupyter Notebooks on any
@@ -241,10 +240,10 @@ an example in more detail, but if you just want to play around with PyRTL
 <h3>
 <a id="hello-n-bit-ripple-carry-adder" class="anchor" href="#hello-n-bit-ripple-carry-adder" aria-hidden="true"><span class="octicon octicon-link"></span></a>Hello N-bit Ripple-Carry Adder!</h3>
 
-<p>While adders are a builtin primitive for PyRTL, most people doing RTL are familiar with the idea of a 
-<a href="https://en.wikipedia.org/wiki/Adder_(electronics)">Ripple-Carry Adder</a> and so it is useful to see how you 
-might express one in PyRTL if you had to.  Rather than the typical <a href="https://www.youtube.com/watch?v=bL3ihMA8_Gs">Verilog introduction to fixed 4-bit 
-adders</a>, let's go ahead and build an <em>arbitrary</em> bitwidth 
+<p>While adders are a builtin primitive for PyRTL, most people doing RTL are familiar with the idea of a
+<a href="https://en.wikipedia.org/wiki/Adder_(electronics)">Ripple-Carry Adder</a> and so it is useful to see how you
+might express one in PyRTL if you had to.  Rather than the typical <a href="https://www.youtube.com/watch?v=bL3ihMA8_Gs">Verilog introduction to fixed 4-bit
+adders</a>, let's go ahead and build an <em>arbitrary</em> bitwidth
 adder.</p>
 
 <div class="highlight highlight-source-python"><pre><span class="pl-k">def</span> <span class="pl-en">one_bit_add</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>, <span class="pl-smi">carry_in</span>):
@@ -275,12 +274,12 @@ sim <span class="pl-k">=</span> pyrtl.Simulation(<span class="pl-smi">tracer</sp
     sim.step({})
 sim_trace.render_trace()</pre></div>
 
-<p>The code above includes an adder generator with Python-style slices on wires (ripple_add), an instantiation 
-of a register (used as a counter with the generated adder), and all the code needed to simulate the design, 
-generate a waveform, and render it to the terminal. The way this particular code works is described more in 
-the examples directory.  When you run it, it should look like this (you can see the counter going from 0 to 7 and repeating):</p>
+<p>The code above includes an adder generator with Python-style slices on wires (<code>ripple_add</code>), an instantiation
+of a register (used as a counter with the generated adder), and all the code needed to simulate the design,
+generate a waveform, and render it to the terminal. The way this particular code works is described more in
+the <code>examples/</code> directory.  When you run it, it should look like this (you can see the counter going from 0 to 7 and repeating):</p>
 
-<p><img src="https://raw.githubusercontent.com/UCSBarchlab/PyRTL/development/docs/screenshots/pyrtl-counter.png?raw=true" alt="Command-line waveform for PyRTL counter" title="PyRTL Counter Screenshot"></p>
+<p><img src="https://github.com/UCSBarchlab/PyRTL/blob/development/docs/screenshots/pyrtl-counter.png?raw=true" alt="Command-line waveform for PyRTL counter" title="PyRTL Counter Screenshot"></p>
 
 <h3>
 <a id="a-few-gotchas" class="anchor" href="#a-few-gotchas" aria-hidden="true"><span class="octicon octicon-link"></span></a>A Few Gotchas</h3>
@@ -291,13 +290,13 @@ users in some unexpected ways.  Watch out for these couple of "somewhat surprisi
 <ul>
 <li><p>PyRTL never uses any of the "in-place arithmetic assignments" such as <code>+=</code> or <code>&amp;=</code> in the traditional ways.
 Instead only <code>&lt;&lt;=</code> and <code>|=</code> are defined and they are used for wire-assignment and conditional-wire-assignment
-respectively (more on both of these in the examples).   If you declare a <code>x = WireVector(bitwidth=3)</code> and 
-<code>y = WireVector(bitwidth=5)</code>, how do you assign <code>x</code> the value of <code>y + 1</code>?  If you do <code>x = y + 1</code> 
-that will replace the old definition of <code>x</code> entirely.  Instead you need to write <code>x &lt;&lt;= y + 1</code> which you 
-can read as "x gets its value from y + 1".</p></li>
+respectively (more on both of these in the examples).   If you declare a <code>x = WireVector(bitwidth=3)</code> and
+<code>y = WireVector(bitwidth=5)</code>, how do you assign <code>x</code> the value of <code>y + 1</code>?  If you do <code>x = y + 1</code>
+that will replace the old definition of <code>x</code> entirely.  Instead you need to write <code>x &lt;&lt;= y + 1</code> which you
+can read as "<code>x</code> gets its value from <code>y + 1</code>".</p></li>
 <li><p>The example above also shows off another aspect of PyRTL.  The bitwidth of <code>y</code> is 5.  The bitwidth of <code>y + 1</code>
 is actually 6 (PyRTL infers this automatically).  But then when you assign <code>x &lt;&lt;= y + 1</code> you are taking
-a 6-bit value and assigning it to 3-bit value.  This is completely legal and only the least significant bits 
+a 6-bit value and assigning it to 3-bit value.  This is completely legal and only the least significant bits
 will be assigned.  Mind your bitwidths.</p></li>
 <li><p>PyRTL provides some handy functions on WireVectors, including <code>==</code> and <code>&lt;</code> which evaluate to a new WireVector
 a single bit long to hold the result of the comparison.  The bitwise operators <code>&amp;</code>, <code>|</code>, <code>~</code> and <code>^</code>
@@ -307,15 +306,15 @@ when you start combining the two together.  Consider: <code>doit = ready &amp; s
 instead of what you might have guessed at first!  Make sure to use parentheses when using comparisons with
 logic operations to be clear: <code>doit = ready &amp; (state==3)</code>.</p></li>
 <li><p>PyRTL right now assumes that all WireVectors are unsigned integers.  When you do comparisons
-such as "&lt;" it will do unsigned comparison.  If you pass a WireVector to a function that requires more bits 
+such as "&lt;" it will do unsigned comparison.  If you pass a WireVector to a function that requires more bits
 that you have provided, it will do zero extension by default.  You can always explicitly do sign extension
-with .sign_extended() but it is not the default behavior for WireVector.  For now, this is for clarity and
+with <code>.sign_extended()</code> but it is not the default behavior for WireVector.  For now, this is for clarity and
 consistency, although it does make writing signed arithmetic operations more text heavy.</p></li>
 </ul>
 
-<p><img src="https://raw.githubusercontent.com/UCSBarchlab/PyRTL/development/docs/screenshots/pyrtl-statemachine.png?raw=true" alt="Command-line waveform for PyRTL state machine" title="PyRTL State Machine Screenshot"></p>
+<p><img src="https://github.com/UCSBarchlab/PyRTL/blob/development/docs/screenshots/pyrtl-statemachine.png?raw=true" alt="Command-line waveform for PyRTL state machine" title="PyRTL State Machine Screenshot"></p>
 
-  
+
 <h3>
 <a id="related-projects" class="anchor" href="#related-projects" aria-hidden="true"><span class="octicon octicon-link"></span></a>Related Projects</h3>
 
@@ -333,10 +332,10 @@ conditional contexts, Chisel is a powerful tool used in some great research proj
 concentrated on a simple to use and complete tool chain which is useful for instructional projects, and provides a clearly defined and relatively easy-to-manipulate
 intermediate structure in the class Block (often times call pyrtl.core) which allows rapid prototyping of hardware analysis
 routines which can then be codesigned with the architecture.</p>
-  
+
 <p><a href="https://github.com/SpinalHDL/SpinalHDL">SpinalHDL</a> is a different approach to HDL in Scala and is very much aligned with the way
 PyRTL is built (invented independently it is neat to see the convergent evolution which, I think, points to something deeper about hardware
-design).  It has a lot of support and really well thought out structures.  
+design).  It has a lot of support and really well thought out structures.
 
 <p><a href="http://www.myhdl.org/">MyHDL</a> is another neat Python hardware project built around generators and decorators.  The semantics of this embedded language
 are close to Verilog and unlike PyRTL, MyHDL allows asynchronous logic and higher level modeling.  Much like Verilog, only a structural
@@ -344,7 +343,7 @@ are close to Verilog and unlike PyRTL, MyHDL allows asynchronous logic and highe
 and synthesizable which avoids a common trap for beginners, it elaborates the design during execution allowing the full power of Python
 in describing recursive or complex hardware structures, and it allows for hardware synthesis, simulation, test bench creation, and optimization
 all in the same framework.</p>
-  
+
 <p><a href="http://www.clifford.at/yosys/">Yosys</a> is an open source tool for Verilog RTL synthesis. It supports a huge subset of the Verilog-2005
 semantics and provides a basic set of synthesis algorithms.  The goals of this tool are quite different from PyRTL, but the two
 play very nicely together in that PyRTL can output Verilog that can then be synthesized through Yosys.  Likewise Yosys can take
@@ -364,7 +363,7 @@ synthesizable and non-synthesizable code (the execution is the elaboration step)
 approach suitable for both combinational and synchronous sequential circuits and allows the transform
 of these high-level descriptions to low-level synthesizable Verilog HDL.  Unlike PyRTL, designs are statically
 typed (like VHDL), yet with a very high degree of type inference, enabling both safe and fast prototying using concise
-descriptions.  If you like functional programming and hardware also check out 
+descriptions.  If you like functional programming and hardware also check out
 <a href="http://blog.raintown.org/p/lava.html">Lava</a>.</p>
 
       <footer class="site-footer">
@@ -375,6 +374,5 @@ descriptions.  If you like functional programming and hardware also check out
 
     </section>
 
-  
   </body>
 </html>
