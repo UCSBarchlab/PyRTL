@@ -1014,12 +1014,12 @@ class RomBlockSimBase(unittest.TestCase):
             self.sim(tracer=sim_trace)
 
     def test_rom_rom_block_in_memory_value_map_error(self):
-        rom_data_array = [1, 2, 3, 4, 5, 6, 7, 8]
-        rom1 = pyrtl.RomBlock(bitwidth=4, addrwidth=3, romdata=rom_data_array)
-        rom_add = pyrtl.Input(3, "rom_in_2")
-        rom_out = pyrtl.Output(4, "rom_out_2")
-        rom_out <<= rom1[rom_add]
-        mem_val_map = {rom1: {0: 0, 1: 1, 2: 2, 3: 3}}
+        rom_data_array = [6]
+        rom1 = pyrtl.RomBlock(bitwidth=4, addrwidth=1, romdata=rom_data_array)
+        rom_addr = pyrtl.Input(1, "rom_addr")
+        rom_out = pyrtl.Output(4, "rom_out")
+        rom_out <<= rom1[rom_addr]
+        mem_val_map = {rom1: {0: 0}}
 
         sim_trace = pyrtl.SimulationTrace()
         with self.assertRaises(pyrtl.PyrtlError) as error:
