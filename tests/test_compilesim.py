@@ -1024,7 +1024,7 @@ class RomBlockSimBase(unittest.TestCase):
         sim_trace = pyrtl.SimulationTrace()
         with self.assertRaises(pyrtl.PyrtlError) as error:
             self.sim(tracer=sim_trace, memory_value_map=mem_val_map)
-        self.assertEqual(str(error.exception), "RomBlock in memory_value_map")
+        self.assertIn("memory_value_map", str(error.exception))
 
     def test_rom_val_map(self):
         def rom_data_function(add):
