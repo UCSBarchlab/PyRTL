@@ -914,13 +914,13 @@ class RomBlockSimBase(unittest.TestCase):
         sim_trace_a.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), expected_output)
 
-    def romBlock_test_helper(self, bidwidth):
+    def rom_block_test_helper(self, bitwidth):
 
         def rom_data_function(add):
             return int((add + 5) / 2)
 
         pyrtl.reset_working_block()
-        self.bitwidth = bidwidth
+        self.bitwidth = bitwidth
         self.addrwidth = 4
         self.output1 = pyrtl.Output(self.bitwidth, "o1")
         self.output2 = pyrtl.Output(self.bitwidth, "o2")
@@ -943,25 +943,25 @@ class RomBlockSimBase(unittest.TestCase):
                                                  ("o2", lambda x: rom_data_function(2 * x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
-    def test_function_RomBlock_bitwidth_4(self):
-        self.romBlock_test_helper(4)
-    
-    def test_function_RomBlock_bitwidth_12(self):
-        self.romBlock_test_helper(12)
-    
-    def test_function_RomBlock_bitwidth_32(self):
-        self.romBlock_test_helper(32)
+    def test_function_rom_block_bitwidth_4(self):
+        self.rom_block_test_helper(4)
 
-    def test_function_RomBlock_bitwidth_64(self):
-        self.romBlock_test_helper(64)
+    def test_function_rom_block_bitwidth_12(self):
+        self.rom_block_test_helper(12)
 
-    def romBlock_with_optimization_helper(self, bidwidth):
+    def test_function_rom_block_bitwidth_32(self):
+        self.rom_block_test_helper(32)
+
+    def test_function_rom_block_bitwidth_64(self):
+        self.rom_block_test_helper(64)
+
+    def rom_block_with_optimization_helper(self, bitwidth):
 
         def rom_data_function(add):
             return int((add + 5) / 2)
 
         pyrtl.reset_working_block()
-        self.bitwidth = bidwidth
+        self.bitwidth = bitwidth
         self.addrwidth = 4
         self.output1 = pyrtl.Output(self.bitwidth, "o1")
         self.output2 = pyrtl.Output(self.bitwidth, "o2")
@@ -990,17 +990,17 @@ class RomBlockSimBase(unittest.TestCase):
                                                  ("o2", lambda x: rom_data_function(2 * x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
-    def test_function_RomBlock_with_optimization_bidwidth_4(self):
-        self.romBlock_with_optimization_helper(4)
+    def test_function_rom_block_with_optimization_bidwidth_4(self):
+        self.rom_block_with_optimization_helper(4)
 
-    def test_function_RomBlock_with_optimization_bidwidth_12(self):
-        self.romBlock_with_optimization_helper(12)
+    def test_function_rom_block_with_optimization_bidwidth_12(self):
+        self.rom_block_with_optimization_helper(12)
 
-    def test_function_RomBlock_with_optimization_bidwidth_32(self):
-        self.romBlock_with_optimization_helper(32)
+    def test_function_rom_block_with_optimization_bidwidth_32(self):
+        self.rom_block_with_optimization_helper(32)
 
-    def test_function_RomBlock_with_optimization_bidwidth_64(self):
-        self.romBlock_with_optimization_helper(64)
+    def test_function_rom_block_with_optimization_bidwidth_64(self):
+        self.rom_block_with_optimization_helper(64)
 
     def test_rom_out_of_range_error(self):
         rom_data_array = [15, 13, 11, 9, 7, 5, 3]
@@ -1013,7 +1013,7 @@ class RomBlockSimBase(unittest.TestCase):
         with self.assertRaises(pyrtl.PyrtlError) as ex:
             self.sim(tracer=sim_trace)
 
-    def test_rom_romblock_in_memory_value_map_error(self):
+    def test_rom_rom_block_in_memory_value_map_error(self):
         rom_data_array = [1, 2, 3, 4, 5, 6, 7, 8]
         rom1 = pyrtl.RomBlock(bitwidth=4, addrwidth=3, romdata=rom_data_array)
         rom_add = pyrtl.Input(3, "rom_in_2")
