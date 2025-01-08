@@ -990,16 +990,16 @@ class RomBlockSimBase(unittest.TestCase):
                                                  ("o2", lambda x: rom_data_function(2 * x))), 6)
         self.compareIO(self.sim_trace, exp_out)
 
-    def test_function_rom_block_with_optimization_bidwidth_4(self):
+    def test_function_rom_block_with_optimization_bitwidth_4(self):
         self.rom_block_with_optimization_helper(4)
 
-    def test_function_rom_block_with_optimization_bidwidth_12(self):
+    def test_function_rom_block_with_optimization_bitwidth_12(self):
         self.rom_block_with_optimization_helper(12)
 
-    def test_function_rom_block_with_optimization_bidwidth_32(self):
+    def test_function_rom_block_with_optimization_bitwidth_32(self):
         self.rom_block_with_optimization_helper(32)
 
-    def test_function_rom_block_with_optimization_bidwidth_64(self):
+    def test_function_rom_block_with_optimization_bitwidth_64(self):
         self.rom_block_with_optimization_helper(64)
 
     def test_rom_out_of_range_error(self):
