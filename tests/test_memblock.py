@@ -101,6 +101,44 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         mem = pyrtl.MemBlock(32, 8)
         self.assertIs(pyrtl.working_block().get_memblock_by_name(mem.name), mem)
 
+class RTLMemBlockErrorTests(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_negative_bitwidth(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.MemBlock(-1, 1)
+
+    def test_negative_addrwidth(self):
+        with self.assertRaises(pyrtl.PyrtlError):
+            pyrtl.MemBlock(1, -1)
+    
+    def test_memindex_bitwidth_more_than_addrwidth(self):
+        mem = pyrtl.MemBlock(1, 1)
+        mem_in = pyrtl.Input(2, 'mem_in')
+        mem_out = pyrtl.Output(1, 'mem_out')
+        with self.assertRaises(pyrtl.PyrtlError):
+            mem_out <<= mem[mem_in]
+
+    def test_memblock_write_data_larger_than_memory_bidwidth(self):
+        mem = pyrtl.MemBlock(1, 1)
+        mem_addr = pyrtl.Input(1, 'mem_addr')
+        mem_in = pyrtl.Input(2, 'mem_in')
+        with self.assertRaises(pyrtl.PyrtlError):
+            mem[mem_addr] <<= mem_in
+
+    def test_memblock_enable_signal_not_1_bit(self):
+        mem = pyrtl.MemBlock(1, 1)
+        mem_addr = pyrtl.Input(1, 'mem_addr')
+        mem_in = pyrtl.Input(1, 'mem_in')
+        with self.assertRaises(pyrtl.PyrtlError):
+            mem[mem_addr] <<= pyrtl.MemBlock.EnabledWrite(mem_in, enable=pyrtl.Input(2))
+
+    def test_read_ports_exception(self):
+        mem = pyrtl.MemBlock(1, 1)
+        with self.assertRaises(pyrtl.PyrtlError):
+            mem.read_ports()
+
 
 class MemIndexedTests(unittest.TestCase):
     def setUp(self):
@@ -228,6 +266,53 @@ class MemIndexedTests(unittest.TestCase):
             self.assertEqual(sim.inspect(out), out_exp)
         self.assertEqual(self.mem1.num_read_ports, 1)
         self.assertEqual(self.mem2.num_write_ports, 1)
+
+    def test_memindexed_len(self):
+        self.mem = pyrtl.MemBlock(8, 1)
+        self.assertEqual(len(self.mem[0]), 8)
+        self.mem_2= pyrtl.MemBlock(16, 1)
+        self.assertEqual(len(self.mem_2[0]), 16)
+    
+    def test_memindexed_getitem(self):
+        mem = pyrtl.MemBlock(bitwidth=8, addrwidth=1, max_read_ports=None)
+        mem_in = pyrtl.Input(1, 'mem_in')
+        mem_out_array = [pyrtl.Output(8, 'mem_out_' + str(i)) for i in range(8)]
+        for i in range(8):
+            mem_out_array[i] <<= mem[mem_in][i]
+        mem_value_map = {mem: {0: 7, 1: 5}}
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=mem_value_map)
+        for i in range(len(mem_value_map[mem])):
+            sim.step({mem_in: i})
+            binary = bin(mem_value_map[mem][i])[2:].zfill(8)
+            for j in range(8):
+                self.assertEqual(sim.inspect(mem_out_array[j]), int(binary[7-j]))
+
+    def test_memindexed_sign_extended(self):
+        mem = pyrtl.MemBlock(bitwidth=8, addrwidth=1)
+        mem_in = pyrtl.Input(1, 'mem_in')
+        mem_out = pyrtl.Output(16, 'mem_out')
+        mem_out <<= mem[mem_in].sign_extended(16)
+        mem_value_map = {mem: {0: 0b00101101, 1: 0b10011011}}
+        mem_value_map_sign_extended = [0b0000000000101101, 0b1111111110011011];
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=mem_value_map)
+        for i in range(len(mem_value_map[mem])):
+            sim.step({mem_in: i})
+            self.assertEqual(sim.inspect(mem_out), mem_value_map_sign_extended[i])
+    
+    def test_memindexed_zero_extended(self):
+        mem = pyrtl.MemBlock(bitwidth=8, addrwidth=1)
+        mem_in = pyrtl.Input(1, 'mem_in')
+        mem_out = pyrtl.Output(16, 'mem_out')
+        mem_out <<= mem[mem_in].zero_extended(16)
+        mem_value_map = {mem: {0: 0b00101101, 1: 0b10011011}}
+        mem_value_map_zero_extended = [0b0000000000101101, 0b0000000010011011];
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=mem_value_map)
+        for i in range(len(mem_value_map[mem])):
+            sim.step({mem_in: i})
+            self.assertEqual(sim.inspect(mem_out), mem_value_map_zero_extended[i])
 
 
 class RTLRomBlockWiring(unittest.TestCase):
