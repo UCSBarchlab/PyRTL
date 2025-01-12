@@ -52,9 +52,59 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
         constant_propagation(block, True)
         _remove_unlistened_nets(block)
         common_subexp_elimination(block)
+        _remove_double_inverts(block, skip_sanity_check)
         if (not skip_sanity_check) or _get_debug_mode():
             block.sanity_check()
     return block
+
+
+def _remove_double_inverts(block, skip_sanity_check=False):
+    """ Removes all double invert nets from the block. """
+
+    # checks if the wirevector is used at a LogicNet other than used_at_net
+    def is_wirevector_used_elsewhere(wire, used_at_nets):
+        for net in block.logic:
+            if net not in used_at_nets:
+                if wire.name in [x.name for x in net.args] \
+                        or wire.name in [x.name for x in net.dests]:
+                    return True
+        return False
+
+    new_logic = set()
+    net_exclude_set = set()  # removed nets
+    wire_removal_set = set()
+    for net1 in block.logic:
+        for net2 in block.logic:
+            # Conditions need to be satisfied for the nets to be removed:
+            # 1. Both nets should be invert nets
+            # 2. Nets should not be in net_exclude_set (nets that are already removed)
+            # 3. The destination of net1 should be the argument of net2
+            #    (so we know the nets are connected)
+            # 4. The destination of net1 should not be used elsewhere
+            #    (because we can't remove a wire that is used in another net)
+            if net1.op == '~' and net2.op == '~' \
+                and net1 not in net_exclude_set and net2 not in net_exclude_set \
+                    and net1.dests[0].name == net2.args[0].name \
+                    and not is_wirevector_used_elsewhere(net1.dests[0], (net1, net2)):
+                new_logic.add(LogicNet('w', None, args=net1.args, dests=net2.dests))
+                net_exclude_set.add(net1)
+                net_exclude_set.add(net2)
+                wire_removal_set.add(net1.dests[0])
+                break
+
+    for net in block.logic:
+        if net not in net_exclude_set:
+            new_logic.add(net)
+
+    block.logic = new_logic
+    for dead_wirevector in wire_removal_set:
+        block.remove_wirevector(dead_wirevector)
+
+    if (not skip_sanity_check) or _get_debug_mode():
+        block.sanity_check()
+
+    # clean up wire nodes
+    _remove_wire_nets(block, skip_sanity_check)
 
 
 class _ProducerList(object):
