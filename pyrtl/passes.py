@@ -78,17 +78,42 @@ def _remove_double_inverts(block, skip_sanity_check=False):
     for net in block.logic:
         if net.op == "~":
             invert_destination_wires[net.dests[0].name] = net
-    for net in invert_destination_wires.values():
-        # If the argument of the net is in invert_destination_wires, then it is a double invert
-        # If the net is in net_exclude_set, then it was already removed, so we do not process it
-        if net.args[0].name in invert_destination_wires and net not in net_exclude_set:
-            previous_net = invert_destination_wires[net.args[0].name]
-            if not is_wirevector_used_elsewhere(net.args[0], (net, previous_net)) \
-                    and previous_net not in net_exclude_set:
-                new_logic.add(LogicNet('w', None, args=previous_net.args, dests=net.dests))
-                wire_removal_set.add(net.args[0])
-                net_exclude_set.add(net)
-                net_exclude_set.add(previous_net)
+    # If double invert nets are removed randomly, this may leave some double inverts behind.
+    # Example: ~(~(~(~a)))
+    # If we remove the middle two inverts first, we will end up with ~((~a)). These remaining
+    # double inverts won't get removed because they aren't directly connected.
+    # To avoid this, we remove double inverts in a chain sequentially from start to end.
+    # For example, we first remove the two outer inverts from ~(~(~(~a))) to get ~(~a),
+    # and then remove the remaining two inner inverts. To do this, we need iterate through
+    # the invert_destination_wires dictionary multiple times, hence the outer while loop.
+    repeat = True
+    while repeat:
+        repeat = False
+        removed_nets = set()
+        for net in invert_destination_wires.values():
+            # If the argument of the net is in invert_destination_wires, then it is a double invert
+            # If the net is in net_exclude_set, then it was already removed, so we do not process it
+            if net.args[0].name in invert_destination_wires and net not in net_exclude_set:
+                previous_net = invert_destination_wires[net.args[0].name]
+                if not is_wirevector_used_elsewhere(net.args[0], (net, previous_net)) \
+                        and previous_net not in net_exclude_set:
+                    # If previous_net is in invert_destination_wires, we have a chain of
+                    # 3 or more double inverts. To make sure we remove double inverts
+                    # in these chains sequentially, we only remove the double invert
+                    # we found if the invert net whose destination is previous_net
+                    # was not removed yet. If it was not yet removed, the for loop
+                    # needs to run again, so we set repeat to True.
+                    if previous_net.args[0].name in invert_destination_wires:
+                        repeat = True
+                    else:
+                        new_logic.add(LogicNet('w', None, args=previous_net.args, dests=net.dests))
+                        wire_removal_set.add(net.args[0])
+                        removed_nets.add(net)
+                        removed_nets.add(previous_net)
+        # remove removed_nets from invert_destination_wires to optimize the for loop
+        for net in removed_nets:
+            del invert_destination_wires[net.dests[0].name]
+        net_exclude_set.update(removed_nets)
 
     for net in block.logic:
         if net not in net_exclude_set:
