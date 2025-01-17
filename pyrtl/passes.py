@@ -61,7 +61,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
 def _remove_double_inverts(block, skip_sanity_check=False):
     """ Removes all double invert nets from the block. """
 
-    # checks if the wirevector is used at a LogicNet other than used_at_net
+    # checks if the wirevector is used at a LogicNet other than used_at_nets
     def is_wirevector_used_elsewhere(wire, used_at_nets):
         for net in block.logic:
             if net not in used_at_nets:
@@ -73,24 +73,22 @@ def _remove_double_inverts(block, skip_sanity_check=False):
     new_logic = set()
     net_exclude_set = set()  # removed nets
     wire_removal_set = set()
-    for net1 in block.logic:
-        for net2 in block.logic:
-            # Conditions need to be satisfied for the nets to be removed:
-            # 1. Both nets should be invert nets
-            # 2. Nets should not be in net_exclude_set (nets that are already removed)
-            # 3. The destination of net1 should be the argument of net2
-            #    (so we know the nets are connected)
-            # 4. The destination of net1 should not be used elsewhere
-            #    (because we can't remove a wire that is used in another net)
-            if net1.op == '~' and net2.op == '~' \
-                and net1 not in net_exclude_set and net2 not in net_exclude_set \
-                    and net1.dests[0].name == net2.args[0].name \
-                    and not is_wirevector_used_elsewhere(net1.dests[0], (net1, net2)):
-                new_logic.add(LogicNet('w', None, args=net1.args, dests=net2.dests))
-                net_exclude_set.add(net1)
-                net_exclude_set.add(net2)
-                wire_removal_set.add(net1.dests[0])
-                break
+    # Dictionary, key is the destination wire of the invert net, value is the invert net
+    invert_destination_wires = {}
+    for net in block.logic:
+        if net.op == "~":
+            invert_destination_wires[net.dests[0].name] = net
+    for net in invert_destination_wires.values():
+        # If the argument of the net is in invert_destination_wires, then it is a double invert
+        # If the net is in net_exclude_set, then it was already removed, so we do not process it
+        if net.args[0].name in invert_destination_wires and net not in net_exclude_set:
+            previous_net = invert_destination_wires[net.args[0].name]
+            if not is_wirevector_used_elsewhere(net.args[0], (net, previous_net)) \
+                    and previous_net not in net_exclude_set:
+                new_logic.add(LogicNet('w', None, args=previous_net.args, dests=net.dests))
+                wire_removal_set.add(net.args[0])
+                net_exclude_set.add(net)
+                net_exclude_set.add(previous_net)
 
     for net in block.logic:
         if net not in net_exclude_set:
