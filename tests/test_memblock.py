@@ -274,12 +274,6 @@ class MemIndexedTests(unittest.TestCase):
         self.mem_2 = pyrtl.MemBlock(bitwidth=16, addrwidth=1)
         self.assertEqual(len(self.mem_2[0]), 16)
 
-    def reassemble_bits(bits: list[int]):
-        value = 0
-        for bit in bits:
-            value = (value << 1) | bit
-        return value
-
     def test_memindexed_getitem(self):
         mem = pyrtl.MemBlock(bitwidth=8, addrwidth=1, max_read_ports=None)
         mem_addr = pyrtl.Input(1, 'mem_addr')
