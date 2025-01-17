@@ -316,6 +316,87 @@ class TestOptimization(NetWireNumTestCases):
         self.num_net_of_type('s', 1, block)
         self.num_net_of_type('w', 2, block)
 
+    def test_remove_double_inverts_1_invert(self):
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output(bitwidth=1)
+        outwire <<= ~inwire
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.assert_num_net(2, block)
+        self.assert_num_wires(3, block)
+
+    def test_remove_double_inverts_3_inverts(self):
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output(bitwidth=1)
+        outwire <<= ~(~(~inwire))
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.assert_num_net(2, block)
+        self.assert_num_wires(3, block)
+
+    def test_remove_double_inverts_5_inverts(self):
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output(bitwidth=1)
+        outwire <<= ~(~(~(~(~inwire))))
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.assert_num_net(2, block)
+        self.assert_num_wires(3, block)
+
+    def test_remove_double_inverts_2_inverts(self):
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output(bitwidth=1)
+        outwire <<= ~(~inwire)
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.assert_num_net(1, block)
+        self.assert_num_wires(2, block)
+
+    def test_remove_double_inverts_4_inverts(self):
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output(bitwidth=1)
+        outwire <<= ~(~(~(~inwire)))
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.assert_num_net(1, block)
+        self.assert_num_wires(2, block)
+
+    def test_remove_double_inverts_6_inverts(self):
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output(bitwidth=1)
+        outwire <<= ~(~(~(~(~(~inwire)))))
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.assert_num_net(1, block)
+        self.assert_num_wires(2, block)
+
+    def test_dont_remove_double_inverts_another_user(self):
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output(bitwidth=1)
+        outwire2 = pyrtl.Output(bitwidth=1)
+        tempwire = pyrtl.WireVector()
+        tempwire <<= ~inwire
+        outwire <<= ~tempwire
+        outwire2 <<= tempwire
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.assert_num_net(4, block)
+        self.assert_num_wires(5, block)
+
+    def test_multiple_double_invert_chains(self):
+        # _remove_double_inverts removes double inverts by chains,
+        # so it is useful to make sure it can remove
+        # double inverts from multiple chains
+        inwire = pyrtl.Input(bitwidth=1)
+        outwire = pyrtl.Output(bitwidth=1)
+        outwire2 = pyrtl.Output(bitwidth=1)
+        outwire <<= ~(~inwire)
+        outwire2 <<= ~(~(~(~(inwire))))
+        pyrtl.optimize()
+        block = pyrtl.working_block()
+        self.assert_num_net(2, block)
+        self.assert_num_wires(3, block)
+
 
 class TestConstFolding(NetWireNumTestCases):
     def setUp(self):
