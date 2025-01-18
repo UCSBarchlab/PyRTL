@@ -259,10 +259,7 @@ class MemBlock(object):
     def _assignment(self, item, val, is_conditional):
         from .conditional import _build
 
-        item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
-        if len(item) > self.addrwidth:
-            raise PyrtlError('error, the wire indexing the memory bitwidth > addrwidth')
-        addr = item
+        addr = as_wires(item, bitwidth=self.addrwidth, truncating=False)
 
         if isinstance(val, MemBlock.EnabledWrite):
             data, enable = val.data, val.enable
