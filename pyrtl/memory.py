@@ -259,6 +259,9 @@ class MemBlock(object):
     def _assignment(self, item, val, is_conditional):
         from .conditional import _build
 
+        # Even though as_wires is already called on item already in the __getitem__ method,
+        # we need to call it again here because __setitem__ passes the original item
+        # to _assignment.
         addr = as_wires(item, bitwidth=self.addrwidth, truncating=False)
 
         if isinstance(val, MemBlock.EnabledWrite):
