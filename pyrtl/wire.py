@@ -852,7 +852,8 @@ class Register(WireVector):
         super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block)
         self.reg_in = None  # wire vector setting self.next
         if reset_value is not None:
-            reset_value, rst_bitwidth = infer_val_and_bitwidth(reset_value)
+            # NOTE: pass bitwidth here to allow for negative reset values
+            reset_value, rst_bitwidth = infer_val_and_bitwidth(reset_value, bitwidth=bitwidth)
             if rst_bitwidth > bitwidth:
                 raise PyrtlError(
                     'reset_value "%s" cannot fit in the specified %d bits for this register'
