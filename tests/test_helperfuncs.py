@@ -1814,5 +1814,47 @@ class TestOneHotToBinary(unittest.TestCase):
         self.assertEqual(sim.inspect('o'), 0)
 
 
+class TestBinaryToOneHot(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_simple_binary_to_one_hot(self):
+        i = pyrtl.Input(bitwidth=8, name='i')
+        o = pyrtl.Output(bitwidth=16, name='o')
+        o <<= pyrtl.binary_to_one_hot(i)
+
+        sim = pyrtl.Simulation()
+        sim.step({i: 0})
+        self.assertEqual(sim.inspect('o'), 0b01)
+        sim.step({i: 2})
+        self.assertEqual(sim.inspect('o'), 0b0100)
+        sim.step({i: 5})
+        self.assertEqual(sim.inspect('o'), 0b00100000)
+        sim.step({i: 12})
+        self.assertEqual(sim.inspect('o'), 0b0001000000000000)
+        sim.step({i: 15})
+        self.assertEqual(sim.inspect('o'), 0b1000000000000000)
+
+    def test_sufficient_max_bitwidth(self):
+        i = pyrtl.Input(bitwidth=8, name='i')
+        o = pyrtl.Output(bitwidth=16, name='o')
+        o <<= pyrtl.binary_to_one_hot(i, max_bitwidth=8)
+
+        sim = pyrtl.Simulation()
+        sim.step({i: 0})
+        self.assertEqual(sim.inspect('o'), 0b0001)
+        sim.step({i: 6})
+        self.assertEqual(sim.inspect('o'), 0b01000000)
+
+    def test_insufficient_max_bitwidth(self):
+        i = pyrtl.Input(bitwidth=8, name='i')
+        o = pyrtl.Output(bitwidth=16, name='o')
+        o <<= pyrtl.binary_to_one_hot(i, max_bitwidth=4)
+
+        sim = pyrtl.Simulation()
+        sim.step({i: 5})
+        self.assertEqual(sim.inspect('o'), 0b0000)
+
+
 if __name__ == "__main__":
     unittest.main()

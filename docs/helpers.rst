@@ -111,4 +111,5 @@ Encoders and Decoders
 ---------------------
 
 .. autofunction:: pyrtl.helperfuncs.one_hot_to_binary
+.. autofunction:: pyrtl.helperfuncs.binary_to_one_hot
 

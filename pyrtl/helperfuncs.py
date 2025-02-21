@@ -13,7 +13,15 @@ from typing import Union, NamedTuple
 from .core import working_block, _NameIndexer, _get_debug_mode, Block
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .wire import WireVector, Input, Output, Const, Register, WrappedWireVector
-from .corecircuits import as_wires, rtl_all, rtl_any, concat, concat_list, select
+from .corecircuits import (
+    as_wires,
+    rtl_all,
+    rtl_any,
+    concat,
+    concat_list,
+    select,
+    shift_left_logical
+)
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -1715,3 +1723,37 @@ def one_hot_to_binary(w) -> WireVector:
         already_found = already_found | w[i]
 
     return pos
+
+
+def binary_to_one_hot(bit_position, max_bitwidth: int = None) -> WireVector:
+    '''Takes an input representing a bit position and returns a WireVector
+    with that bit position set to 1 and the others to 0.
+
+    :param bit_position: WireVector, WireVector-like object, or something that can be converted
+        into a :py:class:`.Const` (in accordance with the :py:func:`.as_wires()`
+        required input). Example inputs: ``0b10``, ``0b1000, ``4``.
+    :param max_bitwidth: Optional integer maximum bitwidth for the resulting one-hot WireVector.
+    :return: WireVector with the bit position, given by the input, set to 1 and all others set to 0.
+
+    If the max_bitwidth provided is not sufficient for the given bit_position to be set to 1,
+    a ``0`` WireVector of size max_bitwidth will be returned.
+
+    Examples::
+
+        binary_to_onehot(2)  # returns 0b0100
+        binary_to_onehot(8)  # returns 0b00100000
+        binary_to_onehot(12)  # returns 0b0001000000000000
+        binary_to_onehot(15)  # returns 0b1000000000000000
+
+    '''
+
+    bit_position = as_wires(bit_position)
+
+    if max_bitwidth is not None:
+        bitwidth = max_bitwidth
+    else:
+        bitwidth = 2 ** len(bit_position)
+
+    onehot = Const(1, bitwidth=bitwidth)
+
+    return shift_left_logical(onehot, bit_position)
