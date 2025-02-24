@@ -1819,41 +1819,37 @@ class TestBinaryToOneHot(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_simple_binary_to_one_hot(self):
-        i = pyrtl.Input(bitwidth=8, name='i')
-        o = pyrtl.Output(bitwidth=16, name='o')
-        o <<= pyrtl.binary_to_one_hot(i)
+        bit_position = pyrtl.Input(bitwidth=8, name='bit_position')
+        one_hot = pyrtl.Output(bitwidth=16, name='one_hot')
+        one_hot <<= pyrtl.binary_to_one_hot(bit_position)
 
         sim = pyrtl.Simulation()
-        sim.step({i: 0})
-        self.assertEqual(sim.inspect('o'), 0b01)
-        sim.step({i: 2})
-        self.assertEqual(sim.inspect('o'), 0b0100)
-        sim.step({i: 5})
-        self.assertEqual(sim.inspect('o'), 0b00100000)
-        sim.step({i: 12})
-        self.assertEqual(sim.inspect('o'), 0b0001000000000000)
-        sim.step({i: 15})
-        self.assertEqual(sim.inspect('o'), 0b1000000000000000)
+        sim.step({bit_position: 0})
+        self.assertEqual(sim.inspect('one_hot'), 0b01)
+        sim.step({bit_position: 2})
+        self.assertEqual(sim.inspect('one_hot'), 0b0100)
+        sim.step({bit_position: 5})
+        self.assertEqual(sim.inspect('one_hot'), 0b00100000)
+        sim.step({bit_position: 12})
+        self.assertEqual(sim.inspect('one_hot'), 0b0001000000000000)
+        sim.step({bit_position: 15})
+        self.assertEqual(sim.inspect('one_hot'), 0b1000000000000000)
 
-    def test_sufficient_max_bitwidth(self):
-        i = pyrtl.Input(bitwidth=8, name='i')
-        o = pyrtl.Output(bitwidth=16, name='o')
-        o <<= pyrtl.binary_to_one_hot(i, max_bitwidth=8)
-
-        sim = pyrtl.Simulation()
-        sim.step({i: 0})
-        self.assertEqual(sim.inspect('o'), 0b0001)
-        sim.step({i: 6})
-        self.assertEqual(sim.inspect('o'), 0b01000000)
-
-    def test_insufficient_max_bitwidth(self):
-        i = pyrtl.Input(bitwidth=8, name='i')
-        o = pyrtl.Output(bitwidth=16, name='o')
-        o <<= pyrtl.binary_to_one_hot(i, max_bitwidth=4)
+    # Tests with the max_bitwidth set
+    def test_with_max_bitwidth(self):
+        bit_position = pyrtl.Input(bitwidth=8, name='bit_position')
+        one_hot = pyrtl.Output(bitwidth=16, name='one_hot')
+        one_hot <<= pyrtl.binary_to_one_hot(bit_position, max_bitwidth=4)
 
         sim = pyrtl.Simulation()
-        sim.step({i: 5})
-        self.assertEqual(sim.inspect('o'), 0b0000)
+        sim.step({bit_position: 0})
+        self.assertEqual(sim.inspect('one_hot'), 0b0001)
+        sim.step({bit_position: 3})
+        self.assertEqual(sim.inspect('one_hot'), 0b1000)
+
+        # The max_bitwidth set is not enough for a bit position of 4
+        sim.step({bit_position: 4})
+        self.assertEqual(sim.inspect('one_hot'), 0b0000)
 
 
 if __name__ == "__main__":

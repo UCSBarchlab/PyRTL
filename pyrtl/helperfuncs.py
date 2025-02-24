@@ -1731,20 +1731,19 @@ def binary_to_one_hot(bit_position, max_bitwidth: int = None) -> WireVector:
 
     :param bit_position: WireVector, WireVector-like object, or something that can be converted
         into a :py:class:`.Const` (in accordance with the :py:func:`.as_wires()`
-        required input). Example inputs: ``0b10``, ``0b1000, ``4``.
+        required input). Example inputs: ``0b10``, ``0b1000``, ``4``.
     :param max_bitwidth: Optional integer maximum bitwidth for the resulting one-hot WireVector.
-    :return: WireVector with the bit position, given by the input, set to 1 and all others set to 0.
+    :return: WireVector with the bit position given by the input set to 1 and all other bits
+    set to 0 (bit position 0 being the least significant bit).
 
     If the max_bitwidth provided is not sufficient for the given bit_position to be set to 1,
     a ``0`` WireVector of size max_bitwidth will be returned.
 
     Examples::
 
-        binary_to_onehot(2)  # returns 0b0100
-        binary_to_onehot(8)  # returns 0b00100000
-        binary_to_onehot(12)  # returns 0b0001000000000000
-        binary_to_onehot(15)  # returns 0b1000000000000000
-
+        binary_to_onehot(0)  # returns 0b01
+        binary_to_onehot(3)  # returns 0b1000
+        binary_to_onehot(0b100)  # returns 0b10000
     '''
 
     bit_position = as_wires(bit_position)
@@ -1754,6 +1753,5 @@ def binary_to_one_hot(bit_position, max_bitwidth: int = None) -> WireVector:
     else:
         bitwidth = 2 ** len(bit_position)
 
-    onehot = Const(1, bitwidth=bitwidth)
-
-    return shift_left_logical(onehot, bit_position)
+    # Need to dynamically set the appropriate bit position since bit_position may not be a Const
+    return shift_left_logical(Const(1, bitwidth=bitwidth), bit_position)
