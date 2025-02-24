@@ -1734,7 +1734,7 @@ def binary_to_one_hot(bit_position, max_bitwidth: int = None) -> WireVector:
         required input). Example inputs: ``0b10``, ``0b1000``, ``4``.
     :param max_bitwidth: Optional integer maximum bitwidth for the resulting one-hot WireVector.
     :return: WireVector with the bit position given by the input set to 1 and all other bits
-    set to 0 (bit position 0 being the least significant bit).
+        set to 0 (bit position 0 being the least significant bit).
 
     If the max_bitwidth provided is not sufficient for the given bit_position to be set to 1,
     a ``0`` WireVector of size max_bitwidth will be returned.

@@ -1820,8 +1820,10 @@ class TestBinaryToOneHot(unittest.TestCase):
 
     def test_simple_binary_to_one_hot(self):
         bit_position = pyrtl.Input(bitwidth=8, name='bit_position')
-        one_hot = pyrtl.Output(bitwidth=16, name='one_hot')
+        one_hot = pyrtl.Output(name='one_hot')
         one_hot <<= pyrtl.binary_to_one_hot(bit_position)
+
+        self.assertEqual(one_hot.bitwidth, 256)
 
         sim = pyrtl.Simulation()
         sim.step({bit_position: 0})
@@ -1838,8 +1840,10 @@ class TestBinaryToOneHot(unittest.TestCase):
     # Tests with the max_bitwidth set
     def test_with_max_bitwidth(self):
         bit_position = pyrtl.Input(bitwidth=8, name='bit_position')
-        one_hot = pyrtl.Output(bitwidth=16, name='one_hot')
+        one_hot = pyrtl.Output(name='one_hot')
         one_hot <<= pyrtl.binary_to_one_hot(bit_position, max_bitwidth=4)
+
+        self.assertEqual(one_hot.bitwidth, 4)
 
         sim = pyrtl.Simulation()
         sim.step({bit_position: 0})
