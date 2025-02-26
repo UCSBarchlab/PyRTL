@@ -852,29 +852,15 @@ class Register(WireVector):
         super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block)
         self.reg_in = None  # wire vector setting self.next
         if reset_value is not None:
-            # detect if reset_value is a negative Verilog constant and sign
-            # extend it to the correct bitwidth
-            if isinstance(reset_value, str) and reset_value.startswith('-'):
-                verilog_bitwidth, constant = reset_value[1:].split("'")
-                if int(verilog_bitwidth) > bitwidth:
-                    raise PyrtlError(
-                        'reset_value "%s" cannot fit in the specified %d bits for this register'
-                        % (str(reset_value), bitwidth)
-                    )
-
-                reset_value = '-' + str(bitwidth) + "'" + constant
-
             reset_value, rst_bitwidth = infer_val_and_bitwidth(
                 reset_value,
-                # the below allows for Verilog strings with bitwidths less
-                # than what is specified for the register
-                # e.g. -3'd6 is a valid reset value for a 4-bit register
-                bitwidth=(None if isinstance(reset_value, str) else bitwidth)
+                bitwidth=bitwidth,
             )
             if rst_bitwidth > bitwidth:
                 raise PyrtlError(
                     'reset_value "%s" cannot fit in the specified %d bits for this register'
-                    % (str(reset_value), bitwidth))
+                    % (str(reset_value), bitwidth)
+                )
         self.reset_value = reset_value
 
     @property

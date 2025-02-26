@@ -370,7 +370,6 @@ class TestConst(unittest.TestCase):
         self.assert_bad_const("5'b111111'")
         self.assert_bad_const("'")
         self.assert_bad_const("'1")
-        self.assert_bad_const("2'b01", bitwidth=3)
         self.assert_bad_const("1'")
 
     def test_bool(self):

@@ -795,11 +795,20 @@ def _convert_verilog_str(val: str, bitwidth: int = None,
     if val.startswith('-'):
         neg = True
         val = val[1:]
+
     split_string = val.lower().split("'")
     if len(split_string) != 2:
         raise PyrtlError('error, string not in verilog style format')
     try:
         bitwidth = int(split_string[0])
+        if passed_bitwidth is not None:
+            if bitwidth > passed_bitwidth:
+                raise PyrtlError(
+                    "bitwidth parameter passed (%d) cannot fit Verilog-style constant with bitwidth %d"
+                        % (passed_bitwidth, bitwidth)
+                )
+            bitwidth = passed_bitwidth
+
         sval = split_string[1]
         if sval[0] == 's':
             raise PyrtlError('error, signed integers are not supported in verilog-style constants')
@@ -811,16 +820,11 @@ def _convert_verilog_str(val: str, bitwidth: int = None,
         num = int(sval, base)
     except (IndexError, ValueError):
         raise PyrtlError('error, string not in verilog style format')
+
     if neg and num:
         if (num >> bitwidth - 1):
             raise PyrtlError('error, insufficient bits for negative number')
         num = (1 << bitwidth) - num
-
-    if passed_bitwidth and passed_bitwidth != bitwidth:
-        raise PyrtlError('error, bitwidth parameter of constant does not match'
-                         ' the bitwidth infered from the verilog style specification'
-                         ' (if bitwidth=None is used, pyrtl will determine the bitwidth from the'
-                         ' verilog-style constant specification)')
 
     if num >> bitwidth != 0:
         raise PyrtlError('specified bitwidth %d for verilog constant insufficient to store value %d'
