@@ -51,3 +51,6 @@ ipynb-examples/.ipynb_checkpoints
 
 # VS Code
 .vscode
+
+# Python venv
+pyvenv.cfg
