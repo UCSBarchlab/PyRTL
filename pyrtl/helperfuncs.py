@@ -789,7 +789,6 @@ def _convert_verilog_str(val: str, bitwidth: int = None,
         raise PyrtlError('error, "signed" option with verilog-style string constants not supported')
 
     bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16, 'x': 16}
-    passed_bitwidth = bitwidth
 
     neg = False
     if val.startswith('-'):
@@ -800,18 +799,19 @@ def _convert_verilog_str(val: str, bitwidth: int = None,
     if len(split_string) != 2:
         raise PyrtlError('error, string not in verilog style format')
     try:
-        bitwidth = int(split_string[0])
-        if passed_bitwidth is not None:
-            if bitwidth > passed_bitwidth:
-                raise PyrtlError(
-                    "bitwidth parameter passed (%d) cannot fit Verilog-style constant with bitwidth %d"
-                        % (passed_bitwidth, bitwidth)
-                )
-            bitwidth = passed_bitwidth
+        verilog_bitwidth = int(split_string[0])
+        bitwidth = bitwidth or verilog_bitwidth  # if bitwidth is None, use verilog_bitwidth
+        if verilog_bitwidth > bitwidth:
+            raise PyrtlError(
+                "bitwidth parameter passed (%d) cannot fit Verilog-style constant with bitwidth %d"
+                % (bitwidth, verilog_bitwidth) +
+                " (if bitwidth=None is used, PyRTL will determine the bitwidth from the "
+                "Verilog-style constant specification)"
+            )
 
         sval = split_string[1]
         if sval[0] == 's':
-            raise PyrtlError('error, signed integers are not supported in verilog-style constants')
+            raise PyrtlError('error, signed integers are not supported in Verilog-style constants')
         base = 10
         if sval[0] in bases:
             base = bases[sval[0]]
