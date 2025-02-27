@@ -804,8 +804,8 @@ def _convert_verilog_str(val: str, bitwidth: int = None,
         if verilog_bitwidth > bitwidth:
             raise PyrtlError(
                 "bitwidth parameter passed (%d) cannot fit Verilog-style constant with bitwidth %d"
-                % (bitwidth, verilog_bitwidth) +
-                " (if bitwidth=None is used, PyRTL will determine the bitwidth from the "
+                % (bitwidth, verilog_bitwidth)
+                + " (if bitwidth=None is used, PyRTL will determine the bitwidth from the "
                 "Verilog-style constant specification)"
             )
 
