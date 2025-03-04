@@ -123,7 +123,7 @@ def _remove_double_inverts(block, skip_sanity_check=False):
     net_exclude_set = set()  # removed nets
     wire_removal_set = set()
     for inverter_wirenet_chain in inverter_wirenet_chains:
-        if len(inverter_wirenet_chain) > 1:
+        if len(inverter_wirenet_chain) > 2:
             if len(inverter_wirenet_chain) % 2 == 1: # even number of inverters in a chain
                 end_idx = len(inverter_wirenet_chain) - 1
             else: # odd number of inverters in a chain
@@ -134,8 +134,8 @@ def _remove_double_inverts(block, skip_sanity_check=False):
             inverters_to_remove = {wire_creator[wire] for wire in wires_to_remove}
             inverters_to_remove.add(wire_creator[inverter_wirenet_chain[end_idx]])
 
-        wire_removal_set.update(wires_to_remove)
-        net_exclude_set.update(inverters_to_remove)
+            wire_removal_set.update(wires_to_remove)
+            net_exclude_set.update(inverters_to_remove)
 
     for net in block.logic:
         if net not in net_exclude_set:
