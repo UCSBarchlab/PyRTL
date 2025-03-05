@@ -67,7 +67,7 @@ def _remove_double_inverts(block, skip_sanity_check=False):
 
     # Build a list of inverter chains. Each inverter chain is a list of WireVectors,
     # from source to destination.
-    inverter_wirenet_chains = []
+    inverter_chains = []
     for current_dest, current_creator in wire_creator.items():
         if current_creator.op != "~":
             # Skip non-inverters.
@@ -84,61 +84,55 @@ def _remove_double_inverts(block, skip_sanity_check=False):
         # Add the current inverter to the beginning of this inverter chain.
         prepend_to = None
         next_inverter_chains = []
-        for inverter_wirenet_chain in inverter_wirenet_chains:
-            chain_arg = inverter_wirenet_chain[0]
-            chain_dest = inverter_wirenet_chain[-1]
+        for inverter_chain in inverter_chains:
+            chain_arg = inverter_chain[0]
+            chain_dest = inverter_chain[-1]
             chain_users = len(wire_users[chain_dest])
 
             if chain_dest is current_arg and chain_users == 1:
                 # This chain's only destination is the current inverter. Append the
                 # current inverter to the chain.
-                append_to = inverter_wirenet_chain
+                append_to = inverter_chain
             elif chain_arg is current_dest and current_users <= 1:
                 # This chain's only argument is the current inverter. Add the current
                 # inverter to the beginning of the chain.
-                prepend_to = inverter_wirenet_chain
+                prepend_to = inverter_chain
             else:
-                next_inverter_chains.append(inverter_wirenet_chain)
+                next_inverter_chains.append(inverter_chain)
 
-        #print("current inverter: ", current_arg, "->", current_dest)
         if append_to and prepend_to:
             # The current inverter joins two existing inverter chains.
             next_inverter_chains.append(append_to + prepend_to)
-            #print("  joined", next_inverter_chains)
         elif append_to:
             # Add the current inverter after 'append_to'.
             next_inverter_chains.append(append_to + [current_dest])
-            #print("  appended", next_inverter_chains)
         elif prepend_to:
             # Add the current inverter before 'prepend_to'.
             next_inverter_chains.append([current_arg] + prepend_to)
-            #print("  prepended", next_inverter_chains)
         else:
             next_inverter_chains.append([current_arg, current_dest])
-            #print("  start new chain", next_inverter_chains)
 
-        inverter_wirenet_chains = next_inverter_chains
+        inverter_chains = next_inverter_chains
 
     new_logic = set()
-    net_exclude_set = set()  # removed nets
+    net_removal_set = set()
     wire_removal_set = set()
-    for inverter_wirenet_chain in inverter_wirenet_chains:
-        if len(inverter_wirenet_chain) > 2:
-            if len(inverter_wirenet_chain) % 2 == 1: # even number of inverters in a chain
-                end_idx = len(inverter_wirenet_chain) - 1
-            else: # odd number of inverters in a chain
-                end_idx = len(inverter_wirenet_chain) - 2
-            wires_to_remove = inverter_wirenet_chain[1:end_idx]
-            new_logic.add(LogicNet('w', None, args=(inverter_wirenet_chain[0],), \
-                                    dests=(inverter_wirenet_chain[end_idx],)))
+    for inverter_chain in inverter_chains:
+        if len(inverter_chain) > 2:
+            if len(inverter_chain) % 2 == 1:  # even number of inverters in a chain
+                end_idx = len(inverter_chain) - 1
+            else:  # odd number of inverters in a chain
+                end_idx = len(inverter_chain) - 2
+            wires_to_remove = inverter_chain[1:end_idx]
+            new_logic.add(LogicNet('w', None, args=(inverter_chain[0],),
+                                   dests=(inverter_chain[end_idx],)))
             inverters_to_remove = {wire_creator[wire] for wire in wires_to_remove}
-            inverters_to_remove.add(wire_creator[inverter_wirenet_chain[end_idx]])
-
+            inverters_to_remove.add(wire_creator[inverter_chain[end_idx]])
             wire_removal_set.update(wires_to_remove)
-            net_exclude_set.update(inverters_to_remove)
+            net_removal_set.update(inverters_to_remove)
 
     for net in block.logic:
-        if net not in net_exclude_set:
+        if net not in net_removal_set:
             new_logic.add(net)
 
     block.logic = new_logic
