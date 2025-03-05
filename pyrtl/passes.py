@@ -58,12 +58,8 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
     return block
 
 
-def _remove_double_inverts(block, skip_sanity_check=False):
-    """ Removes all double invert nets from the block. """
-
-    # wire_creator maps from WireVector to the LogicNet that defines its value.
-    # wire_users maps from WireVector to a list of LogicNets that use its value.
-    wire_creator, wire_users = block.net_connections()
+def _get_inverter_chains(wire_creator, wire_users):
+    """Returns all inverter chains in the block"""
 
     # Build a list of inverter chains. Each inverter chain is a list of WireVectors,
     # from source to destination.
@@ -93,11 +89,13 @@ def _remove_double_inverts(block, skip_sanity_check=False):
                 # This chain's only destination is the current inverter. Append the
                 # current inverter to the chain.
                 append_to = inverter_chain
-            elif chain_arg is current_dest and current_users <= 1:
+            elif chain_arg is current_dest and current_users == 1:
                 # This chain's only argument is the current inverter. Add the current
                 # inverter to the beginning of the chain.
                 prepend_to = inverter_chain
             else:
+                # The current inverter is not connected to the inverter chain, so we
+                # pass the inverter chain through to next_inverter_chains
                 next_inverter_chains.append(inverter_chain)
 
         if append_to and prepend_to:
@@ -110,14 +108,27 @@ def _remove_double_inverts(block, skip_sanity_check=False):
             # Add the current inverter before 'prepend_to'.
             next_inverter_chains.append([current_arg] + prepend_to)
         else:
+            # The current inverter is not connected to any inverter chain, so
+            # we start a new inverter chain with it
             next_inverter_chains.append([current_arg, current_dest])
 
         inverter_chains = next_inverter_chains
+    return inverter_chains
+
+
+def _remove_double_inverts(block, skip_sanity_check=False):
+    """ Removes all double invert nets from the block. """
+
+    # wire_creator maps from WireVector to the LogicNet that defines its value.
+    # wire_users maps from WireVector to a list of LogicNets that use its value.
+    wire_creator, wire_users = block.net_connections()
 
     new_logic = set()
     net_removal_set = set()
     wire_removal_set = set()
-    for inverter_chain in inverter_chains:
+    for inverter_chain in _get_inverter_chains(wire_creator, wire_users):
+        # if len(inverter_chain) = n, there are n-1 inverters in the chain
+        # only remove inverters if there are at least two inverters in a chain
         if len(inverter_chain) > 2:
             if len(inverter_chain) % 2 == 1:  # even number of inverters in a chain
                 end_idx = len(inverter_chain) - 1
