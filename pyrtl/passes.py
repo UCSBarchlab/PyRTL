@@ -69,10 +69,9 @@ class _ProducerList(object):
         self.dict[key] = item
 
     def find_producer(self, item):
-        if item in self.dict:
-            return self.find_producer(self.dict[item])
-        else:
-            return item
+        while item in self.dict:
+            item = self.find_producer(self.dict[item])
+        return item
 
 
 def _remove_wire_nets(block, skip_sanity_check=False):
