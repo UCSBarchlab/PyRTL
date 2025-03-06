@@ -132,17 +132,17 @@ def _remove_double_inverts(block, skip_sanity_check=False):
         # only remove inverters if there are at least two inverters in a chain
         if len(inverter_chain) > 2:
             if len(inverter_chain) % 2 == 1:  # even number of inverters in a chain
-                end_idx = len(inverter_chain) - 1
+                start_idx = 1
             else:  # odd number of inverters in a chain
-                end_idx = len(inverter_chain) - 2
+                start_idx = 2
             # remove wires used in the inverter chain
-            wires_to_remove = inverter_chain[1:end_idx + 1]
+            wires_to_remove = inverter_chain[start_idx:]
             wire_removal_set.update(wires_to_remove)
             # remove inverters used in the chain
             inverters_to_remove = {wire_creator[wire] for wire in wires_to_remove}
             net_removal_set.update(inverters_to_remove)
             # map the end wire of the inverter chain to the beginning wire
-            wire_src_dict[inverter_chain[end_idx]] = inverter_chain[0]
+            wire_src_dict[inverter_chain[-1]] = inverter_chain[start_idx-1]
 
     for net in block.logic:
         if net not in net_removal_set:
