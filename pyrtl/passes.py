@@ -136,9 +136,7 @@ def _remove_double_inverts(block, skip_sanity_check=False):
             else:  # odd number of inverters in a chain
                 end_idx = len(inverter_chain) - 2
             wires_to_remove = inverter_chain[1:end_idx+1]
-            for chain_dest in wire_users[inverter_chain[end_idx]]:
-                for arg in chain_dest.args:
-                    wire_src_dict[arg] = inverter_chain[0]
+            wire_src_dict[inverter_chain[end_idx]] = inverter_chain[0]
             inverters_to_remove = {wire_creator[wire] for wire in wires_to_remove}
             inverters_to_remove.add(wire_creator[inverter_chain[end_idx]])
             wire_removal_set.update(wires_to_remove)
