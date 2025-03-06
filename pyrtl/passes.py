@@ -126,8 +126,7 @@ def _remove_double_inverts(block, skip_sanity_check=False):
     new_logic = set()
     net_removal_set = set()
     wire_removal_set = set()
-    wire_destinations_replacement = dict()
-    wire_sources_replacement = dict()
+    wire_src_dict = _ProducerList()
     for inverter_chain in _get_inverter_chains(wire_creator, wire_users):
         # if len(inverter_chain) = n, there are n-1 inverters in the chain
         # only remove inverters if there are at least two inverters in a chain
@@ -137,17 +136,9 @@ def _remove_double_inverts(block, skip_sanity_check=False):
             else:  # odd number of inverters in a chain
                 end_idx = len(inverter_chain) - 2
             wires_to_remove = inverter_chain[1:end_idx+1]
-            #if inverter_chain[0] in wire_creator:
-            #    chain_source = wire_creator[inverter_chain[0]]
-            #    new_wire_dests = tuple(dest for dest in chain_source.dests if dest is not inverter_chain[0])
-            #    new_wire_dests += (inverter_chain[end_idx],)
-            #    wire_destinations_replacement[chain_source] = new_wire_dests
             for chain_dest in wire_users[inverter_chain[end_idx]]:
-                new_wire_sources = tuple(arg for arg in chain_dest.args if arg is not inverter_chain[end_idx])
-                new_wire_sources += (inverter_chain[0],)
-                wire_sources_replacement[chain_dest] = new_wire_sources
-            #new_logic.add(LogicNet('w', None, args=(inverter_chain[0],),
-            #                       dests=(inverter_chain[end_idx],)))
+                for arg in chain_dest.args:
+                    wire_src_dict[arg] = inverter_chain[0]
             inverters_to_remove = {wire_creator[wire] for wire in wires_to_remove}
             inverters_to_remove.add(wire_creator[inverter_chain[end_idx]])
             wire_removal_set.update(wires_to_remove)
@@ -155,16 +146,8 @@ def _remove_double_inverts(block, skip_sanity_check=False):
 
     for net in block.logic:
         if net not in net_removal_set:
-            #new_logic.add(net)
-            #continue
-            if net in wire_sources_replacement:
-                new_logic.add(LogicNet(net.op, net.op_param, args=wire_sources_replacement[net],
+            new_logic.add(LogicNet(net.op, net.op_param, args=tuple(wire_src_dict.find_producer(x) for x in net.args),
                                        dests=net.dests))
-            #if net in wire_destinations_replacement:
-            #    new_logic.add(LogicNet(net.op, net.op_param, args=net.args,
-            #                           dests=wire_destinations_replacement[net]))
-            else:
-                new_logic.add(net)
 
     block.logic = new_logic
     for dead_wirevector in wire_removal_set:
@@ -172,9 +155,6 @@ def _remove_double_inverts(block, skip_sanity_check=False):
 
     if (not skip_sanity_check) or _get_debug_mode():
         block.sanity_check()
-
-    # clean up wire nodes
-    #_remove_wire_nets(block, skip_sanity_check)
 
 
 class _ProducerList(object):
