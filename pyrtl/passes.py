@@ -135,17 +135,21 @@ def _remove_double_inverts(block, skip_sanity_check=False):
                 end_idx = len(inverter_chain) - 1
             else:  # odd number of inverters in a chain
                 end_idx = len(inverter_chain) - 2
-            wires_to_remove = inverter_chain[1:end_idx+1]
-            wire_src_dict[inverter_chain[end_idx]] = inverter_chain[0]
+            # remove wires used in the inverter chain
+            wires_to_remove = inverter_chain[1:end_idx + 1]
+            wire_removal_set.update(wires_to_remove)
+            # remove inverters used in the chain
             inverters_to_remove = {wire_creator[wire] for wire in wires_to_remove}
             inverters_to_remove.add(wire_creator[inverter_chain[end_idx]])
-            wire_removal_set.update(wires_to_remove)
             net_removal_set.update(inverters_to_remove)
+            # map the end wire of the inverter chain to the beginning wire
+            wire_src_dict[inverter_chain[end_idx]] = inverter_chain[0]
 
     for net in block.logic:
         if net not in net_removal_set:
-            new_logic.add(LogicNet(net.op, net.op_param, args=tuple(wire_src_dict.find_producer(x) for x in net.args),
-                                       dests=net.dests))
+            new_logic.add(LogicNet(net.op, net.op_param,
+                                   args=tuple(wire_src_dict.find_producer(x) for x in net.args),
+                                   dests=net.dests))
 
     block.logic = new_logic
     for dead_wirevector in wire_removal_set:
