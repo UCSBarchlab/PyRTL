@@ -140,7 +140,6 @@ def _remove_double_inverts(block, skip_sanity_check=False):
             wire_removal_set.update(wires_to_remove)
             # remove inverters used in the chain
             inverters_to_remove = {wire_creator[wire] for wire in wires_to_remove}
-            inverters_to_remove.add(wire_creator[inverter_chain[end_idx]])
             net_removal_set.update(inverters_to_remove)
             # map the end wire of the inverter chain to the beginning wire
             wire_src_dict[inverter_chain[end_idx]] = inverter_chain[0]
