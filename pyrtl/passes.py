@@ -70,7 +70,7 @@ class _ProducerList(object):
 
     def find_producer(self, item):
         while item in self.dict:
-            item = self.find_producer(self.dict[item])
+            item = self.dict[item]
         return item
 
 
