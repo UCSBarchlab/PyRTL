@@ -52,7 +52,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
         constant_propagation(block, True)
         _remove_unlistened_nets(block)
         common_subexp_elimination(block)
-        _remove_double_inverts(block, skip_sanity_check)
+        _remove_inverter_chains(block, skip_sanity_check)
         if (not skip_sanity_check) or _get_debug_mode():
             block.sanity_check()
     return block
@@ -116,8 +116,22 @@ def _get_inverter_chains(wire_creator, wire_users):
     return inverter_chains
 
 
-def _remove_double_inverts(block, skip_sanity_check=False):
-    """ Removes all double invert nets from the block. """
+def _remove_inverter_chains(block, skip_sanity_check=False):
+    """ Removes all inverter chains from the block.
+
+    An inverter chain means two or more inverters directly connected
+    to each other. Inverter chains are redundant and can be removed.
+    For example, A -~-> B -~-> C -w-> X can be reduced to A -w-> X.
+
+    After optimization, a chain of an even number of inverters will
+    be reduced a direct connection, and a chain of an odd number of
+    inverters will be reduced to one inverter.
+
+    If an inverter chain has intermediate users it won't be removed.
+    For example, the inverter chain in the following circuit won't be removed:
+    A -~-> B -~-> C -w-> X
+    B -w-> Y
+    """
 
     # wire_creator maps from WireVector to the LogicNet that defines its value.
     # wire_users maps from WireVector to a list of LogicNets that use its value.
@@ -126,7 +140,28 @@ def _remove_double_inverts(block, skip_sanity_check=False):
     new_logic = set()
     net_removal_set = set()
     wire_removal_set = set()
+
+    # This ProducerList maps the end wire of an inverter chain to its beginning wire.
+    # We need this because when removing an inverter chain its end wire gets removed,
+    # so we need to replace the source of LogicNets using the end wire of the inverter
+    # chain with the chain's beginning wire.
+    #
+    # We need a ProducerList, rather than a simple dict, because if an inverter chain
+    # of more than two inverters has intermediate users, we may have to query the dict
+    # multiple times to get the replacement for the inverter chain's last wire.
+    # Consider the following circuit, for example:
+    # A -~-> B -~-> C -w-> X
+    # C -~-> D -~-> E -w-> Y
+    # This is the optimized version of the circuit:
+    # A -w-> X
+    # A -w-> Y
+    # The inverter chains found will be B-C and D-E (two separate chains will be
+    # found instead of B-C-D-E because C has an intermediate user). In the dict,
+    # C will be mapped to A and E will be maped to C. Hence, when finding the
+    # replacement of E, we have to first query the dict to get C, and then query
+    # the dict again on C to get A.
     wire_src_dict = _ProducerList()
+
     for inverter_chain in _get_inverter_chains(wire_creator, wire_users):
         # if len(inverter_chain) = n, there are n-1 inverters in the chain
         # only remove inverters if there are at least two inverters in a chain
@@ -142,8 +177,12 @@ def _remove_double_inverts(block, skip_sanity_check=False):
             inverters_to_remove = {wire_creator[wire] for wire in wires_to_remove}
             net_removal_set.update(inverters_to_remove)
             # map the end wire of the inverter chain to the beginning wire
-            wire_src_dict[inverter_chain[-1]] = inverter_chain[start_idx-1]
+            wire_src_dict[inverter_chain[-1]] = inverter_chain[start_idx - 1]
 
+    # This loop recreates the LogicNet with inverter chains removed. It adds each
+    # block in the original LogicNet to the new LogicNet if it is not marked for
+    # removal, and replaces the source of the block if its source was the end wire
+    # of a removed inverter chain.
     for net in block.logic:
         if net not in net_removal_set:
             new_logic.add(LogicNet(net.op, net.op_param,
