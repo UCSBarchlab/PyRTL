@@ -163,20 +163,20 @@ def _remove_inverter_chains(block, skip_sanity_check=False):
     wire_src_dict = _ProducerList()
 
     for inverter_chain in _get_inverter_chains(wire_creator, wire_users):
-        # if len(inverter_chain) = n, there are n-1 inverters in the chain
-        # only remove inverters if there are at least two inverters in a chain
+        # If len(inverter_chain) = n, there are n-1 inverters in the chain.
+        # We only remove inverters if there are at least two inverters in a chain.
         if len(inverter_chain) > 2:
-            if len(inverter_chain) % 2 == 1:  # even number of inverters in a chain
+            if len(inverter_chain) % 2 == 1:  # There is an even number of inverters in a chain.
                 start_idx = 1
-            else:  # odd number of inverters in a chain
+            else:  # There is an odd number of inverters in a chain.
                 start_idx = 2
-            # remove wires used in the inverter chain
+            # Remove wires used in the inverter chain.
             wires_to_remove = inverter_chain[start_idx:]
             wire_removal_set.update(wires_to_remove)
-            # remove inverters used in the chain
+            # Remove inverters used in the chain.
             inverters_to_remove = {wire_creator[wire] for wire in wires_to_remove}
             net_removal_set.update(inverters_to_remove)
-            # map the end wire of the inverter chain to the beginning wire
+            # Map the end wire of the inverter chain to the beginning wire.
             wire_src_dict[inverter_chain[-1]] = inverter_chain[start_idx - 1]
 
     # This loop recreates the LogicNet with inverter chains removed. It adds each
