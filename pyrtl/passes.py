@@ -52,14 +52,25 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
         constant_propagation(block, True)
         _remove_unlistened_nets(block)
         common_subexp_elimination(block)
-        _remove_inverter_chains(block, skip_sanity_check)
+        _optimize_inverter_chains(block, skip_sanity_check)
         if (not skip_sanity_check) or _get_debug_mode():
             block.sanity_check()
     return block
 
 
 def _get_inverter_chains(wire_creator, wire_users):
-    """Returns all inverter chains in the block"""
+    """Returns all inverter chains in the block.
+
+    The function returns a list of inverter chains in the block.
+    Each inverter chain is represented as a list of the LogicNets
+    in the chain.
+
+    Consider the following circuit, for example:
+    A -~-> B -~-> C -w-> X
+    D -~-> E -w-> Y
+    If the function is called on this circuit, it will return
+    [[A, B, C], [D, E]].
+    """
 
     # Build a list of inverter chains. Each inverter chain is a list of WireVectors,
     # from source to destination.
@@ -116,8 +127,8 @@ def _get_inverter_chains(wire_creator, wire_users):
     return inverter_chains
 
 
-def _remove_inverter_chains(block, skip_sanity_check=False):
-    """ Removes all inverter chains from the block.
+def _optimize_inverter_chains(block, skip_sanity_check=False):
+    """ Optimizes inverter chains in the block.
 
     An inverter chain means two or more inverters directly connected
     to each other. Inverter chains are redundant and can be removed.
@@ -155,9 +166,9 @@ def _remove_inverter_chains(block, skip_sanity_check=False):
     # This is the optimized version of the circuit:
     # A -w-> X
     # A -w-> Y
-    # The inverter chains found will be B-C and D-E (two separate chains will be
-    # found instead of B-C-D-E because C has an intermediate user). In the dict,
-    # C will be mapped to A and E will be maped to C. Hence, when finding the
+    # The inverter chains found will be A-B-C and C-D-E (two separate chains will be
+    # found instead of A-B-C-D-E because C has an intermediate user). In the dict,
+    # C will be mapped to A and E will be mapped to C. Hence, when finding the
     # replacement of E, we have to first query the dict to get C, and then query
     # the dict again on C to get A.
     wire_src_dict = _ProducerList()
@@ -179,9 +190,9 @@ def _remove_inverter_chains(block, skip_sanity_check=False):
             # Map the end wire of the inverter chain to the beginning wire.
             wire_src_dict[inverter_chain[-1]] = inverter_chain[start_idx - 1]
 
-    # This loop recreates the LogicNet with inverter chains removed. It adds each
-    # block in the original LogicNet to the new LogicNet if it is not marked for
-    # removal, and replaces the source of the block if its source was the end wire
+    # This loop recreates the block with inverter chains removed. It adds each
+    # LogicNet in the original block to the new block if it is not marked for
+    # removal, and replaces the source of the LocigNet if its source was the end wire
     # of a removed inverter chain.
     for net in block.logic:
         if net not in net_removal_set:
