@@ -62,7 +62,7 @@ def _get_inverter_chains(wire_creator, wire_users):
     """Returns all inverter chains in the block.
 
     The function returns a list of inverter chains in the block.
-    Each inverter chain is represented as a list of the LogicNets
+    Each inverter chain is represented as a list of the WireVectors
     in the chain.
 
     Consider the following circuit, for example:
@@ -192,7 +192,7 @@ def _optimize_inverter_chains(block, skip_sanity_check=False):
 
     # This loop recreates the block with inverter chains removed. It adds each
     # LogicNet in the original block to the new block if it is not marked for
-    # removal, and replaces the source of the LocigNet if its source was the end wire
+    # removal, and replaces the source of the LogicNet if its source was the end wire
     # of a removed inverter chain.
     for net in block.logic:
         if net not in net_removal_set:
