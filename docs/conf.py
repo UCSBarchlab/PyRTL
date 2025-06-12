@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'PyRTL'
-copyright = '2024, Timothy Sherwood'
+copyright = '2025, Timothy Sherwood'
 author = 'Timothy Sherwood'
 
 # -- General configuration ---------------------------------------------------
