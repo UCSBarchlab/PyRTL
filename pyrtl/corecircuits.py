@@ -5,7 +5,7 @@ import math
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import LogicNet, working_block
-from .wire import Const, WireVector, WrappedWireVector
+from .wire import Const, WireVector, WireVectorLike, WrappedWireVector
 from pyrtl.rtllib import barrel
 from pyrtl.rtllib import muxes
 from .conditional import otherwise
@@ -391,7 +391,7 @@ def match_bitwidth(*args, **opt):
         return (wv.zero_extended(max_len) for wv in args)
 
 
-def as_wires(val, bitwidth=None, truncating=True, block=None):
+def as_wires(val: WireVectorLike, bitwidth=None, truncating=True, block=None):
     """Return wires from `val` which may be wires, integers (including
     IntEnums), strings, or bools.
 

@@ -76,16 +76,15 @@ design.
 PyRTL Classes:
 --------------
 
-Perhaps the most important class to understand is :class:`.WireVector`, which
-is the basic type from which you build all hardware.  If you are coming to
-PyRTL from Verilog, a :class:`.WireVector` is closest to a multi-bit `wire`.
-Every new :class:`.WireVector` builds a set of wires which you can then connect
-with other :class:`.WireVector` through overloaded operations such as
-`addition` or `bitwise or`. A bunch of other related classes, including
-:class:`.Input`, :class:`.Output`, :class:`.Const`, and :class:`.Register` are
-all derived from :class:`.WireVector`. Coupled with :class:`.MemBlock` (and
-:class:`.RomBlock`), this is all a user needs to create a functional hardware
-design.
+Perhaps the most important class to understand is :class:`.WireVector`, which is the
+basic type from which you build all hardware. If you are coming to PyRTL from Verilog, a
+:class:`.WireVector` is closest to a multi-bit `wire`. Every new :class:`.WireVector`
+builds a set of wires which you can then connect with other :class:`.WireVector` through
+overloaded operations such as :meth:`~.WireVector.__add__` or
+:meth:`~.WireVector.__or__`. A bunch of other related classes, including
+:class:`.Input`, :class:`.Output`, :class:`.Const`, and :class:`.Register` are all
+derived from :class:`.WireVector`. Coupled with :class:`.MemBlock` (and
+:class:`.RomBlock`), this is all a user needs to create a functional hardware design.
 
 .. inheritance-diagram:: pyrtl.wire.WireVector
                          pyrtl.wire.Input
@@ -134,15 +133,20 @@ which we are implicitly working.  Hardware transforms may make a new
 Errors
 ^^^^^^
 
-Finally, when things go wrong you may hit on one of two ``Exceptions``, neither
-of which is likely recoverable automatically (which is why we limited them to
-only two).  The intention is that ``PyrtlError`` is intended to capture end
-user errors such as invalid constant strings and mis-matched bitwidths.  In
-contrast, ``PyrtlInternalError`` captures internal invariants and assertions
-over the core logic graph which should never be hit when constructing designs
-in the normal ways.  If you hit a confusing ``PyrtlError`` or any
-``PyrtlInternalError`` feel free to file an issue.
+Finally, when things go wrong you may hit an :class:`Exception`, neither of which is
+likely recoverable automatically (which is why we limited them to only two). The
+intention is that :class:`.PyrtlError` is intended to capture end user errors such as
+invalid constant strings and mis-matched bitwidths. In contrast,
+:class:`.PyrtlInternalError` captures internal invariants and assertions over the core
+logic graph which should never be encountered when constructing designs in the normal
+ways. If you hit a confusing :class:`.PyrtlError` or any :class:`.PyrtlInternalError`
+feel free to file an issue.
 
+.. autoclass:: pyrtl.pyrtlexceptions.PyrtlError
+    :members:
+
+.. autoclass:: pyrtl.pyrtlexceptions.PyrtlInternalError
+    :members:
 
 Reference Guide
 ===============

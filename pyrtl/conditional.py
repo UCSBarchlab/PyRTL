@@ -57,8 +57,9 @@ Conditional Assignment Defaults
 
 Every PyRTL wire, register, and memory must have a value in every cycle. PyRTL does not
 support "don't care" or ``X`` values. To satisfy this requirement, conditional
-assignment must assign some value to wires in :data:`conditional_assignment` blocks when
-a value is not specified. This can happen when:
+assignment must always assign a value to every wire in a :data:`conditional_assignment`
+block, even if the :data:`conditional_assignment` does not specify a value. This can
+happen when:
 
 #. A condition is ``True``, but no value is specified for a wire or register in that
    condition's ``with`` block. In the example above, no value is specified for ``r1`` in
@@ -154,8 +155,8 @@ assignment to ``w`` is already conditional. Making the lower-level assignment to
 ``output`` conditional would not make sense, especially if ``output`` is used elsewhere
 in the circuit.
 
-For more :data:`conditional_assignment` examples, see the state machine example in
-``examples/example3-statemachine.py``.
+For more :data:`conditional_assignment` examples, see `the state machine example
+<https://github.com/UCSBarchlab/PyRTL/blob/development/examples/example3-statemachine.py>`_.
 
 """
 # Use the objects "conditional_assignment" and "otherwise" as described above. The
@@ -172,9 +173,10 @@ from .wire import WireVector, Const, Register
 #
 
 
-def currently_under_condition():
-    """Returns ``True`` if execution is currently in the context of a
-    :data:`conditional_assignment`.
+def currently_under_condition() -> bool:
+    """
+    :return: ``True`` iff execution is currently in the context of a
+        :data:`conditional_assignment`.
 
     """
     return _depth > 0
@@ -236,8 +238,8 @@ _reset_conditional_state()
 conditional_assignment = _ConditionalAssignment()
 """Context manager implementing PyRTL's ``conditional_assignment``.
 
-:param dict defaults: Dictionary mapping from WireVector to its default value in this
-    ``conditional_assignment`` block. ``defaults`` are not supported for
+:param dict defaults: Dictionary mapping from :class:`.WireVector` to its default value
+    in this ``conditional_assignment`` block. ``defaults`` are not supported for
     :class:`.MemBlock`.
 
 """

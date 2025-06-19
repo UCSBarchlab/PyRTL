@@ -54,58 +54,109 @@ def next_tempvar_name(name=""):
         return name
 
 
+"""Alias for types that can be coerced to ``WireVector`` by :func:`.as_wires`."""
+WireVectorLike = Union["WireVector", int, str, bool]
+
+
 class WireVector(object):
     """The main class for describing the connections between operators.
 
-    WireVectors act much like a list of wires, except that there is no
-    "contained" type, each slice of a WireVector is itself a WireVector (even
-    if it just contains a single "bit" of information). The least significant
-    bit of the wire is at index 0 and normal list slicing syntax applies (i.e.
-    ``myvector[0:5]`` makes a new vector from the bottom 5 bits of
-    ``myvector``, ``myvector[-1]`` takes the most significant bit, and
-    ``myvector[-4:]`` takes the 4 most significant bits).
+    ``WireVectors`` act much like a list of wires, except that there is no "contained"
+    type, each slice of a ``WireVector`` is itself a ``WireVector`` (even if it just
+    contains a single "bit" of information). The least significant bit of the wire is at
+    index ``0`` and normal list slicing syntax applies (i.e. ``myvector[0:5]`` makes a
+    new vector from the bottom ``5`` bits of ``myvector``, ``myvector[-1]`` takes the
+    most significant bit, and ``myvector[-4:]`` takes the ``4`` most significant bits).
 
     ===============  ================  =======================================================
     Operation        Syntax            Function
     ===============  ================  =======================================================
-    Addition         ``a + b``         Creates an unsigned adder, returns WireVector
-    Subtraction      ``a - b``         Creates an unsigned subtracter, returns WireVector
-    Multiplication   ``a * b``         Creates an unsigned multiplier, returns WireVector
-    Xor              ``a ^ b``         Bitwise XOR, returns WireVector
-    Or               ``a | b``         Bitwise OR, returns WireVector
-    And              ``a & b``         Bitwise AND, returns WireVector
-    Invert           ``~a``            Bitwise invert, returns WireVector
-    Less Than        ``a < b``         Unsigned less than, return 1-bit WireVector
-    Less or Eq.      ``a <= b``        Unsigned less than or equal to, return 1-bit WireVector
-    Greater Than     ``a > b``         Unsigned greater than, return 1-bit WireVector
-    Greater or Eq.   ``a >= b``        Unsigned greater or equal to, return 1-bit WireVector
-    Equality         ``a == b``        Hardware to check equality, return 1-bit WireVector
-    Not Equal        ``a != b``        Inverted equality check, return 1-bit WireVector
-    Bitwidth         ``len(a)``        Return bitwidth of the WireVector
-    Assignment       ``a <<= b``       Connect from b to a (see note below)
-    Bit Slice        ``a[3:6]``        Selects bits from WireVector, in this case bits 3,4,5
+    Addition         ``a + b``         Creates an *unsigned* adder, returns ``WireVector``
+    Subtraction      ``a - b``         Creates an *unsigned* subtracter, returns ``WireVector``
+    Multiplication   ``a * b``         Creates an *unsigned* multiplier, returns ``WireVector``
+    Xor              ``a ^ b``         Bitwise XOR, returns ``WireVector``
+    Or               ``a | b``         Bitwise OR, returns ``WireVector``
+    And              ``a & b``         Bitwise AND, returns ``WireVector``
+    Invert           ``~a``            Bitwise invert, returns ``WireVector``
+    Less Than        ``a < b``         Unsigned less than, return 1-bit ``WireVector``
+    Less or Eq.      ``a <= b``        Unsigned less than or equal to, return 1-bit ``WireVector``
+    Greater Than     ``a > b``         Unsigned greater than, return 1-bit ``WireVector``
+    Greater or Eq.   ``a >= b``        Unsigned greater or equal to, return 1-bit ``WireVector``
+    Equality         ``a == b``        Hardware to check equality, return 1-bit ``WireVector``
+    Not Equal        ``a != b``        Inverted equality check, return 1-bit ``WireVector``
+    Bitwidth         ``len(a)``        Return bitwidth of the ``WireVector``
+    Assignment       ``a <<= b``       Connect from b to a (see Note below)
+    Bit Slice        ``a[3:6]``        Selects bits from ``WireVector``, in this case bits 3,4,5
     ===============  ================  =======================================================
 
-    A note on ``<<=`` asssignment: This operator is how you "drive" an already
-    created wire with an existing wire. If you were to do ``a = b`` it would
-    lose the old value of ``a`` and simply overwrite it with a new value, in
-    this case with a reference to WireVector ``b``. In contrast ``a <<= b``
-    does not overwrite ``a``, but simply wires the two together.
+    .. note::
+        ``<<=`` is how you "drive" an already created wire with an existing wire. If you
+        were to do ``a = b`` it would lose the old value of ``a`` and simply overwrite
+        it with a new value, in this case with a reference to ``WireVector`` ``b``. In
+        contrast ``a <<= b`` does not overwrite ``a``, but simply wires the two
+        together.
 
-    -------------------
-    WireVector Equality
-    -------------------
+    .. _wirevector_coercion:
 
-    WireVector's :meth:`.__eq__` generates logic that dynamically reports if two wires
-    carry the same values. WireVector's :meth:`.__eq__` returns a 1-bit WireVector, not
-    a ``bool``, and attempting to convert a WireVector to a ``bool`` throws a
+    -----------------------
+    ``WireVector`` Coercion
+    -----------------------
+
+    Most PyRTL functions that accept ``WireVectors`` as arguments will also accept any
+    type that :func:`.as_wires` can coerce to ``WireVector``. Examples include
+    :class:`int`, :class:`bool`, and :class:`str`.
+
+    :class:`int` will be coerced to an *unsigned* :class:`Const` ``WireVector`` with
+    the minimum bitwidth required for the integer. In the following example, a
+    2-bit :class:`Const` is implicitly created for ``2``::
+
+        >>> input = pyrtl.Input(name="input", bitwidth=8)
+        >>> output = pyrtl.Output(name="output", bitwidth=8)
+        >>> output <<= input + 2
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input": 3})
+        >>> sim.inspect("output")
+        5
+
+    :class:`bool` will be coerced to a :class:`Const` with ``bitwidth`` ``1``. In the
+    following example, a 1-bit :class:`Const` is implicitly created for ``True``::
+
+        >>> input = pyrtl.Input(name="input", bitwidth=1)
+        >>> output = pyrtl.Output(name="output", bitwidth=1)
+        >>> output <<= input ^ True
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input": False})
+        >>> sim.inspect("output")
+        1
+
+    :class:`str` will be interpreted as a `Verilog-style string constant
+    <https://en.wikipedia.org/wiki/Verilog#Definition_of_constants>`_. In the following
+    example, a 4-bit :class:`Const` is implicitly created for ``"4'hf"``::
+
+        >>> input = pyrtl.Input(name="input", bitwidth=8)
+        >>> output = pyrtl.Output(name="output", bitwidth=4)
+        >>> output <<= input & "4'hf"
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input": 0xab})
+        >>> hex(sim.inspect("output"))
+        '0xb'
+
+    .. _wirevector_equality:
+
+    -----------------------
+    ``WireVector`` Equality
+    -----------------------
+
+    :meth:`WireVector.__eq__` generates logic that dynamically reports if two wires
+    carry the same values. :meth:`WireVector.__eq__` returns a 1-bit ``WireVector``, not
+    a ``bool``, and attempting to convert a ``WireVector`` to a ``bool`` throws a
     ``PyrtlError``. This behavior is incompatible with `Python's data model
     <https://docs.python.org/3/reference/expressions.html#value-comparisons>`_, which
     can cause problems.
 
-    For example, you *can not* statically check if two WireVectors are equal with
-    ``==``. Statically checking for WireVector equality can be useful while constructing
-    or analyzing circuits::
+    For example, you *can not* statically check if two ``WireVectors`` are equal with
+    ``==``. Statically checking for ``WireVector`` equality can be useful while
+    constructing or analyzing circuits::
 
         >>> w1 = pyrtl.WireVector(name="w1", bitwidth=1)
         >>> w2 = pyrtl.WireVector(name="w2", bitwidth=2)
@@ -119,12 +170,12 @@ class WireVector(object):
         or something that calls "__eq__", such as when you test if a WireVector is "in"
         something
 
-    The error about converting WireVector to ``bool`` results from Python attempting to
-    convert the 1-bit WireVector returned by :meth:`.__eq__` to ``True`` or ``False``
-    while evaluating the ``if`` statement's condition.
+    The error about converting ``WireVector`` to ``bool`` results from Python attempting
+    to convert the 1-bit ``WireVector`` returned by :meth:`.__eq__` to ``True`` or
+    ``False`` while evaluating the ``if`` statement's condition.
 
-    Instead, you *can* statically check if two WireVectors refer to the same object with
-    ``is``::
+    Instead, you *can* statically check if two ``WireVectors`` refer to the same object
+    with ``is``::
 
         >>> if w1 is not w2:
         ...     print('not the same')
@@ -136,10 +187,10 @@ class WireVector(object):
         >>> temp is w2
         False
 
-    Be careful when using Python features that depend on ``==`` with WireVectors. This
-    often comes up when checking if a WireVector is in a list with ``in``, which does
-    not work because ``in`` falls back on checking each item in the ``list`` for
-    equality with ``==``::
+    Be careful when using Python features that depend on ``==`` with ``WireVectors``.
+    This often comes up when checking if a ``WireVector`` is in a :class:`list` with
+    ``in``, which does not work because ``in`` falls back on checking each item in the
+    :class:`list` for equality with ``==``::
 
         >>> l = [w1]
         >>> w2 in l
@@ -150,8 +201,8 @@ class WireVector(object):
         or something that calls "__eq__", such as when you test if a WireVector is "in"
         something
 
-    Most other ``list`` operations work, so you can store WireVectors in a ``list`` if
-    you avoid using the ``in`` operator::
+    Most other :class:`list` operations work, so you can store ``WireVectors`` in a
+    :class:`list` if you avoid using the ``in`` operator::
 
         >>> len(l)
         1
@@ -160,9 +211,9 @@ class WireVector(object):
         >>> [(w.name, w.bitwidth) for w in l]
         [('w1', 1)]
 
-    WireVectors define a standard ``__hash__`` method, so if you need to check if a
-    WireVector is in a container, use a ``set`` or ``dict``. This works because these
-    containers use ``__hash__`` to skip unnecessary equality checks::
+    ``WireVectors`` define a standard ``__hash__`` method, so if you need to check if a
+    ``WireVector`` is in a container, use a :class:`set` or :class:`dict`. This works
+    because these containers use ``__hash__`` to skip unnecessary equality checks::
 
         >>> s = {w1}
         >>> w1 in s
@@ -186,26 +237,28 @@ class WireVector(object):
 
     def __init__(self, bitwidth: int = None, name: str = '',
                  block: Block = None):
-        """Construct a generic WireVector.
-
-        :param bitwidth: If no bitwidth is provided, it will be set to the
-            minimum number of bits to represent this wire
-        :param block: The block under which the wire should be placed.
-            Defaults to the working block
-        :param name: The name of the wire referred to in some places.
-            Must be unique. If none is provided, one will be autogenerated
+        """Construct a generic ``WireVector``.
 
         Examples::
 
-            # Visible in trace as "data".
-            data = pyrtl.WireVector(bitwidth=8, name='data')
+            # Visible in Simulation traces as "data".
+            data = pyrtl.WireVector(bitwidth=8, name="data")
             # `ctrl` is assigned a temporary name, and will not be visible in
-            # traces by default.
+            # Simulation traces by default.
             ctrl = pyrtl.WireVector(bitwidth=1)
             # `temp` is a temporary with bitwidth specified later.
             temp = pyrtl.WireVector()
-            # `temp` gets the bitwidth of 8 from data.
+            # `temp` infers a bitwidth of 8 from `data`.
             temp <<= data
+
+        :param bitwidth: If no ``bitwidth`` is provided, it will be set to the
+            minimum number of bits needed to represent this wire.
+        :param block: The :class:`.Block` under which the wire should be placed.
+            Defaults to the working block.
+        :param name: The name of the wire. Must be unique. If empty, a name will be
+            autogenerated. If non-empty, the wire's value can be inspected with
+            :meth:`.Simulation.inspect`, and this wire will appear in traces generated
+            by :meth:`.SimulationTrace.render_trace`.
 
         """
         self._name = None
@@ -221,13 +274,13 @@ class WireVector(object):
 
     @property
     def name(self) -> str:
-        """A property holding the name (a string) of the WireVector.
+        """A property holding the name of the ``WireVector``.
 
         The name can be read or written. Examples::
 
-            a = WireVector(bitwidth=1, name='foo')
-            print(a.name)  # Prints 'foo'.
-            a.name = 'mywire'
+            a = WireVector(bitwidth=1, name="foo")
+            print(a.name)  # Prints "foo".
+            a.name = "mywire"
 
         """
         return self._name
@@ -261,7 +314,7 @@ class WireVector(object):
                 raise PyrtlError('you are trying a negative bitwidth? awesome but wrong')
         self.bitwidth = bitwidth
 
-    def _build(self, other):
+    def _build(self, other: WireVectorLike):
         # Actually create and add WireVector to logic block
         # This might be called immediately from ilshift, or delayed from conditional assignment
         net = LogicNet(
@@ -279,20 +332,21 @@ class WireVector(object):
             self.bitwidth = rhs.bitwidth
         return rhs
 
-    def __ilshift__(self, other):
-        """ Wire assignment operator (assign other to self).
+    def __ilshift__(self, other: WireVectorLike):
+        """Wire assignment operator (assign ``other`` to ``self``).
 
         Example::
 
-            i = pyrtl.Input(8, 'i')
-            t = pyrtl.WireVector(8, 't')
-            t <<= i
+            input = pyrtl.Input(bitwidth=8, name="input")
+            output = pyrtl.WireVector(bitwidth=8, name="output")
+            output <<= input
+
         """
         other = self._prepare_for_assignment(other)
         self._build(other)
         return self
 
-    def __ior__(self, other):
+    def __ior__(self, other: WireVectorLike):
         """Conditional assignment operator (only valid under Conditional Update)."""
         from .conditional import _build, currently_under_condition
         if not self.bitwidth:
@@ -342,191 +396,421 @@ class WireVector(object):
 
     __nonzero__ = __bool__  # for Python 2 and 3 compatibility
 
-    def __and__(self, other):
-        """Bitwise ANDs two wires together into a single wire.
+    def __and__(self, other: WireVectorLike) -> WireVector:
+        """Returns the result of bitwise ANDing ``self`` and ``other``.
 
-        :rtype: WireVector
-        :return: the result wire of the operation
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
 
         Example::
 
-                temp = a & b
+            >>> three = pyrtl.Const(val=0b11, bitwidth=2)
+            >>> five = pyrtl.Const(val=0b101, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three & five
+            >>> out.bitwidth
+            4
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("out")
+            1
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A ``WireVector`` containing the result of bitwise ANDing ``self`` and
+            ``other``. The returned ``WireVector`` has the same ``bitwidth`` as the
+            longer of the two input ``WireVectors``.
+
         """
         return self._two_var_op(other, '&')
 
-    def __rand__(self, other):
+    def __rand__(self, other: WireVectorLike):
         return self._two_var_op(other, '&')
 
-    def __iand__(self, other):
+    def __iand__(self, other: WireVectorLike):
         raise PyrtlError('error, operation not allowed on WireVectors')
 
-    def __or__(self, other):
-        """Bitwise ORs two wires together into a single wire.
+    def __or__(self, other: WireVectorLike) -> WireVector:
+        """Returns the result of bitwise ORing ``self`` and ``other``.
 
-        :rtype: WireVector
-        :return: the result wire of the operation
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
 
         Example::
 
-            temp = a | b
+            >>> three = pyrtl.Const(val=0b11, bitwidth=2)
+            >>> five = pyrtl.Const(val=0b101, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three | five
+            >>> out.bitwidth
+            4
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> bin(sim.inspect("out"))
+            '0b111'
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A ``WireVector`` containing the result of bitwise ORing ``self`` and
+            ``other``. The returned ``WireVector`` has the same ``bitwidth`` as the
+            longer of the two input ``WireVectors``.
+
         """
         return self._two_var_op(other, '|')
 
-    def __ror__(self, other):
+    def __ror__(self, other: WireVectorLike):
         return self._two_var_op(other, '|')
 
     # __ior__ used for conditional assignment above
 
-    def __xor__(self, other):
-        """Bitwise XORs two wires together into a single wire.
+    def __xor__(self, other: WireVectorLike) -> WireVector:
+        """Returns the result of bitwise XORing ``self`` and ``other``.
 
-        :rtype: WireVector
-        :return: the result wire of the operation
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
+
+        Example::
+
+            >>> three = pyrtl.Const(val=0b11, bitwidth=2)
+            >>> five = pyrtl.Const(val=0b101, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three ^ five
+            >>> out.bitwidth
+            4
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> bin(sim.inspect("out"))
+            '0b110'
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A ``WireVector`` containing the result of bitwise XORing ``self`` and
+            ``other``. The returned ``WireVector`` has the same ``bitwidth`` as the
+            longer of the two input ``WireVectors``.
+
         """
         return self._two_var_op(other, '^')
 
-    def __rxor__(self, other):
+    def __rxor__(self, other: WireVectorLike):
         return self._two_var_op(other, '^')
 
-    def __ixor__(self, other):
+    def __ixor__(self, other: WireVectorLike):
         raise PyrtlError('error, operation not allowed on WireVectors')
 
-    def __add__(self, other):
-        """Adds two wires together into a single WireVector.
+    def __add__(self, other: WireVectorLike) -> WireVector:
+        """Returns the result of adding ``self`` and ``other``.
 
-        Addition is *unsigned*. Use :func:`.signed_add` for signed addition.
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
 
-        :rtype: WireVector
-        :return: Returns the result wire of the operation. The resulting wire
-            has one more bit than the longer of the two input wires.
+        .. WARNING::
+            This addition operation is *unsigned*. Use :func:`.signed_add` for signed
+            addition.
 
-        Examples::
+        Example::
 
-            temp = a + b  # simple addition of two WireVectors
-            temp = a + 5  # you can use integers
-            temp = a + 0b110  # you can use other integers
-            temp = a + "3'h7"  # compatible verilog constants work too
+            >>> three = pyrtl.Const(val=3, bitwidth=2)
+            >>> five = pyrtl.Const(val=5, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three + five
+            >>> out.bitwidth
+            5
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("out")
+            8
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A ``WireVector`` containing the result of adding ``self`` and
+            ``other``. The returned ``WireVector`` has a ``bitwidth`` equal to the
+            longer of the two input ``WireVectors``, plus one.
 
         """
         return self._two_var_op(other, '+')
 
-    def __radd__(self, other):
+    def __radd__(self, other: WireVectorLike):
         return self._two_var_op(other, '+')
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: WireVectorLike):
         raise PyrtlError('error, operation not allowed on WireVectors')
 
-    def __sub__(self, other):
-        """Subtracts the right wire from the left one.
+    def __sub__(self, other: WireVectorLike) -> WireVector:
+        """Returns the result of subtracting ``self`` and ``other``.
 
-        Subtraction is *unsigned*. Use :func:`.signed_sub` for signed
-        subtraction.
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
 
-        :rtype: WireVector
-        :return: Returns the result wire of the operation. The resulting wire
-            has one more bit than the longer of the two input wires.
+        .. WARNING::
+            This subtraction operation is *unsigned*. Use :func:`.signed_sub` for signed
+            subtraction.
+
+        Example::
+
+            >>> three = pyrtl.Const(val=3, bitwidth=2)
+            >>> five = pyrtl.Const(val=5, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= five - three
+            >>> out.bitwidth
+            5
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("out")
+            2
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A ``WireVector`` containing the result of subtracting ``self`` and
+            ``other``. The returned ``WireVector`` has a ``bitwidth`` equal to the
+            longer of the two input ``WireVectors``, plus one.
 
         """
         return self._two_var_op(other, '-')
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: WireVectorLike):
         from .corecircuits import as_wires
         other = as_wires(other)  # '-' op is not symmetric
         return other._two_var_op(self, '-')
 
-    def __isub__(self, other):
+    def __isub__(self, other: WireVectorLike):
         raise PyrtlError('error, operation not allowed on WireVectors')
 
-    def __mul__(self, other):
-        """Multiplies two WireVectors.
+    def __mul__(self, other: WireVectorLike) -> WireVector:
+        """Returns the result of multiplying ``self`` and ``other``.
 
-        Multiplication is *unsigned*. Use :func:`.signed_mult` for signed
-        multiplication.
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
 
-        :rtype: WireVector
-        :return: Returns the result wire of the operation. The resulting wire's
-            bitwidth is the sum of the two input wires' bitwidths.
+        .. WARNING::
+            This multiplication operation is *unsigned*. Use :func:`.signed_mult` for
+            signed multiplication.
+
+        Example::
+
+            >>> three = pyrtl.Const(val=3, bitwidth=2)
+            >>> five = pyrtl.Const(val=5, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three * five
+            >>> out.bitwidth
+            8
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("out")
+            15
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A ``WireVector`` containing the result of multiplying ``self`` and
+            ``other``. The returned ``WireVector`` has a ``bitwidth`` equal
+            to twice the length of the longer input.
 
         """
         return self._two_var_op(other, '*')
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: WireVectorLike):
         return self._two_var_op(other, '*')
 
-    def __imul__(self, other):
+    def __imul__(self, other: WireVectorLike):
         raise PyrtlError('error, operation not allowed on WireVectors')
 
-    def __lt__(self, other):
-        """Calculates whether a wire is less than another.
+    def __lt__(self, other: WireVectorLike) -> WireVector:
+        """Checks if ``self`` is less than ``other``. Returns a one-bit ``WireVector``.
 
-        The comparison is *unsigned*. Use :func:`.signed_lt` for a signed
-        comparison.
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
 
-        :rtype: WireVector
-        :return: a one bit result wire of the operation
+        .. WARNING::
+            This comparison is *unsigned*. Use :func:`.signed_lt` for signed
+            comparison.
+
+        Example::
+
+            >>> three = pyrtl.Const(val=3, bitwidth=2)
+            >>> five = pyrtl.Const(val=5, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three < five
+            >>> out.bitwidth
+            1
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("out")
+            1
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A one-bit ``WireVector`` indicating if ``self`` is less than ``other``.
 
         """
         return self._two_var_op(other, '<')
 
-    def __le__(self, other):
-        """Calculates whether a wire is less than or equal to another.
+    def __le__(self, other: WireVectorLike) -> WireVector:
+        """Checks if ``self`` is less than or equal to ``other``.
 
-        The comparison is *unsigned*. Use :func:`.signed_le` for a signed
-        comparison.
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
 
-        :rtype: WireVector
-        :return: a one bit result wire of the operation
+        .. WARNING::
+            This comparison is *unsigned*. Use :func:`.signed_le` for signed
+            comparison.
+
+        Example::
+
+            >>> three = pyrtl.Const(val=3, bitwidth=2)
+            >>> five = pyrtl.Const(val=5, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three <= five
+            >>> out.bitwidth
+            1
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("out")
+            1
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A one-bit ``WireVector`` indicating if ``self`` is less than or equal
+            to ``other``.
 
         """
         return ~ self._two_var_op(other, '>')
 
-    def __eq__(self, other):
-        """Calculates whether a wire is equal to another.
+    def __eq__(self, other: WireVectorLike) -> WireVector:
+        """Checks if ``self`` is equal to ``other``. Returns a one-bit ``WireVector``.
 
-        :rtype: WireVector
-        :return: a one bit result wire of the operation
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
+
+        .. WARNING::
+            This definition of ``__eq__`` returns :class:`WireVector`, not
+            :class:`bool`, which is not compatible with Python's data model, which can
+            cause problems. See :ref:`wirevector_equality`.
+
+        Example::
+
+            >>> three = pyrtl.Const(val=3, bitwidth=2)
+            >>> five = pyrtl.Const(val=5, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three == five
+            >>> out.bitwidth
+            1
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("out")
+            0
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A one-bit ``WireVector`` indicating if ``self`` is equal to ``other``.
 
         """
         return self._two_var_op(other, '=')
 
-    def __ne__(self, other):
-        """Calculates whether a wire is not equal to another.
+    def __ne__(self, other: WireVectorLike) -> WireVector:
+        """Checks if ``self`` is not equal to ``other``.
 
-        :rtype: WireVector
-        :return: a one bit result wire of the operation
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
+
+        Example::
+
+            >>> three = pyrtl.Const(val=3, bitwidth=2)
+            >>> five = pyrtl.Const(val=5, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three != five
+            >>> out.bitwidth
+            1
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("out")
+            1
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A one-bit ``WireVector`` indicating if ``self`` is not equal to
+            ``other``.
 
         """
         return ~ self._two_var_op(other, '=')
 
-    def __gt__(self, other):
-        """Calculates whether a wire is greater than another.
+    def __gt__(self, other: WireVectorLike) -> WireVector:
+        """Checks if ``self`` is greater than ``other``.
 
-        The comparison is *unsigned*. Use :func:`.signed_gt` for a signed
-        comparison.
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
 
-        :rtype: WireVector
-        :return: a one bit result wire of the operation
+        .. WARNING::
+            This comparison is *unsigned*. Use :func:`.signed_gt` for signed
+            comparison.
+
+        Example::
+
+            >>> three = pyrtl.Const(val=3, bitwidth=2)
+            >>> five = pyrtl.Const(val=5, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three > five
+            >>> out.bitwidth
+            1
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("out")
+            0
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A one-bit ``WireVector`` indicating if ``self`` is greater than
+            ``other``.
 
         """
         return self._two_var_op(other, '>')
 
-    def __ge__(self, other):
-        """Calculates whether a wire is greater than or equal to another.
+    def __ge__(self, other: WireVectorLike) -> WireVector:
+        """Checks if ``self`` is greater than or equal to ``other``.
 
-        The comparison is *unsigned*. Use :func:`.signed_ge` for a signed
-        comparison.
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
 
-        :rtype: WireVector
-        :return: a one bit result wire of the operation
+        .. WARNING::
+            This comparison is *unsigned*. Use :func:`.signed_ge` for signed
+            comparison.
+
+        Example::
+
+            >>> three = pyrtl.Const(val=3, bitwidth=2)
+            >>> five = pyrtl.Const(val=5, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three >= five
+            >>> out.bitwidth
+            1
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("out")
+            0
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A one-bit ``WireVector`` indicating if ``self`` is greater than or
+            equal to ``other``.
 
         """
         return ~ self._two_var_op(other, '<')
 
-    def __invert__(self):
-        """Bitwise inverts a wire.
+    def __invert__(self) -> WireVector:
+        """Returns a ``WireVector`` containing the bitwise inversion of ``self``.
 
-        :rtype: WireVector
-        :return: a result wire for the operation
+        Example::
+
+            >>> five = pyrtl.Const(val=0b101, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= ~five
+            >>> out.bitwidth
+            4
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> bin(sim.inspect("out"))
+            '0b1010'
+
+        :return: A ``WireVector`` containing the result of bitwise inverting ``self``.
+            The returned ``WireVector`` has the same ``bitwidth`` as ``self``.
 
         """
         outwire = WireVector(bitwidth=len(self))
@@ -538,10 +822,9 @@ class WireVector(object):
         working_block().add_net(net)
         return outwire
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> WireVector:
         """Grabs a subset of the wires.
 
-        :rtype: WireVector
         :return: a result wire for the operation
 
         """
@@ -563,7 +846,7 @@ class WireVector(object):
         working_block().add_net(net)
         return outwire
 
-    def __lshift__(self, other):
+    def __lshift__(self, other: WireVectorLike):
         raise PyrtlError('Shifting using the << and >> operators are not supported '
                          'in PyRTL. '
                          'If you are trying to select bits in a wire, use '
@@ -575,7 +858,7 @@ class WireVector(object):
 
     __rshift__ = __lshift__
 
-    def __mod__(self, other):
+    def __mod__(self, other: WireVectorLike):
         raise PyrtlError("Masking with the % operator is not supported"
                          "in PyRTL. "
                          "Instead if you are trying to select bits in a wire, use"
@@ -584,14 +867,26 @@ class WireVector(object):
                          "index 8 to make a new length 7 wire.")
 
     def __len__(self) -> int:
-        """Get the bitwidth of a WireVector.
+        """Return the ``WireVector``'s ``bitwidth``.
 
-        :return: Returns the length (i.e. bitwidth) of the WireVector in bits.
+        :return: Returns the length (``bitwidth``) of the ``WireVector``, in bits.
+        :raises PyrtlError: If the ``bitwidth`` is not yet defined, see the Note below.
 
-        Note that WireVectors do not need to have a bitwidth defined when they
-        are first allocated. They can get it from a ``<<=`` assignment later.
-        However, if you check the ``len`` of WireVector with undefined bitwidth
-        it will throw ``PyrtlError``.
+        .. note::
+
+            ``WireVectors`` may not have a defined ``bitwidth`` when they are
+            constructed. ``bitwidth`` can be inferred from an ``<<=`` assignment later.
+
+            Example::
+
+                >>> w = pyrtl.WireVector()
+                >>> len(w)
+                Traceback (most recent call last):
+                ...
+                pyrtl.pyrtlexceptions.PyrtlError: length of WireVector not yet defined
+                >>> w <<= pyrtl.Const(val=42, bitwidth=6)
+                >>> len(w)
+                6
 
         """
         if self.bitwidth is None:
@@ -609,43 +904,81 @@ class WireVector(object):
         _pop_condition()
 
     # more functions for wires
-    def nand(self, other):
-        """Bitwise NANDs two WireVectors together to a single WireVector.
+    def nand(self, other: WireVectorLike) -> WireVector:
+        """Returns the result of bitwise NANDing ``self`` and ``other``.
 
-        :rtype: WireVector
-        :return: Returns WireVector of the nand operation.
+        If the inputs do not have the same ``bitwidth``, the shorter input will be
+        :meth:`zero_extended` to the longer input's ``bitwidth``.
+
+        Example::
+
+            >>> three = pyrtl.Const(val=0b11, bitwidth=2)
+            >>> five = pyrtl.Const(val=0b101, bitwidth=4)
+            >>> out = pyrtl.Output(name="out")
+            >>> out <<= three.nand(five)
+            >>> out.bitwidth
+            4
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> bin(sim.inspect("out"))
+            '0b1110'
+
+        :param other: A ``WireVector``, or any type that can be coerced to
+            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+        :return: A ``WireVector`` containing the result of bitwise NANDing ``self`` and
+            ``other``. The returned ``WireVector`` has the same ``bitwidth`` as the
+            longer of the two input ``WireVectors``.
 
         """
         return self._two_var_op(other, 'n')
 
     @property
     def bitmask(self) -> int:
-        """A property holding a bitmask of the same length as this WireVector.
+        """A property holding a bitmask of the same length as this ``WireVector``.
 
-        Specifically it is an integer with a number of bits set to 1 equal to
-        the bitwidth of the WireVector.
+        ``bitmask`` is an :class:`int` with a number of bits set to 1 equal to the
+        ``bitwidth`` of the ``WireVector``.
 
-        It is often times useful to "mask" an integer such that it fits in the
-        the number of bits of a WireVector. As a convenience for this, the
-        ``bitmask`` property is provided. As an example, if there was a 3-bit
-        WireVector ``a``, a call to ``a.bitmask()`` should return ``0b111`` or
-        ``0x7``.
+        It is often useful to "mask" an integer such that it fits in the number of bits
+        of a ``WireVector``, so the ``bitmask`` property is provided as a convenience.
+        Example::
+
+            >>> w = pyrtl.WireVector(bitwidth=4)
+            >>> bin(w.bitmask)
+            '0b1111'
+            >>> w.bitmask
+            15
+            >>> hex(0xabcd & w.bitmask)
+            '0xd'
 
         """
         if "_bitmask" not in self.__dict__:
             self._bitmask = (1 << len(self)) - 1
         return self._bitmask
 
-    def truncate(self, bitwidth: int):
-        """Generate a new truncated WireVector derived from self.
+    def truncate(self, bitwidth: int) -> WireVector:
+        """Return a copy of ``self`` with its most significant bits removed.
 
-        :param bitwidth: Number of bits to truncate to.
-        :rtype: WireVector
-        :return: Returns a new WireVector equal to the original WireVector but
-            truncated to the specified bitwidth.
+        Truncation reduces ``bitwidth`` by removing the most significant bits from
+        ``self``. Example::
 
-        If the bitwidth specified is larger than the bitwidth of self, then
-        ``PyrtlError`` is thrown.
+            >>> input = pyrtl.Input(name="input", bitwidth=8)
+            >>> output = pyrtl.Output(name="output", bitwidth=4)
+            >>> output <<= input.truncate(bitwidth=output.bitwidth)
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step(provided_inputs={"input": 0b0000_1111})
+            >>> bin(sim.inspect("output"))
+            '0b1111'
+            >>> sim.step(provided_inputs={"input": 0b1100_1011})
+            >>> bin(sim.inspect("output"))
+            '0b1011'
+
+        :param bitwidth: Number of bits to truncate to. This is the number of bits to
+            keep.
+        :return: A new ``WireVector`` equal to the original ``WireVector`` but truncated
+            to the specified ``bitwidth``.
+        :raises PyrtlError: If the ``bitwidth`` specified is larger than
+            ``self.bitwidth``.
 
         """
         if not isinstance(bitwidth, int):
@@ -654,28 +987,52 @@ class WireVector(object):
             raise PyrtlError('Cannot truncate a WireVector to have more bits than it started with')
         return self[:bitwidth]
 
-    def sign_extended(self, bitwidth):
-        """Generate a new sign extended WireVector derived from self.
+    def sign_extended(self, bitwidth) -> WireVector:
+        """Return a sign-extended copy of ``self``.
 
-        :rtype: WireVector
-        :return: Returns a new WireVector equal to the original WireVector sign
-            extended to the specified bitwidth.
+        Sign-extension increases ``bitwidth`` by adding copies of the most significant
+        bit of ``self``. Example:
 
-        If the bitwidth specified is smaller than the bitwidth of self, then
-        ``PyrtlError`` is thrown.
+            >>> input = pyrtl.Input(name="input", bitwidth=1)
+            >>> output = pyrtl.Output(name="output", bitwidth=4)
+            >>> output <<= input.sign_extended(bitwidth=output.bitwidth)
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step(provided_inputs={"input": 0})
+            >>> bin(sim.inspect("output"))
+            '0b0'
+            >>> sim.step(provided_inputs={"input": 1})
+            >>> bin(sim.inspect("output"))
+            '0b1111'
+
+        :return: A new ``WireVector`` equal to the original ``WireVector`` but
+            sign-extended to the specified ``bitwidth``.
+        :raises PyrtlError: If the ``bitwidth`` specified is smaller than
+            ``self.bitwidth``.
 
         """
         return self._extend_with_bit(bitwidth, self[-1])
 
-    def zero_extended(self, bitwidth):
-        """Generate a new zero extended WireVector derived from self.
+    def zero_extended(self, bitwidth) -> WireVector:
+        """Return a zero-extended copy of ``self``.
 
-        :rtype: WireVector
-        :return: Returns a new WireVector equal to the original WireVector zero
-            extended to the specified bitwidth.
+        Zero-extension increases ``bitwidth`` by adding zero-valued high bits to
+        ``self``. Example:
 
-        If the bitwidth specified is smaller than the bitwidth of self, then
-        ``PyrtlError`` is thrown.
+            >>> input = pyrtl.Input(name="input", bitwidth=1)
+            >>> output = pyrtl.Output(name="output", bitwidth=4)
+            >>> output <<= input.zero_extended(bitwidth=output.bitwidth)
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step(provided_inputs={"input": 0})
+            >>> bin(sim.inspect("output"))
+            '0b0'
+            >>> sim.step(provided_inputs={"input": 1})
+            >>> bin(sim.inspect("output"))
+            '0b1'
+
+        :return: A new ``WireVector`` equal to the original ``WireVector`` but
+            zero-extended to the specified ``bitwidth``.
+        :raises PyrtlError: If the ``bitwidth`` specified is smaller than
+            ``self.bitwidth``.
 
         """
         return self._extend_with_bit(bitwidth, 0)
@@ -709,7 +1066,31 @@ class WireVector(object):
 #
 
 class Input(WireVector):
-    """A WireVector type denoting inputs to a block (no writers)."""
+    """A ``WireVector`` placeholder for inputs to a :class:`.Block`.
+
+    ``Input`` ``WireVectors`` are placeholders for values provided during simulation.
+    See :meth:`.Simulation.step`'s ``provided_inputs`` argument. For example:
+
+        >>> input = pyrtl.Input(name="input", bitwidth=8)
+        >>> output = pyrtl.Output(name="output", bitwidth=8)
+        >>> output <<= input + 2
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input": 1})
+        >>> sim.inspect("output")
+        3
+
+    Attempting to assign an ``Input`` ``WireVector`` with the ``<<=`` or ``|=``
+    operators will raise :class:`.PyrtlError`::
+
+        >>> input = pyrtl.Input(name="input", bitwidth=1)
+        >>> input <<= True
+        Traceback (most recent call last):
+        ...
+        pyrtl.pyrtlexceptions.PyrtlError: Connection using <<= operator attempted on
+        Input. Inputs, such as "input", cannot have values generated internally. aka
+        they can't have other wires driving it
+
+    """
     _code = 'I'
 
     def __init__(self, bitwidth: int = None, name: str = '',
@@ -734,10 +1115,18 @@ class Input(WireVector):
 
 
 class Output(WireVector):
-    """A WireVector type denoting outputs of a block (no readers).
+    """A ``WireVector`` type denoting outputs of a :class:`.Block`.
 
-    Even though Output seems to have valid ops such as ``__or__`` , using
-    them will throw an error.
+    Attempting to use an ``Output`` ``WireVector`` as the input to any operation, such
+    as ``__or__``, which implements bitwise or, will raise
+    :class:`.PyrtlInternalError`::
+
+        >>> out = pyrtl.Output(name="out", bitwidth=1)
+        >>> foo = out | pyrtl.Const(2)
+        Traceback (most recent call last):
+        ...
+        pyrtl.pyrtlexceptions.PyrtlInternalError: error, Outputs cannot be arguments for
+        a net (out/1O)
 
     """
     _code = 'O'
@@ -748,14 +1137,12 @@ class Output(WireVector):
 
 
 class Const(WireVector):
-    """A WireVector representation of a constant value.
+    """A ``WireVector`` representation of a constant value.
 
-    Converts from bool, integer, or Verilog-style strings to a constant
-    of the specified bitwidth.  If the bitwidth is too short to represent
-    the specified constant, then an error is raised.  If a positive
-    integer is specified, the bitwidth can be inferred from the constant.
-    If a negative integer is provided in the simulation, it is converted
-    to a two's complement representation of the specified bitwidth.
+    Converts from bool, integer, or Verilog-style strings to a constant of the specified
+    ``bitwidth``. If a positive integer is specified, the bitwidth can be
+    inferred from the constant. If a negative integer is provided in the simulation, it
+    is converted to a two's complement representation of the specified bitwidth.
 
     """
 
@@ -765,23 +1152,25 @@ class Const(WireVector):
                  name: str = '', signed: bool = False, block: Block = None):
         """Construct a constant implementation at initialization.
 
-        :param val: the value for the const WireVector
-        :param bitwidth: the desired bitwidth of the resulting const
-        :param name: The name of the wire referred to in some places.
-            Must be unique. If none is provided, one will be autogenerated
-        :param signed: specify if bits should be used for two's complement
+        :param val: The constant value. For details of how constants are coerced from
+            int, bool, and strings (for Verilog constants), see documentation for
+            :py:func:`.infer_val_and_bitwidth`.
+        :param bitwidth: The desired bitwidth of the resulting ``Const``.
+        :param name: The name of the wire. Must be unique. If none is provided, one will
+            be autogenerated
+        :param signed: Specifies if bits should be used for two's complement.
+        :param block: The block under which the wire should be placed.
+            Defaults to the working block.
+        :raise PyrtlInternalError: If the ``bitwidth`` is too short to represent the
+           specified constant.
 
-        Descriptions for all parameters not listed above can be found at
-        :meth:`.WireVector.__init__`
-
-        For details of how constants are converted from int, bool, and strings
-        (for Verilog constants), see documentation for the helper function
-        :py:func:`.infer_val_and_bitwidth`. Please note that a constant
-        generated with ``signed=True`` is still just a raw bitvector and all
-        arthimetic on it is unsigned by default. The ``signed=True`` argument
-        is only used for proper inference of WireVector size and certain
-        bitwidth sanity checks assuming a two's complement representation of
-        the constants.
+        .. WARNING::
+            A constant generated with ``signed=True`` is still just a raw bitvector. All
+            arthimetic on it is *unsigned* by default. The ``signed=True`` argument is
+            only used for proper inference of WireVector size and certain bitwidth
+            sanity checks, assuming a two's complement representation of the constants.
+            For signed arithmetic, use the ``signed_*`` functions in the
+            :ref:`extended_logic_and_arithmetic` section.
 
         """
         self._validate_bitwidth(bitwidth)
@@ -802,7 +1191,7 @@ class Const(WireVector):
         # add the member "val" to track the value of the constant
         self.val = num
 
-    def __ilshift__(self, other):
+    def __ilshift__(self, other: WireVectorLike):
         """ This is an illegal op for Consts. Their value is set in the __init__ function"""
         raise PyrtlError(
             'ConstWires, such as "%s", should never be assigned to with <<='
@@ -883,7 +1272,7 @@ class Register(WireVector):
         def __init__(self, reg):
             self.reg = reg
 
-        def __ilshift__(self, other):
+        def __ilshift__(self, other: WireVectorLike):
             from .corecircuits import as_wires
             other = as_wires(other, bitwidth=self.reg.bitwidth)
             if self.reg.bitwidth is None:
@@ -895,7 +1284,7 @@ class Register(WireVector):
 
             return self
 
-        def __ior__(self, other):
+        def __ior__(self, other: WireVectorLike):
             from .conditional import _build
             from .corecircuits import as_wires
             other = as_wires(other, bitwidth=self.reg.bitwidth)
@@ -957,14 +1346,14 @@ class Register(WireVector):
         """Sets the Register's value for the next cycle (it is before the D-Latch)."""
         return Register._Next(self)
 
-    def __ilshift__(self, other):
+    def __ilshift__(self, other: WireVectorLike):
         raise PyrtlError('error, you cannot set registers directly, net .next instead')
 
-    def __ior__(self, other):
+    def __ior__(self, other: WireVectorLike):
         raise PyrtlError('error, you cannot set registers directly, net .next instead')
 
     @next.setter
-    def next(self, other):
+    def next(self, other: WireVectorLike):
         if not isinstance(other, Register._Next):
             raise PyrtlError('error, .next should be set with "<<=" or "|=" operators')
 

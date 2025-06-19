@@ -40,7 +40,6 @@ Input Pins
 .. autoclass:: pyrtl.wire.Input
     :members:
     :show-inheritance:
-    :special-members: __init__
 
 Output Pins
 -----------
@@ -48,7 +47,6 @@ Output Pins
 .. autoclass:: pyrtl.wire.Output
     :members:
     :show-inheritance:
-    :special-members: __init__
 
 Constants
 ---------

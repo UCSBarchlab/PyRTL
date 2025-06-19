@@ -86,6 +86,8 @@ Reductions
 .. autofunction:: pyrtl.corecircuits.rtl_any
 .. autofunction:: pyrtl.corecircuits.rtl_all
 
+.. _extended_logic_and_arithmetic:
+
 Extended Logic and Arithmetic
 -----------------------------
 
