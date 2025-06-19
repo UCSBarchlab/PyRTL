@@ -848,7 +848,7 @@ def and_inverter_synth(net):
     elif net.op == '^':
         all_1 = arg(0) & arg(1)
         all_0 = ~arg(0) & ~arg(1)
-        dest <<= all_0 & ~all_1
+        dest <<= ~all_0 & ~all_1
     elif net.op == 'n':
         dest <<= ~(arg(0) & arg(1))
     else:
