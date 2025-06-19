@@ -5,9 +5,8 @@ import sys
 import unittest
 
 import pyrtl
-from pyrtl.wire import Const, Output
 from pyrtl.rtllib import testingutils as utils
-
+from pyrtl.wire import Const, Output
 from .test_transform import NetWireNumTestCases
 
 
@@ -731,6 +730,68 @@ class TestSubexpElimination(NetWireNumTestCases):
         self.num_net_of_type('^', 1)
         self.num_net_of_type('&', 1)
         pyrtl.working_block().sanity_check()
+
+
+class TestSynthPasses(NetWireNumTestCases):
+    in1: pyrtl.Input
+    in2: pyrtl.Input
+    out: pyrtl.Output
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+        self.in1 = pyrtl.Input(bitwidth=5, name='in1')
+        self.in2 = pyrtl.Input(bitwidth=5, name='in2')
+        self.out = pyrtl.Output(bitwidth=5, name='out')
+
+    def run_nand_synth(self, values: dict[tuple[int, int], int]):
+        pyrtl.synthesize()
+        pyrtl.nand_synth()
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for inputs, output in values.items():
+            sim.step({'in1': inputs[0], 'in2': inputs[1]})
+            self.assertEqual(sim.inspect('out'), output, msg=f"Failed on inputs {inputs[0]} and {inputs[1]}")
+
+    def test_nand_synth_and(self):
+        self.out <<= self.in1 & self.in2
+        self.run_nand_synth({(1, 2): 0, (4, 5): 4, (7, 11): 3})
+
+    def test_nand_synth_or(self):
+        self.out <<= self.in1 | self.in2
+        self.run_nand_synth({(1, 2): 3, (4, 5): 5, (7, 11): 15})
+
+    def test_nand_synth_xor(self):
+        self.out <<= self.in1 ^ self.in2
+        self.run_nand_synth({(1, 2): 3, (4, 5): 1, (7, 11): 12})
+
+    def test_nand_synth_adder(self):
+        self.out <<= self.in1 + self.in2
+        self.run_nand_synth({(1, 2): 3, (4, 5): 9, (7, 11): 18})
+
+    def run_and_inverter_synth(self, values: dict[tuple[int, int], int]):
+        pyrtl.synthesize()
+        pyrtl.and_inverter_synth()
+        sim_trace = pyrtl.SimulationTrace()
+        sim = pyrtl.Simulation(tracer=sim_trace)
+        for inputs, output in values.items():
+            sim.step({'in1': inputs[0], 'in2': inputs[1]})
+            self.assertEqual(sim.inspect('out'), output, msg=f"Failed on inputs {inputs[0]} and {inputs[1]}")
+
+    def test_and_inverter_synth_and(self):
+        self.out <<= self.in1 & self.in2
+        self.run_and_inverter_synth({(1, 2): 0, (4, 5): 4, (7, 11): 3})
+
+    def test_and_inverter_synth_or(self):
+        self.out <<= self.in1 | self.in2
+        self.run_and_inverter_synth({(1, 2): 3, (4, 5): 5, (7, 11): 15})
+
+    def test_and_inverter_synth_xor(self):
+        self.out <<= self.in1 ^ self.in2
+        self.run_and_inverter_synth({(1, 2): 3, (4, 5): 1, (7, 11): 12})
+
+    def test_and_inverter_synth_adder(self):
+        self.out <<= self.in1 + self.in2
+        self.run_and_inverter_synth({(1, 2): 3, (4, 5): 9, (7, 11): 18})
 
 
 class TestSynthOptTiming(NetWireNumTestCases):
