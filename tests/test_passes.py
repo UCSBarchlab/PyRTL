@@ -3,6 +3,7 @@ import operator
 import os
 import sys
 import unittest
+from typing import Callable
 
 import pyrtl
 from pyrtl.rtllib import testingutils as utils
@@ -732,66 +733,85 @@ class TestSubexpElimination(NetWireNumTestCases):
         pyrtl.working_block().sanity_check()
 
 
-class TestSynthPasses(NetWireNumTestCases):
+class TestSynthPasses(unittest.TestCase):
+    in0: pyrtl.Input
     in1: pyrtl.Input
-    in2: pyrtl.Input
     out: pyrtl.Output
 
     def setUp(self):
         pyrtl.reset_working_block()
+        self.in0 = pyrtl.Input(bitwidth=5, name='in0')
         self.in1 = pyrtl.Input(bitwidth=5, name='in1')
-        self.in2 = pyrtl.Input(bitwidth=5, name='in2')
         self.out = pyrtl.Output(bitwidth=5, name='out')
 
-    def run_nand_synth(self, values: dict[tuple[int, int], int]):
-        pyrtl.synthesize()
-        pyrtl.nand_synth()
+    def check_synth(self, operation: Callable[[int, int], int]):
+        """
+        Simulates the current circuit with some test input pairs (in0, in1) and checks the outputs
+        against the provided operation. Any synthesis/passes should be run before this gets called.
+
+        :param operation: The operation to test against. This should be a lambda taking an input
+            pair (in0, in1) and returning the expected output from this circuit.
+        """
         sim_trace = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=sim_trace)
-        for inputs, output in values.items():
-            sim.step({'in1': inputs[0], 'in2': inputs[1]})
-            self.assertEqual(sim.inspect('out'), output, msg=f"Failed on inputs {inputs[0]} and {inputs[1]}")
+
+        values = [(1, 2), (4, 5), (7, 11)]
+        """A list of input pairs (in0, in1) to test on."""
+
+        for in0, in1 in values:
+            expected_output = operation(in0, in1)
+            sim.step({'in0': in0, 'in1': in1})
+            # compare simulation output to expected output
+            self.assertEqual(sim.inspect('out'), expected_output,
+                             msg=f"Failed on inputs {in0} and {in1}")
 
     def test_nand_synth_and(self):
-        self.out <<= self.in1 & self.in2
-        self.run_nand_synth({(1, 2): 0, (4, 5): 4, (7, 11): 3})
+        self.out <<= self.in0 & self.in1
+        pyrtl.synthesize()
+        pyrtl.nand_synth()
+        self.check_synth(lambda a, b: a & b)
 
     def test_nand_synth_or(self):
-        self.out <<= self.in1 | self.in2
-        self.run_nand_synth({(1, 2): 3, (4, 5): 5, (7, 11): 15})
+        self.out <<= self.in0 | self.in1
+        pyrtl.synthesize()
+        pyrtl.nand_synth()
+        self.check_synth(lambda a, b: a | b)
 
     def test_nand_synth_xor(self):
-        self.out <<= self.in1 ^ self.in2
-        self.run_nand_synth({(1, 2): 3, (4, 5): 1, (7, 11): 12})
+        self.out <<= self.in0 ^ self.in1
+        pyrtl.synthesize()
+        pyrtl.nand_synth()
+        self.check_synth(lambda a, b: a ^ b)
 
     def test_nand_synth_adder(self):
-        self.out <<= self.in1 + self.in2
-        self.run_nand_synth({(1, 2): 3, (4, 5): 9, (7, 11): 18})
-
-    def run_and_inverter_synth(self, values: dict[tuple[int, int], int]):
+        self.out <<= self.in0 + self.in1
         pyrtl.synthesize()
-        pyrtl.and_inverter_synth()
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
-        for inputs, output in values.items():
-            sim.step({'in1': inputs[0], 'in2': inputs[1]})
-            self.assertEqual(sim.inspect('out'), output, msg=f"Failed on inputs {inputs[0]} and {inputs[1]}")
+        pyrtl.nand_synth()
+        self.check_synth(lambda a, b: a + b)
 
     def test_and_inverter_synth_and(self):
-        self.out <<= self.in1 & self.in2
-        self.run_and_inverter_synth({(1, 2): 0, (4, 5): 4, (7, 11): 3})
+        self.out <<= self.in0 & self.in1
+        pyrtl.synthesize()
+        pyrtl.and_inverter_synth()
+        self.check_synth(lambda a, b: a & b)
 
     def test_and_inverter_synth_or(self):
-        self.out <<= self.in1 | self.in2
-        self.run_and_inverter_synth({(1, 2): 3, (4, 5): 5, (7, 11): 15})
+        self.out <<= self.in0 | self.in1
+        pyrtl.synthesize()
+        pyrtl.and_inverter_synth()
+        self.check_synth(lambda a, b: a | b)
 
     def test_and_inverter_synth_xor(self):
-        self.out <<= self.in1 ^ self.in2
-        self.run_and_inverter_synth({(1, 2): 3, (4, 5): 1, (7, 11): 12})
+        self.out <<= self.in0 ^ self.in1
+        pyrtl.synthesize()
+        pyrtl.and_inverter_synth()
+        self.check_synth(lambda a, b: a ^ b)
 
     def test_and_inverter_synth_adder(self):
-        self.out <<= self.in1 + self.in2
-        self.run_and_inverter_synth({(1, 2): 3, (4, 5): 9, (7, 11): 18})
+        self.out <<= self.in0 + self.in1
+        pyrtl.synthesize()
+        pyrtl.and_inverter_synth()
+        self.check_synth(lambda a, b: a + b)
 
 
 class TestSynthOptTiming(NetWireNumTestCases):
