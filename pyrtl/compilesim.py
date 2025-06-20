@@ -8,6 +8,7 @@ from os import path
 import platform
 import sys
 import _ctypes
+from collections.abc import Mapping
 
 from .core import working_block, Block
 from .wire import Input, Output, Const, WireVector, Register
@@ -15,11 +16,6 @@ from .memory import MemBlock, RomBlock
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .simulation import SimulationTrace, _trace_sort_key
 from .helperfuncs import infer_val_and_bitwidth
-
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
 
 
 __all__ = ['CompiledSimulation']
@@ -56,7 +52,7 @@ class DllMemInspector(Mapping):
         return all(self[x] == other.get(x, 0) for x in self)
 
 
-class CompiledSimulation(object):
+class CompiledSimulation:
     """Simulate a block, compiling to C for efficiency.
 
     This module provides significant speed improvements over

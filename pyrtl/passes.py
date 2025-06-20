@@ -208,7 +208,7 @@ def _optimize_inverter_chains(block, skip_sanity_check=False):
         block.sanity_check()
 
 
-class _ProducerList(object):
+class _ProducerList:
     """  Maps from wire to its immediate producer and finds ultimate producers. """
     def __init__(self):
         self.dict = {}  # map from wirevector to its direct producer wirevector

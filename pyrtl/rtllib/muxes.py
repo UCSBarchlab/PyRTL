@@ -105,7 +105,7 @@ def _sparse_mux(sel, vals):
     return pyrtl.select(sel[-1], falsecase=false_result, truecase=true_result)
 
 
-class MultiSelector(object):
+class MultiSelector:
     """ The MultiSelector allows you to specify multiple wire value results
     for a single select wire.
 

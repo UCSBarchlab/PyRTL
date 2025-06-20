@@ -58,7 +58,7 @@ def next_tempvar_name(name=""):
 WireVectorLike = Union["WireVector", int, str, bool]
 
 
-class WireVector(object):
+class WireVector:
     """The main class for describing the connections between operators.
 
     ``WireVectors`` act much like a list of wires, except that there is no "contained"
@@ -1244,7 +1244,7 @@ class Register(WireVector):
     #     reg <<= 5       # error
     #     a <<= reg.next  # error
     #     reg.next = 5    # error
-    class _Next(object):
+    class _Next:
         """Type returned by the ``Register.next`` property.
 
         This class allows unconditional assignments (``<<=``, ``__ilshift__``) and

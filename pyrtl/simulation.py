@@ -9,6 +9,7 @@ import os
 import re
 import sys
 import typing
+from collections.abc import Mapping
 
 from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 from .core import working_block, PostSynthBlock, _PythonSanitizer, Block
@@ -18,11 +19,6 @@ from .helperfuncs import check_rtl_assertions, _currently_in_jupyter_notebook
 from .helperfuncs import val_to_signed_integer, infer_val_and_bitwidth
 from .importexport import _VerilogSanitizer
 
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
-
 # ----------------------------------------------------------------
 #    __                         ___    __
 #   /__` |  |\/| |  | |     /\   |  | /  \ |\ |
@@ -30,7 +26,7 @@ except ImportError:
 #
 
 
-class Simulation(object):
+class Simulation:
     """A class for simulating blocks of logic step by step.
 
     A Simulation step works as follows:
@@ -488,7 +484,7 @@ class Simulation(object):
 #
 
 
-class FastSimulation(object):
+class FastSimulation:
     """A class for running JIT-to-python implementations of blocks.
 
     A Simulation step works as follows:
@@ -994,7 +990,7 @@ class FastSimulation(object):
 #     |  |  \ /~~\ \__, |___
 #
 
-class WaveRenderer(object):
+class WaveRenderer:
     """Render a SimulationTrace to the terminal.
 
     See ``examples/renderer-demo.py``, which renders traces with various
@@ -1460,7 +1456,7 @@ class TraceStorage(Mapping):
         return self.__data[key]
 
 
-class SimulationTrace(object):
+class SimulationTrace:
     """ Storage and presentation of simulation waveforms. """
 
     def __init__(self, wires_to_track: list[WireVector] = None,

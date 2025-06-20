@@ -9,7 +9,7 @@ from ..pyrtlexceptions import PyrtlError
 from ..helperfuncs import formatted_str_to_val
 
 
-class Matrix(object):
+class Matrix:
     ''' Class for making a Matrix using PyRTL.
 
     Provides the ability to perform different matrix operations.
