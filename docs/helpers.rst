@@ -40,6 +40,7 @@ Control Flow Hardware
 .. autofunction:: pyrtl.corecircuits.enum_mux
 .. autofunction:: pyrtl.corecircuits.bitfield_update
 .. autofunction:: pyrtl.corecircuits.bitfield_update_set
+.. autoclass:: pyrtl.helperfuncs.MatchedFields
 .. autofunction:: pyrtl.helperfuncs.match_bitpattern
 
 Creating Lists of WireVectors

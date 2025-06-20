@@ -191,33 +191,33 @@ class MatchedFields(collections.namedtuple('MatchedFields', 'matched fields')):
 
 
 def match_bitpattern(w: WireVector, bitpattern: str,
-                     field_map: dict = None) -> MatchedFields:
-    """Returns a single-bit WireVector that is 1 if and only if ``w`` matches
+                     field_map: dict[str, str] = None) -> MatchedFields:
+    """Returns a single-bit ``WireVector`` that is 1 if and only if ``w`` matches
     the ``bitpattern``, and a tuple containing the matched fields, if any.
     Compatible with the ``with`` statement.
 
-    :param WireVector w: The WireVector to be compared to the bitpattern
+    :param w: The ``WireVector`` to be compared to the ``bitpattern``
     :param bitpattern: A string holding the pattern (of bits and wildcards) to
         match
     :param field_map: (optional) A map from single-character field name in the
-        bitpattern to the desired name of field in the returned namedtuple. If
-        given, all non-"1"/"0"/"?" characters in the `bitpattern` must be
+        bitpattern to the desired name of field in the returned ``namedtuple``. If
+        given, all non-``1``/``0``/``?`` characters in the ``bitpattern`` must be
         present in the map.
-    :return: A tuple of 1-bit WireVector carrying the result of the comparison,
-        followed by a named tuple containing the matched fields, if any.
+    :return: A tuple of a 1-bit ``WireVector`` carrying the result of the comparison,
+        followed by a ``namedtuple`` containing the matched fields, if any.
 
-    This function will compare a multi-bit WireVector to a specified pattern of
+    This function will compare a multi-bit ``WireVector`` to a specified pattern of
     bits, where some of the pattern can be "wildcard" bits.  If any of the
     ``1`` or ``0`` values specified in the bitpattern fail to match the
-    WireVector during execution, a ``0`` will be produced, otherwise the value
+    ``WireVector`` during execution, a ``0`` will be produced, otherwise the value
     carried on the wire will be ``1``.  The wildcard characters can be any
     other alphanumeric character, with characters other than ``?`` having
     special functionality (see below).  The string must have length equal to
-    the WireVector specified, although whitespace and underscore characters
+    the ``WireVector`` specified, although whitespace and underscore characters
     will be ignored and can be used for pattern readability.
 
     For all other characters besides ``1``, ``0``, or ``?``, a tuple of
-    WireVectors will be returned as the second return value. Each character
+    ``WireVectors`` will be returned as the second return value. Each character
     will be treated as the name of a field, and non-consecutive fields with the
     same name will be concatenated together, left-to-right, into a single field
     in the resultant tuple. For example, ``01aa1?bbb11a`` will match a string
@@ -225,10 +225,10 @@ def match_bitpattern(w: WireVector, bitpattern: str,
 
         (a, b) = (0b001, 0b100)
 
-    where the ``a`` field is the concenation of bits 9, 8, and 0, and the ``b``
+    where the ``a`` field is the concatenation of bits 9, 8, and 0, and the ``b``
     field is the concenation of bits 5, 4, and 3. Thus, arbitrary characters
     beside ``?`` act as wildcard characters for the purposes of matching, with
-    the additional benefit of returning the WireVectors corresponding to those
+    the additional benefit of returning the ``WireVectors`` corresponding to those
     fields.
 
     A prime example of this is for decoding instructions. Here we decode some
@@ -253,28 +253,30 @@ def match_bitpattern(w: WireVector, bitpattern: str,
 
         m, _ = match_bitpattern(w, '0101')  # basically the same as w == '0b0101'
         m, _ = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
-        m, _ = match_bitpattern(w, '??01')  # m be true when last two bits of w are '01'
+        m, _ = match_bitpattern(w, '??01')  # m will be true when last two bits of w are '01'
         m, _ = match_bitpattern(w, '??_0 1')  # spaces/underscores are ignored, same as line above
-        m, (a, b) = match_pattern(w, '01aa1?bbb11a')  # all bits with same letter make up same field
-        m, fs = match_pattern(w, '01aa1?bbb11a', {'a': 'foo', 'b': 'bar'})  # fields fs.foo, fs.bar
+        # All bits with the same letter make up same field.
+        m, (a, b) = match_bitpattern(w, '01aa1?bbb11a')
+        # Fields will be named `fs.foo` and `fs.bar`.
+        m, fs = match_bitpattern(w, '01aa1?bbb11a', {'a': 'foo', 'b': 'bar'})
 
     """
     w = as_wires(w)
     if not isinstance(bitpattern, str):
         raise PyrtlError('bitpattern must be a string')
-    nospace_string = ''.join(bitpattern.replace('_', '').split())
-    if len(w) != len(nospace_string):
+    bitpattern = bitpattern.replace("_", "").replace(" ", "")
+    if len(w) != len(bitpattern):
         raise PyrtlError('bitpattern string different length than wirevector provided')
-    lsb_first_string = nospace_string[::-1]  # flip so index 0 is lsb
+    # Reverse ``bitpattern`` so index 0 is the least significant bit. This makes
+    # ``w[i]`` and ``reversed_bitpattern[i]`` refer to the same bit ``i``.
+    reversed_bitpattern = bitpattern[::-1]
 
-    zero_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '0']
-    one_bits = [w[index] for index, x in enumerate(lsb_first_string) if x == '1']
+    zero_bits = [w[index] for index, x in enumerate(reversed_bitpattern) if x == '0']
+    one_bits = [w[index] for index, x in enumerate(reversed_bitpattern) if x == '1']
     match = rtl_all(*one_bits) & ~rtl_any(*zero_bits)
 
-    # Since only Python 3.7 and above guarantees maintaining insertion order in dictionaries,
-    # do all of this to make sure we can maintain the ordering in the returned Tuple.
-    # Order of fields is determined based on left-to-right ordering in original string.
-    def field_name(name):
+    def field_name(name: str) -> str:
+        """Retrieve a field's name from ``field_map``."""
         if field_map is not None:
             if name not in field_map:
                 raise PyrtlError('field_map argument has been given, '
@@ -282,13 +284,18 @@ def match_bitpattern(w: WireVector, bitpattern: str,
             return field_map[name]
         return name
 
+    # ``fields`` maps from ``field_name`` to a list of WireVectors that match
+    # ``field_name``.
     fields = collections.defaultdict(list)
-    for i, c in enumerate(lsb_first_string):
+    for i, c in enumerate(reversed_bitpattern):
         if c not in '01?':
             fields[c].append(w[i])
-    fields = sorted(fields.items(), key=lambda m: nospace_string.index(m[0]))  # now list of tuples
-    Fields = collections.namedtuple('Fields', ' '.join(field_name(name) for name, _ in fields))
-    fields = Fields(**{field_name(k): concat_list(l) for k, l in fields})
+    # Sort ``fields`` by each field's position in ``bitpattern`` and convert ``fields``
+    # to a list of tuples.
+    fields = sorted(fields.items(), key=lambda m: bitpattern.index(m[0]))
+    Fields = collections.namedtuple('Fields', [field_name(name) for name, _ in fields])
+    fields = Fields(**{field_name(name): concat_list(wirevector_list)
+                    for name, wirevector_list in fields})
 
     return MatchedFields(match, fields)
 
