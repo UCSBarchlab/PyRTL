@@ -358,32 +358,30 @@ def shift_right_logical(bits_to_shift, shift_amount):
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
 
 
-def match_bitwidth(*args, **opt):
-    """ Matches the argument wires' bitwidth via zero or sign extension, returning new WireVectors
+def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]:
+    """Matches multiple :class:`.WireVector` ``bitwidths`` via zero- or sign-extension.
 
-    :param WireVector args: WireVectors of which to match bitwidths
-    :param opt: Optional keyword argument ``signed=True`` (defaults to False)
-    :return: tuple of args in order with extended bits
+    ``WireVectors`` with shorter ``bitwidths`` will be zero- or sign-extended to match
+    the longest ``bitwidth`` in ``args``, depending on ``signed``.
 
-    Example of matching the bitwidths of two WireVectors ``a`` and ``b`` with
-    zero extension: ::
+    Example of matching the ``bitwidths`` of two ``WireVectors`` ``a`` and ``b`` with
+    zero-extension::
 
         a, b = match_bitwidth(a, b)
 
-    Example of matching the bitwidths of three WireVectors ``a``, ``b``, and ``c`` with
-    with sign extension: ::
+    Example of matching the ``bitwidths`` of three ``WireVectors`` ``a``, ``b``, and
+    ``c`` with with sign-extension::
 
         a, b, c = match_bitwidth(a, b, c, signed=True)
-    """
-    # TODO: when we drop 2.7 support, this code should be cleaned up with explicit
-    # kwarg support for "signed" rather than the less than helpful "**opt"
-    if len(opt) == 0:
-        signed = False
-    else:
-        if len(opt) > 1 or 'signed' not in opt:
-            raise PyrtlError('error, only supported kwarg to match_bitwidth is "signed"')
-        signed = bool(opt['signed'])
 
+    :param args: ``WireVectors`` of which to match ``bitwidth``
+    :param signed: If ``True``, match ``bitwidth`` with
+        :meth:`~.WireVector.sign_extended`. Otherwise, match bitwidth with
+        :meth:`~.WireVector.zero_extended`.
+    :return: :class:`tuple` of ``WireVectors``, in the same order they appeared in
+        ``args``, all with ``bitwidth`` equal to the longest ``bitwidth`` in ``args``.
+
+    """
     max_len = max(len(wv) for wv in args)
     if signed:
         return (wv.sign_extended(max_len) for wv in args)

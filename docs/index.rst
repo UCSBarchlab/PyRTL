@@ -134,13 +134,12 @@ Errors
 ^^^^^^
 
 Finally, when things go wrong you may hit an :class:`Exception`, neither of which is
-likely recoverable automatically (which is why we limited them to only two). The
-intention is that :class:`.PyrtlError` is intended to capture end user errors such as
-invalid constant strings and mis-matched bitwidths. In contrast,
-:class:`.PyrtlInternalError` captures internal invariants and assertions over the core
-logic graph which should never be encountered when constructing designs in the normal
-ways. If you hit a confusing :class:`.PyrtlError` or any :class:`.PyrtlInternalError`
-feel free to file an issue.
+likely recoverable automatically (which is why we limited them to only two types).
+:class:`.PyrtlError` is intended to capture end user errors such as invalid constant
+strings and mis-matched bitwidths. In contrast, :class:`.PyrtlInternalError` captures
+internal invariants and assertions over the core logic graph which should never be
+encountered when constructing designs in the normal ways. If you hit a confusing
+:class:`.PyrtlError` or any :class:`.PyrtlInternalError` feel free to file an issue.
 
 .. autoclass:: pyrtl.pyrtlexceptions.PyrtlError
     :members:
