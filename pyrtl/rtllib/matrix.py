@@ -584,8 +584,6 @@ class Matrix(object):
 
         Is used with ``a @= b``.
 
-        Note: The matmul symbol (``@``) only works in Python 3.5+. Otherwise you must
-        call ``__imatmul__(other)``.
         '''
         new_value = self.__matmul__(other)
         self.columns = new_value.columns
@@ -602,8 +600,6 @@ class Matrix(object):
 
         Is used with ``a @ b``.
 
-        Note: The matmul symbol (`@`) only works in Python 3.5+. Otherwise you must
-        call ``__matmul__(other)``.
         '''
         if not isinstance(other, Matrix):
             raise PyrtlError('error: expecting a Matrix, '
@@ -736,16 +732,15 @@ class Matrix(object):
             col = mat_ix % self.columns
             self[row, col] = get_value(v_ix)
 
-    def reshape(self, *newshape, **order):
-        ''' Create a matrix of the given shape from the current matrix.
+    def reshape(self, *newshape, order: str = "C"):
+        '''Create a matrix of the given shape from the current matrix.
 
         :param int/ints/tuple[int] newshape: shape of the matrix to return;
             if a single int, will result in a 1-D row-vector of that length;
             if a tuple, will use values for number of rows and cols. Can also
             be a varargs.
-        :param str order: ``C`` means to read from self using
-            row-major order (C-style), and ``F`` means to read from self
-            using column-major order (Fortran-style).
+        :param order: ``C`` means to read from self using row-major order (C-style), and
+            ``F`` means to read from self using column-major order (Fortran-style).
         :return: A copy of the matrix with same data, with a new number of rows/cols
 
         One shape dimension in newshape can be -1; in this case, the value
@@ -766,10 +761,8 @@ class Matrix(object):
             matrix.reshape(4, 2) == [[0, 1], [2, 3], [4, 5], [6, 7]]
             matrix.reshape(-1, 2) == [[0, 1], [2, 3], [4, 5], [6, 7]]
             matrix.reshape(4, -1) == [[0, 1], [2, 3], [4, 5], [6, 7]]
+
         '''
-        # python2 does not support named arguments after *args, so we use
-        # **kwargs for 'order' and set the default here.
-        order = order.get('order', 'C')
         count = self.rows * self.columns
         if isinstance(newshape, int):
             if newshape == -1:

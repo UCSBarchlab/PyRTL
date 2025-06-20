@@ -394,8 +394,6 @@ class WireVector(object):
                          'something that calls "__eq__", such as when you test if a '
                          'WireVector is "in" something')
 
-    __nonzero__ = __bool__  # for Python 2 and 3 compatibility
-
     def __and__(self, other: WireVectorLike) -> WireVector:
         """Returns the result of bitwise ANDing ``self`` and ``other``.
 
@@ -1304,8 +1302,6 @@ class Register(WireVector):
                              'often happens when you attempt to use a Register.next with "==" or '
                              'something that calls "__eq__", such as when you test if a '
                              'Register.next is "in" something')
-
-        __nonzero__ = __bool__  # for Python 2 and 3 compatibility
 
     def __init__(self, bitwidth: int, name: str = '', reset_value: int = None,
                  block: Block = None):
