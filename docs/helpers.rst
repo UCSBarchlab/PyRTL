@@ -42,6 +42,8 @@ Control Flow Hardware
 .. autofunction:: pyrtl.corecircuits.bitfield_update
 .. autofunction:: pyrtl.corecircuits.bitfield_update_set
 .. autoclass:: pyrtl.helperfuncs.MatchedFields
+    :members:
+    :undoc-members:
 .. autofunction:: pyrtl.helperfuncs.match_bitpattern
 
 Creating Lists of WireVectors

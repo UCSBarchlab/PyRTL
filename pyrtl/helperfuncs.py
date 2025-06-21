@@ -179,7 +179,13 @@ def truncate(wirevector_or_integer: Union[WireVector, int],
         return x & ((1 << bitwidth) - 1)
 
 
-class MatchedFields(collections.namedtuple('MatchedFields', 'matched fields')):
+class MatchedFields(NamedTuple):
+    """Result returned by :func:`match_bitpattern`."""
+    matched: WireVector
+    """1-bit ``WireVector`` indicating if ``w`` matches ``bitpattern``."""
+    fields: NamedTuple
+    """``NamedTuple`` containing the matched fields, if any."""
+
     def __enter__(self):
         from .conditional import _push_condition
         _push_condition(self.matched)
@@ -203,8 +209,8 @@ def match_bitpattern(w: WireVector, bitpattern: str,
         bitpattern to the desired name of field in the returned ``namedtuple``. If
         given, all non-``1``/``0``/``?`` characters in the ``bitpattern`` must be
         present in the map.
-    :return: A tuple of a 1-bit ``WireVector`` carrying the result of the comparison,
-        followed by a ``namedtuple`` containing the matched fields, if any.
+    :return: A ``NamedTuple`` consisting of a 1-bit ``WireVector`` carrying the result
+        of the comparison, and a ``NamedTuple`` containing the matched fields, if any.
 
     This function will compare a multi-bit ``WireVector`` to a specified pattern of
     bits, where some of the pattern can be "wildcard" bits.  If any of the

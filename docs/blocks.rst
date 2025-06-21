@@ -1,16 +1,19 @@
-Logic Nets and Blocks
+Block and Logic Nets
 =====================
-
-LogicNets
----------
-
-.. autoclass:: pyrtl.core.LogicNet
-
 
 Blocks
 ------
 
 .. autoclass:: pyrtl.core.Block
+    :members:
+    :exclude-members: sanity_check_memblock, sanity_check_memory_sync, sanity_check_net, sanity_check_wirevector
+
+
+``working_block``
+^^^^^^^^^^^^^^^^^
+
+Most PyRTL operations operate on the global ``working_block`` by default. PyRTL
+provides several functions to inspect and manipulate the ``working_block``:
 
 .. autofunction:: pyrtl.core.working_block
 
@@ -20,20 +23,9 @@ Blocks
 
 .. autofunction:: pyrtl.core.temp_working_block
 
-.. autofunction:: pyrtl.core.Block.add_wirevector
+LogicNets
+---------
 
-.. autofunction:: pyrtl.core.Block.remove_wirevector
-
-.. autofunction:: pyrtl.core.Block.add_net
-
-.. autofunction:: pyrtl.core.Block.get_memblock_by_name
-
-.. autofunction:: pyrtl.core.Block.wirevector_subset
-
-.. autofunction:: pyrtl.core.Block.logic_subset
-
-.. autofunction:: pyrtl.core.Block.get_wirevector_by_name
-
-.. autofunction:: pyrtl.core.Block.net_connections
-
-.. autofunction:: pyrtl.core.Block.sanity_check
+.. autoclass:: pyrtl.core.LogicNet
+    :members:
+    :undoc-members:

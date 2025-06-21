@@ -1,7 +1,5 @@
 .. PyRTL analysis master file
 
-.. default-domain:: pyrtl.rtllib
-
 =========================
 Analysis and Optimization
 =========================
@@ -27,6 +25,7 @@ Synthesis
 
 .. autoclass:: pyrtl.core.PostSynthBlock
    :show-inheritance:
+   :members:
 
 Individual Passes
 -----------------

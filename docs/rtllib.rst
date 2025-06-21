@@ -1,7 +1,5 @@
 .. PyRTL rtllib master file
 
-.. default-domain:: pyrtl.rtllib
-
 ===========
 RTL Library
 ===========
