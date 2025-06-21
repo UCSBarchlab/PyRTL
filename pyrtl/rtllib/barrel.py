@@ -1,17 +1,31 @@
 import pyrtl
 import math
+from enum import IntEnum
+
+from pyrtl.wire import WireVector, WireVectorLike
 
 
-def barrel_shifter(bits_to_shift, bit_in, direction, shift_dist, wrap_around=0):
-    """ Create a barrel shifter that operates on data based on the wire width.
+class Direction(IntEnum):
+    """Assigns names to each shift direction, to improve code readability."""
+    RIGHT = 0
+    LEFT = 1
 
-    :param bits_to_shift: the input wire
-    :param bit_in: the 1-bit wire giving the value to shift in
-    :param direction: a one bit WireVector representing shift direction
-        (0 = shift down, 1 = shift up)
-    :param shift_dist: WireVector representing offset to shift
+
+def barrel_shifter(bits_to_shift: WireVector, bit_in: WireVectorLike,
+                   direction: WireVectorLike, shift_dist: WireVector,
+                   wrap_around=0) -> WireVector:
+    """Create a barrel shifter.
+
+    :param bits_to_shift: ``WireVector`` with the value to shift.
+    :param bit_in: A 1-bit ``WireVector`` representing the value to shift in.
+    :param direction: A one bit ``WireVector`` representing the shift direction (``0`` =
+        shift right, ``1`` = shift left). If ``direction`` is constant, use
+        :py:class:`Direction` to improve code readability (``direction=Direction.RIGHT``
+        instead of ``direction=0``).
+    :param shift_dist: ``WireVector`` representing the amount to shift.
     :param wrap_around: ****currently not implemented****
-    :return: shifted WireVector
+
+    :return: The shifted ``WireVector``.
     """
     from pyrtl import concat, select  # just for readability
 
@@ -27,8 +41,8 @@ def barrel_shifter(bits_to_shift, bit_in, direction, shift_dist, wrap_around=0):
         shift_amt = pow(2, i)  # stages shift 1,2,4,8,...
         if shift_amt < final_width:
             newval = select(direction,
-                            concat(val[:-shift_amt], append_val),  # shift up
-                            concat(append_val, val[shift_amt:]))  # shift down
+                            concat(val[:-shift_amt], append_val),  # shift left
+                            concat(append_val, val[shift_amt:]))  # shift right
             val = select(shift_dist[i],
                          truecase=newval,  # if bit of shift is 1, do the shift
                          falsecase=val)  # otherwise, don't

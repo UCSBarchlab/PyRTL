@@ -414,7 +414,7 @@ class WireVector:
             1
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A ``WireVector`` containing the result of bitwise ANDing ``self`` and
             ``other``. The returned ``WireVector`` has the same ``bitwidth`` as the
             longer of the two input ``WireVectors``.
@@ -448,7 +448,7 @@ class WireVector:
             '0b111'
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A ``WireVector`` containing the result of bitwise ORing ``self`` and
             ``other``. The returned ``WireVector`` has the same ``bitwidth`` as the
             longer of the two input ``WireVectors``.
@@ -481,7 +481,7 @@ class WireVector:
             '0b110'
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A ``WireVector`` containing the result of bitwise XORing ``self`` and
             ``other``. The returned ``WireVector`` has the same ``bitwidth`` as the
             longer of the two input ``WireVectors``.
@@ -519,7 +519,7 @@ class WireVector:
             8
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A ``WireVector`` containing the result of adding ``self`` and
             ``other``. The returned ``WireVector`` has a ``bitwidth`` equal to the
             longer of the two input ``WireVectors``, plus one.
@@ -557,7 +557,7 @@ class WireVector:
             2
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A ``WireVector`` containing the result of subtracting ``self`` and
             ``other``. The returned ``WireVector`` has a ``bitwidth`` equal to the
             longer of the two input ``WireVectors``, plus one.
@@ -597,7 +597,7 @@ class WireVector:
             15
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A ``WireVector`` containing the result of multiplying ``self`` and
             ``other``. The returned ``WireVector`` has a ``bitwidth`` equal
             to twice the length of the longer input.
@@ -635,7 +635,7 @@ class WireVector:
             1
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A one-bit ``WireVector`` indicating if ``self`` is less than ``other``.
 
         """
@@ -665,7 +665,7 @@ class WireVector:
             1
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A one-bit ``WireVector`` indicating if ``self`` is less than or equal
             to ``other``.
 
@@ -697,7 +697,7 @@ class WireVector:
             0
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A one-bit ``WireVector`` indicating if ``self`` is equal to ``other``.
 
         """
@@ -723,7 +723,7 @@ class WireVector:
             1
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A one-bit ``WireVector`` indicating if ``self`` is not equal to
             ``other``.
 
@@ -754,7 +754,7 @@ class WireVector:
             0
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A one-bit ``WireVector`` indicating if ``self`` is greater than
             ``other``.
 
@@ -785,7 +785,7 @@ class WireVector:
             0
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A one-bit ``WireVector`` indicating if ``self`` is greater than or
             equal to ``other``.
 
@@ -922,7 +922,7 @@ class WireVector:
             '0b1110'
 
         :param other: A ``WireVector``, or any type that can be coerced to
-            ``WireVector`` by :func:`.as_wires`. See :ref:`wirevector_coercion`.
+            ``WireVector`` by :func:`.as_wires`.
         :return: A ``WireVector`` containing the result of bitwise NANDing ``self`` and
             ``other``. The returned ``WireVector`` has the same ``bitwidth`` as the
             longer of the two input ``WireVectors``.

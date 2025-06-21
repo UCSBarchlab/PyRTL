@@ -13,9 +13,7 @@ Estimation
 
 .. automodule:: pyrtl.analysis
    :members:
-   :special-members:
-   :undoc-members:
-   :exclude-members: __dict__,__weakref__,__module__
+   :special-members: __init__
 
 Optimization
 ------------

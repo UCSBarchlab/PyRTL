@@ -1,16 +1,17 @@
 import pyrtl
 
+from pyrtl import WireVector
 
-def prioritized_mux(selects, vals):
-    """ Returns the value in the first wire for which its select bit is 1
 
-    :param [WireVector] selects: a list of WireVectors signaling whether
-        a wire should be chosen
-    :param [WireVector] vals: values to return when the corresponding select
-        value is 1
-    :return: WireVector
+def prioritized_mux(selects: list[WireVector], vals: list[WireVector]) -> WireVector:
+    """Returns the value in the first wire for which its ``select`` bit is ``1``
 
-    If none of the `selects` are high, the last `val` is returned
+    If none of the ``selects`` are ``1``, the last ``val`` is returned.
+
+    :param selects: A list of ``WireVectors`` signaling whether a wire should be chosen.
+    :param vals: Values to return when the corresponding ``select`` value is ``1``.
+
+    :return: The selected value.
     """
     if len(selects) != len(vals):
         raise pyrtl.PyrtlError("Number of select and val signals must match")
@@ -34,17 +35,18 @@ def _is_equivalent(w1, w2):
 SparseDefault = "default"
 
 
-def sparse_mux(sel, vals):
-    """ Mux that avoids instantiating unnecessary mux_2s when possible.
+def sparse_mux(sel: WireVector, vals: dict[int, WireVector]) -> WireVector:
+    """Mux that avoids instantiating unnecessary ``mux_2s`` when possible.
 
-    :param WireVector sel: Select wire, determines what is selected on a given cycle
-    :param dict[int, WireVector] vals: dictionary of values at mux inputs
-    :return: WireVector that signifies the change
+    This mux supports not having a full specification. Indices that are not specified
+    are treated as don't-cares
 
-    This mux supports not having a full specification. Indices that are not
-    specified are treated as don't-cares
+    It also supports a specified default value, ``SparseDefault``.
 
-    It also supports a specified default value, SparseDefault
+    :param sel: Select wire, determines what is selected on a given cycle.
+    :param vals: Dictionary of values at mux inputs.
+
+    :return: WireVector that signifies the change.
     """
     import numbers
 
@@ -181,11 +183,46 @@ class MultiSelector:
             dest_w <<= sparse_mux(self.signal_wire, mux_vals)
 
 
-def demux(select):
-    """ Demultiplexes a wire of arbitrary bitwidth
+def demux(select: WireVector) -> tuple[WireVector, ...]:
+    """Demultiplexes a wire of arbitrary bitwidth
 
-    :param WireVector select: indicates which wire to set on
-    :return (WireVector, ...): a tuple of wires corresponding to each demultiplexed wire
+    This effectively converts an unsigned binary value into a unary value, returning
+    each bit of the unary value as a separate ``WireVector``.
+
+    Example::
+
+        >>> input = pyrtl.Input(bitwidth=3)
+        >>> output = pyrtl.rtllib.muxes.demux(input)
+        >>> len(output)
+        8
+        >>> len(output[0])
+        1
+        >>> for i, wire in enumerate(output):
+        ...     wire.name = f"output{i}"
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={input.name: 5})
+        >>> sim.inspect(output[4].name)
+        0
+        >>> sim.inspect(output[5].name)
+        1
+        >>> sim.inspect(output[6].name)
+        0
+
+    In the example above, ``len(output)`` is ``8`` because ``2 ** 3 == 8``, and
+    ``output[5]`` is ``1`` because the output index ``5`` matches the input value.
+
+    :py:func:`.binary_to_one_hot` performs a similar operation.
+
+    .. WARNING::
+
+        ``demux`` can create a very large number of ``WireVectors``. Use with
+        caution.
+
+    :param select: The value to demultiplex.
+
+    :return: A tuple of 1-bit wires, where each wire indicates if the value of
+             ``select`` equals the wire's index in the tuple. The tuple has length ``2
+             ** select.bitwidth``.
     """
     if len(select) == 1:
         return _demux_2(select)

@@ -25,10 +25,11 @@ Coercion to WireVector
 ----------------------
 
 In PyRTL there is only one function in charge of coercing values into
-:class:`WireVectors<.WireVector>`, and that is :func:`.as_wires`.  This
-function is called in almost all helper functions and classes to manage the
-mixture of constants and WireVectors that naturally occur in hardware
-development.
+:class:`WireVectors<.WireVector>`, and that is :func:`.as_wires`. This function
+is called in almost all helper functions and classes to manage the mixture of
+constants and :class:`WireVectors<.WireVector>` that naturally occur in
+hardware development. See :ref:`wirevector_coercion` for examples and more
+details.
 
 .. autofunction:: pyrtl.corecircuits.as_wires
 
@@ -115,4 +116,3 @@ Encoders and Decoders
 
 .. autofunction:: pyrtl.helperfuncs.one_hot_to_binary
 .. autofunction:: pyrtl.helperfuncs.binary_to_one_hot
-
