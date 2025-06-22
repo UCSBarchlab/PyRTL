@@ -1,10 +1,18 @@
+import doctest
 from random import randint
 import unittest
 
 import pyrtl
 
 
-# -------------------------------------------------------------------
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+    def test_doctests(self):
+        failures, tests = doctest.testmod(m=pyrtl.memory)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
+
+
 class RTLMemBlockDesignBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

@@ -162,24 +162,31 @@ class MemBlock:
         ---------------------------
         Simultaneous Read and Write
         ---------------------------
+        ..
+            # For ``doctest``.
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
         In PyRTL simulations, if the same address is read and written in the same cycle,
         the read will return the `last` value stored in the MemBlock, not the newly
         written value. Example::
 
-            mem = pyrtl.MemBlock(addrwidth=1, bitwidth=1)
-            mem[0] <<= 1
-            read_data = pyrtl.Output(name="read_data", bitwidth=1)
-            read_data <<= mem[0]
+            >>> mem = pyrtl.MemBlock(addrwidth=1, bitwidth=1)
+            >>> mem[0] <<= 1
+            >>> read_data = pyrtl.Output(name="read_data", bitwidth=1)
+            >>> read_data <<= mem[0]
 
-            # In the first cycle, read_data will be the default MemBlock data value (0),
-            # not the newly written value (1).
-            sim = pyrtl.Simulation()
-            sim.step()
-            print("Cycle 0 read_data", sim.inspect("read_data"))
+            >>> # In the first cycle, read_data will be the default MemBlock data value
+            >>> # (0), not the newly written value (1).
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step()
+            >>> sim.inspect("read_data")
+            0
 
             # In the second cycle, read_data will be the newly written value (1).
-            sim.step()
-            print("Cycle 1 read_data", sim.inspect("read_data"))
+            >>> sim.step()
+            >>> sim.inspect("read_data")
+            1
 
         -----------------------------
         Mapping MemBlocks to Hardware
