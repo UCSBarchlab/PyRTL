@@ -11,14 +11,13 @@ import pyrtl.corecircuits
 import pyrtl.helperfuncs
 from pyrtl.rtllib import testingutils as utils
 
-# ---------------------------------------------------------------
-
 
 class TestDocTests(unittest.TestCase):
     """Test documentation examples."""
     def test_doctests(self):
-        doctest_results = doctest.testmod(m=pyrtl.helperfuncs)
-        self.assertEqual(doctest_results.failed, 0)
+        failures, tests = doctest.testmod(m=pyrtl.helperfuncs)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 class TestWireVectorList(unittest.TestCase):

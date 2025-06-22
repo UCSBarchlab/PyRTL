@@ -1,7 +1,17 @@
+import doctest
 import io
+import pytest
 import unittest
 
 import pyrtl
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+    def test_doctests(self):
+        failures, tests = doctest.testmod(m=pyrtl.core)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 class TestBlock(unittest.TestCase):

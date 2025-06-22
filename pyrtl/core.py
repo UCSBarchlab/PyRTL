@@ -396,6 +396,11 @@ class Block:
     def get_memblock_by_name(self, name: str, strict: bool = False) -> MemBlock:
         """Get a :class:`.MemBlock` from the ``Block``, by name.
 
+        ..
+            # For ``doctest``.
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
         Useful for getting access to internal ``MemBlocks`` for testing. For example,
         the :class:`.Simulation` constructor requires a ``MemBlock`` reference for its
         ``memory_value_map``. Instead of passing the ``MemBlock`` around in your code,
@@ -441,17 +446,33 @@ class Block:
 
         Filters ``WireVectors`` by type.
 
+        ..
+            # For ``doctest``.
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
         If ``cls`` is ``None``, returns all the ``WireVectors`` associated with the
         ``Block``. If ``cls`` is a single type, or a tuple of types, only
         ``WireVectors`` of the matching types will be returned. This is helpful for
         getting all of a ``Block``'s :class:`Inputs<.Input>`, :class:`Outputs<.Output>`,
         or :class:`Registers<.Register>` for example::
 
-            inputs = pyrtl.working_block().wirevector_subset(pyrtl.Input)
-            outputs = pyrtl.working_block().wirevector_subset(pyrtl.Output)
+            >>> len([pyrtl.Input(bitwidth=4) for _ in range(2)])
+            2
+            >>> len([pyrtl.Output(bitwidth=4) for _ in range(3)])
+            3
 
-            # returns set of all non-input WireVectors
-            non_inputs = pyrtl.working_block().wirevector_subset(exclude=pyrtl.Input)
+            >>> inputs = pyrtl.working_block().wirevector_subset(pyrtl.Input)
+            >>> len(inputs)
+            2
+            >>> all(isinstance(input, pyrtl.Input) for input in inputs)
+            True
+
+            >>> non_inputs = pyrtl.working_block().wirevector_subset(exclude=pyrtl.Input)
+            >>> len(non_inputs)
+            3
+            >>> any(isinstance(non_input, pyrtl.Input) for non_input in non_inputs)
+            False
 
         :param cls: Type of ``WireVector`` objects to include in the returned
             :class:`set`.

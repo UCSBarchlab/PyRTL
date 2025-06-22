@@ -1,7 +1,17 @@
+import doctest
 import unittest
 
 import pyrtl
 from pyrtl import wire
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+    def test_doctests(self):
+        failures, tests = doctest.testmod(
+            m=pyrtl.wire, optionflags=doctest.IGNORE_EXCEPTION_DETAIL)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 class TestWireVector(unittest.TestCase):
