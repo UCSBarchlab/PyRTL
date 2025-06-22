@@ -17,18 +17,16 @@ import re
 import sys
 from typing import Union
 
-from . import core  # needed for _setting_keep_wirevector_call_stack
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl import core  # needed for _setting_keep_wirevector_call_stack
+from pyrtl.core import working_block, LogicNet, _NameIndexer, Block
 
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, LogicNet, _NameIndexer, Block
 
 # ----------------------------------------------------------------
 #        ___  __  ___  __   __
 #  \  / |__  /  `  |  /  \ |__)
 #   \/  |___ \__,  |  \__/ |  \
 #
-
-
 _wvIndexer = _NameIndexer("tmp")
 _constIndexer = _NameIndexer("const_")
 
@@ -326,7 +324,7 @@ class WireVector:
 
     def _prepare_for_assignment(self, rhs):
         # Convert right-hand-side to wires and propagate bitwidth if necessary
-        from .corecircuits import as_wires
+        from pyrtl.corecircuits import as_wires
         rhs = as_wires(rhs, bitwidth=self.bitwidth)
         if self.bitwidth is None:
             self.bitwidth = rhs.bitwidth
@@ -348,7 +346,7 @@ class WireVector:
 
     def __ior__(self, other: WireVectorLike):
         """Conditional assignment operator (only valid under Conditional Update)."""
-        from .conditional import _build, currently_under_condition
+        from pyrtl.conditional import _build, currently_under_condition
         if not self.bitwidth:
             raise PyrtlError('Conditional assignment only defined on '
                              'WireVectors with pre-defined bitwidths')
@@ -360,7 +358,7 @@ class WireVector:
         return self
 
     def _two_var_op(self, other, op):
-        from .corecircuits import as_wires, match_bitwidth
+        from pyrtl.corecircuits import as_wires, match_bitwidth
 
         # convert constants if necessary
         a, b = self, as_wires(other)
@@ -566,7 +564,7 @@ class WireVector:
         return self._two_var_op(other, '-')
 
     def __rsub__(self, other: WireVectorLike):
-        from .corecircuits import as_wires
+        from pyrtl.corecircuits import as_wires
         other = as_wires(other)  # '-' op is not symmetric
         return other._two_var_op(self, '-')
 
@@ -894,11 +892,11 @@ class WireVector:
 
     def __enter__(self):
         """ Use wires as contexts for conditional assignments. """
-        from .conditional import _push_condition
+        from pyrtl.conditional import _push_condition
         _push_condition(self)
 
     def __exit__(self, *execinfo):
-        from .conditional import _pop_condition
+        from pyrtl.conditional import _pop_condition
         _pop_condition()
 
     # more functions for wires
@@ -1044,7 +1042,7 @@ class WireVector:
                 'Neither zero_extended nor sign_extended can'
                 ' reduce the number of bits')
         else:
-            from .corecircuits import concat
+            from pyrtl.corecircuits import concat
             if isinstance(extbit, int):
                 extbit = Const(extbit, bitwidth=1)
             extvector = WireVector(bitwidth=numext)
@@ -1172,7 +1170,7 @@ class Const(WireVector):
 
         """
         self._validate_bitwidth(bitwidth)
-        from .helperfuncs import infer_val_and_bitwidth
+        from pyrtl.helperfuncs import infer_val_and_bitwidth
         num, bitwidth = infer_val_and_bitwidth(val, bitwidth, signed)
 
         if num < 0:
@@ -1271,7 +1269,7 @@ class Register(WireVector):
             self.reg = reg
 
         def __ilshift__(self, other: WireVectorLike):
-            from .corecircuits import as_wires
+            from pyrtl.corecircuits import as_wires
             other = as_wires(other, bitwidth=self.reg.bitwidth)
             if self.reg.bitwidth is None:
                 self.reg.bitwidth = other.bitwidth
@@ -1283,8 +1281,8 @@ class Register(WireVector):
             return self
 
         def __ior__(self, other: WireVectorLike):
-            from .conditional import _build
-            from .corecircuits import as_wires
+            from pyrtl.conditional import _build
+            from pyrtl.corecircuits import as_wires
             other = as_wires(other, bitwidth=self.reg.bitwidth)
             if not self.reg.bitwidth:
                 raise PyrtlError('Conditional assignment only defined on '

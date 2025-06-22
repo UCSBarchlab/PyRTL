@@ -21,8 +21,8 @@ structures (through Block.logic, block.Wirevector_set, etc).
 import functools
 from pyrtl.pyrtlexceptions import PyrtlError
 
-from .core import set_working_block, LogicNet, working_block
-from .wire import Const, Input, Output, WireVector, Register
+from pyrtl.core import set_working_block, LogicNet, working_block
+from pyrtl.wire import Const, Input, Output, WireVector, Register
 
 
 def net_transform(transform_func, block=None, **kwargs):

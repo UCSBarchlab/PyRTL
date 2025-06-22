@@ -11,13 +11,14 @@ import sys
 import typing
 from collections.abc import Mapping
 
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, PostSynthBlock, _PythonSanitizer, Block
-from .wire import Input, Register, Const, Output, WireVector
-from .memory import RomBlock, MemBlock
-from .helperfuncs import check_rtl_assertions, _currently_in_jupyter_notebook
-from .helperfuncs import val_to_signed_integer, infer_val_and_bitwidth
-from .importexport import _VerilogSanitizer
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.core import working_block, PostSynthBlock, _PythonSanitizer, Block
+from pyrtl.wire import Input, Register, Const, Output, WireVector
+from pyrtl.memory import RomBlock, MemBlock
+from pyrtl.helperfuncs import (
+    check_rtl_assertions, _currently_in_jupyter_notebook, val_to_signed_integer,
+    infer_val_and_bitwidth)
+from pyrtl.importexport import _VerilogSanitizer
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -1649,7 +1650,7 @@ class SimulationTrace:
         """
         if _currently_in_jupyter_notebook():
             from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
-            from .visualization import trace_to_html
+            from pyrtl.visualization import trace_to_html
             htmlstring = trace_to_html(self, trace_list=trace_list, sortkey=_trace_sort_key)
             html_elem = HTML(htmlstring)
             display(html_elem)

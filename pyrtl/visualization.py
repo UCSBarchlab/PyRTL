@@ -7,9 +7,9 @@ The functions provided write the block as a given visual format to the file.
 
 import collections
 
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, LogicNet
-from .wire import WireVector, Input, Output, Const, Register
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.core import working_block, LogicNet
+from pyrtl.wire import WireVector, Input, Output, Const, Register
 
 
 def net_graph(block=None, split_state=False):
@@ -41,7 +41,7 @@ def net_graph(block=None, split_state=False):
     """
     # FIXME: make it not try to add unused wires (issue #204)
     block = working_block(block)
-    from .wire import Register
+    from pyrtl.wire import Register
     # self.sanity_check()
     graph = {}
 
@@ -383,7 +383,7 @@ digraph g {
         fixedsize=shape];
     edge [labelfloat=false, penwidth=2, color=deepskyblue, arrowsize=.5];
 """
-    from .importexport import _natural_sort_key
+    from pyrtl.importexport import _natural_sort_key
 
     def _node_sort_key(node):
         # If a LogicNet and a wire share the same name, we want the LogicNet
@@ -509,7 +509,7 @@ def trace_to_html(simtrace, trace_list=None, sortkey=None, repr_func=hex, repr_p
     :return: An HTML block showing the trace
     """
 
-    from .simulation import SimulationTrace, _trace_sort_key
+    from pyrtl.simulation import SimulationTrace, _trace_sort_key
     if not isinstance(simtrace, SimulationTrace):
         raise PyrtlError('first arguement must be of type SimulationTrace')
 

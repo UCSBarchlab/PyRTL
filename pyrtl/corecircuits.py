@@ -4,12 +4,11 @@ import itertools
 import math
 from typing import Union
 
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import Block, LogicNet, working_block
-from .wire import Const, WireVector, WireVectorLike, WrappedWireVector
-from pyrtl.rtllib import barrel
-from pyrtl.rtllib import muxes
-from .conditional import otherwise
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.core import Block, LogicNet, working_block
+from pyrtl.wire import Const, WireVector, WireVectorLike, WrappedWireVector
+from pyrtl.rtllib import barrel, muxes
+from pyrtl.conditional import otherwise
 
 
 def mux(index: WireVectorLike, *mux_ins: WireVector,
@@ -476,7 +475,7 @@ def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
         be dropped).
     :param block: ``Block`` to use for the returned ``WireVector``.
     """
-    from .memory import _MemIndexed
+    from pyrtl.memory import _MemIndexed
     block = working_block(block)
 
     if isinstance(val, (int, str)):
@@ -542,7 +541,7 @@ def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalu
 
     :return: ``w`` with some of the bits overwritten by ``newvalue``.
     """
-    from .corecircuits import concat_list
+    from pyrtl.corecircuits import concat_list
 
     w = as_wires(w)
     idxs = list(range(len(w)))  # we make a list of integers and slice those up to use as indexes

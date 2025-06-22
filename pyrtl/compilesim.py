@@ -10,12 +10,12 @@ import sys
 import _ctypes
 from collections.abc import Mapping
 
-from .core import working_block, Block
-from .wire import Input, Output, Const, WireVector, Register
-from .memory import MemBlock, RomBlock
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .simulation import SimulationTrace, _trace_sort_key
-from .helperfuncs import infer_val_and_bitwidth
+from pyrtl.core import working_block, Block
+from pyrtl.wire import Input, Output, Const, WireVector, Register
+from pyrtl.memory import MemBlock, RomBlock
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.simulation import SimulationTrace, _trace_sort_key
+from pyrtl.helperfuncs import infer_val_and_bitwidth
 
 
 __all__ = ['CompiledSimulation']

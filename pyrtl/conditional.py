@@ -162,8 +162,8 @@ For more :data:`conditional_assignment` examples, see `the state machine example
 # Use the objects "conditional_assignment" and "otherwise" as described above. The
 # classes below are internal implementation details.
 
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .wire import WireVector, Const, Register
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.wire import WireVector, Const, Register
 
 
 # -----------------------------------------------------------------------
@@ -320,7 +320,7 @@ def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
 
 def _finalize(defaults):
     """Build the required muxes and call back to WireVector to finalize the wirevector build."""
-    from .memory import MemBlock
+    from pyrtl.memory import MemBlock
     from pyrtl.corecircuits import select
     for lhs in _predicate_map:
         # handle memory write ports

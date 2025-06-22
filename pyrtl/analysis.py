@@ -12,12 +12,12 @@ import subprocess
 import sys
 import collections
 
-from .core import working_block
-from .wire import Input, Output, Const, Register, WireVector
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .importexport import output_to_verilog
-from .memory import RomBlock
-from .helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
+from pyrtl.core import working_block
+from pyrtl.wire import Input, Output, Const, Register, WireVector
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.importexport import output_to_verilog
+from pyrtl.memory import RomBlock
+from pyrtl.helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
 
 
 # --------------------------------------------------------------------

@@ -6,17 +6,18 @@ ways to change a block.
 
 import collections
 
-from .core import working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock
-from .helperfuncs import _NetCount
-from .corecircuits import (_basic_mult, _basic_add, _basic_sub, _basic_eq,
-                           _basic_lt, _basic_gt, _basic_select, concat_list,
-                           as_wires, concat)
-from .memory import MemBlock
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .wire import WireVector, Input, Output, Const, Register
-from .transform import net_transform, _get_new_block_mem_instance, copy_block, replace_wires
-from . import transform
-from pyrtl import wire  # transform.all_nets looks better than all_nets
+from pyrtl.core import (
+    working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock)
+from pyrtl.helperfuncs import _NetCount
+from pyrtl.corecircuits import (
+    _basic_mult, _basic_add, _basic_sub, _basic_eq, _basic_lt, _basic_gt, _basic_select,
+    concat_list, as_wires, concat)
+from pyrtl.memory import MemBlock
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.wire import WireVector, Input, Output, Const, Register
+from pyrtl.transform import (
+    net_transform, _get_new_block_mem_instance, copy_block, replace_wires)
+from pyrtl import transform  # transform.all_nets looks better than all_nets
 
 
 # --------------------------------------------------------------------
@@ -1017,7 +1018,7 @@ def two_way_fanout(block=None):
 
     :param block: block to update (defaults to working block)
     """
-    from .analysis import fanout
+    from pyrtl.analysis import fanout
     block = working_block(block)
 
     _, dst_map = block.net_connections()

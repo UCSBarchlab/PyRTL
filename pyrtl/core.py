@@ -10,18 +10,16 @@ Included in this file you will find:
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .wire import WireVector, Register
-    from .memory import MemBlock
-
 import collections
 import re
 import keyword
-from typing import NamedTuple
+from typing import NamedTuple, TYPE_CHECKING
 
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+
+if TYPE_CHECKING:
+    from pyrtl.wire import WireVector, Register
+    from pyrtl.memory import MemBlock
 
 
 # -----------------------------------------------------------------
@@ -29,7 +27,6 @@ from .pyrtlexceptions import PyrtlError, PyrtlInternalError
 #   |__) |    /  \ /  ` |__/
 #   |__) |___ \__/ \__, |  \
 #
-
 class LogicNet(NamedTuple):
     """The basic immutable datatype for storing a "net" in a netlist.
 
@@ -147,7 +144,7 @@ class LogicNet(NamedTuple):
         lhs = ', '.join(str(x) for x in self.dests)
         options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
 
-        from .helperfuncs import _currently_in_jupyter_notebook
+        from pyrtl.helperfuncs import _currently_in_jupyter_notebook
 
         if _currently_in_jupyter_notebook():
             # Output the working block as a Latex table
@@ -349,7 +346,7 @@ class Block:
 
     def __str__(self):
         """String form has one LogicNet per line."""
-        from .helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
+        from pyrtl.helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
 
         if _currently_in_jupyter_notebook():
             _print_netlist_latex(list(self))
@@ -517,7 +514,7 @@ class Block:
         nice error message when _MemIndexed is used as a lookup key.
         """
         def __missing__(self, key):
-            from .memory import _MemIndexed
+            from pyrtl.memory import _MemIndexed
 
             if isinstance(key, _MemIndexed):
                 raise PyrtlError(
@@ -572,7 +569,7 @@ class Block:
                 dst_list[edge] = [node]
 
         if include_virtual_nodes:
-            from .wire import Input, Output, Const
+            from pyrtl.wire import Input, Output, Const
             for wire in self.wirevector_subset((Input, Const)):
                 add_wire_src(wire, wire)
 
@@ -589,7 +586,7 @@ class Block:
 
     def _repr_svg_(self):
         """ IPython display support for Block. """
-        from .visualization import block_to_svg
+        from pyrtl.visualization import block_to_svg
         return block_to_svg(self)
 
     def __iter__(self):
@@ -602,7 +599,7 @@ class Block:
         Also, the order of the nets is not guaranteed to be the same
         over multiple iterations.
         """
-        from .wire import Input, Const, Register
+        from pyrtl.wire import Input, Const, Register
         src_dict, dest_dict = self.net_connections()
         to_clear = self.wirevector_subset((Input, Const, Register))
         cleared = set()
@@ -634,9 +631,8 @@ class Block:
 
         :raise PyrtlError: If the ``Block`` is malformed.
         """
-
-        from .wire import Input, Const, Output
-        from .helperfuncs import get_stack, get_stacks
+        from pyrtl.wire import Input, Const, Output
+        from pyrtl.helperfuncs import get_stack, get_stacks
 
         # check for valid LogicNets (and wires)
         for net in self.logic:
@@ -734,7 +730,7 @@ class Block:
         if wire_src_dict is None:
             wire_src_dict, wdd = self.net_connections()
 
-        from .wire import Input, Const
+        from pyrtl.wire import Input, Const
         sync_src = 'r'
         sync_prop = 'wcs'
         for net in sync_mems:
@@ -756,7 +752,7 @@ class Block:
 
     def sanity_check_wirevector(self, w):
         """ Check that w is a valid WireVector type. """
-        from .wire import WireVector
+        from pyrtl.wire import WireVector
         if not isinstance(w, WireVector):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
@@ -764,7 +760,7 @@ class Block:
 
     def sanity_check_memblock(self, m):
         """ Check that m is a valid memblock type. """
-        from .memory import MemBlock
+        from pyrtl.memory import MemBlock
         if not isinstance(m, MemBlock):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
@@ -772,8 +768,8 @@ class Block:
 
     def sanity_check_net(self, net):
         """ Check that net is a valid LogicNet. """
-        from .wire import Input, Output, Const, Register
-        from .memory import MemBlock
+        from pyrtl.wire import Input, Output, Const, Register
+        from pyrtl.memory import MemBlock
 
         # general sanity checks that apply to all operations
         if not isinstance(net, LogicNet):

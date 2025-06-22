@@ -10,18 +10,11 @@ import sys
 from functools import reduce
 from typing import Union, NamedTuple
 
-from .core import working_block, _NameIndexer, _get_debug_mode, Block
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .wire import WireVector, Input, Output, Const, Register, WrappedWireVector
-from .corecircuits import (
-    as_wires,
-    rtl_all,
-    rtl_any,
-    concat,
-    concat_list,
-    select,
-    shift_left_logical
-)
+from pyrtl.core import working_block, _NameIndexer, _get_debug_mode, Block
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.wire import WireVector, Input, Output, Const, Register, WrappedWireVector
+from pyrtl.corecircuits import (
+    as_wires, rtl_all, rtl_any, concat, concat_list, select, shift_left_logical)
 
 # -----------------------------------------------------------------
 #        ___       __   ___  __   __
@@ -187,12 +180,12 @@ class MatchedFields(NamedTuple):
     """``NamedTuple`` containing the matched fields, if any."""
 
     def __enter__(self):
-        from .conditional import _push_condition
+        from pyrtl.conditional import _push_condition
         _push_condition(self.matched)
         return self.fields
 
     def __exit__(self, *execinfo):
-        from .conditional import _pop_condition
+        from pyrtl.conditional import _pop_condition
         _pop_condition()
 
 

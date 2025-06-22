@@ -1,7 +1,7 @@
 import itertools
 
 import pyrtl
-from . import libutils
+from pyrtl.rtllib import libutils
 
 
 def kogge_stone(a, b, cin=0):

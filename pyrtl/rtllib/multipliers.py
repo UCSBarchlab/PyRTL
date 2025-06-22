@@ -4,7 +4,7 @@ Multipliers contains various PyRTL sample multipliers for people to use
 
 """
 import pyrtl
-from . import adders, libutils
+from pyrtl.rtllib import adders, libutils
 
 
 def simple_mult(A, B, start):

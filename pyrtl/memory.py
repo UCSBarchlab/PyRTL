@@ -14,11 +14,11 @@ with the correct number of ports to support that
 
 import collections
 
-from .pyrtlexceptions import PyrtlError
-from .core import working_block, LogicNet, _NameIndexer, Block
-from .wire import WireVector, Const, next_tempvar_name
-from .corecircuits import as_wires
-from .helperfuncs import infer_val_and_bitwidth
+from pyrtl.pyrtlexceptions import PyrtlError
+from pyrtl.core import working_block, LogicNet, _NameIndexer, Block
+from pyrtl.wire import WireVector, Const, next_tempvar_name
+from pyrtl.corecircuits import as_wires
+from pyrtl.helperfuncs import infer_val_and_bitwidth
 # ------------------------------------------------------------------------
 #
 #         ___        __   __          __        __   __
@@ -257,7 +257,7 @@ class MemBlock:
         return data
 
     def _assignment(self, item, val, is_conditional):
-        from .conditional import _build
+        from pyrtl.conditional import _build
 
         # Even though as_wires is already called on item already in the __getitem__ method,
         # we need to call it again here because __setitem__ passes the original item

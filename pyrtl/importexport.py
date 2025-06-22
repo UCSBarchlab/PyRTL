@@ -18,12 +18,12 @@ import functools
 import operator
 import typing
 
-from .pyrtlexceptions import PyrtlError, PyrtlInternalError
-from .core import working_block, _NameSanitizer, Block
-from .wire import WireVector, Input, Output, Const, Register, next_tempvar_name
-from .corecircuits import concat_list, rtl_all, rtl_any, select
-from .memory import RomBlock
-from .passes import two_way_concat, one_bit_selects
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.core import working_block, _NameSanitizer, Block
+from pyrtl.wire import WireVector, Input, Output, Const, Register, next_tempvar_name
+from pyrtl.corecircuits import concat_list, rtl_all, rtl_any, select
+from pyrtl.memory import RomBlock
+from pyrtl.passes import two_way_concat, one_bit_selects
 
 
 def _natural_sort_key(key):

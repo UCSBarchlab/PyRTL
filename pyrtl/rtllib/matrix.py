@@ -3,10 +3,10 @@ import builtins
 
 from pyrtl.rtllib import multipliers as mult
 
-from ..wire import Const, WireVector
-from ..corecircuits import as_wires, concat, select
-from ..pyrtlexceptions import PyrtlError
-from ..helperfuncs import formatted_str_to_val
+from pyrtl.wire import Const, WireVector
+from pyrtl.corecircuits import as_wires, concat, select
+from pyrtl.pyrtlexceptions import PyrtlError
+from pyrtl.helperfuncs import formatted_str_to_val
 
 
 class Matrix:
