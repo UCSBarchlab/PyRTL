@@ -1091,7 +1091,7 @@ class Input(WireVector):
 
     def __init__(self, bitwidth: int = None, name: str = '',
                  block: Block = None):
-        super(Input, self).__init__(bitwidth=bitwidth, name=name, block=block)
+        super().__init__(bitwidth=bitwidth, name=name, block=block)
 
     def __ilshift__(self, _):
         """ This is an illegal op for Inputs. They cannot be assigned to in this way """
@@ -1129,7 +1129,7 @@ class Output(WireVector):
 
     def __init__(self, bitwidth: int = None, name: str = '',
                  block: Block = None):
-        super(Output, self).__init__(bitwidth, name, block)
+        super().__init__(bitwidth, name, block)
 
 
 class Const(WireVector):
@@ -1183,7 +1183,7 @@ class Const(WireVector):
 
         name = name if name else _constIndexer.make_valid_string() + '_' + str(val)
 
-        super(Const, self).__init__(bitwidth=bitwidth, name=name, block=block)
+        super().__init__(bitwidth=bitwidth, name=name, block=block)
         # add the member "val" to track the value of the constant
         self.val = num
 
@@ -1321,7 +1321,7 @@ class Register(WireVector):
         """
         from pyrtl.helperfuncs import infer_val_and_bitwidth
 
-        super(Register, self).__init__(bitwidth=bitwidth, name=name, block=block)
+        super().__init__(bitwidth=bitwidth, name=name, block=block)
         self.reg_in = None  # wire vector setting self.next
         if reset_value is not None:
             reset_value, rst_bitwidth = infer_val_and_bitwidth(

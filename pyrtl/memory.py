@@ -352,9 +352,9 @@ class RomBlock(MemBlock):
 
         """
 
-        super(RomBlock, self).__init__(bitwidth=bitwidth, addrwidth=addrwidth, name=name,
-                                       max_read_ports=max_read_ports, max_write_ports=0,
-                                       asynchronous=asynchronous, block=block)
+        super().__init__(bitwidth=bitwidth, addrwidth=addrwidth, name=name,
+                         max_read_ports=max_read_ports, max_write_ports=0,
+                         asynchronous=asynchronous, block=block)
         self.data = romdata
         self.build_new_roms = build_new_roms
         self.current_copy = self
@@ -372,7 +372,7 @@ class RomBlock(MemBlock):
             raise PyrtlError("There is no point in indexing into a RomBlock with an int. "
                              "Instead, get the value from the source data for this Rom")
             # If you really know what you are doing, use a Const WireVector instead.
-        return super(RomBlock, self).__getitem__(item)
+        return super().__getitem__(item)
 
     def __setitem__(self, item, assignment):
         raise PyrtlError('no writing to a read-only memory')

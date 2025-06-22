@@ -893,7 +893,7 @@ class PostSynthBlock(Block):
     """
 
     def __init__(self):
-        super(PostSynthBlock, self).__init__()
+        super().__init__()
         self.io_map = collections.defaultdict(list)
         self.reg_map = collections.defaultdict(list)
         self.mem_map = {}
@@ -1075,7 +1075,7 @@ class _NameSanitizer(_NameIndexer):
         self.map_valid = map_valid_vals
         self.extra_checks = extra_checks
         self.allow_dups = allow_duplicates
-        super(_NameSanitizer, self).__init__(internal_prefix)
+        super().__init__(internal_prefix)
 
     def __getitem__(self, item):
         """ Get a value from the sanitizer """
@@ -1091,7 +1091,7 @@ class _NameSanitizer(_NameIndexer):
         if not self.is_valid_str(string):
             if string in self.val_map and not self.allow_dups:
                 raise IndexError("Value {} has already been given to the sanitizer".format(string))
-            internal_name = super(_NameSanitizer, self).make_valid_string()
+            internal_name = super().make_valid_string()
             self.val_map[string] = internal_name
             return internal_name
         else:
@@ -1103,5 +1103,5 @@ class _NameSanitizer(_NameIndexer):
 class _PythonSanitizer(_NameSanitizer):
     """ Name Sanitizer specifically built for Python identifers. """
     def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
-        super(_PythonSanitizer, self).__init__(_py_regex, internal_prefix, map_valid_vals)
+        super().__init__(_py_regex, internal_prefix, map_valid_vals)
         self.extra_checks = lambda s: not keyword.iskeyword(s)

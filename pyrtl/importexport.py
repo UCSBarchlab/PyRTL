@@ -692,8 +692,8 @@ class _VerilogSanitizer(_NameSanitizer):
 
     def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
         self._verilog_reserved_set = frozenset(self._verilog_reserved.split())
-        super(_VerilogSanitizer, self).__init__(self._ver_regex, internal_prefix,
-                                                map_valid_vals, self._extra_checks)
+        super().__init__(
+            self._ver_regex, internal_prefix, map_valid_vals, self._extra_checks)
 
     def _extra_checks(self, str):
         return (str not in self._verilog_reserved_set  # is not a Verilog reserved keyword
