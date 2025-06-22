@@ -46,14 +46,6 @@ Control Flow Hardware
     :undoc-members:
 .. autofunction:: pyrtl.helperfuncs.match_bitpattern
 
-Creating Lists of WireVectors
------------------------------
-
-.. autofunction:: pyrtl.helperfuncs.input_list
-.. autofunction:: pyrtl.helperfuncs.output_list
-.. autofunction:: pyrtl.helperfuncs.register_list
-.. autofunction:: pyrtl.helperfuncs.wirevector_list
-
 Interpreting Vectors of Bits
 ----------------------------
 
