@@ -1,9 +1,18 @@
+import doctest
 import enum
 import io
 import unittest
 
 import pyrtl
 from pyrtl.corecircuits import _basic_add
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+    def test_doctests(self):
+        failures, tests = doctest.testmod(m=pyrtl.simulation)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 def fastsim_only(sim):
@@ -1440,6 +1449,8 @@ def make_unittests():
     base_tests = {name: v for name, v in g.items()
                   if isinstance(v, type) and issubclass(v, unittest.TestCase)}
     for name, v in base_tests.items():
+        if name == "TestDocTests":
+            continue
         del g[name]
         if name[-4:].lower() == 'base':
             name = name[:-4]

@@ -56,8 +56,10 @@ Constants
     :show-inheritance:
     :special-members: __init__
 
-Conditionals
-------------
+.. _conditional_assignment:
+
+Conditional Assignment
+----------------------
 
 .. automodule:: pyrtl.conditional
    :members:

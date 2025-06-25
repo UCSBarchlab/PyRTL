@@ -33,7 +33,7 @@ def optimize(update_working_block=True, block=None, skip_sanity_check=False):
 
     :param bool update_working_block: Don't copy the block and optimize the
         new block (defaults to True)
-    :param Block block: the block to optimize (defaults to working block)
+    :param Block block: the block to optimize (defaults to :ref:`working_block`)
     :param bool skip_sanity_check: Don't perform sanity checks on the block
         before/during/after the optimization passes (defaults to False).
         Sanity checks will always be performed if in debug mode.
@@ -437,7 +437,8 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
 def common_subexp_elimination(block=None, abs_thresh=1, percent_thresh=0):
     """ Common Subexpression Elimination for PyRTL blocks.
 
-    :param Block block: the block to run the subexpression elimination on
+    :param Block block: the block to run the subexpression elimination on. Defaults to
+        the :ref:`working_block`.
     :param float abs_thresh: absolute threshold for stopping optimization
     :param float percent_thresh: percent threshold for stopping optimization
     """
@@ -614,14 +615,14 @@ def _remove_unused_wires(block, keep_inputs=True):
 def synthesize(update_working_block=True, merge_io_vectors=True, block=None):
     """Lower the design to just single-bit "and", "or", "xor", and "not" gates.
 
-    :param bool update_working_block: Boolean specifying if working block
+    :param bool update_working_block: Boolean specifying if :ref:`working_block`
         should be set to the newly synthesized block.
     :param bool merge_io_vectors: if False, turn all N-bit IO wirevectors
         into N 1-bit IO wirevectors (i.e. don't maintain interface).
     :param Block block: The block you want to synthesize.
     :return: The newly synthesized block (of type :py:class:`.PostSynthBlock`).
 
-    Takes as input a block (default to working block) and creates a new block
+    Takes as input a block (default to :ref:`working_block`) and creates a new block
     which is identical in function but uses only single bit gates and excludes
     many of the more complicated primitives.  The new block should consist
     *almost* exclusively of the combination elements of ``w``, ``&``, ``\\|``,
@@ -929,7 +930,7 @@ def one_bit_selects(net):
 def direct_connect_outputs(block=None):
     """ Remove 'w' nets immediately before outputs, if possible.
 
-    :param block: block to update (defaults to working block)
+    :param block: block to update (defaults to :ref:`working_block`)
 
     The 'w' nets that are eligible for removal with this pass
     meet the following requirements:
@@ -1016,7 +1017,7 @@ def _make_tree(wire, block, curr_fanout):
 def two_way_fanout(block=None):
     """ Update the block such that no wire goes to more than 2 destination nets
 
-    :param block: block to update (defaults to working block)
+    :param block: block to update (defaults to :ref:`working_block`)
     """
     from pyrtl.analysis import fanout
     block = working_block(block)

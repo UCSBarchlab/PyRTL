@@ -52,8 +52,8 @@ def probe(w: WireVector, name: str = None) -> WireVector:
 
     .. note::
 
-        ``probe`` actually adds an :class:`.Output` wire to the working block of ``w``,
-        which can confuse various post-processing transforms such as
+        ``probe`` actually adds an :class:`.Output` wire to the :ref:`working_block` of
+        ``w``, which can confuse various post-processing transforms such as
         :func:`.output_to_verilog`.
 
     :param w: ``WireVector`` from which to get info
@@ -85,8 +85,8 @@ def rtl_assert(w: WireVector, exp: Exception, block: Block = None) -> Output:
 
     :param w: A 1-bit ``WireVector`` to assert.
     :param exp: :class:`Exception` to throw when the assertion fails.
-    :param block: ``Block`` to which the assertion should be added (default to working
-        block).
+    :param block: ``Block`` to which the assertion should be added (default to
+        :ref:`working_block`).
 
     :raises exp: When ``w`` is not ``True``.
 
@@ -1472,7 +1472,7 @@ def wire_struct(wire_struct_spec):
                 provided, components will be assigned names of the form
                 "{name}.{component_name}".
             :param Block block: The block containing the concatenated and
-                component wires. Defaults to the working block.
+                component wires. Defaults to the :ref:`working_block`.
             :param type concatenated_type: Type for the concatenated
                 ``WireVector``.
             :param type component_type: Type for each component.

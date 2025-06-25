@@ -13,10 +13,11 @@ with the correct number of ports to support that
 """
 
 import collections
+from typing import NamedTuple, Union
 
 from pyrtl.pyrtlexceptions import PyrtlError
 from pyrtl.core import working_block, LogicNet, _NameIndexer, Block
-from pyrtl.wire import WireVector, Const, next_tempvar_name
+from pyrtl.wire import WireVector, WireVectorLike, Const, next_tempvar_name
 from pyrtl.corecircuits import as_wires
 from pyrtl.helperfuncs import infer_val_and_bitwidth
 # ------------------------------------------------------------------------
@@ -87,29 +88,147 @@ class _MemIndexed(WireVector):
 
 
 class MemBlock:
-    """MemBlock is the object for specifying block memories. It can be indexed like an
-    array for both reading and writing. Writes under a conditional are automatically
-    converted to enabled writes. Consider the following examples where ``addr``,
-    ``data``, and ``we`` are all WireVectors::
+    """``MemBlock`` is the object for specifying block memories.
 
-        data = memory[addr]  # create a read port
-        memory[addr] <<= data  # create a write port
-        mem[address] <<= MemBlock.EnabledWrite(data, enable=we)
+    ..
+        # For ``doctest``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
 
-    When the address of a memory is assigned to using an
-    :class:`~.MemBlock.EnabledWrite` object, items will only be written to the memory
-    when the ``enable`` WireVector is set to high (1).
+    ``MemBlock`` can be indexed like an array for reads and writes. Example::
 
+        >>> mem = pyrtl.MemBlock(bitwidth=8, addrwidth=2)
+
+        >>> # Write to each address, starting from address 1.
+        >>> write_addr = pyrtl.Register(name="write_addr", bitwidth=2, reset_value=1)
+        >>> write_addr.next <<= write_addr + 1
+
+        >>> # Read from each address, starting from address 0.
+        >>> read_addr = pyrtl.Register(name="read_addr", bitwidth=2)
+        >>> read_addr.next <<= read_addr + 1
+
+        >>> read_data = pyrtl.Output(name="read_data", bitwidth=8)
+        >>> read_data <<= mem[read_addr]  # Creates a read port.
+        >>> mem[write_addr] <<= write_addr + 10  # Creates a write port.
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step_multiple(nsteps=6)
+        >>> sim.tracer.trace["write_addr"]
+        [1, 2, 3, 0, 1, 2]
+        >>> sim.tracer.trace["read_addr"]
+        [0, 1, 2, 3, 0, 1]
+        >>> sim.tracer.trace["read_data"]
+        [0, 11, 12, 13, 10, 11]
+
+    ..
+        >>> pyrtl.reset_working_block()
+
+    When the address of a memory is assigned to using an :class:`EnabledWrite` object,
+    data will only be written to the memory when the ``EnabledWrite``'s
+    :attr:`~EnabledWrite.enable` ``WireVector`` is set to high (``1``). In the following
+    example, the ``MemBlock`` is only written when ``write_addr`` is odd::
+
+        >>> mem = pyrtl.MemBlock(bitwidth=8, addrwidth=2)
+
+        >>> write_addr = pyrtl.Register(name="write_addr", bitwidth=2)
+        >>> write_addr.next <<= write_addr + 1
+        >>> mem[write_addr] <<= pyrtl.MemBlock.EnabledWrite(
+        ...     enable=write_addr[0], data=write_addr + 10)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step_multiple(nsteps=6)
+        >>> sorted(sim.inspect_mem(mem).items())
+        [(1, 11), (3, 13)]
+
+    Writes under :ref:`conditional_assignment` are automatically converted to
+    :class:`EnabledWrites<EnabledWrite>`.
+
+    .. _asynchronous_memories:
+
+    ---------------------
+    Asynchronous Memories
+    ---------------------
+    It is best practice to have memory operations start on a rising clock edge if you
+    want them to synthesize into efficient hardware, so ``MemBlocks`` are `synchronous`
+    by default (``asynchronous=False``). ``MemBlocks`` will enforce this by checking
+    that all their inputs are ready at each rising clock edge. This implies that all
+    ``MemBlock`` inputs - the address to read/write, the data to write, and the
+    write-enable bit - must be registers, inputs, or constants, unless you explicitly
+    declare the memory as `asynchronous` with ``asynchronous=True``.
+
+    Asynchronous memories can be convenient and tempting, but they are rarely a good
+    idea. They can't be mapped to block RAMs in FPGAs and will be converted to registers
+    by most design tools. They are not a realistic option for memories with more than a
+    few hundred elements.
+
+    --------------------
+    Read and Write Ports
+    --------------------
+    Each read or write to the memory will create a new `port` (either a read port or
+    write port respectively). By default memories are limited to 2 read ports and 1
+    write port, to keep designs efficient by default, but those values can be changed
+    with ``max_read_ports`` and ``max_write_ports``. Note that memories with many ports
+    may not map to physical memories such as block RAMs or existing memory hardware
+    macros.
+
+    --------------
+    Default Values
+    --------------
+    In PyRTL :class:`.Simulation`, all ``MemBlocks`` are zero-initialized by default.
+    Initial data can be specified for each MemBlock in :meth:`.Simulation.__init__`'s
+    ``memory_value_map``.
+
+    ---------------------------
+    Simultaneous Read and Write
+    ---------------------------
+    ..
+        # For ``doctest``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    In PyRTL :class:`.Simulation`, if the same address is read and written in the same
+    cycle, the read will return the `last` value stored in the ``MemBlock``, not the
+    newly written value. Example::
+
+        >>> mem = pyrtl.MemBlock(addrwidth=1, bitwidth=1)
+        >>> mem[0] <<= 1
+        >>> read_data = pyrtl.Output(name="read_data", bitwidth=1)
+        >>> read_data <<= mem[0]
+
+        >>> # In the first cycle, read_data will be the default MemBlock data value
+        >>> # (0), not the newly written value (1).
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> sim.inspect("read_data")
+        0
+
+        # In the second cycle, read_data will be the newly written value (1).
+        >>> sim.step()
+        >>> sim.inspect("read_data")
+        1
+
+    ---------------------------------
+    Mapping ``MemBlocks`` to Hardware
+    ---------------------------------
+    Synchronous ``MemBlocks`` can generally be mapped to FPGA block RAMs and similar
+    hardware, but there are many pitfalls:
+
+    #. ``asynchronous=False`` is generally necessary, but may not be sufficient, for
+       mapping a design to FPGA block RAMs. Block RAMs may have additional timing
+       constraints, like requiring register outputs for each block RAM.
+       ``asynchronous=False`` only requires register inputs.
+    #. Block RAMs may offer more or less read and write ports than ``MemBlock``'s
+       defaults.
+    #. Block RAMs may not zero-initialize by default.
+    #. Block RAMs may implement simultaneous reads and writes in different ways.
     """
     # FIXME: write ports assume that only one port is under control of the conditional
-    EnabledWrite = collections.namedtuple('EnabledWrite', 'data, enable')
-    """Generates logic to conditionally enable a write port.
-
-    ``data`` (the first field in the tuple) is the data to write, and ``enable`` (the
-    second field) is a one bit signal specifying whether the write should happen (i.e.
-    active high).
-
-    """
+    class EnabledWrite(NamedTuple):
+        """Generates logic to conditionally enable a write port."""
+        data: WireVector
+        """Data to write."""
+        enable: WireVector
+        """Single-bit ``WireVector`` indicating if a write should occur."""
 
     def __init__(self, bitwidth: int, addrwidth: int, name: str = '',
                  max_read_ports: int = 2, max_write_ports: int = 1,
@@ -125,84 +244,9 @@ class MemBlock:
         :param max_write_ports: limits the number of write ports each block can create;
             passing ``None`` indicates there is no limit.
         :param asynchronous: If ``False``, ensure that all memory inputs are registers,
-            inputs, or constants. See the note about asynchronous memories below.
-        :param block: The block to add the MemBlock to, defaults to the working block.
-
-        ---------------------
-        Asynchronous Memories
-        ---------------------
-        It is best practice to have memory operations start on a rising clock edge if
-        you want them to synthesize into efficient hardware. MemBlocks will enforce this
-        by checking that all their inputs are ready at each rising clock edge. This
-        implies that all MemBlock inputs - the address to read/write, the data to write,
-        and the write-enable bit - must be registers, inputs, or constants, unless you
-        explicitly declare the memory as ``asynchronous=True``.
-
-        Asynchronous memories can be convenient and tempting, but they are rarely a good
-        idea. They can't be mapped to block RAMs in FPGAs and will be converted to
-        registers by most design tools. They are not a realistic option for memories
-        with more than a few hundred elements.
-
-        --------------------
-        Read and Write Ports
-        --------------------
-        Each read or write to the memory will create a new `port` (either a read port or
-        write port respectively). By default memories are limited to 2 read ports and 1
-        write port, to keep designs efficient by default, but those values can be
-        changed. Note that memories with many ports may not map to physical memories
-        such as block RAMs or existing memory hardware macros.
-
-        --------------
-        Default Values
-        --------------
-        In PyRTL simulations, all MemBlocks are zero-initialized by default. Initial
-        data can be specified for each MemBlock in :meth:`.Simulation.__init__`'s
-        ``memory_value_map``.
-
-        ---------------------------
-        Simultaneous Read and Write
-        ---------------------------
-        ..
-            # For ``doctest``.
-            >>> import pyrtl
-            >>> pyrtl.reset_working_block()
-
-        In PyRTL simulations, if the same address is read and written in the same cycle,
-        the read will return the `last` value stored in the MemBlock, not the newly
-        written value. Example::
-
-            >>> mem = pyrtl.MemBlock(addrwidth=1, bitwidth=1)
-            >>> mem[0] <<= 1
-            >>> read_data = pyrtl.Output(name="read_data", bitwidth=1)
-            >>> read_data <<= mem[0]
-
-            >>> # In the first cycle, read_data will be the default MemBlock data value
-            >>> # (0), not the newly written value (1).
-            >>> sim = pyrtl.Simulation()
-            >>> sim.step()
-            >>> sim.inspect("read_data")
-            0
-
-            # In the second cycle, read_data will be the newly written value (1).
-            >>> sim.step()
-            >>> sim.inspect("read_data")
-            1
-
-        -----------------------------
-        Mapping MemBlocks to Hardware
-        -----------------------------
-        Synchronous MemBlocks can generally be mapped to FPGA block RAMs and similar
-        hardware, but there are many pitfalls:
-
-        #. ``asynchronous=False`` is generally necessary, but may not be sufficient, for
-           mapping a design to FPGA block RAMs. Block RAMs may have additional timing
-           constraints, like requiring register outputs for each block RAM.
-           ``asynchronous=False`` only requires register inputs.
-        #. Block RAMs may offer more or less read and write ports than MemBlock's
-           defaults.
-        #. Block RAMs may not zero-initialize by default.
-        #. Block RAMs may implement simultaneous reads and writes in different ways.
-
+            inputs, or constants. See :ref:`asynchronous_memories`.
+        :param block: The block to add the MemBlock to, defaults to the
+            :ref:`working_block`.
         """
         self.max_read_ports = max_read_ports
         self.num_read_ports = 0
@@ -230,17 +274,32 @@ class MemBlock:
     def read_ports(self):
         raise PyrtlError('read_ports now called num_read_ports for clarity')
 
-    def __getitem__(self, item) -> WireVector:
-        """Create a read port to load items from the MemBlock."""
-        item = as_wires(item, bitwidth=self.addrwidth, truncating=False)
-        if len(item) > self.addrwidth:
-            raise PyrtlError('memory index bitwidth > addrwidth')
-        return _MemIndexed(mem=self, index=item)
+    def __getitem__(self, addr: WireVectorLike) -> WireVector:
+        """Create a read port to read data from the ``MemBlock``.
 
-    def __setitem__(self, item, assignment):
-        """Create a write port to store items to the MemBlock."""
-        if isinstance(assignment, _MemAssignment):
-            self._assignment(item, assignment.rhs, is_conditional=assignment.is_conditional)
+        :param addr: ``MemBlock`` address to read. A ``WireVector``, or any type that
+            can be coerced to ``WireVector`` by :func:`.as_wires`.
+
+        :return: A ``WireVector`` containing the data read from the ``MemBlock`` at
+                 address ``addr``.
+        """
+        addr = as_wires(addr, bitwidth=self.addrwidth, truncating=False)
+        if len(addr) > self.addrwidth:
+            raise PyrtlError('memory index bitwidth > addrwidth')
+        return _MemIndexed(mem=self, index=addr)
+
+    def __setitem__(self, addr: WireVectorLike,
+                    data: Union[EnabledWrite, WireVectorLike]):
+        """Create a write port to write data to the ``MemBlock``.
+
+        :param addr: ``MemBlock`` address to write. A ``WireVector``, or any type that
+            can be coerced to ``WireVector`` by :func:`.as_wires`.
+        :param data: ``MemBlock`` data to write. An :class:`EnabledWrite`,
+            ``WireVector``, or any type that can be coerced to ``WireVector`` by
+            :func:`.as_wires`.
+        """
+        if isinstance(data, _MemAssignment):
+            self._assignment(addr, data.rhs, is_conditional=data.is_conditional)
         else:
             raise PyrtlError('error, assigment to memories should use "<<=" not "=" operator')
 
@@ -321,6 +380,25 @@ class RomBlock(MemBlock):
     interface as :class:`MemBlock`, but they cannot be written to (i.e. there are no
     write ports). The ROM's contents are specified when the ROM is constructed.
 
+    ..
+        # For ``doctest``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example that creates and reads a 4-element ROM::
+
+        >>> rom = pyrtl.RomBlock(bitwidth=3, addrwidth=2, romdata=[4, 5, 6, 7])
+        >>> read_addr = pyrtl.Register(name="read_addr", bitwidth=2)
+        >>> read_addr.next <<= read_addr + 1
+        >>> data = pyrtl.Output(name="data", bitwidth=3)
+        >>> data <<= rom[read_addr]
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step_multiple(nsteps=6)
+        >>> sim.tracer.trace["read_addr"]
+        [0, 1, 2, 3, 0, 1]
+        >>> sim.tracer.trace["data"]
+        [4, 5, 6, 7, 4, 5]
     """
     def __init__(self, bitwidth: int, addrwidth: int, romdata, name: str = '',
                  max_read_ports: int = 2, build_new_roms: bool = False,
@@ -332,22 +410,14 @@ class RomBlock(MemBlock):
         :param addrwidth: The number of bits used to address an element in the ROM.
             The ROM can store ``2 ** addrwidth`` elements.
         :param romdata: Specifies the data stored in the ROM. This can either be a
-            function or an array (iterable) that maps from address to data. Example::
-
-                # Create a 4-element ROM, where:
-                #   rom[0] == 4
-                #   rom[1] == 5
-                #   rom[2] == 6
-                #   rom[3] == 7
-                rom = RomBlock(bitwidth=3, addrwidth=2, romdata=[4, 5, 6, 7])
+            function or an array (iterable) that maps from address to data.
         :param name: The identifier for the memory.
         :param max_read_ports: limits the number of read ports each block can create;
             passing ``None`` indicates there is no limit.
         :param build_new_roms: indicates whether :meth:`RomBlock.__getitem__` should
             create copies of the RomBlock to avoid exceeding ``max_read_ports``.
         :param asynchronous: If ``False``, ensure that all RomBlock inputs are
-            registers, inputs, or constants. See the notes about asynchronous memories
-            in :meth:`MemBlock.__init__`.
+            registers, inputs, or constants. See :ref:`asynchronous_memories`.
         :param pad_with_zeros: If ``True``, fill any missing ``romdata`` with zeros so
             all accesses to the ROM are well defined. Otherwise, the simulation will
             throw an error when accessing unintialized data. If you are generating
@@ -355,7 +425,7 @@ class RomBlock(MemBlock):
             setting this to ``True`` will help), however for testing and simulation it
             useful to know if you are accessing an unspecified value (which is why it is
             ``False`` by default).
-        :param block: The block to add to, defaults to the working block.
+        :param block: The block to add to, defaults to the :ref:`working_block`.
 
         """
 
@@ -367,19 +437,27 @@ class RomBlock(MemBlock):
         self.current_copy = self
         self.pad_with_zeros = pad_with_zeros
 
-    def __getitem__(self, item) -> WireVector:
-        """Create a read port to load items from the RomBlock.
+    def __getitem__(self, addr: WireVector) -> WireVector:
+        """Create a read port to read data from the ``RomBlock``.
 
-        If ``build_new_roms`` was specified, create a new copy of the RomBlock if the
-        number of read ports exceeds ``max_read_ports``.
+        If ``build_new_roms`` was specified, create a new copy of the ``RomBlock`` if
+        the number of read ports exceeds ``max_read_ports``.
 
+        :param addr: ``MemBlock`` address to read.
+
+        :raises PyrtlError: If ``addr`` is an ``int``. ``RomBlocks`` hold constant data,
+            so they are not needed when the read address is statically known. Create a
+            :class:`.Const` with the data at the read address instead.
+
+        :return: A ``WireVector`` containing the data read from the ``RomBlock`` at
+                 address ``addr``.
         """
         import numbers
-        if isinstance(item, numbers.Number):
+        if isinstance(addr, numbers.Number):
             raise PyrtlError("There is no point in indexing into a RomBlock with an int. "
                              "Instead, get the value from the source data for this Rom")
             # If you really know what you are doing, use a Const WireVector instead.
-        return super().__getitem__(item)
+        return super().__getitem__(addr)
 
     def __setitem__(self, item, assignment):
         raise PyrtlError('no writing to a read-only memory')

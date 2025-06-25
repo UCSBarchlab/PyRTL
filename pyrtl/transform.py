@@ -30,7 +30,7 @@ def net_transform(transform_func, block=None, **kwargs):
 
     :param transform_func:
         Function signature: func(orig_net (logicnet)) -> keep_orig_net (bool)
-    :param block: optional block to work on (defaults to working block)
+    :param block: optional block to work on (defaults to :ref:`working_block`)
     :return:
 
     If transform_func does not return True, the original net is removed from
@@ -63,7 +63,7 @@ def wire_transform(transform_func, select_types=WireVector,
         make src_wire and dst_wire both the original wire.
     :param select_types: Type or Tuple of types of WireVectors to replace
     :param exclude_types: Type or Tuple of types of WireVectors to exclude from replacement
-    :param block: The Block to replace wires on
+    :param block: The Block to replace wires on. Defaults to the :ref:`working_block`.
 
     Note that if both new_src and new_dst don't equal orig_wire, orig_wire will
     be removed from the block entirely.
@@ -87,7 +87,7 @@ def replace_wires(wire_map, block=None):
     """ Replace all wires in a block.
 
     :param {old_wire: new_wire} wire_map: mapping of old wires to new wires
-    :param block: block to operate over (defaults to working block)
+    :param block: block to operate over (defaults to :ref:`working_block`)
     """
     block = working_block(block)
     src_nets, dst_nets = block.net_connections(include_virtual_nodes=False)
@@ -105,7 +105,7 @@ def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=Non
         argument of a net. Ignored if orig_wire equals new_dst.
     :param {WireVector: LogicNet} src_nets: Maps a wire to the net where it is a dest
     :param {WireVector: List[LogicNet]} dst_nets: Maps a wire to list of nets where it is an arg
-    :param Block block: The block on which to operate (defaults to working block)
+    :param Block block: The block on which to operate (defaults to :ref:`working_block`)
 
     The net that orig_wire originates from (its source net) will use new_src as its
     destination wire. The nets that orig_wire went to (its destination nets) will now
@@ -238,7 +238,7 @@ def clone_wire(old_wire, name=None):
 def copy_block(block=None, update_working_block=True):
     """ Makes a copy of an existing block.
 
-    :param block: The block to clone (defaults to the working block).
+    :param block: The block to clone (defaults to the :ref:`working_block`).
     :return: The resulting block
     """
     block_in = working_block(block)

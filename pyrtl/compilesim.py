@@ -14,7 +14,7 @@ from pyrtl.core import working_block, Block
 from pyrtl.wire import Input, Output, Const, WireVector, Register
 from pyrtl.memory import MemBlock, RomBlock
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.simulation import SimulationTrace, _trace_sort_key
+from pyrtl.simulation import Simulation, SimulationTrace, _trace_sort_key
 from pyrtl.helperfuncs import infer_val_and_bitwidth
 
 
@@ -53,48 +53,45 @@ class DllMemInspector(Mapping):
 
 
 class CompiledSimulation:
-    """Simulate a block, compiling to C for efficiency.
+    """Simulate a block by generating, compiling, and running C code.
 
-    This module provides significant speed improvements over
-    :class:`.FastSimulation`, at the cost of somewhat longer setup time.
-    Generally this will do better than :class:`.FastSimulation` for simulations
-    requiring over 1000 steps.  It is not built to be a debugging tool, though
-    it may help with debugging.  Note that only :class:`.Input` and
-    :class:`.Output` wires can be traced using CompiledSimulation.  This code
-    is still experimental, but has been used on designs of significant scale to
-    good effect.
+    ``CompiledSimulation`` provides significant execution speed improvements over
+    :class:`.FastSimulation`, at the cost of even longer start-up time. Generally this
+    will do better than :class:`.FastSimulation` for simulations requiring over 1000
+    steps.
 
-    In order to use this, you need:
-        - A 64-bit processor
-        - GCC (tested on version 4.8.4)
-        - A 64-bit build of Python
+    ``CompiledSimulation`` is not built to be a debugging tool, though it may help with
+    debugging. Note that only :class:`.Input` and :class:`.Output` wires can be traced
+    with ``CompiledSimulation``.
+
+    .. note::
+        For very large circuits, :class:`.FastSimulation` can sometimes be a better
+        choice than ``CompiledSimulation`` because ``CompiledSimulation`` will generate
+        an extremely large ``.c`` file, which can take prohibitively long to compile and
+        optimize. :class:`.FastSimulation` will generate an extremely large ``.py``
+        file, but Python will interpret that generated code as needed, instead of trying
+        to process all the generated code at once.
+
+    .. WARNING::
+        This code is still experimental, but has been used on designs of significant
+        scale to good effect.
+
+    To use ``CompiledSimulation``, you'll need:
+
+    - A 64-bit processor
+    - GCC (tested on version 4.8.4)
+    - A 64-bit build of Python
 
     If using the multiplication operand, only some architectures are supported:
-        - x86-64 / amd64
-        - arm64 / aarch64
-        - mips64 (untested)
 
-    ``default_value`` is currently only implemented for registers, not memories.
+    - x86-64 / amd64
+    - arm64 / aarch64
+    - mips64 (untested)
 
-    A Simulation step works as follows:
+    ``default_value`` is currently only implemented for :class:`Registers<.Register>`,
+    not :class:`MemBlocks<.MemBlock>`.
 
-    1. Registers are updated:
-        1. (If this is the first step) With the default values passed in
-           to the Simulation during instantiation and/or any reset values
-           specified in the individual registers.
-        2. (Otherwise) With their next values calculated in the previous step
-           (``r`` logic nets).
-    2. The new values of these registers as well as the values of block inputs
-       are propagated through the combinational logic.
-    3. Memory writes are performed (``@`` logic nets).
-    4. The current values of all wires are recorded in the trace.
-    5. The next values for the registers are saved, ready to be applied at the
-       beginning of the next step.
-
-    Note that the register values saved in the trace after each simulation step
-    are from *before* the register has latched in its newly calculated values,
-    since that latching in occurs at the beginning of the *next* step.
-
+    See :class:`.Simulation` for an overview of PyRTL simulations.
     """
 
     def __init__(
@@ -131,12 +128,17 @@ class CompiledSimulation:
         self._create_dll()
         self._initialize_mems()
 
+    # Use Simulation.__init__'s docstring as CompiledSimulation.__init__'s docstring.
+    __init__.__doc__ = Simulation.__init__.__doc__
+
     def inspect_mem(self, mem: MemBlock) -> dict[int, int]:
-        """Get a view into the contents of a MemBlock."""
         return DllMemInspector(self, mem)
 
+    # Use Simulation.inspect_mem's docstring as CompiledSimulation.inspect_mem's
+    # docstring.
+    inspect_mem.__doc__ = Simulation.inspect_mem.__doc__
+
     def inspect(self, w: str) -> int:
-        """Get the latest value of the wire given, if possible."""
         if isinstance(w, WireVector):
             w = w.name
         try:
@@ -149,23 +151,10 @@ class CompiledSimulation:
             return vals[-1]
         raise PyrtlError('CompiledSimulation does not support inspecting internal WireVectors')
 
+    # Use Simulation.inspect's docstring as CompiledSimulation.inspect's docstring.
+    inspect.__doc__ = Simulation.inspect.__doc__
+
     def step(self, provided_inputs: dict[str, int] = {}, inputs=None):
-        """Run one step of the simulation.
-
-        :param provided_inputs: A mapping from input names to the values for
-            the step.
-
-        A step causes the block to be updated as follows, in order:
-
-        1. Registers are updated with their :attr:`~.Register.next` values
-           computed in the previous cycle
-        2. Block inputs and these new register values propagate through the
-           combinational logic
-        3. Memories are updated
-        4. The :attr:`~.Register.next` values of the registers are saved for
-           use in step 1 of the next cycle.
-
-        """
         if inputs is not None:
             import warnings
             warnings.warn(
@@ -174,65 +163,13 @@ class CompiledSimulation:
             provided_inputs = inputs
         self.run([provided_inputs])
 
+    # Use Simulation.step's docstring as CompiledSimulation.step's docstring.
+    step.__doc__ = Simulation.step.__doc__
+
     def step_multiple(self, provided_inputs: dict[str, list[int]] = {},
                       expected_outputs: dict[str, int] = {},
                       nsteps: int = None, file=sys.stdout,
                       stop_after_first_error: bool = False):
-        """Take the simulation forward N cycles, where N is the number of values
-         for each provided input.
-
-        :param provided_inputs: a dictionary mapping wirevectors to their values for N steps
-        :param expected_outputs: a dictionary mapping wirevectors to their expected values
-            for N steps; use ``?`` to indicate you don't care what the value at that step is
-        :param nsteps: number of steps to take (defaults to None, meaning step for each
-            supplied input value)
-        :param file: where to write the output (if there are unexpected outputs detected)
-        :param stop_after_first_error: a boolean flag indicating whether to stop the simulation
-            after the step where the first errors are encountered (defaults to False)
-
-        All input wires must be in the `provided_inputs` in order for the simulation
-        to accept these values. Additionally, the length of the array of provided values for each
-        input must be the same.
-
-        When `nsteps` is specified, then it must be *less than or equal* to the number of values
-        supplied for each input when `provided_inputs` is non-empty. When `provided_inputs` is
-        empty (which may be a legitimate case for a design that takes no inputs), then `nsteps`
-        will be used.  When `nsteps` is not specified, then the simulation will take the number
-        of steps equal to the number of values supplied for each input.
-
-        Example: if we have inputs named ``a`` and ``b`` and output ``o``, we can call::
-
-            sim.step_multiple({'a': [0,1], 'b': [23,32]}, {'o': [42, 43]})
-
-        to simulate 2 cycles, where in the first cycle ``a`` and ``b`` take on
-        0 and 23, respectively, and ``o`` is expected to have the value 42, and
-        in the second cycle ``a`` and ``b`` take on 1 and 32, respectively, and
-        ``o`` is expected to have the value 43.
-
-        If your values are all single digit, you can also specify them in a single string, e.g.::
-
-            sim.step_multiple({'a': '01', 'b': '01'})
-
-        will simulate 2 cycles, with ``a`` and ``b`` taking on
-        0 and 0, respectively, on the first cycle and 1 and 1, respectively, on the second
-        cycle.
-
-        Example: if the design had no inputs, like so::
-
-            a = pyrtl.Register(8)
-            b = pyrtl.Output(8, 'b')
-
-            a.next <<= a + 1
-            b <<= a
-
-            sim = pyrtl.Simulation()
-            sim.step_multiple(nsteps=3)
-
-        Using ``sim.step_multiple(nsteps=3)`` simulates 3 cycles, after which
-        we would expect the value of ``b`` to be 2.
-
-        """
-
         if not nsteps and len(provided_inputs) == 0:
             raise PyrtlError('need to supply either input values or a number of steps to simulate')
 
@@ -297,11 +234,18 @@ class CompiledSimulation:
                 file.write("{0:>5} {1:>10} {2:>8} {3:>8}\n".format(step, name, expected, actual))
             file.flush()
 
-    def run(self, inputs: list[dict[str, int]]):
-        """ Run many steps of the simulation.
+    # Use Simulation.step_multiple's docstring as CompiledSimulation.step_multiple's
+    # docstring.
+    step_multiple.__doc__ = Simulation.step_multiple.__doc__
 
-        :param inputs: A list of input mappings for each step;
-            its length is the number of steps to be executed.
+    def run(self, inputs: list[dict[str, int]]):
+        """Run many steps of the ``CompiledSimulation``.
+
+        :meth:`CompiledSimulation.step` and :meth:`CompiledSimulation.step_multiple` are
+        wrappers around this lower-level method.
+
+        :param inputs: A list of input mappings for each step; its length is the number
+            of steps to be executed.
         """
         steps = len(inputs)
         # create i/o arrays of the appropriate length

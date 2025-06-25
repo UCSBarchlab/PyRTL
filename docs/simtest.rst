@@ -21,6 +21,7 @@ Compiled (JIT to C) Simulation
 .. autoclass:: pyrtl.compilesim.CompiledSimulation
     :members:
     :special-members: __init__
+    :exclude-members: run
 
 Simulation Trace
 ----------------
@@ -28,6 +29,9 @@ Simulation Trace
 .. autoclass:: pyrtl.simulation.SimulationTrace
     :members:
     :special-members: __init__
+    :exclude-members: add_fast_step, add_step
+
+.. autofunction:: pyrtl.simulation.enum_name
 
 Wave Renderer
 -------------
@@ -36,7 +40,7 @@ Wave Renderer
     :members:
     :special-members: __init__
     :exclude-members: render_ruler_segment, render_val, val_to_str
-.. autofunction:: pyrtl.simulation.enum_name
+.. autoclass:: pyrtl.simulation.RendererConstants
 .. autoclass:: pyrtl.simulation.PowerlineRendererConstants
     :show-inheritance:
 .. autoclass:: pyrtl.simulation.Utf8RendererConstants

@@ -15,21 +15,42 @@ The main Sphinx configuration file is
 
 Most of PyRTL's documentation is automatically extracted from Python
 docstrings, see [docstring
-formating](https://www.sphinx-doc.org/en/master/usage/domains/python.html)
-for supported directives and fields. Sphinx parses [Python type
+formating](https://www.sphinx-doc.org/en/master/usage/domains/python.html) for
+supported directives and fields. Sphinx parses [Python type
 annotations](https://docs.python.org/3/library/typing.html), so put type
-information into annotations instead of docstrings.
+information in annotations instead of docstrings.
 
 Follow the instructions on this page to build a local copy of PyRTL's
 documentation. This is useful for verifying that PyRTL's documentation still
 renders correctly after making a local change.
 
-There is additional PyRTL documentation in the
-[`gh-pages` branch](https://github.com/UCSBarchlab/PyRTL/tree/gh-pages).
-This additional documentation is pushed to https://ucsbarchlab.github.io/PyRTL/
-by the `pages-build-deployment` GitHub Action. The additional documentation is
-written in [GitHub MarkDown](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax),
-and is not described further in this README.
+There is additional PyRTL documentation in the [`gh-pages`
+branch](https://github.com/UCSBarchlab/PyRTL/tree/gh-pages). This additional
+documentation is pushed to https://ucsbarchlab.github.io/PyRTL/ by the
+`pages-build-deployment` GitHub Action. This additional documentation is
+written HTML and is not described further in this README.
+
+## Testing Documentation Examples
+
+PyRTL's documentation contains many examples that are tested with
+[`doctest`](https://docs.python.org/3/library/doctest.html). It is important to
+test these examples so we can be sure that they keep working as we change the
+code. These tests run via test fixtures called `TestDocTest`, see the example
+in
+[`test_core.py`](https://github.com/UCSBarchlab/PyRTL/blob/development/tests/test_core.py).
+
+When adding a new `doctest`, you'll need to to add a preceding comment block
+that imports PyRTL and resets the working block before running your new
+`doctest`. This comment block contains additional code necessary for `doctest`
+to successfully run the test, but the lines are commented out because they are
+not worth showing in every example. These blocks look like:
+
+```
+..
+    # For ``doctest``.
+    >>> import pyrtl
+    >>> pyrtl.reset_working_block()
+```
 
 ## Installing Sphinx
 

@@ -71,3 +71,6 @@ html_logo = 'brand/pyrtl_logo.png'
 inheritance_graph_attrs = {
     'bgcolor': 'aliceblue',
 }
+
+# The copy button excludes line numbers, prompts, and outputs.
+copybutton_exclude = '.linenos, .gp, .go'

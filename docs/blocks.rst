@@ -8,6 +8,7 @@ Blocks
     :members:
     :exclude-members: sanity_check_memblock, sanity_check_memory_sync, sanity_check_net, sanity_check_wirevector
 
+.. _working_block:
 
 ``working_block``
 ^^^^^^^^^^^^^^^^^

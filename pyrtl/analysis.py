@@ -147,7 +147,8 @@ class TimingAnalysis:
     def __init__(self, block=None, gate_delay_funcs=None):
         """ Calculates timing delays in the block.
 
-        :param Block block: PyRTL block to analyze
+        :param Block block: PyRTL block to analyze. Defaults to the
+            :ref:`working_block`.
         :param gate_delay_funcs: a map with keys corresponding to the gate op and
             a function returning the delay as the value.
             It takes the gate as an argument.
@@ -449,7 +450,7 @@ def paths(src=None, dst=None, dst_nets=None, block=None):
     :param dict[WireVector, LogicNet] dst_nets: map from wire to set of nets where the
         wire is an argument; will compute it internally if not given via a
         call to pyrtl.net_connections()
-    :param Block block: block to use (defaults to working block)
+    :param Block block: block to use (defaults to :ref:`working_block`)
     :return: a map of the form `{src_wire: {dst_wire: [path]}}` for each `src_wire` in `src`
         (or all inputs if `src` is None), `dst_wire` in `dst` (or all outputs if `dst` is None),
         where `path` is a list of nets. This map is also an instance of :py:class:`.PathsResult`,
@@ -552,7 +553,7 @@ def distance(src, dst, f, block=None):
     :param Callable[[LogicNet], int] f: function from a net to number,
         representing the 'value' of a net that you want to sum
         across all nets in the path
-    :param Block block: block to use (defaults to working block)
+    :param Block block: block to use (defaults to :ref:`working_block`)
     :return: a map from each path (a tuple) to its calculated distance
 
     This calls the given function `f` on each net in a path, summing the result.

@@ -104,7 +104,8 @@ def input_from_blif(
     """Read an open BLIF file or string as input, updating the block appropriately.
 
     :param blif: An open BLIF file to read.
-    :param block: The block where the logic will be added.
+    :param block: The block where the logic will be added. Defaults to the
+        :ref:`working_block`.
     :param merge_io_vectors: If True, :py:class:`.Input`/:py:class:`.Output` wires whose
         names differ only by a indexing subscript (e.g. 1-bit wires ``a[0]`` and
         ``a[1]``) will be combined into a single :py:class:`.Input`/:py:class:`.Output`
@@ -541,7 +542,8 @@ def input_from_verilog(
         model defined in the Verilog file.
     :param leave_in_dir: If True, save the intermediate BLIF file created in the given
         directory.
-    :param: The block where the logic will be added.
+    :param block: The block where the logic will be added. Defaults to the
+        :ref:`working_block`.
 
     Note: This function is essentially a wrapper for :py:func:`input_from_blif`, with
     the added convenience of turning the Verilog into BLIF for import for you. This
@@ -630,7 +632,7 @@ def output_to_verilog(dest_file, add_reset: typing.Union[bool, str] = True,
     :param initialize_registers: Initialize Verilog registers to their ``reset_value``.
         When this argument is ``True``, a register like ``Register(name='foo',
         bitwidth=8, reset_value=4)`` generates Verilog like ``reg[7:0] foo = 8'd4;``.
-    :param block: Block to be walked and exported.
+    :param block: Block to be walked and exported. Defaults to the :ref:`working_block`.
 
     The Verilog module will be named ``toplevel``, with a clock input named ``clk``.
 
@@ -934,7 +936,7 @@ def output_verilog_testbench(
         value passed in here should match the argument passed to
         :func:`.output_to_verilog`.
 
-    :param block: Block containing design to test.
+    :param block: Block containing design to test. Defaults to the :ref:`working_block`.
 
     If ``add_reset`` is not False, a ``rst`` input wire is added to the instantiated
     ``toplevel`` module. The ``rst`` wire will be held low in the testbench, because
@@ -1103,7 +1105,7 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
 
     :param open_file: File to write to.
     :param rom_blocks: List of ROM blocks to be initialized.
-    :param block: Block to use (defaults to working block).
+    :param block: Block to use (defaults to :ref:`working_block`).
 
     If ROM is initialized in PyRTL code, you can pass in the ``rom_blocks`` as a
     list ``[rom1, rom2, ...]``.
@@ -1269,7 +1271,8 @@ def input_from_iscas_bench(bench, block: Block = None):
     ''' Import an ISCAS .bench file
 
     :param bench: an open ISCAS .bench file to read
-    :param block: block to add the imported logic (defaults to current working block)
+    :param block: block to add the imported logic (defaults to current
+        :ref:`working_block`)
     '''
 
     import pyparsing
