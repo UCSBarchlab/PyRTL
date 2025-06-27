@@ -475,15 +475,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=0b11, bitwidth=2)
             >>> five = pyrtl.Const(val=0b101, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three & five
-            >>> out.bitwidth
+            >>> output <<= three & five
+            >>> output.bitwidth
             4
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> sim.inspect("out")
+            >>> sim.inspect("output")
             1
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -516,15 +516,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=0b11, bitwidth=2)
             >>> five = pyrtl.Const(val=0b101, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three | five
-            >>> out.bitwidth
+            >>> output <<= three | five
+            >>> output.bitwidth
             4
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> bin(sim.inspect("out"))
+            >>> bin(sim.inspect("output"))
             '0b111'
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -556,15 +556,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=0b11, bitwidth=2)
             >>> five = pyrtl.Const(val=0b101, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three ^ five
-            >>> out.bitwidth
+            >>> output <<= three ^ five
+            >>> output.bitwidth
             4
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> bin(sim.inspect("out"))
+            >>> bin(sim.inspect("output"))
             '0b110'
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -602,15 +602,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=3, bitwidth=2)
             >>> five = pyrtl.Const(val=5, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three + five
-            >>> out.bitwidth
+            >>> output <<= three + five
+            >>> output.bitwidth
             5
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> sim.inspect("out")
+            >>> sim.inspect("output")
             8
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -648,15 +648,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=3, bitwidth=2)
             >>> five = pyrtl.Const(val=5, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= five - three
-            >>> out.bitwidth
+            >>> output <<= five - three
+            >>> output.bitwidth
             5
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> sim.inspect("out")
+            >>> sim.inspect("output")
             2
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -696,15 +696,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=3, bitwidth=2)
             >>> five = pyrtl.Const(val=5, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three * five
-            >>> out.bitwidth
+            >>> output <<= three * five
+            >>> output.bitwidth
             8
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> sim.inspect("out")
+            >>> sim.inspect("output")
             15
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -741,15 +741,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=3, bitwidth=2)
             >>> five = pyrtl.Const(val=5, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three < five
-            >>> out.bitwidth
+            >>> output <<= three < five
+            >>> output.bitwidth
             1
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> sim.inspect("out")
+            >>> sim.inspect("output")
             1
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -778,15 +778,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=3, bitwidth=2)
             >>> five = pyrtl.Const(val=5, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three <= five
-            >>> out.bitwidth
+            >>> output <<= three <= five
+            >>> output.bitwidth
             1
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> sim.inspect("out")
+            >>> sim.inspect("output")
             1
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -818,15 +818,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=3, bitwidth=2)
             >>> five = pyrtl.Const(val=5, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three == five
-            >>> out.bitwidth
+            >>> output <<= three == five
+            >>> output.bitwidth
             1
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> sim.inspect("out")
+            >>> sim.inspect("output")
             0
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -851,15 +851,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=3, bitwidth=2)
             >>> five = pyrtl.Const(val=5, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three != five
-            >>> out.bitwidth
+            >>> output <<= three != five
+            >>> output.bitwidth
             1
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> sim.inspect("out")
+            >>> sim.inspect("output")
             1
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -889,15 +889,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=3, bitwidth=2)
             >>> five = pyrtl.Const(val=5, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three > five
-            >>> out.bitwidth
+            >>> output <<= three > five
+            >>> output.bitwidth
             1
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> sim.inspect("out")
+            >>> sim.inspect("output")
             0
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -927,15 +927,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=3, bitwidth=2)
             >>> five = pyrtl.Const(val=5, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three >= five
-            >>> out.bitwidth
+            >>> output <<= three >= five
+            >>> output.bitwidth
             1
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> sim.inspect("out")
+            >>> sim.inspect("output")
             0
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -957,15 +957,15 @@ class WireVector:
         Example::
 
             >>> five = pyrtl.Const(val=0b101, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= ~five
-            >>> out.bitwidth
+            >>> output <<= ~five
+            >>> output.bitwidth
             4
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> bin(sim.inspect("out"))
+            >>> bin(sim.inspect("output"))
             '0b1010'
 
         :return: A ``WireVector`` containing the result of bitwise inverting ``self``.
@@ -1083,15 +1083,15 @@ class WireVector:
 
             >>> three = pyrtl.Const(val=0b11, bitwidth=2)
             >>> five = pyrtl.Const(val=0b101, bitwidth=4)
-            >>> out = pyrtl.Output(name="out")
+            >>> output = pyrtl.Output(name="output")
 
-            >>> out <<= three.nand(five)
-            >>> out.bitwidth
+            >>> output <<= three.nand(five)
+            >>> output.bitwidth
             4
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step()
-            >>> bin(sim.inspect("out"))
+            >>> bin(sim.inspect("output"))
             '0b1110'
 
         :param other: A ``WireVector``, or any type that can be coerced to
@@ -1333,8 +1333,8 @@ class Output(WireVector):
     as ``__or__``, which implements bitwise or, will raise
     :class:`.PyrtlInternalError`::
 
-        >>> out = pyrtl.Output(name="out", bitwidth=1)
-        >>> foo = out | 2
+        >>> output = pyrtl.Output(name="output", bitwidth=1)
+        >>> foo = output | 2
         Traceback (most recent call last):
         ...
         pyrtl.pyrtlexceptions.PyrtlInternalError: error, Outputs cannot be arguments for

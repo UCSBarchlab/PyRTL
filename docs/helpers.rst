@@ -39,12 +39,12 @@ Control Flow Hardware
 
 .. autofunction:: pyrtl.corecircuits.mux
 .. autofunction:: pyrtl.corecircuits.select
-.. autofunction:: pyrtl.corecircuits.bitfield_update
-.. autofunction:: pyrtl.corecircuits.bitfield_update_set
 .. autoclass:: pyrtl.helperfuncs.MatchedFields
     :members:
     :undoc-members:
 .. autofunction:: pyrtl.helperfuncs.match_bitpattern
+.. autofunction:: pyrtl.corecircuits.bitfield_update
+.. autofunction:: pyrtl.corecircuits.bitfield_update_set
 
 Interpreting Vectors of Bits
 ----------------------------
@@ -57,11 +57,11 @@ functions below do not create any hardware but rather help in the process of
 reasoning about bit vector representations of human understandable values.
 
 .. autofunction:: pyrtl.helperfuncs.val_to_signed_integer
-.. autofunction:: pyrtl.helperfuncs.val_to_formatted_str
-.. autofunction:: pyrtl.helperfuncs.formatted_str_to_val
 .. autoclass:: pyrtl.helperfuncs.ValueBitwidthTuple
    :members: value, bitwidth
 .. autofunction:: pyrtl.helperfuncs.infer_val_and_bitwidth
+.. autofunction:: pyrtl.helperfuncs.val_to_formatted_str
+.. autofunction:: pyrtl.helperfuncs.formatted_str_to_val
 .. autofunction:: pyrtl.helperfuncs.log2
 
 Debugging
@@ -70,7 +70,6 @@ Debugging
 .. autofunction:: pyrtl.core.set_debug_mode
 .. autofunction:: pyrtl.helperfuncs.probe
 .. autofunction:: pyrtl.helperfuncs.rtl_assert
-.. autofunction:: pyrtl.helperfuncs.check_rtl_assertions
 
 Reductions
 ----------

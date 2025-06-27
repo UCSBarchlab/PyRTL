@@ -171,7 +171,7 @@ def concat(*args: WireVectorLike) -> WireVector:
 
     .. note::
 
-        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which help
+        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which helps
         with consistently disassembling, naming, and reassembling fields.
 
     .. doctest only::
@@ -230,7 +230,7 @@ def concat_list(wire_list: list[WireVectorLike]) -> WireVector:
 
     .. note::
 
-        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which help
+        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which helps
         with consistently disassembling, naming, and reassembling fields.
 
     .. doctest only::
@@ -285,15 +285,15 @@ def signed_add(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
         >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
         >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
-        >>> out = pyrtl.Output(name="out")
+        >>> output = pyrtl.Output(name="output")
 
-        >>> out <<= pyrtl.signed_add(neg_three, neg_five)
-        >>> out.bitwidth
+        >>> output <<= pyrtl.signed_add(neg_three, neg_five)
+        >>> output.bitwidth
         6
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step()
-        >>> pyrtl.val_to_signed_integer(sim.inspect("out"), bitwidth=out.bitwidth)
+        >>> pyrtl.val_to_signed_integer(sim.inspect("output"), bitwidth=output.bitwidth)
         -8
 
     :param a: A :class:`.WireVector`, or any type that can be coerced to
@@ -327,15 +327,15 @@ def signed_sub(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
         >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
         >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
-        >>> out = pyrtl.Output(name="out")
+        >>> output = pyrtl.Output(name="output")
 
-        >>> out <<= pyrtl.signed_sub(neg_three, neg_five)
-        >>> out.bitwidth
+        >>> output <<= pyrtl.signed_sub(neg_three, neg_five)
+        >>> output.bitwidth
         6
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step()
-        >>> pyrtl.val_to_signed_integer(sim.inspect("out"), bitwidth=out.bitwidth)
+        >>> pyrtl.val_to_signed_integer(sim.inspect("output"), bitwidth=output.bitwidth)
         2
 
     :param a: A :class:`.WireVector`, or any type that can be coerced to
@@ -374,15 +374,15 @@ def signed_mult(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
         >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
         >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
-        >>> out = pyrtl.Output(name="out")
+        >>> output = pyrtl.Output(name="output")
 
-        >>> out <<= pyrtl.signed_mult(neg_three, neg_five)
-        >>> out.bitwidth
+        >>> output <<= pyrtl.signed_mult(neg_three, neg_five)
+        >>> output.bitwidth
         8
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step()
-        >>> pyrtl.val_to_signed_integer(sim.inspect("out"), bitwidth=out.bitwidth)
+        >>> pyrtl.val_to_signed_integer(sim.inspect("output"), bitwidth=output.bitwidth)
         15
 
     :param a: A :class:`.WireVector`, or any type that can be coerced to
@@ -416,15 +416,15 @@ def signed_lt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
         >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
         >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
-        >>> out = pyrtl.Output(name="out")
+        >>> output = pyrtl.Output(name="output")
 
-        >>> out <<= pyrtl.signed_lt(neg_three, neg_five)
-        >>> out.bitwidth
+        >>> output <<= pyrtl.signed_lt(neg_three, neg_five)
+        >>> output.bitwidth
         1
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step()
-        >>> sim.inspect("out")
+        >>> sim.inspect("output")
         0
 
     :param a: A :class:`.WireVector`, or any type that can be coerced to
@@ -454,15 +454,15 @@ def signed_le(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
         >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
         >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
-        >>> out = pyrtl.Output(name="out")
+        >>> output = pyrtl.Output(name="output")
 
-        >>> out <<= pyrtl.signed_le(neg_three, neg_five)
-        >>> out.bitwidth
+        >>> output <<= pyrtl.signed_le(neg_three, neg_five)
+        >>> output.bitwidth
         1
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step()
-        >>> sim.inspect("out")
+        >>> sim.inspect("output")
         0
 
     :param a: A :class:`.WireVector`, or any type that can be coerced to
@@ -493,15 +493,15 @@ def signed_gt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
         >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
         >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
-        >>> out = pyrtl.Output(name="out")
+        >>> output = pyrtl.Output(name="output")
 
-        >>> out <<= pyrtl.signed_gt(neg_three, neg_five)
-        >>> out.bitwidth
+        >>> output <<= pyrtl.signed_gt(neg_three, neg_five)
+        >>> output.bitwidth
         1
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step()
-        >>> sim.inspect("out")
+        >>> sim.inspect("output")
         1
 
     :param a: A :class:`.WireVector`, or any type that can be coerced to
@@ -531,15 +531,15 @@ def signed_ge(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
         >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
         >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
-        >>> out = pyrtl.Output(name="out")
+        >>> output = pyrtl.Output(name="output")
 
-        >>> out <<= pyrtl.signed_ge(neg_three, neg_five)
-        >>> out.bitwidth
+        >>> output <<= pyrtl.signed_ge(neg_three, neg_five)
+        >>> output.bitwidth
         1
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step()
-        >>> sim.inspect("out")
+        >>> sim.inspect("output")
         1
 
     :param a: A :class:`.WireVector`, or any type that can be coerced to
@@ -580,13 +580,13 @@ def shift_right_arithmetic(bits_to_shift: WireVector,
 
         >>> neg_forty = pyrtl.Const(val=-40, signed=True, bitwidth=7)
         >>> shift_amount = pyrtl.Input(name="shift_amount", bitwidth=3)
-        >>> out = pyrtl.Output(name="out")
+        >>> output = pyrtl.Output(name="output")
 
-        >>> out <<= pyrtl.shift_right_arithmetic(neg_forty, shift_amount)
+        >>> output <<= pyrtl.shift_right_arithmetic(neg_forty, shift_amount)
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step(provided_inputs={"shift_amount": 3})
-        >>> pyrtl.val_to_signed_integer(sim.inspect("out"), bitwidth=out.bitwidth)
+        >>> pyrtl.val_to_signed_integer(sim.inspect("output"), bitwidth=output.bitwidth)
         -5
         >>> int(-40 / 2 ** 3)
         -5
@@ -622,13 +622,13 @@ def shift_left_logical(bits_to_shift: WireVector,
 
         >>> three = pyrtl.Const(val=3, bitwidth=6)
         >>> shift_amount = pyrtl.Input(name="shift_amount", bitwidth=3)
-        >>> out = pyrtl.Output(name="out")
+        >>> output = pyrtl.Output(name="output")
 
-        >>> out <<= pyrtl.shift_left_logical(three, shift_amount)
+        >>> output <<= pyrtl.shift_left_logical(three, shift_amount)
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step(provided_inputs={"shift_amount": 3})
-        >>> sim.inspect("out")
+        >>> sim.inspect("output")
         24
         >>> 3 * 2 ** 3
         24
@@ -668,13 +668,13 @@ def shift_right_logical(bits_to_shift: WireVector,
 
         >>> forty = pyrtl.Const(val=40, bitwidth=6)
         >>> shift_amount = pyrtl.Input(name="shift_amount", bitwidth=3)
-        >>> out = pyrtl.Output(name="out")
+        >>> output = pyrtl.Output(name="output")
 
-        >>> out <<= pyrtl.shift_right_logical(forty, shift_amount)
+        >>> output <<= pyrtl.shift_right_logical(forty, shift_amount)
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step(provided_inputs={"shift_amount": 3})
-        >>> sim.inspect("out")
+        >>> sim.inspect("output")
         5
         >>> int(40 / 2 ** 3)
         5
@@ -846,7 +846,7 @@ def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalu
 
     .. note::
 
-        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which help
+        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which helps
         with consistently disassembling, naming, and reassembling fields.
 
     :param w: A :class:`.WireVector`, or any type that can be coerced to
@@ -909,7 +909,7 @@ def bitfield_update_set(w: WireVectorLike,
 
     .. note::
 
-        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which help
+        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which helps
         with consistently disassembling, naming, and reassembling fields.
 
     :param w: A :class:`.WireVector`, or any type that can be coerced to

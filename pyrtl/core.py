@@ -1039,16 +1039,19 @@ def temp_working_block():
     return set_working_block(Block())
 
 
-def set_debug_mode(debug=True):
-    """ Set the global debug mode.
+def set_debug_mode(debug: bool = True):
+    """Set the global debug mode.
 
-    :param bool debug: Optional boolean paramter to which debug mode will be set
+    Sets the debug mode to the specified ``debug`` value. Debug mode is off by default,
+    to improve performance. When debug mode is enabled, all temporary
+    :class:`WireVectors<.WireVector>` will be assigned names based on the line of code
+    on which they were created.
 
-    This function will set the debug mode to the specified value.  Debug mode
-    is, by default, set to off to keep the performance of the system.  With debug
-    mode set to true, all temporary WireVectors created will be given a name based
-    on the line of code on which they were created and a snapshot of the call-stack
-    for those WireVectors will be kept as well.
+    Each :class:`.WireVector` will also save a copy of its call stack when constructed.
+    These call stacks can be inspected as ``WireVector.init_call_stack``, and they will
+    appear in :meth:`Block.sanity_check` error messages.
+
+    :param debug: Optional boolean parameter to which the debug mode will be set.
     """
     global debug_mode
     global _setting_keep_wirevector_call_stack
