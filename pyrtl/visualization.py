@@ -366,7 +366,7 @@ def block_to_graphviz_string(
             output_to_graphviz(f, namer=graphviz_detailed_namer(node_fanout, wire_delay))
 
     :param namer: A function mapping graph objects (wires/logic nets) to labels. If you
-        want a more detailed namer, pass in a call to :func:`.graphviz_detailed_namer`
+        want a more detailed namer, pass in a call to :func:`graphviz_detailed_namer`
         (see below).
     :param block: ``Block`` to use (defaults to current :ref:`working_block`)
     :param bool split_state: If ``True``, split connections to/from a register update
@@ -510,8 +510,8 @@ def trace_to_html(simtrace: "SimulationTrace", trace_list: list[str] = None,
     :param sortkey: (optional) The key with which to sort the ``trace_list``.
         :param repr_func: Function to use for representing each value in the
             trace. Examples include ``hex``, ``oct``, ``bin``, and ``str`` (for
-            decimal), :py:func:`.val_to_signed_integer` (for signed decimal) or
-            the function returned by :py:func:`enum_name` (for ``IntEnum``).
+            decimal), :func:`val_to_signed_integer` (for signed decimal) or
+            the function returned by :func:`enum_name` (for ``IntEnum``).
             Defaults to ``hex``.
     :param repr_per_name: Map from signal name to a function that takes in the signal's
         value and returns a user-defined representation. If a signal name is not found

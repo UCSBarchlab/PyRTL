@@ -66,7 +66,7 @@ def _trivial_mult(A, B):
 
 def complex_mult(A, B, shifts, start):
     """ Generate shift-and-add multiplier that can shift and add multiple bits per clock cycle.
-    Uses substantially more space than :py:func:`.simple_mult` but is much faster.
+    Uses substantially more space than :func:`simple_mult` but is much faster.
 
     :param WireVector A: input wire for the multiplication
     :param WireVector B: input wire for the multiplication

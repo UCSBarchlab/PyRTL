@@ -18,17 +18,17 @@ the design. :class:`.Const` is useful for specifying hard-wired values and
 :class:`.Register` is how sequential elements are created (they all have an
 implicit clock).
 
-.. inheritance-diagram:: pyrtl.wire.WireVector
-                         pyrtl.wire.Input
-                         pyrtl.wire.Output
-                         pyrtl.wire.Const
-                         pyrtl.wire.Register
+.. inheritance-diagram:: pyrtl.WireVector
+                         pyrtl.Input
+                         pyrtl.Output
+                         pyrtl.Const
+                         pyrtl.Register
     :parts: 1
 
 WireVector
 ----------
 
-.. autoclass:: pyrtl.wire.WireVector
+.. autoclass:: pyrtl.WireVector
     :members:
     :special-members: __init__, __add__, __sub__, __mul__, __getitem___,
                       __len__, __ilshift__, __and__, __or__, __xor__, __lt__,
@@ -37,21 +37,21 @@ WireVector
 Input Pins
 ----------
 
-.. autoclass:: pyrtl.wire.Input
+.. autoclass:: pyrtl.Input
     :members:
     :show-inheritance:
 
 Output Pins
 -----------
 
-.. autoclass:: pyrtl.wire.Output
+.. autoclass:: pyrtl.Output
     :members:
     :show-inheritance:
 
 Constants
 ---------
 
-.. autoclass:: pyrtl.wire.Const
+.. autoclass:: pyrtl.Const
     :members:
     :show-inheritance:
     :special-members: __init__

@@ -1,8 +1,6 @@
 import unittest
 
 import pyrtl
-from pyrtl import transform
-from pyrtl.core import set_working_block
 
 
 class NetWireNumTestCases(unittest.TestCase):
@@ -52,13 +50,13 @@ def insert_random_inversions(rate=0.5):
 
     def randomly_replace(wire):
         if random.random() < rate:
-            new_src = transform.clone_wire(wire, pyrtl.wire.next_tempvar_name())
-            new_dst = transform.clone_wire(wire, pyrtl.wire.next_tempvar_name())
+            new_src = pyrtl.clone_wire(wire, pyrtl.wire.next_tempvar_name())
+            new_dst = pyrtl.clone_wire(wire, pyrtl.wire.next_tempvar_name())
             new_dst <<= ~new_src
             return new_src, new_dst
         return wire, wire
 
-    transform.wire_transform(randomly_replace)
+    pyrtl.wire_transform(randomly_replace)
 
 
 class TestWireTransform(NetWireNumTestCases):
@@ -95,7 +93,7 @@ class TestWireTransform(NetWireNumTestCases):
         self.assertIn(a, dst_nets)
         self.assertIn(b, dst_nets)
 
-        transform.wire_transform(f, select_types=pyrtl.Input, exclude_types=tuple())
+        pyrtl.wire_transform(f, select_types=pyrtl.Input, exclude_types=tuple())
 
         w2 = pyrtl.working_block().get_wirevector_by_name('w2')
         w3 = pyrtl.working_block().get_wirevector_by_name('w3')
@@ -119,7 +117,7 @@ class TestWireTransform(NetWireNumTestCases):
         self.assertEqual(dst_nets[w1], [pyrtl.LogicNet('w', None, (w1,), (o,))])
         self.assertIn(o, src_nets)
 
-        transform.wire_transform(f, select_types=pyrtl.Output, exclude_types=tuple())
+        pyrtl.wire_transform(f, select_types=pyrtl.Output, exclude_types=tuple())
 
         w2 = pyrtl.working_block().get_wirevector_by_name('w2')
         src_nets, dst_nets = pyrtl.working_block().net_connections()
@@ -135,7 +133,7 @@ class TestCopyBlock(NetWireNumTestCases, WireMemoryNameTestCases):
         self.assertEqual(mems_expected, len(memories))
 
     def test_blank(self):
-        block = transform.copy_block()
+        block = pyrtl.copy_block()
         self.assert_num_net(0, block)
         self.assert_num_wires(0, block)
 
@@ -152,7 +150,7 @@ class TestCopyBlock(NetWireNumTestCases, WireMemoryNameTestCases):
 
         self.name_wires('a b o', old_block)
 
-        new_block = transform.copy_block()
+        new_block = pyrtl.copy_block()
         new_block.sanity_check()
         self.assert_num_wires(5, new_block)
         self.assert_num_net(3, new_block)
@@ -180,7 +178,7 @@ class TestCopyBlock(NetWireNumTestCases, WireMemoryNameTestCases):
 
         self.name_memories('mem1 mem2', old_block)
 
-        new_block = transform.copy_block()
+        new_block = pyrtl.copy_block()
         self.num_net_of_type('m', 2, new_block)
         self.num_net_of_type('@', 1, new_block)
         self.num_net_of_type('&', 1, new_block)
@@ -203,8 +201,8 @@ class TestFastWireReplace(unittest.TestCase):
         n <<= h
         block = pyrtl.working_block()
         src_nets, dst_nets = block.net_connections()
-        transform.replace_wire_fast(o, x, x, src_nets, dst_nets)
-        transform.replace_wire_fast(h, y, y, src_nets, dst_nets)
+        pyrtl.replace_wire_fast(o, x, x, src_nets, dst_nets)
+        pyrtl.replace_wire_fast(h, y, y, src_nets, dst_nets)
         for old_wire in (o, h):
             self.assertNotIn(old_wire, src_nets)
             self.assertNotIn(old_wire, dst_nets)
@@ -222,9 +220,9 @@ class TestFastWireReplace(unittest.TestCase):
         n <<= h
         block = pyrtl.working_block()
         src_nets, dst_nets = block.net_connections()
-        transform.replace_wire_fast(o, x, x, src_nets, dst_nets)
-        transform.replace_wire_fast(p, z, z, src_nets, dst_nets)
-        transform.replace_wire_fast(h, y, y, src_nets, dst_nets)
+        pyrtl.replace_wire_fast(o, x, x, src_nets, dst_nets)
+        pyrtl.replace_wire_fast(p, z, z, src_nets, dst_nets)
+        pyrtl.replace_wire_fast(h, y, y, src_nets, dst_nets)
         for old_wire in (o, h, p):
             self.assertNotIn(old_wire, src_nets)
             self.assertNotIn(old_wire, dst_nets)
@@ -242,7 +240,7 @@ class TestFastWireReplace(unittest.TestCase):
 
         block = pyrtl.working_block()
         src_nets, dst_nets = block.net_connections()
-        transform.replace_wire_fast(r, x, x, src_nets, dst_nets)
+        pyrtl.replace_wire_fast(r, x, x, src_nets, dst_nets)
 
         for old_wire in (r,):
             self.assertNotIn(old_wire, src_nets)
@@ -272,7 +270,7 @@ class TestFastWireReplace(unittest.TestCase):
         self.assertEqual(w1_dst_net.dests, (w3,))
         self.assertNotIn(w4, src_nets)
 
-        pyrtl.transform.replace_wire_fast(w1, w4, w1, src_nets, dst_nets)
+        pyrtl.replace_wire_fast(w1, w4, w1, src_nets, dst_nets)
 
         self.assertNotIn(w1, src_nets)  # The maps have been updated...
         self.assertEqual(dst_nets[w1], [w1_dst_net])
@@ -302,7 +300,7 @@ class TestFastWireReplace(unittest.TestCase):
         self.assertEqual(w1_dst_net.dests, (w3,))
         self.assertNotIn(w4, src_nets)
 
-        pyrtl.transform.replace_wire_fast(w1, w1, w4, src_nets, dst_nets)
+        pyrtl.replace_wire_fast(w1, w1, w4, src_nets, dst_nets)
 
         self.assertNotIn(w1, dst_nets)  # The maps have been updated...
         self.assertEqual(src_nets[w1], w1_src_net)
@@ -376,7 +374,7 @@ class TestCloning(unittest.TestCase):
     def test_clone_wire_different_name_different_block(self):
         a = pyrtl.WireVector(1, 'a')
         b = pyrtl.Block()
-        with set_working_block(b):
+        with pyrtl.set_working_block(b):
             w = pyrtl.clone_wire(a, 'w')
         self.assertEqual(a.name, 'a')
         self.assertEqual(w.name, 'w')

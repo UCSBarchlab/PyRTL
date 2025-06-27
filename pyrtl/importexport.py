@@ -106,19 +106,19 @@ def input_from_blif(
     :param blif: An open BLIF file to read.
     :param block: The block where the logic will be added. Defaults to the
         :ref:`working_block`.
-    :param merge_io_vectors: If True, :py:class:`.Input`/:py:class:`.Output` wires whose
+    :param merge_io_vectors: If True, :class:`Input`/:class:`Output` wires whose
         names differ only by a indexing subscript (e.g. 1-bit wires ``a[0]`` and
-        ``a[1]``) will be combined into a single :py:class:`.Input`/:py:class:`.Output`
+        ``a[1]``) will be combined into a single :class:`Input`/:class:`Output`
         (e.g. a 2-bit wire ``a``).
     :param clock_name: The name of the clock (defaults to ``clk``). :param top_model:
         name of top-level model to instantiate; if None, defaults to first model listed
         in the BLIF.
 
-    If ``merge_io_vectors`` is ``True``, then given 1-bit :py:class:`.Input` wires
+    If ``merge_io_vectors`` is ``True``, then given 1-bit :class:`Input` wires
     ``a[0]`` and ``a[1]``, these wires will be combined into a single 2-bit
-    :py:class:`.Input` wire ``a`` that can be accessed by name ``a`` in the block.
+    :class:`Input` wire ``a`` that can be accessed by name ``a`` in the block.
     Otherwise if ``merge_io_vectors`` is ``False``, the original 1-bit wires will be
-    :py:class:`.Input` wires of the block. This holds similarly for :py:class:`.Output`.
+    :class:`Input` wires of the block. This holds similarly for :class:`Output`.
 
     This assumes the following:
       * There is only one single shared clock and reset
@@ -545,13 +545,13 @@ def input_from_verilog(
     :param block: The block where the logic will be added. Defaults to the
         :ref:`working_block`.
 
-    Note: This function is essentially a wrapper for :py:func:`input_from_blif`, with
+    Note: This function is essentially a wrapper for :func:`input_from_blif`, with
     the added convenience of turning the Verilog into BLIF for import for you. This
     function passes a set of commands to Yosys as a script that normally produces BLIF
-    files that can be successuflly imported into PyRTL via :py:func:`input_from_blif`. If the
+    files that can be successuflly imported into PyRTL via :func:`input_from_blif`. If the
     Yosys conversion fails here, we recommend you create your own custom Yosys script to
     try and produce BLIF yourself. Then you can import BLIF directly via
-    :py:func:`input_from_blif`.
+    :func:`input_from_blif`.
 
     """
 
@@ -934,17 +934,17 @@ def output_verilog_testbench(
         (meaning no reset logic is added), ``True`` (default, for adding synchronous
         reset logic), and ``'asynchronous'`` (for adding asynchronous reset logic). The
         value passed in here should match the argument passed to
-        :func:`.output_to_verilog`.
+        :func:`output_to_verilog`.
 
     :param block: Block containing design to test. Defaults to the :ref:`working_block`.
 
     If ``add_reset`` is not False, a ``rst`` input wire is added to the instantiated
     ``toplevel`` module. The ``rst`` wire will be held low in the testbench, because
     initialization here occurs via the ``initial`` block. ``add_reset`` is provided for
-    consistency with :py:func:`output_to_verilog`.
+    consistency with :func:`output_to_verilog`.
 
     This function *only* generates the Verilog testbench. The Verilog module must be
-    generated separately by calling :py:func:`output_to_verilog`, see the
+    generated separately by calling :func:`output_to_verilog`, see the
     ``toplevel_include`` parameter and Example 2 below.
 
     The test bench does not return any values.

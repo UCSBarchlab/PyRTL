@@ -1129,10 +1129,10 @@ def dot(first, second):
     Specifically, the dot product on two matrices is:
 
         * If either `first` or `second` are WireVectors/have both rows and columns
-          equal to 1, it is equivalent to :py:meth:`.Matrix.__mul__`
+          equal to 1, it is equivalent to :meth:`Matrix.__mul__`
         * If both `first` and `second` are both arrays (have rows or columns equal to 1),
           it is inner product of vectors.
-        * Otherwise it is :py:meth:`.Matrix.__matmul__` between `first` and `second`
+        * Otherwise it is :meth:`Matrix.__matmul__` between `first` and `second`
 
     NOTE: Row vectors and column vectors are both treated as arrays
     '''

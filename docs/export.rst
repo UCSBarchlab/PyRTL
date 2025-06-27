@@ -4,29 +4,29 @@ Exporting and Importing Designs
 Exporting Hardware Designs
 --------------------------
 
-.. autofunction:: pyrtl.importexport.output_to_verilog
+.. autofunction:: pyrtl.output_to_verilog
 
-.. autofunction:: pyrtl.importexport.output_to_firrtl
+.. autofunction:: pyrtl.output_to_firrtl
 
 Exporting Testbenches
 ---------------------
 
-.. autofunction:: pyrtl.importexport.output_verilog_testbench
+.. autofunction:: pyrtl.output_verilog_testbench
 
 Importing Verilog
 -----------------
 
-.. autofunction:: pyrtl.importexport.input_from_blif
-.. autofunction:: pyrtl.importexport.input_from_verilog
+.. autofunction:: pyrtl.input_from_blif
+.. autofunction:: pyrtl.input_from_verilog
 
 Outputting for Visualization
 ----------------------------
 
-.. autofunction:: pyrtl.visualization.output_to_trivialgraph
-.. autofunction:: pyrtl.visualization.output_to_graphviz
-.. autofunction:: pyrtl.visualization.graphviz_detailed_namer
-.. autofunction:: pyrtl.visualization.output_to_svg
-.. autofunction:: pyrtl.visualization.block_to_graphviz_string
-.. autofunction:: pyrtl.visualization.block_to_svg
-.. autofunction:: pyrtl.visualization.trace_to_html
-.. autofunction:: pyrtl.visualization.net_graph
+.. autofunction:: pyrtl.output_to_trivialgraph
+.. autofunction:: pyrtl.output_to_graphviz
+.. autofunction:: pyrtl.graphviz_detailed_namer
+.. autofunction:: pyrtl.output_to_svg
+.. autofunction:: pyrtl.block_to_graphviz_string
+.. autofunction:: pyrtl.block_to_svg
+.. autofunction:: pyrtl.trace_to_html
+.. autofunction:: pyrtl.net_graph

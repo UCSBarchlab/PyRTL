@@ -16,23 +16,23 @@ Estimation
 Optimization
 ------------
 
-.. autofunction:: pyrtl.passes.optimize
+.. autofunction:: pyrtl.optimize
 
 Synthesis
 ---------
 
-.. autofunction:: pyrtl.passes.synthesize
+.. autofunction:: pyrtl.synthesize
 
-.. autoclass:: pyrtl.core.PostSynthBlock
+.. autoclass:: pyrtl.PostSynthBlock
    :show-inheritance:
    :members:
 
 Individual Passes
 -----------------
 
-.. autofunction:: pyrtl.passes.common_subexp_elimination
-.. autofunction:: pyrtl.passes.constant_propagation
-.. autofunction:: pyrtl.passes.nand_synth
-.. autofunction:: pyrtl.passes.and_inverter_synth
-.. autofunction:: pyrtl.passes.one_bit_selects
-.. autofunction:: pyrtl.passes.two_way_concat
+.. autofunction:: pyrtl.common_subexp_elimination
+.. autofunction:: pyrtl.constant_propagation
+.. autofunction:: pyrtl.nand_synth
+.. autofunction:: pyrtl.and_inverter_synth
+.. autofunction:: pyrtl.one_bit_selects
+.. autofunction:: pyrtl.two_way_concat

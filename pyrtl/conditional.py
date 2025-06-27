@@ -48,7 +48,7 @@ This :data:`conditional_assignment` is equivalent to::
     w <<= pyrtl.select(d, 7, 0)
     mem[0] <<= pyrtl.MemBlock.EnabledWrite(data=2, enable=a)
 
-Conditional assignments are generally recommended over nested :func:`.select` statements
+Conditional assignments are generally recommended over nested :func:`select` statements
 because conditional assignments are easier to read and write.
 
 -------------------------------
@@ -76,7 +76,7 @@ value. See how ``r1`` and ``r2`` appear within the ``select`` s in the first and
 lines of the example above.
 
 When this happens for a memory, the memory's write port is disabled. See how the example
-above uses a :class:`.EnabledWrite` to disable writes to ``mem[0]`` when ``a`` is
+above uses a :class:`EnabledWrite` to disable writes to ``mem[0]`` when ``a`` is
 ``False``.
 
 These default values can be changed by passing a ``defaults`` dict to
@@ -104,7 +104,7 @@ These default values can be changed by passing a ``defaults`` dict to
 
 .. WARNING::
     :data:`conditional_assignment` ``defaults`` are not supported for
-    :class:`.MemBlock`.
+    :class:`MemBlock`.
 
 -------------------------------------------
 The Conditional Assigment Operator (``|=``)
@@ -238,9 +238,9 @@ _reset_conditional_state()
 conditional_assignment = _ConditionalAssignment()
 """Context manager implementing PyRTL's ``conditional_assignment``.
 
-:param dict defaults: Dictionary mapping from :class:`.WireVector` to its default value
+:param dict defaults: Dictionary mapping from :class:`WireVector` to its default value
     in this ``conditional_assignment`` block. ``defaults`` are not supported for
-    :class:`.MemBlock`.
+    :class:`MemBlock`.
 
 """
 

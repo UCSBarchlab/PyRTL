@@ -46,7 +46,7 @@ def twos_comp_repr(val, bitwidth):
     :param val: Integer literal to convert to two's complement
     :param bitwidth: Size of val in bits
 
-    For use with :py:meth:`.Simulation.step` etc. in passing negative numbers,
+    For use with :meth:`.Simulation.step` etc. in passing negative numbers,
     which it does not accept.
 
     """
@@ -63,7 +63,7 @@ def rev_twos_comp_repr(val, bitwidth):
     """
     Takes a two's-complement represented value and
     converts it to a signed integer based on the provided `bitwidth`.
-    For use with :py:meth:`.Simulation.inspect` etc. when expecting negative numbers,
+    For use with :meth:`.Simulation.inspect` etc. when expecting negative numbers,
     which it does not recognize
     """
     valbl = val.bit_length()

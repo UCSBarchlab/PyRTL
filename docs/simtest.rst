@@ -4,21 +4,21 @@ Simulation and Testing
 Simulation
 ----------
 
-.. autoclass:: pyrtl.simulation.Simulation
+.. autoclass:: pyrtl.Simulation
     :members:
     :special-members: __init__
 
 Fast (JIT to Python) Simulation
 -------------------------------
 
-.. autoclass:: pyrtl.simulation.FastSimulation
+.. autoclass:: pyrtl.FastSimulation
     :members:
     :special-members: __init__
 
 Compiled (JIT to C) Simulation
 ------------------------------
 
-.. autoclass:: pyrtl.compilesim.CompiledSimulation
+.. autoclass:: pyrtl.CompiledSimulation
     :members:
     :special-members: __init__
     :exclude-members: run
@@ -26,12 +26,12 @@ Compiled (JIT to C) Simulation
 Simulation Trace
 ----------------
 
-.. autoclass:: pyrtl.simulation.SimulationTrace
+.. autoclass:: pyrtl.SimulationTrace
     :members:
     :special-members: __init__
     :exclude-members: add_fast_step, add_step
 
-.. autofunction:: pyrtl.simulation.enum_name
+.. autofunction:: pyrtl.enum_name
 
 Wave Renderer
 -------------

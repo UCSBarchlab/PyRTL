@@ -138,7 +138,7 @@ def _bits_ports_and_isrom_from_memory(mem):
 class TimingAnalysis:
     """Timing analysis estimates the timing delays in the block
 
-    TimingAnalysis has an :py:attr:`~.TimingAnalysis.timing_map` object that
+    TimingAnalysis has an :attr:`~.TimingAnalysis.timing_map` object that
     maps wires to the 'time' after a clock edge at which the signal in the wire
     settles
 
@@ -258,7 +258,7 @@ class TimingAnalysis:
         and that there is no setup or hold time associated with the circuit.
         The resulting value is in picoseconds.  If an proper estimation of
         timing is required it is recommended to us
-        :py:meth:`.TimingAnalysis.max_freq` to determine the clock period as it
+        :meth:`.TimingAnalysis.max_freq` to determine the clock period as it
         more accurately considers scaling and setup/hold.
 
         """
@@ -315,7 +315,7 @@ class TimingAnalysis:
     @staticmethod
     def print_critical_paths(critical_paths):
         """ Prints the results of the critical path length analysis.
-            Done by default by the :py:meth:`.TimingAnalysis.critical_path` function.
+            Done by default by the :meth:`.TimingAnalysis.critical_path` function.
         """
         line_indent = " " * 2
         #  print the critical path
@@ -416,7 +416,7 @@ def yosys_area_delay(library, abc_cmd=None, leave_in_dir=None, block=None):
 
 class PathsResult(dict):
     def print(self, file=sys.stdout):
-        """ Pretty print the result of calling :py:func:`.paths`
+        """ Pretty print the result of calling :func:`.paths`
 
         :param f: the open file to print to (defaults to stdout)
         :return: None
@@ -453,10 +453,10 @@ def paths(src=None, dst=None, dst_nets=None, block=None):
     :param Block block: block to use (defaults to :ref:`working_block`)
     :return: a map of the form `{src_wire: {dst_wire: [path]}}` for each `src_wire` in `src`
         (or all inputs if `src` is None), `dst_wire` in `dst` (or all outputs if `dst` is None),
-        where `path` is a list of nets. This map is also an instance of :py:class:`.PathsResult`,
-        so you can call :py:meth:`.PathsResult.print` on it to pretty print it.
+        where `path` is a list of nets. This map is also an instance of :class:`.PathsResult`,
+        so you can call :meth:`.PathsResult.print` on it to pretty print it.
 
-    You can provide `dst_nets` (the result of calling :py:func:`.net_connections`, if you plan
+    You can provide `dst_nets` (the result of calling :func:`.net_connections`, if you plan
     on calling this function repeatedly on a block that hasn't changed, to speed things up.
 
     This function can accept one or more `src` wires, and one or more `dst` wires,

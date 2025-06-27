@@ -10,7 +10,6 @@
 import random
 
 import pyrtl
-from pyrtl import *
 
 # --- Part 1: Memories -------------------------------------------------------
 
@@ -19,24 +18,24 @@ from pyrtl import *
 # that the same thing happens to two different memories using the same
 # inputs
 
-mem1 = MemBlock(bitwidth=32, addrwidth=3, name='mem')
-mem2 = MemBlock(32, 3, 'mem')
+mem1 = pyrtl.MemBlock(bitwidth=32, addrwidth=3, name='mem')
+mem2 = pyrtl.MemBlock(32, 3, 'mem')
 
 # One memory will receive the write address from an input, the other, a register
-waddr = Input(3, 'waddr')
-count = Register(3, 'count')
+waddr = pyrtl.Input(3, 'waddr')
+count = pyrtl.Register(3, 'count')
 
 # In order to make sure that the two memories take the same inputs,
 # we will use same write data, write enable, and read addr values
-wdata = Input(32, 'wdata')
-we = Input(1, 'we')
-raddr = Input(3, 'raddr')
+wdata = pyrtl.Input(32, 'wdata')
+we = pyrtl.Input(1, 'we')
+raddr = pyrtl.Input(3, 'raddr')
 
 # We will be grabbing data from each of the two memory blocks so we need
 # two different output wires to see the results
 
-rdata1 = Output(32, 'rdata1')
-rdata2 = Output(32, 'rdata2')
+rdata1 = pyrtl.Output(32, 'rdata1')
+rdata2 = pyrtl.Output(32, 'rdata2')
 
 # Ports
 # The way of sending data to and from a memory block is through the
@@ -54,18 +53,17 @@ rdata2 <<= mem2[raddr]
 # The write enable bit allows us to disable the write port as long as the
 # value is zero, giving us complete control over whether to accept the data.
 
-WE = MemBlock.EnabledWrite
-mem1[waddr] <<= WE(wdata, we)  # Uses input wire
-mem2[count] <<= WE(wdata, we)  # Uses count register
+mem1[waddr] <<= pyrtl.MemBlock.EnabledWrite(wdata, we)  # Uses input wire
+mem2[count] <<= pyrtl.MemBlock.EnabledWrite(wdata, we)  # Uses count register
 
 # Now we will finish up the circuit
 # We will increment count register on each write
 
-count.next <<= select(we, truecase=count + 1, falsecase=count)
+count.next <<= pyrtl.select(we, truecase=count + 1, falsecase=count)
 
 # We will also verify that the two write addresses are always the same
 
-validate = Output(1, 'validate')
+validate = pyrtl.Output(1, 'validate')
 validate <<= waddr == count
 
 # Now it is time to simulate the circuit. First we will set up the values
@@ -120,13 +118,13 @@ rom_data_array = [rom_data_func(a) for a in range(16)]
 # data to be initialized as.
 
 # FIXME: rework how memassigns work to account for more read ports
-rom1 = RomBlock(bitwidth=5, addrwidth=4, romdata=rom_data_func, max_read_ports=10)
-rom2 = RomBlock(5, 4, rom_data_array, max_read_ports=10)
+rom1 = pyrtl.RomBlock(bitwidth=5, addrwidth=4, romdata=rom_data_func, max_read_ports=10)
+rom2 = pyrtl.RomBlock(5, 4, rom_data_array, max_read_ports=10)
 
-rom_add_1, rom_add_2 = Input(4, "rom_in"), Input(4, "rom_in_2")
+rom_add_1, rom_add_2 = pyrtl.Input(4, "rom_in"), pyrtl.Input(4, "rom_in_2")
 
-rom_out_1, rom_out_2 = Output(5, "rom_out_1"), Output(5, "rom_out_2")
-rom_out_3, cmp_out = Output(5, "rom_out_3"), Output(1, "cmp_out")
+rom_out_1, rom_out_2 = pyrtl.Output(5, "rom_out_1"), pyrtl.Output(5, "rom_out_2")
+rom_out_3, cmp_out = pyrtl.Output(5, "rom_out_3"), pyrtl.Output(1, "cmp_out")
 
 # Because Output WireVectors cannot be used as the source for other nets,
 # in order to use the ROM outputs in two different places, we must instead

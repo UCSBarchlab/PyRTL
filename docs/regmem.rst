@@ -4,7 +4,7 @@ Registers and Memories
 Registers
 ---------
 
-.. autoclass:: pyrtl.wire.Register
+.. autoclass:: pyrtl.Register
     :members:
     :show-inheritance:
     :special-members: __init__
@@ -12,14 +12,14 @@ Registers
 Memories
 --------
 
-.. autoclass:: pyrtl.memory.MemBlock
+.. autoclass:: pyrtl.MemBlock
     :members:
     :special-members: __init__, __getitem__, __setitem__
 
 ROMs
 ----
 
-.. autoclass:: pyrtl.memory.RomBlock
+.. autoclass:: pyrtl.RomBlock
     :members:
     :show-inheritance:
     :special-members: __init__, __getitem__

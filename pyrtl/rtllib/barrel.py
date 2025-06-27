@@ -20,7 +20,7 @@ def barrel_shifter(bits_to_shift: WireVector, bit_in: WireVectorLike,
     :param bit_in: A 1-bit ``WireVector`` representing the value to shift in.
     :param direction: A one bit ``WireVector`` representing the shift direction (``0`` =
         shift right, ``1`` = shift left). If ``direction`` is constant, use
-        :py:class:`Direction` to improve code readability (``direction=Direction.RIGHT``
+        :class:`Direction` to improve code readability (``direction=Direction.RIGHT``
         instead of ``direction=0``).
     :param shift_dist: ``WireVector`` representing the amount to shift.
     :param wrap_around: ****currently not implemented****

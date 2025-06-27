@@ -211,7 +211,7 @@ def demux(select: WireVector) -> tuple[WireVector, ...]:
     In the example above, ``len(output)`` is ``8`` because ``2 ** 3 == 8``, and
     ``output[5]`` is ``1`` because the output index ``5`` matches the input value.
 
-    :py:func:`.binary_to_one_hot` performs a similar operation.
+    :func:`.binary_to_one_hot` performs a similar operation.
 
     .. WARNING::
 

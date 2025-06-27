@@ -175,8 +175,8 @@ class MemBlock:
     --------------
     Default Values
     --------------
-    In PyRTL :class:`.Simulation`, all ``MemBlocks`` are zero-initialized by default.
-    Initial data can be specified for each MemBlock in :meth:`.Simulation.__init__`'s
+    In PyRTL :class:`Simulation`, all ``MemBlocks`` are zero-initialized by default.
+    Initial data can be specified for each MemBlock in :meth:`Simulation.__init__`'s
     ``memory_value_map``.
 
     ---------------------------
@@ -187,7 +187,7 @@ class MemBlock:
         >>> import pyrtl
         >>> pyrtl.reset_working_block()
 
-    In PyRTL :class:`.Simulation`, if the same address is read and written in the same
+    In PyRTL :class:`Simulation`, if the same address is read and written in the same
     cycle, the read will return the `last` value stored in the ``MemBlock``, not the
     newly written value. Example::
 
@@ -279,7 +279,7 @@ class MemBlock:
         """Create a read port to read data from the ``MemBlock``.
 
         :param addr: ``MemBlock`` address to read. A ``WireVector``, or any type that
-            can be coerced to ``WireVector`` by :func:`.as_wires`.
+            can be coerced to ``WireVector`` by :func:`as_wires`.
 
         :return: A ``WireVector`` containing the data read from the ``MemBlock`` at
                  address ``addr``.
@@ -294,10 +294,10 @@ class MemBlock:
         """Create a write port to write data to the ``MemBlock``.
 
         :param addr: ``MemBlock`` address to write. A ``WireVector``, or any type that
-            can be coerced to ``WireVector`` by :func:`.as_wires`.
+            can be coerced to ``WireVector`` by :func:`as_wires`.
         :param data: ``MemBlock`` data to write. An :class:`EnabledWrite`,
             ``WireVector``, or any type that can be coerced to ``WireVector`` by
-            :func:`.as_wires`.
+            :func:`as_wires`.
         """
         if isinstance(data, _MemAssignment):
             self._assignment(addr, data.rhs, is_conditional=data.is_conditional)
@@ -420,7 +420,7 @@ class RomBlock(MemBlock):
         :param asynchronous: If ``False``, ensure that all ``RomBlock`` inputs are
             registers, inputs, or constants. See :ref:`asynchronous_memories`.
         :param pad_with_zeros: If ``True``, fill any missing ``romdata`` with zeros so
-            all accesses to the ROM are well defined. Otherwise, :class:`.Simulation`
+            all accesses to the ROM are well defined. Otherwise, :class:`Simulation`
             will raise an exception when accessing unintialized data. If you are
             generating Verilog, you will need to specify a value for every address (in
             which case setting this to ``True`` will help), however for testing and
@@ -447,7 +447,7 @@ class RomBlock(MemBlock):
 
         :raises PyrtlError: If ``addr`` is an ``int``. ``RomBlocks`` hold constant data,
             so they don't need to be read when the read address is statically known.
-            Create a :class:`.Const` with the data at the read address instead.
+            Create a :class:`Const` with the data at the read address instead.
 
         :return: A ``WireVector`` containing the data read from the ``RomBlock`` at
                  address ``addr``.

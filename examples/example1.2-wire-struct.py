@@ -203,5 +203,5 @@ sim.tracer.render_trace(
 # wire_struct and wire_matrix have many more features, but this example should
 # demonstrate the main ideas. See the documentation for more details:
 #
-# https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.helperfuncs.wire_struct
-# https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.helperfuncs.wire_matrix
+# https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.wire_struct
+# https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.wire_matrix

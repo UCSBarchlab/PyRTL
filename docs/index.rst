@@ -86,11 +86,11 @@ overloaded operations such as :meth:`~.WireVector.__add__` or
 derived from :class:`.WireVector`. Coupled with :class:`.MemBlock` (and
 :class:`.RomBlock`), this is all a user needs to create a functional hardware design.
 
-.. inheritance-diagram:: pyrtl.wire.WireVector
-                         pyrtl.wire.Input
-                         pyrtl.wire.Output
-                         pyrtl.wire.Const
-                         pyrtl.wire.Register
+.. inheritance-diagram:: pyrtl.WireVector
+                         pyrtl.Input
+                         pyrtl.Output
+                         pyrtl.Const
+                         pyrtl.Register
     :parts: 1
 
 After specifying a hardware design, there are then options to simulate your
@@ -141,10 +141,10 @@ internal invariants and assertions over the core logic graph which should never 
 encountered when constructing designs in the normal ways. If you hit a confusing
 :class:`.PyrtlError` or any :class:`.PyrtlInternalError` feel free to file an issue.
 
-.. autoclass:: pyrtl.pyrtlexceptions.PyrtlError
+.. autoclass:: pyrtl.PyrtlError
     :members:
 
-.. autoclass:: pyrtl.pyrtlexceptions.PyrtlInternalError
+.. autoclass:: pyrtl.PyrtlInternalError
     :members:
 
 Reference Guide

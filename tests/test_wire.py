@@ -2,7 +2,6 @@ import doctest
 import unittest
 
 import pyrtl
-from pyrtl import wire
 
 
 class TestDocTests(unittest.TestCase):
@@ -63,7 +62,7 @@ class TestWireVector(unittest.TestCase):
 
 class TestWireVectorNames(unittest.TestCase):
     def is_valid_str(self, s):
-        return wire.next_tempvar_name(s) == s
+        return pyrtl.wire.next_tempvar_name(s) == s
 
     def test_invalid_name(self):
         self.assertFalse(self.is_valid_str(''))
@@ -283,14 +282,14 @@ class TestRegister(unittest.TestCase):
     def test_negative_reset_value(self):
         r = pyrtl.Register(4, reset_value=-4)
         self.assertEqual(
-            pyrtl.helperfuncs.val_to_signed_integer(r.reset_value, r.bitwidth),
+            pyrtl.val_to_signed_integer(r.reset_value, r.bitwidth),
             -4
         )
 
     def test_negative_reset_value_as_string(self):
         r = pyrtl.Register(4, reset_value="-4'd1")
         self.assertEqual(
-            pyrtl.helperfuncs.val_to_signed_integer(r.reset_value, r.bitwidth),
+            pyrtl.val_to_signed_integer(r.reset_value, r.bitwidth),
             -1
         )
 
@@ -301,7 +300,7 @@ class TestRegister(unittest.TestCase):
     def test_extending_negative_reset_value_as_string(self):
         r = pyrtl.Register(4, reset_value="-3'd3")
         self.assertEqual(
-            pyrtl.helperfuncs.val_to_signed_integer(r.reset_value, r.bitwidth),
+            pyrtl.val_to_signed_integer(r.reset_value, r.bitwidth),
             -3
         )
 
@@ -500,47 +499,47 @@ class TestWrappedWireVector(unittest.TestCase):
                 self.assertEqual(repr(a), repr(wrapped_a))
                 self.assertEqual(len(a), len(wrapped_a))
 
-                a_and_b = pyrtl.wire.WireVector(name='a_and_b', bitwidth=4)
+                a_and_b = pyrtl.WireVector(name='a_and_b', bitwidth=4)
                 a_and_b <<= wrapped_a & wrapped_b
-                a_rand_b = pyrtl.wire.WireVector(name='a_rand_b', bitwidth=4)
+                a_rand_b = pyrtl.WireVector(name='a_rand_b', bitwidth=4)
                 a_rand_b <<= wrapped_a.val & wrapped_b
-                a_or_b = pyrtl.wire.WireVector(name='a_or_b', bitwidth=4)
+                a_or_b = pyrtl.WireVector(name='a_or_b', bitwidth=4)
                 a_or_b <<= wrapped_a | wrapped_b
-                a_ror_b = pyrtl.wire.WireVector(name='a_ror_b', bitwidth=4)
+                a_ror_b = pyrtl.WireVector(name='a_ror_b', bitwidth=4)
                 a_ror_b <<= wrapped_a.val | wrapped_b
-                a_xor_b = pyrtl.wire.WireVector(name='a_xor_b', bitwidth=4)
+                a_xor_b = pyrtl.WireVector(name='a_xor_b', bitwidth=4)
                 a_xor_b <<= wrapped_a ^ wrapped_b
-                a_rxor_b = pyrtl.wire.WireVector(name='a_rxor_b', bitwidth=4)
+                a_rxor_b = pyrtl.WireVector(name='a_rxor_b', bitwidth=4)
                 a_rxor_b <<= wrapped_a.val ^ wrapped_b
-                a_add_b = pyrtl.wire.WireVector(name='a_add_b', bitwidth=5)
+                a_add_b = pyrtl.WireVector(name='a_add_b', bitwidth=5)
                 a_add_b <<= wrapped_a + wrapped_b
-                a_radd_b = pyrtl.wire.WireVector(name='a_radd_b', bitwidth=5)
+                a_radd_b = pyrtl.WireVector(name='a_radd_b', bitwidth=5)
                 a_radd_b <<= wrapped_a.val + wrapped_b
-                a_sub_b = pyrtl.wire.WireVector(name='a_sub_b', bitwidth=4)
+                a_sub_b = pyrtl.WireVector(name='a_sub_b', bitwidth=4)
                 a_sub_b <<= wrapped_a - wrapped_b
-                a_rsub_b = pyrtl.wire.WireVector(name='a_rsub_b', bitwidth=4)
+                a_rsub_b = pyrtl.WireVector(name='a_rsub_b', bitwidth=4)
                 a_rsub_b <<= wrapped_a.val - wrapped_b
-                a_mul_b = pyrtl.wire.WireVector(name='a_mul_b', bitwidth=8)
+                a_mul_b = pyrtl.WireVector(name='a_mul_b', bitwidth=8)
                 a_mul_b <<= wrapped_a * wrapped_b
-                a_rmul_b = pyrtl.wire.WireVector(name='a_rmul_b', bitwidth=8)
+                a_rmul_b = pyrtl.WireVector(name='a_rmul_b', bitwidth=8)
                 a_rmul_b <<= wrapped_a.val * wrapped_b
-                a_lt_b = pyrtl.wire.WireVector(name='a_lt_b', bitwidth=1)
+                a_lt_b = pyrtl.WireVector(name='a_lt_b', bitwidth=1)
                 a_lt_b <<= wrapped_a < wrapped_b
-                a_le_b = pyrtl.wire.WireVector(name='a_le_b', bitwidth=1)
+                a_le_b = pyrtl.WireVector(name='a_le_b', bitwidth=1)
                 a_le_b <<= wrapped_a <= wrapped_b
-                a_eq_b = pyrtl.wire.WireVector(name='a_eq_b', bitwidth=1)
+                a_eq_b = pyrtl.WireVector(name='a_eq_b', bitwidth=1)
                 a_eq_b <<= wrapped_a == wrapped_b
-                a_ne_b = pyrtl.wire.WireVector(name='a_ne_b', bitwidth=1)
+                a_ne_b = pyrtl.WireVector(name='a_ne_b', bitwidth=1)
                 a_ne_b <<= wrapped_a != wrapped_b
-                a_gt_b = pyrtl.wire.WireVector(name='a_gt_b', bitwidth=1)
+                a_gt_b = pyrtl.WireVector(name='a_gt_b', bitwidth=1)
                 a_gt_b <<= wrapped_a > wrapped_b
-                a_ge_b = pyrtl.wire.WireVector(name='a_ge_b', bitwidth=1)
+                a_ge_b = pyrtl.WireVector(name='a_ge_b', bitwidth=1)
                 a_ge_b <<= wrapped_a >= wrapped_b
-                a_invert = pyrtl.wire.WireVector(name='a_invert', bitwidth=4)
+                a_invert = pyrtl.WireVector(name='a_invert', bitwidth=4)
                 a_invert <<= ~wrapped_a
-                a_high = pyrtl.wire.WireVector(name='a_high', bitwidth=2)
+                a_high = pyrtl.WireVector(name='a_high', bitwidth=2)
                 a_high <<= wrapped_a[2:4]
-                a_low = pyrtl.wire.WireVector(name='a_low', bitwidth=2)
+                a_low = pyrtl.WireVector(name='a_low', bitwidth=2)
                 a_low <<= wrapped_a[0:2]
 
                 x = pyrtl.WireVector(name='x', bitwidth=4)

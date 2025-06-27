@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - An optimization pass to [optimize inverter chains](https://github.com/UCSBarchlab/PyRTL/blob/d5f8dbe53f54e61e1d54722449e4894b885243c7/pyrtl/passes.py#L130)
-- `one_hot_to_binary` encoder ([documentation](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.helperfuncs.one_hot_to_binary))
-- `binary_to_one_hot` decoder ([documentation](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.helperfuncs.binary_to_one_hot))
+- `one_hot_to_binary` encoder ([documentation](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.one_hot_to_binary))
+- `binary_to_one_hot` decoder ([documentation](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.binary_to_one_hot))
 
 ### Changed
 
@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added an `initialize_registers` option to `output_to_verilog`
-  ([documentation](https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.importexport.output_to_verilog))
+  ([documentation](https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.output_to_verilog))
 
 ### Changed
 
@@ -46,8 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Named `WireVector` slices with `wire_struct` and `wire_matrix`. See documentation:
-  - [wire_struct](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.helperfuncs.wire_struct)
-  - [wire_matrix](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.helperfuncs.wire_matrix)
+  - [wire_struct](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.wire_struct)
+  - [wire_matrix](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.wire_matrix)
 
 ### Changed
 

@@ -28,35 +28,35 @@ from pyrtl.importexport import _VerilogSanitizer
 
 
 class Simulation:
-    """A class for simulating :class:`Blocks<.Block>` of logic step by step.
+    """A class for simulating :class:`Blocks<Block>` of logic step by step.
 
     A ``Simulation`` step works as follows:
 
-    1. :class:`Registers<.Register>` are updated:
+    1. :class:`Registers<Register>` are updated:
         1. (If this is the first step) With the default values passed in
            to the ``Simulation`` during instantiation and/or any ``reset_values``
-           specified in the individual :class:`Registers<.Register>`.
+           specified in the individual :class:`Registers<Register>`.
         2. (Otherwise) With their next values calculated in the previous step
-           (``r`` :class:`LogicNets<.LogicNet>`).
+           (``r`` :class:`LogicNets<LogicNet>`).
     2. The new values of these ``Registers`` as well as the values of
-       :class:`.Block` :class:`Inputs<.Input>` are propagated through the combinational
+       :class:`Block` :class:`Inputs<Input>` are propagated through the combinational
        logic.
-    3. :class:`.MemBlock` writes are performed (``@`` :class:`LogicNets<.LogicNet>`).
+    3. :class:`MemBlock` writes are performed (``@`` :class:`LogicNets<LogicNet>`).
     4. The current values of all wires are recorded in the :attr:`tracer`.
-    5. The next values for the :class:`Registers<.Register>` are saved, ready to be
+    5. The next values for the :class:`Registers<Register>` are saved, ready to be
        applied at the beginning of the next step.
 
-    Note that the :class:`.Register` values saved in the :attr:`tracer` after each
-    simulation step are from *before* the :class:`.Register` has latched in its newly
+    Note that the :class:`Register` values saved in the :attr:`tracer` after each
+    simulation step are from *before* the :class:`Register` has latched in its newly
     calculated values, since that latching occurs at the beginning of the *next* step.
 
     In addition to the functions methods listed below, it is sometimes
     useful to reach into this class and access internal state directly.
     Of particular usefulness are:
 
-    * ``.value``: a map from every signal in the :class:`.Block` to its current
+    * ``.value``: a map from every signal in the :class:`Block` to its current
       simulation value.
-    * ``.regvalue``: a map from :class:`.Register` to its value on the next cycle.
+    * ``.regvalue``: a map from :class:`Register` to its value on the next cycle.
     * ``.memvalue``: a map from ``memid`` to a dictionary of ``{address: value}``.
     """
     tracer: SimulationTrace
@@ -105,19 +105,19 @@ class Simulation:
         :param tracer: Stores execution results. If ``None`` is passed, no
             :attr:`tracer` is used, which improves performance for long running
             simulations. If the default (``True``) is passed, ``Simulation`` will create
-            a new :class:`.SimulationTrace` automatically, which can be referenced as
+            a new :class:`SimulationTrace` automatically, which can be referenced as
             :attr:`tracer`.
         :param register_value_map: Defines the initial value for the ``Registers``
             specified; overrides the ``Register``'s ``reset_value``.
         :param memory_value_map: Defines initial values for ``MemBlocks``. Format:
-            ``{memory: {address: value}}``. ``memory`` is a :class:`.MemBlock`,
+            ``{memory: {address: value}}``. ``memory`` is a :class:`MemBlock`,
             ``address`` is the address of ``value``
         :param default_value: The value that all unspecified ``Registers`` and
             ``MemBloccks`` will initialize to (default ``0``). For ``Registers``, this
             is the value that will be used if the particular ``Register`` doesn't have a
             specified ``reset_value``, and isn't found in the ``register_value_map``.
         :param block: The hardware ``Block`` to be simulated (which might be of type
-            :class:`.PostSynthBlock`). Defaults to the :ref:`working_block`.
+            :class:`PostSynthBlock`). Defaults to the :ref:`working_block`.
         """
         # Creates object and initializes it with self._initialize. register_value_map,
         # memory_value_map, and default_value are passed on to _initialize.
@@ -194,22 +194,22 @@ class Simulation:
     def step(self, provided_inputs: dict[str, int] = {}):
         """Take the simulation forward one cycle.
 
-        ``step`` causes the :class:`.Block` to be updated as follows, in order:
+        ``step`` causes the :class:`Block` to be updated as follows, in order:
 
-        1. :class:`Registers<.Register>` are updated with their :attr:`~.Register.next`
+        1. :class:`Registers<Register>` are updated with their :attr:`~Register.next`
            values computed at the end of the previous cycle.
 
-        2. :class:`Inputs<.Input>` and these new :class:`.Register` values propagate
+        2. :class:`Inputs<Input>` and these new :class:`Register` values propagate
            through the combinational logic
 
-        3. :class:`MemBlocks<.MemBlock>` are updated
+        3. :class:`MemBlocks<MemBlock>` are updated
 
-        4. The :attr:`~.Register.next` values of the :class:`Registers<.Register>` are
+        4. The :attr:`~Register.next` values of the :class:`Registers<Register>` are
            saved for use at the beginning of the next cycle.
 
         All :class:`Input` wires must be in the ``provided_inputs``.
 
-        Example: if we have :class:`Inputs<.Input>` named ``a`` and ``x``, we can
+        Example: if we have :class:`Inputs<Input>` named ``a`` and ``x``, we can
         call::
 
             sim.step({'a': 1, 'x': 23})
@@ -217,7 +217,7 @@ class Simulation:
         to simulate a cycle where ``a == 1`` and ``x == 23`` respectively.
 
         :param provided_inputs: a dictionary mapping :class:`Input`
-            :class:`WireVectors<.WireVector>` to their values for this step.
+            :class:`WireVectors<WireVector>` to their values for this step.
         """
 
         # Check that all Input have a corresponding provided_input
@@ -277,19 +277,19 @@ class Simulation:
         """Take the simulation forward ``N`` cycles, based on ``provided_inputs`` for
         each cycle.
 
-        All :class:`.Input` wires must be in ``provided_inputs``. Additionally, the
-        length of the array of provided values for each :class:`.Input` must be the
+        All :class:`Input` wires must be in ``provided_inputs``. Additionally, the
+        length of the array of provided values for each :class:`Input` must be the
         same.
 
         When ``nsteps`` is specified, then it must be *less than or equal* to the number
-        of values supplied for each :class:`.Input` when ``provided_inputs`` is
+        of values supplied for each :class:`Input` when ``provided_inputs`` is
         non-empty. When ``provided_inputs`` is empty (which may be a legitimate case for
         a design that takes no :class:`Input`), then ``nsteps`` will be used. When
         ``nsteps`` is not specified, then the simulation will take the number of steps
-        equal to the number of values supplied for each :class:`.Input`.
+        equal to the number of values supplied for each :class:`Input`.
 
-        Example: if we have :class:`Inputs<.Input>` named ``a`` and ``b`` and
-        :class:`.Output` ``o``, we can call::
+        Example: if we have :class:`Inputs<Input>` named ``a`` and ``b`` and
+        :class:`Output` ``o``, we can call::
 
             sim.step_multiple({'a': [0,1], 'b': [23,32]}, {'o': [42, 43]})
 
@@ -312,7 +312,7 @@ class Simulation:
             >>> import pyrtl
             >>> pyrtl.reset_working_block()
 
-        If a design has no :class:`Inputs<.Input>`, use ``nsteps`` to specify the number
+        If a design has no :class:`Inputs<Input>`, use ``nsteps`` to specify the number
         of cycles to simulate::
 
             >>> counter = pyrtl.Register(name="counter", bitwidth=8)
@@ -401,7 +401,7 @@ class Simulation:
             file.flush()
 
     def inspect(self, w: str) -> int:
-        """Get the value of a :class:`.WireVector` in the current ``Simulation`` cycle.
+        """Get the value of a :class:`WireVector` in the current ``Simulation`` cycle.
 
         .. doctest only::
 
@@ -422,8 +422,8 @@ class Simulation:
             >>> sim.inspect("counter")
             1
 
-        :param w: The name of the :class:`.WireVector` to inspect (passing in a
-                  :class:`.WireVector` instead of a name is deprecated).
+        :param w: The name of the :class:`WireVector` to inspect (passing in a
+                  :class:`WireVector` instead of a name is deprecated).
 
         :raise KeyError: If ``w`` does not exist in the ``Simulation``.
 
@@ -433,11 +433,11 @@ class Simulation:
         return self.value[wire]
 
     def inspect_mem(self, mem: MemBlock) -> dict[int, int]:
-        """Get :class:`.MemBlock` values in the current ``Simulation`` cycle.
+        """Get :class:`MemBlock` values in the current ``Simulation`` cycle.
 
         .. note::
 
-            This returns the current contents of the :class:`.MemBlock`. Modifying the
+            This returns the current contents of the :class:`MemBlock`. Modifying the
             returned :class:`dict` will modify the ``Simulation``'s state.
 
         .. doctest only::
@@ -561,12 +561,12 @@ class FastSimulation:
             block: Block = None, code_file: str = None):
         """
         The interface for ``FastSimulation`` and :class:`Simulation` are almost
-        identical. See :meth:`.Simulation.__init__` descriptions of the constructor's
+        identical. See :meth:`Simulation.__init__` descriptions of the constructor's
         arguments.
 
         .. note::
 
-            This constructor generates Python code for the :class:`.Block`, so any
+            This constructor generates Python code for the :class:`Block`, so any
             changes to the circuit after instantiating a ``FastSimulation`` will not be
             reflected in the ``FastSimulation``.
 
@@ -1189,7 +1189,7 @@ class Utf8RendererConstants(RendererConstants):
     """UTF-8 renderer constants. These should work in most terminals.
 
     Single-bit ``WireVectors`` are rendered as square waveforms, with vertical
-    rising and falling edges. Multi-bit :class:`.WireVector` values are rendered in
+    rising and falling edges. Multi-bit :class:`WireVector` values are rendered in
     reverse-video rectangles.
 
     This is the default renderer on non-Windows platforms.
@@ -1228,7 +1228,7 @@ class Utf8AltRendererConstants(RendererConstants):
     """Alternative UTF-8 renderer constants.
 
     Single-bit ``WireVectors`` are rendered as waveforms with sloped rising and
-    falling edges. Multi-bit :class:`.WireVector` values are rendered in reverse-video
+    falling edges. Multi-bit :class:`WireVector` values are rendered in reverse-video
     rectangles.
 
     Compared to :class:`Utf8RendererConstants`, this renderer is more
@@ -1266,7 +1266,7 @@ class PowerlineRendererConstants(Utf8RendererConstants):
 
     This render's appearance is the most similar to a traditional logic analyzer.
     Single-bit ``WireVectors`` are rendered as square waveforms, with vertical rising
-    and falling edges. Multi-bit :class:`.WireVector` values are rendered in
+    and falling edges. Multi-bit :class:`WireVector` values are rendered in
     reverse-video hexagons.
 
     This renderer requires a `terminal font that supports Powerline glyphs
@@ -1292,7 +1292,7 @@ class Cp437RendererConstants(RendererConstants):
     """Code page 437 renderer constants (for windows ``cmd`` compatibility).
 
     Single-bit ``WireVectors`` are rendered as square waveforms, with vertical rising
-    and falling edges. Multi-bit :class:`.WireVector` values are rendered between
+    and falling edges. Multi-bit :class:`WireVector` values are rendered between
     vertical bars.
 
     `Code page 437 <https://en.wikipedia.org/wiki/Code_page_437>`_ is also known as
@@ -1329,7 +1329,7 @@ class AsciiRendererConstants(RendererConstants):
     """7-bit ASCII renderer constants. These should work anywhere.
 
     Single-bit ``WireVectors`` are rendered as waveforms with sloped rising and falling
-    edges. Multi-bit :class:`.WireVector` values are rendered between vertical bars.
+    edges. Multi-bit :class:`WireVector` values are rendered between vertical bars.
 
     Enable this renderer by default by setting the ``PYRTL_RENDERER`` environment
     variable to ``ascii``::
@@ -1604,7 +1604,7 @@ class SimulationTrace:
             largest represented value fits.
         :param repr_func: Function to use for representing each value in the
             trace. Examples include ``hex``, ``oct``, ``bin``, and ``str`` (for
-            decimal), :func:`.val_to_signed_integer` (for signed decimal) or
+            decimal), :func:`val_to_signed_integer` (for signed decimal) or
             the function returned by :func:`enum_name` (for ``IntEnum``).
             Defaults to ``hex``.
         :param repr_per_name: Map from signal name to a function that takes in

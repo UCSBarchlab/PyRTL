@@ -7,7 +7,6 @@ from typing import Callable
 
 import pyrtl
 from pyrtl.rtllib import testingutils as utils
-from pyrtl.wire import Const, Output
 from .test_transform import NetWireNumTestCases
 
 
@@ -423,7 +422,7 @@ class TestConstFolding(NetWireNumTestCases):
         self.num_net_of_type('w', 1, block)
         self.assertEqual(len(block.logic), 1)
         self.assertEqual(len(block.wirevector_set), 2)
-        self.num_wire_of_type(Const, 1, block)
+        self.num_wire_of_type(pyrtl.Const, 1, block)
 
     def test_adv_one_var_op_1(self):
         constwire = pyrtl.Const(0, 1)
@@ -441,8 +440,8 @@ class TestConstFolding(NetWireNumTestCases):
         self.num_net_of_type('w', 1, block)
         self.assert_num_net(1, block)
         self.assert_num_wires(2, block)
-        self.num_wire_of_type(Const, 1, block)
-        self.num_wire_of_type(Output, 1, block)
+        self.num_wire_of_type(pyrtl.Const, 1, block)
+        self.num_wire_of_type(pyrtl.Output, 1, block)
 
     def test_adv_one_var_op_2(self):
         # this one tests to see that an input wirevector is properly preserved
@@ -466,8 +465,8 @@ class TestConstFolding(NetWireNumTestCases):
         self.num_net_of_type('w', 1, block)
         self.assert_num_net(3, block)
         self.assert_num_wires(4, block)
-        self.num_wire_of_type(Const, 0, block)
-        self.num_wire_of_type(Output, 1, block)
+        self.num_wire_of_type(pyrtl.Const, 0, block)
+        self.num_wire_of_type(pyrtl.Output, 1, block)
 
     def test_basic_two_var_op_1(self):
         inwire = pyrtl.Input(bitwidth=1)
@@ -484,7 +483,7 @@ class TestConstFolding(NetWireNumTestCases):
         self.num_net_of_type('w', 1, block)
         self.assert_num_net(1, block)
         self.assert_num_wires(3, block)
-        self.num_wire_of_type(Const, 1, block)
+        self.num_wire_of_type(pyrtl.Const, 1, block)
 
     def test_basic_two_var_op_2(self):
         inwire = pyrtl.Input(bitwidth=1)
@@ -500,7 +499,7 @@ class TestConstFolding(NetWireNumTestCases):
         self.num_net_of_type('w', 1, block)
         self.assert_num_net(1, block)
         self.assert_num_wires(2, block)
-        self.num_wire_of_type(Const, 0, block)
+        self.num_wire_of_type(pyrtl.Const, 0, block)
 
     def test_basic_two_var_op_3(self):
         constwire = pyrtl.Const(0, 1)
@@ -517,7 +516,7 @@ class TestConstFolding(NetWireNumTestCases):
         self.num_net_of_type('w', 1, block)
         self.assert_num_net(1, block)
         self.assert_num_wires(2, block)
-        self.num_wire_of_type(Const, 1, block)
+        self.num_wire_of_type(pyrtl.Const, 1, block)
 
     def test_two_var_op_produce_not(self):
         constwire = pyrtl.Const(1, 1)
@@ -536,7 +535,7 @@ class TestConstFolding(NetWireNumTestCases):
         self.num_net_of_type('s', 0, block)
         self.assert_num_net(2, block)
         self.assert_num_wires(3, block)
-        self.num_wire_of_type(Const, 0, block)
+        self.num_wire_of_type(pyrtl.Const, 0, block)
 
     def test_two_var_op_correct_wire_prop(self):
         ins = [pyrtl.Input(1) for i in range(3)]
@@ -556,7 +555,7 @@ class TestConstFolding(NetWireNumTestCases):
         self.num_net_of_type('w', 1)
         self.assert_num_net(3)
         self.assert_num_wires(6)
-        self.num_wire_of_type(Const, 0)
+        self.num_wire_of_type(pyrtl.Const, 0)
 
     def test_two_var_op_correct_not_wire_replacement(self):
         ins = [pyrtl.Input(1) for i in range(3)]
@@ -578,7 +577,7 @@ class TestConstFolding(NetWireNumTestCases):
         self.num_net_of_type('w', 1)
         self.assert_num_net(4)
         self.assert_num_wires(7)
-        self.num_wire_of_type(Const, 0)
+        self.num_wire_of_type(pyrtl.Const, 0)
 
     def test_unsynthesized_inversion(self):
         constwire = pyrtl.Const(0b1101, bitwidth=4)

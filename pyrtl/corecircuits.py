@@ -65,11 +65,11 @@ def mux(index: WireVectorLike, *mux_ins: WireVectorLike,
         >>> sim.inspect("selected")
         9
 
-    :param index: Multiplexer's selection input. Can be a :class:`.WireVector`, or any
-        type that can be coerced to :class:`.WireVector` by :func:`.as_wires`.
-    :param mux_ins: :class:`.WireVector` arguments to select from. Can be a
-        :class:`.WireVector`, or any type that can be coerced to :class:`.WireVector` by
-        :func:`.as_wires`.
+    :param index: Multiplexer's selection input. Can be a :class:`WireVector`, or any
+        type that can be coerced to :class:`WireVector` by :func:`as_wires`.
+    :param mux_ins: :class:`WireVector` arguments to select from. Can be a
+        :class:`WireVector`, or any type that can be coerced to :class:`WireVector` by
+        :func:`as_wires`.
     :param default: If you are selecting between fewer items than ``index`` can address,
         ``default`` will be used for all remaining items. For example, if you have a
         3-bit index but are selecting between 6 ``mux_ins``, you need to specify a value
@@ -79,7 +79,7 @@ def mux(index: WireVectorLike, *mux_ins: WireVectorLike,
         ``default=None``, the number of ``mux_ins`` must be exactly ``2 **
         index.bitwidth``.
 
-    :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth` matching the length
+    :return: :class:`WireVector` with :attr:`~WireVector.bitwidth` matching the length
              of the longest input (not including ``index``).
     """
     # find the diff between the addressable range and number of inputs given
@@ -134,16 +134,16 @@ def select(sel: WireVectorLike,
         >>> sim.inspect("min")
         6
 
-    :param sel: Multiplexer's selection input. Can be a :class:`.WireVector`, or any
-        type that can be coerced to :class:`.WireVector` by :func:`.as_wires`.
+    :param sel: Multiplexer's selection input. Can be a :class:`WireVector`, or any
+        type that can be coerced to :class:`WireVector` by :func:`as_wires`.
     :param truecase: The WireVector selected if ``sel == 1``. Can be a
-        :class:`.WireVector`, or any type that can be coerced to :class:`.WireVector` by
-        :func:`.as_wires`.
+        :class:`WireVector`, or any type that can be coerced to :class:`WireVector` by
+        :func:`as_wires`.
     :param falsecase: The WireVector selected if ``sel == 0``. Can be a
-        :class:`.WireVector`, or any type that can be coerced to :class:`.WireVector` by
-        :func:`.as_wires`.
+        :class:`WireVector`, or any type that can be coerced to :class:`WireVector` by
+        :func:`as_wires`.
 
-    :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth` matching the longer
+    :return: :class:`WireVector` with :attr:`~WireVector.bitwidth` matching the longer
              of ``truecase`` and ``falsecase``.
     """
     sel, f, t = (as_wires(w) for w in (sel, falsecase, truecase))
@@ -156,8 +156,8 @@ def select(sel: WireVectorLike,
 
 
 def concat(*args: WireVectorLike) -> WireVector:
-    """Concatenates multiple :class:`WireVectors<.WireVector>` into a single
-    :class:`.WireVector`.
+    """Concatenates multiple :class:`WireVectors<WireVector>` into a single
+    :class:`WireVector`.
 
     Concatenates any number of arguments. The right-most argument is the least
     significant bits of the result.
@@ -167,11 +167,11 @@ def concat(*args: WireVectorLike) -> WireVector:
         If you have a :class:`list` of arguments to ``concat`` together, you probably
         want index 0 to be the least significant bit. If so, and you unpack the
         :class:`list` into ``concat``'s ``args``, the result will be backwards. The
-        function :func:`.concat_list` is provided specifically for that case.
+        function :func:`concat_list` is provided specifically for that case.
 
     .. note::
 
-        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which helps
+        Consider using :func:`wire_struct` or :func:`wire_matrix` instead, which helps
         with consistently disassembling, naming, and reassembling fields.
 
     .. doctest only::
@@ -195,11 +195,11 @@ def concat(*args: WireVectorLike) -> WireVector:
         '0xabcd'
 
     :param args: Inputs to concatenate, with the most significant bits first. Each input
-        can be a :class:`.WireVector`, or any type that can be coerced to
-        :class:`.WireVector` by :func:`.as_wires`.
+        can be a :class:`WireVector`, or any type that can be coerced to
+        :class:`WireVector` by :func:`as_wires`.
 
-    :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth` equal to the sum of
-             all ``args``' :attr:`bitwidths<~.WireVector.bitwidth>`.
+    :return: :class:`WireVector` with :attr:`~WireVector.bitwidth` equal to the sum of
+             all ``args``' :attr:`bitwidths<~WireVector.bitwidth>`.
     """
     if len(args) <= 0:
         raise PyrtlError('error, concat requires at least 1 argument')
@@ -219,18 +219,18 @@ def concat(*args: WireVectorLike) -> WireVector:
 
 
 def concat_list(wire_list: list[WireVectorLike]) -> WireVector:
-    """Concatenates a list of :class:`WireVectors<.WireVector>` into a single
-    :class:`.WireVector`.
+    """Concatenates a list of :class:`WireVectors<WireVector>` into a single
+    :class:`WireVector`.
 
-    This take a :class:`list` of :class:`WireVectors<.WireVector>` and concats them all
-    into a single :class:`.WireVector`, with the element at index 0 serving as the least
+    This take a :class:`list` of :class:`WireVectors<WireVector>` and concats them all
+    into a single :class:`WireVector`, with the element at index 0 serving as the least
     significant bits. This is useful when you have a variable number of
-    :class:`WireVectors<.WireVector>` to concatenate, otherwise :func:`.concat` is
+    :class:`WireVectors<WireVector>` to concatenate, otherwise :func:`concat` is
     prefered.
 
     .. note::
 
-        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which helps
+        Consider using :func:`wire_struct` or :func:`wire_matrix` instead, which helps
         with consistently disassembling, naming, and reassembling fields.
 
     .. doctest only::
@@ -254,11 +254,11 @@ def concat_list(wire_list: list[WireVectorLike]) -> WireVector:
         '0xabcd'
 
     :param wire_list: List of inputs to concatenate. Each input can be a
-        :class:`.WireVector`, or any type that can be coerced to :class:`.WireVector` by
-        :func:`.as_wires`.
+        :class:`WireVector`, or any type that can be coerced to :class:`WireVector` by
+        :func:`as_wires`.
 
-    :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth` equal to the sum of
-             all ``wire_list`` :attr:`bitwidths<~.WireVector.bitwidth>`.
+    :return: :class:`WireVector` with :attr:`~WireVector.bitwidth` equal to the sum of
+             all ``wire_list`` :attr:`bitwidths<~WireVector.bitwidth>`.
     """
     return concat(*reversed(wire_list))
 
@@ -271,9 +271,9 @@ def _signed_input_to_wirevector(x):
 
 
 def signed_add(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a :class:`.WireVector` for the result of signed addition.
+    """Return a :class:`WireVector` for the result of signed addition.
 
-    The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
     adding.
 
     .. doctest only::
@@ -296,13 +296,13 @@ def signed_add(a: WireVectorLike, b: WireVectorLike) -> WireVector:
         >>> pyrtl.val_to_signed_integer(sim.inspect("output"), bitwidth=output.bitwidth)
         -8
 
-    :param a: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
-    :param b: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
+    :param a: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
+    :param b: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
 
-    :return: A :class:`.WireVector` representing the sum of ``a`` and ``b``, with
-             :attr:`~.WireVector.bitwidth` ``max(a.bitwidth, b.bitwidth) + 1``.
+    :return: A :class:`WireVector` representing the sum of ``a`` and ``b``, with
+             :attr:`~WireVector.bitwidth` ``max(a.bitwidth, b.bitwidth) + 1``.
     """
     a = _signed_input_to_wirevector(a)
     b = _signed_input_to_wirevector(b)
@@ -313,9 +313,9 @@ def signed_add(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def signed_sub(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a :class:`.WireVector` for the result of signed subtraction.
+    """Return a :class:`WireVector` for the result of signed subtraction.
 
-    The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
     subtracting.
 
     .. doctest only::
@@ -338,13 +338,13 @@ def signed_sub(a: WireVectorLike, b: WireVectorLike) -> WireVector:
         >>> pyrtl.val_to_signed_integer(sim.inspect("output"), bitwidth=output.bitwidth)
         2
 
-    :param a: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
-    :param b: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
+    :param a: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
+    :param b: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
 
-    :return: A :class:`.WireVector` representing the difference between ``a`` and ``b``,
-             with :attr:`~.WireVector.bitwidth` ``max(a.bitwidth, b.bitwidth) + 1``.
+    :return: A :class:`WireVector` representing the difference between ``a`` and ``b``,
+             with :attr:`~WireVector.bitwidth` ``max(a.bitwidth, b.bitwidth) + 1``.
     """
     a = _signed_input_to_wirevector(a)
     b = _signed_input_to_wirevector(b)
@@ -360,9 +360,9 @@ def mult_signed(a, b):
 
 
 def signed_mult(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a :class:`.WireVector` for the result of signed multiplication.
+    """Return a :class:`WireVector` for the result of signed multiplication.
 
-    The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
     multiplying.
 
     .. doctest only::
@@ -385,13 +385,13 @@ def signed_mult(a: WireVectorLike, b: WireVectorLike) -> WireVector:
         >>> pyrtl.val_to_signed_integer(sim.inspect("output"), bitwidth=output.bitwidth)
         15
 
-    :param a: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
-    :param b: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
+    :param a: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
+    :param b: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
 
-    :return: A :class:`.WireVector` representing the product of ``a`` and ``b``, with
-             :attr:`~.WireVector.bitwidth` ``a.bitwidth + b.bitwidth``.
+    :return: A :class:`WireVector` representing the product of ``a`` and ``b``, with
+             :attr:`~WireVector.bitwidth` ``a.bitwidth + b.bitwidth``.
     """
     a = _signed_input_to_wirevector(a)
     b = _signed_input_to_wirevector(b)
@@ -402,9 +402,9 @@ def signed_mult(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def signed_lt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a 1-bit :class:`.WireVector` for the result of a signed ``<`` comparison.
+    """Return a 1-bit :class:`WireVector` for the result of a signed ``<`` comparison.
 
-    The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
     comparing.
 
     .. doctest only::
@@ -427,12 +427,12 @@ def signed_lt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
         >>> sim.inspect("output")
         0
 
-    :param a: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
-    :param b: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
+    :param a: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
+    :param b: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
 
-    :return: A 1-bit :class:`.WireVector` indicating if ``a`` is less than ``b``.
+    :return: A 1-bit :class:`WireVector` indicating if ``a`` is less than ``b``.
     """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = a - b
@@ -440,9 +440,9 @@ def signed_lt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def signed_le(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a 1-bit :class:`.WireVector` for the result of a signed ``<=`` comparison.
+    """Return a 1-bit :class:`WireVector` for the result of a signed ``<=`` comparison.
 
-    The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
     comparing.
 
     .. doctest only::
@@ -465,12 +465,12 @@ def signed_le(a: WireVectorLike, b: WireVectorLike) -> WireVector:
         >>> sim.inspect("output")
         0
 
-    :param a: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
-    :param b: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
+    :param a: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
+    :param b: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
 
-    :return: A 1-bit :class:`.WireVector` indicating if ``a`` is less than or equal to
+    :return: A 1-bit :class:`WireVector` indicating if ``a`` is less than or equal to
              ``b``.
     """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
@@ -479,9 +479,9 @@ def signed_le(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def signed_gt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a 1-bit :class:`.WireVector` for the result of a signed ``>`` comparison.
+    """Return a 1-bit :class:`WireVector` for the result of a signed ``>`` comparison.
 
-    The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
     comparing.
 
     .. doctest only::
@@ -504,12 +504,12 @@ def signed_gt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
         >>> sim.inspect("output")
         1
 
-    :param a: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
-    :param b: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
+    :param a: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
+    :param b: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
 
-    :return: A 1-bit :class:`.WireVector` indicating if ``a`` is greater than ``b``.
+    :return: A 1-bit :class:`WireVector` indicating if ``a`` is greater than ``b``.
     """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = b - a
@@ -517,9 +517,9 @@ def signed_gt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def signed_ge(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a 1-bit :class:`.WireVector` for the result of a signed ``>=`` comparison.
+    """Return a 1-bit :class:`WireVector` for the result of a signed ``>=`` comparison.
 
-    The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
     comparing.
 
     .. doctest only::
@@ -542,12 +542,12 @@ def signed_ge(a: WireVectorLike, b: WireVectorLike) -> WireVector:
         >>> sim.inspect("output")
         1
 
-    :param a: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
-    :param b: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`.
+    :param a: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
+    :param b: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`.
 
-    :return: A 1-bit :class:`.WireVector` indicating if ``a`` is greater than or equal
+    :return: A 1-bit :class:`WireVector` indicating if ``a`` is greater than or equal
              to ``b``.
     """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
@@ -596,7 +596,7 @@ def shift_right_arithmetic(bits_to_shift: WireVector,
     :param bits_to_shift: Value to shift right arithmetically.
     :param shift_amount: Number of bit positions to shift, as an unsigned integer.
 
-    :return: A new :class:`.WireVector` with the same bitwidth as ``bits_to_shift``.
+    :return: A new :class:`WireVector` with the same bitwidth as ``bits_to_shift``.
     """
     if isinstance(shift_amount, int):
         return bits_to_shift[shift_amount:].sign_extended(len(bits_to_shift))
@@ -638,7 +638,7 @@ def shift_left_logical(bits_to_shift: WireVector,
     :param bits_to_shift: Value to shift left logically.
     :param shift_amount: Number of bit positions to shift, as an unsigned integer.
 
-    :return: A new :class:`.WireVector` with the same bitwidth as ``bits_to_shift``.
+    :return: A new :class:`WireVector` with the same bitwidth as ``bits_to_shift``.
     """
     if isinstance(shift_amount, int):
         return concat(bits_to_shift[:-shift_amount], Const(0, shift_amount))
@@ -684,7 +684,7 @@ def shift_right_logical(bits_to_shift: WireVector,
     :param bits_to_shift: Value to shift right logically.
     :param shift_amount: Number of bit positions to shift, as an unsigned integer.
 
-    :return: A new :class:`.WireVector` with the same bitwidth as ``bits_to_shift``.
+    :return: A new :class:`WireVector` with the same bitwidth as ``bits_to_shift``.
     """
     if isinstance(shift_amount, int):
         return bits_to_shift[shift_amount:].zero_extended(len(bits_to_shift))
@@ -695,13 +695,13 @@ def shift_right_logical(bits_to_shift: WireVector,
 
 
 def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]:
-    """Matches multiple :class:`.WireVector` :attr:`bitwidths<~.WireVector.bitwidth>`
+    """Matches multiple :class:`WireVector` :attr:`bitwidths<~WireVector.bitwidth>`
     via zero- or sign-extension.
 
-    :class:`WireVectors<.WireVector>` with shorter
-    :attr:`bitwidths<~.WireVector.bitwidth>` will be to match the longest
-    :attr:`~.WireVector.bitwidth` in ``args``. :class:`WireVectors<.WireVector>` will be
-    :meth:`~.WireVector.sign_extended` or :meth:`~.WireVector.zero_extended`, depending
+    :class:`WireVectors<WireVector>` with shorter
+    :attr:`bitwidths<~WireVector.bitwidth>` will be to match the longest
+    :attr:`~WireVector.bitwidth` in ``args``. :class:`WireVectors<WireVector>` will be
+    :meth:`~WireVector.sign_extended` or :meth:`~WireVector.zero_extended`, depending
     on ``signed``.
 
     .. doctest only::
@@ -728,15 +728,15 @@ def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]
         >>> bin(sim.inspect("a_long"))
         '0b1111'
 
-    :param args: :class:`WireVectors<.WireVector>` of which to match
-        :attr:`~.WireVector.bitwidth`
-    :param signed: If ``True``, extend shorter :class:`WireVectors<.WireVector>` with
-        :meth:`~.WireVector.sign_extended`. Otherwise, extend with
-        :meth:`~.WireVector.zero_extended`.
+    :param args: :class:`WireVectors<WireVector>` of which to match
+        :attr:`~WireVector.bitwidth`
+    :param signed: If ``True``, extend shorter :class:`WireVectors<WireVector>` with
+        :meth:`~WireVector.sign_extended`. Otherwise, extend with
+        :meth:`~WireVector.zero_extended`.
 
-    :return: :class:`tuple` of :class:`WireVectors<.WireVector>`, in the same order they
-             appeared in ``args``, all with :attr:`~.WireVector.bitwidth` equal to the
-             longest :attr:`~.WireVector.bitwidth` in ``args``.
+    :return: :class:`tuple` of :class:`WireVectors<WireVector>`, in the same order they
+             appeared in ``args``, all with :attr:`~WireVector.bitwidth` equal to the
+             longest :attr:`~WireVector.bitwidth` in ``args``.
     """
     max_len = max(len(wv) for wv in args)
     if signed:
@@ -747,9 +747,9 @@ def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]
 
 def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
              block: Block = None) -> WireVector:
-    """Convert ``val`` to a :class:`.WireVector`.
+    """Convert ``val`` to a :class:`WireVector`.
 
-    ``val`` may be a :class:`.WireVector`, :class:`int` (including
+    ``val`` may be a :class:`WireVector`, :class:`int` (including
     :class:`~enum.IntEnum`), :class:`str`, or :class:`bool`.
 
     .. doctest only::
@@ -757,9 +757,9 @@ def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
         >>> import pyrtl
         >>> pyrtl.reset_working_block()
 
-    ``as_wires`` is mainly used to coerce values into :class:`WireVectors<.WireVector>`
+    ``as_wires`` is mainly used to coerce values into :class:`WireVectors<WireVector>`
     (for example, operations such as ``x + 1`` where ``1`` needs to be converted to a
-    :class:`.Const` :class:`.WireVector`). See :ref:`wirevector_coercion`. An example::
+    :class:`Const` :class:`WireVector`). See :ref:`wirevector_coercion`. An example::
 
         >>> def make_my_hardware(a, b):
         ...     a = as_wires(a)
@@ -781,14 +781,14 @@ def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
     In the example above, ``as_wires`` will convert the ``7`` to ``Const(7)`` but keep
     ``input`` unchanged.
 
-    :param val: A :class:`.WireVector`, or a constant value that can be converted into a
-        :class:`.Const`.
-    :param bitwidth: The :attr:`~.WireVector.bitwidth` of the resulting
-        :class:`.WireVector`.
+    :param val: A :class:`WireVector`, or a constant value that can be converted into a
+        :class:`Const`.
+    :param bitwidth: The :attr:`~WireVector.bitwidth` of the resulting
+        :class:`WireVector`.
     :param truncating: Determines whether bits will be dropped to achieve the desired
-        :attr:`~.WireVector.bitwidth` if ``val`` is too long (if ``True``, the
+        :attr:`~WireVector.bitwidth` if ``val`` is too long (if ``True``, the
         most-significant bits will be dropped).
-    :param block: ``Block`` to use for the returned :class:`.WireVector`. Defaults to
+    :param block: ``Block`` to use for the returned :class:`WireVector`. Defaults to
         the :ref:`working_block`.
     """
     from pyrtl.memory import _MemIndexed
@@ -821,15 +821,15 @@ def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
 
 def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalue: int,
                     truncating: bool = False) -> WireVector:
-    """Update a :class:`.WireVector` by replacing some of its bits with ``newvalue``.
+    """Update a :class:`WireVector` by replacing some of its bits with ``newvalue``.
 
-    Given a :class:`.WireVector` ``w``, this function returns a new :class:`.WireVector`
+    Given a :class:`WireVector` ``w``, this function returns a new :class:`WireVector`
     that is identical to ``w`` except in the range of bits specified by ``[range_start,
     range_end)``. In that range, the value ``newvalue`` is swapped in. For example::
 
         bitfield_update(w, range_start=20, range_end=23, newvalue=0b111)
 
-    will return a :class:`.WireVector` of the same length as ``w``, and with the same
+    will return a :class:`WireVector` of the same length as ``w``, and with the same
     values as ``w``, but with bits 20, 21, and 22 all set to ``1``.
 
     Note that ``range_start`` and ``range_end`` will be inputs to a slice and so
@@ -846,11 +846,11 @@ def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalu
 
     .. note::
 
-        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which helps
+        Consider using :func:`wire_struct` or :func:`wire_matrix` instead, which helps
         with consistently disassembling, naming, and reassembling fields.
 
-    :param w: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`, to use as the starting point
+    :param w: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`, to use as the starting point
               for the update
     :param range_start: The start of the range of bits to be updated.
     :param range_end: The end of the range of bits to be updated.
@@ -894,12 +894,12 @@ def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalu
 def bitfield_update_set(w: WireVectorLike,
                         update_set: dict[tuple[int, int], WireVectorLike],
                         truncating: bool = False) -> WireVector:
-    """Update a :class:`.WireVector` by replacing the bits specified in ``update_set``.
+    """Update a :class:`WireVector` by replacing the bits specified in ``update_set``.
 
-    Given a WireVector ``w``, return a new :class:`.WireVector` that is identical to `w`
+    Given a WireVector ``w``, return a new :class:`WireVector` that is identical to `w`
     except in the ranges of bits specified by ``update_set``. When multiple
     non-overlapping fields need to be updated in a single cycle, this provides a clearer
-    way to describe that behavior than iterative calls to :func:`.bitfield_update`::
+    way to describe that behavior than iterative calls to :func:`bitfield_update`::
 
         w = bitfield_update_set(w, update_set={
                 (20, 23):    0x6,      # sets bit 20 to 0, bits 21 and 22 to 1
@@ -909,11 +909,11 @@ def bitfield_update_set(w: WireVectorLike,
 
     .. note::
 
-        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which helps
+        Consider using :func:`wire_struct` or :func:`wire_matrix` instead, which helps
         with consistently disassembling, naming, and reassembling fields.
 
-    :param w: A :class:`.WireVector`, or any type that can be coerced to
-              :class:`.WireVector` by :func:`.as_wires`, to use as the starting point
+    :param w: A :class:`WireVector`, or any type that can be coerced to
+              :class:`WireVector` by :func:`as_wires`, to use as the starting point
               for the update
     :param update_set: A map from tuples of ``(range_start, range_end)`` integers to a
         new value for the range of bits.
@@ -962,9 +962,9 @@ def enum_mux(cntrl: WireVector, table: dict[int, WireVector],
         enum_mux(cntrl, {Command.ADD: a + b}, default=a - b)
 
     :param cntrl: Control for the mux.
-    :param table: Maps :class:`enum.IntEnum` values to :class:`.WireVector`.
-    :param default: A :class:`.WireVector` to use when the key is not present. In
-        addition it is possible to use the key :data:`.otherwise` to specify a default
+    :param table: Maps :class:`enum.IntEnum` values to :class:`WireVector`.
+    :param default: A :class:`WireVector` to use when the key is not present. In
+        addition it is possible to use the key :data:`otherwise` to specify a default
         value, but it is an error if both are supplied.
     :param strict: When ``True``, check that the dictionary has an entry for every
         possible value in the :class:`enum.IntEnum`. Note that if a ``default`` is set,
@@ -1026,7 +1026,7 @@ def and_all_bits(vector: WireVector) -> WireVector:
         >>> sim.inspect("output")
         1
 
-    :param vector: Takes a single arbitrary length :class:`.WireVector`.
+    :param vector: Takes a single arbitrary length :class:`WireVector`.
 
     :return: Returns a 1-bit result, the bitwise ``&`` of all of the bits in ``vector``.
     """
@@ -1056,7 +1056,7 @@ def or_all_bits(vector: WireVector) -> WireVector:
         >>> sim.inspect("output")
         1
 
-    :param vector: Takes a single arbitrary length :class:`.WireVector`.
+    :param vector: Takes a single arbitrary length :class:`WireVector`.
 
     :return: Returns a 1-bit result, the bitwise ``|`` of all of the bits in ``vector``.
     """
@@ -1086,7 +1086,7 @@ def xor_all_bits(vector: WireVector) -> WireVector:
         >>> sim.inspect("output")
         0
 
-    :param vector: Takes a single arbitrary length :class:`.WireVector`.
+    :param vector: Takes a single arbitrary length :class:`WireVector`.
 
     :return: Returns a 1-bit result, the bitwise ``^`` of all of the bits in ``vector``.
     """
@@ -1119,17 +1119,17 @@ def _apply_op_over_all_bits(op, vector):
 def rtl_any(*vectorlist: WireVectorLike) -> WireVector:
     """Hardware equivalent of Python's :func:`any`.
 
-    Given any number of :class:`WireVectors<.WireVector>`, return a 1-bit
-    :class:`.WireVector` which will hold a ``1`` if any of the inputs are ``1``. In
+    Given any number of :class:`WireVectors<WireVector>`, return a 1-bit
+    :class:`WireVector` which will hold a ``1`` if any of the inputs are ``1``. In
     other words, this generates a large OR gate. If no inputs are provided, it will
-    return a :class:`.Const` ``0`` (since there are no ``1s`` present) similar to
+    return a :class:`Const` ``0`` (since there are no ``1s`` present) similar to
     Python's :func:`any` called with an empty list.
 
     .. note::
 
         ``rtl_any`` is most useful when working with a variable number of
-        :class:`WireVectors<.WireVector>`. For a fixed number of
-        :class:`WireVectors<.WireVector>`, it is clearer to use ``|``::
+        :class:`WireVectors<WireVector>`. For a fixed number of
+        :class:`WireVectors<WireVector>`, it is clearer to use ``|``::
 
             any_ones = a | b | c
 
@@ -1154,12 +1154,12 @@ def rtl_any(*vectorlist: WireVectorLike) -> WireVector:
         >>> sim.inspect("output")
         1
 
-    :param vectorlist: All arguments are length 1 :class:`.WireVector`, or any type that
-        can be coerced to :class:`.WireVector` by :func:`.as_wires`, with length 1.
+    :param vectorlist: All arguments are length 1 :class:`WireVector`, or any type that
+        can be coerced to :class:`WireVector` by :func:`as_wires`, with length 1.
 
-    :raise PyrtlError: If any argument's :attr:`~.WireVector.bitwidth` is not 1.
+    :raise PyrtlError: If any argument's :attr:`~WireVector.bitwidth` is not 1.
 
-    :return: Length 1 :class:`.WireVector` indicating if any bits in ``vectorlist`` are
+    :return: Length 1 :class:`WireVector` indicating if any bits in ``vectorlist`` are
              ``1``.
     """
     if len(vectorlist) == 0:
@@ -1173,17 +1173,17 @@ def rtl_any(*vectorlist: WireVectorLike) -> WireVector:
 def rtl_all(*vectorlist: WireVectorLike) -> WireVector:
     """Hardware equivalent of Python's :func:`all`.
 
-    Given any number of :class:`WireVectors<.WireVector>`, return a 1-bit
-    :class:`.WireVector` which will hold a ``1`` only if all of the inputs are ``1``. In
+    Given any number of :class:`WireVectors<WireVector>`, return a 1-bit
+    :class:`WireVector` which will hold a ``1`` only if all of the inputs are ``1``. In
     other words, this generates a large AND gate. If no inputs are provided, it will
-    return a :class:`.Const` ``1`` (since there are no ``0s`` present) similar to
+    return a :class:`Const` ``1`` (since there are no ``0s`` present) similar to
     Python's :func:`all` called with an empty list.
 
     .. note::
 
         ``rtl_all`` is most useful when working with a variable number of
-        :class:`WireVectors<.WireVector>`. For a fixed number of
-        :class:`WireVectors<.WireVector>`, it is clearer to use ``&``::
+        :class:`WireVectors<WireVector>`. For a fixed number of
+        :class:`WireVectors<WireVector>`, it is clearer to use ``&``::
 
             all_ones = a & b & c
 
@@ -1208,12 +1208,12 @@ def rtl_all(*vectorlist: WireVectorLike) -> WireVector:
         >>> sim.inspect("output")
         1
 
-    :param vectorlist: All arguments are length 1 :class:`.WireVector`, or any type that
-        can be coerced to :class:`.WireVector` by :func:`.as_wires`, with length 1.
+    :param vectorlist: All arguments are length 1 :class:`WireVector`, or any type that
+        can be coerced to :class:`WireVector` by :func:`as_wires`, with length 1.
 
-    :raise PyrtlError: If any argument's :attr:`~.WireVector.bitwidth` is not 1.
+    :raise PyrtlError: If any argument's :attr:`~WireVector.bitwidth` is not 1.
 
-    :return: Length 1 :class:`.WireVector` indicating if all bits in ``vectorlist`` are
+    :return: Length 1 :class:`WireVector` indicating if all bits in ``vectorlist`` are
              ``1``.
     """
     if len(vectorlist) == 0:

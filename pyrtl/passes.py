@@ -325,7 +325,7 @@ def constant_propagation(block, silence_unexpected_net_warnings=False):
     Note on resulting block:
     The output of the block can have WireVectors that are driven but not
     listened to. This is to be expected. These are to be removed by
-    :py:func:`._remove_unlistened_nets`
+    :func:`_remove_unlistened_nets`
     """
     net_count = _NetCount(block)
     while net_count.shrinking():
@@ -620,7 +620,7 @@ def synthesize(update_working_block=True, merge_io_vectors=True, block=None):
     :param bool merge_io_vectors: if False, turn all N-bit IO wirevectors
         into N 1-bit IO wirevectors (i.e. don't maintain interface).
     :param Block block: The block you want to synthesize.
-    :return: The newly synthesized block (of type :py:class:`.PostSynthBlock`).
+    :return: The newly synthesized block (of type :class:`PostSynthBlock`).
 
     Takes as input a block (default to :ref:`working_block`) and creates a new block
     which is identical in function but uses only single bit gates and excludes
@@ -638,11 +638,11 @@ def synthesize(update_working_block=True, merge_io_vectors=True, block=None):
     of original wire to which it corresponds.
 
     The block that results from synthesis is actually of type
-    :py:class:`.PostSynthBlock` which contains a mapping from the original
+    :class:`PostSynthBlock` which contains a mapping from the original
     inputs and outputs to the inputs and outputs of this block.  This is used
     during simulation to map the input/outputs so that the same testbench can
     be used both pre and post synthesis (see documentation for
-    :py:class:`.Simulation` for more details).
+    :class:`Simulation` for more details).
 
     """
 
@@ -807,7 +807,7 @@ def _decompose(net, wv_map, mems, block_out):
 
 @transform.all_nets
 def nand_synth(net):
-    """Synthesizes a :py:class:`.PostSynthBlock` into one consisting of nands
+    """Synthesizes a :class:`PostSynthBlock` into one consisting of nands
     and inverters in place
 
     :param PostSynthBlock block: The block to synthesize.
@@ -859,8 +859,8 @@ def and_inverter_synth(net):
 
 @transform.all_nets
 def two_way_concat(net):
-    """Transforms a block so all n-way (n > 2) :py:func:`concats<.concat>` are
-    replaced with series of 2-way :py:func:`concats<.concat>`.
+    """Transforms a block so all n-way (n > 2) :func:`concats<concat>` are
+    replaced with series of 2-way :func:`concats<concat>`.
 
     :param Block block: The block to transform
 
@@ -906,8 +906,8 @@ def two_way_concat(net):
 
 @transform.all_nets
 def one_bit_selects(net):
-    """Converts arbitrary-sliced :py:func:`selects<.select>` to concatenations
-    of 1-bit :py:func:`selects<.select>`.
+    """Converts arbitrary-sliced :func:`selects<select>` to concatenations
+    of 1-bit :func:`selects<select>`.
 
     :param Block block: The block to transform
 
