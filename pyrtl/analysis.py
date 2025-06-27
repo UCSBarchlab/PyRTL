@@ -11,8 +11,9 @@ import tempfile
 import subprocess
 import sys
 import collections
+from typing import Union, Iterable, Callable
 
-from pyrtl.core import working_block
+from pyrtl.core import working_block, LogicNet, Block
 from pyrtl.wire import Input, Output, Const, Register, WireVector
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
 from pyrtl.importexport import output_to_verilog
@@ -26,10 +27,10 @@ from pyrtl.helperfuncs import _currently_in_jupyter_notebook, _print_netlist_lat
 #   /~~\ |  \ |___ /~~\    |___ .__/  |  |  |  | /~~\  |  | \__/ | \|
 #
 
-def area_estimation(tech_in_nm=130, block=None):
+def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
     """Estimates the total area of the block.
 
-    :param float tech_in_nm: the size of the circuit technology to be estimated
+    :param tech_in_nm: the size of the circuit technology to be estimated
         (for example, 65 is 65nm and 250 is 0.25um)
     :return: tuple of estimated areas (logic, mem) in terms of mm^2
 
@@ -138,27 +139,22 @@ def _bits_ports_and_isrom_from_memory(mem):
 class TimingAnalysis:
     """Timing analysis estimates the timing delays in the block
 
-    TimingAnalysis has an :attr:`~.TimingAnalysis.timing_map` object that
-    maps wires to the 'time' after a clock edge at which the signal in the wire
-    settles
-
+    TimingAnalysis has an :attr:`timing_map` object that maps wires to the 'time' after
+    a clock edge at which the signal in the wire settles
     """
 
-    def __init__(self, block=None, gate_delay_funcs=None):
-        """ Calculates timing delays in the block.
+    def __init__(self, block: Block = None, gate_delay_funcs=None):
+        """Calculates timing delays in the block.
 
-        :param Block block: PyRTL block to analyze. Defaults to the
-            :ref:`working_block`.
-        :param gate_delay_funcs: a map with keys corresponding to the gate op and
-            a function returning the delay as the value.
-            It takes the gate as an argument.
-            If the delay is negative (-1), the gate will be treated as the end
-            of the block
+        Calculates the timing analysis while allowing for different timing delays of
+        different gates of each type. Supports all valid presynthesis blocks. Currently
+        doesn't support memory post synthesis.
 
-        Calculates the timing analysis while allowing for
-        different timing delays of different gates of each type.
-        Supports all valid presynthesis blocks.
-        Currently doesn't support memory post synthesis.
+        :param block: PyRTL block to analyze. Defaults to the :ref:`working_block`.
+        :param gate_delay_funcs: a map with keys corresponding to the gate op and a
+            function returning the delay as the value. It takes the gate as an argument.
+            If the delay is negative (``-1``), the gate will be treated as the end of
+            the block.
         """
 
         self.block = working_block(block)
@@ -229,12 +225,12 @@ class TimingAnalysis:
         tech_in_um = 0.130
         return 270 * tech_in_um**1.38 * bits**0.25 * ports**1.30 + 1.05
 
-    def max_freq(self, tech_in_nm=130, ffoverhead=None):
+    def max_freq(self, tech_in_nm: float = 130, ffoverhead: float = None) -> float:
         """Estimates the max frequency of a block in MHz.
 
-        :param float tech_in_nm: the size of the circuit technology to be estimated
+        :param tech_in_nm: the size of the circuit technology to be estimated
             (for example, 65 is 65nm and 250 is 0.25um)
-        :param float ffoverhead: setup and ff propagation delay in picoseconds
+        :param ffoverhead: setup and ff propagation delay in picoseconds
         :return: a number representing an estimate of the max frequency in Mhz
 
         All params are optional and have reasonable default values.  Estimation
@@ -254,13 +250,11 @@ class TimingAnalysis:
     def max_length(self):
         """Returns the max timing delay of the circuit in ps.
 
-        The result assumes that the circuit is implemented in a 130nm process,
-        and that there is no setup or hold time associated with the circuit.
-        The resulting value is in picoseconds.  If an proper estimation of
-        timing is required it is recommended to us
-        :meth:`.TimingAnalysis.max_freq` to determine the clock period as it
-        more accurately considers scaling and setup/hold.
-
+        The result assumes that the circuit is implemented in a 130nm process, and that
+        there is no setup or hold time associated with the circuit. The resulting value
+        is in picoseconds. If an proper estimation of timing is required it is
+        recommended to use :meth:`max_freq` to determine the clock period as it more
+        accurately considers scaling and setup/hold.
         """
         return max(self.timing_map.values())
 
@@ -271,10 +265,11 @@ class TimingAnalysis:
     class _TooManyCPsError(Exception):
         pass
 
-    def critical_path(self, print_cp=True, cp_limit=100):
+    def critical_path(self, print_cp: bool = True, cp_limit=100
+                      ) -> list[WireVector, list[LogicNet]]:
         """ Takes a timing map and returns the critical paths of the system.
 
-        :param bool print_cp: Whether to print the critical path to the terminal
+        :param print_cp: Whether to print the critical path to the terminal
             after calculation
         :return: a list containing tuples with the 'first' wire as the
             first value and the critical paths (which themselves are lists
@@ -315,7 +310,7 @@ class TimingAnalysis:
     @staticmethod
     def print_critical_paths(critical_paths):
         """ Prints the results of the critical path length analysis.
-            Done by default by the :meth:`.TimingAnalysis.critical_path` function.
+            Done by default by the :meth:`critical_path` function.
         """
         line_indent = " " * 2
         #  print the critical path
@@ -358,8 +353,8 @@ def yosys_area_delay(library, abc_cmd=None, leave_in_dir=None, block=None):
 
     http://www.vlsitechnology.org/html/vsc_description.html
 
-    May raise `PyrtlError` if :program:`yosys` is not configured correctly, and
-    `PyrtlInternalError` if the call to :program:`yosys` was not successful
+    May raise :class:`PyrtlError` if :program:`yosys` is not configured correctly, and
+    :class:`PyrtlInternalError` if the call to :program:`yosys` was not successful
 
     """
 
@@ -416,7 +411,7 @@ def yosys_area_delay(library, abc_cmd=None, leave_in_dir=None, block=None):
 
 class PathsResult(dict):
     def print(self, file=sys.stdout):
-        """ Pretty print the result of calling :func:`.paths`
+        """ Pretty print the result of calling :func:`paths`
 
         :param f: the open file to print to (defaults to stdout)
         :return: None
@@ -440,41 +435,47 @@ class PathsResult(dict):
                     print("    (No paths)", file=file)
 
 
-def paths(src=None, dst=None, dst_nets=None, block=None):
-    """Get the list of all paths from `src` to `dst`.
+def paths(src: Union[WireVector, Iterable[WireVector]] = None,
+          dst: Union[WireVector, Iterable[WireVector]] = None,
+          dst_nets: dict[WireVector, LogicNet] = None, block: Block = None
+          ) -> PathsResult:
+    """Get the list of all paths from ``src`` to ``dst``.
 
-    :param Union[WireVector, Iterable[WireVector]] src: source wire(s) from which to
-        trace your paths; if None, will get paths from all Inputs
-    :param Union[WireVector, Iterable[WireVector]] dst: destination wire(s) to which to
-        trace your paths; if None, will get paths to all Outputs
-    :param dict[WireVector, LogicNet] dst_nets: map from wire to set of nets where the
-        wire is an argument; will compute it internally if not given via a
-        call to pyrtl.net_connections()
-    :param Block block: block to use (defaults to :ref:`working_block`)
-    :return: a map of the form `{src_wire: {dst_wire: [path]}}` for each `src_wire` in `src`
-        (or all inputs if `src` is None), `dst_wire` in `dst` (or all outputs if `dst` is None),
-        where `path` is a list of nets. This map is also an instance of :class:`.PathsResult`,
-        so you can call :meth:`.PathsResult.print` on it to pretty print it.
+    You can provide ``dst_nets`` (the result of calling :meth:`Block.net_connections`,
+    if you plan on calling this function repeatedly on a block that hasn't changed, to
+    speed things up.
 
-    You can provide `dst_nets` (the result of calling :func:`.net_connections`, if you plan
-    on calling this function repeatedly on a block that hasn't changed, to speed things up.
-
-    This function can accept one or more `src` wires, and one or more `dst` wires,
+    This function can accept one or more ``src`` wires, and one or more ``dst`` wires,
     such that it returns a map that can be accessed like so::
 
         paths[src][dst] = [<path>, <path>, ...]
 
-    where `path` is a list of nets. Thus there can be multiple paths from a given `src` wire
-    to a given `dst` wire.
+    where ``path`` is a list of nets. Thus there can be multiple paths from a given
+    ``src`` wire to a given ``dst`` wire.
 
-    If `src` and `dst` are both single wires, you still need to access the
-    result via `paths[src][dst]`.
+    If ``src`` and ``dst`` are both single wires, you still need to access the result
+    via ``paths[src][dst]``.
 
-    This also finds and returns the loop paths in the case of registers or memories that feed into
-    themselves, i.e. `paths[src][src]` is not necessarily empty.
+    This also finds and returns the loop paths in the case of registers or memories that
+    feed into themselves, i.e. ``paths[src][src]`` is not necessarily empty.
 
-    It does not distinguish between loops that include synchronous vs asynchronous memories.
+    It does not distinguish between loops that include synchronous vs asynchronous
+    memories.
 
+    :param src: Source wire(s) from which to trace your paths; if ``None``, will get
+        paths from all :class:`Inputs<Input>`.
+    :param dst: Destination wire(s) to which to trace your paths; if ``None``, will get
+        paths to all :class:`Outputs<Output>`.
+    :param dst_nets: map from wire to set of nets where the wire is an argument; will
+        compute it internally if not given via a call to
+        :meth:`Block.net_connections()`.
+    :param block: Block to use (defaults to :ref:`working_block`)
+
+    :return: a map of the form ``{src_wire: {dst_wire: [path]}}`` for each ``src_wire``
+             in ``src`` (or all inputs if ``src`` is None), ``dst_wire`` in ``dst`` (or
+             all outputs if ``dst`` is None), where ``path`` is a list of nets. This map
+             is also an instance of :class:`.PathsResult`, so you can call
+             :meth:`.PathsResult.print` on it to pretty print it.
     """
     block = working_block(block)
 
@@ -545,15 +546,16 @@ def paths(src=None, dst=None, dst_nets=None, block=None):
     return PathsResult(all_paths)
 
 
-def distance(src, dst, f, block=None):
+def distance(src: WireVector, dst: WireVector, f: Callable[[LogicNet], int],
+             block: Block = None) -> dict[list[LogicNet], int]:
     """ Calculate the 'distance' along each path from `src` to `dst` according to `f`
 
-    :param WireVector src: wire to start from
-    :param WireVector dst: wire to end on
-    :param Callable[[LogicNet], int] f: function from a net to number,
+    :param src: wire to start from
+    :param dst: wire to end on
+    :param f: function from a net to number,
         representing the 'value' of a net that you want to sum
         across all nets in the path
-    :param Block block: block to use (defaults to :ref:`working_block`)
+    :param block: block to use (defaults to :ref:`working_block`)
     :return: a map from each path (a tuple) to its calculated distance
 
     This calls the given function `f` on each net in a path, summing the result.
@@ -565,11 +567,12 @@ def distance(src, dst, f, block=None):
     return m
 
 
-def fanout(w):
-    """ Get the number of places a wire is used as an argument.
+def fanout(w: WireVector) -> int:
+    """Get the number of places a wire is used as an argument.
 
-    :param WireVector w: WireVector to check fanout for
-    :return: integer fanout count
+    :param w: :class:`WireVector` to check fanout for.
+
+    :return: Integer fanout count.
     """
     _, dst_nets = w._block.net_connections()
     if w not in dst_nets:

@@ -9,9 +9,17 @@ Tools for analyzing and optimizing aspects of PyRTL designs.
 Estimation
 ----------
 
-.. automodule:: pyrtl.analysis
+.. autoclass:: pyrtl.TimingAnalysis
    :members:
    :special-members: __init__
+
+.. autofunction:: pyrtl.area_estimation
+.. autofunction:: pyrtl.distance
+.. autofunction:: pyrtl.fanout
+.. autoclass:: pyrtl.analysis.PathsResult
+   :members:
+.. autofunction:: pyrtl.paths
+.. autofunction:: pyrtl.yosys_area_delay
 
 Optimization
 ------------
