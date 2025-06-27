@@ -46,8 +46,8 @@ to successfully run the test, but the lines are commented out because they are
 not worth showing in every example. These blocks look like:
 
 ```
-..
-    # For ``doctest``.
+.. doctest only::
+
     >>> import pyrtl
     >>> pyrtl.reset_working_block()
 ```

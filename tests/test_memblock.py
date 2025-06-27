@@ -36,7 +36,7 @@ class RTLMemBlockDesignBase(unittest.TestCase):
         self.memory[self.mem_write_address] <<= self.mem_write_data
         pyrtl.working_block().sanity_check()
 
-    def test_memblock_assign_with_extention(self):
+    def test_memblock_assign_with_extension(self):
         big_output = pyrtl.Output(self.bitwidth + 1, "big_output")
         big_output <<= self.memory[self.mem_read_address1]
         self.output1 <<= 1

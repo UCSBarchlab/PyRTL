@@ -273,9 +273,9 @@ class Block:
 
       ``ops``: ``&``, ``|``, ``^``, ``n``, ``~``, ``+``, ``-``, ``*``.
 
-      All inputs must be the same ``bitwidth``.  Logical operations produce as many
-      bits as are in the input, while ``+`` and ``-`` produce ``n + 1`` bits, and
-      ``*`` produces ``2 * n`` bits.
+      All inputs must be the same :attr:`~.WireVector.bitwidth`.  Logical operations
+      produce as many bits as are in the input, while ``+`` and ``-`` produce ``n + 1``
+      bits, and ``*`` produces ``2 * n`` bits.
 
     * In addition there are some operations for performing comparisons
       that should perform the operation specified.  The ``=`` ``op`` is checking
@@ -396,8 +396,8 @@ class Block:
     def get_memblock_by_name(self, name: str, strict: bool = False) -> MemBlock:
         """Get a :class:`.MemBlock` from the ``Block``, by name.
 
-        ..
-            # For ``doctest``.
+        .. doctest only::
+
             >>> import pyrtl
             >>> pyrtl.reset_working_block()
 
@@ -446,8 +446,8 @@ class Block:
 
         Filters ``WireVectors`` by type.
 
-        ..
-            # For ``doctest``.
+        .. doctest only::
+
             >>> import pyrtl
             >>> pyrtl.reset_working_block()
 
@@ -951,7 +951,7 @@ def _get_useful_callpoint_name():
 
     This function walks back the current frame stack attempting to find the
     first frame that is not part of the pyrtl module.  The filename (stripped
-    of path and .py extention) and line number of that call are returned.
+    of path and .py extension) and line number of that call are returned.
     This point should be the point where the user-level code is making the
     call to some pyrtl intrisic (for example, calling "mux").   If the
     attempt to find the callpoint fails for any reason, None is returned.

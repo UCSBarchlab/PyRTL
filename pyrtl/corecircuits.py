@@ -11,71 +11,84 @@ from pyrtl.rtllib import barrel, muxes
 from pyrtl.conditional import otherwise
 
 
-def mux(index: WireVectorLike, *mux_ins: WireVector,
-        **kwargs: WireVector) -> WireVector:
+def mux(index: WireVectorLike, *mux_ins: WireVectorLike,
+        default: WireVectorLike = None) -> WireVector:
     """Multiplexer returning a wire from ``mux_ins`` according to ``index``.
 
-    To avoid confusion, if you are using the ``mux`` where the ``index`` is a
-    "predicate" (meaning something that you are checking the truth value of rather than
-    using it as a number), it is recommended that you use :func:`.select` instead as
-    named arguments because the ordering is different from the classic ternary operator
-    of some languages.
+    ``index`` ``0`` corresponds to the first ``mux_in`` argument.
 
-    Example of multiplexing between ``a0`` and ``a1``::
+    .. note::
 
-        index = WireVector(1)
-        mux(index, a0, a1)
+        If ``index`` is a 1-bit predicate (something that is ``True`` or ``False``
+        rather than an integer), it is clearer to use :func:`select`, whose argument
+        order is consistent with the ternary operators in C-style languages
+        (``condition ? truecase : falsecase``).
 
-    Example of multiplexing between ``a0``, ``a1``, ``a2``, ``a3``::
+    .. doctest only::
 
-        index = WireVector(2)
-        mux(index, a0, a1, a2, a3)
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
 
-    Example of ``default`` to specify additional arguments::
+    Example of multiplexing between four values::
 
-        index = WireVector(3)
-        mux(index, a0, a1, a2, a3, a4, a5, default=0)
+        >>> index = pyrtl.Input(name="index", bitwidth=2)
+        >>> selected = pyrtl.WireVector(name="selected")
 
-    :param index: Multiplexer's selection input. Can be a ``WireVector``, or any type
-        that can be coerced to ``WireVector`` by :func:`.as_wires`.
-    :param mux_ins: ``WireVector`` arguments to select from.
-    :param kwargs: Additional ``WireVectors``, keyword arg ``default``. If you are
-        selecting between fewer items than your index can address, you can use the
-        ``default`` keyword argument to auto-expand those terms. For example, if you
-        have a 3-bit index but are selecting between 6 ``mux_ins``, you need to specify
-        a value for those other 2 possible values of ``index`` (``0b110`` and
-        ``0b111``).
+        >>> selected <<= pyrtl.mux(index, 4, 5, 6, 7)
 
-    :raises PyrtlError: If there are not enough ``mux_ins`` to select from. If there is
-        no ``default``, the number of ``mux_ins`` must be exactly ``2 **
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"index": 0})
+        >>> sim.inspect("selected")
+        4
+
+        >>> sim.step(provided_inputs={"index": 3})
+        >>> sim.inspect("selected")
+        7
+
+    .. doctest only::
+
+
+    >>> pyrtl.reset_working_block()
+
+    Example with ``default``::
+
+        >>> index = pyrtl.Input(name="index", bitwidth=2)
+        >>> selected = pyrtl.WireVector(name="selected")
+        >>> selected <<= pyrtl.mux(index, 4, 5, default=9)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"index": 1})
+        >>> sim.inspect("selected")
+        5
+
+        >>> sim.step(provided_inputs={"index": 2})
+        >>> sim.inspect("selected")
+        9
+
+    :param index: Multiplexer's selection input. Can be a :class:`.WireVector`, or any
+        type that can be coerced to :class:`.WireVector` by :func:`.as_wires`.
+    :param mux_ins: :class:`.WireVector` arguments to select from. Can be a
+        :class:`.WireVector`, or any type that can be coerced to :class:`.WireVector` by
+        :func:`.as_wires`.
+    :param default: If you are selecting between fewer items than ``index`` can address,
+        ``default`` will be used for all remaining items. For example, if you have a
+        3-bit index but are selecting between 6 ``mux_ins``, you need to specify a value
+        for those other 2 possible values of ``index`` (``0b110`` and ``0b111``).
+
+    :raises PyrtlError: If there are not enough ``mux_ins`` to select from. If
+        ``default=None``, the number of ``mux_ins`` must be exactly ``2 **
         index.bitwidth``.
 
-    :return: ``WireVector`` with ``bitwidth`` matching the length of the longest input
-             (not including ``index``).
+    :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth` matching the length
+             of the longest input (not including ``index``).
     """
-    if kwargs:  # only "default" is allowed as kwarg.
-        if len(kwargs) != 1 or 'default' not in kwargs:
-            try:
-                result = select(index, **kwargs)
-                import warnings
-                warnings.warn("Predicates are being deprecated in Mux. "
-                              "Use the select operator instead.", stacklevel=2)
-                return result
-            except Exception:
-                bad_args = [k for k in kwargs.keys() if k != 'default']
-                raise PyrtlError('unknown keywords %s applied to mux' % str(bad_args))
-        default = kwargs['default']
-    else:
-        default = None
-
     # find the diff between the addressable range and number of inputs given
     index = as_wires(index)
     short_by = 2**len(index) - len(mux_ins)
     if short_by > 0:
         if default is not None:  # extend the list to appropriate size
             mux_ins = list(mux_ins)
-            extention = [default] * short_by
-            mux_ins.extend(extention)
+            mux_ins.extend([default] * short_by)
 
     if 2 ** len(index) != len(mux_ins):
         raise PyrtlError(
@@ -92,25 +105,46 @@ def mux(index: WireVectorLike, *mux_ins: WireVector,
 
 def select(sel: WireVectorLike,
            truecase: WireVectorLike, falsecase: WireVectorLike) -> WireVector:
-    """Multiplexer returning ``falsecase`` when ``sel == 0``, otherwise ``truecase``.
+    """Multiplexer returning ``truecase`` when ``sel == 1``, otherwise ``falsecase``.
 
-    The hardware this generates is exactly the same as :func:`.mux` but by putting the
-    true case as the first argument it matches more of the C-style ternary operator
-    semantics which can be helpful for readability.
+    ``select`` is equivalent to :func:`mux` with a 1-bit ``index``, except that
+    ``select``'s ``truecase`` is its first argument, rather than its second.
+    ``select``'s argument order is consistent with the ternary operator in C-style
+    languages, which improves readability, so prefer ``select`` over :func:`mux` when
+    selecting between exactly two options.
 
-    Example of taking the min of ``a`` and ``5``::
+    .. doctest only::
 
-        select(a < 5, truecase=5, falsecase=a)
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
 
-    :param sel: Multiplexer's selection input. Can be a ``WireVector``, or any type that
-        can be coerced to ``WireVector`` by :func:`.as_wires`.
-    :param truecase: The WireVector selected if ``sel == 1``. Can be a ``WireVector``,
-        or any type that can be coerced to ``WireVector`` by :func:`.as_wires`.
-    :param falsecase: The WireVector selected if ``sel == 0``. Can be a ``WireVector``,
-        or any type that can be coerced to ``WireVector`` by :func:`.as_wires`.
+    Example that computes ``min(a, 5)``::
 
-    :return: ``WireVector`` with ``bitwidth`` matching the longer of ``truecase`` and
-             ``falsecase``.
+        >>> a = pyrtl.Input(name="a", bitwidth=4)
+        >>> min = pyrtl.WireVector(name="min")
+
+        >>> min <<= pyrtl.select(a < 5, 5, a)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"a": 4})
+        >>> sim.inspect("min")
+        5
+
+        >>> sim.step(provided_inputs={"a": 6})
+        >>> sim.inspect("min")
+        6
+
+    :param sel: Multiplexer's selection input. Can be a :class:`.WireVector`, or any
+        type that can be coerced to :class:`.WireVector` by :func:`.as_wires`.
+    :param truecase: The WireVector selected if ``sel == 1``. Can be a
+        :class:`.WireVector`, or any type that can be coerced to :class:`.WireVector` by
+        :func:`.as_wires`.
+    :param falsecase: The WireVector selected if ``sel == 0``. Can be a
+        :class:`.WireVector`, or any type that can be coerced to :class:`.WireVector` by
+        :func:`.as_wires`.
+
+    :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth` matching the longer
+             of ``truecase`` and ``falsecase``.
     """
     sel, f, t = (as_wires(w) for w in (sel, falsecase, truecase))
     f, t = match_bitwidth(f, t)
@@ -122,24 +156,50 @@ def select(sel: WireVectorLike,
 
 
 def concat(*args: WireVectorLike) -> WireVector:
-    """Concatenates multiple ``WireVectors`` into a single ``WireVector``.
+    """Concatenates multiple :class:`WireVectors<.WireVector>` into a single
+    :class:`.WireVector`.
 
-    You can provide multiple arguments and they will be combined with the right-most
-    argument being the least significant bits of the result. Note that if you have a
-    :class:`list` of arguments to ``concat`` together you will likely want index 0 to be
-    the least significant bit and so if you unpack the :class:`list` into the arguments
-    here it will be backwards. The function :func:`.concat_list` is provided for that
-    case specifically.
+    Concatenates any number of arguments. The right-most argument is the least
+    significant bits of the result.
 
-    Example using ``concat`` to combine two bytes into a 16-bit quantity::
+    .. note::
 
-        concat(msb, lsb)
+        If you have a :class:`list` of arguments to ``concat`` together, you probably
+        want index 0 to be the least significant bit. If so, and you unpack the
+        :class:`list` into ``concat``'s ``args``, the result will be backwards. The
+        function :func:`.concat_list` is provided specifically for that case.
 
-    :param args: Inputs to concatenate. Each input can be a ``WireVector``, or any type
-        that can be coerced to ``WireVector`` by :func:`.as_wires`.
+    .. note::
 
-    :return: ``WireVector`` with ``bitwidth`` equal to the sum of all ``args``
-             ``bitwidths``.
+        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which help
+        with consistently disassembling, naming, and reassembling fields.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example that concatenates two bytes into a 16-bit ``output``::
+
+        >>> msb = pyrtl.Input(name="msb", bitwidth=8)
+        >>> lsb = pyrtl.Input(name="lsb", bitwidth=8)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.concat(msb, lsb)
+        >>> output.bitwidth
+        16
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"msb": 0xab, "lsb": 0xcd})
+        >>> hex(sim.inspect("output"))
+        '0xabcd'
+
+    :param args: Inputs to concatenate, with the most significant bits first. Each input
+        can be a :class:`.WireVector`, or any type that can be coerced to
+        :class:`.WireVector` by :func:`.as_wires`.
+
+    :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth` equal to the sum of
+             all ``args``' :attr:`bitwidths<~.WireVector.bitwidth>`.
     """
     if len(args) <= 0:
         raise PyrtlError('error, concat requires at least 1 argument')
@@ -159,23 +219,46 @@ def concat(*args: WireVectorLike) -> WireVector:
 
 
 def concat_list(wire_list: list[WireVectorLike]) -> WireVector:
-    """Concatenates a list of ``WireVectors`` into a single ``WireVector``.
+    """Concatenates a list of :class:`WireVectors<.WireVector>` into a single
+    :class:`.WireVector`.
 
-    This take a :class:`list` of ``WireVectors`` and concats them all into a single
-    ``WireVector`` with the element at index 0 serving as the least significant bits.
-    This is useful when you have a variable number of ``WireVectors`` to concatenate,
-    otherwise :func:`.concat` is prefered.
+    This take a :class:`list` of :class:`WireVectors<.WireVector>` and concats them all
+    into a single :class:`.WireVector`, with the element at index 0 serving as the least
+    significant bits. This is useful when you have a variable number of
+    :class:`WireVectors<.WireVector>` to concatenate, otherwise :func:`.concat` is
+    prefered.
 
-    Example using ``concat_list`` to combine two bytes into a 16-bit quantity::
+    .. note::
 
-        mylist = [lsb, msb]
-        concat_list(mylist)
+        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which help
+        with consistently disassembling, naming, and reassembling fields.
 
-    :param wire_list: List of inputs to concatenate. Each input can be a ``WireVector``,
-        or any type that can be coerced to ``WireVector`` by :func:`.as_wires`.
+    .. doctest only::
 
-    :return: ``WireVector`` with ``bitwidth`` equal to the sum of all ``wire_list``
-             ``bitwidths``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example that concatenates two bytes into a 16-bit ``output``::
+
+        >>> msb = pyrtl.Input(name="msb", bitwidth=8)
+        >>> lsb = pyrtl.Input(name="lsb", bitwidth=8)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.concat_list([lsb, msb])
+        >>> output.bitwidth
+        16
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"msb": 0xab, "lsb": 0xcd})
+        >>> hex(sim.inspect("output"))
+        '0xabcd'
+
+    :param wire_list: List of inputs to concatenate. Each input can be a
+        :class:`.WireVector`, or any type that can be coerced to :class:`.WireVector` by
+        :func:`.as_wires`.
+
+    :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth` equal to the sum of
+             all ``wire_list`` :attr:`bitwidths<~.WireVector.bitwidth>`.
     """
     return concat(*reversed(wire_list))
 
@@ -188,18 +271,38 @@ def _signed_input_to_wirevector(x):
 
 
 def signed_add(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a ``WireVector`` for the result of signed addition.
+    """Return a :class:`.WireVector` for the result of signed addition.
 
     The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
     adding.
 
-    :param a: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
-    :param b: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
+    .. doctest only::
 
-    :return: A ``WireVector`` representing the sum of ``a`` and ``b``, with ``bitwidth``
-             ``max(a.bitwidth, b.bitwidth) + 1``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
+        >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
+        >>> out = pyrtl.Output(name="out")
+
+        >>> out <<= pyrtl.signed_add(neg_three, neg_five)
+        >>> out.bitwidth
+        6
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> pyrtl.val_to_signed_integer(sim.inspect("out"), bitwidth=out.bitwidth)
+        -8
+
+    :param a: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+    :param b: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+
+    :return: A :class:`.WireVector` representing the sum of ``a`` and ``b``, with
+             :attr:`~.WireVector.bitwidth` ``max(a.bitwidth, b.bitwidth) + 1``.
     """
     a = _signed_input_to_wirevector(a)
     b = _signed_input_to_wirevector(b)
@@ -210,18 +313,38 @@ def signed_add(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def signed_sub(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a ``WireVector`` for the result of signed subtraction.
+    """Return a :class:`.WireVector` for the result of signed subtraction.
 
     The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
     subtracting.
 
-    :param a: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
-    :param b: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
+    .. doctest only::
 
-    :return: A ``WireVector`` representing the difference between ``a`` and ``b``, with
-        ``bitwidth`` ``max(a.bitwidth, b.bitwidth) + 1``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
+        >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
+        >>> out = pyrtl.Output(name="out")
+
+        >>> out <<= pyrtl.signed_sub(neg_three, neg_five)
+        >>> out.bitwidth
+        6
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> pyrtl.val_to_signed_integer(sim.inspect("out"), bitwidth=out.bitwidth)
+        2
+
+    :param a: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+    :param b: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+
+    :return: A :class:`.WireVector` representing the difference between ``a`` and ``b``,
+             with :attr:`~.WireVector.bitwidth` ``max(a.bitwidth, b.bitwidth) + 1``.
     """
     a = _signed_input_to_wirevector(a)
     b = _signed_input_to_wirevector(b)
@@ -237,18 +360,38 @@ def mult_signed(a, b):
 
 
 def signed_mult(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a ``WireVector`` for the result of signed multiplication.
+    """Return a :class:`.WireVector` for the result of signed multiplication.
 
     The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
     multiplying.
 
-    :param a: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
-    :param b: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
+    .. doctest only::
 
-    :return: A ``WireVector`` representing the product of ``a`` and ``b``, with
-        ``bitwidth`` ``a.bitwidth + b.bitwidth``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
+        >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
+        >>> out = pyrtl.Output(name="out")
+
+        >>> out <<= pyrtl.signed_mult(neg_three, neg_five)
+        >>> out.bitwidth
+        8
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> pyrtl.val_to_signed_integer(sim.inspect("out"), bitwidth=out.bitwidth)
+        15
+
+    :param a: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+    :param b: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+
+    :return: A :class:`.WireVector` representing the product of ``a`` and ``b``, with
+             :attr:`~.WireVector.bitwidth` ``a.bitwidth + b.bitwidth``.
     """
     a = _signed_input_to_wirevector(a)
     b = _signed_input_to_wirevector(b)
@@ -259,17 +402,37 @@ def signed_mult(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def signed_lt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a 1-bit ``WireVector`` for the result of a signed ``<`` comparison.
+    """Return a 1-bit :class:`.WireVector` for the result of a signed ``<`` comparison.
 
     The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
     comparing.
 
-    :param a: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
-    :param b: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
+    .. doctest only::
 
-    :return: A 1-bit ``WireVector`` indicating if ``a`` is less than ``b``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
+        >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
+        >>> out = pyrtl.Output(name="out")
+
+        >>> out <<= pyrtl.signed_lt(neg_three, neg_five)
+        >>> out.bitwidth
+        1
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> sim.inspect("out")
+        0
+
+    :param a: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+    :param b: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+
+    :return: A 1-bit :class:`.WireVector` indicating if ``a`` is less than ``b``.
     """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = a - b
@@ -277,17 +440,38 @@ def signed_lt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def signed_le(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a 1-bit ``WireVector`` for the result of a signed ``<=`` comparison.
+    """Return a 1-bit :class:`.WireVector` for the result of a signed ``<=`` comparison.
 
     The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
     comparing.
 
-    :param a: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
-    :param b: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
+    .. doctest only::
 
-    :return: A 1-bit ``WireVector`` indicating if ``a`` is less than or equal to ``b``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
+        >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
+        >>> out = pyrtl.Output(name="out")
+
+        >>> out <<= pyrtl.signed_le(neg_three, neg_five)
+        >>> out.bitwidth
+        1
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> sim.inspect("out")
+        0
+
+    :param a: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+    :param b: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+
+    :return: A 1-bit :class:`.WireVector` indicating if ``a`` is less than or equal to
+             ``b``.
     """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = a - b
@@ -295,17 +479,37 @@ def signed_le(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def signed_gt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a 1-bit ``WireVector`` for the result of a signed ``>`` comparison.
+    """Return a 1-bit :class:`.WireVector` for the result of a signed ``>`` comparison.
 
     The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
     comparing.
 
-    :param a: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
-    :param b: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
+    .. doctest only::
 
-    :return: A 1-bit ``WireVector`` indicating if ``a`` is greater than ``b``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
+        >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
+        >>> out = pyrtl.Output(name="out")
+
+        >>> out <<= pyrtl.signed_gt(neg_three, neg_five)
+        >>> out.bitwidth
+        1
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> sim.inspect("out")
+        1
+
+    :param a: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+    :param b: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+
+    :return: A 1-bit :class:`.WireVector` indicating if ``a`` is greater than ``b``.
     """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = b - a
@@ -313,18 +517,38 @@ def signed_gt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def signed_ge(a: WireVectorLike, b: WireVectorLike) -> WireVector:
-    """Return a 1-bit ``WireVector`` for the result of a signed ``>=`` comparison.
+    """Return a 1-bit :class:`.WireVector` for the result of a signed ``>=`` comparison.
 
     The inputs are :meth:`~.WireVector.sign_extended` to the result's bitwidth before
     comparing.
 
-    :param a: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
-    :param b: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`.
+    .. doctest only::
 
-    :return: A 1-bit ``WireVector`` indicating if ``a`` is greater than or equal to
-             ``b``.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> neg_three = pyrtl.Const(val=-3, signed=True, bitwidth=3)
+        >>> neg_five = pyrtl.Const(val=-5, signed=True, bitwidth=5)
+        >>> out = pyrtl.Output(name="out")
+
+        >>> out <<= pyrtl.signed_ge(neg_three, neg_five)
+        >>> out.bitwidth
+        1
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> sim.inspect("out")
+        1
+
+    :param a: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+    :param b: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`.
+
+    :return: A 1-bit :class:`.WireVector` indicating if ``a`` is greater than or equal
+             to ``b``.
     """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = b - a
@@ -340,34 +564,39 @@ def _check_shift_inputs(a, shamt):
     return a, shamt
 
 
-def shift_left_arithmetic(bits_to_shift: WireVector,
-                          shift_amount: Union[WireVector, int]) -> WireVector:
-    """Shift left arithmetic operation.
-
-    Arithemetic shifting treats the ``bits_to_shift`` as a signed number, although for
-    left shift, arithmetic and logical shifting are identical. Zeroes will be added on
-    the right.
-
-    :param bits_to_shift: Value to shift left arithmetically.
-    :param shift_amount: Number of bit positions to shift, as an unsigned integer.
-
-    :return: A new ``WireVector`` with the same bitwidth as ``bits_to_shift``.
-    """
-    # shift left arithmetic and logical are the same thing
-    return shift_left_logical(bits_to_shift, shift_amount)
-
-
 def shift_right_arithmetic(bits_to_shift: WireVector,
                            shift_amount: Union[WireVector, int]) -> WireVector:
-    """Shift right arithmetic operation.
+    """Arithmetic right shift operation.
 
     Arithemetic shifting treats the ``bits_to_shift`` as a signed number, so copies of
     ``bits_to_shift``'s sign bit will be added on the left.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> neg_forty = pyrtl.Const(val=-40, signed=True, bitwidth=7)
+        >>> shift_amount = pyrtl.Input(name="shift_amount", bitwidth=3)
+        >>> out = pyrtl.Output(name="out")
+
+        >>> out <<= pyrtl.shift_right_arithmetic(neg_forty, shift_amount)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"shift_amount": 3})
+        >>> pyrtl.val_to_signed_integer(sim.inspect("out"), bitwidth=out.bitwidth)
+        -5
+        >>> int(-40 / 2 ** 3)
+        -5
+
+    Right shifting by ``N`` bits is equivalent to dividing by ``2^N``.
+
     :param bits_to_shift: Value to shift right arithmetically.
     :param shift_amount: Number of bit positions to shift, as an unsigned integer.
 
-    :return: A new ``WireVector`` with the same bitwidth as ``bits_to_shift``.
+    :return: A new :class:`.WireVector` with the same bitwidth as ``bits_to_shift``.
     """
     if isinstance(shift_amount, int):
         return bits_to_shift[shift_amount:].sign_extended(len(bits_to_shift))
@@ -379,15 +608,37 @@ def shift_right_arithmetic(bits_to_shift: WireVector,
 
 def shift_left_logical(bits_to_shift: WireVector,
                        shift_amount: Union[WireVector, int]) -> WireVector:
-    """Shift left logical operation.
+    """Logical left shift operation.
 
     Logical shifting treats the ``bits_to_shift`` as an unsigned number. Zeroes will be
     added on the right.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> three = pyrtl.Const(val=3, bitwidth=6)
+        >>> shift_amount = pyrtl.Input(name="shift_amount", bitwidth=3)
+        >>> out = pyrtl.Output(name="out")
+
+        >>> out <<= pyrtl.shift_left_logical(three, shift_amount)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"shift_amount": 3})
+        >>> sim.inspect("out")
+        24
+        >>> 3 * 2 ** 3
+        24
+
+    Left shifting by ``N`` bits is equivalent to multiplying by ``2^N``.
+
     :param bits_to_shift: Value to shift left logically.
     :param shift_amount: Number of bit positions to shift, as an unsigned integer.
 
-    :return: A new ``WireVector`` with the same bitwidth as ``bits_to_shift``.
+    :return: A new :class:`.WireVector` with the same bitwidth as ``bits_to_shift``.
     """
     if isinstance(shift_amount, int):
         return concat(bits_to_shift[:-shift_amount], Const(0, shift_amount))
@@ -397,17 +648,43 @@ def shift_left_logical(bits_to_shift: WireVector,
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
 
 
+shift_left_arithmetic = shift_left_logical
+"""Alias for :func:`shift_left_logical`"""
+
+
 def shift_right_logical(bits_to_shift: WireVector,
                         shift_amount: Union[WireVector, int]) -> WireVector:
-    """Shift right logical operation.
+    """Logical right shift operation.
 
     Logical shifting treats the ``bits_to_shift`` as an unsigned number, so zeroes will
     be added on the left.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> forty = pyrtl.Const(val=40, bitwidth=6)
+        >>> shift_amount = pyrtl.Input(name="shift_amount", bitwidth=3)
+        >>> out = pyrtl.Output(name="out")
+
+        >>> out <<= pyrtl.shift_right_logical(forty, shift_amount)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"shift_amount": 3})
+        >>> sim.inspect("out")
+        5
+        >>> int(40 / 2 ** 3)
+        5
+
+    Right shifting by ``N`` bits is equivalent to dividing by ``2^N``.
+
     :param bits_to_shift: Value to shift right logically.
     :param shift_amount: Number of bit positions to shift, as an unsigned integer.
 
-    :return: A new ``WireVector`` with the same bitwidth as ``bits_to_shift``.
+    :return: A new :class:`.WireVector` with the same bitwidth as ``bits_to_shift``.
     """
     if isinstance(shift_amount, int):
         return bits_to_shift[shift_amount:].zero_extended(len(bits_to_shift))
@@ -418,28 +695,48 @@ def shift_right_logical(bits_to_shift: WireVector,
 
 
 def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]:
-    """Matches multiple :class:`.WireVector` ``bitwidths`` via zero- or sign-extension.
+    """Matches multiple :class:`.WireVector` :attr:`bitwidths<~.WireVector.bitwidth>`
+    via zero- or sign-extension.
 
-    ``WireVectors`` with shorter ``bitwidths`` will be zero- or sign-extended to match
-    the longest ``bitwidth`` in ``args``, depending on ``signed``.
+    :class:`WireVectors<.WireVector>` with shorter
+    :attr:`bitwidths<~.WireVector.bitwidth>` will be to match the longest
+    :attr:`~.WireVector.bitwidth` in ``args``. :class:`WireVectors<.WireVector>` will be
+    :meth:`~.WireVector.sign_extended` or :meth:`~.WireVector.zero_extended`, depending
+    on ``signed``.
 
-    Example of matching the ``bitwidths`` of two ``WireVectors`` ``a`` and ``b`` with
-    zero-extension::
+    .. doctest only::
 
-        a, b = match_bitwidth(a, b)
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
 
-    Example of matching the ``bitwidths`` of three ``WireVectors`` ``a``, ``b``, and
-    ``c`` with with sign-extension::
+    Example with sign-extension::
 
-        a, b, c = match_bitwidth(a, b, c, signed=True)
+        >>> a = pyrtl.Const(-1, name="a_short", signed=True, bitwidth=2)
+        >>> b = pyrtl.Const(-3, name="b", signed=True, bitwidth=4)
 
-    :param args: ``WireVectors`` of which to match ``bitwidth``
-    :param signed: If ``True``, match ``bitwidth`` with
-        :meth:`~.WireVector.sign_extended`. Otherwise, match bitwidth with
+        >>> a, b = match_bitwidth(a, b, signed=True)
+        >>> a.name = "a_long"
+        >>> a.bitwidth, b.bitwidth
+        (4, 4)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> bin(sim.inspect("b"))
+        '0b1101'
+        >>> bin(sim.inspect("a_short"))
+        '0b11'
+        >>> bin(sim.inspect("a_long"))
+        '0b1111'
+
+    :param args: :class:`WireVectors<.WireVector>` of which to match
+        :attr:`~.WireVector.bitwidth`
+    :param signed: If ``True``, extend shorter :class:`WireVectors<.WireVector>` with
+        :meth:`~.WireVector.sign_extended`. Otherwise, extend with
         :meth:`~.WireVector.zero_extended`.
-    :return: :class:`tuple` of ``WireVectors``, in the same order they appeared in
-        ``args``, all with ``bitwidth`` equal to the longest ``bitwidth`` in ``args``.
 
+    :return: :class:`tuple` of :class:`WireVectors<.WireVector>`, in the same order they
+             appeared in ``args``, all with :attr:`~.WireVector.bitwidth` equal to the
+             longest :attr:`~.WireVector.bitwidth` in ``args``.
     """
     max_len = max(len(wv) for wv in args)
     if signed:
@@ -455,25 +752,44 @@ def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
     ``val`` may be a :class:`.WireVector`, :class:`int` (including
     :class:`~enum.IntEnum`), :class:`str`, or :class:`bool`.
 
-    This function is mainly used to coerce values into ``WireVectors`` (for example,
-    operations such as ``x + 1`` where ``1`` needs to be converted to a :class:`.Const`
-    ``WireVector``). An example::
+    .. doctest only::
 
-        def myhardware(input_a, input_b):
-            a = as_wires(input_a)
-            b = as_wires(input_b)
-        myhardware(3, x)
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
 
-    :func:`.as_wires` will convert the ``3`` to ``Const(3)`` but keep ``x`` unchanged
-    assuming it is a ``WireVector``.
+    ``as_wires`` is mainly used to coerce values into :class:`WireVectors<.WireVector>`
+    (for example, operations such as ``x + 1`` where ``1`` needs to be converted to a
+    :class:`.Const` :class:`.WireVector`). See :ref:`wirevector_coercion`. An example::
 
-    :param val: A ``WireVector``-like object or value that can be converted into a
+        >>> def make_my_hardware(a, b):
+        ...     a = as_wires(a)
+        ...     b = as_wires(b)
+        ...     return (a + b) & 0xf
+
+        >>> input = pyrtl.Input(name="input", bitwidth=8)
+        >>> output = pyrtl.Output(name="output", bitwidth=4)
+
+        >>> output <<= make_my_hardware(input, 7)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input": 20})
+        >>> sim.inspect("output")
+        11
+        >>> (20 + 7) % 16
+        11
+
+    In the example above, ``as_wires`` will convert the ``7`` to ``Const(7)`` but keep
+    ``input`` unchanged.
+
+    :param val: A :class:`.WireVector`, or a constant value that can be converted into a
         :class:`.Const`.
-    :param bitwidth: The ``bitwidth`` the resulting ``WireVector``.
+    :param bitwidth: The :attr:`~.WireVector.bitwidth` of the resulting
+        :class:`.WireVector`.
     :param truncating: Determines whether bits will be dropped to achieve the desired
-        ``bitwidth`` if ``val`` is too long (if ``True``, the most-significant bits will
-        be dropped).
-    :param block: ``Block`` to use for the returned ``WireVector``.
+        :attr:`~.WireVector.bitwidth` if ``val`` is too long (if ``True``, the
+        most-significant bits will be dropped).
+    :param block: ``Block`` to use for the returned :class:`.WireVector`. Defaults to
+        the :ref:`working_block`.
     """
     from pyrtl.memory import _MemIndexed
     block = working_block(block)
@@ -505,16 +821,16 @@ def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
 
 def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalue: int,
                     truncating: bool = False) -> WireVector:
-    """Update a ``WireVector`` by replacing some of its bits with ``newvalue``.
+    """Update a :class:`.WireVector` by replacing some of its bits with ``newvalue``.
 
-    Given a ``WireVector`` ``w``, this function returns a new ``WireVector`` that is
-    identical to ``w`` except in the range of bits specified by ``[range_start,
-    range_end)``. In that range, the value ```newvalue``` is swapped in. For example::
+    Given a :class:`.WireVector` ``w``, this function returns a new :class:`.WireVector`
+    that is identical to ``w`` except in the range of bits specified by ``[range_start,
+    range_end)``. In that range, the value ``newvalue`` is swapped in. For example::
 
         bitfield_update(w, range_start=20, range_end=23, newvalue=0b111)
 
-    will return a ``WireVector`` of the same length as ``w``, and with the same values
-    as ``w``, but with bits 20, 21, and 22 all set to ``1``.
+    will return a :class:`.WireVector` of the same length as ``w``, and with the same
+    values as ``w``, but with bits 20, 21, and 22 all set to ``1``.
 
     Note that ``range_start`` and ``range_end`` will be inputs to a slice and so
     standard Python slicing rules apply (e.g. negative values for end-relative indexing
@@ -528,8 +844,14 @@ def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalu
         w = bitfield_update(w, None, 1, 0x1)  # set the LSB (bit) to 1
         w = bitfield_update(w, 1, None, 0x9)  # set the bits after the LSB (bit) to 9
 
-    :param w: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`, to use as the starting point for the update
+    .. note::
+
+        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which help
+        with consistently disassembling, naming, and reassembling fields.
+
+    :param w: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`, to use as the starting point
+              for the update
     :param range_start: The start of the range of bits to be updated.
     :param range_end: The end of the range of bits to be updated.
     :param newvalue: The value to be written in to the ``range_start:range_end`` range.
@@ -572,9 +894,9 @@ def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalu
 def bitfield_update_set(w: WireVectorLike,
                         update_set: dict[tuple[int, int], WireVectorLike],
                         truncating: bool = False) -> WireVector:
-    """Update a ``WireVector`` by replacing the bits specified in ``update_set``.
+    """Update a :class:`.WireVector` by replacing the bits specified in ``update_set``.
 
-    Given a WireVector ``w``, return a new ``WireVector`` that is identical to `w`
+    Given a WireVector ``w``, return a new :class:`.WireVector` that is identical to `w`
     except in the ranges of bits specified by ``update_set``. When multiple
     non-overlapping fields need to be updated in a single cycle, this provides a clearer
     way to describe that behavior than iterative calls to :func:`.bitfield_update`::
@@ -585,8 +907,14 @@ def bitfield_update_set(w: WireVectorLike,
                 (None, 1):   0x0,      # set the LSB (bit) to 0
             })
 
-    :param w: A ``WireVector``, or any type that can be coerced to ``WireVector`` by
-              :func:`.as_wires`, to use as the starting point for the update
+    .. note::
+
+        Consider using :func:`.wire_struct` or :func:`.wire_matrix` instead, which help
+        with consistently disassembling, naming, and reassembling fields.
+
+    :param w: A :class:`.WireVector`, or any type that can be coerced to
+              :class:`.WireVector` by :func:`.as_wires`, to use as the starting point
+              for the update
     :param update_set: A map from tuples of ``(range_start, range_end)`` integers to a
         new value for the range of bits.
     :param truncating: If ``True``, clip new values to the proper bitwidth if a new
@@ -617,6 +945,10 @@ def enum_mux(cntrl: WireVector, table: dict[int, WireVector],
              default: WireVector = None, strict: bool = True) -> WireVector:
     """Build a mux for the control signals specified by an :class:`enum.IntEnum`.
 
+    .. WARNING::
+
+        Use :ref:`conditional_assignment` instead.
+
     Examples::
 
         from enum import IntEnum
@@ -630,10 +962,10 @@ def enum_mux(cntrl: WireVector, table: dict[int, WireVector],
         enum_mux(cntrl, {Command.ADD: a + b}, default=a - b)
 
     :param cntrl: Control for the mux.
-    :param table: Maps :class:`enum.IntEnum` values to ``WireVector``.
-    :param default: A ``WireVector`` to use when the key is not present. In addition it
-        is possible to use the key :data:`.otherwise` to specify a default value, but it
-        is an error if both are supplied.
+    :param table: Maps :class:`enum.IntEnum` values to :class:`.WireVector`.
+    :param default: A :class:`.WireVector` to use when the key is not present. In
+        addition it is possible to use the key :data:`.otherwise` to specify a default
+        value, but it is an error if both are supplied.
     :param strict: When ``True``, check that the dictionary has an entry for every
         possible value in the :class:`enum.IntEnum`. Note that if a ``default`` is set,
         then this check is not performed as the ``default`` will provide valid values
@@ -674,7 +1006,27 @@ def enum_mux(cntrl: WireVector, table: dict[int, WireVector],
 def and_all_bits(vector: WireVector) -> WireVector:
     """Returns the result of bitwise ANDing all the bits in ``vector``.
 
-    :param vector: Takes a single arbitrary length WireVector
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> input = pyrtl.Input(name="input", bitwidth=4)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.and_all_bits(input)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input": 0b0101})
+        >>> sim.inspect("output")
+        0
+        >>> sim.step(provided_inputs={"input": 0b1111})
+        >>> sim.inspect("output")
+        1
+
+    :param vector: Takes a single arbitrary length :class:`.WireVector`.
 
     :return: Returns a 1-bit result, the bitwise ``&`` of all of the bits in ``vector``.
     """
@@ -684,7 +1036,27 @@ def and_all_bits(vector: WireVector) -> WireVector:
 def or_all_bits(vector: WireVector) -> WireVector:
     """Returns the result of bitwise ORing all the bits in ``vector``.
 
-    :param vector: Takes a single arbitrary length WireVector
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> input = pyrtl.Input(name="input", bitwidth=4)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.or_all_bits(input)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input": 0b0000})
+        >>> sim.inspect("output")
+        0
+        >>> sim.step(provided_inputs={"input": 0b0100})
+        >>> sim.inspect("output")
+        1
+
+    :param vector: Takes a single arbitrary length :class:`.WireVector`.
 
     :return: Returns a 1-bit result, the bitwise ``|`` of all of the bits in ``vector``.
     """
@@ -694,7 +1066,27 @@ def or_all_bits(vector: WireVector) -> WireVector:
 def xor_all_bits(vector: WireVector) -> WireVector:
     """Returns the result of bitwise XORing all the bits in ``vector``.
 
-    :param vector: Takes a single arbitrary length WireVector
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> input = pyrtl.Input(name="input", bitwidth=4)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.xor_all_bits(input)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input": 0b0100})
+        >>> sim.inspect("output")
+        1
+        >>> sim.step(provided_inputs={"input": 0b0101})
+        >>> sim.inspect("output")
+        0
+
+    :param vector: Takes a single arbitrary length :class:`.WireVector`.
 
     :return: Returns a 1-bit result, the bitwise ``^`` of all of the bits in ``vector``.
     """
@@ -702,6 +1094,7 @@ def xor_all_bits(vector: WireVector) -> WireVector:
 
 
 parity = xor_all_bits  # shadowing the xor_all_bits function
+"""Alias for :func:`xor_all_bits`."""
 
 
 def tree_reduce(op, vector: WireVector) -> WireVector:
@@ -726,21 +1119,48 @@ def _apply_op_over_all_bits(op, vector):
 def rtl_any(*vectorlist: WireVectorLike) -> WireVector:
     """Hardware equivalent of Python's :func:`any`.
 
-    Returns a 1-bit :class:`.WireVector` which will hold a ``1`` if any of the inputs
-    are ``1``. In other words, this generates a large OR gate. If no inputs are
-    provided, it will return a :class:`.Const` ``0`` (since there are no ``1s`` present)
-    similar to Python's :func:`any` called with an empty list.
+    Given any number of :class:`WireVectors<.WireVector>`, return a 1-bit
+    :class:`.WireVector` which will hold a ``1`` if any of the inputs are ``1``. In
+    other words, this generates a large OR gate. If no inputs are provided, it will
+    return a :class:`.Const` ``0`` (since there are no ``1s`` present) similar to
+    Python's :func:`any` called with an empty list.
 
-    Examples::
+    .. note::
 
-        rtl_any(thing1, thing2, thing3)  # same as thing1 | thing2 | thing3
-        rtl_any(*[list_of_things])  # the unpack operator ("*") can be used for lists
-        rtl_any()  # returns Const(0) which comes up if the list above is empty
+        ``rtl_any`` is most useful when working with a variable number of
+        :class:`WireVectors<.WireVector>`. For a fixed number of
+        :class:`WireVectors<.WireVector>`, it is clearer to use ``|``::
 
-    :param vectorlist: All arguments are length 1 ``WireVector``, or any type that can
-        be coerced to ``WireVector`` by :func:`.as_wires`, with length 1.
+            any_ones = a | b | c
 
-    :return: Length 1 ``WireVector`` indicating if any bits in ``vectorlist`` are ``1``.
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> inputs = [pyrtl.Input(name="input0", bitwidth=1),
+        ...           pyrtl.Input(name="input1", bitwidth=1)]
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtl_any(*inputs)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input0": 0, "input1": 0})
+        >>> sim.inspect("output")
+        0
+        >>> sim.step(provided_inputs={"input0": 0, "input1": 1})
+        >>> sim.inspect("output")
+        1
+
+    :param vectorlist: All arguments are length 1 :class:`.WireVector`, or any type that
+        can be coerced to :class:`.WireVector` by :func:`.as_wires`, with length 1.
+
+    :raise PyrtlError: If any argument's :attr:`~.WireVector.bitwidth` is not 1.
+
+    :return: Length 1 :class:`.WireVector` indicating if any bits in ``vectorlist`` are
+             ``1``.
     """
     if len(vectorlist) == 0:
         return as_wires(False)
@@ -753,21 +1173,48 @@ def rtl_any(*vectorlist: WireVectorLike) -> WireVector:
 def rtl_all(*vectorlist: WireVectorLike) -> WireVector:
     """Hardware equivalent of Python's :func:`all`.
 
-    Returns a 1-bit :class:`.WireVector` which will hold a ``1`` only if all of the
-    inputs are ``1``. In other words, this generates a large AND gate. If no inputs are
-    provided, it will return a :class:`.Const` ``1`` (since there are no ``0s`` present)
-    similar to Python's :func:`all` called with an empty list.
+    Given any number of :class:`WireVectors<.WireVector>`, return a 1-bit
+    :class:`.WireVector` which will hold a ``1`` only if all of the inputs are ``1``. In
+    other words, this generates a large AND gate. If no inputs are provided, it will
+    return a :class:`.Const` ``1`` (since there are no ``0s`` present) similar to
+    Python's :func:`all` called with an empty list.
 
-    Examples::
+    .. note::
 
-        rtl_all(thing1, thing2, thing3)  # same as thing1 & thing2 & thing3
-        rtl_all(*[list_of_things])  # the unpack operator ("*") can be used for lists
-        rtl_all()  # returns Const(1) which comes up if the list above is empty
+        ``rtl_all`` is most useful when working with a variable number of
+        :class:`WireVectors<.WireVector>`. For a fixed number of
+        :class:`WireVectors<.WireVector>`, it is clearer to use ``&``::
 
-    :param vectorlist: All arguments are length 1 ``WireVector``, or any type that can
-        be coerced to ``WireVector`` by :func:`.as_wires`, with length 1.
+            all_ones = a & b & c
 
-    :return: Length 1 ``WireVector`` indicating if all bits in ``vectorlist`` are ``1``.
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> inputs = [pyrtl.Input(name="input0", bitwidth=1),
+        ...           pyrtl.Input(name="input1", bitwidth=1)]
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtl_all(*inputs)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input0": 0, "input1": 1})
+        >>> sim.inspect("output")
+        0
+        >>> sim.step(provided_inputs={"input0": 1, "input1": 1})
+        >>> sim.inspect("output")
+        1
+
+    :param vectorlist: All arguments are length 1 :class:`.WireVector`, or any type that
+        can be coerced to :class:`.WireVector` by :func:`.as_wires`, with length 1.
+
+    :raise PyrtlError: If any argument's :attr:`~.WireVector.bitwidth` is not 1.
+
+    :return: Length 1 :class:`.WireVector` indicating if all bits in ``vectorlist`` are
+             ``1``.
     """
     if len(vectorlist) == 0:
         return as_wires(True)

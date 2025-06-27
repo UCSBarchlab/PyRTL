@@ -90,8 +90,8 @@ class _MemIndexed(WireVector):
 class MemBlock:
     """``MemBlock`` is the object for specifying block memories.
 
-    ..
-        # For ``doctest``.
+    .. doctest only::
+
         >>> import pyrtl
         >>> pyrtl.reset_working_block()
 
@@ -107,7 +107,7 @@ class MemBlock:
         >>> read_addr = pyrtl.Register(name="read_addr", bitwidth=2)
         >>> read_addr.next <<= read_addr + 1
 
-        >>> read_data = pyrtl.Output(name="read_data", bitwidth=8)
+        >>> read_data = pyrtl.Output(name="read_data")
         >>> read_data <<= mem[read_addr]  # Creates a read port.
         >>> mem[write_addr] <<= write_addr + 10  # Creates a write port.
 
@@ -120,7 +120,8 @@ class MemBlock:
         >>> sim.tracer.trace["read_data"]
         [0, 11, 12, 13, 10, 11]
 
-    ..
+    .. doctest only::
+
         >>> pyrtl.reset_working_block()
 
     When the address of a memory is assigned to using an :class:`EnabledWrite` object,
@@ -181,8 +182,8 @@ class MemBlock:
     ---------------------------
     Simultaneous Read and Write
     ---------------------------
-    ..
-        # For ``doctest``.
+    .. doctest only::
+
         >>> import pyrtl
         >>> pyrtl.reset_working_block()
 
@@ -374,14 +375,14 @@ class MemBlock:
 
 
 class RomBlock(MemBlock):
-    """PyRTL Read Only Memory.
+    """PyRTL Read Only Memory (ROM).
 
-    RomBlocks are the read only memory block for PyRTL. They support the same read
+    ``RomBlocks`` are PyRTL's read only memory block. They support the same read
     interface as :class:`MemBlock`, but they cannot be written to (i.e. there are no
     write ports). The ROM's contents are specified when the ROM is constructed.
 
-    ..
-        # For ``doctest``.
+    .. doctest only::
+
         >>> import pyrtl
         >>> pyrtl.reset_working_block()
 
@@ -390,7 +391,7 @@ class RomBlock(MemBlock):
         >>> rom = pyrtl.RomBlock(bitwidth=3, addrwidth=2, romdata=[4, 5, 6, 7])
         >>> read_addr = pyrtl.Register(name="read_addr", bitwidth=2)
         >>> read_addr.next <<= read_addr + 1
-        >>> data = pyrtl.Output(name="data", bitwidth=3)
+        >>> data = pyrtl.Output(name="data")
         >>> data <<= rom[read_addr]
 
         >>> sim = pyrtl.Simulation()
@@ -407,26 +408,25 @@ class RomBlock(MemBlock):
         """Create a PyRTL Read Only Memory.
 
         :param bitwidth: The bitwidth of each element in the ROM.
-        :param addrwidth: The number of bits used to address an element in the ROM.
-            The ROM can store ``2 ** addrwidth`` elements.
+        :param addrwidth: The number of bits used to address an element in the ROM. The
+            ROM can store ``2 ** addrwidth`` elements.
         :param romdata: Specifies the data stored in the ROM. This can either be a
             function or an array (iterable) that maps from address to data.
         :param name: The identifier for the memory.
-        :param max_read_ports: limits the number of read ports each block can create;
+        :param max_read_ports: Limits the number of read ports each block can create;
             passing ``None`` indicates there is no limit.
-        :param build_new_roms: indicates whether :meth:`RomBlock.__getitem__` should
-            create copies of the RomBlock to avoid exceeding ``max_read_ports``.
-        :param asynchronous: If ``False``, ensure that all RomBlock inputs are
+        :param build_new_roms: Indicates whether :meth:`RomBlock.__getitem__` should
+            create copies of the ``RomBlock`` to avoid exceeding ``max_read_ports``.
+        :param asynchronous: If ``False``, ensure that all ``RomBlock`` inputs are
             registers, inputs, or constants. See :ref:`asynchronous_memories`.
         :param pad_with_zeros: If ``True``, fill any missing ``romdata`` with zeros so
-            all accesses to the ROM are well defined. Otherwise, the simulation will
-            throw an error when accessing unintialized data. If you are generating
-            Verilog, you will need to specify a value for every address (in which case
-            setting this to ``True`` will help), however for testing and simulation it
-            useful to know if you are accessing an unspecified value (which is why it is
-            ``False`` by default).
+            all accesses to the ROM are well defined. Otherwise, :class:`.Simulation`
+            will raise an exception when accessing unintialized data. If you are
+            generating Verilog, you will need to specify a value for every address (in
+            which case setting this to ``True`` will help), however for testing and
+            simulation it useful to know if you are accessing an unspecified value
+            (which is why it is ``False`` by default).
         :param block: The block to add to, defaults to the :ref:`working_block`.
-
         """
 
         super().__init__(bitwidth=bitwidth, addrwidth=addrwidth, name=name,
@@ -446,8 +446,8 @@ class RomBlock(MemBlock):
         :param addr: ``MemBlock`` address to read.
 
         :raises PyrtlError: If ``addr`` is an ``int``. ``RomBlocks`` hold constant data,
-            so they are not needed when the read address is statically known. Create a
-            :class:`.Const` with the data at the read address instead.
+            so they don't need to be read when the read address is statically known.
+            Create a :class:`.Const` with the data at the read address instead.
 
         :return: A ``WireVector`` containing the data read from the ``RomBlock`` at
                  address ``addr``.

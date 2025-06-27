@@ -307,7 +307,8 @@ class Simulation:
         ``0``, respectively. In the second cycle, they take on ``1`` and ``1``,
         respectively.
 
-        .. # For ``doctest``.
+        .. doctest only::
+
             >>> import pyrtl
             >>> pyrtl.reset_working_block()
 
@@ -402,8 +403,8 @@ class Simulation:
     def inspect(self, w: str) -> int:
         """Get the value of a :class:`.WireVector` in the current ``Simulation`` cycle.
 
-        ..
-            # For ``doctest``.
+        .. doctest only::
+
             >>> import pyrtl
             >>> pyrtl.reset_working_block()
 
@@ -439,8 +440,8 @@ class Simulation:
             This returns the current contents of the :class:`.MemBlock`. Modifying the
             returned :class:`dict` will modify the ``Simulation``'s state.
 
-        ..
-            # For ``doctest``.
+        .. doctest only::
+
             >>> import pyrtl
             >>> pyrtl.reset_working_block()
 
@@ -1768,7 +1769,8 @@ class SimulationTrace:
 def enum_name(EnumClass: type) -> typing.Callable[[int], str]:
     """Returns a function that returns the name of an :class:`enum.IntEnum` value.
 
-    .. # For ``doctest``.
+    .. doctest only::
+
         >>> import pyrtl
         >>> import enum
         >>> pyrtl.reset_working_block()
@@ -1796,7 +1798,7 @@ def enum_name(EnumClass: type) -> typing.Callable[[int], str]:
         an enum value, like ``State.FOO`` or ``1``.
 
     :return: A function that accepts an enum value, like ``State.FOO`` or ``1``, and
-        returns the value's name as a string, like ``"FOO"``.
+             returns the value's name as a string, like ``"FOO"``.
     """
     def value_to_name(value: int) -> str:
         return EnumClass(value).name

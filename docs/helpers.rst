@@ -8,7 +8,7 @@ The functions below provide ways of combining, slicing, and extending
 :class:`WireVectors<.WireVector>` in ways that are often useful in hardware
 design.  The functions below extend those member functions of the
 :class:`.WireVector` class itself (which provides support for the Python
-builtin ``len``, slicing e.g. ``wire[3:6]``,
+builtin :func:`len`, slicing e.g. ``wire[3:6]``,
 :meth:`~pyrtl.wire.WireVector.zero_extended`,
 :meth:`~pyrtl.wire.WireVector.sign_extended`, and many operators such as
 addition and multiplication).
@@ -28,8 +28,9 @@ In PyRTL there is only one function in charge of coercing values into
 :class:`WireVectors<.WireVector>`, and that is :func:`.as_wires`. This function
 is called in almost all helper functions and classes to manage the mixture of
 constants and :class:`WireVectors<.WireVector>` that naturally occur in
-hardware development. See :ref:`wirevector_coercion` for examples and more
-details.
+hardware development.
+
+See :ref:`wirevector_coercion` for examples and more details.
 
 .. autofunction:: pyrtl.corecircuits.as_wires
 
@@ -38,7 +39,6 @@ Control Flow Hardware
 
 .. autofunction:: pyrtl.corecircuits.mux
 .. autofunction:: pyrtl.corecircuits.select
-.. autofunction:: pyrtl.corecircuits.enum_mux
 .. autofunction:: pyrtl.corecircuits.bitfield_update
 .. autofunction:: pyrtl.corecircuits.bitfield_update_set
 .. autoclass:: pyrtl.helperfuncs.MatchedFields
@@ -100,10 +100,10 @@ addition, subtraction, multiplication, comparison, and many others).
 .. autofunction:: pyrtl.corecircuits.signed_le
 .. autofunction:: pyrtl.corecircuits.signed_gt
 .. autofunction:: pyrtl.corecircuits.signed_ge
-.. autofunction:: pyrtl.corecircuits.shift_left_arithmetic
-.. autofunction:: pyrtl.corecircuits.shift_right_arithmetic
 .. autofunction:: pyrtl.corecircuits.shift_left_logical
+.. autofunction:: pyrtl.corecircuits.shift_left_arithmetic
 .. autofunction:: pyrtl.corecircuits.shift_right_logical
+.. autofunction:: pyrtl.corecircuits.shift_right_arithmetic
 
 Encoders and Decoders
 ---------------------

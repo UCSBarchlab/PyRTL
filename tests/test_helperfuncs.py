@@ -14,7 +14,12 @@ from pyrtl.rtllib import testingutils as utils
 
 class TestDocTests(unittest.TestCase):
     """Test documentation examples."""
-    def test_doctests(self):
+    def test_corecircuits_doctests(self):
+        failures, tests = doctest.testmod(m=pyrtl.corecircuits)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
+
+    def test_helperfuncs_doctests(self):
         failures, tests = doctest.testmod(m=pyrtl.helperfuncs)
         self.assertGreater(tests, 0)
         self.assertEqual(failures, 0)
@@ -822,13 +827,6 @@ class TestMux(unittest.TestCase):
         s = pyrtl.WireVector(name='s', bitwidth=2)
         with self.assertRaises(pyrtl.PyrtlError):
             r = pyrtl.corecircuits.mux(s, a, b, c, d, e, default=0)
-
-    def test_mux_too_many_inputs_with_extra_kwarg(self):
-        a = pyrtl.WireVector(name='a', bitwidth=3)
-        b = pyrtl.WireVector(name='b', bitwidth=1)
-        s = pyrtl.WireVector(name='s', bitwidth=2)
-        with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.corecircuits.mux(s, a, b, default=0, foo=1)
 
 
 class TestMuxSimulation(unittest.TestCase):
