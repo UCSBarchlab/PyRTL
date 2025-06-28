@@ -20,7 +20,6 @@ Compiled (JIT to C) Simulation
 
 .. autoclass:: pyrtl.CompiledSimulation
     :members:
-    :special-members: __init__
     :exclude-members: run
 
 Simulation Trace

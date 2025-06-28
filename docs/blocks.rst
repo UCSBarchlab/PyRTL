@@ -1,6 +1,10 @@
 Block and Logic Nets
 =====================
 
+:class:`.Block` and :class:`.LogicNet` are lower level PyRTL abstractions. Most
+users won't need to understand them, unless they are implementing
+:ref:`analysis_and_optimization` passes or modifying PyRTL itself.
+
 Blocks
 ------
 

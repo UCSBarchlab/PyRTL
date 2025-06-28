@@ -248,7 +248,7 @@ class Block:
     references to the :class:`WireVectors<WireVector>` and
     :class:`MemBlocks<MemBlock>` that connect them together.
 
-    The logic structure is primarily contained in :attr:`Block.logic` which holds a
+    The logic structure is primarily contained in :attr:`~Block.logic` which holds a
     :class:`set` of :class:`LogicNets <LogicNet>`. Each :class:`LogicNet` describes a
     primitive operation (such as an adder or memory), a 4-tuple of:
 
@@ -267,65 +267,71 @@ class Block:
     Below is a list of the basic operations. These properties (more formally specified)
     should all be checked by :meth:`sanity_check`.
 
-    * Most logical and arithmetic ``ops`` are pretty self explanatory. Each takes
-      exactly two ``args``, and they should perform the arithmetic or logical
-      operation specified.
+    * Most logical and arithmetic :class:`ops<LogicNet.op>` are pretty self
+      explanatory. Each takes exactly two :class:`~LogicNet.args`, and they should
+      perform the arithmetic or logical operation specified.
 
-      ``ops``: ``&``, ``|``, ``^``, ``n``, ``~``, ``+``, ``-``, ``*``.
+      :class:`ops<LogicNet.op>`: ``&``, ``|``, ``^``, ``n``, ``~``, ``+``, ``-``,
+      ``*``.
 
       All inputs must be the same :attr:`~WireVector.bitwidth`.  Logical operations
       produce as many bits as are in the input, while ``+`` and ``-`` produce ``n + 1``
       bits, and ``*`` produces ``2 * n`` bits.
 
     * In addition there are some operations for performing comparisons
-      that should perform the operation specified.  The ``=`` ``op`` is checking
-      to see if the bits of the ``args`` vectors are equal, while ``<`` and ``>`` do
-      *unsigned* arithmetic comparison.  All comparisons generate a single bit
-      ``dest`` (``1`` for ``True``, ``0`` for ``False``).
+      that should perform the operation specified.  The ``=`` :class:`~LogicNet.op` is
+      checking to see if the bits of the :class:`~LogicNet.args` vectors are equal,
+      while ``<`` and ``>`` do *unsigned* arithmetic comparison.  All comparisons
+      generate a single bit :class:`dest<LogicNet.dests>` (``1`` for ``True``,
+      ``0`` for ``False``).
 
-    * The ``w`` ``op`` is simply a directional wire that connects ``args`` to
-      ``dests``. It has no logic function.
+    * The ``w`` :class:`~LogicNet.op` is simply a directional wire that connects
+      :class:`~LogicNet.args` to :class:`~LogicNet.dests`. It has no logic function.
 
-    * The ``x`` ``op`` is a multiplexer which takes a select bit and two
-      signals as ``args``.  If the value of the select bit is ``0`` it selects the
-      second ``arg``; if it is ``1`` it selects the third ``arg``.  Select must be a
-      single bit, while the other two ``args`` must be the same length.
+    * The ``x`` :class:`~LogicNet.op` is a multiplexer which takes a select bit and two
+      signals as :class:`~LogicNet.args`.  If the value of the select bit is ``0`` it
+      selects the second :class:`arg<LogicNet.args>`; if it is ``1`` it selects the
+      third :class:`arg<LogicNet.args>`.  Select must be a single bit, while the other
+      two :class:`~LogicNet.args` must be the same length.
 
-    * The ``c`` ``op`` is the concatenation operator and combines any number
-      of ``WireVector`` ``args`` (``a``, ``b``, ..., ``z``) into a single new
-      ``WireVector`` with ``a`` in the MSB and ``z`` (or whatever is last) in the LSB
-      position.
+    * The ``c`` :class:`~LogicNet.op` is the concatenation operator and combines any
+      number of :class:`WireVector` :class:`~LogicNet.args` (``a``, ``b``, ..., ``z``)
+      into a single new :class:`WireVector` with ``a`` in the MSB and ``z`` (or whatever
+      is last) in the LSB position.
 
-    * The ``s`` ``op`` is the selection operator and chooses, based on the
-      ``op_param`` specified, a subset of the logic bits from a ``WireVector`` to
-      select.  Repeats are accepted.
+    * The ``s`` :class:`~LogicNet.op` is the selection operator and chooses, based on
+      the :class:`~LogicNet.op_param` specified, a subset of the logic bits from a
+      :class:`WireVector` to select.  Repeats are accepted.
 
-    * The ``r`` ``op`` is a register and on posedge, simply copies the value
-      from ``arg`` to the register's ``dest``.
+    * The ``r`` :class:`~LogicNet.op` is a register and on posedge, simply copies the
+      value from :class:`arg<LogicNet.args>` to the register's
+      :class:`dest<LogicNet.dests>`.
 
-    * The ``m`` ``op`` is a memory block read port, which supports async
+    * The ``m`` :class:`~LogicNet.op` is a memory block read port, which supports async
       reads (acting like combinational logic). Multiple read (and write) ports
       are possible to the same memory but each ``m`` defines only one of
-      those. The ``op_param`` is a tuple containing two references: the ``memid``,
-      and a reference to the :class:`MemBlock` containing this port. The
+      those. The :class:`~LogicNet.op_param` is a tuple containing two references: the
+      ``memid``, and a reference to the :class:`MemBlock` containing this port. The
       :class:`MemBlock` should only be used for debug and sanity checks. Each read port
-      has one ``addr`` (an ``arg``) and one ``data`` (a ``dest``).
+      has one ``addr`` (an :class:`arg<LogicNet.args>`) and one ``data`` (a
+      :class:`dest<LogicNet.dests>`).
 
-    * The ``@`` (update) ``op`` is a memory block write port, which supports
-      synchronous writes (writes are "latched" at positive edge).  Multiple
+    * The ``@`` (update) :class:`~LogicNet.op` is a memory block write port, which
+      supports synchronous writes (writes are "latched" at positive edge).  Multiple
       write (and read) ports are possible to the same memory but each ``@``
-      defines only one of those. The ``op_param`` is a tuple containing two
-      references: the ``memid``, and a reference to the :class:`MemBlock`.  Writes have
-      three ``args`` (``addr``, ``data``, and write enable ``we_en``).  The ``dests``
-      should be an empty tuple.  You will not see a written value change until the
-      following cycle.  If multiple writes happen to the same address in the
-      same cycle the behavior is currently undefined.
+      defines only one of those. The :class:`~LogicNet.op_param` is a tuple containing
+      two references: the ``memid``, and a reference to the :class:`MemBlock`.  Writes
+      have three :class:`~LogicNet.args` (``addr``, ``data``, and write enable
+      ``we_en``).  The :class:`~LogicNet.dests` should be an empty tuple.  You will not
+      see a written value change until the following cycle.  If multiple writes happen
+      to the same address in the same cycle the behavior is currently undefined.
 
-    The connecting elements (``args`` and ``dests``) should be ``WireVectors`` or
-    derived from ``WireVector``, and should be registered with the ``Block`` using
-    :meth:`add_wirevector`. ``LogicNets`` should be registered using :meth:`add_net`.
+    The connecting elements (:class:`~LogicNet.args` and :class:`~LogicNet.dests`)
+    should be :class:`WireVectors<WireVector>` or derived from :class:`WireVector`, and
+    should be registered with the ``Block`` using :meth:`add_wirevector`.
+    :class:`LogicNets<LogicNet>` should be registered using :meth:`add_net`.
 
-    In addition, there is a member :attr:`Block.legal_ops` which defines the set of
+    In addition, there is a member :attr:`~Block.legal_ops` which defines the set of
     operations that can be legally added to the ``Block``. By default it is set to all
     of the above defined operations, but it can be useful in certain cases to only allow
     a subset of operations (such as when transforms are being done that are "lowering"
@@ -333,6 +339,11 @@ class Block:
 
     See :class:`LogicNet` for a complete list of defined operations.
     """
+    logic: set[LogicNet]
+    """Set of :class:`LogicNets<LogicNet>` belonging to this ``Block``."""
+
+    legal_ops: set[str]
+    """Set of allowed :attr:`ops<LogicNet.op>` in this block."""
 
     def __init__(self):
         """Creates an empty hardware block."""
@@ -356,7 +367,7 @@ class Block:
 
     def add_wirevector(self, wirevector: WireVector):
         """
-        :param wirevector: ``WireVector`` to add to ``self``.
+        :param wirevector: :class:`WireVector` to add to ``self``.
         """
         self.sanity_check_wirevector(wirevector)
         self.wirevector_set.add(wirevector)
@@ -364,7 +375,7 @@ class Block:
 
     def remove_wirevector(self, wirevector: WireVector):
         """
-        :param wirevector: ``WireVector`` to remove from ``self``.
+        :param wirevector: :class:`WireVector` to remove from ``self``.
         """
         self.wirevector_set.remove(wirevector)
         del self.wirevector_by_name[wirevector.name]
@@ -376,7 +387,7 @@ class Block:
         :class:`WireVectors<WireVector>` are added; they must be added seperately with
         :meth:`add_wirevector`.
 
-        :param net: ``LogicNet`` to add to ``self``.
+        :param net: :class:`LogicNet` to add to ``self``.
         """
 
         self.sanity_check_net(net)
@@ -401,11 +412,11 @@ class Block:
             >>> import pyrtl
             >>> pyrtl.reset_working_block()
 
-        Useful for getting access to internal ``MemBlocks`` for testing. For example,
-        the :class:`Simulation` constructor requires a ``MemBlock`` reference for its
-        ``memory_value_map``. Instead of passing the ``MemBlock`` around in your code,
-        you can get a reference to the ``MemBlock`` from the global
-        :func:`working_block`::
+        Useful for getting access to internal :class:`MemBlocks<MemBlock>` for testing.
+        For example, the :class:`Simulation` constructor requires a :class:`MemBlock`
+        reference for its ``memory_value_map``. Instead of passing the :class:`MemBlock`
+        around in your code, you can get a reference to the :class:`MemBlock` from the
+        global :func:`working_block`::
 
             >>> def read_internal_mem(read_addr: pyrtl.WireVector) -> pyrtl.WireVector:
             ...     mem = pyrtl.MemBlock(bitwidth=8, addrwidth=4, name='internal_mem')
@@ -421,17 +432,17 @@ class Block:
             >>> sim.inspect(data.name)
             7
 
-        Returns ``None`` if no matching ``MemBlock`` can be found. However, if
+        Returns ``None`` if no matching :class:`MemBlock` can be found. However, if
         ``strict=True``, then this will instead throw a :class:`PyrtlError` when no
         match is found.
 
-        :param name: Name of the ``MemBlock`` to retrieve.
+        :param name: Name of the :class:`MemBlock` to retrieve.
         :param strict: When ``True``, raises an exception when no match is found.
             Defaults to ``False``.
 
         :raise PyrtlError: When ``strict=True`` and no match is found.
 
-        :return: The ``MemBlock`` object with specified name
+        :return: The :class:`MemBlock` object with specified name
         """
         if name in self.memblock_by_name:
             return self.memblock_by_name[name]
@@ -444,18 +455,18 @@ class Block:
                           exclude: tuple[type] = tuple()) -> set[WireVector]:
         """Return a subset of the ``Block's`` :class:`WireVectors<WireVector>`.
 
-        Filters ``WireVectors`` by type.
+        Filters :class:`WireVectors<WireVector>` by type.
 
         .. doctest only::
 
             >>> import pyrtl
             >>> pyrtl.reset_working_block()
 
-        If ``cls`` is ``None``, returns all the ``WireVectors`` associated with the
-        ``Block``. If ``cls`` is a single type, or a tuple of types, only
-        ``WireVectors`` of the matching types will be returned. This is helpful for
-        getting all of a ``Block``'s :class:`Inputs<Input>`, :class:`Outputs<Output>`,
-        or :class:`Registers<Register>` for example::
+        If ``cls`` is ``None``, returns all the :class:`WireVectors<WireVector>`
+        associated with the ``Block``. If ``cls`` is a single type, or a tuple of types,
+        only :class:`WireVectors<WireVector>` of the matching types will be returned.
+        This is helpful for getting all of a ``Block``'s :class:`Inputs<Input>`,
+        :class:`Outputs<Output>`, or :class:`Registers<Register>` for example::
 
             >>> len([pyrtl.Input(bitwidth=4) for _ in range(2)])
             2
@@ -474,13 +485,13 @@ class Block:
             >>> any(isinstance(non_input, pyrtl.Input) for non_input in non_inputs)
             False
 
-        :param cls: Type of ``WireVector`` objects to include in the returned
+        :param cls: Type of :class:`WireVector` objects to include in the returned
             :class:`set`.
-        :param exclude: Type of ``WireVector`` objects to exclude from the returned
+        :param exclude: Type of :class:`WireVector` objects to exclude from the returned
             :class:`set`.
 
-        :return: ``WireVectors`` in the ``Block`` that are both a ``cls`` type and not
-                 an ``excluded`` type.
+        :return: :class:`WireVectors<WireVector>` in the ``Block`` that are both a
+                 ``cls`` type and not an ``excluded`` type.
         """
         if cls is None:
             initial_set = self.wirevector_set
@@ -496,14 +507,16 @@ class Block:
 
         Filters :class:`LogicNets<LogicNet>` by their :attr:`~LogicNet.op`.
 
-        If ``op`` is ``None``, returns all the ``LogicNets`` associated with the
-        ``Block``. Otherwise, returns a set of the ``LogicNets`` with one of the
-        specified ``ops``. This is helpful for getting all memories of a block for
-        example.
+        If :class:`~LogicNet.op` is ``None``, returns all the
+        :class:`LogicNets<LogicNet>` associated with the ``Block``. Otherwise, returns a
+        set of the :class:`LogicNets<LogicNet>` with one of the specified
+        :class:`ops<LogicNet.op>`. This is helpful for getting all memories of a block
+        for example.
 
         :param op: :attr:`LogicNet.op` to filter on. Defaults to ``None``.
 
-        :return: ``LogicNets`` in the ``Block`` with the corresponding ``op``.
+        :return: :class:`LogicNets<LogicNet>` in the ``Block`` with the corresponding
+                 :class:`~LogicNet.op`.
         """
         if op is None:
             return self.logic
@@ -513,13 +526,14 @@ class Block:
     def get_wirevector_by_name(self, name: str, strict: bool = False) -> WireVector:
         """Return the :class:`WireVector` with matching ``name``.
 
-        :param name: Name of ``WireVector``.
-        :param strict: If ``True``, raise an exception when no matching ``WireVector``
-            is found. Defaults to False.
+        :param name: Name of :class:`WireVector`.
+        :param strict: If ``True``, raise an exception when no matching
+            :class:`WireVector` is found. Defaults to False.
 
-        :raise PyrtlError: if ``strict=True`` and no matching ``WireVector`` is found.
+        :raise PyrtlError: if ``strict=True`` and no matching :class:`WireVector` is
+            found.
 
-        :return: The ``WireVector`` with the specified ``name``.
+        :return: The :class:`WireVector` with the specified ``name``.
         """
         if name in self.wirevector_by_name:
             return self.wirevector_by_name[name]
@@ -550,11 +564,11 @@ class Block:
                                    dict[WireVector, list[LogicNet]]]:
         """Returns `sources` and `sinks` for each :class:`WireVector` in the ``Block``.
 
-        A ``WireVector``'s `source` is the :class:`LogicNet` that sets the
-        ``WireVector``'s value.
+        A :class:`WireVector`'s `source` is the :class:`LogicNet` that sets the
+        :class:`WireVector`'s value.
 
-        A ``WireVector``'s `sinks` are the :class:`LogicNets<LogicNet>` that use the
-        ``WireVector``'s value.
+        A :class:`WireVector`'s `sinks` are the :class:`LogicNets<LogicNet>` that use
+        the :class:`WireVector`'s value.
 
         This information helps when building a graph representation for the ``Block``.
         See :func:`net_graph` for an example.
@@ -565,9 +579,10 @@ class Block:
             :class:`Outputs<Output>`) will be represented as wires that use themselves.
             If ``False``, these nodes will be excluded from the results.
 
-        :return: Two dictionaries. The first maps ``WireVectors`` to the ``LogicNet``
-                 that creates their signal (``wire_src_dict``). The second maps
-                 ``WireVectors`` to a list of ``LogicNets`` that use their signal
+        :return: Two dictionaries. The first maps :class:`WireVectors<WireVector>` to
+                 the :class:`LogicNet` that creates their signal (``wire_src_dict``).
+                 The second maps :class:`WireVectors<WireVector>` to a list of
+                 :class:`LogicNets<LogicNet>` that use their signal
                  (``wire_sink_dict``).
         """
         src_list = {}
@@ -899,14 +914,14 @@ class PostSynthBlock(Block):
     """
     A map from old IO :class:`WireVector` to a :class:`list` of new IO
     :class:`WireVectors<WireVector>` it maps to; this is a :class:`list` because for
-    unmerged IO vectors, each old N-bit IO ``WireVector`` maps to N new 1-bit IO
-    ``WireVectors``.
+    unmerged IO vectors, each old N-bit IO :class:`WireVector` maps to N new 1-bit IO
+    :class:`WireVectors<WireVector>`.
     """
     reg_map: dict[Register, list[Register]]
     """
     A map from old :class:`Register` to a :class:`list` of new
     :class:`Registers<Register>`; a :class:`list` because post-synthesis, each N-bit
-    ``Register`` has been mapped to N 1-bit ``Registers``.
+    :class:`Register` has been mapped to N 1-bit :class:`Registers<Register>`.
     """
     mem_map: dict[MemBlock, MemBlock]
     """
@@ -979,12 +994,12 @@ def _get_useful_callpoint_name():
 
 
 def working_block(block: Block = None) -> Block:
-    """ Convenience function for capturing the current working block.
+    """Convenience function for capturing the current working block.
 
-    If a block is not passed, or if the block passed is None, then
-    this will return the "current working block".  However, if a block
-    is passed in it will simply return that block instead.  This feature
-    is useful in allowing functions to "override" the current working block.
+    If a ``block`` is not passed, or if the ``block`` passed is ``None``, then this will
+    return the "current working block". However, if a ``block`` is passed in it will
+    simply return ``block`` instead. This feature is useful in allowing functions to
+    "override" the current working block.
     """
 
     if block is None:
@@ -1003,7 +1018,7 @@ def reset_working_block():
 
 class set_working_block:
     """ Set the working block to be the block passed as argument.
-    Compatible with the `with` statement.
+    Compatible with the ``with`` statement.
 
     Sanity checks will only be run if the new block is different
     from the original block.
@@ -1033,7 +1048,7 @@ class set_working_block:
 def temp_working_block():
     """ Set the working block to be new temporary block.
 
-    If used with the `with` statement the block will be reset to the
+    If used with the ``with`` statement the block will be reset to the
     original value (at the time of call) at exit of the context.
     """
     return set_working_block(Block())
@@ -1044,12 +1059,12 @@ def set_debug_mode(debug: bool = True):
 
     Sets the debug mode to the specified ``debug`` value. Debug mode is off by default,
     to improve performance. When debug mode is enabled, all temporary
-    :class:`WireVectors<WireVector>` will be assigned names based on the line of code
-    on which they were created.
+    :class:`WireVectors<WireVector>` will be assigned names based on the line of code on
+    which they were created.
 
     Each :class:`WireVector` will also save a copy of its call stack when constructed.
-    These call stacks can be inspected as ``WireVector.init_call_stack``, and they will
-    appear in :meth:`Block.sanity_check` error messages.
+    These call stacks can be inspected as :attr:`WireVector.init_call_stack`, and they
+    will appear in :meth:`Block.sanity_check` error messages.
 
     :param debug: Optional boolean parameter to which the debug mode will be set.
     """

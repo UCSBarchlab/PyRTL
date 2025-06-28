@@ -56,19 +56,19 @@ class CompiledSimulation:
     """Simulate a block by generating, compiling, and running C code.
 
     ``CompiledSimulation`` provides significant execution speed improvements over
-    :class:`.FastSimulation`, at the cost of even longer start-up time. Generally this
-    will do better than :class:`.FastSimulation` for simulations requiring over 1000
+    :class:`FastSimulation`, at the cost of even longer start-up time. Generally this
+    will do better than :class:`FastSimulation` for simulations requiring over 1000
     steps.
 
     ``CompiledSimulation`` is not built to be a debugging tool, though it may help with
-    debugging. Note that only :class:`.Input` and :class:`.Output` wires can be traced
+    debugging. Note that only :class:`Input` and :class:`Output` wires can be traced
     with ``CompiledSimulation``.
 
     .. note::
-        For very large circuits, :class:`.FastSimulation` can sometimes be a better
+        For very large circuits, :class:`FastSimulation` can sometimes be a better
         choice than ``CompiledSimulation`` because ``CompiledSimulation`` will generate
         an extremely large ``.c`` file, which can take prohibitively long to compile and
-        optimize. :class:`.FastSimulation` will generate an extremely large ``.py``
+        optimize. :class:`FastSimulation` will generate an extremely large ``.py``
         file, but Python will interpret that generated code as needed, instead of trying
         to process all the generated code at once.
 
@@ -84,14 +84,16 @@ class CompiledSimulation:
 
     If using the multiplication operand, only some architectures are supported:
 
-    - x86-64 / amd64
-    - arm64 / aarch64
-    - mips64 (untested)
+    - ``x86-64`` / ``amd64``
+    - ``arm64`` / ``aarch64``
+    - ``mips64`` (untested)
 
-    ``default_value`` is currently only implemented for :class:`Registers<.Register>`,
-    not :class:`MemBlocks<.MemBlock>`.
+    ``default_value`` is currently only implemented for :class:`Registers<Register>`,
+    not :class:`MemBlocks<MemBlock>`.
 
-    See :class:`.Simulation` for an overview of PyRTL simulations.
+    ``CompiledSimulation`` is a drop-in replacement for :class:`Simulation`, so the two
+    classes share the same interface. See :class:`Simulation` for interface
+    documentation, and more details about PyRTL simulations.
     """
 
     def __init__(
@@ -128,15 +130,8 @@ class CompiledSimulation:
         self._create_dll()
         self._initialize_mems()
 
-    # Use Simulation.__init__'s docstring as CompiledSimulation.__init__'s docstring.
-    __init__.__doc__ = Simulation.__init__.__doc__
-
     def inspect_mem(self, mem: MemBlock) -> dict[int, int]:
         return DllMemInspector(self, mem)
-
-    # Use Simulation.inspect_mem's docstring as CompiledSimulation.inspect_mem's
-    # docstring.
-    inspect_mem.__doc__ = Simulation.inspect_mem.__doc__
 
     def inspect(self, w: str) -> int:
         if isinstance(w, WireVector):
@@ -151,9 +146,6 @@ class CompiledSimulation:
             return vals[-1]
         raise PyrtlError('CompiledSimulation does not support inspecting internal WireVectors')
 
-    # Use Simulation.inspect's docstring as CompiledSimulation.inspect's docstring.
-    inspect.__doc__ = Simulation.inspect.__doc__
-
     def step(self, provided_inputs: dict[str, int] = {}, inputs=None):
         if inputs is not None:
             import warnings
@@ -162,9 +154,6 @@ class CompiledSimulation:
                 '`provided_inputs`', DeprecationWarning)
             provided_inputs = inputs
         self.run([provided_inputs])
-
-    # Use Simulation.step's docstring as CompiledSimulation.step's docstring.
-    step.__doc__ = Simulation.step.__doc__
 
     def step_multiple(self, provided_inputs: dict[str, list[int]] = {},
                       expected_outputs: dict[str, int] = {},
@@ -233,10 +222,6 @@ class CompiledSimulation:
             for (step, name, expected, actual) in failed_sorted:
                 file.write("{0:>5} {1:>10} {2:>8} {3:>8}\n".format(step, name, expected, actual))
             file.flush()
-
-    # Use Simulation.step_multiple's docstring as CompiledSimulation.step_multiple's
-    # docstring.
-    step_multiple.__doc__ = Simulation.step_multiple.__doc__
 
     def run(self, inputs: list[dict[str, int]]):
         """Run many steps of the ``CompiledSimulation``.

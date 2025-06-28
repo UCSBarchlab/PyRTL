@@ -1334,7 +1334,6 @@ def wire_struct(wire_struct_spec):
         ...     high: 4
         ...     low: 4
 
-    ------------
     Construction
     ------------
 
@@ -1355,7 +1354,6 @@ def wire_struct(wire_struct_spec):
        Note how the class name (``Byte``) is used as a keyword arg for the
        constructor.
 
-    ----------------
     Accessing Slices
     ----------------
 
@@ -1386,7 +1384,6 @@ def wire_struct(wire_struct_spec):
         >>> len(byte)
         2
 
-    ------
     Naming
     ------
 
@@ -1407,7 +1404,6 @@ def wire_struct(wire_struct_spec):
         later rename a ``@wire_struct`` or its components, but those changes
         are local, and will not propagate to other ``@wire_struct`` components.
 
-    -----------
     Composition
     -----------
 
@@ -1466,7 +1462,6 @@ def wire_struct(wire_struct_spec):
     Leaf-level components can be accessed by combining the ``.`` and ``[]``
     operators, for example ``cache_line.address[3]``.
 
-    -----
     Types
     -----
 
@@ -1684,7 +1679,6 @@ def wire_matrix(component_schema, size: int):
     .. NOTE::
         ``wire_matrix`` returns a class, like :func:`~collections.namedtuple`.
 
-    ------------
     Construction
     ------------
 
@@ -1711,7 +1705,6 @@ def wire_matrix(component_schema, size: int):
     slices are first-class :class:`WireVector`, so they can be manipulated with all
     the usual PyRTL operators.
 
-    ------
     Naming
     ------
 
@@ -1723,7 +1716,6 @@ def wire_matrix(component_schema, size: int):
         >>> word[0].name
         'w[0]'
 
-    -----------
     Composition
     -----------
 
@@ -1749,7 +1741,6 @@ def wire_matrix(component_schema, size: int):
         array_2d = Array2D(values=[Array1D(values=[0x89, 0xAB]),
                                    Array1D(values=[0xCD, 0xEF])])
 
-    ----------------
     Accessing Slices
     ----------------
 
@@ -1775,7 +1766,6 @@ def wire_matrix(component_schema, size: int):
 
         print(len(array_1d))  # Prints '2'.
 
-    -----
     Types
     -----
 
@@ -1960,10 +1950,11 @@ def one_hot_to_binary(w: WireVectorLike) -> WireVector:
 
 
 def binary_to_one_hot(bit_position: WireVectorLike, max_bitwidth: int = None) -> WireVector:
-    """Given a ``bit_position``, return a WireVector with only that bit set to ``1``.
+    """Given a ``bit_position``, return a :class:`WireVector` with only that bit set to
+    ``1``.
 
     If the ``max_bitwidth`` provided is not large enough for the given ``bit_position``,
-    a ``0``-valued WireVector of size ``max_bitwidth`` will be returned.
+    a ``0``-valued :class:`WireVector` of size ``max_bitwidth`` will be returned.
 
     .. doctest only::
 
@@ -1993,10 +1984,10 @@ def binary_to_one_hot(bit_position: WireVectorLike, max_bitwidth: int = None) ->
     :param bit_position: A :class:`WireVector`, or any type that can be coerced to
         :class:`WireVector` by :func:`as_wires`.
     :param max_bitwidth: Optional integer maximum bitwidth for the resulting one-hot
-        WireVector.
+        :class:`WireVector`.
 
-    :return: A :class:`WireVector` with the bit at ``bit_position`` set to ``1`` and
-             all other bits set to ``0``. Bit position 0 is the least significant bit.
+    :return: A :class:`WireVector` with the bit at ``bit_position`` set to ``1`` and all
+             other bits set to ``0``. Bit position 0 is the least significant bit.
     """
 
     bit_position = as_wires(bit_position)

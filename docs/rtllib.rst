@@ -1,6 +1,5 @@
 .. PyRTL rtllib master file
 
-===========
 RTL Library
 ===========
 

@@ -30,8 +30,8 @@ WireVector
 
 .. autoclass:: pyrtl.WireVector
     :members:
-    :special-members: __init__, __add__, __sub__, __mul__, __getitem___,
-                      __len__, __ilshift__, __and__, __or__, __xor__, __lt__,
+    :special-members: __init__, __add__, __sub__, __mul__, __getitem__,
+                      __len__, __ilshift__, __invert__, __and__, __or__, __xor__, __lt__,
                       __le__, __eq__, __ne__, __gt__, __ge__, __len__
 
 Input Pins
@@ -134,7 +134,6 @@ Context manager implementing PyRTL's ``otherwise`` under :data:`.conditional_ass
 
 .. _conditional_assignment_defaults:
 
--------------------------------
 Conditional Assignment Defaults
 -------------------------------
 
@@ -189,7 +188,6 @@ These default values can be changed by passing a ``defaults`` dict to
     :data:`.conditional_assignment` ``defaults`` are not supported for
     :class:`.MemBlock`.
 
--------------------------------------------
 The Conditional Assigment Operator (``|=``)
 -------------------------------------------
 

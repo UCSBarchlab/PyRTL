@@ -1,6 +1,7 @@
 .. PyRTL analysis master file
 
-=========================
+.. _analysis_and_optimization:
+
 Analysis and Optimization
 =========================
 

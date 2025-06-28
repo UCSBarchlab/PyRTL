@@ -66,26 +66,26 @@ class WireVector:
     new vector from the bottom ``5`` bits of ``myvector``, ``myvector[-1]`` takes the
     most significant bit, and ``myvector[-4:]`` takes the ``4`` most significant bits).
 
-    ===============  ================  =======================================================
-    Operation        Syntax            Function
-    ===============  ================  =======================================================
-    Addition         ``a + b``         Creates an *unsigned* adder, returns ``WireVector``
-    Subtraction      ``a - b``         Creates an *unsigned* subtracter, returns ``WireVector``
-    Multiplication   ``a * b``         Creates an *unsigned* multiplier, returns ``WireVector``
-    Xor              ``a ^ b``         Bitwise XOR, returns ``WireVector``
-    Or               ``a | b``         Bitwise OR, returns ``WireVector``
-    And              ``a & b``         Bitwise AND, returns ``WireVector``
-    Invert           ``~a``            Bitwise invert, returns ``WireVector``
-    Less Than        ``a < b``         Unsigned less than, return 1-bit ``WireVector``
-    Less or Eq.      ``a <= b``        Unsigned less than or equal to, return 1-bit ``WireVector``
-    Greater Than     ``a > b``         Unsigned greater than, return 1-bit ``WireVector``
-    Greater or Eq.   ``a >= b``        Unsigned greater or equal to, return 1-bit ``WireVector``
-    Equality         ``a == b``        Hardware to check equality, return 1-bit ``WireVector``
-    Not Equal        ``a != b``        Inverted equality check, return 1-bit ``WireVector``
-    Bitwidth         ``len(a)``        Return bitwidth of the ``WireVector``
-    Assignment       ``a <<= b``       Connect from b to a (see Note below)
-    Bit Slice        ``a[3:6]``        Selects bits from ``WireVector``, in this case bits 3,4,5
-    ===============  ================  =======================================================
+    ==============  ===========  ===========================================================  ===================
+    Operation       Syntax       Function                                                     Documentation
+    ==============  ===========  ===========================================================  ===================
+    Addition        ``a + b``    Creates an *unsigned* adder, returns ``WireVector``          :meth:`__add__`
+    Subtraction     ``a - b``    Creates an *unsigned* subtracter, returns ``WireVector``     :meth:`__sub__`
+    Multiplication  ``a * b``    Creates an *unsigned* multiplier, returns ``WireVector``     :meth:`__mul__`
+    Xor             ``a ^ b``    Bitwise XOR, returns ``WireVector``                          :meth:`__xor__`
+    Or              ``a | b``    Bitwise OR, returns ``WireVector``                           :meth:`__or__`
+    And             ``a & b``    Bitwise AND, returns ``WireVector``                          :meth:`__and__`
+    Invert          ``~a``       Bitwise invert, returns ``WireVector``                       :meth:`__invert__`
+    Less Than       ``a < b``    Unsigned less than, return 1-bit ``WireVector``              :meth:`__lt__`
+    Less or Eq.     ``a <= b``   Unsigned less than or equal to, return 1-bit ``WireVector``  :meth:`__le__`
+    Greater Than    ``a > b``    Unsigned greater than, return 1-bit ``WireVector``           :meth:`__gt__`
+    Greater or Eq.  ``a >= b``   Unsigned greater or equal to, return 1-bit ``WireVector``    :meth:`__ge__`
+    Equality        ``a == b``   Hardware to check equality, return 1-bit ``WireVector``      :meth:`__eq__`
+    Not Equal       ``a != b``   Inverted equality check, return 1-bit ``WireVector``         :meth:`__ne__`
+    Bitwidth        ``len(a)``   Return bitwidth of the ``WireVector``                        :meth:`__len__`
+    Assignment      ``a <<= b``  Connect from b to a (see Note below)                         :meth:`__ilshift__`
+    Bit Slice       ``a[3:6]``   Selects bits from ``WireVector``, in this case bits 3,4,5    :meth:`__getitem__`
+    ==============  ===========  ===========================================================  ===================
 
     .. note::
         ``<<=`` is how you "drive" an already created wire with an existing wire. If you
@@ -96,7 +96,6 @@ class WireVector:
 
     .. _wirevector_coercion:
 
-    -----------------------
     ``WireVector`` Coercion
     -----------------------
 
@@ -158,14 +157,13 @@ class WireVector:
 
     .. _wirevector_equality:
 
-    -----------------------
     ``WireVector`` Equality
     -----------------------
 
     :meth:`WireVector.__eq__` generates logic that dynamically reports if two wires
     carry the same values. :meth:`WireVector.__eq__` returns a 1-bit ``WireVector``, not
-    a ``bool``, and attempting to convert a ``WireVector`` to a ``bool`` throws a
-    ``PyrtlError``. This behavior is incompatible with `Python's data model
+    a ``bool``, and attempting to convert a ``WireVector`` to a ``bool`` raises a
+    :class:`PyrtlError`. This behavior is incompatible with `Python's data model
     <https://docs.python.org/3/reference/expressions.html#value-comparisons>`_, which
     can cause problems.
 
@@ -237,7 +235,7 @@ class WireVector:
         >>> d[w1]
         'hello'
 
-    """
+    """  # noqa: E501
     bitwidth: int
     """The wire's bitwidth.
 
@@ -980,11 +978,138 @@ class WireVector:
         working_block().add_net(net)
         return outwire
 
-    def __getitem__(self, item) -> WireVector:
-        """Grabs a subset of the wires.
+    def __getitem__(self, item: Union[int, slice]) -> WireVector:
+        """Returns a ``WireVector`` containing a subset of the wires in ``self``.
 
-        :return: a result wire for the operation
+        There are two ways to retrieve ``WireVector`` subsets:
 
+        1. By :class:`int` index, for example ``wire[2]``. This returns a ``WireVector``
+           with :attr:`bitwidth` ``1``.
+
+        2. By :class:`slice`, for example ``wire[3:5]``. Slicing uses the usual
+           ``[start:stop:step]`` notation.
+
+           1. If ``start`` is omitted, it defaults to index ``0``, the least significant
+              bit.
+           2. If ``stop`` is omitted, it defaults to ``bitwidth - 1``, the most
+              significant bit.
+           3. If ``step`` is omitted, it defaults to ``1``.
+
+        ``bitwidth`` is added to negative ``start`` and ``stop`` indices, so negative
+        indices count backwards from just beyond the most significant bit. Index
+        ``bitwidth - 1`` and index ``-1`` both refer to the most significant bit.
+
+        If ``step`` is negative, the wires will be returned in reverse order.
+
+        Suppose we have a ``WireVector`` ``input``, with :attr:`bitwidth` 8::
+
+            input = WireVector(name="input", bitwidth=8)
+
+        We can access individual wires of ``input`` with integer indices::
+
+            input[0]                   # Least significant bit.
+            input[input.bitwidth - 1]  # Most significant bit
+            input[-1]                  # Another name for the most significant bit.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> input = pyrtl.Input(name="input", bitwidth=8)
+            >>> msb = pyrtl.Output(name="msb")
+
+            >>> msb <<= input[-1]
+            >>> msb.bitwidth
+            1
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step(provided_inputs={"input": 0b1000_0000})
+            >>> sim.inspect("msb")
+            1
+
+        We can access contiguous subsets of ``input``'s wires with slices::
+
+            input[2:6]  # Middle 4 bits.
+            input[:4]   # Least significant 4 bits.
+            input[-4:]  # Most significant 4 bits.
+
+        .. doctest only::
+
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> input = pyrtl.Input(name="input", bitwidth=8)
+            >>> middle_bits = pyrtl.Output(name="middle_bits")
+
+            >>> middle_bits <<= input[2:6]
+            >>> middle_bits.bitwidth
+            4
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step(provided_inputs={"input": 0b0011_1100})
+            >>> bin(sim.inspect("middle_bits"))
+            '0b1111'
+
+        We can skip some of ``input``'s wires with slices::
+
+            input[::2]   # Even numbered wires: 0, 2, 4, 6.
+            input[1::2]  # Odd numbered wires: 1, 3, 5, 7.
+
+        .. doctest only::
+
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> input = pyrtl.Input(name="input", bitwidth=8)
+            >>> odd_bits = pyrtl.Output(name="odd_bits")
+
+            >>> odd_bits <<= input[1::2]
+            >>> odd_bits.bitwidth
+            4
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step(provided_inputs={"input": 0b1010_1010})
+            >>> bin(sim.inspect("odd_bits"))
+            '0b1111'
+
+        We can reverse ``input``'s wires with slices::
+
+            input[::-1]    # Reversed wires: 7, 6, 5, 4, 3, 2, 1, 0.
+            input[-1::-2]  # Reversed odd wires: 7, 5, 3, 1.
+
+        .. doctest only::
+
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> input = pyrtl.Input(name="input", bitwidth=8)
+            >>> reversed_bits = pyrtl.Output(name="reversed_bits")
+
+            >>> reversed_bits <<= input[::-1]
+            >>> reversed_bits.bitwidth
+            8
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step(provided_inputs={"input": 0b0000_1111})
+            >>> bin(sim.inspect("reversed_bits"))
+            '0b11110000'
+
+            >>> sim.step(provided_inputs={"input": 0b1010_1010})
+            >>> # `bin` omits the leading 0.
+            >>> bin(sim.inspect("reversed_bits"))
+            '0b1010101'
+
+        :param item: If an :class:`int`, specifies the index of a single-bit wire to
+            return. If a :class:`slice`, specifies a subset of wires to return, as
+            ``start:stop:step``.
+        :return: A ``WireVector`` containing the wires selected by ``item`` from
+            ``self``.
         """
         if self.bitwidth is None:
             raise PyrtlError('You cannot get a subset of a wire with no bitwidth')
