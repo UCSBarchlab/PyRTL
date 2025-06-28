@@ -331,31 +331,31 @@ class TimingAnalysis:
 #      |  \__/ .__/  |  .__/
 #
 
-def yosys_area_delay(library, abc_cmd=None, leave_in_dir=None, block=None):
-    """Synthesize with `Yosys <https://yosyshq.net/yosys/>`_ and return
-    estimate of area and delay.
+def yosys_area_delay(library: str, abc_cmd: str = None, leave_in_dir: str = None,
+                     block: Block = None) -> tuple[float, float]:
+    """Synthesize with `Yosys <https://yosyshq.net/yosys/>`_ and return estimate of area
+    and delay.
 
-    :param library: stdcell library file to target in liberty format
-    :param abc_cmd: string of commands for :program:`yosys` to pass to
-        :program:`abc` for synthesis
-    :param dir: the directory where temporary files should be left
-    :param block: PyRTL block to analyze
-    :return: a tuple of numbers: area, delay
-
-    If `dir` is specified, that directory will be used to create any temporary
-    files, and the resulting files will be left behind there (which can be
+    If ``leave_in_dir`` is specified, that directory will be used to create any
+    temporary files, and the resulting files will be left behind there (which can be
     useful for manual exploration or debugging)
 
-    The area and delay are returned in units as defined by the stdcell
-    library.  In the standard vsc 130nm library, the area is in a number of
-    "tracks", each of which is about 1.74 square um (see area estimation
-    for more details) and the delay is in ps.
+    The area and delay are returned in units as defined by the stdcell library. In the
+    standard vsc 130nm library, the area is in a number of "tracks", each of which is
+    about 1.74 square um (see area estimation for more details) and the delay is in ps.
 
     http://www.vlsitechnology.org/html/vsc_description.html
 
-    May raise :class:`PyrtlError` if :program:`yosys` is not configured correctly, and
-    :class:`PyrtlInternalError` if the call to :program:`yosys` was not successful
+    :param library: stdcell library file to target in liberty format
+    :param abc_cmd: string of commands for :program:`yosys` to pass to :program:`abc`
+        for synthesis
+    :param leave_in_dir: the directory where temporary files should be left
+    :param block: PyRTL block to analyze. Defaults to the :ref:`working_block`.
 
+    :raise PyrtlError: If :program:`yosys` is not configured correctly.
+    :raise PyrtlInternalError: If the call to :program:`yosys` was not successful
+
+    :return: a tuple of numbers: area, delay
     """
 
     if abc_cmd is None:
@@ -546,19 +546,19 @@ def paths(src: Union[WireVector, Iterable[WireVector]] = None,
     return PathsResult(all_paths)
 
 
-def distance(src: WireVector, dst: WireVector, f: Callable[[LogicNet], int],
-             block: Block = None) -> dict[list[LogicNet], int]:
-    """ Calculate the 'distance' along each path from `src` to `dst` according to `f`
+def distance(src: WireVector, dst: WireVector, f: Callable[list[LogicNet], int],
+             block: Block = None) -> dict[tuple[LogicNet], int]:
+    """Calculate the distance along each path from ``src`` to ``dst`` according to ``f``
+
+    This calls the given function ``f`` on each net in a path, summing the result.
 
     :param src: wire to start from
     :param dst: wire to end on
-    :param f: function from a net to number,
-        representing the 'value' of a net that you want to sum
-        across all nets in the path
+    :param f: function from a net to number, representing the 'value' of a net that you
+              want to sum across all nets in the path
     :param block: block to use (defaults to :ref:`working_block`)
-    :return: a map from each path (a tuple) to its calculated distance
 
-    This calls the given function `f` on each net in a path, summing the result.
+    :return: a map from each path (a tuple) to its calculated distance
     """
     ps = paths(src, dst, block=block)
     ps = ps[src][dst]

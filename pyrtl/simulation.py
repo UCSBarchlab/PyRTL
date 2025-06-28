@@ -8,7 +8,7 @@ import numbers
 import os
 import re
 import sys
-import typing
+from typing import Callable
 from collections.abc import Mapping
 
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
@@ -984,9 +984,8 @@ class WaveRenderer:
         return ticks
 
     def val_to_str(
-            self, value: int, wire: WireVector,
-            repr_func: typing.Callable[[int], str],
-            repr_per_name: dict[str, typing.Callable[[int], str]]) -> str:
+            self, value: int, wire: WireVector, repr_func: Callable[[int], str],
+            repr_per_name: dict[str, Callable[[int], str]]) -> str:
         """Return a string representing 'value'.
 
         :param value: The value to convert to string.
@@ -1016,9 +1015,8 @@ class WaveRenderer:
 
     def render_val(
             self, w: WireVector, prior_val: int, current_val: int,
-            symbol_len: int, cycle_len: int,
-            repr_func: typing.Callable[[int], str],
-            repr_per_name: dict[str, typing.Callable[[int], str]],
+            symbol_len: int, cycle_len: int, repr_func: Callable[[int], str],
+            repr_per_name: dict[str, Callable[[int], str]],
             prev_line: bool, is_last: bool) -> str:
         """Return a string encoding the given value in a waveform.
 
@@ -1580,8 +1578,8 @@ class SimulationTrace:
             self, trace_list: list[str] = None, file=sys.stdout,
             renderer: WaveRenderer = default_renderer(),
             symbol_len: int = None,
-            repr_func: typing.Callable[[int], str] = hex,
-            repr_per_name: dict[str, typing.Callable[[int], str]] = {},
+            repr_func: Callable[[int], str] = hex,
+            repr_per_name: dict[str, Callable[[int], str]] = {},
             segment_size: int = 1):
 
         """Render the trace to a file using unicode and ASCII escape sequences.
@@ -1590,24 +1588,21 @@ class SimulationTrace:
         :program:`less -R` which should handle the ASCII escape sequences used in
         rendering.
 
-        :param trace_list: A list of signal names to be output in the specified
-            order.
+        :param trace_list: A list of signal names to be output in the specified order.
         :param file: The place to write output, default to stdout.
         :param renderer: An object that translates traces into output bytes.
-        :param symbol_len: The "length" of each rendered value in characters.
-            If ``None``, the length will be automatically set such that the
-            largest represented value fits.
-        :param repr_func: Function to use for representing each value in the
-            trace. Examples include ``hex``, ``oct``, ``bin``, and ``str`` (for
-            decimal), :func:`val_to_signed_integer` (for signed decimal) or
-            the function returned by :func:`enum_name` (for ``IntEnum``).
-            Defaults to ``hex``.
-        :param repr_per_name: Map from signal name to a function that takes in
-            the signal's value and returns a user-defined representation. If a
-            signal name is not found in the map, the argument ``repr_func``
-            will be used instead.
-        :param segment_size: Traces are broken in the segments of this number
-            of cycles.
+        :param symbol_len: The "length" of each rendered value in characters. If
+            ``None``, the length will be automatically set such that the largest
+            represented value fits.
+        :param repr_func: Function to use for representing each value in the trace.
+            Examples include :func:`hex`, :func:`oct`, :func:`bin`, and :class:`str`
+            (for decimal), :func:`val_to_signed_integer` (for signed decimal) or the
+            function returned by :func:`enum_name` (for :class:`~enum.IntEnum`).
+            Defaults to :func:`hex`.
+        :param repr_per_name: Map from signal name to a function that takes in the
+            signal's value and returns a user-defined representation. If a signal name
+            is not found in the map, the argument ``repr_func`` will be used instead.
+        :param segment_size: Traces are broken in the segments of this number of cycles.
         """
         if _currently_in_jupyter_notebook():
             from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
@@ -1761,7 +1756,7 @@ class SimulationTrace:
                   file=file)
 
 
-def enum_name(EnumClass: type) -> typing.Callable[[int], str]:
+def enum_name(EnumClass: type) -> Callable[[int], str]:
     """Returns a function that returns the name of an :class:`enum.IntEnum` value.
 
     .. doctest only::

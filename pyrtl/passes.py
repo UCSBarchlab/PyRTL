@@ -7,7 +7,7 @@ ways to change a block.
 import collections
 
 from pyrtl.core import (
-    working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock)
+    working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock, Block)
 from pyrtl.helperfuncs import _NetCount
 from pyrtl.corecircuits import (
     _basic_mult, _basic_add, _basic_sub, _basic_eq, _basic_lt, _basic_gt, _basic_select,
@@ -27,19 +27,19 @@ from pyrtl import transform  # transform.all_nets looks better than all_nets
 #
 
 
-def optimize(update_working_block=True, block=None, skip_sanity_check=False):
-    """
-    Return an optimized version of a synthesized hardware block.
+def optimize(update_working_block: bool = True, block: Block = None,
+             skip_sanity_check: bool = False):
+    """Return an optimized version of a synthesized hardware block.
 
-    :param bool update_working_block: Don't copy the block and optimize the
-        new block (defaults to True)
-    :param Block block: the block to optimize (defaults to :ref:`working_block`)
-    :param bool skip_sanity_check: Don't perform sanity checks on the block
-        before/during/after the optimization passes (defaults to False).
-        Sanity checks will always be performed if in debug mode.
+    ``optimize`` works on all hardware designs, both synthesized and non synthesized.
 
-    Note:
-    optimize works on all hardware designs, both synthesized and non synthesized
+    :param update_working_block: Don't copy the block and optimize the new block
+        (defaults to ``True``).
+    :param block: The block to optimize (defaults to :ref:`working_block`).
+    :param skip_sanity_check: Don't perform :meth:`~Block.sanity_check` on the ``block``
+        before, during, and after the optimization passes (defaults to ``False``).
+        :meth:`~Block.sanity_check` will always be performed in debug mode
+        (:func:`set_debug_mode`).
     """
     block = working_block(block)
     if not update_working_block:
@@ -320,12 +320,13 @@ def _remove_slice_nets(block, skip_sanity_check=False):
 
 
 def constant_propagation(block, silence_unexpected_net_warnings=False):
-    """ Removes excess constants in the block.
+    """Removes excess constants in the block.
 
-    Note on resulting block:
-    The output of the block can have WireVectors that are driven but not
-    listened to. This is to be expected. These are to be removed by
-    :func:`_remove_unlistened_nets`
+    .. note::
+
+        The resulting block can have :class:`WireVectors<WireVector>` that are driven
+        but not listened to. These are expected to be removed by
+        :func:`_remove_unlistened_nets`
     """
     net_count = _NetCount(block)
     while net_count.shrinking():
@@ -434,13 +435,14 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
     _remove_unused_wires(block)
 
 
-def common_subexp_elimination(block=None, abs_thresh=1, percent_thresh=0):
-    """ Common Subexpression Elimination for PyRTL blocks.
+def common_subexp_elimination(block: Block = None, abs_thresh: float = 1,
+                              percent_thresh: float = 0):
+    """Common Subexpression Elimination for PyRTL blocks.
 
-    :param Block block: the block to run the subexpression elimination on. Defaults to
-        the :ref:`working_block`.
-    :param float abs_thresh: absolute threshold for stopping optimization
-    :param float percent_thresh: percent threshold for stopping optimization
+    :param block: the block to run the subexpression elimination on. Defaults to the
+        :ref:`working_block`.
+    :param abs_thresh: absolute threshold for stopping optimization
+    :param percent_thresh: percent threshold for stopping optimization
     """
     block = working_block(block)
     net_count = _NetCount(block)
@@ -612,38 +614,43 @@ def _remove_unused_wires(block, keep_inputs=True):
 #
 
 
-def synthesize(update_working_block=True, merge_io_vectors=True, block=None):
+def synthesize(update_working_block: bool = True, merge_io_vectors: bool = True,
+               block: Block = None) -> PostSynthBlock:
     """Lower the design to just single-bit "and", "or", "xor", and "not" gates.
 
-    :param bool update_working_block: Boolean specifying if :ref:`working_block`
-        should be set to the newly synthesized block.
-    :param bool merge_io_vectors: if False, turn all N-bit IO wirevectors
-        into N 1-bit IO wirevectors (i.e. don't maintain interface).
-    :param Block block: The block you want to synthesize.
-    :return: The newly synthesized block (of type :class:`PostSynthBlock`).
+    Takes as input a ``block`` (default to :ref:`working_block`) and creates a new block
+    which is identical in function but uses only single bit gates and excludes many of
+    the more complicated :class:`LogicNet` primitives. The new block should consist
+    *almost* exclusively of ``w``, ``&``, ``\\|``, ``^``, and ``~``
+    :attr:`ops<LogicNet.op>`, and sequential elements of :class`Registers<Register>`,
+    which are one bit as well.
 
-    Takes as input a block (default to :ref:`working_block`) and creates a new block
-    which is identical in function but uses only single bit gates and excludes
-    many of the more complicated primitives.  The new block should consist
-    *almost* exclusively of the combination elements of ``w``, ``&``, ``\\|``,
-    ``^``, and ``~`` and sequential elements of registers (which are one bit as
-    well).  The two exceptions are for inputs/outputs (so that we can keep the
-    same interface) which are immediately broken down into the individual bits
-    and memories (read and write ports) which require the reassembly and
-    disassembly of the wirevectors immediately before and after. These are the
-    only two places where ``c`` and ``s`` ops should exist. If
-    `merge_io_vectors` is False, then these individual bits are not reassembled
-    and disassembled before and after, and so no ``c`` and ``s`` ops will
-    exist. Instead, they will be named `<name>[n]`, where `n` is the bit number
-    of original wire to which it corresponds.
+    The two exceptions are for :class:`Inputs<Input>` and :class:`Outputs<Output>`, to
+    maintain the same interface, which are immediately broken down into the individual
+    bits and memories (read and write ports) which require the reassembly and
+    disassembly of the :class:`WireVectors<WireVector>` immediately before and after.
+    These are the only two places where ``c`` and ``s`` :attr:`ops<LogicNet.op>` should
+    exist. If ``merge_io_vectors`` is ``False``, then these individual bits are not
+    reassembled and disassembled before and after, and so no ``c`` and ``s``
+    :attr:`ops<LogicNet.op>` will exist. Instead, they will be named ``<name>[n]``,
+    where ``n`` is the bit number of original wire to which it corresponds.
 
-    The block that results from synthesis is actually of type
-    :class:`PostSynthBlock` which contains a mapping from the original
-    inputs and outputs to the inputs and outputs of this block.  This is used
-    during simulation to map the input/outputs so that the same testbench can
-    be used both pre and post synthesis (see documentation for
-    :class:`Simulation` for more details).
+    The block that results from synthesis is actually of type :class:`PostSynthBlock`
+    which contains a mapping from the original :class:`Inputs<Input>` and
+    :class:`Outputs<Output>` to the :class:`Inputs<Input>` and :class:`Outputs<Output>`
+    of this block. This is used during :class:`Simulation` to map the
+    :class:`Inputs<Input>` and :class:`Outputs<Output>` so that the same testbench can
+    be used both pre- and post- synthesis. See documentation for :class:`Simulation` for
+    more details.
 
+    :param update_working_block: Boolean specifying if :ref:`working_block` should be
+        set to the newly synthesized block.
+    :param merge_io_vectors: If ``False``, turn all N-bit IO
+        :class:`WireVectors<WireVector>` into N 1-bit IO
+        :class:`WireVectors<WireVector>` (i.e. don't maintain interface).
+    :param block: The block to synthesize.
+
+    :return: The newly synthesized block, of type :class:`PostSynthBlock`.
     """
 
     block_pre = working_block(block)
@@ -806,12 +813,11 @@ def _decompose(net, wv_map, mems, block_out):
 
 
 @transform.all_nets
-def nand_synth(net):
-    """Synthesizes a :class:`PostSynthBlock` into one consisting of nands
-    and inverters in place
+def nand_synth(net: LogicNet):
+    """Synthesizes a :class:`PostSynthBlock` into one consisting of nands and inverters
+    in place.
 
     :param PostSynthBlock block: The block to synthesize.
-
     """
     if net.op in '~nrwcsm@':
         return True
@@ -832,9 +838,8 @@ def nand_synth(net):
 
 
 @transform.all_nets
-def and_inverter_synth(net):
-    """
-    Transforms a decomposed block into one consisting of ands and inverters in place
+def and_inverter_synth(net: LogicNet):
+    """Transforms a decomposed block into one consisting of ands and inverters in place.
 
     :param Block block: The block to synthesize
     """
@@ -858,17 +863,15 @@ def and_inverter_synth(net):
 
 
 @transform.all_nets
-def two_way_concat(net):
-    """Transforms a block so all n-way (n > 2) :func:`concats<concat>` are
-    replaced with series of 2-way :func:`concats<concat>`.
+def two_way_concat(net: LogicNet):
+    """Transforms a block so all n-way (n > 2) :func:`concats<concat>` are replaced with
+    series of 2-way :func:`concats<concat>`.
+
+    This is useful for preparing the netlist for output to other formats, like FIRRTL or
+    BTOR2, whose ``concatenate`` operation (``cat`` and ``concat``, respectively), only
+    allow two arguments (most-significant wire and least-significant wire).
 
     :param Block block: The block to transform
-
-    This is useful for preparing the netlist for output to other formats, like
-    FIRRTL or BTOR2, whose `concatenate` operation (`cat` and `concat`,
-    respectively), only allow two arguments (most-significant wire and
-    least-significant wire).
-
     """
 
     # Turns a netlist of the form (where [] denote nets):
@@ -905,19 +908,19 @@ def two_way_concat(net):
 
 
 @transform.all_nets
-def one_bit_selects(net):
-    """Converts arbitrary-sliced :func:`selects<select>` to concatenations
-    of 1-bit :func:`selects<select>`.
+def one_bit_selects(net: LogicNet):
+    """Converts arbitrary-sliced :func:`selects<select>` to concatenations of 1-bit
+    :func:`selects<select>`.
+
+    This is useful for preparing the netlist for output to other formats, like FIRRTL or
+    BTOR2, whose ``select`` operation (``bits`` and ``slice``, respectively) require
+    contiguous ranges.
+
+    Python slices are not necessarily contiguous ranges, e.g. the range ``[::2]``
+    (syntactic sugar for ``slice(None, None, 2)``) produces indices ``0``, ``2``, ``4``,
+    etc. up to the length of the list on which it is used.
 
     :param Block block: The block to transform
-
-    This is useful for preparing the netlist for output to other formats, like
-    FIRRTL or BTOR2, whose `select` operation (`bits` and `slice`,
-    respectively) require contiguous ranges. Python slices are not necessarily
-    contiguous ranges, e.g. the range `[::2]` (syntactic sugar for `slice(None,
-    None, 2)`) produces indices 0, 2, 4, etc. up to the length of the list on
-    which it is used.
-
     """
     if net.op != 's':
         return True
