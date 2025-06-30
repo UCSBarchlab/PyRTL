@@ -3,7 +3,7 @@ import unittest
 
 import pyrtl
 import pyrtl.rtllib.testingutils as utils
-from pyrtl.rtllib import multipliers, adders, libutils
+from pyrtl.rtllib import multipliers, adders
 
 
 class TestSimpleMult(unittest.TestCase):
@@ -40,8 +40,7 @@ class TestSimpleMult(unittest.TestCase):
         mult_results = []
 
         for x_val, y_val, true_res in zip(xvals, yvals, true_result):
-            sim_trace = pyrtl.SimulationTrace()
-            sim = pyrtl.Simulation(tracer=sim_trace)
+            sim = pyrtl.Simulation()
             sim.step({a: x_val, b: y_val, reset: 1})
             for cycle in range(len(a) + 1):
                 sim.step({a: 0, b: 0, reset: 0})
@@ -97,8 +96,7 @@ class TestComplexMult(unittest.TestCase):
         mult_results = []
 
         for x_val, y_val, true_res in zip(xvals, yvals, true_result):
-            sim_trace = pyrtl.SimulationTrace()
-            sim = pyrtl.Simulation(tracer=sim_trace)
+            sim = pyrtl.Simulation()
             sim.step({a: x_val, b: y_val, reset: 1})
             if shifts <= len_a:
                 length = len_a // shifts + (1 if len_a % shifts == 0 else 2)
@@ -137,13 +135,12 @@ class TestWallace(unittest.TestCase):
         true_result = [i * j for i, j in zip(xvals, yvals)]
 
         # Setting up and running the tests
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for cycle in range(len(xvals)):
             sim.step({a: xvals[cycle], b: yvals[cycle]})
 
         # Extracting the values and verifying correctness
-        multiplier_result = sim_trace.trace[product.name]
+        multiplier_result = sim.tracer.trace[product.name]
         self.assertEqual(multiplier_result, true_result)
 
     def test_trivial_case(self):
@@ -221,17 +218,13 @@ class TestSignedTreeMult(unittest.TestCase):
         true_result = [i * j for i, j in zip(xvals, yvals)]
 
         # Setting up and running the tests
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for cycle in range(len(xvals)):
-            sim.step({
-                a: libutils.twos_comp_repr(xvals[cycle], len_a),
-                b: libutils.twos_comp_repr(yvals[cycle], len_b)
-            })
+            sim.step({a: xvals[cycle], b: yvals[cycle]})
 
         # Extracting the values and verifying correctness
-        multiplier_result = [libutils.rev_twos_comp_repr(p, len(product))
-                             for p in sim_trace.trace[product.name]]
+        multiplier_result = [pyrtl.val_to_signed_integer(p, len(product))
+                             for p in sim.tracer.trace[product.name]]
         self.assertEqual(multiplier_result, true_result)
 
     def test_small_bitwidth_error(self):
@@ -255,3 +248,7 @@ class TestSignedTreeMult(unittest.TestCase):
 
     def test_dada_tree(self):
         self.mult_t_base(5, 10, reducer=adders.dada_reducer)
+
+
+if __name__ == "__main__":
+    unittest.main()

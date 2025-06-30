@@ -1,22 +1,30 @@
-# coding=utf-8
 """
-Multipliers contains various PyRTL sample multipliers for people to use
+Basic integer multiplication is defined in PyRTL's core library, see:
 
+- :meth:`.WireVector.__mul__` for unsigned integer multiplication.
+- :func:`.signed_mult` for signed integer multiplication.
+
+The functions below provide more complex alternatives.
 """
+
+from typing import Callable
+
 import pyrtl
 from pyrtl.rtllib import adders, libutils
 
 
-def simple_mult(A, B, start):
-    """ Builds a slow, small multiplier using the simple shift-and-add algorithm.
-    Requires very small area (it uses only a single adder), but has long delay
-    (worst case is `len(A)` cycles). `start` is a one-bit input to indicate inputs are ready.
-    `done` is a one-bit output signal raised when the multiplication is finished.
+def simple_mult(A: pyrtl.WireVector, B: pyrtl.WireVector,
+                start: pyrtl.WireVector) -> tuple[pyrtl.Register, pyrtl.WireVector]:
+    """Builds a slow, small multiplier using the simple shift-and-add algorithm.
 
-    :param WireVector A: input wire for the multiplication
-    :param WireVector B: input wire for the multiplication
-    :return [Register, bool]: Register containing the product and the `done` signal
+    Requires very small area (it uses only a single adder), but has long delay (worst
+    case is ``len(A)`` cycles).
 
+    :param A: Input wire for the multiplication.
+    :param B: Input wire for the multiplication.
+    :param start: A one-bit input that indicates when the inputs are ready.
+
+    :return: A :class:`.Register` containing the product, and a 1-bit ``done`` signal.
     """
     triv_result = _trivial_mult(A, B)
     if triv_result is not None:
@@ -64,16 +72,18 @@ def _trivial_mult(A, B):
         return pyrtl.concat_list([a_vals & B, pyrtl.Const(0)])
 
 
-def complex_mult(A, B, shifts, start):
-    """ Generate shift-and-add multiplier that can shift and add multiple bits per clock cycle.
-    Uses substantially more space than :func:`simple_mult` but is much faster.
+def complex_mult(A: pyrtl.WireVector, B: pyrtl.WireVector, shifts: int,
+                 start: pyrtl.WireVector) -> tuple[pyrtl.Register, pyrtl.WireVector]:
+    """Generate shift-and-add multiplier that can shift and add multiple bits per clock
+    cycle. Uses substantially more space than :func:`simple_mult` but is much faster.
 
-    :param WireVector A: input wire for the multiplication
-    :param WireVector B: input wire for the multiplication
-    :param int shifts: number of spaces Register is to be shifted per clock cycle
-        (cannot be greater than the length of `A` or `B`)
-    :param bool start: start signal
-    :return [Register, bool]: Register containing the product and the `done` signal
+    :param A: Input wire for the multiplication.
+    :param B: Input wire for the multiplication.
+    :param shifts: Number of spaces :class:`.Register` is to be shifted per clock cycle.
+        Cannot be greater than the length of ``A`` or ``B``.
+    :param start: One-bit start signal.
+
+    :return: :class:`.Register` containing the product, and a 1-bit ``done`` signal.
     """
 
     alen = len(A)
@@ -96,8 +106,8 @@ def complex_mult(A, B, shifts, start):
 
         with ~done:  # don't run when there's no work to do
             # "Multiply" shifted breg by LSB of areg by cond. adding
-            areg.next |= libutils._shifted_reg_next(areg, 'r', shifts)  # right shift
-            breg.next |= libutils._shifted_reg_next(breg, 'l', shifts)  # left shift
+            areg.next |= pyrtl.shift_right_logical(areg, shifts)
+            breg.next |= pyrtl.shift_left_logical(breg, shifts)
             accum.next |= accum + _one_cycle_mult(areg, breg, shifts)
 
     return accum, done
@@ -123,23 +133,24 @@ def _one_cycle_mult(areg, breg, rem_bits, sum_sf=0, curr_bit=0):
             )
 
 
-def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
-    """ Build an fast unclocked multiplier for inputs A and B using a Wallace or Dada Tree.
-
-    :param WireVector A: input wire for the multiplication
-    :param WireVector B: input wire for the multiplication
-    :param Callable reducer: Reduce the tree using either a Dada reducer or a Wallace reducer
-      determines whether it is a Wallace tree multiplier or a Dada tree multiplier
-    :param Callable adder_func: an adder function that will be used to do the last addition
-    :return WireVector: The multiplied result
+def tree_multiplier(A: pyrtl.WireVector, B: pyrtl.WireVector,
+                    reducer: Callable = adders.wallace_reducer,
+                    adder_func: Callable = adders.kogge_stone) -> pyrtl.WireVector:
+    """Build an fast unclocked multiplier using a Wallace or Dada Tree.
 
     Delay is `O(log(N))`, while area is `O(N^2)`.
-    """
 
+    :param A: Input wire for the multiplication.
+    :param B: Input wire for the multiplication.
+    :param reducer: Reducing the tree with a :func:`~.adders.wallace_reducer` or a
+        :func:`~.adders.dada_reducer` determines whether the ``tree_multiplier`` is a
+        Wallace tree multiplier or a Dada tree multiplier.
+    :param adder_func: An adder function that will be used to do the last addition.
+
+    :return: The multiplied result.
     """
-    The two tree multipliers basically works by splitting the multiplication
-    into a series of many additions, and it works by applying 'reductions'.
-    """
+    # The two tree multipliers basically works by splitting the multiplication into a
+    # series of many additions, and it works by applying 'reductions'.
     triv_res = _trivial_mult(A, B)
     if triv_res is not None:
         return triv_res
@@ -158,7 +169,7 @@ def tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogg
 
 
 def signed_tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
-    """Same as tree_multiplier, but uses two's-complement signed integers"""
+    """Same as :func:`tree_multiplier`, but uses two's-complement signed integers."""
     if len(A) == 1 or len(B) == 1:
         raise pyrtl.PyrtlError("sign bit required, one or both wires too small")
 
@@ -178,22 +189,28 @@ def _twos_comp_conditional(orig_wire: pyrtl.WireVector,
                         orig_wire)
 
 
-def fused_multiply_adder(mult_A, mult_B, add, signed=False, reducer=adders.wallace_reducer,
-                         adder_func=adders.kogge_stone):
-    """Generate efficient hardware for ``a * b + c``.
+def fused_multiply_adder(
+        mult_A: pyrtl.WireVector, mult_B: pyrtl.WireVector, add: pyrtl.WireVector,
+        signed: bool = False, reducer: Callable = adders.wallace_reducer,
+        adder_func: Callable = adders.kogge_stone) -> pyrtl.WireVector:
+    """Generate efficient hardware for ``mult_A * mult_B + add``.
 
-    Multiplies two WireVectors together and adds a third WireVector to the
-    multiplication result, all in one step. By doing it this way (instead of
-    separately), one reduces both the area and the timing delay of the circuit.
+    Multiplies two :class:`WireVectors<.WireVector>` together and adds a third
+    :class:`.WireVector` to the multiplication result, all in one step. By combining
+    these operations, rather than doing them separately, one reduces both the area and
+    the timing delay of the circuit.
 
+    :param mult_A: Input wire for the multiplication.
+    :param mult_B: Input wire for the multiplication.
+    :param add: Input wire for the addition.
+    :param signed: Currently not supported (will be added in the future) The default
+        will likely be changed to ``True``, so if you want the smallest set of wires in
+        the future, specify this as ``False``.
+    :param reducer: (advanced) The tree reducer to use. See
+        :func:`~.adders.dada_reducer` and :func:`~.adders.wallace_reducer`.
+    :param adder_func: (advanced) The adder to use to add the two results at the end.
 
-    :param Bool signed: Currently not supported (will be added in the future)
-      The default will likely be changed to True, so if you want the smallest
-      set of wires in the future, specify this as False
-    :param reducer: (advanced) The tree reducer to use
-    :param adder_func: (advanced) The adder to use to add the two results at the end
-    :return WireVector: The result WireVector
-
+    :return: The result :class:`.WireVector`.
     """
 
     # TODO: Specify the length of the result wirevector
@@ -201,28 +218,31 @@ def fused_multiply_adder(mult_A, mult_B, add, signed=False, reducer=adders.walla
     return generalized_fma(((mult_A, mult_B),), (add,), signed, reducer, adder_func)
 
 
-def generalized_fma(mult_pairs, add_wires, signed=False, reducer=adders.wallace_reducer,
-                    adder_func=adders.kogge_stone):
-    """Generated an opimitized fused multiply adder.
+def generalized_fma(
+        mult_pairs: list[tuple[pyrtl.WireVector, pyrtl.WireVector]],
+        add_wires: list[pyrtl.WireVector], signed: bool = False,
+        reducer: Callable = adders.wallace_reducer,
+        adder_func: Callable = adders.kogge_stone):
+    """Generated an optimized fused multiply adder.
 
-    A generalized FMA unit that multiplies each pair of numbers in
-    `mult_pairs`, then adds the resulting numbers and the values of the
-    `add_wires` all together to form an answer. This is faster than separate
-    adders and multipliers because you avoid unnecessary adder structures for
-    intermediate representations.
+    A generalized FMA unit that multiplies each pair of numbers in ``mult_pairs``, then
+    adds up the resulting products and all the values of the ``add_wires``. This is
+    faster than multiplying and adding separately because you avoid unnecessary adder
+    structures for intermediate representations.
 
-    :param mult_pairs: Either None (if there are no pairs to multiply) or a
-        list of pairs of wires to multiply: `[(mult1_1, mult1_2), ...]`
-    :param add_wires: Either None (if there are no individual items to add
-        other than the `mult_pairs`), or a list of wires for adding on top of
-        the result of the pair multiplication.
-    :param bool signed: Currently not supported (will be added in the future)
-        The default will likely be changed to True, so if you want the smallest
-        set of wires in the future, specify this as False
-    :param reducer: (advanced) The tree reducer to use
-    :param adder_func: (advanced) The adder to use to add the two results at the end
-    :return WireVector: The result WireVector
+    :param mult_pairs: Either ``None`` (if there are no pairs to multiply) or a list of
+        pairs of wires to multiply together: ``[(mult1_1, mult1_2), ...]``
+    :param add_wires: Either ``None`` (if there are no individual items to add other
+        than the ``mult_pairs`` products), or a list of wires to add on top of the
+        result of the pair multiplication.
+    :param signed: Currently not supported (will be added in the future) The default
+        will likely be changed to ``True``, so if you want the smallest set of wires in
+        the future, specify this as ``False``.
+    :param reducer: (advanced) The tree reducer to use. See
+        :func:`~.adders.dada_reducer` and :func:`~.adders.wallace_reducer`.
+    :param adder_func: (advanced) The adder to use to add the two results at the end.
 
+    :return: The result :class:`.WireVector`.
     """
     # first need to figure out the max length
     if mult_pairs:  # Need to deal with the case when it is empty

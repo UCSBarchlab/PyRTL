@@ -7,7 +7,7 @@ from typing import Callable
 
 import pyrtl
 from pyrtl.rtllib import testingutils as utils
-from .test_transform import NetWireNumTestCases
+from tests.test_transform import NetWireNumTestCases
 
 
 class TestSynthesis(unittest.TestCase):
@@ -20,12 +20,11 @@ class TestSynthesis(unittest.TestCase):
 
     def check_trace(self, correct_string):
         pyrtl.synthesize()
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output, compact=True)
+        sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_not_simulation(self):
@@ -178,12 +177,11 @@ class TestMultiplierSynthesis(unittest.TestCase):
         ina, inb = pyrtl.Input(bitwidth=4, name='a'), pyrtl.Input(bitwidth=4, name='b')
         self.output <<= ina * inb
         pyrtl.synthesize()
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for a in range(16):
             for b in range(16):
                 sim.step({'a': a, 'b': b})
-        result = sim_trace.trace['r']
+        result = sim.tracer.trace['r']
         self.assertEqual(result, [a * b for a in range(16) for b in range(16)])
 
     def test_chained_mul(self):
@@ -193,25 +191,23 @@ class TestMultiplierSynthesis(unittest.TestCase):
             pyrtl.Input(bitwidth=2, name='c'))
         self.output <<= ina * inb * inc
         pyrtl.synthesize()
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for a in range(4):
             for b in range(4):
                 for c in range(4):
                     sim.step({'a': a, 'b': b, 'c': c})
-        result = sim_trace.trace['r']
+        result = sim.tracer.trace['r']
         self.assertEqual(result, [a * b * c for a in range(4) for b in range(4) for c in range(4)])
 
     def test_singlebit_mul(self):
         ina, inb = pyrtl.Input(bitwidth=1, name='a'), pyrtl.Input(bitwidth=3, name='b')
         self.output <<= ina * inb
         pyrtl.synthesize()
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for a in range(2):
             for b in range(8):
                 sim.step({'a': a, 'b': b})
-        result = sim_trace.trace['r']
+        result = sim.tracer.trace['r']
         self.assertEqual(result, [a * b for a in range(2) for b in range(8)])
 
 
@@ -224,12 +220,11 @@ class TestComparisonSynthesis(unittest.TestCase):
         ina, inb = pyrtl.Input(bitwidth=4, name='a'), pyrtl.Input(bitwidth=4, name='b')
         self.output <<= op(ina, inb)
         pyrtl.synthesize()
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for a in range(16):
             for b in range(16):
                 sim.step({'a': a, 'b': b})
-        result = sim_trace.trace['r']
+        result = sim.tracer.trace['r']
         self.assertEqual(result, [op(a, b) for a in range(16) for b in range(16)])
 
     def test_eq(self):
@@ -751,8 +746,7 @@ class TestSynthPasses(unittest.TestCase):
         :param operation: The operation to test against. This should be a lambda taking an input
             pair (in0, in1) and returning the expected output from this circuit.
         """
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
 
         values = [(1, 2), (4, 5), (7, 11)]
         """A list of input pairs (in0, in1) to test on."""

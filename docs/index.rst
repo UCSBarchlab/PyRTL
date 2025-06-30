@@ -106,15 +106,14 @@ different classes help you do that: :class:`.Simulation`,
 interchangeably.  Typically one starts with :class:`.Simulation` and then moves
 up to :class:`.FastSimulation` when performance begins to matter.
 
-Both :class:`.Simulation` and :class:`.FastSimulation` take an instance of
-:class:`.SimulationTrace` as an argument (or makes an empty
-:class:`.SimulationTrace` by default), which stores a list of the signals as
-they are simulated. This trace can then be rendered to the terminal with
-:meth:`~.SimulationTrace.render_trace`.
+Both :class:`.Simulation` and :class:`.FastSimulation` store a list of each
+wire's value in each cycle in :attr:`.Simulation.tracer`, which is an instance
+of :class:`.SimulationTrace`. Traces can then be rendered to the terminal with
+:meth:`.SimulationTrace.render_trace`.
 :class:`SimulationTraces<.SimulationTrace>` can be handled in other ways, for
-example they can be extracted as a test bench
-(:func:`.output_verilog_testbench`) or exported to a VCD file
-(:meth:`~.SimulationTrace.print_vcd`).
+example they can be extracted as a test bench with
+:func:`.output_verilog_testbench`, or exported to a VCD file with
+:meth:`~.SimulationTrace.print_vcd`.
 
 Optimization
 ------------

@@ -1,17 +1,10 @@
+from typing import Callable
+
 import pyrtl
 import random
 
-""" testcase_utils
 
-This file (intentionally misspelled) is created to store common utility
-functions used for the test cases.
-
-I am documenting this rather well because users have
-a good reason to look at it - John Clow
-"""
-
-
-def calcuate_max_and_min_bitwidths(max_bitwidth=None, exact_bitwidth=None):
+def calculate_max_and_min_bitwidths(max_bitwidth=None, exact_bitwidth=None):
     if max_bitwidth is not None:
         min_bitwidth = 1
     elif exact_bitwidth is not None:
@@ -30,34 +23,46 @@ def uniform_dist(bitwidth):
     return random.randrange(2**bitwidth)
 
 
-def make_inputs_and_values(num_wires, max_bitwidth=None, exact_bitwidth=None,
-                           dist=uniform_dist, test_vals=20):
-    """ Generates multiple input wires and sets of test values for
-    testing purposes
+def make_inputs_and_values(
+        num_wires: int, max_bitwidth: int = None, exact_bitwidth: int = None,
+        dist: Callable[[int], int] = uniform_dist,
+        test_vals: int = 20) -> tuple[list[pyrtl.Input], list[list[int]]]:
+    """Generates multiple :class:`.Input` wires and their test values.
 
-    :param function dist: function to generate the random values
-    :return: wires; list of values for the wires
+    The generated list of test values is a list of lists. The inner lists each represent
+    the values of a single :class:`.Input` wire, for each :class:`.Simulation` cycle.
 
-    The list of values is a list of lists. The interior lists represent the
-    values of a single wire for all of the simulation cycles
+    :param num_wires: Number of :class:`Inputs<.Input>` to generate.
+    :param max_bitwidth: If specified, generate :class:`Inputs<.Input>` with random
+        :attr:`~.WireVector.bitwidth` in the range ``[1, max_bitwidth)``.
+    :param exact_bitwidth: If specified, generate :class:`Inputs<.Input>` with
+        :attr:`~.WireVector.bitwidth` ``exact_bitwidth``.
+    :param dist: Function to generate the random :class:`.Input` values.
+    :param test_vals: Number of random :class:`.Input` values to generate.
 
+    :return: ``(inputs, values)``, where ``inputs`` is a :class:`list` of
+             :class:`Inputs<.Input>`, and ``values`` is a list of values for each
+             ``input``.
     """
-    min_bitwidth, max_bitwidth = calcuate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
+    min_bitwidth, max_bitwidth = calculate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
     wires, vals = list(zip(*(
         an_input_and_vals(random.randrange(min_bitwidth, max_bitwidth + 1), test_vals,
                           random_dist=dist) for i in range(num_wires))))
     return wires, vals
 
 
-def an_input_and_vals(bitwidth, test_vals=20, name='',
-                      random_dist=uniform_dist):
-    """ Generates an input wire and a set of test values for
-    testing purposes
+def an_input_and_vals(
+        bitwidth: int, test_vals: int = 20, name: str = '',
+        random_dist: Callable[[int], int] = uniform_dist
+) -> tuple[pyrtl.Input, list[int]]:
+    """Generate an :class:`.Input` wire and random test values for it.
 
-    :param bitwidth: The bitwidth of the value to be generated
-    :param int test_vals: number of values to generate per wire
-    :param name: name for the input wire to be generated
-    :return: tuple of `input_wire`, `test_values`
+    :param bitwidth: The bitwidth of the random values to generate.
+    :param test_vals: Number of random values to generate per :class:`.Input`.
+    :param name: Name of the returned :class:`.Input`.
+
+    :return: ``(input_wire, test_values)``, where ``input_wire`` is an :class:`.Input`,
+             and ``test_values`` is a list of random test values for ``input_wire``.
     """
     input_wire = pyrtl.Input(bitwidth, name=name)  # Creating a new input wire
     test_vals = [random_dist(bitwidth) for i in range(test_vals)]
@@ -68,58 +73,78 @@ def an_input_and_vals(bitwidth, test_vals=20, name='',
 generate_in_wire_and_values = an_input_and_vals
 
 
-def make_consts(num_wires, max_bitwidth=None, exact_bitwidth=None, random_dist=inverse_power_dist):
+def make_consts(
+        num_wires: int, max_bitwidth: int = None, exact_bitwidth: int = None,
+        random_dist: Callable[[int], int] = inverse_power_dist
+) -> tuple[list[pyrtl.Const], list[int]]:
+    """Generate random :class:`.Const` values.
+
+    :param num_wires: Number of :class:`Consts<.Const>` to generate.
+    :param max_bitwidth: If specified, generate :class:`Consts<.Const>` with random
+        :attr:`~.WireVector.bitwidth` in the range ``[1, max_bitwidth)``.
+    :param exact_bitwidth: If specified, generate :class:`Consts<.Const>` with
+        :attr:`~.WireVector.bitwidth` ``exact_bitwidth``.
+    :param random_dist: Function to generate the random :class:`.Const` values.
+
+    :return: ``(consts, values)``, where ``consts`` is a :class:`list` of
+             :class:`Consts<.Const>`, and ``values`` is a list of each ``const``'s
+             value.
     """
-    :return: [Const_wires]; [Const_vals]
-    """
-    min_bitwidth, max_bitwidth = calcuate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
+    min_bitwidth, max_bitwidth = calculate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
     bitwidths = [random.randrange(min_bitwidth, max_bitwidth + 1) for i in range(num_wires)]
     wires = [pyrtl.Const(random_dist(b), b) for b in bitwidths]
     vals = [w.val for w in wires]
     return wires, vals
 
 
-def sim_and_ret_out(outwire, inwires, invals):
-    """ Simulates the net using `inwires` and `invals`, and returns the output array.
-    Used for rapid test development.
+def sim_and_ret_out(outwire: pyrtl.WireVector, inwires: list[pyrtl.WireVector],
+                    invals: list[list[int]]) -> list[int]:
+    """Run a simulation with ``invals`` for ``inwires`` and return ``outwire``'s values.
 
-    :param outwire: The wire to return the output of
-    :param inwires: a list of wires to read in from (`[Input, ...]`)
-    :param invals: a list of input value lists (`[ [int, ...], ...]`)
-    :return: a list of values from the output wire simulation result
+    .. WARNING::
+
+        Use :meth:`.Simulation.step_multiple` instead::
+
+            sim = pyrtl.Simulation()
+            sim.step_multiple(provided_inputs=dict(zip(inwires, invals)))
+            output = sim.tracer.trace[outwire.name]
+
+    :param outwire: The wire to return the values of in each simulation cycle.
+    :param inwires: A list of :class:`.Input` wires to provide values for.
+    :param invals: A list of :class:`.Input` value lists.
+
+    :return: A list of ``outwire``'s values in each simulation cycle.
     """
     # Pulling the value of outwire straight from the log
     return sim_and_ret_outws(inwires, invals)[outwire.name]
 
 
-def sim_and_ret_outws(inwires, invals):
-    """ Simulates the net using `inwires` and `invals`, and returns the output array.
-    Used for rapid test development.
+def sim_and_ret_outws(inwires: list[pyrtl.WireVector],
+                      invals: list[list[int]]) -> dict[str, list[int]]:
+    """Run a simulation with ``invals`` for ``inwires`` and return all wire values.
 
-    :param inwires: a list of wires to read in from (`[Input, ...]`)
-    :param invals: a list of input value lists (`[[int, ...], ...]`)
-    :return: a list of values from the output wire simulation result
+    .. WARNING::
+
+        Use :meth:`.Simulation.step_multiple` instead::
+
+            sim = pyrtl.Simulation()
+            sim.step_multiple(provided_inputs=dict(zip(inwires, invals)))
+            outputs = sim.tracer.trace
+
+    :param inwires: A list of :class:`.Input` wires to provide values for.
+    :param invals: A list of :class:`.Input` value lists.
+
+    :return: A :class:`dict` mapping from a :class:`WireVector`'s name to a
+             :class:`list` of its values in each cycle.
     """
-    sim_trace = pyrtl.SimulationTrace()  # Creating a logger for the simulator
-    sim = pyrtl.Simulation(tracer=sim_trace)  # Creating the simulation
-    for cycle in range(len(invals[0])):
-        sim.step({wire.name: val[cycle] for wire, val in zip(inwires, invals)})
-
-    return sim_trace.trace  # Pulling the value of wires straight from the trace
+    sim = pyrtl.Simulation()
+    sim.step_multiple(provided_inputs=dict(zip(inwires, invals)))
+    return sim.tracer.trace
 
 
 def sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
-    # TODO: write param and return descriptions
-    """ Simulation of a circuit that takes multiple cycles to complete.
-
-    :param in_dict:
-    :param hold_dict:
-    :param hold_cycles:
-    :param sim:
-    :return:
-    """
     if sim is None:
-        sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace())
+        sim = pyrtl.Simulation()
     sim.step(in_dict)
     for i in range(hold_cycles):
         sim.step(hold_dict)
@@ -127,17 +152,8 @@ def sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
 
 
 def multi_sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
-    # TODO: write param and return descriptions
-    """ Simulates a circuit that takes multiple cycles to complete multiple times.
-
-    :param in_dict: `{in_wire: [in_values, ...], ...}`
-    :param hold_dict: `{hold_wire: hold_value}` The hold values for the
-    :param hold_cycles:
-    :param sim:
-    :return:
-    """
     if sim is None:
-        sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace())
+        sim = pyrtl.Simulation()
     cycles = len(list(in_dict.values())[0])
     for cycle in range(cycles):
         current_dict = {wire: values[cycle] for wire, values in in_dict}

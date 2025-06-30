@@ -1,23 +1,35 @@
+"""
+Basic integer addition is defined in PyRTL's core library, see:
+
+- :meth:`.WireVector.__add__` for unsigned integer addition.
+
+- :func:`.signed_add` for signed integer addition.
+
+The functions below provide more complex alternatives.
+"""
+
 import itertools
+from typing import Callable
 
 import pyrtl
-from pyrtl.rtllib import libutils
 
 
-def kogge_stone(a, b, cin=0):
+def kogge_stone(a: pyrtl.WireVector, b: pyrtl.WireVector,
+                cin: pyrtl.wire.WireVectorLike = 0) -> pyrtl.WireVector:
+    """Creates a Kogge-Stone adder given two inputs.
+
+    The Kogge-Stone adder is a fast tree-based adder with `O(log(n))` propagation delay,
+    useful for performance critical designs. However, it has `O(n log(n))` area usage,
+    and large fan out.
+
+    :param a: A :class:`.WireVector` to add up. Bitwidths don't need to match.
+    :param b: A :class:`.WireVector` to add up. Bitwidths don't need to match.
+    :param cin: An optional 1-bit carry-in :class:`.WireVector`. Can be any type that
+        can be coerced to :class:`.WireVector` by :func:`.as_wires`.
+
+    :return: A :class:`.WireVector` representing the output of the adder.
     """
-    Creates a Kogge-Stone adder given two inputs
-
-    :param WireVector a: A WireVector to add up (bitwidths don't need to match)
-    :param WireVector b: A WireVector to add up (bitwidths don't need to match)
-    :param cin: An optimal carry in WireVector or value
-    :return: a WireVector representing the output of the adder
-
-    The Kogge-Stone adder is a fast tree-based adder with `O(log(n))`
-    propagation delay, useful for performance critical designs. However,
-    it has `O(n log(n))` area usage, and large fan out.
-    """
-    a, b = libutils.match_bitwidth(a, b)
+    a, b = pyrtl.match_bitwidth(a, b)
 
     prop_orig = a ^ b
     prop_bits = [i for i in prop_orig]
@@ -83,31 +95,37 @@ def ripple_half_add(a, cin=0):
         return pyrtl.concat(msbits, ripplecarry[1])
 
 
-def carrysave_adder(a, b, c, final_adder=ripple_add):
-    """
-    Adds three wirevectors up in an efficient manner
+def carrysave_adder(a: pyrtl.WireVector, b: pyrtl.WireVector, c: pyrtl.WireVector,
+                    final_adder: Callable = ripple_add) -> pyrtl.WireVector:
+    """Adds three :class:`WireVectors<.WireVector>` up in an efficient manner.
 
-    :param WireVector a: a wire to add up
-    :param WireVector b: a wire to add up
-    :param WireVector c: a wire to add up
-    :param Callable final_adder: The adder to use to do the final addition
-    :return: a WireVector with length 2 longer than the largest input
+    :param a: A :class:`.WireVector` to add up. Bitwidths don't need to match.
+    :param b: A :class:`.WireVector` to add up. Bitwidths don't need to match.
+    :param c: A :class:`.WireVector` to add up. Bitwidths don't need to match.
+    :param final_adder: The adder to use for the final addition.
+
+    :return: A :class:`.WireVector` with bitwidth equal to the longest input, plus 2.
     """
-    a, b, c = libutils.match_bitwidth(a, b, c)
+    a, b, c = pyrtl.match_bitwidth(a, b, c)
     partial_sum = a ^ b ^ c
     shift_carry = (a | b) & (a | c) & (b | c)
     return pyrtl.concat(final_adder(partial_sum[1:], shift_carry), partial_sum[0])
 
 
-def cla_adder(a, b, cin=0, la_unit_len=4):
-    """
-    Carry Lookahead Adder
+def cla_adder(a: pyrtl.WireVector, b: pyrtl.WireVector, cin: pyrtl.WireVector = 0,
+              la_unit_len: int = 4) -> pyrtl.WireVector:
+    """Carry Look-Ahead Adder.
 
-    :param int la_unit_len: the length of input that every unit processes
+    A Carry Look-Ahead Adder is an adder that is faster than :func:`ripple_add`, as it
+    calculates the carry bits faster. It is not as fast as :func:`kogge_stone`, but uses
+    less area.
 
-    A Carry LookAhead Adder is an adder that is faster than
-    a ripple carry adder, as it calculates the carry bits faster.
-    It is not as fast as a Kogge-Stone adder, but uses less area.
+    :param a: A :class:`.WireVector` to add up. Bitwidths don't need to match.
+    :param b: A :class:`.WireVector` to add up. Bitwidths don't need to match.
+    :param cin: A 1-bit carry-in :class:`.WireVector`.
+    :param la_unit_len: The length of input that every unit processes.
+
+    :return: A :class:`.WireVector` representing the output of the adder.
     """
     a, b = pyrtl.match_bitwidth(a, b)
     if len(a) <= la_unit_len:
@@ -143,17 +161,21 @@ def _cla_adder_unit(a, b, cin):
     return sum_bit, cout
 
 
-def wallace_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
-    """
-    The reduction and final adding part of a dada tree. Useful for adding many numbers together
-    The use of single bitwidth wires is to allow for additional flexibility
+def wallace_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: int,
+                    final_adder: Callable = kogge_stone) -> pyrtl.WireVector:
+    """The reduction and final adding part of a dada tree.
 
-    :param [[Wirevector]] wire_array_2: An array of arrays of single bitwidth
-        wirevectors
-    :param int result_bitwidth: The bitwidth you want for the resulting wire.
-        Used to eliminate unnecessary wires.
-    :param final_adder: The adder used for the final addition
-    :return: WireVector of length `result_bitwidth`
+    Useful for adding many numbers together with :func:`fast_group_adder`. The use of
+    single bitwidth wires allows for additional flexibility.
+
+    :param wire_array_2: An array of arrays of single bitwidth
+        :class:`WireVectors<.WireVector>`.
+    :param result_bitwidth: Bitwidth of the resulting wire. Used to eliminate
+        unnecessary wires.
+    :param final_adder: The adder used for the final addition.
+
+    :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth`
+             ``result_bitwidth``.
     """
     # verification that the wires are actually wirevectors of length 1
     for wire_set in wire_array_2:
@@ -188,17 +210,21 @@ def wallace_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
         return result
 
 
-def dada_reducer(wire_array_2, result_bitwidth, final_adder=kogge_stone):
-    """
-    The reduction and final adding part of a dada tree. Useful for adding many numbers together
-    The use of single bitwidth wires is to allow for additional flexibility
+def dada_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: int,
+                 final_adder: Callable = kogge_stone) -> pyrtl.WireVector:
+    """The reduction and final adding part of a dada tree.
 
-    :param [[Wirevector]] wire_array_2: An array of arrays of single bitwidth
-        wirevectors
-    :param int result_bitwidth: The bitwidth you want for the resulting wire.
-        Used to eliminate unnecessary wires.
-    :param final_adder: The adder used for the final addition
-    :return: WireVector of length `result_bitwidth`
+    Useful for adding many numbers together with :func:`fast_group_adder`. The use of
+    single bitwidth wires allows for additional flexibility.
+
+    :param wire_array_2: An array of arrays of single bitwidth
+        :class:`WireVectors<.WireVector>`.
+    :param result_bitwidth: Bitwidth of the resulting wire. Used to eliminate
+        unnecessary wires.
+    :param final_adder: The adder used for the final addition.
+
+    :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth`
+             ``result_bitwidth``.
     """
     import math
     # verification that the wires are actually wirevectors of length 1
@@ -261,21 +287,23 @@ Some adders that utilize these tree reducers
 """
 
 
-def fast_group_adder(wires_to_add, reducer=wallace_reducer, final_adder=kogge_stone):
-    """
-    A generalization of the carry save adder, this is designed to add many numbers
-    together in a both area and time efficient manner. Uses a tree reducer
-    to achieve this performance
-
-
-    :param [WireVector] wires_to_add: an array of WireVectors to add
-    :param reducer: the tree reducer to use
-    :param final_adder: The two value adder to use at the end
-    :return: a wirevector with the result of the addition
+def fast_group_adder(wires_to_add: list[pyrtl.WireVector],
+                     reducer: Callable = wallace_reducer,
+                     final_adder: Callable = kogge_stone):
+    """A generalization of :func:`carrysave_adder`, ``fast_group_adder`` is designed to
+    add many numbers together in a both area and time efficient manner. Uses a tree
+    reducer to achieve this performance.
 
     The length of the result is::
 
         max(len(w) for w in wires_to_add) + ceil(len(wires_to_add))
+
+    :param wires_to_add: A :class:`list` of :class:`WireVectors<.WireVector>` to add.
+    :param reducer: The tree reducer to use. See :func:`wallace_reducer` and
+        :func:`dada_reducer`.
+    :param final_adder: The two value adder to use at the end.
+
+    :return: A :class:`.WireVector` with the result of the addition.
     """
     import math
     longest_wire_len = max(len(w) for w in wires_to_add)

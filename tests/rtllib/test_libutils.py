@@ -89,11 +89,14 @@ class TestTwosComp(unittest.TestCase):
 
     def test_twos_comp_sim(self):
         self.out <<= self.in1 + self.in2
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for i in range(10):
             sim.step({
                 'in1': i,
                 'in2': libutils.twos_comp_repr(-2 * i, 8)
             })
             self.assertEqual(-i, libutils.rev_twos_comp_repr(sim.inspect('out'), 8))
+
+
+if __name__ == "__main__":
+    unittest.main()

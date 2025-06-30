@@ -175,8 +175,7 @@ output = attempt4_hardware_fibonacci(n_in, req_in, len(n_in))
 fib_out <<= output[0]
 done_out <<= output[1]
 
-sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation()
 
 sim.step({'n_in': 7, 'req_in': 1})
 
@@ -184,5 +183,5 @@ sim.step({'n_in': 0, 'req_in': 0})
 while not sim.inspect('done_out'):
     sim.step({'n_in': 0, 'req_in': 0})
 
-sim_trace.render_trace(
+sim.tracer.render_trace(
     trace_list=['n_in', 'req_in', 'i', 'fib_out', 'done_out'], repr_func=int)

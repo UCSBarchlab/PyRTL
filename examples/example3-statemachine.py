@@ -101,8 +101,7 @@ refund <<= state == State.RFND
 
 # Now let's build and test our state machine.
 
-sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation()
 
 # Rather than just give some random inputs, let's specify some specific 1-bit
 # values. To make it easier to simulate it over several steps, we'll use
@@ -119,7 +118,7 @@ sim.step_multiple(sim_inputs)
 # Also, to make our input/output easy to reason about let's specify an order to
 # the traces. We also use `enum_name` to display the state names (WAIT, TOK1,
 # ...) rather than their numbers (0, 1, ...).
-sim_trace.render_trace(
+sim.tracer.render_trace(
     trace_list=['token_in', 'req_refund', 'state', 'dispense', 'refund'],
     repr_per_name={'state': pyrtl.enum_name(State)})
 

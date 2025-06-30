@@ -51,3 +51,7 @@ class TestAdders(unittest.TestCase):
         out_vals = utils.sim_and_ret_out(outwire, wires, vals)
         true_result = [sum(cycle_vals) for cycle_vals in zip(*vals)]
         self.assertEqual(out_vals, true_result)
+
+
+if __name__ == "__main__":
+    unittest.main()

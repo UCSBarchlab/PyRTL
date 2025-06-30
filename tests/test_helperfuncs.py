@@ -162,12 +162,11 @@ class TestMatchBitpattern(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output, compact=True)
+        sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_pattern_type_or_length_mismatch(self):
@@ -476,12 +475,11 @@ class TestChop(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output, compact=True)
+        sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_fields_mismatch(self):
@@ -520,12 +518,11 @@ class TestBitField_Update(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output, compact=True)
+        sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_field_too_big(self):
@@ -598,12 +595,11 @@ class TestBitField_Update_Set(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output, compact=True)
+        sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_field_too_big(self):
@@ -678,12 +674,11 @@ class TestAnyAll(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output, compact=True)
+        sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_any_only_on_1_bit_vectors(self):
@@ -752,12 +747,11 @@ class TestXorAllBits(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output, compact=True)
+        sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_one_wirevector(self):
@@ -1029,16 +1023,28 @@ class TestShiftSimulation(unittest.TestCase):
         self.sra_checker(4, 4)
 
     def test_sll_integer_shift_amount(self):
-        self.sll_checker(5, 2, 1)
+        self.sll_checker(5, None, 1)
 
     def test_sla_integer_shift_amount(self):
-        self.sla_checker(5, 2, 1)
+        self.sla_checker(5, None, 1)
 
     def test_srl_integer_shift_amount(self):
-        self.srl_checker(5, 2, 1)
+        self.srl_checker(5, None, 1)
 
     def test_sra_integer_shift_amount(self):
-        self.sra_checker(5, 2, 1)
+        self.sra_checker(5, None, 1)
+
+    def test_sll_big_integer_shift_amount(self):
+        self.sll_checker(3, None, 2 ** 3)
+
+    def test_sla_big_integer_shift_amount(self):
+        self.sla_checker(3, None, 2 ** 3)
+
+    def test_srl_big_integer_shift_amount(self):
+        self.srl_checker(3, None, 2 ** 3)
+
+    def test_sra_big_integer_shift_amount(self):
+        self.sra_checker(3, None, 2 ** 3)
 
 
 class TestBasicMult(unittest.TestCase):
@@ -1059,13 +1065,12 @@ class TestBasicMult(unittest.TestCase):
         true_result = [i * j for i, j in zip(xvals, yvals)]
 
         # Setting up and running the tests
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for cycle in range(len(xvals)):
             sim.step({a: xvals[cycle], b: yvals[cycle]})
 
         # Extracting the values and verifying correctness
-        multiplier_result = sim_trace.trace[product.name]
+        multiplier_result = sim.tracer.trace[product.name]
         self.assertEqual(multiplier_result, true_result)
 
     def test_mult_1(self):

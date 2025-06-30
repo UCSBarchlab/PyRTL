@@ -1,3 +1,13 @@
+"""
+Basic shifting is defined in PyRTL's core library, see:
+
+- :func:`.shift_left_logical`
+- :func:`.shift_right_logical`
+- :func:`.shift_right_arithmetic`
+
+:func:`barrel_shifter` should only be used when more complex shifting behavior is
+required.
+"""
 import pyrtl
 import math
 from enum import IntEnum
@@ -16,16 +26,16 @@ def barrel_shifter(bits_to_shift: WireVector, bit_in: WireVectorLike,
                    wrap_around=0) -> WireVector:
     """Create a barrel shifter.
 
-    :param bits_to_shift: ``WireVector`` with the value to shift.
-    :param bit_in: A 1-bit ``WireVector`` representing the value to shift in.
-    :param direction: A one bit ``WireVector`` representing the shift direction (``0`` =
-        shift right, ``1`` = shift left). If ``direction`` is constant, use
+    :param bits_to_shift: :class:`.WireVector` with the value to shift.
+    :param bit_in: A 1-bit :class:`.WireVector` representing the value to shift in.
+    :param direction: A one bit :class:`.WireVector` representing the shift direction
+        (``0`` = shift right, ``1`` = shift left). If ``direction`` is constant, use
         :class:`Direction` to improve code readability (``direction=Direction.RIGHT``
         instead of ``direction=0``).
-    :param shift_dist: ``WireVector`` representing the amount to shift.
+    :param shift_dist: :class:`.WireVector` representing the amount to shift.
     :param wrap_around: ****currently not implemented****
 
-    :return: The shifted ``WireVector``.
+    :return: The shifted :class:`.WireVector`.
     """
     from pyrtl import concat, select  # just for readability
 

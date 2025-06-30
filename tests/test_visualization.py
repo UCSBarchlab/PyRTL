@@ -178,19 +178,19 @@ class TestOutputGraphs(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_output_to_tgf_does_not_throw_error(self):
-        from .test_importexport import full_adder_blif
+        from tests.test_importexport import full_adder_blif
         with io.StringIO() as vfile:
             pyrtl.input_from_blif(full_adder_blif)
             pyrtl.output_to_trivialgraph(vfile)
 
     def test_output_to_graphviz_does_not_throw_error(self):
-        from .test_importexport import full_adder_blif
+        from tests.test_importexport import full_adder_blif
         with io.StringIO() as vfile:
             pyrtl.input_from_blif(full_adder_blif)
             pyrtl.output_to_graphviz(vfile)
 
     def test_output_to_graphviz_with_custom_namer_does_not_throw_error(self):
-        from .test_importexport import full_adder_blif
+        from tests.test_importexport import full_adder_blif
         with io.StringIO() as vfile:
             pyrtl.input_from_blif(full_adder_blif)
             timing = pyrtl.TimingAnalysis()
@@ -333,8 +333,7 @@ class TestOutputIPynb(unittest.TestCase):
         temp3 = b & c  # temp3 IS the result of b & c (this is the first mention of temp3)
         carry_out <<= temp1 | temp2 | temp3
 
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for cycle in range(15):
             sim.step({
                 'a': random.choice([0, 1]),
@@ -342,7 +341,7 @@ class TestOutputIPynb(unittest.TestCase):
                 'c': random.choice([0, 1])
             })
 
-        htmlstring = pyrtl.trace_to_html(sim_trace)  # tests if it compiles or not
+        htmlstring = pyrtl.trace_to_html(sim.tracer)  # tests if it compiles or not
 
     def test_trace_to_html(self):
         i = pyrtl.Input(1, 'i')

@@ -169,8 +169,7 @@ class MemIndexedTests(unittest.TestCase):
         z = pyrtl.Output(8, 'z')
         y <<= x
         z <<= x
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=self.mem_val_map)
+        sim = pyrtl.Simulation(memory_value_map=self.mem_val_map)
         for i in range(5):
             sim.step({
                 a: i
@@ -190,8 +189,7 @@ class MemIndexedTests(unittest.TestCase):
         self.mem2[x] <<= inp
         out = pyrtl.Output(9, name='out')
         out <<= self.mem2[addr2]  # one behind addr1, so one behind x
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=self.mem_val_map)
+        sim = pyrtl.Simulation(memory_value_map=self.mem_val_map)
         for i in range(5):
             sim.step({
                 addr1: i,
@@ -217,8 +215,7 @@ class MemIndexedTests(unittest.TestCase):
                 z |= x
             with pyrtl.otherwise:
                 w |= x
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=self.mem_val_map)
+        sim = pyrtl.Simulation(memory_value_map=self.mem_val_map)
         for i in range(5):
             sim.step({
                 decide: i % 2,
@@ -257,8 +254,7 @@ class MemIndexedTests(unittest.TestCase):
             with pyrtl.otherwise:
                 self.mem2[x] |= zero
         out <<= self.mem2[addr2]  # one behind addr1, so one behind x
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=self.mem_val_map)
+        sim = pyrtl.Simulation(memory_value_map=self.mem_val_map)
         for i in range(5):
             sim.step({
                 decide: i % 2,

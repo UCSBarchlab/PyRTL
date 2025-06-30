@@ -52,10 +52,6 @@ def next_tempvar_name(name=""):
         return name
 
 
-"""Alias for types that can be coerced to ``WireVector`` by :func:`as_wires`."""
-WireVectorLike = Union["WireVector", int, str, bool]
-
-
 class WireVector:
     """The main class for describing the connections between operators.
 
@@ -1384,12 +1380,15 @@ class WireVector:
             return concat(extvector, self)
 
 
+WireVectorLike = Union[WireVector, int, str, bool]
+"""Alias for types that can be coerced to ``WireVector`` by :func:`as_wires`."""
+
+
 # -----------------------------------------------------------------------
 #  ___     ___  ___       __   ___  __           ___  __  ___  __   __   __
 # |__  \_/  |  |__  |\ | |  \ |__  |  \    \  / |__  /  `  |  /  \ |__) /__`
 # |___ / \  |  |___ | \| |__/ |___ |__/     \/  |___ \__,  |  \__/ |  \ .__/
 #
-
 class Input(WireVector):
     """A ``WireVector`` placeholder for inputs to a :class:`Block`.
 

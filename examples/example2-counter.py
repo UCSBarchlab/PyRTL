@@ -74,9 +74,8 @@ counter.next <<= sum
 # Now let's run the bugger.  No need for inputs, as it doesn't have any.
 # Finally we'll print the trace to the screen and check that it counts up correctly.
 
-sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation()
 for cycle in range(15):
     sim.step()
     assert sim.value[counter] == cycle % 8
-sim_trace.render_trace()
+sim.tracer.render_trace()

@@ -71,7 +71,6 @@ class SimplePipelineExample(SimplePipeline):
 simplepipeline = SimplePipelineExample()
 print(pyrtl.working_block())
 # Simulation of the core
-sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation()
 sim.step_multiple({}, nsteps=15)
-sim_trace.render_trace()
+sim.tracer.render_trace()

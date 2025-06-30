@@ -37,8 +37,7 @@ class TestPrngs(unittest.TestCase):
         load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
         rand = pyrtl.Output(128, 'rand')
         rand <<= prngs.prng_lfsr(128, load, req, seed)
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         in_vals = [random.randrange(1, 2**127) for i in range(5)]
 
         for trial in range(5):
@@ -61,8 +60,7 @@ class TestPrngs(unittest.TestCase):
         ready_out, rand_out = prngs.prng_xoroshiro128(128, load, req, seed)
         ready <<= ready_out
         rand <<= rand_out
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         in_vals = [random.randrange(1, 2**128) for i in range(5)]
 
         for trial in range(5):
@@ -78,10 +76,10 @@ class TestPrngs(unittest.TestCase):
                              "\nAssertion failed on trial {}\nExpected value: {}\nGotten value: {}"
                              .format(trial, hex(true_val), hex(circuit_out)))
 
-        for ready_signal in sim_trace.trace['ready'][:3]:
+        for ready_signal in sim.tracer.trace['ready'][:3]:
             self.assertEqual(ready_signal, 0)
-        self.assertEqual(sim_trace.trace['ready'][3], 1)
-        self.assertEqual(sim_trace.trace['ready'][4], 0)
+        self.assertEqual(sim.tracer.trace['ready'][3], 1)
+        self.assertEqual(sim.tracer.trace['ready'][4], 0)
 
     def test_csprng_trivium(self):
         """
@@ -96,8 +94,7 @@ class TestPrngs(unittest.TestCase):
         ready_out, rand_out = prngs.csprng_trivium(128, load, req, in_vector)
         ready <<= ready_out
         out_vector <<= rand_out
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
 
         in_vals = [0x0100000000000000000000000000000000000000,
                    0x0a09080706050403020100000000000000000000,
@@ -123,11 +120,15 @@ class TestPrngs(unittest.TestCase):
                              "\nAssertion failed on trial {}\nExpected value: {}\nGotten value: {}"
                              .format(trial, hex(true_vals[trial]), hex(circuit_out)))
 
-        for ready_signal in sim_trace.trace['ready'][:19]:
+        for ready_signal in sim.tracer.trace['ready'][:19]:
             self.assertEqual(ready_signal, 0)
-        self.assertEqual(sim_trace.trace['ready'][19], 1)
+        self.assertEqual(sim.tracer.trace['ready'][19], 1)
 
-        for ready_signal in sim_trace.trace['ready'][20:22]:
+        for ready_signal in sim.tracer.trace['ready'][20:22]:
             self.assertEqual(ready_signal, 0)
-        self.assertEqual(sim_trace.trace['ready'][22], 1)
-        self.assertEqual(sim_trace.trace['ready'][23], 0)
+        self.assertEqual(sim.tracer.trace['ready'][22], 1)
+        self.assertEqual(sim.tracer.trace['ready'][23], 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

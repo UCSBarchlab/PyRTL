@@ -65,12 +65,9 @@ print()
 
 # --- Step 2: Simulate Design  -----------------------------------------------
 
-# Okay, let's simulate our one-bit adder.  To keep track of the output of
-# the simulation we need to make a new "SimulationTrace" and a "Simulation"
-# that then uses that trace.
+# Okay, let's simulate our one-bit adder.
 
-sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation()
 
 # Now all we need to do is call "sim.step" to simulate each clock cycle of our
 # design.  We just need to pass in some input each cycle, which is a dictionary
@@ -89,7 +86,7 @@ for cycle in range(15):
 # Now all we need to do is print the trace results to the screen. Here we use
 # "render_trace" with some size information.
 print('--- One Bit Adder Simulation ---')
-sim_trace.render_trace(symbol_len=2)
+sim.tracer.render_trace(symbol_len=2)
 
 a_value = sim.inspect(a)
 print("The latest value of 'a' was: " + str(a_value))
@@ -105,13 +102,13 @@ print("The latest value of 'a' was: " + str(a_value))
 for cycle in range(15):
     # Note that we are doing all arithmetic on values, NOT wirevectors, here.
     # We can add the inputs together to get a value for the result
-    add_result = (sim_trace.trace['a'][cycle]
-                  + sim_trace.trace['b'][cycle]
-                  + sim_trace.trace['c'][cycle])
+    add_result = (sim.tracer.trace['a'][cycle]
+                  + sim.tracer.trace['b'][cycle]
+                  + sim.tracer.trace['c'][cycle])
     # We can select off the bits and compare
     python_sum = add_result & 0x1
     python_cout = (add_result >> 1) & 0x1
-    if (python_sum != sim_trace.trace['sum'][cycle]
-            or python_cout != sim_trace.trace['carry_out'][cycle]):
+    if (python_sum != sim.tracer.trace['sum'][cycle]
+            or python_cout != sim.tracer.trace['carry_out'][cycle]):
         print('This Example is Broken!!!')
         exit(1)

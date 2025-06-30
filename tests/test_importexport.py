@@ -401,8 +401,7 @@ class TestInputFromBlif(unittest.TestCase):
         # wire conversion occurred correctly.
         pyrtl.input_from_blif(counter4bit_blif)
         io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
-        sim_trace = pyrtl.SimulationTrace(wires_to_track=io_vectors)
-        sim = pyrtl.Simulation(sim_trace)
+        sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace(wires_to_track=io_vectors))
         inputs = {
             'rst': [1] + [0] * 20,
             'en': [1] + [1] * 20,
@@ -417,7 +416,7 @@ class TestInputFromBlif(unittest.TestCase):
                           "en     1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1\n"
                           "rst    1  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0\n")
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim.tracer.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
     def test_blif_input_simulates_correctly_with_unmerged_outputs(self):
@@ -431,8 +430,7 @@ class TestInputFromBlif(unittest.TestCase):
         self.assertEqual(len(count2), 1)
         self.assertEqual(len(count3), 1)
         io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
-        sim_trace = pyrtl.SimulationTrace(wires_to_track=io_vectors)
-        sim = pyrtl.Simulation(sim_trace)
+        sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace(wires_to_track=io_vectors))
         inputs = {
             'rst': [1] + [0] * 20,
             'en': [1] + [1] * 20,
@@ -455,7 +453,7 @@ class TestInputFromBlif(unittest.TestCase):
                           "en       1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1\n"
                           "rst      1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n")
         output = io.StringIO()
-        sim_trace.print_trace(output)
+        sim.tracer.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
 
     def test_blif_with_output_as_arg(self):
@@ -1914,12 +1912,11 @@ class TestOutputTestbench(unittest.TestCase):
         counter = pyrtl.Register(3, 'counter')
         counter.next <<= pyrtl.mux(zero, counter + 1, 0)
         counter_output <<= counter
-        sim_trace = pyrtl.SimulationTrace([counter_output, zero])
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace([counter_output, zero]))
         for cycle in range(15):
             sim.step({zero: random.choice([0, 0, 0, 1])})
         with io.StringIO() as tbfile:
-            pyrtl.output_verilog_testbench(tbfile, sim_trace)
+            pyrtl.output_verilog_testbench(tbfile, sim.tracer)
 
     def create_design(self):
         # Various wire names so we can verify they are printed
@@ -1935,8 +1932,7 @@ class TestOutputTestbench(unittest.TestCase):
         mem[i1] <<= r1 + 3
         o1 <<= i3 - r2
         o2 <<= r1
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace, register_value_map={
+        sim = pyrtl.Simulation(register_value_map={
             r1: 2,
             r2: 3,
         }, memory_value_map={
@@ -1950,7 +1946,7 @@ class TestOutputTestbench(unittest.TestCase):
             'w12': [0, 1, 7, 4],
             'a100': [0, 1, 3, 2],
         })
-        return sim_trace
+        return sim.tracer
 
     def test_verilog_testbench_consistency(self):
         sim_trace = self.create_design()

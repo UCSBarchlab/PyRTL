@@ -1,9 +1,19 @@
+import doctest
 import unittest
+
 import pyrtl
 from pyrtl.rtllib import testingutils as utils
 from pyrtl.rtllib import muxes
 
 gen_in = utils.an_input_and_vals
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+    def test_doctests(self):
+        failures, tests = doctest.testmod(m=pyrtl.rtllib.muxes)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 class TestPrioritizedMuxTrivial(unittest.TestCase):
@@ -345,3 +355,7 @@ class TestDemux(unittest.TestCase):
         for cycle in range(20):
             for i, out_wire in enumerate(outs):
                 self.assertEqual(in_vals[i] == i, traces[out_wire][cycle])
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1421,7 +1421,8 @@ class SimulationTrace:
     """
     trace: dict[str, list[int]]
     """
-    A map from a :class:`WireVector`'s name to a list of its values in each cycle.
+    A :class:`dict` mapping from a :class:`WireVector`'s name to a :class:`list` of its
+    values in each cycle.
     """
 
     def __init__(self, wires_to_track: list[WireVector] = None,

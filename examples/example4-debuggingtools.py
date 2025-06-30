@@ -51,8 +51,7 @@ vals1 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
 vals2 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
 vals3 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
 
-sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation()
 sim.step_multiple({
     'in1': vals1,
     'in2': vals2,
@@ -62,16 +61,18 @@ sim.step_multiple({
 # In order to get the result data, you do not need to print a waveform of the trace.
 # You always have the option to just pull the data out of the tracer directly
 print("---- Inputs and debug_out ----")
-print("in1:       ", str(sim_trace.trace['in1']))
-print("in2:       ", str(sim_trace.trace['in2']))
-print("debug_out: ", str(sim_trace.trace['debug_out']))
+print("in1:       ", str(sim.tracer.trace['in1']))
+print("in2:       ", str(sim.tracer.trace['in2']))
+print("debug_out: ", str(sim.tracer.trace['debug_out']))
 print('\n')
 
 # Below, I am using the ability to directly retrieve the trace data to
 # verify the correctness of the first adder
 
 for i in range(len(vals1)):
-    assert sim_trace.trace['debug_out'][i] == sim_trace.trace['in1'][i] + sim_trace.trace['in2'][i]
+    actual = sim.tracer.trace['debug_out'][i]
+    expected = sim.tracer.trace['in1'][i] + sim.tracer.trace['in2'][i]
+    assert actual == expected
 
 
 # --- Probe ----
@@ -118,8 +119,7 @@ out2 <<= pyrtl.probe(multout)[2:16]  # notice probe names are not absolutely nec
 vals1 = [int(2**random.uniform(1, 8) - 2) for _ in range(10)]
 vals2 = [int(2**random.uniform(1, 8) - 2) for _ in range(10)]
 
-sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation()
 sim.step_multiple({
     'in1': vals1,
     'in2': vals2,
@@ -128,8 +128,8 @@ sim.step_multiple({
 # Now we will show the values of the inputs and probes
 # and look at that, we didn't need to make any outputs!
 # (although we did, to demonstrate the power and convenience of probes)
-sim_trace.render_trace()
-sim_trace.print_trace()
+sim.tracer.render_trace()
+sim.tracer.print_trace()
 
 print("--- Probe w/ debugging: ---")
 # Say we wanted to have gotten more information about

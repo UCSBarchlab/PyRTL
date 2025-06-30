@@ -1,38 +1,3 @@
-""" A class for building a PyRTL AES circuit.
-
-Currently this class only supports 128 bit AES encryption/decryption
-
-Example::
-
-    import pyrtl
-    from pyrtl.rtllib.aes import AES
-
-    aes = AES()
-    plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
-    key = pyrtl.Input(bitwidth=128, name='aes_key')
-    aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
-    reset = pyrtl.Input(1, name='reset')
-    ready = pyrtl.Output(1, name='ready')
-    ready_out, aes_cipher = aes.encrypt_state_m(plaintext, key, reset)
-    ready <<= ready_out
-    aes_ciphertext <<= aes_cipher
-    sim_trace = pyrtl.SimulationTrace()
-    sim = pyrtl.Simulation(tracer=sim_trace)
-    sim.step ({
-        'aes_plaintext': 0x00112233445566778899aabbccddeeff,
-        'aes_key': 0x000102030405060708090a0b0c0d0e0f,
-        'reset': 1
-    })
-    for cycle in range(1,10):
-        sim.step ({
-            'aes_plaintext': 0x00112233445566778899aabbccddeeff,
-            'aes_key': 0x000102030405060708090a0b0c0d0e0f,
-            'reset': 0
-        })
-    sim_trace.render_trace(symbol_len=40, segment_size=1)
-
-"""
-
 import pyrtl
 from pyrtl.rtllib import libutils
 
@@ -47,18 +12,53 @@ from pyrtl.rtllib import libutils
 
 
 class AES:
+    """ A class for building a PyRTL AES circuit.
+
+    Currently this class only supports 128 bit AES encryption/decryption.
+
+    Example::
+
+        import pyrtl
+        from pyrtl.rtllib.aes import AES
+
+        aes = AES()
+        plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
+        key = pyrtl.Input(bitwidth=128, name='aes_key')
+        aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
+        reset = pyrtl.Input(1, name='reset')
+        ready = pyrtl.Output(1, name='ready')
+
+        ready_out, aes_cipher = aes.encrypt_state_m(plaintext, key, reset)
+        ready <<= ready_out
+        aes_ciphertext <<= aes_cipher
+
+        sim = pyrtl.Simulation()
+        sim.step ({
+            'aes_plaintext': 0x00112233445566778899aabbccddeeff,
+            'aes_key': 0x000102030405060708090a0b0c0d0e0f,
+            'reset': 1
+        })
+        for cycle in range(1,10):
+            sim.step ({
+                'aes_plaintext': 0x00112233445566778899aabbccddeeff,
+                'aes_key': 0x000102030405060708090a0b0c0d0e0f,
+                'reset': 0
+            })
+        sim.tracer.render_trace(symbol_len=40, segment_size=1)
+    """
+
     def __init__(self):
         self.memories_built = False
         self._key_len = 128
 
-    def encryption(self, plaintext, key):
-        """
-        Builds a single cycle AES Encryption circuit
+    def encryption(self, plaintext: pyrtl.WireVector,
+                   key: pyrtl.WireVector) -> pyrtl.WireVector:
+        """Builds a single cycle AES Encryption circuit.
 
-        :param WireVector plaintext: text to encrypt
-        :param WireVector key: AES key to use to encrypt
-        :return: a WireVector containing the ciphertext
+        :param plaintext: Text to encrypt.
+        :param key: AES key to use to encrypt.
 
+        :return: A :class:`.WireVector` containing the ciphertext.
         """
         if len(plaintext) != self._key_len:
             raise pyrtl.PyrtlError("Ciphertext length is invalid")
@@ -76,15 +76,18 @@ class AES:
             t = self._add_round_key(t, key_list[round])
         return t
 
-    def encrypt_state_m(self, plaintext_in, key_in, reset):
-        """
-        Builds a multiple cycle AES Encryption state machine circuit
+    def encrypt_state_m(
+            self, plaintext_in: pyrtl.WireVector, key_in: pyrtl.WireVector,
+            reset: pyrtl.WireVector) -> tuple[pyrtl.WireVector, pyrtl.WireVector]:
+        """Builds a multiple cycle AES Encryption state machine circuit.
 
-        :param reset: a one bit signal telling the state machine
-            to reset and accept the current plaintext and key
-        :return ready, cipher_text: ready is a one bit signal showing
-            that the encryption result (`cipher_text`) has been calculated.
+        :param plaintext: Text to encrypt.
+        :param key: AES key to use to encrypt.
+        :param reset: a one bit signal telling the state machine to reset and accept the
+            current ``plaintext`` and ``key``.
 
+        :return: ``(ready, cipher_text)``: ``ready`` is a one bit signal showing that
+                 the encryption result (``cipher_text``) has been calculated.
         """
         if len(key_in) != len(plaintext_in):
             raise pyrtl.PyrtlError("AES key and plaintext should be the same length")
@@ -125,13 +128,14 @@ class AES:
         ready = (counter == 10)
         return ready, plain_text
 
-    def decryption(self, ciphertext, key):
-        """
-        Builds a single cycle AES Decryption circuit
+    def decryption(self, ciphertext: pyrtl.WireVector,
+                   key: pyrtl.WireVector) -> pyrtl.WireVector:
+        """Builds a single cycle AES Decryption circuit.
 
-        :param WireVector ciphertext: data to decrypt
-        :param WireVector key: AES key to use to encrypt (AES is symmetric)
-        :return: a WireVector containing the plaintext
+        :param ciphertext: Data to decrypt.
+        :param key: AES key to use to encrypt (AES is symmetric).
+
+        :return: A :class:`.WireVector` containing the plaintext.
         """
         if len(ciphertext) != self._key_len:
             raise pyrtl.PyrtlError("Ciphertext length is invalid")
@@ -149,15 +153,18 @@ class AES:
 
         return t
 
-    def decryption_statem(self, ciphertext_in, key_in, reset):
-        """
-        Builds a multiple cycle AES Decryption state machine circuit
+    def decryption_statem(
+            self, ciphertext_in: pyrtl.WireVector, key_in: pyrtl.WireVector,
+            reset: pyrtl.WireVector) -> tuple[pyrtl.WireVector, pyrtl.WireVector]:
+        """Builds a multiple cycle AES Decryption state machine circuit.
 
-        :param reset: a one bit signal telling the state machine
-          to reset and accept the current plaintext and key
-        :return ready, plain_text: ready is a one bit signal showing
-          that the decryption result (`plain_text`) has been calculated.
+        :param ciphertext: Data to decrypt.
+        :param key: AES key to use to encrypt (AES is symmetric).
+        :param reset: a one bit signal telling the state machine to reset and accept the
+            current plaintext and key.
 
+        :return: ``(ready, plain_text)``: ``ready`` is a one bit signal showing that the
+                 decryption result (``plain_text``) has been calculated.
         """
         if len(key_in) != len(ciphertext_in):
             raise pyrtl.PyrtlError("AES key and ciphertext should be the same length")

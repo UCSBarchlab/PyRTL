@@ -1,91 +1,52 @@
-"""
-
-``Example``::
-
-    ``csprng_trivium``
-    load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
-    ready, rand = pyrtl.Output(1, 'ready'), pyrtl.Output(128, 'rand')
-    ready_out, rand_out = prngs.csprng_trivium(128, load, req)
-    ready <<= ready_out
-    rand <<= rand_out
-    sim_trace = pyrtl.SimulationTrace()
-    sim = pyrtl.Simulation(tracer=sim_trace)
-
-    # seed once at the beginning
-    sim.step({'load': 1, 'req': 0})
-    while sim.value[ready] == 0:  # or loop 19 cycles
-        sim.step({'load': 0, 'req': 0})
-
-    sim.step({'load': 0, 'req': 1})
-    while sim.value[ready] == 0:  # or loop 2 cycles
-        sim.step({'load': 0, 'req': 0})
-
-    print(sim.inspect(rand))
-    sim_trace.render_trace(symbol_len=45, segment_size=5)
-
-    ``prng_xoroshiro128``
-    load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
-    ready, rand = pyrtl.Output(1, 'ready'), pyrtl.Output(128, 'rand')
-    ready_out, rand_out = prngs.prng_xoroshiro128(128, load, req)
-    ready <<= ready_out
-    rand <<= rand_out
-    sim_trace = pyrtl.SimulationTrace()
-    sim = pyrtl.Simulation(tracer=sim_trace)
-
-    sim.step({'load': 1, 'req': 0})  # seed once at the beginning
-    sim.step({'load': 0, 'req': 1})
-    while sim.value[ready] == 0:  # or loop 2 cycles
-        sim.step({'load': 0, 'req': 0})
-
-    print(sim.inspect(rand))
-    sim_trace.render_trace(symbol_len=40, segment_size=1)
-
-    ``prng_lfsr``
-    load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
-    rand = pyrtl.Output(64, 'rand')
-    rand <<= prngs.prng_lfsr(64, load, req)
-    sim_trace = pyrtl.SimulationTrace()
-    sim = pyrtl.Simulation(tracer=sim_trace)
-
-    sim.step({'load': 1, 'req': 0}) # seed once at the beginning
-    sim.step({'load': 0, 'req': 1})
-    sim.step({'load': 0, 'req': 0})
-    print(sim.inspect(rand))
-    sim_trace.render_trace(symbol_len=40, segment_size=1)
-
-    ``explicit seeding``
-    seed =  pyrtl.Input(127, 'seed')
-    load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
-    rand = pyrtl.Output(32, 'rand')
-    rand <<= prngs.prng_lfsr(32, load, req, seed)
-    sim_trace = pyrtl.SimulationTrace()
-    sim = pyrtl.Simulation(tracer=sim_trace)
-
-    sim.step({'load': 1, 'req': 0, 'seed': 0x102030405060708090a0b0c0d0e0f010})
-    sim.step({'load': 0, 'req': 1, 'seed': 0x102030405060708090a0b0c0d0e0f010})
-    sim.step({'load': 0, 'req': 0, 'seed': 0x102030405060708090a0b0c0d0e0f010})
-    print(sim.inspect(rand))
-    sim_trace.render_trace(symbol_len=40, segment_size=1)
-
-"""
-
-
 import pyrtl
 
 
-def prng_lfsr(bitwidth, load, req, seed=None):
-    """ Builds a single-cycle PRNG using a 127 bits Fibonacci LFSR.
+def prng_lfsr(bitwidth: int, load: pyrtl.WireVector, req: pyrtl.WireVector,
+              seed: pyrtl.WireVector = None) -> pyrtl.Register:
+    """Builds a single-cycle PRNG using a 127 bits Fibonacci LFSR.
 
-    :param bitwidth: the desired bitwidth of the random number
-    :param load: one bit signal to load the seed into the prng
-    :param req: one bit signal to request a random number
-    :param seed: 127 bits WireVector, defaults to None (self-seeding),
-      refrain from self-seeding if reseeding at run time is required
-    :return: register containing the random number with the given bitwidth
+    A very fast and compact PRNG that generates a random number using only one clock
+    cycle. Has a period of ``2**127 - 1``. Its linearity makes it a bit statistically
+    weak, but it should be good enough for any noncryptographic purpose like test
+    pattern generation.
 
-    A very fast and compact PRNG that generates a random number using only one clock cycle.
-    Has a period of 2**127 - 1. Its linearity makes it a bit statistically weak, but should be
-    good enough for any noncryptographic purpose like test pattern generation.
+    Example::
+
+        load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
+        rand = pyrtl.Output(64, 'rand')
+
+        rand <<= prngs.prng_lfsr(64, load, req)
+
+        sim = pyrtl.Simulation()
+        sim.step({'load': 1, 'req': 0}) # seed once at the beginning
+        sim.step({'load': 0, 'req': 1})
+        sim.step({'load': 0, 'req': 0})
+        print(sim.inspect(rand))
+        sim.tracer.render_trace(symbol_len=40, segment_size=1)
+
+    Example with explicit seeding::
+
+        seed =  pyrtl.Input(127, 'seed')
+        load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
+        rand = pyrtl.Output(32, 'rand')
+
+        rand <<= prngs.prng_lfsr(32, load, req, seed)
+
+        sim = pyrtl.Simulation()
+        sim.step({'load': 1, 'req': 0, 'seed': 0x102030405060708090a0b0c0d0e0f010})
+        sim.step({'load': 0, 'req': 1, 'seed': 0x102030405060708090a0b0c0d0e0f010})
+        sim.step({'load': 0, 'req': 0, 'seed': 0x102030405060708090a0b0c0d0e0f010})
+        print(sim.inspect(rand))
+        sim.tracer.render_trace(symbol_len=40, segment_size=1)
+
+    :param bitwidth: The desired bitwidth of the random number.
+    :param load: One bit signal to load the seed into the PRNG.
+    :param req: One bit signal to request a random number.
+    :param seed: 127 bits :class:`.WireVector`, defaults to ``None`` (self-seeding).
+        Refrain from self-seeding if reseeding at run time is required.
+
+    :return: :class:`.Register` containing the random number with the given
+             ``bitwidth``.
     """
     # 127 bits is chosen because 127 is a mersenne prime, which makes the period of the
     # LFSR maximized at 2**127 - 1 for any requested bitwidth
@@ -108,28 +69,52 @@ def prng_lfsr(bitwidth, load, req, seed=None):
     return lfsr[:bitwidth]
 
 
-def prng_xoroshiro128(bitwidth, load, req, seed=None):
-    """ Builds a PRNG using the Xoroshiro128+ algorithm in hardware.
+def prng_xoroshiro128(
+        bitwidth: int, load: pyrtl.WireVector, req: pyrtl.WireVector,
+        seed: pyrtl.WireVector = None) -> tuple[pyrtl.WireVector, pyrtl.Register]:
+    """Builds a PRNG using the Xoroshiro128+ algorithm in hardware.
 
-    :param bitwidth: the desired bitwidth of the random number
-    :param load: one bit signal to load the seed into the prng
-    :param req: one bit signal to request a random number
-    :param seed: 128 bits WireVector, defaults to None (self-seeding),
-      refrain from self-seeding if reseeding at run time is required
-    :return ready, rand: ready is a one bit signal showing the random number has been
-      produced, rand is a register containing the random number with the given bitwidth
-
-    An efficient noncryptographic PRNG, has much smaller area than Trivium.
-    But it does require a 64-bit adder to compute the output, so it is a bit slower.
-    Has a period of 2**128 - 1. Passes most statistical tests. Outputs a 64-bit random
-    word each cycle, takes multiple cycles if more than 64 bits are requested, and MSBs
-    of the random words are returned if the bitwidth is not a multiple of 64.
+    An efficient noncryptographic PRNG, has much smaller area than
+    :func:`csprng_trivium`. But it does require a 64-bit adder to compute the output, so
+    it is a bit slower. Has a period of ``2 ** 128 - 1``. Passes most statistical tests.
+    Outputs a 64-bit random word each cycle, takes multiple cycles if more than 64 bits
+    are requested, and MSBs of the random words are returned if the bitwidth is not a
+    multiple of 64.
 
     See also http://xoroshiro.di.unimi.it/
+
+    Example::
+
+        load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
+        ready, rand = pyrtl.Output(1, 'ready'), pyrtl.Output(128, 'rand')
+
+        ready_out, rand_out = prngs.prng_xoroshiro128(128, load, req)
+        ready <<= ready_out
+        rand <<= rand_out
+
+        sim = pyrtl.Simulation()
+        sim.step({'load': 1, 'req': 0})  # seed once at the beginning
+        sim.step({'load': 0, 'req': 1})
+        while sim.value[ready] == 0:  # or loop 2 cycles
+            sim.step({'load': 0, 'req': 0})
+
+        print(sim.inspect(rand))
+        sim.tracer.render_trace(symbol_len=40, segment_size=1)
+
+    :param bitwidth: The desired bitwidth of the random number.
+    :param load: One bit signal to load the seed into the PRNG.
+    :param req: One bit signal to request a random number.
+    :param seed: 128 bits :class:`.WireVector`, defaults to ``None`` (self-seeding).
+        Refrain from self-seeding if reseeding at run time is required.
+
+    :return: ``(ready, rand)``, where ``ready`` is a one bit signal indicating that the
+             random number has been produced, and ``rand`` is a :class:`.Register`
+             containing the random number with the given ``bitwidth``.
     """
     from math import ceil, log
     from pyrtl.rtllib import adders
-    from pyrtl.rtllib.libutils import _shifted_reg_next as shift  # for readability
+    from pyrtl import shift_left_logical as sll
+    from pyrtl import shift_right_logical as srl
     if seed is None:
         import random
         cryptogen = random.SystemRandom()
@@ -140,8 +125,8 @@ def prng_xoroshiro128(bitwidth, load, req, seed=None):
     output = pyrtl.WireVector(64)
     # update internal states by xoring, rotating, and shifting
     _s1 = s0 ^ s1
-    s0_next = (shift(s0, 'l', 55) | shift(s0, 'r', 9)) ^ shift(_s1, 'l', 14) ^ _s1
-    s1_next = shift(_s1, 'l', 36) | shift(_s1, 'r', 28)
+    s0_next = (sll(s0, 55) | srl(s0, 9)) ^ sll(_s1, 14) ^ _s1
+    s1_next = sll(_s1, 36) | srl(_s1, 28)
     output <<= adders.kogge_stone(s0, s1)
 
     gen_cycles = int(ceil(bitwidth / 64))
@@ -173,34 +158,61 @@ def prng_xoroshiro128(bitwidth, load, req, seed=None):
     return ready, rand[-bitwidth:]  # return MSBs because LSBs are less random
 
 
-def csprng_trivium(bitwidth, load, req, seed=None, bits_per_cycle=64):
-    """ Builds a cyptographically secure PRNG using the Trivium stream cipher.
+def csprng_trivium(bitwidth: int, load: pyrtl.WireVector, req: pyrtl.WireVector,
+                   seed: pyrtl.WireVector = None,
+                   bits_per_cycle: int = 64) -> tuple[pyrtl.WireVector, pyrtl.Register]:
+    """Builds a cyptographically secure PRNG using the Trivium stream cipher.
 
-    :param bitwidth: the desired bitwidth of the random number
-    :param load: one bit signal to load the seed into the prng
-    :param req: one bit signal to request a random number
-    :param seed: 160 bits WireVector (80 bits key + 80 bits IV), defaults to None (self-seeding),
-      refrain from self-seeding if reseeding at run time is needed
-    :param bits_per_cycle: the number of output bits to generate in parallel each cycle,
-      up to 64 bits, must be a power of two: either 1, 2, 4, 8, 16, 32, or 64
-    :return ready, rand: ready is a one bit signal showing either the random number has
-      been produced or the seed has been initialized, rand is a register containing the
-      random number with the given bitwidth
+    This PRNG uses Trivium's key stream as its random bits output. Both ``seed`` and the
+    key stream are MSB first (the earliest bit is stored at the MSB). Trivium has a seed
+    initialization stage that discards the first weak 1152 output bits after each
+    loading. Generation stage can take multiple cycles as well depending on the given
+    bitwidth and ``bits_per_cycle``. Has smaller gate area and faster speed than AES-CTR
+    and any other stream cipher. Passes all known statistical tests. Can be used to
+    generate encryption keys or IVs. Designed to securely generate up to ``2 ** 64``
+    bits. If more than ``2 ** 64`` bits are needed, must reseed after each generation of
+    ``2 ** 64`` bits.
 
-    This prng uses Trivium's key stream as its random bits output.
-    Both seed and key stream are MSB first (the earliest bit is stored at the MSB).
-    Trivium has a seed initialization stage that discards the first weak 1152 output bits
-    after each loading. Generation stage can take multiple cycles as well depending on the
-    given bitwidth and bits_per_cycle.
-    Has smaller gate area and faster speed than AES-CTR and any other stream cipher.
-    Passes all known statistical tests. Can be used to generate encryption keys or IVs.
-    Designed to securely generate up to 2**64 bits. If more than 2**64 bits is needed,
-    must reseed after each generation of 2**64 bits.
+    Trivium specifications: http://www.ecrypt.eu.org/stream/ciphers/trivium/trivium.pdf
 
-    Trivium specifications:
-    http://www.ecrypt.eu.org/stream/ciphers/trivium/trivium.pdf
-    See also the eSTREAM portfolio page:
-    http://www.ecrypt.eu.org/stream/e2-trivium.html
+    See also the eSTREAM portfolio page: http://www.ecrypt.eu.org/stream/e2-trivium.html
+
+    Example::
+
+        load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
+        ready, rand = pyrtl.Output(1, 'ready'), pyrtl.Output(128, 'rand')
+
+        ready_out, rand_out = prngs.csprng_trivium(128, load, req)
+        ready <<= ready_out
+        rand <<= rand_out
+
+        sim = pyrtl.Simulation()
+        # Seed only in the first cycle.
+        sim.step({'load': 1, 'req': 0})
+        while sim.value[ready] == 0:  # or loop 19 cycles
+            sim.step({'load': 0, 'req': 0})
+
+        sim.step({'load': 0, 'req': 1})
+        while sim.value[ready] == 0:  # or loop 2 cycles
+            sim.step({'load': 0, 'req': 0})
+
+        print(sim.inspect(rand))
+        sim.tracer.render_trace(symbol_len=45, segment_size=5)
+
+    :param bitwidth: The desired bitwidth of the random number.
+    :param load: One bit signal to load the seed into the PRNG
+    :param req: One bit signal to request a random number.
+    :param seed: 160 bits :class:`.WireVector` (80 bits key + 80 bits IV), defaults to
+        ``None`` (self-seeding). Refrain from self-seeding if reseeding at run time is
+        needed.
+    :param bits_per_cycle: The number of output bits to generate in parallel each cycle,
+        up to ``64`` bits. Must be a power of two, so ``bits_per_cycle`` must be one of
+        ``1``, ``2``, ``4``, ``8``, ``16``, ``32``, or ``64``.
+
+    :return: ``(ready, rand)``, where ``ready`` is a one bit signal indicating that the
+             random number has been produced or the seed has been initialized, and
+             ``rand`` is a :class:`.Register` containing the random number with the
+             given ``bitwidth``.
     """
     from math import ceil, log
     if (64 // bits_per_cycle) * bits_per_cycle != 64:

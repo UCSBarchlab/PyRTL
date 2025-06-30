@@ -599,6 +599,9 @@ def shift_right_arithmetic(bits_to_shift: WireVector,
     :return: A new :class:`WireVector` with the same bitwidth as ``bits_to_shift``.
     """
     if isinstance(shift_amount, int):
+        if shift_amount >= bits_to_shift.bitwidth:
+            return bits_to_shift[-1].sign_extended(len(bits_to_shift))
+
         return bits_to_shift[shift_amount:].sign_extended(len(bits_to_shift))
 
     bit_in = bits_to_shift[-1]  # shift in sign_bit
@@ -611,7 +614,7 @@ def shift_left_logical(bits_to_shift: WireVector,
     """Logical left shift operation.
 
     Logical shifting treats the ``bits_to_shift`` as an unsigned number. Zeroes will be
-    added on the right.
+    added on the right and the result will be truncated to ``bits_to_shift.bitwidth``.
 
     .. doctest only::
 
@@ -641,6 +644,9 @@ def shift_left_logical(bits_to_shift: WireVector,
     :return: A new :class:`WireVector` with the same bitwidth as ``bits_to_shift``.
     """
     if isinstance(shift_amount, int):
+        if shift_amount >= bits_to_shift.bitwidth:
+            return Const(val=0, bitwidth=bits_to_shift.bitwidth)
+
         return concat(bits_to_shift[:-shift_amount], Const(0, shift_amount))
 
     bit_in = 0  # shift in a 0
@@ -687,6 +693,8 @@ def shift_right_logical(bits_to_shift: WireVector,
     :return: A new :class:`WireVector` with the same bitwidth as ``bits_to_shift``.
     """
     if isinstance(shift_amount, int):
+        if shift_amount >= bits_to_shift.bitwidth:
+            return Const(val=0, bitwidth=bits_to_shift.bitwidth)
         return bits_to_shift[shift_amount:].zero_extended(len(bits_to_shift))
 
     bit_in = 0  # shift in a 0

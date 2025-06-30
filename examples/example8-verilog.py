@@ -70,9 +70,8 @@ x, y, cin = [pyrtl.working_block().get_wirevector_by_name(s) for s in ['x', 'y',
 io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
 
 # We are only going to trace the input and output vectors for clarity
-sim_trace = pyrtl.SimulationTrace(wires_to_track=io_vectors)
 # Now simulate the logic with some random inputs
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace(wires_to_track=io_vectors))
 for i in range(15):
     # here we actually generate random booleans for the inputs
     sim.step({
@@ -80,7 +79,7 @@ for i in range(15):
         'y': random.choice([0, 1]),
         'cin': random.choice([0, 1])
     })
-sim_trace.render_trace(symbol_len=2)
+sim.tracer.render_trace(symbol_len=2)
 
 
 # ---- Exporting to Verilog ----
@@ -115,11 +114,10 @@ with io.StringIO() as vfile:
     print(vfile.getvalue())
 
 print("--- Simulation Results ---")
-sim_trace = pyrtl.SimulationTrace([counter_output, zero])
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace([counter_output, zero]))
 for cycle in range(15):
     sim.step({'zero': random.choice([0, 0, 0, 1])})
-sim_trace.render_trace()
+sim.tracer.render_trace()
 
 # We already did the "hard" work of generating a test input for this simulation, so
 # we might want to reuse that work when we take this design through a Verilog toolchain.
@@ -128,7 +126,7 @@ sim_trace.render_trace()
 
 print("--- Verilog for the TestBench ---")
 with io.StringIO() as tbfile:
-    pyrtl.output_verilog_testbench(dest_file=tbfile, simulation_trace=sim_trace)
+    pyrtl.output_verilog_testbench(dest_file=tbfile, simulation_trace=sim.tracer)
     print(tbfile.getvalue())
 
 

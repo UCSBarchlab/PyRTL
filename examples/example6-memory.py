@@ -90,10 +90,9 @@ memvals = {mem1: mem1_init, mem2: mem2_init}
 # value map.
 print("---------memories----------")
 print(pyrtl.working_block())
-sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace, memory_value_map=memvals)
+sim = pyrtl.Simulation(memory_value_map=memvals)
 sim.step_multiple(simvals)
-sim_trace.render_trace()
+sim.tracer.render_trace()
 
 # Cleanup in preparation for the ROM example
 pyrtl.reset_working_block()
@@ -164,7 +163,6 @@ simvals = {
 # supply a memory value map because ROMs are defined with the values
 # predefined.
 
-sim_trace = pyrtl.SimulationTrace()
-sim = pyrtl.Simulation(tracer=sim_trace)
+sim = pyrtl.Simulation()
 sim.step_multiple(simvals)
-sim_trace.render_trace()
+sim.tracer.render_trace()

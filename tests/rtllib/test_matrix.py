@@ -698,8 +698,7 @@ class TestMatrixCopy(unittest.TestCase):
         copy_output_1 = pyrtl.Output(name="copy_output_1", bitwidth=len(copy_matrix))
         copy_output_1 <<= copy_matrix.to_wirevector()
 
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         sim.step({})
 
         given_output = Matrix.matrix_wv_to_list(sim.inspect("matrix_output"), rows, columns, bits)

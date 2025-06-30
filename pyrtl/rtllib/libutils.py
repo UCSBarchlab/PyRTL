@@ -1,23 +1,32 @@
 import pyrtl
 
 
-def match_bitwidth(*args):
+def match_bitwidth(*args: pyrtl.WireVector):
     # TODO: allow for custom bit extension functions
     """ Matches the bitwidth of all of the input arguments.
 
-    :param WireVector args: input arguments
+    .. WARNING::
+
+        Use :func:`.match_bitwidth` instead.
+
+    :param args: input arguments
     :return: tuple of `args` in order with extended bits
     """
     return pyrtl.match_bitwidth(*args)
 
 
-def partition_wire(wire, partition_size):
-    """ Partitions a wire into a list of N wires of size `partition_size`.
+def partition_wire(wire: pyrtl.WireVector,
+                   partition_size: int) -> list[pyrtl.WireVector]:
+    """Partitions a wire into a list of ``N`` wires of size ``partition_size``.
 
-    :param wire: Wire to partition
-    :param partition_size: Integer representing size of each partition
+    The ``wire``'s bitwidth must be evenly divisible by ``partition_size``.
 
-    The `wire`'s bitwidth must be evenly divisible by `parition_size`.
+    .. note::
+
+        Consider using :func:`.wire_matrix` or :func:`.chop` instead.
+
+    :param wire: Wire to partition.
+    :param partition_size: Integer representing size of each partition.
     """
     if len(wire) % partition_size != 0:
         raise pyrtl.PyrtlError("Wire {} cannot be evenly partitioned into items of size {}"
@@ -28,27 +37,30 @@ def partition_wire(wire, partition_size):
 def str_to_int_array(string, base=16):
     """
     Converts a string to an array of integer values according to the
-    base specified (int numbers must be whitespace delimited).\n
+    base speciafied (int numbers must be whitespace delimited).
+
     Example: ``"13 a3 3c" => [0x13, 0xa3, 0x3c]``
+
+    .. WARNING::
+
+        Use a :class:`list` comprehension instead.
 
     :return: [int]
     """
-
     int_strings = string.split()
     return [int(int_str, base) for int_str in int_strings]
 
 
-def twos_comp_repr(val, bitwidth):
-    """Converts a value to its two's-complement (positive) integer
-    representation using a given bitwidth (only converts the value if it is
-    negative).
+def twos_comp_repr(val: int, bitwidth: int) -> int:
+    """Converts a value to its two's-complement (positive) integer representation using
+    a given bitwidth (only converts the value if it is negative).
+
+    .. WARNING::
+
+        Use :func:`.infer_val_and_bitwidth` instead.
 
     :param val: Integer literal to convert to two's complement
     :param bitwidth: Size of val in bits
-
-    For use with :meth:`.Simulation.step` etc. in passing negative numbers,
-    which it does not accept.
-
     """
     correctbw = abs(val).bit_length() + 1
     if bitwidth < correctbw:
@@ -59,12 +71,13 @@ def twos_comp_repr(val, bitwidth):
         return (~abs(val) & (2 ** bitwidth - 1)) + 1  # flip the bits and add one
 
 
-def rev_twos_comp_repr(val, bitwidth):
-    """
-    Takes a two's-complement represented value and
-    converts it to a signed integer based on the provided `bitwidth`.
-    For use with :meth:`.Simulation.inspect` etc. when expecting negative numbers,
-    which it does not recognize
+def rev_twos_comp_repr(val: int, bitwidth: int) -> int:
+    """Takes a two's-complement represented value and converts it to a signed integer
+    based on the provided ``bitwidth``.
+
+    .. WARNING::
+
+        Use :func:`.val_to_signed_integer` instead.
     """
     valbl = val.bit_length()
     if bitwidth < val.bit_length() or val == 2 ** (bitwidth - 1):
@@ -75,13 +88,19 @@ def rev_twos_comp_repr(val, bitwidth):
         return val
 
 
-def _shifted_reg_next(reg, direct, num=1):
-    """
-    Creates a shifted 'next' property for shifted (left or right) register.\n
-    Use: `myReg.next = shifted_reg_next(myReg, 'l', 4)`
+def _shifted_reg_next(reg: pyrtl.Register, direct: str, num: int = 1):
+    """Creates a shifted :attr:`.Register.next` property for shifted (left or right)
+    register.
 
-    :param string direct: direction of shift, either 'l' or 'r'
-    :param int num: number of shifts
+    Use: ``myReg.next = shifted_reg_next(myReg, 'l', 4)``
+
+    .. WARNING::
+
+        Use :func:`.shift_left_logical` or :func:`.shift_right_logical` instead.
+
+    :param direct: Direction of shift, either ``l`` or ``r``.
+    :param num: Number of bit positions to shift.
+
     :return: Register containing reg's (shifted) next state
     """
     if direct == 'l':

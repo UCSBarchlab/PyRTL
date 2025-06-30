@@ -79,8 +79,7 @@ class TestAESDecrypt(unittest.TestCase):
         self.out_vector <<= decrypt_out
         ready <<= decrypt_ready
 
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
 
         sim.step({
             self.in_vector: 0x69c4e0d86a7b0430d8cdb78070b4c55a,
@@ -100,14 +99,14 @@ class TestAESDecrypt(unittest.TestCase):
             sim.step({
                 self.in_vector: 0x0, aes_key: 0x1, reset: 0
             })
-            circuit_out = sim_trace.trace['out_vector'][cycle]
+            circuit_out = sim.tracer.trace['out_vector'][cycle]
             self.assertEqual(circuit_out, true_vals[cycle], "\nAssertion failed on cycle: "
                              + str(cycle) + " Gotten value: " + hex(circuit_out))
 
-        for ready_signal in sim_trace.trace['ready'][:11]:
+        for ready_signal in sim.tracer.trace['ready'][:11]:
             self.assertEqual(ready_signal, 0)
 
-        for ready_signal in sim_trace.trace['ready'][11:]:
+        for ready_signal in sim.tracer.trace['ready'][11:]:
             self.assertEqual(ready_signal, 1)
 
 
@@ -184,8 +183,7 @@ class TestAESEncrypt(unittest.TestCase):
         self.out_vector <<= encrypt_out
         ready <<= encrypt_ready
 
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
 
         sim.step({
             self.in_vector: 0x00112233445566778899aabbccddeeff,
@@ -205,13 +203,17 @@ class TestAESEncrypt(unittest.TestCase):
             sim.step({
                 self.in_vector: 0x0, aes_key: 0x1, reset: 0
             })
-            circuit_out = sim_trace.trace['out_vector'][cycle]
-            # sim_trace.render_trace(symbol_len=40)
+            circuit_out = sim.tracer.trace['out_vector'][cycle]
+            # sim.tracer.render_trace(symbol_len=40)
             self.assertEqual(circuit_out, true_vals[cycle], "\nAssertion failed on cycle: "
                              + str(cycle) + " Gotten value: " + hex(circuit_out))
 
-        for ready_signal in sim_trace.trace['ready'][:11]:
+        for ready_signal in sim.tracer.trace['ready'][:11]:
             self.assertEqual(ready_signal, 0)
 
-        for ready_signal in sim_trace.trace['ready'][11:]:
+        for ready_signal in sim.tracer.trace['ready'][11:]:
             self.assertEqual(ready_signal, 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

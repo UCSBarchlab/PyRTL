@@ -16,12 +16,11 @@ class TestComparisonBasicOperationsMSB1(unittest.TestCase):
         self.r.next <<= self.r + 1
 
     def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output, compact=True)
+        sim.tracer.print_trace(output, compact=True)
         spaced_output = '  '.join(output.getvalue())  # add spaces to string
         self.assertEqual(spaced_output, correct_string)
 
@@ -78,12 +77,11 @@ class TestComparisonBasicOperations_MSB0(unittest.TestCase):
         self.r.next <<= self.r + 1
 
     def check_trace(self, correct_string):
-        sim_trace = pyrtl.SimulationTrace()
-        sim = pyrtl.Simulation(tracer=sim_trace)
+        sim = pyrtl.Simulation()
         for i in range(8):
             sim.step({})
         output = io.StringIO()
-        sim_trace.print_trace(output, compact=True)
+        sim.tracer.print_trace(output, compact=True)
         spaced_output = '  '.join(output.getvalue())  # add spaces to string
         self.assertEqual(spaced_output, correct_string)
 
