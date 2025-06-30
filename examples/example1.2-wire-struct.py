@@ -8,6 +8,7 @@ This example demonstrates named slicing with wire_struct and wire_matrix:
 """
 
 import inspect
+
 import pyrtl
 
 # Motivation

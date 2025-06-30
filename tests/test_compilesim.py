@@ -1,14 +1,15 @@
 import io
-import unittest
-
-import pyrtl
-from pyrtl.corecircuits import _basic_add
 
 # the code below disables testing of CompiledSim on systems where there does
 # not appear to be the right version of gcc.  This is a not an ideal way to check
 # and more work is required to more elegantly check compiledsim across multiple
 # architectures.
 import subprocess
+import unittest
+
+import pyrtl
+from pyrtl.corecircuits import _basic_add
+
 try:
     version = subprocess.check_output(['gcc', '--version'])
 except OSError:
@@ -974,7 +975,7 @@ class RomBlockSimBase(unittest.TestCase):
         rom_out_1 = pyrtl.Output(4, "rom_out_1")
         rom_out_1 <<= rom1[rom_add_1]
 
-        with self.assertRaises(pyrtl.PyrtlError) as ex:
+        with self.assertRaises(pyrtl.PyrtlError):
             self.sim()
 
     def test_rom_rom_block_in_memory_value_map_error(self):
@@ -992,7 +993,6 @@ class RomBlockSimBase(unittest.TestCase):
     def test_rom_val_map(self):
         def rom_data_function(add):
             return int((add + 5) / 2)
-        dummy_in = pyrtl.Input(1, "dummy")
         self.bitwidth = 4
         self.addrwidth = 4
         self.rom1 = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
@@ -1003,7 +1003,7 @@ class RomBlockSimBase(unittest.TestCase):
                        self.rom2: {0: 4, 1: 5, 2: 6, 3: 7}}
 
         with self.assertRaises(pyrtl.PyrtlError):
-            sim = self.sim(memory_value_map=mem_val_map)
+            _ = self.sim(memory_value_map=mem_val_map)
 
     def test_negative_memory_value_map(self):
         mem = pyrtl.MemBlock(addrwidth=3, bitwidth=3)
@@ -1060,7 +1060,7 @@ class TraceErrorBase(unittest.TestCase):
 
     def test_empty_trace(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            sim_trace = pyrtl.SimulationTrace()
+            _ = pyrtl.SimulationTrace()
 
     def test_empty_trace_after_untraceable_removed(self):
         r = pyrtl.Register(2, 'r')

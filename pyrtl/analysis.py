@@ -4,22 +4,21 @@ Contains functions to estimate aspects of blocks (like area and delay)
 by either using internal models or by making calls out to external tool chains.
 """
 
-import re
-import os
+import collections
 import math
-import tempfile
+import os
+import re
 import subprocess
 import sys
-import collections
-from typing import Union, Iterable, Callable
+import tempfile
+from typing import Callable, Iterable, Union
 
-from pyrtl.core import working_block, LogicNet, Block
-from pyrtl.wire import Input, Output, Const, Register, WireVector
-from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.core import Block, LogicNet, working_block
+from pyrtl.helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
 from pyrtl.importexport import output_to_verilog
 from pyrtl.memory import RomBlock
-from pyrtl.helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
-
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.wire import Const, Input, Output, Register, WireVector
 
 # --------------------------------------------------------------------
 #         __   ___          ___  __  ___              ___    __
@@ -400,7 +399,7 @@ def yosys_area_delay(library: str, abc_cmd: str = None, leave_in_dir: str = None
         print(str(e.output).replace('\\n', '\n'), file=sys.stderr)
         print('---------------------------------------------', file=sys.stderr)
         raise PyrtlError('Yosys callfailed')
-    except OSError as e:
+    except OSError:
         print('Error with call to yosys...', file=sys.stderr)
         raise PyrtlError('Call to yosys failed (not installed or on path?)')
     finally:

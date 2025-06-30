@@ -10,6 +10,7 @@
 """
 
 import random
+
 import pyrtl
 
 # The basic idea of PyRTL is to specify the component of a some hardware block

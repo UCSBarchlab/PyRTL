@@ -226,7 +226,6 @@ def dada_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: in
     :return: :class:`.WireVector` with :attr:`~.WireVector.bitwidth`
              ``result_bitwidth``.
     """
-    import math
     # verification that the wires are actually wirevectors of length 1
     for wire_set in wire_array_2:
         for a_wire in wire_set:
@@ -242,7 +241,6 @@ def dada_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: in
 
     for reduction_target in reversed(reduction_schedule[:-1]):
         deferred = [[] for weight in range(result_bitwidth + 1)]
-        last_round = (max(len(i) for i in wire_array_2) == 3)
         for i, w_array in enumerate(wire_array_2):  # Start with low weights and start reducing
             while len(w_array) + len(deferred[i]) > reduction_target:
                 if len(w_array) + len(deferred[i]) - reduction_target >= 2:
@@ -250,8 +248,6 @@ def dada_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: in
                     deferred[i].append(sum)
                     deferred[i + 1].append(cout)
                 else:
-                    # if (last_round and len(deferred[i]) % 3 == 1) or (len(deferred[i]) % 3 == 2):
-                    # if not(last_round and len(wire_array_2[i + 1]) < 3):
                     cout, sum = half_adder(*(w_array.pop(0) for j in range(2)))
                     deferred[i].append(sum)
                     deferred[i + 1].append(cout)

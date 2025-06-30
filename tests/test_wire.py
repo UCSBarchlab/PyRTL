@@ -109,18 +109,19 @@ class TestWireVectorFail(unittest.TestCase):
     def test_undef_wirevector_length(self):
         x = pyrtl.WireVector()
         with self.assertRaises(pyrtl.PyrtlError):
-            y = len(x)
+            _ = len(x)
 
     def test_bad_bitwidth(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector(bitwidth='happy')
+            _ = pyrtl.WireVector(bitwidth='happy')
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector(bitwidth=-1)
+            _ = pyrtl.WireVector(bitwidth=-1)
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector(bitwidth=0)
+            _ = pyrtl.WireVector(bitwidth=0)
+
         y = pyrtl.WireVector(1)
         with self.assertRaises(pyrtl.PyrtlError):
-            x = pyrtl.WireVector(y)
+            _ = pyrtl.WireVector(y)
 
     def test_no_immed_operators(self):
         x = pyrtl.WireVector(bitwidth=3)
@@ -159,23 +160,23 @@ class TestWirevectorSlicing(unittest.TestCase):
     def invalid_empty_slice(self, bitwidth, slice):
         w = pyrtl.Input(bitwidth)
         with self.assertRaises(pyrtl.PyrtlError):
-            x = w[slice]
+            _ = w[slice]
 
     def invalid_slice_index(self, bitwidth, slice):
         w = pyrtl.Input(bitwidth)
         with self.assertRaises(IndexError):
-            x = w[slice]
+            _ = w[slice]
 
     def valid_slice(self, bitwidth, slice):
         w = pyrtl.Input(bitwidth)
-        x = w[slice]
+        _ = w[slice]
 
     def test_wire_wo_bitwidth_fails(self):
         w = pyrtl.WireVector()
         with self.assertRaises(pyrtl.PyrtlError):
-            x = w[2]
+            _ = w[2]
         with self.assertRaises(pyrtl.PyrtlError):
-            x = w[3:5]
+            _ = w[3:5]
 
     def test_valid_indicies(self):
         self.valid_slice(4, 2)
@@ -238,18 +239,11 @@ class TestRegister(unittest.TestCase):
 
     def test_logic_operations(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            a = (self.r or True)
+            _ = (self.r or True)
 
     def test_register_assignment_not_next(self):
         with self.assertRaises(pyrtl.PyrtlError):
             self.r <<= 1
-
-    @unittest.skip("I don't think this is fixable")
-    def test_assign_next(self):
-        # I really don't know how we can fix this - John
-        w = pyrtl.WireVector(bitwidth=1)
-        with self.assertRaises(pyrtl.PyrtlError):
-            a = self.r.next
 
     def test_connect_next(self):
         w = pyrtl.WireVector(bitwidth=1)
@@ -258,7 +252,7 @@ class TestRegister(unittest.TestCase):
 
     def test_next_logic_operations(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            a = (self.r.next or True)
+            _ = (self.r.next or True)
 
     def test_reset_value_is_none(self):
         self.assertIsNone(self.r.reset_value)
@@ -273,11 +267,11 @@ class TestRegister(unittest.TestCase):
 
     def test_invalid_reset_value_too_large(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.Register(4, reset_value=16)
+            _ = pyrtl.Register(4, reset_value=16)
 
     def test_invalid_reset_value_too_large_as_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.Register(4, reset_value="5'd16")
+            _ = pyrtl.Register(4, reset_value="5'd16")
 
     def test_negative_reset_value(self):
         r = pyrtl.Register(4, reset_value=-4)
@@ -295,7 +289,7 @@ class TestRegister(unittest.TestCase):
 
     def test_invalid_negative_reset_value_as_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.Register(2, reset_value="-4'd1")
+            _ = pyrtl.Register(2, reset_value="-4'd1")
 
     def test_extending_negative_reset_value_as_string(self):
         r = pyrtl.Register(4, reset_value="-3'd3")
@@ -306,7 +300,7 @@ class TestRegister(unittest.TestCase):
 
     def test_invalid_reset_value_not_an_integer(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.Register(4, reset_value='hello')
+            _ = pyrtl.Register(4, reset_value='hello')
 
 
 # -------------------------------------------------------------------
@@ -417,7 +411,7 @@ class TestConst(unittest.TestCase):
 
     def assert_bad_const(self, *args, **kwargs):
         with self.assertRaises(pyrtl.PyrtlError):
-            c = pyrtl.Const(*args, **kwargs)
+            _ = pyrtl.Const(*args, **kwargs)
 
 
 class TestOutput(unittest.TestCase):
@@ -434,12 +428,12 @@ class TestOutput(unittest.TestCase):
         o = pyrtl.Output(1)
         w = pyrtl.WireVector(1)
         with self.assertRaises(pyrtl.PyrtlInternalError):
-            x = w & o
+            _ = w & o
 
     def test_slice_output(self):
         o = pyrtl.Output(2)
         with self.assertRaises(pyrtl.PyrtlInternalError):
-            x = o[0]
+            _ = o[0]
 
 
 class TestKeepingCallStack(unittest.TestCase):
@@ -454,7 +448,7 @@ class TestKeepingCallStack(unittest.TestCase):
         pyrtl.set_debug_mode(False)
         wire = pyrtl.WireVector()
         with self.assertRaises(AttributeError):
-            call_stack = wire.init_call_stack
+            _ = wire.init_call_stack
 
     def test_get_call_stack(self):
         pyrtl.set_debug_mode(True)

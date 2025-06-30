@@ -112,9 +112,10 @@ def prng_xoroshiro128(
              containing the random number with the given ``bitwidth``.
     """
     from math import ceil, log
-    from pyrtl.rtllib import adders
+
     from pyrtl import shift_left_logical as sll
     from pyrtl import shift_right_logical as srl
+    from pyrtl.rtllib import adders
     if seed is None:
         import random
         cryptogen = random.SystemRandom()

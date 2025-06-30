@@ -1,6 +1,5 @@
 import doctest
 import io
-import pytest
 import unittest
 
 import pyrtl
@@ -37,13 +36,13 @@ class TestBlock(unittest.TestCase):
         self.invalid_wire(42)
 
     def test_undriven_net(self):
-        w = pyrtl.WireVector(name='testwire', bitwidth=3)
+        _ = pyrtl.WireVector(name='testwire', bitwidth=3)
         self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
         pyrtl.reset_working_block()
-        r = pyrtl.Register(3)
+        _ = pyrtl.Register(3)
         self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
         pyrtl.reset_working_block()
-        o = pyrtl.Output(3)
+        _ = pyrtl.Output(3)
         self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
 
     def test_no_logic_net_comparisons(self):
@@ -54,18 +53,18 @@ class TestBlock(unittest.TestCase):
         net1 = pyrtl.LogicNet(op='x', op_param=None, args=(select, a, b), dests=(outwire,))
         net2 = pyrtl.LogicNet(op='x', op_param=None, args=(select, b, a), dests=(outwire,))
         with self.assertRaises(pyrtl.PyrtlError):
-            foo = net1 < net2
+            _ = net1 < net2
         with self.assertRaises(pyrtl.PyrtlError):
-            foo = net1 <= net2
+            _ = net1 <= net2
         with self.assertRaises(pyrtl.PyrtlError):
-            foo = net1 > net2
+            _ = net1 > net2
         with self.assertRaises(pyrtl.PyrtlError):
-            foo = net1 >= net2
+            _ = net1 >= net2
 
     def test_logicsubset_no_op(self):
         w = pyrtl.WireVector(name='testwire1', bitwidth=1)
         v = pyrtl.WireVector(name='testwire2', bitwidth=1)
-        sum = w & v
+        _ = w & v
         block = pyrtl.working_block()
         self.assertEqual(block.logic_subset(None), block.logic)
 
@@ -114,7 +113,7 @@ class TestBlock(unittest.TestCase):
     def test_same_memblock_referenced_across_multiple_operators(self):
         mem_name = 'mem'
         mem = pyrtl.MemBlock(32, 5, mem_name)
-        x = mem[0]
+        _ = mem[0]
         mem[1] <<= 42
         mem = pyrtl.working_block().get_memblock_by_name(mem_name)
         for net in pyrtl.working_block().logic:
@@ -467,7 +466,7 @@ class TestAsGraph(unittest.TestCase):
         x = pyrtl.Input(1)
         d = pyrtl.Output()
         b = a & a
-        c = pyrtl.concat(a, a)
+        _ = pyrtl.concat(a, a)
         m = pyrtl.MemBlock(addrwidth=3, bitwidth=3, name='m')
         m2 = pyrtl.MemBlock(addrwidth=1, bitwidth=1, name='m')
         d <<= m[a]
@@ -491,8 +490,7 @@ class TestSanityCheck(unittest.TestCase):
             pyrtl.working_block().sanity_check()
 
     def test_missing_bitwidth(self):
-        inp = pyrtl.Input()
-        out = pyrtl.Output(8)
+        _ = pyrtl.Input()
         self.sanity_error("missing bitwidth")
 
     def test_duplicate_names(self):
@@ -510,8 +508,7 @@ class TestSanityCheck(unittest.TestCase):
             self.sanity_error("Unknown wires")
 
     def test_not_connected(self):
-        inp = pyrtl.Input(8, 'inp')
-        out = pyrtl.Output(8, 'out')
+        _ = pyrtl.Output(8, 'out')
         self.sanity_error("declared but not connected")
 
     def test_not_driven(self):
@@ -568,13 +565,13 @@ class TestLogicNets(unittest.TestCase):
     def test_comparison(self):
         net = pyrtl.LogicNet('+', 'xx', ("arg1", "arg2"), ("dest",))
         with self.assertRaises(pyrtl.PyrtlError):
-            a = net < net
+            _ = net < net
         with self.assertRaises(pyrtl.PyrtlError):
-            a = net <= net
+            _ = net <= net
         with self.assertRaises(pyrtl.PyrtlError):
-            a = net >= net
+            _ = net >= net
         with self.assertRaises(pyrtl.PyrtlError):
-            a = net > net
+            _ = net > net
 
     def test_equivelence_of_same_nets(self):
         a = pyrtl.WireVector(1)

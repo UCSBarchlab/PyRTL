@@ -1,7 +1,6 @@
 import pyrtl
 from pyrtl.rtllib import libutils
 
-
 # TODO:
 # 2) All ROMs should be synchronous.  This should be easy once (3) is completed
 # 3) Right now decryption generates one GIANT combinatorial block. Instead

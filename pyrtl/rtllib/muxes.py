@@ -107,9 +107,9 @@ def _sparse_mux(sel, vals):
 
         first_dict = {indx: wire for indx, wire in vals.items() if indx < half}
         second_dict = {indx - half: wire for indx, wire in vals.items() if indx >= half}
-        if not len(first_dict):
+        if not first_dict:
             return sparse_mux(sel[:-1], second_dict)
-        if not len(second_dict):
+        if not second_dict:
             return sparse_mux(sel[:-1], first_dict)
 
         false_result = sparse_mux(sel[:-1], first_dict)

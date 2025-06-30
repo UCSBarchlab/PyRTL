@@ -4,18 +4,22 @@
 from __future__ import annotations
 
 import collections
-import math
 import numbers
-import sys
-from functools import reduce
-from typing import Union, NamedTuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple, Union
 
-from pyrtl.core import working_block, _NameIndexer, _get_debug_mode, Block
-from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.wire import (
-    WireVector, Input, Output, Const, Register, WrappedWireVector, WireVectorLike)
+from pyrtl.core import Block, _get_debug_mode, _NameIndexer, working_block
 from pyrtl.corecircuits import (
-    as_wires, rtl_all, rtl_any, concat, concat_list, select, shift_left_logical)
+    as_wires,
+    concat,
+    concat_list,
+    rtl_all,
+    rtl_any,
+    select,
+    shift_left_logical,
+)
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.wire import Const, Input, Output, Register, WireVector, WireVectorLike, WrappedWireVector
+
 if TYPE_CHECKING:
     from pyrtl.simulation import Simulation
 
@@ -796,7 +800,6 @@ def val_to_formatted_str(val: int, format: str, enum_set=None) -> str:
     """
     type = format[0]
     bitwidth = int(format[1:].split('/')[0])
-    bitmask = (1 << bitwidth) - 1
     if type == 's':
         rval = str(val_to_signed_integer(val, bitwidth))
     elif type == 'x':
@@ -1051,7 +1054,7 @@ def find_loop(block=None):
     checking_stack = [_FilteringState(initial_w)]
 
     # we don't use a recursive method as Python has a limited stack (default: 999 frames)
-    while len(checking_stack):
+    while checking_stack:
         cur_item = checking_stack[-1]
         if cur_item.arg_num == -1:
             #  first time testing this item
@@ -1120,7 +1123,7 @@ def _currently_in_jupyter_notebook():
 
 def _print_netlist_latex(netlist):
     """ Print each net in netlist in a Latex array """
-    from IPython.display import display, Latex  # pylint: disable=import-error
+    from IPython.display import Latex, display  # pylint: disable=import-error
     out = '\n\\begin{array}{ \\| c \\| c \\| l \\| }\n'
     out += '\n\\hline\n'
     out += '\\hline\n'.join(str(n) for n in netlist)

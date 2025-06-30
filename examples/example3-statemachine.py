@@ -7,6 +7,7 @@
 """
 
 import enum
+
 import pyrtl
 
 token_in = pyrtl.Input(1, 'token_in')

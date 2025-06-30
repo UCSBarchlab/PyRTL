@@ -1,14 +1,13 @@
 """ Some useful hardware generators (e.g. muxes, signed multipliers, etc.)  """
 
 import itertools
-import math
 from typing import Union
 
-from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.core import Block, LogicNet, working_block
-from pyrtl.wire import Const, WireVector, WireVectorLike, WrappedWireVector
-from pyrtl.rtllib import barrel, muxes
 from pyrtl.conditional import otherwise
+from pyrtl.core import Block, LogicNet, working_block
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.rtllib import barrel, muxes
+from pyrtl.wire import Const, WireVector, WireVectorLike, WrappedWireVector
 
 
 def mux(index: WireVectorLike, *mux_ins: WireVectorLike,
@@ -553,15 +552,6 @@ def signed_ge(a: WireVectorLike, b: WireVectorLike) -> WireVector:
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = b - a
     return (r[-1] ^ (~a[-1]) ^ (~b[-1])) | (a == b)
-
-
-def _check_shift_inputs(a, shamt):
-    # TODO: perhaps this should just be implemented directly rather than throwing error
-    if isinstance(shamt, int):
-        raise PyrtlError('shift_amount is an integer, use slice instead')
-    a, shamt = as_wires(a), as_wires(shamt)
-    log_length = int(math.log(len(a), 2))
-    return a, shamt
 
 
 def shift_right_arithmetic(bits_to_shift: WireVector,

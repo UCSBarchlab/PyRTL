@@ -19,10 +19,10 @@ and WireVector are as well as how Blocks store the latter two
 structures (through Block.logic, block.Wirevector_set, etc).
 """
 import functools
-from pyrtl.pyrtlexceptions import PyrtlError
 
-from pyrtl.core import set_working_block, LogicNet, working_block
-from pyrtl.wire import Const, Input, Output, WireVector, Register
+from pyrtl.core import LogicNet, set_working_block, working_block
+from pyrtl.pyrtlexceptions import PyrtlError
+from pyrtl.wire import Const, Input, Output, Register, WireVector
 
 
 def net_transform(transform_func, block=None, **kwargs):
@@ -117,11 +117,12 @@ def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=Non
     ```
         old_src_net = src_nets[orig_wire]
         src_nets[new_src] = old_src_net (where old_src_net.dests = (new_src,))
-    ``` 
+    ```
     and
     ```
         old_dst_nets = dst_nets[orig_wire]
-        dst_nets[new_dst] = [old_dst_net (where old_dst_net.args replaces orig_wire with new_dst) foreach old_dst_net]  # noqa
+        dst_nets[new_dst] = [old_dst_net (where old_dst_net.args replaces orig_wire with
+                                          new_dst) foreach old_dst_net]
     ```
 
     For example, given the graph on left, `replace_wire_fast(w1, w4, w1, ...)` produces on right:

@@ -1,22 +1,21 @@
 from __future__ import annotations
 
-import ctypes
-import subprocess
-import tempfile
-import shutil
-from os import path
-import platform
-import sys
 import _ctypes
+import ctypes
+import platform
+import shutil
+import subprocess
+import sys
+import tempfile
 from collections.abc import Mapping
+from os import path
 
-from pyrtl.core import working_block, Block
-from pyrtl.wire import Input, Output, Const, WireVector, Register
+from pyrtl.core import Block, working_block
+from pyrtl.helperfuncs import infer_val_and_bitwidth
 from pyrtl.memory import MemBlock, RomBlock
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.simulation import Simulation, SimulationTrace, _trace_sort_key
-from pyrtl.helperfuncs import infer_val_and_bitwidth
-
+from pyrtl.simulation import SimulationTrace, _trace_sort_key
+from pyrtl.wire import Const, Input, Output, Register, WireVector
 
 __all__ = ['CompiledSimulation']
 

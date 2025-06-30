@@ -10,7 +10,7 @@ The functions below provide more complex alternatives.
 from typing import Callable
 
 import pyrtl
-from pyrtl.rtllib import adders, libutils
+from pyrtl.rtllib import adders
 
 
 def simple_mult(A: pyrtl.WireVector, B: pyrtl.WireVector,

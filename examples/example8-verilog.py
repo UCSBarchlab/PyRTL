@@ -7,8 +7,9 @@
     that make doing netlist-level transforms and analysis directly in PyRTL easy.
 """
 
-import random
 import io
+import random
+
 import pyrtl
 
 # ---- Importing From Verilog ----

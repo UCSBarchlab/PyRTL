@@ -8,8 +8,6 @@ Basic shifting is defined in PyRTL's core library, see:
 :func:`barrel_shifter` should only be used when more complex shifting behavior is
 required.
 """
-import pyrtl
-import math
 from enum import IntEnum
 
 from pyrtl.wire import WireVector, WireVectorLike

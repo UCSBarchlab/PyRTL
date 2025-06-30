@@ -52,3 +52,19 @@ Changelog = "https://github.com/UCSBarchlab/PyRTL/blob/development/CHANGELOG.md"
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# See https://docs.astral.sh/ruff/rules/
+select = [
+    # pycodestyle
+    "E", "W",
+    # Pyflakes
+    "F",
+    # isort
+    "I",
+    # pylint
+    "PLE",
+]

@@ -8,7 +8,6 @@
 
 import pyrtl
 
-
 # Let's just dive right in.
 
 def one_bit_add(a, b, carry_in):

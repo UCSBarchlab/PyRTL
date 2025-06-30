@@ -8,22 +8,22 @@ accordingly, or write information from the Block out to the file.
 
 from __future__ import annotations
 
-import re
 import collections
-import tempfile
-import os
-import subprocess
-import sys
 import functools
 import operator
-from typing import Union, TYPE_CHECKING
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from typing import TYPE_CHECKING, Union
 
-from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.core import working_block, _NameSanitizer, Block
-from pyrtl.wire import WireVector, Input, Output, Const, Register, next_tempvar_name
+from pyrtl.core import Block, _NameSanitizer, working_block
 from pyrtl.corecircuits import concat_list, rtl_all, rtl_any, select
 from pyrtl.memory import RomBlock
-from pyrtl.passes import two_way_concat, one_bit_selects
+from pyrtl.passes import one_bit_selects, two_way_concat
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.wire import Const, Input, Output, Register, WireVector, next_tempvar_name
 
 if TYPE_CHECKING:
     from pyrtl.simulation import SimulationTrace
@@ -135,8 +135,17 @@ def input_from_blif(
         first model listed in the BLIF.
     """
     import pyparsing
-    from pyparsing import (Word, Literal, OneOrMore, ZeroOrMore,
-                           Suppress, Group, Keyword, Opt, one_of)
+    from pyparsing import (
+        Group,
+        Keyword,
+        Literal,
+        OneOrMore,
+        Opt,
+        Suppress,
+        Word,
+        ZeroOrMore,
+        one_of,
+    )
 
     block = working_block(block)
 
@@ -615,7 +624,7 @@ def input_from_verilog(
         print(str(e.output).replace('\\n', '\n'), file=sys.stderr)
         print('---------------------------------------------', file=sys.stderr)
         raise PyrtlError('Yosys call failed')
-    except OSError as e:
+    except OSError:
         print('Error with call to yosys...', file=sys.stderr)
         raise PyrtlError('Call to yosys failed (not installed or on path?)')
     finally:
@@ -1212,7 +1221,7 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
         elif log_net.op == 'm':
             # if there are rom blocks, need to be initialized
             if rom_blocks is not None:
-                if not log_net.op_param[0] in initializedMem:
+                if log_net.op_param[0] not in initializedMem:
                     initializedMem.append(log_net.op_param[0])
 
                     # find corresponding rom block according to memid
@@ -1237,7 +1246,7 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
                                                 log_net.args[0].name))
 
             else:
-                if not log_net.op_param[0] in initializedMem:
+                if log_net.op_param[0] not in initializedMem:
                     initializedMem.append(log_net.op_param[0])
                     f.write("    cmem %s_%s : UInt<%s>[%s]\n" %
                             (log_net.op_param[1].name, log_net.op_param[0],
@@ -1248,7 +1257,7 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
                 f.write("    %s <= T_%d\n" % (log_net.dests[0].name, node_cntr))
                 node_cntr += 1
         elif log_net.op == '@':
-            if not log_net.op_param[0] in initializedMem:
+            if log_net.op_param[0] not in initializedMem:
                 initializedMem.append(log_net.op_param[0])
                 f.write("    cmem %s_%s : UInt<%s>[%s]\n" %
                         (log_net.op_param[1].name, log_net.op_param[0],
@@ -1280,8 +1289,7 @@ def input_from_iscas_bench(bench, block: Block = None):
     '''
 
     import pyparsing
-    from pyparsing import (Word, Literal, OneOrMore, ZeroOrMore,
-                           Suppress, Group, Keyword, one_of)
+    from pyparsing import Group, Keyword, Literal, OneOrMore, Suppress, Word, ZeroOrMore, one_of
 
     block = working_block(block)
 

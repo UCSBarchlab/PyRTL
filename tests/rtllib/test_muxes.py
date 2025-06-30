@@ -2,8 +2,8 @@ import doctest
 import unittest
 
 import pyrtl
-from pyrtl.rtllib import testingutils as utils
 from pyrtl.rtllib import muxes
+from pyrtl.rtllib import testingutils as utils
 
 gen_in = utils.an_input_and_vals
 
@@ -23,19 +23,19 @@ class TestPrioritizedMuxTrivial(unittest.TestCase):
 
     def test_empty(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            x = muxes.prioritized_mux([], [])
+            _ = muxes.prioritized_mux([], [])
 
     def test_different_sel_and_val_lengths(self):
         a = pyrtl.WireVector(1)
         with self.assertRaises(pyrtl.PyrtlError):
-            x = muxes.prioritized_mux([a], [a, a])
+            _ = muxes.prioritized_mux([a], [a, a])
 
     def test_invalid_select_width(self):
         a = pyrtl.WireVector(2)
         b = pyrtl.WireVector(2)
         c = pyrtl.WireVector(10)
         with self.assertRaises(pyrtl.PyrtlError):
-            x = muxes.prioritized_mux([a, b], [c, c])
+            _ = muxes.prioritized_mux([a, b], [c, c])
 
     def test_one_wire(self):
         a = pyrtl.WireVector(1)
@@ -184,7 +184,6 @@ class TestSmartMux(unittest.TestCase):
         a1, a1_vals = gen_in(3)
         a2, a2_vals = gen_in(8)
         a3, a3_vals = gen_in(5)
-        res = pyrtl.Output(name="output")
 
         m = muxes.sparse_mux(sel, {2: a1, 3: a2, 6: a3})
         self.assertEqual(len(m), 8)  # the biggest one

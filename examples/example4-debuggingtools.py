@@ -6,10 +6,11 @@ debugging, as a problem may surface long after the error was made. Fortunately,
 PyRTL comes with various features to help you find mistakes.
 """
 
-import random
 import io
-from pyrtl.rtllib import adders, multipliers
+import random
+
 import pyrtl
+from pyrtl.rtllib import adders, multipliers
 
 random.seed(93729473)  # used to make random calls deterministic for this example
 

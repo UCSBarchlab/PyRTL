@@ -8,17 +8,20 @@ import numbers
 import os
 import re
 import sys
-from typing import Callable
 from collections.abc import Mapping
+from typing import Callable
 
-from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.core import working_block, PostSynthBlock, _PythonSanitizer, Block
-from pyrtl.wire import Input, Register, Const, Output, WireVector
-from pyrtl.memory import RomBlock, MemBlock
+from pyrtl.core import Block, PostSynthBlock, _PythonSanitizer, working_block
 from pyrtl.helperfuncs import (
-    check_rtl_assertions, _currently_in_jupyter_notebook, val_to_signed_integer,
-    infer_val_and_bitwidth)
+    _currently_in_jupyter_notebook,
+    check_rtl_assertions,
+    infer_val_and_bitwidth,
+    val_to_signed_integer,
+)
 from pyrtl.importexport import _VerilogSanitizer
+from pyrtl.memory import MemBlock, RomBlock
+from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
+from pyrtl.wire import Const, Input, Output, Register, WireVector
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -171,7 +174,7 @@ class Simulation:
             if isinstance(self.block, PostSynthBlock):
                 mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
             self.memvalue[mem.id] = mem_map
-            max_addr_val, max_bit_val = 2**mem.addrwidth, 2**mem.bitwidth
+            max_addr_val = 2**mem.addrwidth
             mem_map = {addr: infer_val_and_bitwidth(val, bitwidth=mem.bitwidth).value
                        for addr, val in mem_map.items()}
             for (addr, val) in mem_map.items():
@@ -1449,7 +1452,7 @@ class SimulationTrace:
             wires_to_track = self.block.wirevector_set
 
         non_const_tracked = list(filter(lambda w: not isinstance(w, Const), wires_to_track))
-        if not len(non_const_tracked):
+        if not non_const_tracked:
             raise PyrtlError("There needs to be at least one named non-constant wire "
                              "for simulation to be useful")
         self.wires_to_track = wires_to_track
@@ -1606,7 +1609,8 @@ class SimulationTrace:
         :param segment_size: Traces are broken in the segments of this number of cycles.
         """
         if _currently_in_jupyter_notebook():
-            from IPython.display import display, HTML, Javascript  # pylint: disable=import-error
+            from IPython.display import HTML, Javascript, display  # pylint: disable=import-error
+
             from pyrtl.visualization import trace_to_html
             htmlstring = trace_to_html(self, trace_list=trace_list, sortkey=_trace_sort_key)
             html_elem = HTML(htmlstring)

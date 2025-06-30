@@ -2,8 +2,7 @@
 # classes below are internal implementation details.
 
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.wire import WireVector, Const, Register
-
+from pyrtl.wire import Const, Register, WireVector
 
 # -----------------------------------------------------------------------
 #    __   __        __    ___    __                  __
@@ -148,8 +147,8 @@ def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
 
 def _finalize(defaults):
     """Build the required muxes and call back to WireVector to finalize the wirevector build."""
-    from pyrtl.memory import MemBlock
     from pyrtl.corecircuits import select
+    from pyrtl.memory import MemBlock
     for lhs in _predicate_map:
         # handle memory write ports
         if isinstance(lhs, MemBlock):

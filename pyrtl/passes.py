@@ -6,19 +6,32 @@ ways to change a block.
 
 import collections
 
+from pyrtl import transform  # transform.all_nets looks better than all_nets
 from pyrtl.core import (
-    working_block, set_working_block, _get_debug_mode, LogicNet, PostSynthBlock, Block)
-from pyrtl.helperfuncs import _NetCount
+    Block,
+    LogicNet,
+    PostSynthBlock,
+    _get_debug_mode,
+    set_working_block,
+    working_block,
+)
 from pyrtl.corecircuits import (
-    _basic_mult, _basic_add, _basic_sub, _basic_eq, _basic_lt, _basic_gt, _basic_select,
-    concat_list, as_wires, concat)
+    _basic_add,
+    _basic_eq,
+    _basic_gt,
+    _basic_lt,
+    _basic_mult,
+    _basic_select,
+    _basic_sub,
+    as_wires,
+    concat,
+    concat_list,
+)
+from pyrtl.helperfuncs import _NetCount
 from pyrtl.memory import MemBlock
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.wire import WireVector, Input, Output, Const, Register
-from pyrtl.transform import (
-    net_transform, _get_new_block_mem_instance, copy_block, replace_wires)
-from pyrtl import transform  # transform.all_nets looks better than all_nets
-
+from pyrtl.transform import _get_new_block_mem_instance, copy_block, net_transform, replace_wires
+from pyrtl.wire import Const, Input, Output, Register, WireVector
 
 # --------------------------------------------------------------------
 #   __   __  ___           __      ___    __
@@ -382,7 +395,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
 
         if (net_checking.op in two_var_ops) and num_constants == 1:
             long_wires = [w for w in net_checking.args + net_checking.dests if len(w) != 1]
-            if len(long_wires):
+            if long_wires:
                 _constant_prop_error(net_checking, "has wire(s) {} with bitwidths that are not 1"
                                      .format(long_wires))
                 return  # skip if we are ignoring unoptimizable ops

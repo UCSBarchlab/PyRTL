@@ -1,10 +1,10 @@
+import random
 
 import pyrtl
 from pyrtl import transform
 
 
 def insert_random_inversions(rate=0.5):
-    import random
 
     def randomly_replace(wire):
         if random.random() < rate:

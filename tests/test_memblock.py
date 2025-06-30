@@ -1,5 +1,4 @@
 import doctest
-from random import randint
 import unittest
 
 import pyrtl
@@ -343,17 +342,17 @@ class RTLRomBlockWiring(unittest.TestCase):
 
     def test_int_index_error(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            x = self.memory[3]
+            _ = self.memory[3]
 
     def test_other_non_wire_index_error(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            y = self.memory[()]
+            _ = self.memory[()]
         with self.assertRaises(pyrtl.PyrtlError):
-            y = self.memory["test"]
+            _ = self.memory["test"]
         with self.assertRaises(pyrtl.PyrtlError):
-            y = self.memory["15"]
+            _ = self.memory["15"]
         with self.assertRaises(pyrtl.PyrtlError):
-            y = self.memory[False]
+            _ = self.memory[False]
 
     def test_write(self):
         with self.assertRaises(pyrtl.PyrtlError):

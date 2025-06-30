@@ -3,7 +3,7 @@ import unittest
 
 import pyrtl
 import pyrtl.rtllib.testingutils as utils
-from pyrtl.rtllib import multipliers, adders
+from pyrtl.rtllib import adders, multipliers
 
 
 class TestSimpleMult(unittest.TestCase):

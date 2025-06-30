@@ -485,23 +485,23 @@ class TestChop(unittest.TestCase):
     def test_fields_mismatch(self):
         instr = pyrtl.WireVector(name='instr', bitwidth=32)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.chop(instr, 10, 10, 10)
+            _ = pyrtl.chop(instr, 10, 10, 10)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.chop(instr, 10, 10, 14)
+            _ = pyrtl.chop(instr, 10, 10, 14)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.chop(instr, 33)
+            _ = pyrtl.chop(instr, 33)
 
     def test_wrong_input_types_fail(self):
         instr = pyrtl.WireVector(name='instr', bitwidth=32)
         x = pyrtl.WireVector(name='x', bitwidth=10)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.chop(instr, x, 10, 12)
+            _ = pyrtl.chop(instr, x, 10, 12)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.chop(instr, 10, x, 12)
+            _ = pyrtl.chop(instr, 10, x, 12)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.chop(instr, x)
+            _ = pyrtl.chop(instr, x)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.chop(10, 5, 5)
+            _ = pyrtl.chop(10, 5, 5)
 
     def test_chop_does_simulation_correct(self):
         r = pyrtl.Register(5, 'r')
@@ -529,18 +529,18 @@ class TestBitField_Update(unittest.TestCase):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.bitfield_update(a, 1, 2, b)
+            _ = pyrtl.bitfield_update(a, 1, 2, b)
 
     def test_field_too_big_truncate(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=3)
-        o = pyrtl.bitfield_update(a, 1, 2, b, truncating=True)
+        _ = pyrtl.bitfield_update(a, 1, 2, b, truncating=True)
 
     def test_no_bits_to_update(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.bitfield_update(a, 1, 1, b, truncating=True)
+            _ = pyrtl.bitfield_update(a, 1, 1, b, truncating=True)
 
     def bitfield_update_checker(self, input_width, range_start, range_end,
                                 update_width, test_amt=20):
@@ -606,33 +606,33 @@ class TestBitField_Update_Set(unittest.TestCase):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.bitfield_update_set(a, {(1, 2): b})
+            _ = pyrtl.bitfield_update_set(a, {(1, 2): b})
 
     def test_field_too_big_truncate(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=3)
-        o = pyrtl.bitfield_update_set(a, {(1, 2): b}, truncating=True)
+        _ = pyrtl.bitfield_update_set(a, {(1, 2): b}, truncating=True)
 
     def test_no_bits_to_update(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.bitfield_update_set(a, {(1, 1): b}, truncating=True)
+            _ = pyrtl.bitfield_update_set(a, {(1, 1): b}, truncating=True)
 
     def test_overlapping_ranges(self):
         a = pyrtl.WireVector(name='a', bitwidth=10)
         b = pyrtl.WireVector(name='b', bitwidth=10)
         c = pyrtl.WireVector(name='c', bitwidth=10)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.bitfield_update_set(a, {(1, 4): b, (3, 6): c}, truncating=True)
+            _ = pyrtl.bitfield_update_set(a, {(1, 4): b, (3, 6): c}, truncating=True)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.bitfield_update_set(a, {(8, 10): b, (-1, None): c}, truncating=True)
+            _ = pyrtl.bitfield_update_set(a, {(8, 10): b, (-1, None): c}, truncating=True)
         with self.assertRaises(pyrtl.PyrtlError):
-            o = pyrtl.bitfield_update_set(a, {(None, 3): b, (0, 1): c}, truncating=True)
+            _ = pyrtl.bitfield_update_set(a, {(None, 3): b, (0, 1): c}, truncating=True)
 
     def bitfield_update_set_checker(self, input_width, update_set_constraints, test_amt=20):
-        from functools import reduce
         from collections import namedtuple
+        from functools import reduce
         Update_Info = namedtuple('Update_Info', ['range_start', 'range_end',
                                                  'update_wire', 'update_vals'])
 
@@ -685,24 +685,24 @@ class TestAnyAll(unittest.TestCase):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=1)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.rtl_any(a, b)
+            _ = pyrtl.rtl_any(a, b)
 
     def test_all_only_on_1_bit_vectors(self):
         a = pyrtl.WireVector(name='a', bitwidth=1)
         b = pyrtl.WireVector(name='b', bitwidth=1)
         c = pyrtl.WireVector(name='c', bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.rtl_all(a, b, c)
+            _ = pyrtl.rtl_all(a, b, c)
 
     def test_any_works_with_consts(self):
         a = pyrtl.WireVector(name='a', bitwidth=1)
         c = pyrtl.WireVector(name='c', bitwidth=1)
-        r = pyrtl.rtl_any(a, 1, c)
+        _ = pyrtl.rtl_any(a, 1, c)
 
     def test_all_works_with_consts(self):
         a = pyrtl.WireVector(name='a', bitwidth=1)
         c = pyrtl.WireVector(name='c', bitwidth=1)
-        r = pyrtl.rtl_all(a, 1, c)
+        _ = pyrtl.rtl_all(a, 1, c)
 
     def test_any_does_simulation_correct(self):
         r = pyrtl.Register(3, 'r')
@@ -786,7 +786,7 @@ class TestMux(unittest.TestCase):
         c = pyrtl.WireVector(name='c', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=1)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.mux(s, a, b, c)
+            _ = pyrtl.mux(s, a, b, c)
 
     def test_mux_not_enough_inputs(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
@@ -794,13 +794,13 @@ class TestMux(unittest.TestCase):
         c = pyrtl.WireVector(name='c', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=2)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.mux(s, a, b, c)
+            _ = pyrtl.mux(s, a, b, c)
 
     def test_mux_not_enough_inputs_but_default(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
         b = pyrtl.WireVector(name='b', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=2)
-        r = pyrtl.mux(s, a, b, default=0)
+        _ = pyrtl.mux(s, a, b, default=0)
 
     def test_mux_enough_inputs_with_default(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
@@ -808,7 +808,7 @@ class TestMux(unittest.TestCase):
         c = pyrtl.WireVector(name='c', bitwidth=1)
         d = pyrtl.WireVector(name='d', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=2)
-        r = pyrtl.mux(s, a, b, c, d, default=0)
+        _ = pyrtl.mux(s, a, b, c, d, default=0)
 
     def test_mux_too_many_inputs_with_default(self):
         a = pyrtl.WireVector(name='a', bitwidth=3)
@@ -818,7 +818,7 @@ class TestMux(unittest.TestCase):
         e = pyrtl.WireVector(name='e', bitwidth=1)
         s = pyrtl.WireVector(name='s', bitwidth=2)
         with self.assertRaises(pyrtl.PyrtlError):
-            r = pyrtl.mux(s, a, b, c, d, e, default=0)
+            _ = pyrtl.mux(s, a, b, c, d, e, default=0)
 
 
 class TestMuxSimulation(unittest.TestCase):
@@ -1230,7 +1230,7 @@ class TestLoopDetection(unittest.TestCase):
 
         x_1 = ins[4] < reg
         x_2 = ins[1] * x_1
-        x_3 = pyrtl.mux(x_1, ins[1], ins[2])
+        _ = pyrtl.mux(x_1, ins[1], ins[2])
         # x_4 = pyrtl.as_wires(mem1[ins[6]])
         x_4 = mem1[ins[6]]
         x_5 = reg + ins[7]
@@ -1327,19 +1327,19 @@ class TestWireStruct(unittest.TestCase):
     def test_exceptions(self):
         # Slicing exceptions.
         with self.assertRaises(pyrtl.PyrtlError):
-            bad_byte = Byte(Byte=0xAB, high=0xC)
+            _ = Byte(Byte=0xAB, high=0xC)
         with self.assertRaises(pyrtl.PyrtlError):
-            bad_byte = Byte(Byte=0xAB, foo=0xC)
+            _ = Byte(Byte=0xAB, foo=0xC)
 
         # Concatenating exceptions.
         with self.assertRaises(pyrtl.PyrtlError):
-            bad_byte = Byte()
+            _ = Byte()
         with self.assertRaises(pyrtl.PyrtlError):
-            bad_byte = Byte(high=0xA)
+            _ = Byte(high=0xA)
         with self.assertRaises(pyrtl.PyrtlError):
-            bad_byte = Byte(low=0xB)
+            _ = Byte(low=0xB)
         with self.assertRaises(pyrtl.PyrtlError):
-            bad_byte = Byte(high=0xA, low=0xB, foo=0xC)
+            _ = Byte(high=0xA, low=0xB, foo=0xC)
 
     def test_slice(self):
         '''Drive concatenated high+low, observe high and low.'''
@@ -1492,10 +1492,10 @@ class TestWireStruct(unittest.TestCase):
         self.assertEqual(pixel.blue.low.val, 0xF)
 
     def test_pixel_concatenate(self):
-        pixel = Pixel(name='pixel',
-                      red=Byte(name='foo', high=0xA, low=0xB),
-                      green=0xCD,
-                      blue=0xEF)
+        _ = Pixel(name='pixel',
+                  red=Byte(name='foo', high=0xA, low=0xB),
+                  green=0xCD,
+                  blue=0xEF)
 
         sim = pyrtl.Simulation()
         sim.step(provided_inputs={})
@@ -1597,7 +1597,7 @@ class TestWireMatrix(unittest.TestCase):
         self.assertEqual(bitpair[1].val, 0)
 
     def test_wire_matrix_concatenate(self):
-        bitpair = BitPair(name='bitpair', values=[1, 0])
+        _ = BitPair(name='bitpair', values=[1, 0])
 
         sim = pyrtl.Simulation()
         sim.step(provided_inputs={})
@@ -1607,11 +1607,11 @@ class TestWireMatrix(unittest.TestCase):
 
     def test_wire_matrix_exceptions(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            bad_bitpair = BitPair()
+            _ = BitPair()
         with self.assertRaises(pyrtl.PyrtlError):
-            bad_bitpair = BitPair(values=[])
+            _ = BitPair(values=[])
         with self.assertRaises(pyrtl.PyrtlError):
-            bad_bitpair = BitPair(values=[99, 100, 101])
+            _ = BitPair(values=[99, 100, 101])
 
     def test_wire_matrix_word_slice(self):
         word = Word(name='word', values=[0xABCD])
@@ -1629,7 +1629,7 @@ class TestWireMatrix(unittest.TestCase):
         self.assertEqual(word[1].low.val, 0xD)
 
     def test_wire_matrix_word_concatenate(self):
-        word = Word(name='word', values=[0xAB, 0xCD])
+        _ = Word(name='word', values=[0xAB, 0xCD])
 
         sim = pyrtl.Simulation()
         sim.step(provided_inputs={})

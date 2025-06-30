@@ -11,15 +11,15 @@ Included in this file you will find:
 from __future__ import annotations
 
 import collections
-import re
 import keyword
-from typing import NamedTuple, TYPE_CHECKING
+import re
+from typing import TYPE_CHECKING, NamedTuple
 
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
 
 if TYPE_CHECKING:
-    from pyrtl.wire import WireVector, Register
     from pyrtl.memory import MemBlock
+    from pyrtl.wire import Register, WireVector
 
 
 # -----------------------------------------------------------------
@@ -605,7 +605,7 @@ class Block:
                 dst_list[edge] = [node]
 
         if include_virtual_nodes:
-            from pyrtl.wire import Input, Output, Const
+            from pyrtl.wire import Const, Input, Output
             for wire in self.wirevector_subset((Input, Const)):
                 add_wire_src(wire, wire)
 
@@ -635,7 +635,7 @@ class Block:
         Also, the order of the nets is not guaranteed to be the same
         over multiple iterations.
         """
-        from pyrtl.wire import Input, Const, Register
+        from pyrtl.wire import Const, Input, Register
         src_dict, dest_dict = self.net_connections()
         to_clear = self.wirevector_subset((Input, Const, Register))
         cleared = set()
@@ -667,8 +667,8 @@ class Block:
 
         :raise PyrtlError: If the ``Block`` is malformed.
         """
-        from pyrtl.wire import Input, Const, Output
         from pyrtl.helperfuncs import get_stack, get_stacks
+        from pyrtl.wire import Const, Input, Output
 
         # check for valid LogicNets (and wires)
         for net in self.logic:
@@ -760,18 +760,18 @@ class Block:
         beginning of the cycle.
         """
         sync_mems = set(m for m in self.logic_subset('m') if not m.op_param[1].asynchronous)
-        if not len(sync_mems):
+        if not sync_mems:
             return  # nothing to check here
 
         if wire_src_dict is None:
             wire_src_dict, wdd = self.net_connections()
 
-        from pyrtl.wire import Input, Const
+        from pyrtl.wire import Const, Input
         sync_src = 'r'
         sync_prop = 'wcs'
         for net in sync_mems:
             wires_to_check = list(net.args)
-            while len(wires_to_check):
+            while wires_to_check:
                 wire = wires_to_check.pop()
                 if isinstance(wire, (Input, Const)):
                     continue
@@ -804,8 +804,8 @@ class Block:
 
     def sanity_check_net(self, net):
         """ Check that net is a valid LogicNet. """
-        from pyrtl.wire import Input, Output, Const, Register
         from pyrtl.memory import MemBlock
+        from pyrtl.wire import Const, Input, Output, Register
 
         # general sanity checks that apply to all operations
         if not isinstance(net, LogicNet):

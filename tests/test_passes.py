@@ -663,8 +663,8 @@ class TestSubexpElimination(NetWireNumTestCases):
         in_w = pyrtl.Input(5)
         const = pyrtl.Const(23, 5)
         const_2 = pyrtl.Const(23, 5)
-        wire_1 = in_w + const
-        wire_2 = in_w + const_2
+        _ = in_w + const
+        _ = in_w + const_2
 
         pyrtl.common_subexp_elimination()
         self.num_net_of_type('+', 1)
@@ -674,8 +674,8 @@ class TestSubexpElimination(NetWireNumTestCases):
         in_w = pyrtl.Input(5)
         const = pyrtl.Const(23, 5)
         const_2 = pyrtl.Const(23, 6)
-        wire_1 = in_w + const
-        wire_2 = in_w + const_2
+        _ = in_w + const
+        _ = in_w + const_2
 
         pyrtl.common_subexp_elimination()
         self.num_net_of_type('+', 2)
@@ -823,7 +823,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         timing_max_length = timing.max_length()
         if timing_val is not None:
             self.assertEqual(timing_max_length, timing_val)
-        critical_path = timing.critical_path(print_cp=False)
+        _ = timing.critical_path(print_cp=False)
 
         pyrtl.synthesize()
         pyrtl.optimize()
@@ -833,7 +833,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         timing_max_length = timing.max_length()
         if opt_timing_val is not None:
             self.assertEqual(timing_max_length, opt_timing_val)
-        critical_path = timing.critical_path(print_cp=False)
+        _ = timing.critical_path(print_cp=False)
 
         pyrtl.and_inverter_synth()
         pyrtl.optimize()
@@ -841,7 +841,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         block = pyrtl.working_block()
         timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
-        critical_path = timing.critical_path(print_cp=False)
+        _ = timing.critical_path(print_cp=False)
         block = pyrtl.working_block()
         self.num_net_of_type('|', 0, block)
         self.num_net_of_type('^', 0, block)
@@ -852,7 +852,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         block = pyrtl.working_block()
         timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
-        critical_path = timing.critical_path(print_cp=False)
+        _ = timing.critical_path(print_cp=False)
         block.sanity_check()
         self.num_net_of_type('|', 0, block)
         self.num_net_of_type('^', 0, block)

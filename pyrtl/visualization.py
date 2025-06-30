@@ -7,12 +7,12 @@ The functions provided write the block as a given visual format to the file.
 
 from __future__ import annotations
 
-from typing import Union, Callable, TYPE_CHECKING
 import collections
+from typing import TYPE_CHECKING, Callable, Union
 
+from pyrtl.core import Block, LogicNet, working_block
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.core import Block, working_block, LogicNet
-from pyrtl.wire import WireVector, Input, Output, Const, Register
+from pyrtl.wire import Const, Input, Output, Register, WireVector
 
 if TYPE_CHECKING:
     from pyrtl.simulation import SimulationTrace

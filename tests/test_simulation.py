@@ -191,7 +191,7 @@ class RenderTraceBase(unittest.TestCase):
             "  \n"
             "a 0o1  |0o4  |0o11 |0o13 |0o14 \n"
             "  \n"
-            "b 0o2  |0o27 |0o53 |0o170|0o0  \n"
+            "b 0o2  |0o27 |0o53 |0o170|-----\n"
             "  \n"
             "c _____,-----------._____,-----\n"
         )
@@ -204,7 +204,7 @@ class RenderTraceBase(unittest.TestCase):
             "  \n"
             "a 0b1      |0b100    |0b1001   |0b1011   |0b1100   \n"
             "  \n"
-            "b 0b10     |0b10111  |0b101011 |0b1111000|0b0      \n"
+            "b 0b10     |0b10111  |0b101011 |0b1111000|---------\n"
             "  \n"
             "c _________,-------------------._________,---------\n"
         )
@@ -217,14 +217,14 @@ class RenderTraceBase(unittest.TestCase):
             "  \n"
             "a 1  |4  |9  |11 |12 \n"
             "  \n"
-            "b 2  |23 |43 |120|0  \n"
+            "b 2  |23 |43 |120|---\n"
             "  \n"
             "c ___,-------.___,---\n"
         )
         self.check_rendered_trace(expected, repr_func=str)
 
 
-class RenderTraceBase(unittest.TestCase):
+class RenderLongTraceBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
         a = pyrtl.Input(name='a', bitwidth=4)
@@ -266,11 +266,11 @@ class RenderTraceCustomBase(unittest.TestCase):
             BAR = 1
         state = pyrtl.Input(name='state', bitwidth=1)
         sim = pyrtl.Simulation()
-        sim.step_multiple({'state': [State.FOO, State.BAR]})
+        sim.step_multiple({state.name: [State.FOO, State.BAR]})
         buff = io.StringIO()
         sim.tracer.render_trace(
             file=buff, renderer=self.renderer,
-            repr_per_name={'state': pyrtl.enum_name(State)})
+            repr_per_name={state.name: pyrtl.enum_name(State)})
         expected = (
             "     |0  |1  \n"
             "      \n"
@@ -1294,7 +1294,6 @@ class RomBlockSimBase(unittest.TestCase):
     def test_rom_val_map(self):
         def rom_data_function(add):
             return int((add + 5) / 2)
-        dummy_in = pyrtl.Input(1, "dummy")
         self.bitwidth = 4
         self.addrwidth = 4
         self.rom1 = pyrtl.RomBlock(bitwidth=self.bitwidth, addrwidth=self.addrwidth,
@@ -1305,7 +1304,7 @@ class RomBlockSimBase(unittest.TestCase):
                        self.rom2: {0: 4, 1: 5, 2: 6, 3: 7}}
 
         with self.assertRaises(pyrtl.PyrtlError):
-            sim = self.sim(memory_value_map=mem_val_map)
+            _ = self.sim(memory_value_map=mem_val_map)
 
 
 class MemBlockSimBase(unittest.TestCase):
@@ -1407,7 +1406,7 @@ class TraceErrorBase(unittest.TestCase):
 
     def test_empty_trace(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            sim_trace = pyrtl.SimulationTrace()
+            _ = pyrtl.SimulationTrace()
 
     def test_invalid_base(self):
         self.in1 = pyrtl.Input(8, "in1")

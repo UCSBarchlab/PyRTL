@@ -1,5 +1,5 @@
-import random
 import math
+import random
 import unittest
 
 import pyrtl

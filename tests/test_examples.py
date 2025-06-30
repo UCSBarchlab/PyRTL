@@ -1,9 +1,10 @@
 import glob
 import os
 import subprocess
-import pyrtl
+
 import pytest
 
+import pyrtl
 
 """
 Tests all of the files in the example folder
@@ -19,6 +20,6 @@ relative location of the examples changes
 def test_all_examples(file):
     pyrtl.reset_working_block()
     try:
-        output = subprocess.check_output(['python', file])
+        _ = subprocess.check_output(['python', file])
     except subprocess.CalledProcessError as e:
         raise e

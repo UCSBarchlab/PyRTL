@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import Union
-from functools import reduce
 import builtins
+from functools import reduce
+from typing import Union
 
-from pyrtl import (as_wires, concat, select, formatted_str_to_val, PyrtlError,
-                   Const, WireVector)
-from pyrtl.wire import WireVectorLike
+from pyrtl import Const, PyrtlError, WireVector, as_wires, concat, formatted_str_to_val, select
 from pyrtl.rtllib.multipliers import fused_multiply_adder
+from pyrtl.wire import WireVectorLike
 
 
 class Matrix:

@@ -1,8 +1,8 @@
-import unittest
 import random
+import unittest
 
 import pyrtl
-from pyrtl.rtllib.barrel import barrel_shifter, Direction
+from pyrtl.rtllib.barrel import Direction, barrel_shifter
 
 
 class TestBarrel(unittest.TestCase):

@@ -1,7 +1,7 @@
+import random
 from typing import Callable
 
 import pyrtl
-import random
 
 
 def calculate_max_and_min_bitwidths(max_bitwidth=None, exact_bitwidth=None):

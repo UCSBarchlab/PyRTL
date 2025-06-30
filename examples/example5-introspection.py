@@ -2,7 +2,6 @@
 
 import pyrtl
 
-
 # The following example shows how PyRTL can be used to make some interesting
 # hardware structures using Python introspection.  In particular, this example
 # makes a N-stage pipeline structure.  Any specific pipeline is then a derived

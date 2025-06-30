@@ -172,7 +172,6 @@ class TestConditional(unittest.TestCase):
 
     def test_error_on_non_boolean(self):
         c = pyrtl.Const(2)
-        r = pyrtl.Register(bitwidth=2, name='r')
         with self.assertRaises(pyrtl.PyrtlError):
             with pyrtl.conditional_assignment:
                 with c:

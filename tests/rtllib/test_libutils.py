@@ -17,7 +17,7 @@ class TestPartitionWire(unittest.TestCase):
     def test_failing_partition(self):
         w = pyrtl.WireVector(14)
         with self.assertRaises(pyrtl.PyrtlError):
-            partitioned_w = libutils.partition_wire(w, 4)
+            _ = libutils.partition_wire(w, 4)
 
     def test_partition_sim(self):
         pyrtl.reset_working_block()

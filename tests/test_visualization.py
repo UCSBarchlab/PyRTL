@@ -5,7 +5,6 @@ import unittest
 
 import pyrtl
 
-
 graphviz_string_detailed = """\
 digraph g {
     graph [splines="spline", outputorder="edgesfirst"];
@@ -295,11 +294,12 @@ class TestNetGraph(unittest.TestCase):
         self.assertIs(edges[0], inwire)
 
     def test_netgraph_unused_wires(self):
-        genwire = pyrtl.WireVector(8, "genwire")
-        inwire = pyrtl.Input(8, "inwire")
-        outwire = pyrtl.Output(8, "outwire")
-        constwire = pyrtl.Const(8, 8)
-        reg = pyrtl.Register(8, "reg")
+        _ = pyrtl.WireVector(8, "genwire")
+        _ = pyrtl.Input(8, "inwire")
+        _ = pyrtl.Output(8, "outwire")
+        _ = pyrtl.Const(8, 8)
+        _ = pyrtl.Register(8, "reg")
+
         g = pyrtl.net_graph()
         self.assertEqual(len(g), 0)
 
@@ -341,7 +341,7 @@ class TestOutputIPynb(unittest.TestCase):
                 'c': random.choice([0, 1])
             })
 
-        htmlstring = pyrtl.trace_to_html(sim.tracer)  # tests if it compiles or not
+        _ = pyrtl.trace_to_html(sim.tracer)  # tests if it compiles or not
 
     def test_trace_to_html(self):
         i = pyrtl.Input(1, 'i')

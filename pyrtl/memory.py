@@ -15,11 +15,12 @@ with the correct number of ports to support that
 import collections
 from typing import NamedTuple, Union
 
-from pyrtl.pyrtlexceptions import PyrtlError
-from pyrtl.core import working_block, LogicNet, _NameIndexer, Block
-from pyrtl.wire import WireVector, WireVectorLike, Const, next_tempvar_name
+from pyrtl.core import Block, LogicNet, _NameIndexer, working_block
 from pyrtl.corecircuits import as_wires
 from pyrtl.helperfuncs import infer_val_and_bitwidth
+from pyrtl.pyrtlexceptions import PyrtlError
+from pyrtl.wire import Const, WireVector, WireVectorLike, next_tempvar_name
+
 # ------------------------------------------------------------------------
 #
 #         ___        __   __          __        __   __
