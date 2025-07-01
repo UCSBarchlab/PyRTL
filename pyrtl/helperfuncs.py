@@ -481,10 +481,10 @@ def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
                 return field_map[n] if field_map else n
 
             intfields = [int(named_fields[fn(n)]) for n in lifo]
-        except KeyError as e:
+        except KeyError as exc:
             raise PyrtlError(
-                f"bitpattern field {e.args[0]} was not provided in named_field list"
-            )
+                f"bitpattern field {exc.args[0]} was not provided in named_field list"
+            ) from exc
 
     fmap = dict(zip(lifo, intfields))
     for c in bitpattern[::-1]:
@@ -1048,8 +1048,8 @@ def _convert_verilog_str(
             sval = sval[1:]
         sval = sval.replace("_", "")
         num = int(sval, base)
-    except (IndexError, ValueError):
-        raise PyrtlError("error, string not in verilog style format")
+    except (IndexError, ValueError) as exc:
+        raise PyrtlError("error, string not in verilog style format") from exc
 
     if neg and num:
         if num >> bitwidth - 1:
@@ -1958,12 +1958,14 @@ def wire_matrix(component_schema, size: int):
             block: Block = None,
             concatenated_type=WireVector,
             component_type=WireVector,
-            values: list = [],
+            values: list = None,
         ):
             # The concatenated WireVector contains all the _WireMatrix's wires.
             # WrappedWireVector (base class) will forward all attribute and
             # method accesses on this _WireMatrix to the concatenated
             # WireVector.
+            if values is None:
+                values = []
             if (
                 len(values) == 1
                 and isinstance(values[0], int)

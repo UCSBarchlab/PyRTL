@@ -72,7 +72,9 @@ class Subcircuit:
     are not name clashes when we instantiate a module more than once.
     """
 
-    def __init__(self, model, is_top=False, clk_set={"clk"}, block=None):
+    def __init__(self, model, is_top=False, clk_set=None, block=None):
+        if clk_set is None:
+            clk_set = {"clk"}
         self.model = model
         self.is_top = is_top
         self.clk_set = clk_set
@@ -159,11 +161,13 @@ def input_from_blif(
 
     try:
         blif_string = blif.read()
-    except AttributeError:
+    except AttributeError as exc:
         if isinstance(blif, str):
             blif_string = blif
         else:
-            raise PyrtlError("input_from_blif expecting either open file or string")
+            raise PyrtlError(
+                "input_from_blif expecting either open file or string"
+            ) from exc
 
     def SKeyword(x):
         return Suppress(Keyword(x))
@@ -673,11 +677,13 @@ def input_from_verilog(
     #    undriven wires.
     try:
         verilog_string = verilog.read()
-    except AttributeError:
+    except AttributeError as exc:
         if isinstance(verilog, str):
             verilog_string = verilog
         else:
-            raise PyrtlError("input_from_verilog expecting either open file or string")
+            raise PyrtlError(
+                "input_from_verilog expecting either open file or string"
+            ) from exc
 
     block = working_block(block)
 
@@ -712,15 +718,15 @@ def input_from_verilog(
             input_from_blif(
                 blif, block=block, clock_name=clock_name, top_model=toplevel
             )
-    except (subprocess.CalledProcessError, ValueError) as e:
+    except (subprocess.CalledProcessError, ValueError) as exc:
         print("Error with call to yosys...", file=sys.stderr)
         print("---------------------------------------------", file=sys.stderr)
-        print(str(e.output).replace("\\n", "\n"), file=sys.stderr)
+        print(str(exc.output).replace("\\n", "\n"), file=sys.stderr)
         print("---------------------------------------------", file=sys.stderr)
-        raise PyrtlError("Yosys call failed")
-    except OSError:
+        raise PyrtlError("Yosys call failed") from exc
+    except OSError as exc:
         print("Error with call to yosys...", file=sys.stderr)
-        raise PyrtlError("Call to yosys failed (not installed or on path?)")
+        raise PyrtlError("Call to yosys failed (not installed or on path?)") from exc
     finally:
         os.remove(tmp_verilog_path)
         if leave_in_dir is None:
@@ -1515,11 +1521,13 @@ def input_from_iscas_bench(bench, block: Block = None):
 
     try:
         bench_string = bench.read()
-    except AttributeError:
+    except AttributeError as exc:
         if isinstance(bench, str):
             bench_string = bench
         else:
-            raise PyrtlError("input_from_bench expecting either open file or string")
+            raise PyrtlError(
+                "input_from_bench expecting either open file or string"
+            ) from exc
 
     def SKeyword(x):
         return Suppress(Keyword(x))

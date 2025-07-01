@@ -341,7 +341,7 @@ class TestOutputIPynb(unittest.TestCase):
         carry_out <<= temp1 | temp2 | temp3
 
         sim = pyrtl.Simulation()
-        for cycle in range(15):
+        for _cycle in range(15):
             sim.step(
                 {
                     "a": random.choice([0, 1]),

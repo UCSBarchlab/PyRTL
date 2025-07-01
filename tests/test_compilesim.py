@@ -12,8 +12,8 @@ from pyrtl.corecircuits import _basic_add
 
 try:
     version = subprocess.check_output(["gcc", "--version"])
-except OSError:
-    raise unittest.SkipTest("CompiledSimulation testing requires gcc")
+except OSError as exc:
+    raise unittest.SkipTest("CompiledSimulation testing requires gcc") from exc
 
 
 class TraceWithBasicOpsBase(unittest.TestCase):
@@ -27,8 +27,7 @@ class TraceWithBasicOpsBase(unittest.TestCase):
     def check_trace(self, correct_string):
         wtt = pyrtl.working_block().wirevector_subset(pyrtl.Output)
         sim = self.sim(tracer=pyrtl.SimulationTrace(wires_to_track=wtt))
-        for i in range(8):
-            sim.step()
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -530,12 +529,10 @@ class TraceWithAdderBase(unittest.TestCase):
     def test_adder_simulation(self):
         sim_trace = pyrtl.SimulationTrace(wires_to_track=[self.o])
         on_reset = {}  # signal states to be set when reset is asserted
+
         # build the actual simulation environment
         sim = self.sim(register_value_map=on_reset, default_value=0, tracer=sim_trace)
-
-        # step through 15 cycles
-        for i in range(15):
-            sim.step()
+        sim.step_multiple(nsteps=15)
 
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
@@ -613,12 +610,10 @@ b110 o
     def test_vcd_output(self):
         sim_trace = pyrtl.SimulationTrace(wires_to_track=[self.o])
         on_reset = {}  # signal states to be set when reset is asserted
+
         # build the actual simulation environment
         sim = self.sim(register_value_map=on_reset, default_value=0, tracer=sim_trace)
-
-        # step through 15 cycles
-        for i in range(15):
-            sim.step()
+        sim.step_multiple(nsteps=15)
 
         test_output = io.StringIO()
         sim.tracer.print_vcd(test_output)

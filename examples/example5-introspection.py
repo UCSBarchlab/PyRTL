@@ -25,11 +25,11 @@ class SimplePipeline:
     def __getattr__(self, name):
         try:
             return self._pipeline_register_map[self._current_stage_num][name]
-        except KeyError:
+        except KeyError as exc:
             raise pyrtl.PyrtlError(
                 f'error, no pipeline register "{name}" defined for stage '
                 f"{self._current_stage_num}"
-            )
+            ) from exc
 
     def __setattr__(self, name, value):
         if name.startswith("_"):

@@ -71,7 +71,7 @@ class TestPrngs(unittest.TestCase):
                 true_val = true_val << 64 | word
             sim.step({"load": 1, "req": 0, "seed": in_vals[trial]})
             sim.step({"load": 0, "req": 1, "seed": 0x0})
-            for cycle in range(2, 4):
+            for _cycle in range(2, 4):
                 sim.step({"load": 0, "req": 0, "seed": 0x0})
             circuit_out = sim.inspect(rand)
             self.assertEqual(
@@ -119,10 +119,10 @@ class TestPrngs(unittest.TestCase):
 
         for trial in range(5):
             sim.step({"load": 1, "req": 0, "in_vector": in_vals[trial]})
-            for cycle in range(1, 20):
+            for _cycle in range(1, 20):
                 sim.step({"load": 0, "req": 0, "in_vector": 0x0})
             sim.step({"load": 0, "req": 1, "in_vector": 0x0})
-            for cycle in range(21, 23):
+            for _cycle in range(21, 23):
                 sim.step({"load": 0, "req": 0, "in_vector": 0x0})
             circuit_out = sim.inspect(out_vector)
             self.assertEqual(

@@ -33,8 +33,7 @@ class TraceWithBasicOpsBase(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = self.sim()
-        for i in range(8):
-            sim.step()
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -896,12 +895,10 @@ class TraceWithAdderBase(unittest.TestCase):
 
     def test_adder_simulation(self):
         on_reset = {}  # signal states to be set when reset is asserted
+
         # build the actual simulation environment
         sim = self.sim(register_value_map=on_reset, default_value=0)
-
-        # step through 15 cycles
-        for i in range(15):
-            sim.step()
+        sim.step_multiple(nsteps=15)
 
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
@@ -977,12 +974,10 @@ b110 r
 
     def test_vcd_output(self):
         on_reset = {}  # signal states to be set when reset is asserted
+
         # build the actual simulation environment
         sim = self.sim(register_value_map=on_reset, default_value=0)
-
-        # step through 15 cycles
-        for i in range(15):
-            sim.step()
+        sim.step_multiple(nsteps=15)
 
         test_output = io.StringIO()
         sim.tracer.print_vcd(test_output)

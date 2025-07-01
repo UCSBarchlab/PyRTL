@@ -63,7 +63,7 @@ def prng_lfsr(
     lfsr = pyrtl.Register(127 if bitwidth < 127 else bitwidth)
     # leap ahead by shifting the LFSR bitwidth times
     leap_ahead = lfsr
-    for i in range(bitwidth):
+    for _i in range(bitwidth):
         leap_ahead = pyrtl.concat(leap_ahead, leap_ahead[125] ^ leap_ahead[126])
 
     with pyrtl.conditional_assignment:

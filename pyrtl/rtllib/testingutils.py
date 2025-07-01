@@ -170,7 +170,7 @@ def sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
     if sim is None:
         sim = pyrtl.Simulation()
     sim.step(in_dict)
-    for i in range(hold_cycles):
+    for _i in range(hold_cycles):
         sim.step(hold_dict)
     return sim.tracer.trace[-1]
 

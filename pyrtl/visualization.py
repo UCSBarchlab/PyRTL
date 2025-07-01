@@ -107,8 +107,8 @@ def _trivialgraph_default_namer(thing, is_edge=True):
     else:
         try:
             return thing.op + str(thing.op_param or "")
-        except AttributeError:
-            raise PyrtlError(f'no naming rule for "{str(thing)}"')
+        except AttributeError as exc:
+            raise PyrtlError(f'no naming rule for "{str(thing)}"') from exc
 
 
 def output_to_trivialgraph(
@@ -281,8 +281,8 @@ def _default_node_namer(
                 return f'[label="{label(node.op + name)}"]'
             else:
                 return '[label="{}"]'.format(label(node.op + str(node.op_param or "")))
-        except AttributeError:
-            raise PyrtlError(f'no naming rule for "{str(node)}"')
+        except AttributeError as exc:
+            raise PyrtlError(f'no naming rule for "{str(node)}"') from exc
 
 
 def _graphviz_default_namer(
@@ -552,8 +552,10 @@ def block_to_svg(
         else:
             # py-graphviz 0.19 or later
             return svg
-    except ImportError:
-        raise PyrtlError('need graphviz installed (try "pip install graphviz")')
+    except ImportError as exc:
+        raise PyrtlError(
+            'need graphviz installed (try "pip install graphviz")'
+        ) from exc
 
 
 # -----------------------------------------------------------------
@@ -567,7 +569,7 @@ def trace_to_html(
     trace_list: list[str] = None,
     sortkey=None,
     repr_func: Callable[[int], str] = hex,
-    repr_per_name: dict[str, Callable[[int], str]] = {},
+    repr_per_name: dict[str, Callable[[int], str]] = None,
 ) -> str:
     """Return a HTML block showing the trace.
 
@@ -587,6 +589,8 @@ def trace_to_html(
 
     from pyrtl.simulation import SimulationTrace, _trace_sort_key
 
+    if repr_per_name is None:
+        repr_per_name = {}
     if not isinstance(simtrace, SimulationTrace):
         raise PyrtlError("first arguement must be of type SimulationTrace")
 
@@ -615,7 +619,7 @@ def trace_to_html(
         datalist = []
         last = None
 
-        for i, value in enumerate(trace[w]):
+        for value in trace[w]:
             if last == value:
                 wavelist.append(".")
             else:

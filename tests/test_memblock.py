@@ -106,7 +106,7 @@ class RTLMemBlockDesignBase(unittest.TestCase):
             name="lim_memory",
             max_read_ports=8,
         )
-        for i in range(lim_memory.max_read_ports):
+        for _i in range(lim_memory.max_read_ports):
             self.output1 <<= lim_memory[self.mem_read_address1]
         with self.assertRaises(pyrtl.PyrtlError):
             self.output2 <<= lim_memory[self.mem_read_address2]
@@ -118,7 +118,7 @@ class RTLMemBlockDesignBase(unittest.TestCase):
             name="lim_memory",
             max_write_ports=4,
         )
-        for i in range(lim_memory.max_write_ports):
+        for _i in range(lim_memory.max_write_ports):
             lim_memory[self.mem_write_address] <<= pyrtl.Const(6)
         with self.assertRaises(pyrtl.PyrtlError):
             lim_memory[self.mem_write_address] <<= pyrtl.Const(6)
@@ -476,7 +476,7 @@ class RTLRomGetReadData(unittest.TestCase):
     def test_over_max_read_ports(self):
         width = 6
         rom = pyrtl.RomBlock(width, width, [2, 4, 7, 1])
-        for i in range(rom.max_read_ports):
+        for _i in range(rom.max_read_ports):
             rom_read_address = pyrtl.Input(width)
             rom_out = pyrtl.Output(width)
             rom_out <<= rom[rom_read_address]
@@ -495,7 +495,7 @@ class RTLRomGetReadData(unittest.TestCase):
     def test_build_new_roms(self):
         width = 6
         rom = pyrtl.RomBlock(6, 6, [2, 4, 7, 1], build_new_roms=True)
-        for i in range(width):
+        for _i in range(width):
             rom_read_address = pyrtl.Input(width)
             rom_out = pyrtl.Output(width)
             rom_out <<= rom[rom_read_address]

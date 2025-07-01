@@ -17,8 +17,7 @@ class TestComparisonBasicOperationsMSB1(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         spaced_output = "  ".join(output.getvalue())  # add spaces to string
@@ -78,8 +77,7 @@ class TestComparisonBasicOperations_MSB0(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         spaced_output = "  ".join(output.getvalue())  # add spaces to string
@@ -139,10 +137,8 @@ class TestSignedArithBasicOperations(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        output_list = []
-        for i in range(8):
-            sim.step({})
-            output_list.append(sim.value[self.o])
+        sim.step_multiple(nsteps=8)
+        output_list = sim.tracer.trace[self.o.name]
         bw = len(self.o)
         spaced_output = "  ".join(
             str(pyrtl.val_to_signed_integer(x, bw)) for x in output_list

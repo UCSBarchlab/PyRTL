@@ -403,15 +403,15 @@ def yosys_area_delay(
         # call yosys on the temp, and grab the output
         yosys_output = subprocess.check_output(["yosys", yosys_arg])
         area, delay = extract_area_delay_from_yosys_output(yosys_output)
-    except (subprocess.CalledProcessError, ValueError) as e:
+    except (subprocess.CalledProcessError, ValueError) as exc:
         print("Error with call to yosys...", file=sys.stderr)
         print("---------------------------------------------", file=sys.stderr)
-        print(str(e.output).replace("\\n", "\n"), file=sys.stderr)
+        print(str(exc.output).replace("\\n", "\n"), file=sys.stderr)
         print("---------------------------------------------", file=sys.stderr)
-        raise PyrtlError("Yosys callfailed")
-    except OSError:
+        raise PyrtlError("Yosys call failed") from exc
+    except OSError as exc:
         print("Error with call to yosys...", file=sys.stderr)
-        raise PyrtlError("Call to yosys failed (not installed or on path?)")
+        raise PyrtlError("Call to yosys failed (not installed or on path?)") from exc
     finally:
         if leave_in_dir is None:
             os.remove(temp_path)
@@ -435,9 +435,9 @@ class PathsResult(dict):
             print(f"From {start.name}", file=file)
             for end in sorted(self[start].keys(), key=lambda w: w.name):
                 print(f"  To {end.name}", file=file)
-                paths = self[start][end]
-                if len(paths) > 0:
-                    for i, paths in enumerate(sorted(paths, key=path_sort_key)):
+                all_paths = self[start][end]
+                if len(all_paths) > 0:
+                    for i, paths in enumerate(sorted(all_paths, key=path_sort_key)):
                         print(f"    Path {i}", file=file)
                         for path in paths:
                             print(f"      {str(path)}", file=file)

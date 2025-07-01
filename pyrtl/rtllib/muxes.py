@@ -104,11 +104,11 @@ def _sparse_mux(sel, vals):
         try:
             false_result = vals[0]
             true_result = vals[1]
-        except KeyError:
+        except KeyError as exc:
             raise pyrtl.PyrtlError(
-                "Failed to retrieve values for smartmux. "
-                "The length of sel might be wrong"
-            )
+                "Failed to retrieve values for smartmux. The length of sel might be "
+                "wrong"
+            ) from exc
     else:
         half = 2 ** (len(sel) - 1)
 

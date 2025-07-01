@@ -467,9 +467,9 @@ class TestWrappedWireVector(unittest.TestCase):
         self.assertEqual(wrapped_reg.name, "reg")
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("reg"), False)
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("reg"), True)
 
     def test_ops(self):
@@ -537,7 +537,7 @@ class TestWrappedWireVector(unittest.TestCase):
                 self.assertEqual(type(wrapped_x), pyrtl.wire.WrappedWireVector)
 
                 sim = pyrtl.Simulation()
-                sim.step(provided_inputs={})
+                sim.step()
                 self.assertEqual(sim.inspect("a_and_b"), a.val & b.val)
                 self.assertEqual(sim.inspect("a_rand_b"), a.val & b.val)
                 self.assertEqual(sim.inspect("a_or_b"), a.val | b.val)

@@ -506,39 +506,41 @@ class RomBlock(MemBlock):
         try:
             if address < 0 or address > 2**self.addrwidth - 1:
                 raise PyrtlError("Invalid address, " + str(address) + " specified")
-        except TypeError:
-            raise PyrtlError(f"Address: {address} with invalid type specified")
+        except TypeError as exc:
+            raise PyrtlError(f"Address: {address} with invalid type specified") from exc
         if isinstance(self.data, types.FunctionType):
             try:
                 value = self.data(address)
-            except Exception:
-                raise PyrtlError("Invalid data function for RomBlock")
+            except Exception as exc:
+                raise PyrtlError("Invalid data function for RomBlock") from exc
         else:
             try:
                 value = self.data[address]
-            except KeyError:
+            except KeyError as exc:
                 if self.pad_with_zeros:
                     value = 0
                 else:
                     raise PyrtlError(
                         f"RomBlock key {address} is invalid, "
                         "consider using pad_with_zeros=True for defaults"
-                    )
-            except IndexError:
+                    ) from exc
+            except IndexError as exc:
                 if self.pad_with_zeros:
                     value = 0
                 else:
                     raise PyrtlError(
                         f"RomBlock index {address} is invalid, "
                         "consider using pad_with_zeros=True for defaults"
-                    )
-            except Exception:
-                raise PyrtlError("invalid type for RomBlock data object")
+                    ) from exc
+            except Exception as exc:
+                raise PyrtlError("invalid type for RomBlock data object") from exc
 
         try:
             value = infer_val_and_bitwidth(value, bitwidth=self.bitwidth).value
-        except TypeError:
-            raise PyrtlError(f"Value: {value} from rom {self} has an invalid type")
+        except TypeError as exc:
+            raise PyrtlError(
+                f"Value: {value} from rom {self} has an invalid type"
+            ) from exc
         return value
 
     def _build_read_port(self, addr):

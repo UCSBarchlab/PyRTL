@@ -71,7 +71,7 @@ renderers = {
     "ascii": (pyrtl.simulation.AsciiRendererConstants(), "Basic 7-bit ASCII renderer"),
 }
 
-for i, name in enumerate(renderers):
+for name in renderers:
     constants, notes = renderers[name]
     print(f"# {notes}")
     print(f"export PYRTL_RENDERER={name}\n")

@@ -73,7 +73,7 @@ io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output)
 # We are only going to trace the input and output vectors for clarity
 # Now simulate the logic with some random inputs
 sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace(wires_to_track=io_vectors))
-for i in range(15):
+for _cycle in range(15):
     # here we actually generate random booleans for the inputs
     sim.step(
         {
@@ -118,7 +118,7 @@ with io.StringIO() as vfile:
 
 print("--- Simulation Results ---")
 sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace([counter_output, zero]))
-for cycle in range(15):
+for _cycle in range(15):
     sim.step({"zero": random.choice([0, 0, 0, 1])})
 sim.tracer.render_trace()
 

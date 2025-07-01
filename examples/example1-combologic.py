@@ -77,7 +77,7 @@ sim = pyrtl.Simulation()
 # can just specify a random value of 0 or 1 with Python's random module.  We
 # call step 15 times to simulate 15 cycles.
 
-for cycle in range(15):
+for _cycle in range(15):
     sim.step(
         {
             "a": random.choice([0, 1]),

@@ -1768,8 +1768,8 @@ class TestVerilogInput(unittest.TestCase):
 
         try:
             _ = subprocess.check_output(["yosys", "-V"])
-        except OSError:
-            raise unittest.SkipTest("Testing Verilog input requires yosys")
+        except OSError as exc:
+            raise unittest.SkipTest("Testing Verilog input requires yosys") from exc
         pyrtl.reset_working_block()
 
     def test_import_counter(self):
@@ -1781,7 +1781,7 @@ class TestVerilogInput(unittest.TestCase):
     def test_import_small(self):
         pyrtl.input_from_verilog(verilog_output_small)
         sim = pyrtl.Simulation()
-        sim.step({})
+        sim.step()
         self.assertEqual(sim.tracer.trace["o"][0], 0b1100011100110)
 
     def test_import_counter_with_reset(self):
@@ -1952,7 +1952,7 @@ class TestOutputTestbench(unittest.TestCase):
         counter.next <<= pyrtl.mux(zero, counter + 1, 0)
         counter_output <<= counter
         sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace([counter_output, zero]))
-        for cycle in range(15):
+        for _cycle in range(15):
             sim.step({zero: random.choice([0, 0, 0, 1])})
         with io.StringIO() as tbfile:
             pyrtl.output_verilog_testbench(tbfile, sim.tracer)

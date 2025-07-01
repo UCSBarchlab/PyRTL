@@ -21,8 +21,7 @@ class TestSynthesis(unittest.TestCase):
     def check_trace(self, correct_string):
         pyrtl.synthesize()
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -582,7 +581,7 @@ class TestConstFolding(NetWireNumTestCases):
         pyrtl.optimize()
 
         sim = pyrtl.Simulation()
-        sim.step({})
+        sim.step()
         self.assertEqual(sim.inspect("out"), 0b0010)
 
 
@@ -977,7 +976,7 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
         self.assertEqual(lower_concat.args, (upper_concat.dests[0], k))
 
         sim = pyrtl.Simulation()
-        sim.step({})
+        sim.step()
         self.assertEqual(sim.inspect("o"), 0b1100011100110)
 
     def test_one_bit_selects(self):
@@ -998,7 +997,7 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
             self.assertEqual(len(indices), 1)
 
         sim = pyrtl.Simulation()
-        sim.step({})
+        sim.step()
         self.assertEqual(sim.inspect("b"), 0b00011011)
 
 

@@ -101,11 +101,15 @@ class CompiledSimulation:
     def __init__(
         self,
         tracer: SimulationTrace = True,
-        register_value_map: dict[Register, int] = {},
-        memory_value_map: dict[MemBlock, dict[int, int]] = {},
+        register_value_map: dict[Register, int] = None,
+        memory_value_map: dict[MemBlock, dict[int, int]] = None,
         default_value: int = 0,
         block: Block = None,
     ):
+        if memory_value_map is None:
+            memory_value_map = {}
+        if register_value_map is None:
+            register_value_map = {}
         self._dll = self._dir = None
         self.block = working_block(block)
         self.block.sanity_check()
@@ -153,25 +157,32 @@ class CompiledSimulation:
             "CompiledSimulation does not support inspecting internal WireVectors"
         )
 
-    def step(self, provided_inputs: dict[str, int] = {}, inputs=None):
+    def step(self, provided_inputs: dict[str, int] = None, inputs=None):
+        if provided_inputs is None:
+            provided_inputs = {}
         if inputs is not None:
             import warnings
 
             warnings.warn(
                 "CompiledSimulation.step: `inputs` was renamed to `provided_inputs`",
                 DeprecationWarning,
+                stacklevel=2,
             )
             provided_inputs = inputs
         self.run([provided_inputs])
 
     def step_multiple(
         self,
-        provided_inputs: dict[str, list[int]] = {},
-        expected_outputs: dict[str, int] = {},
+        provided_inputs: dict[str, list[int]] = None,
+        expected_outputs: dict[str, int] = None,
         nsteps: int = None,
         file=sys.stdout,
         stop_after_first_error: bool = False,
     ):
+        if expected_outputs is None:
+            expected_outputs = {}
+        if provided_inputs is None:
+            provided_inputs = {}
         if not nsteps and len(provided_inputs) == 0:
             raise PyrtlError(
                 "need to supply either input values or a number of steps to simulate"
@@ -291,7 +302,7 @@ class CompiledSimulation:
             else:
                 raise PyrtlInternalError("Untraceable wire in tracer")
             res = []
-            for n in range(steps):
+            for _step in range(steps):
                 val = 0
                 # unpack output
                 for pos in reversed(range(start, start + count)):

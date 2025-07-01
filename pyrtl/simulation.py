@@ -96,8 +96,8 @@ class Simulation:
     def __init__(
         self,
         tracer: SimulationTrace = True,
-        register_value_map: dict[Register, int] = {},
-        memory_value_map: dict[MemBlock, dict[int, int]] = {},
+        register_value_map: dict[Register, int] = None,
+        memory_value_map: dict[MemBlock, dict[int, int]] = None,
         default_value: int = 0,
         block: Block = None,
     ):
@@ -143,7 +143,7 @@ class Simulation:
         self.tracer = tracer
         self._initialize(register_value_map, memory_value_map)
 
-    def _initialize(self, register_value_map={}, memory_value_map={}):
+    def _initialize(self, register_value_map=None, memory_value_map=None):
         """Sets the wire, register, and memory values to default or as specified.
 
         :param register_value_map: is a map of {Register: value}.
@@ -154,6 +154,10 @@ class Simulation:
             isn't found in the register_value_map.
         """
         # set registers to their values
+        if memory_value_map is None:
+            memory_value_map = {}
+        if register_value_map is None:
+            register_value_map = {}
         reg_set = self.block.wirevector_subset(Register)
         for r in reg_set:
             rval = register_value_map.get(r, r.reset_value)
@@ -185,7 +189,7 @@ class Simulation:
                 addr: infer_val_and_bitwidth(val, bitwidth=mem.bitwidth).value
                 for addr, val in mem_map.items()
             }
-            for addr, val in mem_map.items():
+            for addr, _val in mem_map.items():
                 if addr < 0 or addr >= max_addr_val:
                     raise PyrtlError(
                         f"error, address {str(addr)} in {mem.name} outside of bounds"
@@ -205,7 +209,7 @@ class Simulation:
                 self.default_value, self.regvalue.copy(), copy.deepcopy(self.memvalue)
             )
 
-    def step(self, provided_inputs: dict[str, int] = {}):
+    def step(self, provided_inputs: dict[str, int] = None):
         """Take the simulation forward one cycle.
 
         ``step`` causes the :class:`Block` to be updated as follows, in order:
@@ -230,11 +234,13 @@ class Simulation:
 
         to simulate a cycle where ``a == 1`` and ``x == 23`` respectively.
 
-        :param provided_inputs: a dictionary mapping :class:`Input`
+        :param provided_inputs: A dictionary mapping :class:`Input`
             :class:`WireVectors<WireVector>` to their values for this step.
         """
 
         # Check that all Input have a corresponding provided_input
+        if provided_inputs is None:
+            provided_inputs = {}
         input_set = self.block.wirevector_subset(Input)
         supplied_inputs = set()
         for i in provided_inputs:
@@ -289,8 +295,8 @@ class Simulation:
 
     def step_multiple(
         self,
-        provided_inputs: dict[str, list[int]] = {},
-        expected_outputs: dict[str, list[int]] = {},
+        provided_inputs: dict[str, list[int]] = None,
+        expected_outputs: dict[str, list[int]] = None,
         nsteps: int = None,
         file=sys.stdout,
         stop_after_first_error: bool = False,
@@ -356,6 +362,10 @@ class Simulation:
             simulation after encountering the first error (defaults to ``False``).
         """
 
+        if expected_outputs is None:
+            expected_outputs = {}
+        if provided_inputs is None:
+            provided_inputs = {}
         if not nsteps and len(provided_inputs) == 0:
             raise PyrtlError(
                 "need to supply either input values or a number of steps to simulate"
@@ -369,8 +379,8 @@ class Simulation:
             if nsteps:
                 if nsteps > msteps:
                     raise PyrtlError(
-                        "nsteps is specified but is greater than the "
-                        "number of values supplied for each input"
+                        "nsteps is specified but is greater than the number of values "
+                        "supplied for each input"
                     )
             else:
                 nsteps = msteps
@@ -385,8 +395,8 @@ class Simulation:
 
         if list(filter(lambda value: len(value) < nsteps, expected_outputs.values())):
             raise PyrtlError(
-                "any expected outputs must have a supplied value "
-                "each step of simulation"
+                "any expected outputs must have a supplied value each step of "
+                "simulation"
             )
 
         failed = []
@@ -584,8 +594,8 @@ class FastSimulation:
 
     def __init__(
         self,
-        register_value_map: dict[Register, int] = {},
-        memory_value_map: dict[MemBlock, dict[int, int]] = {},
+        register_value_map: dict[Register, int] = None,
+        memory_value_map: dict[MemBlock, dict[int, int]] = None,
         default_value: int = 0,
         tracer: SimulationTrace = True,
         block: Block = None,
@@ -610,6 +620,10 @@ class FastSimulation:
             Python code. By default, the generated code is not saved.
         """
 
+        if memory_value_map is None:
+            memory_value_map = {}
+        if register_value_map is None:
+            register_value_map = {}
         block = working_block(block)
         block.sanity_check()  # check that this is a good hw block
 
@@ -625,7 +639,11 @@ class FastSimulation:
         self.internal_names = _PythonSanitizer("_fastsim_tmp_")
         self._initialize(register_value_map, memory_value_map)
 
-    def _initialize(self, register_value_map={}, memory_value_map={}):
+    def _initialize(self, register_value_map=None, memory_value_map=None):
+        if memory_value_map is None:
+            memory_value_map = {}
+        if register_value_map is None:
+            register_value_map = {}
         for wire in self.block.wirevector_set:
             self.internal_names.make_valid_string(wire.name)
 
@@ -671,8 +689,10 @@ class FastSimulation:
                 else:
                     self.mems[self._mem_varname(mem)] = {}
 
-    def step(self, provided_inputs: dict[str, int] = {}):
+    def step(self, provided_inputs: dict[str, int] = None):
         # Validate and collect simulation inputs.
+        if provided_inputs is None:
+            provided_inputs = {}
         inputs = {}
         for wire, value in provided_inputs.items():
             wire = (
@@ -703,12 +723,16 @@ class FastSimulation:
 
     def step_multiple(
         self,
-        provided_inputs: dict[str, list[int]] = {},
-        expected_outputs: dict[str, list[int]] = {},
+        provided_inputs: dict[str, list[int]] = None,
+        expected_outputs: dict[str, list[int]] = None,
         nsteps: int = None,
         file=sys.stdout,
         stop_after_first_error: bool = False,
     ):
+        if expected_outputs is None:
+            expected_outputs = {}
+        if provided_inputs is None:
+            provided_inputs = {}
         if not nsteps and len(provided_inputs) == 0:
             raise PyrtlError(
                 "need to supply either input values or a number of steps to simulate"
@@ -791,11 +815,11 @@ class FastSimulation:
     def inspect(self, w: str) -> int:
         try:
             return self.context[self._to_name(w)]
-        except AttributeError:
+        except AttributeError as exc:
             raise PyrtlError(
-                "No context available. Please run a simulation step in "
-                "order to populate values for wires"
-            )
+                "No context available. Please run a simulation step in order to "
+                "populate values for wires"
+            ) from exc
 
     def inspect_mem(self, mem: MemBlock) -> dict[int, int]:
         if isinstance(mem, RomBlock):
@@ -1486,6 +1510,7 @@ class TraceStorage(Mapping):
             warnings.warn(
                 "Access to trace by WireVector instead of name is deprecated.",
                 DeprecationWarning,
+                stacklevel=2,
             )
             key = key.name
         if key not in self.__data:
@@ -1495,6 +1520,9 @@ class TraceStorage(Mapping):
                 "available."
             )
         return self.__data[key]
+
+
+_default_renderer = default_renderer()
 
 
 class SimulationTrace:
@@ -1693,10 +1721,10 @@ class SimulationTrace:
         self,
         trace_list: list[str] = None,
         file=sys.stdout,
-        renderer: WaveRenderer = default_renderer(),
+        renderer: WaveRenderer = _default_renderer,
         symbol_len: int = None,
         repr_func: Callable[[int], str] = hex,
-        repr_per_name: dict[str, Callable[[int], str]] = {},
+        repr_per_name: dict[str, Callable[[int], str]] = None,
         segment_size: int = 1,
     ):
         """Render the trace to a file using unicode and ASCII escape sequences.
@@ -1721,6 +1749,8 @@ class SimulationTrace:
             is not found in the map, the argument ``repr_func`` will be used instead.
         :param segment_size: Traces are broken in the segments of this number of cycles.
         """
+        if repr_per_name is None:
+            repr_per_name = {}
         if _currently_in_jupyter_notebook():
             from IPython.display import (  # pylint: disable=import-error
                 HTML,
@@ -1823,6 +1853,7 @@ class SimulationTrace:
             warnings.warn(
                 "Access to trace by WireVector instead of name is deprecated.",
                 DeprecationWarning,
+                stacklevel=2,
             )
             trace_list = [getattr(x, "name", x) for x in trace_list]
 

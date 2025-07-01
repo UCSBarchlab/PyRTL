@@ -10,8 +10,7 @@ class TestConditional(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -184,8 +183,7 @@ class TestMemConditionalBlock(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -256,8 +254,7 @@ class TestWireConditionalBlock(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -374,8 +371,7 @@ class TestNonExclusiveBlocks(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -513,7 +509,7 @@ class TestSuperWireConditionalBlock(unittest.TestCase):
         for cycle in range(len(sim.tracer)):
             t0, t1, t2, t3, t4 = 0, 0, 0, 0, 0
 
-            def v(var):
+            def v(var, cycle=cycle):
                 return sim.tracer.trace[var.name][cycle]
 
             if v(a):

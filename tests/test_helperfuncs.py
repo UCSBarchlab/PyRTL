@@ -165,8 +165,7 @@ class TestMatchBitpattern(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -473,8 +472,7 @@ class TestChop(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -516,8 +514,7 @@ class TestBitField_Update(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -569,28 +566,28 @@ class TestBitField_Update(unittest.TestCase):
         a = pyrtl.Const(0, 8)
         pyrtl.probe(pyrtl.bitfield_update(a, -1, None, 1), "out")
         sim = pyrtl.Simulation()
-        sim.step({})
+        sim.step()
         self.assertEqual(sim.inspect("out"), 0b10000000)
 
     def test_bitfield_all_but_msb(self):
         a = pyrtl.Const(0, 8)
         pyrtl.probe(pyrtl.bitfield_update(a, None, -1, 0b101110), "out")
         sim = pyrtl.Simulation()
-        sim.step({})
+        sim.step()
         self.assertEqual(sim.inspect("out"), 0b0101110)
 
     def test_bitfield_lsb(self):
         a = pyrtl.Const(0, 8)
         pyrtl.probe(pyrtl.bitfield_update(a, None, 1, 1), "out")
         sim = pyrtl.Simulation()
-        sim.step({})
+        sim.step()
         self.assertEqual(sim.inspect("out"), 0b00000001)
 
     def test_bitfield_all_but_lsb(self):
         a = pyrtl.Const(0, 8)
         pyrtl.probe(pyrtl.bitfield_update(a, 1, None, 0b1011101), "out")  # TODO
         sim = pyrtl.Simulation()
-        sim.step({})
+        sim.step()
         self.assertEqual(sim.inspect("out"), 0b10111010)
 
 
@@ -601,8 +598,7 @@ class TestBitField_Update_Set(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -697,8 +693,7 @@ class TestAnyAll(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -774,8 +769,7 @@ class TestXorAllBits(unittest.TestCase):
 
     def check_trace(self, correct_string):
         sim = pyrtl.Simulation()
-        for i in range(8):
-            sim.step({})
+        sim.step_multiple(nsteps=8)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
@@ -888,8 +882,7 @@ class TestMuxSimulation(unittest.TestCase):
             addr_width, 40, "mux_ctrl", utils.uniform_dist
         )
 
-        for i in range(5):
-            vals.append(default_val)
+        vals.extend([default_val] * 5)
 
         out = pyrtl.Output(val_width, "mux_out")
         out <<= pyrtl.mux(control, *mux_ins, default=pyrtl.Const(default_val))
@@ -1368,7 +1361,7 @@ class TestWireStruct(unittest.TestCase):
         self.assertEqual(len(byte.low), 4)
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         # Because the Byte has the name 'byte', its components are
         # automatically assigned the names 'byte.high' and 'byte.low'.
         self.assertEqual(sim.inspect("byte"), 0xAB)
@@ -1438,7 +1431,7 @@ class TestWireStruct(unittest.TestCase):
         self.assertTrue(isinstance(byte.low, pyrtl.Output))
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("byte"), 0xCD)
         self.assertEqual(sim.inspect("byte.high"), 0xC)
         self.assertEqual(sim.inspect("byte.low"), 0xD)
@@ -1450,7 +1443,7 @@ class TestWireStruct(unittest.TestCase):
         self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Output))
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("byte"), 0xAB)
         self.assertEqual(sim.inspect("byte.high"), 0xA)
         self.assertEqual(sim.inspect("byte.low"), 0xB)
@@ -1485,7 +1478,7 @@ class TestWireStruct(unittest.TestCase):
         out <<= byte
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("out"), 0xAB)
 
         # The other wires are not named, so 'out' should be the only traced
@@ -1502,7 +1495,7 @@ class TestWireStruct(unittest.TestCase):
         high <<= byte.high
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("h"), 0xC)
         self.assertEqual(sim.inspect("l"), 0xD)
 
@@ -1547,7 +1540,7 @@ class TestWireStruct(unittest.TestCase):
         )
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("pixel"), 0xABCDEF)
         self.assertEqual(sim.inspect("pixel.red"), 0xAB)
         self.assertEqual(sim.inspect("pixel.red.high"), 0xA)
@@ -1575,7 +1568,7 @@ class TestWireStruct(unittest.TestCase):
         bl <<= pixel.blue.low
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("rh"), 0xA)
         self.assertEqual(sim.inspect("rl"), 0xB)
         self.assertEqual(sim.inspect("gh"), 0xC)
@@ -1593,7 +1586,7 @@ class TestWireStruct(unittest.TestCase):
         out <<= pixel
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("out"), 0xABCDEF)
 
         # The other wires are not named, so 'out' should be the only traced
@@ -1648,7 +1641,7 @@ class TestWireMatrix(unittest.TestCase):
         _ = BitPair(name="bitpair", values=[1, 0])
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("bitpair"), 2)
         self.assertEqual(sim.inspect("bitpair[0]"), 1)
         self.assertEqual(sim.inspect("bitpair[1]"), 0)
@@ -1680,7 +1673,7 @@ class TestWireMatrix(unittest.TestCase):
         _ = Word(name="word", values=[0xAB, 0xCD])
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("word"), 0xABCD)
         self.assertEqual(sim.inspect("word[0]"), 0xAB)
         self.assertEqual(sim.inspect("word[0].high"), 0xA)
@@ -1701,7 +1694,7 @@ class TestWireMatrix(unittest.TestCase):
         w1l <<= word[1].low
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("w0"), 0xAB)
         self.assertEqual(sim.inspect("w0h"), 0xA)
         self.assertEqual(sim.inspect("w1"), 0xCD)
@@ -1715,7 +1708,7 @@ class TestWireMatrix(unittest.TestCase):
         w <<= word
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("w"), 0xABCD)
 
         self.assertEqual(sorted(sim.tracer.trace.keys()), ["w"])
@@ -1743,9 +1736,9 @@ class TestWireMatrix(unittest.TestCase):
         self.assertTrue(isinstance(pyrtl.as_wires(word), pyrtl.Register))
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("word"), 0)
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("word"), 0xABCD)
         self.assertEqual(sim.inspect("word[0]"), 0xAB)
         self.assertEqual(sim.inspect("word[1]"), 0xCD)
@@ -1775,7 +1768,7 @@ class TestWireMatrix(unittest.TestCase):
         self.assertTrue(isinstance(cached_data, CachedData))
 
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
+        sim.step()
         self.assertEqual(sim.inspect("cached_data"), 0x1ABCD)
         self.assertEqual(sim.inspect("cached_data.valid"), 1)
         self.assertEqual(sim.inspect("cached_data.data"), 0xABCD)

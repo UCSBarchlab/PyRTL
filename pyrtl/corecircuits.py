@@ -1021,10 +1021,10 @@ def enum_mux(
     # check that dictionary is complete for the enum
     try:
         enumkeys = list(keytype.__members__.values())
-    except AttributeError:
+    except AttributeError as exc:
         raise PyrtlError(
             f"type {keytype} not an Enum and does not support the same interface"
-        )
+        ) from exc
     missingkeys = [e for e in enumkeys if e not in table]
 
     # check for "otherwise" in table and move it to a default

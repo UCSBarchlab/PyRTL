@@ -42,10 +42,10 @@ class TestSimpleMult(unittest.TestCase):
         true_result = [i * j for i, j in zip(xvals, yvals)]
         mult_results = []
 
-        for x_val, y_val, true_res in zip(xvals, yvals, true_result):
+        for x_val, y_val in zip(xvals, yvals):
             sim = pyrtl.Simulation()
             sim.step({a: x_val, b: y_val, reset: 1})
-            for cycle in range(len(a) + 1):
+            for _cycle in range(len(a) + 1):
                 sim.step({a: 0, b: 0, reset: 0})
 
             # Extracting the values and verifying correctness
@@ -97,14 +97,14 @@ class TestComplexMult(unittest.TestCase):
         true_result = [i * j for i, j in zip(xvals, yvals)]
         mult_results = []
 
-        for x_val, y_val, true_res in zip(xvals, yvals, true_result):
+        for x_val, y_val in zip(xvals, yvals):
             sim = pyrtl.Simulation()
             sim.step({a: x_val, b: y_val, reset: 1})
             if shifts <= len_a:
                 length = len_a // shifts + (1 if len_a % shifts == 0 else 2)
             else:
                 length = len_a + 1
-            for cycle in range(length):
+            for _cycle in range(length):
                 sim.step({a: 0, b: 0, reset: 0})
 
             # Extracting the values and verifying correctness

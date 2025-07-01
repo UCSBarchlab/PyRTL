@@ -1109,7 +1109,7 @@ def two_way_fanout(block=None):
 
     for old_net, args in nets_to_update.items():
 
-        def get_arg(i, a):
+        def get_arg(i, a, args=args):
             for orig, ix, from_tree in args:
                 # Checking index as well because the same wire could be
                 # used as multiple arguments to the same net.

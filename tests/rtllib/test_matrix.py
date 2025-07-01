@@ -24,7 +24,7 @@ class MatrixTestBase(unittest.TestCase):
             output <<= result.to_wirevector()
 
         sim = pyrtl.Simulation()
-        sim.step({})
+        sim.step()
 
         if isinstance(result, pyrtl.WireVector):
             given_output = sim.inspect("output")
@@ -779,7 +779,7 @@ class TestMatrixCopy(unittest.TestCase):
         copy_output_1 <<= copy_matrix.to_wirevector()
 
         sim = pyrtl.Simulation()
-        sim.step({})
+        sim.step()
 
         given_output = Matrix.matrix_wv_to_list(
             sim.inspect("matrix_output"), rows, columns, bits

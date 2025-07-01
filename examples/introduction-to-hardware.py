@@ -11,7 +11,7 @@ import pyrtl
 def software_fibonacci(n):
     """A normal old Python function to return the Nth Fibonacci number."""
     a, b = 0, 1
-    for i in range(n):
+    for _ in range(n):
         a, b = b, a + b
     return a
 
@@ -30,7 +30,7 @@ def software_fibonacci(n):
 def attempt1_hardware_fibonacci(n):
     a = pyrtl.Const(0)
     b = pyrtl.Const(1)
-    for i in range(n):
+    for _ in range(n):
         a, b = b, a + b
     return a
 
