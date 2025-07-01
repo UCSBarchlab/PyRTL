@@ -228,7 +228,7 @@ class LogicNet(NamedTuple):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def _compare_error(self, other):
+    def _compare_error(self, _other):
         """Throw error when LogicNets are compared.
 
         Comparisons get you in a bad place between while you can compare op and op_param
@@ -1177,7 +1177,7 @@ class _NameSanitizer(_NameIndexer):
         identifier_regex_str,
         internal_prefix="_sani_temp",
         map_valid_vals=True,
-        extra_checks=lambda x: True,
+        extra_checks=lambda _string: True,
         allow_duplicates=False,
     ):
         if identifier_regex_str[-1] != "$":

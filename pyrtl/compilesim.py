@@ -460,7 +460,7 @@ class CompiledSimulation:
         else:
             write(f"uint64_t {vn}[{self._limbs(w)}];")
 
-    def _build_memread(self, write, op, param, args, dest):
+    def _build_memread(self, write, _op, param, args, dest):
         mem = param[1]
         for n in range(self._limbs(dest)):
             if isinstance(mem, RomBlock):
@@ -476,7 +476,7 @@ class CompiledSimulation:
                     f"{self._makemask(dest, mem.bitwidth, n)};"
                 )
 
-    def _build_wire(self, write, op, param, args, dest):
+    def _build_wire(self, write, _op, _param, args, dest):
         for n in range(self._limbs(dest)):
             write(
                 f"{self.varname[dest]}[{n}] = "
@@ -484,14 +484,14 @@ class CompiledSimulation:
                 f"{self._makemask(dest, args[0].bitwidth, n)};"
             )
 
-    def _build_not(self, write, op, param, args, dest):
+    def _build_not(self, write, _op, _param, args, dest):
         for n in range(self._limbs(dest)):
             write(
                 f"{self.varname[dest]}[{n}] = "
                 f"(~{self.varname[args[0]]}[{n}]){self._makemask(dest, None, n)};"
             )
 
-    def _build_bitwise(self, write, op, param, args, dest):  # &, |, ^ only
+    def _build_bitwise(self, write, op, _param, args, dest):  # &, |, ^ only
         for n in range(self._limbs(dest)):
             arg0 = self._getarglimb(args[0], n)
             arg1 = self._getarglimb(args[1], n)
@@ -508,7 +508,7 @@ class CompiledSimulation:
                 )
             )
 
-    def _build_nand(self, write, op, param, args, dest):
+    def _build_nand(self, write, _op, _param, args, dest):
         for n in range(self._limbs(dest)):
             arg0 = self._getarglimb(args[0], n)
             arg1 = self._getarglimb(args[1], n)
@@ -517,7 +517,7 @@ class CompiledSimulation:
                 f"(~({arg0}&{arg1})){self._makemask(dest, None, n)};"
             )
 
-    def _build_eq(self, write, op, param, args, dest):
+    def _build_eq(self, write, _op, _param, args, dest):
         cond = []
         for n in range(max(self._limbs(args[0]), self._limbs(args[1]))):
             arg0 = self._getarglimb(args[0], n)
@@ -527,7 +527,7 @@ class CompiledSimulation:
             "{dest}[0] = {cond};".format(dest=self.varname[dest], cond="&&".join(cond))
         )
 
-    def _build_cmp(self, write, op, param, args, dest):  # <, > only
+    def _build_cmp(self, write, op, _param, args, dest):  # <, > only
         cond = None
         for n in range(max(self._limbs(args[0]), self._limbs(args[1]))):
             arg0 = self._getarglimb(args[0], n)
@@ -539,7 +539,7 @@ class CompiledSimulation:
                 cond = f"({c}||(({arg0}=={arg1})&&{cond}))"
         write(f"{self.varname[dest]}[0] = {cond};")
 
-    def _build_mux(self, write, op, param, args, dest):
+    def _build_mux(self, write, _op, _param, args, dest):
         write(f"if ({self.varname[args[0]]}[0]) {{")
         for n in range(self._limbs(dest)):
             write(
@@ -556,7 +556,7 @@ class CompiledSimulation:
             )
         write("}")
 
-    def _build_add(self, write, op, param, args, dest):
+    def _build_add(self, write, _op, _param, args, dest):
         write("carry = 0;")
         for n in range(self._limbs(dest)):
             arg0 = self._getarglimb(args[0], n)
@@ -573,7 +573,7 @@ class CompiledSimulation:
             )
             write(f"carry = (tmp < {arg0})|({self.varname[dest]}[{n}] < tmp);")
 
-    def _build_sub(self, write, op, param, args, dest):
+    def _build_sub(self, write, _op, _param, args, dest):
         write("carry = 0;")
         for n in range(self._limbs(dest)):
             arg0 = self._getarglimb(args[0], n)
@@ -585,7 +585,7 @@ class CompiledSimulation:
             )
             write(f"carry = (tmp > {arg0})|({self.varname[dest]}[{n}] > tmp);")
 
-    def _build_mul(self, write, op, param, args, dest):
+    def _build_mul(self, write, _op, _param, args, dest):
         for n in range(self._limbs(dest)):
             write(f"{self.varname[dest]}[{n}] = 0;")
         for p0 in range(self._limbs(args[0])):
@@ -621,7 +621,7 @@ class CompiledSimulation:
                     )
                 )
 
-    def _build_concat(self, write, op, param, args, dest):
+    def _build_concat(self, write, _op, _param, args, dest):
         cattotal = sum(x.bitwidth for x in args)
         pieces = (
             (self.varname[a], lx, 0, min(64, a.bitwidth - 64 * lx))
@@ -653,7 +653,7 @@ class CompiledSimulation:
                 )
             )
 
-    def _build_select(self, write, op, param, args, dest):
+    def _build_select(self, write, _op, param, args, dest):
         for n in range(self._limbs(dest)):
             bits = [
                 f"((1&({self.varname[args[0]]}[{b // 64}]>>{b % 64}))<<{en})"

@@ -32,7 +32,7 @@ class Matrix:
         rows: int,
         columns: int,
         bits: int,
-        signed: bool = False,
+        signed: bool = False,  # noqa: ARG002
         value: Union[WireVector, list[list[WireVectorLike]]] = None,
         max_bits: int = 64,
     ):

@@ -27,7 +27,7 @@ def software_fibonacci(n):
 # what happens.
 
 
-def attempt1_hardware_fibonacci(n, bitwidth):
+def attempt1_hardware_fibonacci(n):
     a = pyrtl.Const(0)
     b = pyrtl.Const(1)
     for i in range(n):
@@ -74,7 +74,7 @@ def attempt1_hardware_fibonacci(n, bitwidth):
 # we can update those values as we iteratively compute Fibonacci of N cycle by cycle.
 
 
-def attempt2_hardware_fibonacci(n, bitwidth):
+def attempt2_hardware_fibonacci(bitwidth):
     a = pyrtl.Register(bitwidth, "a")
     b = pyrtl.Register(bitwidth, "b")
 

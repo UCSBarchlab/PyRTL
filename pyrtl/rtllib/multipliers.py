@@ -194,7 +194,9 @@ def signed_tree_multiplier(
     a = _twos_comp_conditional(A, aneg)
     b = _twos_comp_conditional(B, bneg)
 
-    res = tree_multiplier(a[:-1], b[:-1]).zero_extended(len(A) + len(B))
+    res = tree_multiplier(
+        a[:-1], b[:-1], reducer=reducer, adder_func=adder_func
+    ).zero_extended(len(A) + len(B))
     return _twos_comp_conditional(res, aneg ^ bneg)
 
 
@@ -241,7 +243,7 @@ def fused_multiply_adder(
 def generalized_fma(
     mult_pairs: list[tuple[pyrtl.WireVector, pyrtl.WireVector]],
     add_wires: list[pyrtl.WireVector],
-    signed: bool = False,
+    signed: bool = False,  # noqa: ARG001
     reducer: Callable = adders.wallace_reducer,
     adder_func: Callable = adders.kogge_stone,
 ):

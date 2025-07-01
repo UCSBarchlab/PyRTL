@@ -173,24 +173,24 @@ class TimingAnalysis:
 
         if gate_delay_funcs is None:
             gate_delay_funcs = {
-                "~": lambda width: 48.5,
-                "&": lambda width: 98.5,
-                "|": lambda width: 105.3,
-                "^": lambda width: 135.07,
-                "n": lambda width: 66.0,
-                "w": lambda width: 0,
+                "~": lambda _width: 48.5,
+                "&": lambda _width: 98.5,
+                "|": lambda _width: 105.3,
+                "^": lambda _width: 135.07,
+                "n": lambda _width: 66.0,
+                "w": lambda _width: 0,
                 "+": self._logconst_func(184.0, 18.9),
                 "-": self._logconst_func(184.0, 18.9),
                 "*": self._multiplier_stdcell_estimate,
                 "<": self._logconst_func(101.9, 105.4),
                 ">": self._logconst_func(101.9, 105.4),
                 "=": self._logconst_func(60.1, 147),
-                "x": lambda width: 138.0,
-                "c": lambda width: 0,
-                "s": lambda width: 0,
-                "r": lambda width: -1,
+                "x": lambda _width: 138.0,
+                "c": lambda _width: 0,
+                "s": lambda _width: 0,
+                "r": lambda _width: -1,
                 "m": self._memory_read_estimate,
-                "@": lambda width: -1,
+                "@": lambda _width: -1,
             }
         cleared = self.block.wirevector_subset((Input, Const, Register))
         self.timing_map = {wirevector: 0 for wirevector in cleared}

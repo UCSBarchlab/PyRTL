@@ -838,21 +838,21 @@ class FastSimulation:
     _no_mask_bitwidth = {
         "w": lambda net: len(net.args[0]),
         "r": lambda net: len(net.args[0]),
-        "~": lambda net: -1,  # bitflips always need masking
+        "~": lambda _net: -1,  # bitflips always need masking
         "&": lambda net: len(net.args[0]),
         "|": lambda net: len(net.args[0]),
         "^": lambda net: len(net.args[0]),
-        "n": lambda net: -1,  # bitflips always need masking
+        "n": lambda _net: -1,  # bitflips always need masking
         "+": lambda net: len(net.args[0]) + 1,
-        "-": lambda net: -1,  # need to handle negative numbers correctly
+        "-": lambda _net: -1,  # need to handle negative numbers correctly
         "*": lambda net: len(net.args[0]) + len(net.args[1]),
-        "<": lambda net: 1,
-        ">": lambda net: 1,
-        "=": lambda net: 1,
+        "<": lambda _net: 1,
+        ">": lambda _net: 1,
+        "=": lambda _net: 1,
         "x": lambda net: len(net.args[1]),
         "c": lambda net: sum(len(a) for a in net.args),
         "s": lambda net: len(net.op_param),
-        "m": lambda net: -1,  # just not going to optimize this right now
+        "m": lambda _net: -1,  # just not going to optimize this right now
     }
 
     # Yeah, triple quotes don't respect indentation (aka the 4 spaces on the
