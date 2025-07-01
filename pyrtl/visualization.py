@@ -471,9 +471,7 @@ digraph g {
             from_index = node_index_map[_from]
             to_index = node_index_map[_to]
             for edge in graph[_from][_to]:
-                is_to_splitmerge = (
-                    True if hasattr(_to, "op") and _to.op in "cs" else False
-                )
+                is_to_splitmerge = hasattr(_to, "op") and _to.op in "cs"
                 label = namer(edge, True, is_to_splitmerge, False)
                 rstring += f"    n{from_index} -> n{to_index} {label};\n"
                 srcs[_to].append((_from, edge))
@@ -484,11 +482,9 @@ digraph g {
     # the visualization.
     def index_of(w, args):
         # Special helper so we compare id rather than using builtin operators
-        ix = 0
-        for arg in args:
+        for i, arg in enumerate(args):
             if w is arg:
-                return ix
-            ix += 1
+                return i
         raise PyrtlInternalError("Expected to find wire in set of args")
 
     if maintain_arg_order:

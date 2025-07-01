@@ -84,9 +84,8 @@ class Matrix:
                 f'Bits cannot be negative or zero, instead "{str(bits)}" was passed'
             )
 
-        if max_bits is not None:
-            if bits > max_bits:
-                bits = max_bits
+        if max_bits is not None and bits > max_bits:
+            bits = max_bits
 
         self._matrix = [[0 for _ in range(columns)] for _ in range(rows)]
 
@@ -828,12 +827,10 @@ class Matrix:
 
         if isinstance(v, (tuple, list)) and len(v) == 0:
             return
-        elif isinstance(v, Matrix):
-            if v.rows != 1:
-                raise PyrtlError(
-                    f"Expected a row-vector matrix, instead got matrix with {v.rows} "
-                    "rows"
-                )
+        elif isinstance(v, Matrix) and v.rows != 1:
+            raise PyrtlError(
+                f"Expected a row-vector matrix, instead got matrix with {v.rows} rows"
+            )
 
         if mode not in ["raise", "wrap", "clip"]:
             raise PyrtlError(

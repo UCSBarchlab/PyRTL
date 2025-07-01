@@ -347,7 +347,7 @@ class TestPaths(unittest.TestCase):
         # We have entries for every input, output pair
         for start in (a, b, c):
             self.assertEqual(len(paths[start]), 2)
-            self.assertTrue([w.name for w in paths[start].keys()], [o.name, p.name])
+            self.assertTrue([w.name for w in paths[start]], [o.name, p.name])
 
         paths_a_to_o = paths[a][o]
         self.assertEqual(len(paths_a_to_o), 1)

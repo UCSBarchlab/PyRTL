@@ -45,9 +45,12 @@ class DllMemInspector(Mapping):
         return 1 << self._aw
 
     def __eq__(self, other):
-        if isinstance(other, DllMemInspector):
-            if self._sim is other._sim and self._vn == other._vn:
-                return True
+        if (
+            isinstance(other, DllMemInspector)
+            and self._sim is other._sim
+            and self._vn == other._vn
+        ):
+            return True
         return all(self[x] == other.get(x, 0) for x in self)
 
 
@@ -206,7 +209,7 @@ class CompiledSimulation:
         for i in range(nsteps):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
-            for expvar in expected_outputs.keys():
+            for expvar in expected_outputs:
                 expected = expected_outputs[expvar][i]
                 if expected == "?":
                     continue

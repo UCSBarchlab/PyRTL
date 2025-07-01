@@ -92,10 +92,8 @@ class TestBlock(unittest.TestCase):
         block = pyrtl.working_block()
 
         output = io.StringIO()
-        i = 0
-        for net in block:
+        for i, net in enumerate(block):
             self.assertFalse(i > 100, "Too many iterations happened")
-            i += 1
             print(str(net), file=output)
 
         for net in block.logic:

@@ -393,7 +393,7 @@ class Simulation:
         for i in range(nsteps):
             self.step({w: int(v[i]) for w, v in provided_inputs.items()})
 
-            for expvar in expected_outputs.keys():
+            for expvar in expected_outputs:
                 expected = expected_outputs[expvar][i]
                 if expected == "?":
                     continue
@@ -755,7 +755,7 @@ class FastSimulation:
         for i in range(nsteps):
             self.step({w: to_num(v[i]) for w, v in provided_inputs.items()})
 
-            for expvar in expected_outputs.keys():
+            for expvar in expected_outputs:
                 expected = expected_outputs[expvar][i]
                 if expected == "?":
                     continue

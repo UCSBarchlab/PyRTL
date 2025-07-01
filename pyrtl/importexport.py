@@ -754,23 +754,21 @@ def output_to_verilog(
     :param block: Block to be walked and exported. Defaults to the :ref:`working_block`.
     """
 
-    if not isinstance(add_reset, bool):
-        if add_reset != "asynchronous":
-            raise PyrtlError(
-                "Invalid add_reset option %s. Acceptable options are "
-                "False, True, and 'asynchronous'"
-            )
+    if not isinstance(add_reset, bool) and add_reset != "asynchronous":
+        raise PyrtlError(
+            "Invalid add_reset option %s. Acceptable options are False, True, and "
+            "'asynchronous'"
+        )
 
     block = working_block(block)
     file = dest_file
     internal_names = _VerilogSanitizer("_ver_out_tmp_")
 
-    if add_reset:  # True or 'asynchronous'
-        if block.get_wirevector_by_name("rst") is not None:
-            raise PyrtlError(
-                "Found a user-defined wire named 'rst'. Pass in "
-                "'add_reset=False' to use your existing reset logic."
-            )
+    if add_reset and block.get_wirevector_by_name("rst") is not None:
+        raise PyrtlError(
+            "Found a user-defined wire named 'rst'. Pass in 'add_reset=False' to use "
+            "your existing reset logic."
+        )
 
     for wire in block.wirevector_set:
         internal_names.make_valid_string(wire.name)
@@ -1123,21 +1121,19 @@ def output_verilog_testbench(
         :func:`output_to_verilog`.
     :param block: Block containing design to test. Defaults to the :ref:`working_block`.
     """
-    if not isinstance(add_reset, bool):
-        if add_reset != "asynchronous":
-            raise PyrtlError(
-                "Invalid add_reset option %s. Acceptable options are "
-                "False, True, and 'asynchronous'"
-            )
+    if not isinstance(add_reset, bool) and add_reset != "asynchronous":
+        raise PyrtlError(
+            "Invalid add_reset option %s. Acceptable options are False, True, and "
+            "'asynchronous'"
+        )
 
     block = working_block(block)
 
-    if add_reset:  # True or 'asynchronous'
-        if block.get_wirevector_by_name("rst") is not None:
-            raise PyrtlError(
-                "Found a user-defined wire named 'rst'. Pass in "
-                "'add_reset=False' to use your existing reset logic."
-            )
+    if add_reset and block.get_wirevector_by_name("rst") is not None:
+        raise PyrtlError(
+            "Found a user-defined wire named 'rst'. Pass in 'add_reset=False' to use "
+            "your existing reset logic."
+        )
 
     inputs, outputs, registers, wires, memories = _verilog_block_parts(block)
 

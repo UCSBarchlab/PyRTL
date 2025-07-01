@@ -65,6 +65,8 @@ select = [
     "F",
      # pyupgrade
     "UP",
+    # flake8-simplify
+    "SIM",
     # flake8-unused-arguments
     "ARG",
     # isort
@@ -73,8 +75,15 @@ select = [
     "PLE",
 ]
 ignore = [
-    # Use `X | Y` for type annotations
-    # We can't enable this because the new syntax was added in Python 3.10, and we still
-    # need to support Python 3.9.
+    # Use `X | Y` for type annotations:
+    # We can't enable this because the new syntax was added in Python 3.10, and
+    # we still need to support Python 3.9.
     "UP007",
+    # Use ternary operator:
+    # Resulting code is harder to read.
+    "SIM108",
+    # Use a single `with` statement with multiple contexts instead of nested
+    # `with` statements:
+    # conditional_assignment is harder to read when combined.
+    "SIM117"
 ]

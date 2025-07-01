@@ -1107,7 +1107,7 @@ def _check_for_loop(block=None):
                 wires_left.difference_update(net.dests)
         logic_left -= nets_to_remove
 
-    if 0 == len(logic_left):
+    if len(logic_left) == 0:
         return None
     return wires_left, logic_left
 

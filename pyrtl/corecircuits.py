@@ -85,10 +85,9 @@ def mux(
     # find the diff between the addressable range and number of inputs given
     index = as_wires(index)
     short_by = 2 ** len(index) - len(mux_ins)
-    if short_by > 0:
-        if default is not None:  # extend the list to appropriate size
-            mux_ins = list(mux_ins)
-            mux_ins.extend([default] * short_by)
+    if short_by > 0 and default is not None:  # extend the list to appropriate size
+        mux_ins = list(mux_ins)
+        mux_ins.extend([default] * short_by)
 
     if 2 ** len(index) != len(mux_ins):
         raise PyrtlError(
@@ -1015,7 +1014,7 @@ def enum_mux(
     :return: Result of the mux.
     """
     # check dictionary keys are of the right type
-    keytypeset = set(type(x) for x in table.keys() if x is not otherwise)
+    keytypeset = set(type(x) for x in table if x is not otherwise)
     if len(keytypeset) != 1:
         raise PyrtlError(f"table mixes multiple types {keytypeset} as keys")
     keytype = list(keytypeset)[0]

@@ -396,10 +396,9 @@ class TestOptimization(NetWireNumTestCases):
 class TestConstFolding(NetWireNumTestCases):
     def setUp(self):
         pyrtl.reset_working_block()
-        # Redirect stdout because we don't care to see the specific messages about
-        # wires being deemed useless by optimization sent to stdout.
-        f = open(os.devnull, "w")
-        sys.stdout = f
+        # Redirect stdout because we don't care to see the specific messages about wires
+        # being deemed useless by optimization sent to stdout.
+        sys.stdout = open(os.devnull, "w")  # noqa: SIM115
 
     def tearDown(self):
         sys.stdout.close()

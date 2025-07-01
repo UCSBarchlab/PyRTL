@@ -73,7 +73,7 @@ def sparse_mux(sel: WireVector, vals: dict[int, WireVector]) -> WireVector:
             if i not in vals:
                 vals[i] = default_val
 
-    for key in vals.keys():
+    for key in vals:
         if not isinstance(key, numbers.Integral):
             raise pyrtl.PyrtlError(
                 f"value {str(key)} nust be either an integer or 'default'"

@@ -614,9 +614,7 @@ def _remove_unlistened_nets(block):
         listened_wires.update(net.args)
 
     for a_net in block.logic:
-        if a_net.op == "@":
-            add_to_listened(a_net)
-        elif any(isinstance(destW, Output) for destW in a_net.dests):
+        if a_net.op == "@" or any(isinstance(destW, Output) for destW in a_net.dests):
             add_to_listened(a_net)
 
     while len(listened_nets) > prev_listened_net_count:

@@ -237,7 +237,7 @@ class TestMemConditionalBlock(unittest.TestCase):
         with pyrtl.conditional_assignment:
             with i < 2:
                 m[addr] |= i
-            with (2 <= i) & (i < 4):
+            with (i >= 2) & (i < 4):
                 m[addr] |= (i + 1)[:3]
             with pyrtl.otherwise:
                 with addr[0]:
