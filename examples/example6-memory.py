@@ -1,10 +1,10 @@
-""" Example 6: Memories in PyRTL
+"""Example 6: Memories in PyRTL
 
-    One important part of many circuits is the ability to have data in
-    locations that are persistent over clock cycles. In previous examples,
-    we have shown the Register WireVector, which is great for storing
-    a small amount of data for a single clock cycle. However, PyRTL also
-    has other ways to store data, namely memories and ROMs.
+One important part of many circuits is the ability to have data in
+locations that are persistent over clock cycles. In previous examples,
+we have shown the Register WireVector, which is great for storing
+a small amount of data for a single clock cycle. However, PyRTL also
+has other ways to store data, namely memories and ROMs.
 """
 
 import random
@@ -18,24 +18,24 @@ import pyrtl
 # that the same thing happens to two different memories using the same
 # inputs
 
-mem1 = pyrtl.MemBlock(bitwidth=32, addrwidth=3, name='mem')
-mem2 = pyrtl.MemBlock(32, 3, 'mem')
+mem1 = pyrtl.MemBlock(bitwidth=32, addrwidth=3, name="mem")
+mem2 = pyrtl.MemBlock(32, 3, "mem")
 
 # One memory will receive the write address from an input, the other, a register
-waddr = pyrtl.Input(3, 'waddr')
-count = pyrtl.Register(3, 'count')
+waddr = pyrtl.Input(3, "waddr")
+count = pyrtl.Register(3, "count")
 
 # In order to make sure that the two memories take the same inputs,
 # we will use same write data, write enable, and read addr values
-wdata = pyrtl.Input(32, 'wdata')
-we = pyrtl.Input(1, 'we')
-raddr = pyrtl.Input(3, 'raddr')
+wdata = pyrtl.Input(32, "wdata")
+we = pyrtl.Input(1, "we")
+raddr = pyrtl.Input(3, "raddr")
 
 # We will be grabbing data from each of the two memory blocks so we need
 # two different output wires to see the results
 
-rdata1 = pyrtl.Output(32, 'rdata1')
-rdata2 = pyrtl.Output(32, 'rdata2')
+rdata1 = pyrtl.Output(32, "rdata1")
+rdata2 = pyrtl.Output(32, "rdata2")
 
 # Ports
 # The way of sending data to and from a memory block is through the
@@ -63,17 +63,17 @@ count.next <<= pyrtl.select(we, truecase=count + 1, falsecase=count)
 
 # We will also verify that the two write addresses are always the same
 
-validate = pyrtl.Output(1, 'validate')
+validate = pyrtl.Output(1, "validate")
 validate <<= waddr == count
 
 # Now it is time to simulate the circuit. First we will set up the values
 # for all of the inputs.
 # Write 1 through 8 into the eight registers, then read back out
 simvals = {
-    'we': "00111111110000000000000000",
-    'waddr': "00012345670000000000000000",
-    'wdata': "00123456789990000000000000",
-    'raddr': "00000000000000000123456777"
+    "we": "00111111110000000000000000",
+    "waddr": "00012345670000000000000000",
+    "wdata": "00123456789990000000000000",
+    "raddr": "00000000000000000123456777",
 }
 
 # For simulation purposes, we can give the spots in memory an initial value.
@@ -155,8 +155,8 @@ random.seed(4839483)
 # it below are both valid ways of making larger values
 
 simvals = {
-    'rom_in': [1, 11, 4, 2, 7, 8, 2, 4, 5, 13, 15, 3, 4, 4, 4, 8, 12, 13, 2, 1],
-    'rom_in_2': [random.randrange(0, 16) for i in range(20)]
+    "rom_in": [1, 11, 4, 2, 7, 8, 2, 4, 5, 13, 15, 3, 4, 4, 4, 8, 12, 13, 2, 1],
+    "rom_in_2": [random.randrange(0, 16) for i in range(20)],
 }
 
 # Now run the simulation like before. Note that for ROMs, we do not

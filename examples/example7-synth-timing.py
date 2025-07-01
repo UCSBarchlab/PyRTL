@@ -1,11 +1,10 @@
-""" Example 7: Reduction and Speed Analysis
+"""Example 7: Reduction and Speed Analysis
 
-    After building a circuit, one might want to do some stuff to reduce the
-    hardware into simpler nets as well as analyze various metrics of the
-    hardware. This functionality is provided in the Passes part of PyRTL
-    and will be demonstrated here.
+After building a circuit, one might want to do some stuff to reduce the
+hardware into simpler nets as well as analyze various metrics of the
+hardware. This functionality is provided in the Passes part of PyRTL
+and will be demonstrated here.
 """
-
 
 import pyrtl
 

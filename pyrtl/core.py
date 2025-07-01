@@ -1,13 +1,15 @@
-""" The core abstraction for hardware in PyRTL.
+"""The core abstraction for hardware in PyRTL.
 
 Included in this file you will find:
 
 * `LogicNet` -- the core class holding a "net" in the netlist
 * `Block` -- a collection of nets with associated access and error checking
-* `working_block` -- the "current" Block to which, by default, all created nets are added
+* `working_block` -- the "current" Block to which, by default, all created nets are
+                     added
 * `modes` -- access methods for "modes" such as debug
 
 """
+
 from __future__ import annotations
 
 import collections
@@ -103,7 +105,7 @@ class LogicNet(NamedTuple):
                                          when ``x`` == 1 connect ``a2`` to
                                          ``out``
 
-                                         ``x`` must be one bit and ``len(a1) == len(a2)``
+                                         ``x`` must be 1-bit and ``len(a1) == len(a2)``
                      ``a1, a2``
     ``c`` ``None``   ``*args``  ``out``  concatenates ``*args`` (wires) into
                                          single WireVector
@@ -130,6 +132,7 @@ class LogicNet(NamedTuple):
     ===== ========== ========== ======== ====
 
     """
+
     op: str
     """Operation performed by the ``LogicNet``."""
     op_param: tuple
@@ -140,66 +143,76 @@ class LogicNet(NamedTuple):
     """Output of the operation."""
 
     def __str__(self):
-        rhs = ', '.join(str(x) for x in self.args)
-        lhs = ', '.join(str(x) for x in self.dests)
-        options = '' if self.op_param is None else '(' + str(self.op_param) + ')'
+        rhs = ", ".join(str(x) for x in self.args)
+        lhs = ", ".join(str(x) for x in self.dests)
+        options = "" if self.op_param is None else "(" + str(self.op_param) + ")"
 
         from pyrtl.helperfuncs import _currently_in_jupyter_notebook
 
         if _currently_in_jupyter_notebook():
             # Output the working block as a Latex table
             # Escape all Underscores
-            rhs = rhs.replace('_', "\\_")
-            lhs = lhs.replace('_', "\\_")
-            options = options.replace('_', "\\_")
-            if self.op in '&|':
+            rhs = rhs.replace("_", "\\_")
+            lhs = lhs.replace("_", "\\_")
+            options = options.replace("_", "\\_")
+            if self.op in "&|":
                 return "{} & \\leftarrow \\{} \\, - & {} {} \\\\".format(
-                       lhs, self.op, rhs, options)
+                    lhs, self.op, rhs, options
+                )
             elif self.op in "wn+-*<>xcsr":
                 return "{} & \\leftarrow {} \\, - & {} {} \\\\".format(
-                       lhs, self.op, rhs, options)
+                    lhs, self.op, rhs, options
+                )
             elif self.op in "=":
                 return "{} & \\leftarrow \\, {} \\, - & {} {} \\\\".format(
-                       lhs, self.op, rhs, options)
+                    lhs, self.op, rhs, options
+                )
             elif self.op in "^":
                 return "{} & \\leftarrow \\oplus \\, - & {} {} \\\\".format(
-                       lhs, rhs, options)
+                    lhs, rhs, options
+                )
             elif self.op in "~":
                 return "{} & \\leftarrow \\sim \\, - & {} {} \\\\".format(
-                       lhs, rhs, options)
+                    lhs, rhs, options
+                )
 
-            elif self.op in 'm@':
+            elif self.op in "m@":
                 memid, memblock = self.op_param
-                extrainfo = 'memid=' + str(memid)
+                extrainfo = "memid=" + str(memid)
                 extrainfo = extrainfo.replace("_", "\\_")
                 name = memblock.name
                 name = name.replace("_", "\\_")
-                if self.op == 'm':
+                if self.op == "m":
                     return "{} & \\leftarrow m \\, - &  {}[{}]({}) \\\\".format(
-                           lhs, name, rhs, extrainfo)
+                        lhs, name, rhs, extrainfo
+                    )
                 else:
                     addr, data, we = (str(x) for x in self.args)
                     addr = addr.replace("_", "\\_")
                     data = data.replace("_", "\\_")
                     we = we.replace("_", "\\_")
                     return "{}[{}] & \\leftarrow @ \\, - & {} we={} ({}) \\\\".format(
-                        name, addr, data, we, extrainfo)
+                        name, addr, data, we, extrainfo
+                    )
             else:
                 raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
 
         else:  # not in ipython
-            if self.op in 'w~&|^n+-*<>=xcsr':
-                options = ' ' + options if options else ''
+            if self.op in "w~&|^n+-*<>=xcsr":
+                options = " " + options if options else ""
                 return "{} <-- {} -- {}{}".format(lhs, self.op, rhs, options)
-            elif self.op in 'm@':
+            elif self.op in "m@":
                 memid, memblock = self.op_param
-                extrainfo = 'memid=' + str(memid)
-                if self.op == 'm':
-                    return "{} <-- m --  {}[{}]({})".format(lhs, memblock.name, rhs, extrainfo)
+                extrainfo = "memid=" + str(memid)
+                if self.op == "m":
+                    return "{} <-- m --  {}[{}]({})".format(
+                        lhs, memblock.name, rhs, extrainfo
+                    )
                 else:
                     addr, data, we = (str(x) for x in self.args)
                     return "{}[{}] <-- @ -- {} we={} ({})".format(
-                        memblock.name, addr, data, we, extrainfo)
+                        memblock.name, addr, data, we, extrainfo
+                    )
             else:
                 raise PyrtlInternalError('error, unknown op "%s"' % str(self.op))
 
@@ -213,25 +226,28 @@ class LogicNet(NamedTuple):
         # very much not what people would expect to happen.  Instead we define equality
         # as the immutable fields being equal and the list of args and dests being
         # references to the same objects.
-        return (self.op == other.op
-                and self.op_param == other.op_param
-                and len(self.args) == len(other.args)
-                and len(self.dests) == len(other.dests)
-                and all(self.args[i] is other.args[i] for i in range(len(self.args)))
-                and all(self.dests[i] is other.dests[i] for i in range(len(self.dests))))
+        return (
+            self.op == other.op
+            and self.op_param == other.op_param
+            and len(self.args) == len(other.args)
+            and len(self.dests) == len(other.dests)
+            and all(self.args[i] is other.args[i] for i in range(len(self.args)))
+            and all(self.dests[i] is other.dests[i] for i in range(len(self.dests)))
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def _compare_error(self, other):
-        """ Throw error when LogicNets are compared.
+        """Throw error when LogicNets are compared.
 
         Comparisons get you in a bad place between while you can compare op and op_param
         safely, the args and dests are references to mutable objects with comparison
         operators overloaded.
         """
-        raise PyrtlError('Greater than and less than comparisons between'
-                         ' LogicNets are not supported')
+        raise PyrtlError(
+            "Greater than and less than comparisons between LogicNets are not supported"
+        )
 
     __lt__ = _compare_error
     __gt__ = _compare_error
@@ -339,6 +355,7 @@ class Block:
 
     See :class:`LogicNet` for a complete list of defined operations.
     """
+
     logic: set[LogicNet]
     """Set of :class:`LogicNets<LogicNet>` belonging to this ``Block``."""
 
@@ -351,19 +368,24 @@ class Block:
         self.wirevector_set = set()  # set of all WireVectors
         self.wirevector_by_name = {}  # map from name->WireVector, used for performance
         # pre-synthesis WireVectors to post-synthesis vectors
-        self.legal_ops = set('w~&|^n+-*<>=xcsrm@')  # set of legal OPS
-        self.rtl_assert_dict = {}   # map from WireVectors -> exceptions, used by rtl_assert
-        self.memblock_by_name = {}  # map from name->memblock, for easy access to memblock objs
+        self.legal_ops = set("w~&|^n+-*<>=xcsrm@")  # set of legal OPS
+        # map from WireVectors -> exceptions, used by rtl_assert
+        self.rtl_assert_dict = {}
+        # map from name->memblock, for easy access to memblock objs
+        self.memblock_by_name = {}
 
     def __str__(self):
         """String form has one LogicNet per line."""
-        from pyrtl.helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
+        from pyrtl.helperfuncs import (
+            _currently_in_jupyter_notebook,
+            _print_netlist_latex,
+        )
 
         if _currently_in_jupyter_notebook():
             _print_netlist_latex(list(self))
-            return ' '
+            return " "
         else:
-            return '\n'.join(str(net) for net in self)
+            return "\n".join(str(net) for net in self)
 
     def add_wirevector(self, wirevector: WireVector):
         """
@@ -394,7 +416,7 @@ class Block:
         self.logic.add(net)
 
     def _add_memblock(self, mem):
-        """ Registers a memory to the block.
+        """Registers a memory to the block.
 
         Note that this is done automatically when a memory block is
         created and isn't intended for use by PyRTL end users.
@@ -418,16 +440,16 @@ class Block:
         around in your code, you can get a reference to the :class:`MemBlock` from the
         global :func:`working_block`::
 
-            >>> def read_internal_mem(read_addr: pyrtl.WireVector) -> pyrtl.WireVector:
-            ...     mem = pyrtl.MemBlock(bitwidth=8, addrwidth=4, name='internal_mem')
+            >>> def read_hidden_mem(read_addr: pyrtl.WireVector) -> pyrtl.WireVector:
+            ...     mem = pyrtl.MemBlock(bitwidth=8, addrwidth=4, name='hidden_mem')
             ...     return mem[read_addr]
 
             >>> read_addr = pyrtl.Input(4, 'read_addr')
             >>> data = pyrtl.Output(8, 'data')
-            >>> data <<= read_internal_mem(read_addr)
+            >>> data <<= read_hidden_mem(read_addr)
 
-            >>> internal_mem = pyrtl.working_block().get_memblock_by_name('internal_mem')
-            >>> sim = pyrtl.Simulation(memory_value_map={internal_mem: {3: 7}})
+            >>> hidden_mem = pyrtl.working_block().get_memblock_by_name('hidden_mem')
+            >>> sim = pyrtl.Simulation(memory_value_map={hidden_mem: {3: 7}})
             >>> sim.step(provided_inputs={read_addr.name: 3})
             >>> sim.inspect(data.name)
             7
@@ -447,12 +469,13 @@ class Block:
         if name in self.memblock_by_name:
             return self.memblock_by_name[name]
         elif strict:
-            raise PyrtlError('error, block does not have a memblock named %s' % name)
+            raise PyrtlError("error, block does not have a memblock named %s" % name)
         else:
             return None
 
-    def wirevector_subset(self, cls: tuple[type] = None,
-                          exclude: tuple[type] = tuple()) -> set[WireVector]:
+    def wirevector_subset(
+        self, cls: tuple[type] = None, exclude: tuple[type] = tuple()
+    ) -> set[WireVector]:
         """Return a subset of the ``Block's`` :class:`WireVectors<WireVector>`.
 
         Filters :class:`WireVectors<WireVector>` by type.
@@ -472,14 +495,15 @@ class Block:
             2
             >>> len([pyrtl.Output(bitwidth=4) for _ in range(3)])
             3
+            >>> block = pyrtl.working_block()
 
-            >>> inputs = pyrtl.working_block().wirevector_subset(pyrtl.Input)
+            >>> inputs = block.wirevector_subset(pyrtl.Input)
             >>> len(inputs)
             2
             >>> all(isinstance(input, pyrtl.Input) for input in inputs)
             True
 
-            >>> non_inputs = pyrtl.working_block().wirevector_subset(exclude=pyrtl.Input)
+            >>> non_inputs = block.wirevector_subset(exclude=pyrtl.Input)
             >>> len(non_inputs)
             3
             >>> any(isinstance(non_input, pyrtl.Input) for non_input in non_inputs)
@@ -538,16 +562,17 @@ class Block:
         if name in self.wirevector_by_name:
             return self.wirevector_by_name[name]
         elif strict:
-            raise PyrtlError('error, block does not have a WireVector named %s' % name)
+            raise PyrtlError("error, block does not have a WireVector named %s" % name)
         else:
             return None
 
     class _NetConnectionsDict(dict):
-        """ Dictionary wrapper for returning the results of the enclosing function.
+        """Dictionary wrapper for returning the results of the enclosing function.
 
         User doesn't need to know about this class; it's only for delivering a
         nice error message when _MemIndexed is used as a lookup key.
         """
+
         def __missing__(self, key):
             from pyrtl.memory import _MemIndexed
 
@@ -559,9 +584,9 @@ class Block:
             else:
                 raise KeyError(key)
 
-    def net_connections(self, include_virtual_nodes: bool = False
-                        ) -> tuple[dict[WireVector, LogicNet],
-                                   dict[WireVector, list[LogicNet]]]:
+    def net_connections(
+        self, include_virtual_nodes: bool = False
+    ) -> tuple[dict[WireVector, LogicNet], dict[WireVector, list[LogicNet]]]:
         """Returns `sources` and `sinks` for each :class:`WireVector` in the ``Block``.
 
         A :class:`WireVector`'s `source` is the :class:`LogicNet` that sets the
@@ -590,10 +615,13 @@ class Block:
 
         def add_wire_src(edge, node):
             if edge in src_list:
-                raise PyrtlError('Wire "{}" has multiple drivers: [{}] and [{}] (check for '
-                                 'multiple assignments with "<<=" or accidental mixing of '
-                                 '"|=" and "<<=")'
-                                 .format(edge, str(src_list[edge]).strip(), str(node).strip()))
+                raise PyrtlError(
+                    'Wire "{}" has multiple drivers: [{}] and [{}] (check for '
+                    'multiple assignments with "<<=" or accidental mixing of '
+                    '"|=" and "<<=")'.format(
+                        edge, str(src_list[edge]).strip(), str(node).strip()
+                    )
+                )
             src_list[edge] = node
 
         def add_wire_dst(edge, node):
@@ -606,6 +634,7 @@ class Block:
 
         if include_virtual_nodes:
             from pyrtl.wire import Const, Input, Output
+
             for wire in self.wirevector_subset((Input, Const)):
                 add_wire_src(wire, wire)
 
@@ -613,7 +642,9 @@ class Block:
                 add_wire_dst(wire, wire)
 
         for net in self.logic:
-            for arg in set(net.args):  # prevents unexpected duplicates when doing b <<= a & a
+            for arg in set(
+                net.args
+            ):  # prevents unexpected duplicates when doing b <<= a & a
                 add_wire_dst(arg, net)
             for dest in net.dests:
                 add_wire_src(dest, net)
@@ -621,12 +652,13 @@ class Block:
         return Block._NetConnectionsDict(src_list), Block._NetConnectionsDict(dst_list)
 
     def _repr_svg_(self):
-        """ IPython display support for Block. """
+        """IPython display support for Block."""
         from pyrtl.visualization import block_to_svg
+
         return block_to_svg(self)
 
     def __iter__(self):
-        """ BlockIterator iterates over the block passed on init in topographic order.
+        """BlockIterator iterates over the block passed on init in topographic order.
         The input is a Block, and when a LogicNet is returned it is always the case
         that all of its "parents" have already been returned earlier in the iteration.
 
@@ -636,6 +668,7 @@ class Block:
         over multiple iterations.
         """
         from pyrtl.wire import Const, Input, Register
+
         src_dict, dest_dict = self.net_connections()
         to_clear = self.wirevector_subset((Input, Const, Register))
         cleared = set()
@@ -645,17 +678,22 @@ class Block:
                 wire_to_check = to_clear.pop()
                 cleared.add(wire_to_check)
                 if wire_to_check in dest_dict:
-                    for gate in dest_dict[wire_to_check]:  # loop over logicnets not yet returned
-                        if all(arg in cleared for arg in gate.args):  # if all args ready
+                    for gate in dest_dict[
+                        wire_to_check
+                    ]:  # loop over logicnets not yet returned
+                        if all(
+                            arg in cleared for arg in gate.args
+                        ):  # if all args ready
                             yield gate
                             remaining.remove(gate)
-                            if gate.op != 'r':
+                            if gate.op != "r":
                                 to_clear.update(gate.dests)
         except KeyError as e:
             raise PyrtlError("Cannot Iterate through malformed block") from e
 
         if len(remaining) != 0:
             from pyrtl.helperfuncs import find_and_print_loop
+
             find_and_print_loop(self)
             raise PyrtlError("Failure in Block Iterator due to non-register loops")
 
@@ -677,7 +715,9 @@ class Block:
         for w in self.wirevector_subset():
             if w.bitwidth is None:
                 raise PyrtlError(
-                    'error, missing bitwidth for WireVector "%s" \n\n %s' % (w.name, get_stack(w)))
+                    'error, missing bitwidth for WireVector "%s" \n\n %s'
+                    % (w.name, get_stack(w))
+                )
 
         # check for unique names
         wirevector_names_set = set(x.name for x in self.wirevector_set)
@@ -685,10 +725,12 @@ class Block:
             wirevector_names_list = [x.name for x in self.wirevector_set]
             for w in wirevector_names_set:
                 wirevector_names_list.remove(w)
-            raise PyrtlError('Duplicate wire names found for the following '
-                             'different signals: %s (make sure you are not using "tmp" '
-                             'or "const_" as a signal name because those are reserved for '
-                             'internal use)' % repr(wirevector_names_list))
+            raise PyrtlError(
+                "Duplicate wire names found for the following "
+                'different signals: %s (make sure you are not using "tmp" '
+                'or "const_" as a signal name because those are reserved for '
+                "internal use)" % repr(wirevector_names_list)
+            )
 
         # The following line also checks for duplicate wire drivers
         wire_src_dict, wire_dst_dict = self.net_connections()
@@ -697,27 +739,36 @@ class Block:
         full_set = dest_set | arg_set
         connected_minus_allwires = full_set.difference(self.wirevector_set)
         if len(connected_minus_allwires) > 0:
-            bad_wire_names = '\n    '.join(str(x) for x in connected_minus_allwires)
-            raise PyrtlError('Unknown wires found in net:\n %s \n\n %s' % (bad_wire_names,
-                             get_stacks(*connected_minus_allwires)))
+            bad_wire_names = "\n    ".join(str(x) for x in connected_minus_allwires)
+            raise PyrtlError(
+                "Unknown wires found in net:\n %s \n\n %s"
+                % (bad_wire_names, get_stacks(*connected_minus_allwires))
+            )
 
         all_input_and_consts = self.wirevector_subset((Input, Const))
 
-        # Check for wires that aren't connected to anything (inputs and consts can be unconnected)
+        # Check for wires that aren't connected to anything (inputs and consts can be
+        # unconnected)
         allwires_minus_connected = self.wirevector_set.difference(full_set)
-        allwires_minus_connected = allwires_minus_connected.difference(all_input_and_consts)
+        allwires_minus_connected = allwires_minus_connected.difference(
+            all_input_and_consts
+        )
         if len(allwires_minus_connected) > 0:
-            bad_wire_names = '\n    '.join(str(x) for x in allwires_minus_connected)
-            raise PyrtlError('Wires declared but not connected:\n %s \n\n %s' % (bad_wire_names,
-                             get_stacks(*allwires_minus_connected)))
+            bad_wire_names = "\n    ".join(str(x) for x in allwires_minus_connected)
+            raise PyrtlError(
+                "Wires declared but not connected:\n %s \n\n %s"
+                % (bad_wire_names, get_stacks(*allwires_minus_connected))
+            )
 
-        # Check for wires that are inputs to a logicNet, but are not block inputs and are never
-        # driven.
+        # Check for wires that are inputs to a logicNet, but are not block inputs and
+        # are never driven.
         ins = arg_set.difference(dest_set)
         undriven = ins.difference(all_input_and_consts)
         if len(undriven) > 0:
-            raise PyrtlError('Wires used but never driven: %s \n\n %s' %
-                             ([w.name for w in undriven], get_stacks(*undriven)))
+            raise PyrtlError(
+                "Wires used but never driven: %s \n\n %s"
+                % ([w.name for w in undriven], get_stacks(*undriven))
+            )
 
         # Check for async memories not specified as such
         self.sanity_check_memory_sync(wire_src_dict)
@@ -725,41 +776,48 @@ class Block:
         # Check that all mappings in wirevector_by_name are consistent
         bad_wv_by_name = [w for n, w in self.wirevector_by_name.items() if n != w.name]
         if bad_wv_by_name:
-            raise PyrtlInternalError('Wires with inconsistent entry in wirevector_by_name '
-                                     'dict: %s' % [w.name for w in bad_wv_by_name])
+            raise PyrtlInternalError(
+                "Wires with inconsistent entry in wirevector_by_name "
+                "dict: %s" % [w.name for w in bad_wv_by_name]
+            )
 
         # Check that all wires are in wirevector_by_name
         wv_by_name_set = set(self.wirevector_by_name.keys())
         missing_wires = wirevector_names_set.difference(wv_by_name_set)
         if missing_wires:
-            raise PyrtlInternalError('Missing entries in wirevector_by_name for the '
-                                     'following wires: %s' % missing_wires)
+            raise PyrtlInternalError(
+                "Missing entries in wirevector_by_name for the "
+                "following wires: %s" % missing_wires
+            )
 
         unknown_wires = wv_by_name_set.difference(wirevector_names_set)
         if unknown_wires:
-            raise PyrtlInternalError('Unknown wires found in wirevector_by_name: %s'
-                                     % unknown_wires)
+            raise PyrtlInternalError(
+                "Unknown wires found in wirevector_by_name: %s" % unknown_wires
+            )
 
         if debug_mode:
-            # Check for wires that are destinations of a logicNet, but are not outputs and are never
-            # used as args.
+            # Check for wires that are destinations of a logicNet, but are not outputs
+            # and are never used as args.
             outs = dest_set.difference(arg_set)
             unused = outs.difference(self.wirevector_subset(Output))
             if len(unused) > 0:
                 names = [w.name for w in unused]
-                print('Warning: Wires driven but never used { %s } ' % names)
+                print("Warning: Wires driven but never used { %s } " % names)
                 print(get_stacks(*unused))
 
     def sanity_check_memory_sync(self, wire_src_dict=None):
-        """ Check that all memories are synchronous unless explicitly specified as async.
+        """Check that all memories are synchronous unless explicitly specified as async.
 
-        While the semantics of 'm' memories reads is asynchronous, if you want your design
-        to use a block ram (on an FPGA or otherwise) you want to make sure the index is
-        available at the beginning of the clock edge.  This check will walk the logic structure
-        and throw an error on any memory if finds that has an index that is not ready at the
-        beginning of the cycle.
+        While the semantics of 'm' memories reads is asynchronous, if you want your
+        design to use a block ram (on an FPGA or otherwise) you want to make sure the
+        index is available at the beginning of the clock edge. This check will walk the
+        logic structure and throw an error on any memory if finds that has an index that
+        is not ready at the beginning of the cycle.
         """
-        sync_mems = set(m for m in self.logic_subset('m') if not m.op_param[1].asynchronous)
+        sync_mems = set(
+            m for m in self.logic_subset("m") if not m.op_param[1].asynchronous
+        )
         if not sync_mems:
             return  # nothing to check here
 
@@ -767,8 +825,9 @@ class Block:
             wire_src_dict, wdd = self.net_connections()
 
         from pyrtl.wire import Const, Input
-        sync_src = 'r'
-        sync_prop = 'wcs'
+
+        sync_src = "r"
+        sync_prop = "wcs"
         for net in sync_mems:
             wires_to_check = list(net.args)
             while wires_to_check:
@@ -782,134 +841,149 @@ class Block:
                     wires_to_check.extend(src_net.args)
                 else:
                     raise PyrtlError(
-                        'memory "%s" is not specified as asynchronous but has an index '
-                        '"%s" that is not ready at the start of the cycle due to net "%s"'
-                        % (net.op_param[1].name, net.args[0].name, str(src_net)))
+                        f'memory "{net.op_param[1].name}" is not specified as '
+                        f'asynchronous but has an index "{net.args[0].name}" that is '
+                        "not ready at the start of the cycle due to net "
+                        f'"{str(src_net)}"'
+                    )
 
     def sanity_check_wirevector(self, w):
-        """ Check that w is a valid WireVector type. """
+        """Check that w is a valid WireVector type."""
         from pyrtl.wire import WireVector
+
         if not isinstance(w, WireVector):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
-                'instead of WireVector' % type(w))
+                "instead of WireVector" % type(w)
+            )
 
     def sanity_check_memblock(self, m):
-        """ Check that m is a valid memblock type. """
+        """Check that m is a valid memblock type."""
         from pyrtl.memory import MemBlock
+
         if not isinstance(m, MemBlock):
             raise PyrtlError(
                 'error attempting to pass an input of type "%s" '
-                'instead of MemBlock' % type(m))
+                "instead of MemBlock" % type(m)
+            )
 
     def sanity_check_net(self, net):
-        """ Check that net is a valid LogicNet. """
+        """Check that net is a valid LogicNet."""
         from pyrtl.memory import MemBlock
         from pyrtl.wire import Const, Input, Output, Register
 
         # general sanity checks that apply to all operations
         if not isinstance(net, LogicNet):
-            raise PyrtlInternalError('error, net must be of type LogicNet')
+            raise PyrtlInternalError("error, net must be of type LogicNet")
         if not isinstance(net.args, tuple):
-            raise PyrtlInternalError('error, LogicNet args must be tuple')
+            raise PyrtlInternalError("error, LogicNet args must be tuple")
         if not isinstance(net.dests, tuple):
-            raise PyrtlInternalError('error, LogicNet dests must be tuple')
+            raise PyrtlInternalError("error, LogicNet dests must be tuple")
         for w in net.args + net.dests:
             self.sanity_check_wirevector(w)
             if w._block is not self:
-                raise PyrtlInternalError('error, net references different block')
+                raise PyrtlInternalError("error, net references different block")
             if w not in self.wirevector_set:
                 raise PyrtlInternalError('error, net with unknown source "%s"' % w.name)
 
         # checks that input and output WireVectors are not misused
         bad_dests = set(filter(lambda w: isinstance(w, (Input, Const)), net.dests))
         if bad_dests:
-            raise PyrtlInternalError('error, Inputs, Consts cannot be destinations to a net (%s)' %
-                                     ','.join(map(str, bad_dests)))
+            raise PyrtlInternalError(
+                "error, Inputs, Consts cannot be destinations to a net (%s)"
+                % ",".join(map(str, bad_dests))
+            )
         bad_args = set(filter(lambda w: isinstance(w, (Output)), net.args))
         if bad_args:
-            raise PyrtlInternalError('error, Outputs cannot be arguments for a net (%s)' %
-                                     ','.join(map(str, bad_args)))
+            raise PyrtlInternalError(
+                "error, Outputs cannot be arguments for a net (%s)"
+                % ",".join(map(str, bad_args))
+            )
 
         if net.op not in self.legal_ops:
-            raise PyrtlInternalError('error, net op "%s" not from acceptable set %s' %
-                                     (net.op, self.legal_ops))
+            raise PyrtlInternalError(
+                'error, net op "%s" not from acceptable set %s'
+                % (net.op, self.legal_ops)
+            )
 
         # operation-specific checks on arguments
-        if net.op in 'w~rsm' and len(net.args) != 1:
-            raise PyrtlInternalError('error, op only allowed 1 argument')
-        if net.op in '&|^n+-*<>=' and len(net.args) != 2:
-            raise PyrtlInternalError('error, op only allowed 2 arguments')
-        if net.op == 'x':
+        if net.op in "w~rsm" and len(net.args) != 1:
+            raise PyrtlInternalError("error, op only allowed 1 argument")
+        if net.op in "&|^n+-*<>=" and len(net.args) != 2:
+            raise PyrtlInternalError("error, op only allowed 2 arguments")
+        if net.op == "x":
             if len(net.args) != 3:
-                raise PyrtlInternalError('error, op only allowed 3 arguments')
+                raise PyrtlInternalError("error, op only allowed 3 arguments")
             if net.args[1].bitwidth != net.args[2].bitwidth:
-                raise PyrtlInternalError('error, args have mismatched bitwidths')
+                raise PyrtlInternalError("error, args have mismatched bitwidths")
             if net.args[0].bitwidth != 1:
-                raise PyrtlInternalError('error, mux select must be a single bit')
-        if net.op == '@' and len(net.args) != 3:
-            raise PyrtlInternalError('error, op only allowed 3 arguments')
-        if net.op in '&|^n+-*<>=' and net.args[0].bitwidth != net.args[1].bitwidth:
-            raise PyrtlInternalError('error, args have mismatched bitwidths')
-        if net.op in 'm@' and net.args[0].bitwidth != net.op_param[1].addrwidth:
-            raise PyrtlInternalError('error, mem addrwidth mismatch')
-        if net.op == '@' and net.args[1].bitwidth != net.op_param[1].bitwidth:
-            raise PyrtlInternalError('error, mem bitwidth mismatch')
-        if net.op == '@' and net.args[2].bitwidth != 1:
-            raise PyrtlInternalError('error, mem write enable must be 1 bit')
+                raise PyrtlInternalError("error, mux select must be a single bit")
+        if net.op == "@" and len(net.args) != 3:
+            raise PyrtlInternalError("error, op only allowed 3 arguments")
+        if net.op in "&|^n+-*<>=" and net.args[0].bitwidth != net.args[1].bitwidth:
+            raise PyrtlInternalError("error, args have mismatched bitwidths")
+        if net.op in "m@" and net.args[0].bitwidth != net.op_param[1].addrwidth:
+            raise PyrtlInternalError("error, mem addrwidth mismatch")
+        if net.op == "@" and net.args[1].bitwidth != net.op_param[1].bitwidth:
+            raise PyrtlInternalError("error, mem bitwidth mismatch")
+        if net.op == "@" and net.args[2].bitwidth != 1:
+            raise PyrtlInternalError("error, mem write enable must be 1 bit")
 
         # operation-specific checks on op_params
-        if net.op in 'w~&|^n+-*<>=xcr' and net.op_param is not None:
-            raise PyrtlInternalError('error, op_param should be None')
-        if net.op == 's':
+        if net.op in "w~&|^n+-*<>=xcr" and net.op_param is not None:
+            raise PyrtlInternalError("error, op_param should be None")
+        if net.op == "s":
             if not isinstance(net.op_param, tuple):
-                raise PyrtlInternalError('error, select op requires tuple op_param')
+                raise PyrtlInternalError("error, select op requires tuple op_param")
             for p in net.op_param:
                 if not isinstance(p, int):
-                    raise PyrtlInternalError('error, select op_param requires ints')
+                    raise PyrtlInternalError("error, select op_param requires ints")
                 if p < 0 or p >= net.args[0].bitwidth:
-                    raise PyrtlInternalError('error, op_param out of bounds')
-        if net.op in 'm@':
+                    raise PyrtlInternalError("error, op_param out of bounds")
+        if net.op in "m@":
             if not isinstance(net.op_param, tuple):
-                raise PyrtlInternalError('error, mem op requires tuple op_param')
+                raise PyrtlInternalError("error, mem op requires tuple op_param")
             if len(net.op_param) != 2:
-                raise PyrtlInternalError('error, mem op requires 2 op_params in tuple')
+                raise PyrtlInternalError("error, mem op requires 2 op_params in tuple")
             if not isinstance(net.op_param[0], int):
-                raise PyrtlInternalError('error, mem op requires first operand as int')
+                raise PyrtlInternalError("error, mem op requires first operand as int")
             if not isinstance(net.op_param[1], MemBlock):
-                raise PyrtlInternalError('error, mem op requires second operand of a memory type')
+                raise PyrtlInternalError(
+                    "error, mem op requires second operand of a memory type"
+                )
 
         # operation-specific checks on destinations
-        if net.op in 'w~&|^n+-*<>=xcsrm' and len(net.dests) != 1:
-            raise PyrtlInternalError('error, op only allowed 1 destination')
-        if net.op == '@' and net.dests != ():
-            raise PyrtlInternalError('error, mem write dest should be empty tuple')
-        if net.op == 'r' and not isinstance(net.dests[0], Register):
-            raise PyrtlInternalError('error, dest of next op should be a Register')
+        if net.op in "w~&|^n+-*<>=xcsrm" and len(net.dests) != 1:
+            raise PyrtlInternalError("error, op only allowed 1 destination")
+        if net.op == "@" and net.dests != ():
+            raise PyrtlInternalError("error, mem write dest should be empty tuple")
+        if net.op == "r" and not isinstance(net.dests[0], Register):
+            raise PyrtlInternalError("error, dest of next op should be a Register")
 
         # check destination validity
-        if net.op in 'w~&|^nr' and net.dests[0].bitwidth > net.args[0].bitwidth:
-            raise PyrtlInternalError('error, upper bits of destination unassigned')
-        if net.op in '<>=' and net.dests[0].bitwidth != 1:
-            raise PyrtlInternalError('error, destination should be of bitwidth=1')
-        if net.op in '+-' and net.dests[0].bitwidth > net.args[0].bitwidth + 1:
-            raise PyrtlInternalError('error, upper bits of destination unassigned')
-        if net.op == '*' and net.dests[0].bitwidth > 2 * net.args[0].bitwidth:
-            raise PyrtlInternalError('error, upper bits of destination unassigned')
-        if net.op == 'x' and net.dests[0].bitwidth > net.args[1].bitwidth:
-            raise PyrtlInternalError('error, upper bits of mux output undefined')
-        if net.op == 'c' and net.dests[0].bitwidth > sum(x.bitwidth for x in net.args):
-            raise PyrtlInternalError('error, upper bits of concat output undefined')
-        if net.op == 's' and net.dests[0].bitwidth > len(net.op_param):
-            raise PyrtlInternalError('error, upper bits of select output undefined')
-        if net.op == 'm' and net.dests[0].bitwidth != net.op_param[1].bitwidth:
-            raise PyrtlInternalError('error, mem read dest bitwidth mismatch')
+        if net.op in "w~&|^nr" and net.dests[0].bitwidth > net.args[0].bitwidth:
+            raise PyrtlInternalError("error, upper bits of destination unassigned")
+        if net.op in "<>=" and net.dests[0].bitwidth != 1:
+            raise PyrtlInternalError("error, destination should be of bitwidth=1")
+        if net.op in "+-" and net.dests[0].bitwidth > net.args[0].bitwidth + 1:
+            raise PyrtlInternalError("error, upper bits of destination unassigned")
+        if net.op == "*" and net.dests[0].bitwidth > 2 * net.args[0].bitwidth:
+            raise PyrtlInternalError("error, upper bits of destination unassigned")
+        if net.op == "x" and net.dests[0].bitwidth > net.args[1].bitwidth:
+            raise PyrtlInternalError("error, upper bits of mux output undefined")
+        if net.op == "c" and net.dests[0].bitwidth > sum(x.bitwidth for x in net.args):
+            raise PyrtlInternalError("error, upper bits of concat output undefined")
+        if net.op == "s" and net.dests[0].bitwidth > len(net.op_param):
+            raise PyrtlInternalError("error, upper bits of select output undefined")
+        if net.op == "m" and net.dests[0].bitwidth != net.op_param[1].bitwidth:
+            raise PyrtlInternalError("error, mem read dest bitwidth mismatch")
 
 
 class PostSynthBlock(Block):
-    """ This is a block with extra metadata required to maintain the
+    """This is a block with extra metadata required to maintain the
     pre-synthesis interface during post-synthesis.
     """
+
     io_map: dict[WireVector, list[WireVector]]
     """
     A map from old IO :class:`WireVector` to a :class:`list` of new IO
@@ -960,7 +1034,7 @@ def _get_debug_mode():
 
 
 def _get_useful_callpoint_name():
-    """ Attempts to find the lowest user-level call into the PyRTL module.
+    """Attempts to find the lowest user-level call into the PyRTL module.
 
     :return (string, int) or None: the file name and line number respectively
 
@@ -975,14 +1049,15 @@ def _get_useful_callpoint_name():
         return None
 
     import inspect
+
     loc = None
     frame_stack = inspect.stack()
     try:
         for frame in frame_stack:
             modname = inspect.getmodule(frame[0]).__name__
-            if not modname.startswith('pyrtl.'):
+            if not modname.startswith("pyrtl."):
                 full_filename = frame[0].f_code.co_filename
-                filename = full_filename.split('/')[-1].rstrip('.py')
+                filename = full_filename.split("/")[-1].rstrip(".py")
                 lineno = frame[0].f_lineno
                 loc = (filename, lineno)
                 break
@@ -1005,19 +1080,19 @@ def working_block(block: Block = None) -> Block:
     if block is None:
         return _singleton_block
     elif not isinstance(block, Block):
-        raise PyrtlError('error, expected instance of Block as block argument')
+        raise PyrtlError("error, expected instance of Block as block argument")
     else:
         return block
 
 
 def reset_working_block():
-    """ Reset the working block to be empty. """
+    """Reset the working block to be empty."""
     global _singleton_block
     _singleton_block = Block()
 
 
 class set_working_block:
-    """ Set the working block to be the block passed as argument.
+    """Set the working block to be the block passed as argument.
     Compatible with the ``with`` statement.
 
     Sanity checks will only be run if the new block is different
@@ -1028,7 +1103,7 @@ class set_working_block:
     def _set_working_block(block, no_sanity_check=False):
         global _singleton_block
         if not isinstance(block, Block):
-            raise PyrtlError('error, expected instance of Block as block argument')
+            raise PyrtlError("error, expected instance of Block as block argument")
         if block is not _singleton_block:  # don't update if the blocks are the same
             if not no_sanity_check:
                 block.sanity_check()
@@ -1046,7 +1121,7 @@ class set_working_block:
 
 
 def temp_working_block():
-    """ Set the working block to be new temporary block.
+    """Set the working block to be new temporary block.
 
     If used with the ``with`` statement the block will be reset to the
     original value (at the time of call) at exit of the context.
@@ -1076,17 +1151,18 @@ def set_debug_mode(debug: bool = True):
     _setting_slower_but_more_descriptive_tmps = debug
 
 
-_py_regex = r'^[^\d\W]\w*\Z'
+_py_regex = r"^[^\d\W]\w*\Z"
 
 
 class _NameIndexer:
-    """ Provides internal names that are based on a prefix and an index. """
-    def __init__(self, internal_prefix='_sani_temp'):
+    """Provides internal names that are based on a prefix and an index."""
+
+    def __init__(self, internal_prefix="_sani_temp"):
         self.internal_prefix = internal_prefix
         self.internal_index = 0
 
     def make_valid_string(self):
-        """ Build a valid string based on the prefix and internal index. """
+        """Build a valid string based on the prefix and internal index."""
         return self.internal_prefix + str(self.next_index())
 
     def next_index(self):
@@ -1096,7 +1172,7 @@ class _NameIndexer:
 
 
 class _NameSanitizer(_NameIndexer):
-    """ Sanitizes the names so that names can be used in places that don't allow
+    """Sanitizes the names so that names can be used in places that don't allow
     for arbitrary names while not mangling valid names.
 
     Put the values you want to validate into make_valid_string the first time
@@ -1105,10 +1181,17 @@ class _NameSanitizer(_NameIndexer):
     eg: sani["__&sfhs"] for retrieval after the first time
 
     """
-    def __init__(self, identifier_regex_str, internal_prefix='_sani_temp',
-                 map_valid_vals=True, extra_checks=lambda x: True, allow_duplicates=False):
-        if identifier_regex_str[-1] != '$':
-            identifier_regex_str += '$'
+
+    def __init__(
+        self,
+        identifier_regex_str,
+        internal_prefix="_sani_temp",
+        map_valid_vals=True,
+        extra_checks=lambda x: True,
+        allow_duplicates=False,
+    ):
+        if identifier_regex_str[-1] != "$":
+            identifier_regex_str += "$"
         self.identifier = re.compile(identifier_regex_str)
         self.val_map = {}
         self.map_valid = map_valid_vals
@@ -1117,7 +1200,7 @@ class _NameSanitizer(_NameIndexer):
         super().__init__(internal_prefix)
 
     def __getitem__(self, item):
-        """ Get a value from the sanitizer """
+        """Get a value from the sanitizer"""
         if not self.map_valid and self.is_valid_str(item):
             return item
         return self.val_map[item]
@@ -1125,11 +1208,13 @@ class _NameSanitizer(_NameIndexer):
     def is_valid_str(self, string):
         return self.identifier.match(string) and self.extra_checks(string)
 
-    def make_valid_string(self, string=''):
-        """ Inputting a value for the first time. """
+    def make_valid_string(self, string=""):
+        """Inputting a value for the first time."""
         if not self.is_valid_str(string):
             if string in self.val_map and not self.allow_dups:
-                raise IndexError("Value {} has already been given to the sanitizer".format(string))
+                raise IndexError(
+                    "Value {} has already been given to the sanitizer".format(string)
+                )
             internal_name = super().make_valid_string()
             self.val_map[string] = internal_name
             return internal_name
@@ -1140,7 +1225,8 @@ class _NameSanitizer(_NameIndexer):
 
 
 class _PythonSanitizer(_NameSanitizer):
-    """ Name Sanitizer specifically built for Python identifers. """
-    def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
+    """Name Sanitizer specifically built for Python identifers."""
+
+    def __init__(self, internal_prefix="_sani_temp", map_valid_vals=True):
         super().__init__(_py_regex, internal_prefix, map_valid_vals)
         self.extra_checks = lambda s: not keyword.iskeyword(s)

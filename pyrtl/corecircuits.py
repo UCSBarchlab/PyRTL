@@ -1,4 +1,4 @@
-""" Some useful hardware generators (e.g. muxes, signed multipliers, etc.)  """
+"""Some useful hardware generators (e.g. muxes, signed multipliers, etc.)"""
 
 import itertools
 from typing import Union
@@ -10,8 +10,9 @@ from pyrtl.rtllib import barrel, muxes
 from pyrtl.wire import Const, WireVector, WireVectorLike, WrappedWireVector
 
 
-def mux(index: WireVectorLike, *mux_ins: WireVectorLike,
-        default: WireVectorLike = None) -> WireVector:
+def mux(
+    index: WireVectorLike, *mux_ins: WireVectorLike, default: WireVectorLike = None
+) -> WireVector:
     """Multiplexer returning a wire from ``mux_ins`` according to ``index``.
 
     ``index`` ``0`` corresponds to the first ``mux_in`` argument.
@@ -83,7 +84,7 @@ def mux(index: WireVectorLike, *mux_ins: WireVectorLike,
     """
     # find the diff between the addressable range and number of inputs given
     index = as_wires(index)
-    short_by = 2**len(index) - len(mux_ins)
+    short_by = 2 ** len(index) - len(mux_ins)
     if short_by > 0:
         if default is not None:  # extend the list to appropriate size
             mux_ins = list(mux_ins)
@@ -91,19 +92,23 @@ def mux(index: WireVectorLike, *mux_ins: WireVectorLike,
 
     if 2 ** len(index) != len(mux_ins):
         raise PyrtlError(
-            'Mux select line is %d bits, but selecting from %d inputs. '
-            % (len(index), len(mux_ins)))
+            "Mux select line is %d bits, but selecting from %d inputs. "
+            % (len(index), len(mux_ins))
+        )
 
     if len(index) == 1:
         return select(index, falsecase=mux_ins[0], truecase=mux_ins[1])
     half = len(mux_ins) // 2
-    return select(index[-1],
-                  falsecase=mux(index[0:-1], *mux_ins[:half]),
-                  truecase=mux(index[0:-1], *mux_ins[half:]))
+    return select(
+        index[-1],
+        falsecase=mux(index[0:-1], *mux_ins[:half]),
+        truecase=mux(index[0:-1], *mux_ins[half:]),
+    )
 
 
-def select(sel: WireVectorLike,
-           truecase: WireVectorLike, falsecase: WireVectorLike) -> WireVector:
+def select(
+    sel: WireVectorLike, truecase: WireVectorLike, falsecase: WireVectorLike
+) -> WireVector:
     """Multiplexer returning ``truecase`` when ``sel == 1``, otherwise ``falsecase``.
 
     ``select`` is equivalent to :func:`mux` with a 1-bit ``index``, except that
@@ -149,7 +154,7 @@ def select(sel: WireVectorLike,
     f, t = match_bitwidth(f, t)
     outwire = WireVector(bitwidth=len(f))
 
-    net = LogicNet(op='x', op_param=None, args=(sel, f, t), dests=(outwire,))
+    net = LogicNet(op="x", op_param=None, args=(sel, f, t), dests=(outwire,))
     working_block().add_net(net)  # this includes sanity check on the mux
     return outwire
 
@@ -201,18 +206,14 @@ def concat(*args: WireVectorLike) -> WireVector:
              all ``args``' :attr:`bitwidths<~WireVector.bitwidth>`.
     """
     if len(args) <= 0:
-        raise PyrtlError('error, concat requires at least 1 argument')
+        raise PyrtlError("error, concat requires at least 1 argument")
     if len(args) == 1:
         return as_wires(args[0])
 
     arg_wirevectors = tuple(as_wires(arg) for arg in args)
     final_width = sum(len(arg) for arg in arg_wirevectors)
     outwire = WireVector(bitwidth=final_width)
-    net = LogicNet(
-        op='c',
-        op_param=None,
-        args=arg_wirevectors,
-        dests=(outwire,))
+    net = LogicNet(op="c", op_param=None, args=arg_wirevectors, dests=(outwire,))
     working_block().add_net(net)
     return outwire
 
@@ -354,7 +355,7 @@ def signed_sub(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def mult_signed(a, b):
-    """ mult_signed is now deprecated, use ``signed_mult`` instead """
+    """mult_signed is now deprecated, use ``signed_mult`` instead"""
     return signed_mult(a, b)
 
 
@@ -554,8 +555,9 @@ def signed_ge(a: WireVectorLike, b: WireVectorLike) -> WireVector:
     return (r[-1] ^ (~a[-1]) ^ (~b[-1])) | (a == b)
 
 
-def shift_right_arithmetic(bits_to_shift: WireVector,
-                           shift_amount: Union[WireVector, int]) -> WireVector:
+def shift_right_arithmetic(
+    bits_to_shift: WireVector, shift_amount: Union[WireVector, int]
+) -> WireVector:
     """Arithmetic right shift operation.
 
     Arithemetic shifting treats the ``bits_to_shift`` as a signed number, so copies of
@@ -599,8 +601,9 @@ def shift_right_arithmetic(bits_to_shift: WireVector,
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
 
 
-def shift_left_logical(bits_to_shift: WireVector,
-                       shift_amount: Union[WireVector, int]) -> WireVector:
+def shift_left_logical(
+    bits_to_shift: WireVector, shift_amount: Union[WireVector, int]
+) -> WireVector:
     """Logical left shift operation.
 
     Logical shifting treats the ``bits_to_shift`` as an unsigned number. Zeroes will be
@@ -648,8 +651,9 @@ shift_left_arithmetic = shift_left_logical
 """Alias for :func:`shift_left_logical`"""
 
 
-def shift_right_logical(bits_to_shift: WireVector,
-                        shift_amount: Union[WireVector, int]) -> WireVector:
+def shift_right_logical(
+    bits_to_shift: WireVector, shift_amount: Union[WireVector, int]
+) -> WireVector:
     """Logical right shift operation.
 
     Logical shifting treats the ``bits_to_shift`` as an unsigned number, so zeroes will
@@ -743,8 +747,12 @@ def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]
         return (wv.zero_extended(max_len) for wv in args)
 
 
-def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
-             block: Block = None) -> WireVector:
+def as_wires(
+    val: WireVectorLike,
+    bitwidth: int = None,
+    truncating: bool = True,
+    block: Block = None,
+) -> WireVector:
     """Convert ``val`` to a :class:`WireVector`.
 
     ``val`` may be a :class:`WireVector`, :class:`int` (including
@@ -790,6 +798,7 @@ def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
         the :ref:`working_block`.
     """
     from pyrtl.memory import _MemIndexed
+
     block = working_block(block)
 
     if isinstance(val, (int, str)):
@@ -798,17 +807,21 @@ def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
     elif isinstance(val, _MemIndexed):
         # convert to a memory read when the value is actually used
         if val.wire is None:
-            val.wire = as_wires(val.mem._readaccess(val.index), bitwidth, truncating, block)
+            val.wire = as_wires(
+                val.mem._readaccess(val.index), bitwidth, truncating, block
+            )
         return val.wire
     elif isinstance(val, WrappedWireVector):
         return val.wire
     elif not isinstance(val, WireVector):
-        raise PyrtlError('error, expecting a wirevector, int, or verilog-style '
-                         'const string got %s instead' % repr(val))
-    elif bitwidth == '0':
-        raise PyrtlError('error, bitwidth must be >= 1')
+        raise PyrtlError(
+            "error, expecting a wirevector, int, or verilog-style "
+            "const string got %s instead" % repr(val)
+        )
+    elif bitwidth == "0":
+        raise PyrtlError("error, bitwidth must be >= 1")
     elif val.bitwidth is None:
-        raise PyrtlError('error, attempting to use wirevector with no defined bitwidth')
+        raise PyrtlError("error, attempting to use wirevector with no defined bitwidth")
     elif bitwidth and bitwidth > val.bitwidth:
         return val.zero_extended(bitwidth)
     elif bitwidth and truncating and bitwidth < val.bitwidth:
@@ -817,8 +830,13 @@ def as_wires(val: WireVectorLike, bitwidth: int = None, truncating: bool = True,
         return val
 
 
-def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalue: int,
-                    truncating: bool = False) -> WireVector:
+def bitfield_update(
+    w: WireVectorLike,
+    range_start: int,
+    range_end: int,
+    newvalue: int,
+    truncating: bool = False,
+) -> WireVector:
     """Update a :class:`WireVector` by replacing some of its bits with ``newvalue``.
 
     Given a :class:`WireVector` ``w``, this function returns a new :class:`WireVector`
@@ -834,13 +852,26 @@ def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalu
     standard Python slicing rules apply (e.g. negative values for end-relative indexing
     and support for ``None``)::
 
-        w = bitfield_update(w, 20, 23, 0b111)  # sets bits 20, 21, 22 to 1
-        w = bitfield_update(w, 20, 23, 0b110)  # sets bit 20 to 0, bits 21 and 22 to 1
-        w = bitfield_update(w, 20, None, 0x7)  # assuming w is 32 bits, sets bits 31..20 = 0x7
-        w = bitfield_update(w, -1, None, 0x1)  # set the MSB (bit) to 1
-        w = bitfield_update(w, None, -1, 0x9)  # set the bits before the MSB (bit) to 9
-        w = bitfield_update(w, None, 1, 0x1)  # set the LSB (bit) to 1
-        w = bitfield_update(w, 1, None, 0x9)  # set the bits after the LSB (bit) to 9
+        # Sets bits 20, 21, 22 to 1.
+        w = bitfield_update(w, 20, 23, 0b111)
+
+        # Sets bit 20 to 0, bits 21 and 22 to 1.
+        w = bitfield_update(w, 20, 23, 0b110)
+
+        # Assuming w is 32 bits, sets bits 31..20 = 0x7.
+        w = bitfield_update(w, 20, None, 0x7)
+
+        # Set the MSB (bit) to 1.
+        w = bitfield_update(w, -1, None, 0x1)
+
+        # Set the bits before the MSB (bit) to 9.
+        w = bitfield_update(w, None, -1, 0x9)
+
+        # Set the LSB (bit) to 1.
+        w = bitfield_update(w, None, 1, 0x1)
+
+        # Set the bits after the LSB (bit) to 9.
+        w = bitfield_update(w, 1, None, 0x9)
 
     .. note::
 
@@ -864,34 +895,44 @@ def bitfield_update(w: WireVectorLike, range_start: int, range_end: int, newvalu
     from pyrtl.corecircuits import concat_list
 
     w = as_wires(w)
-    idxs = list(range(len(w)))  # we make a list of integers and slice those up to use as indexes
+    idxs = list(
+        range(len(w))
+    )  # we make a list of integers and slice those up to use as indexes
     idxs_middle = idxs[range_start:range_end]
     if len(idxs_middle) == 0:
-        raise PyrtlError('Cannot update bitfield of size 0 (i.e. there are no bits to update)')
-    idxs_lower = idxs[:idxs_middle[0]]
-    idxs_upper = idxs[idxs_middle[-1] + 1:]
+        raise PyrtlError(
+            "Cannot update bitfield of size 0 (i.e. there are no bits to update)"
+        )
+    idxs_lower = idxs[: idxs_middle[0]]
+    idxs_upper = idxs[idxs_middle[-1] + 1 :]
 
     newvalue = as_wires(newvalue, bitwidth=len(idxs_middle), truncating=truncating)
     if len(idxs_middle) != len(newvalue):
-        raise PyrtlError('Cannot update bitfield of length %d with value of length %d '
-                         'unless truncating=True is specified' % (len(idxs_middle), len(newvalue)))
+        raise PyrtlError(
+            "Cannot update bitfield of length %d with value of length %d "
+            "unless truncating=True is specified" % (len(idxs_middle), len(newvalue))
+        )
 
     result_list = []
     if idxs_lower:
-        result_list.append(w[idxs_lower[0]:idxs_lower[-1] + 1])
+        result_list.append(w[idxs_lower[0] : idxs_lower[-1] + 1])
     result_list.append(newvalue)
     if idxs_upper:
-        result_list.append(w[idxs_upper[0]:idxs_upper[-1] + 1])
+        result_list.append(w[idxs_upper[0] : idxs_upper[-1] + 1])
     result = concat_list(result_list)
 
     if len(result) != len(w):
-        raise PyrtlInternalError('len(result)=%d, len(original)=%d' % (len(result), len(w)))
+        raise PyrtlInternalError(
+            "len(result)=%d, len(original)=%d" % (len(result), len(w))
+        )
     return result
 
 
-def bitfield_update_set(w: WireVectorLike,
-                        update_set: dict[tuple[int, int], WireVectorLike],
-                        truncating: bool = False) -> WireVector:
+def bitfield_update_set(
+    w: WireVectorLike,
+    update_set: dict[tuple[int, int], WireVectorLike],
+    truncating: bool = False,
+) -> WireVector:
     """Update a :class:`WireVector` by replacing the bits specified in ``update_set``.
 
     Given a WireVector ``w``, return a new :class:`WireVector` that is identical to `w`
@@ -932,15 +973,19 @@ def bitfield_update_set(w: WireVectorLike,
         # check for overlaps
         setbits = setlist[range_start:range_end]
         if any(setbits):
-            raise PyrtlError('Bitfields for update are overlapping')
+            raise PyrtlError("Bitfields for update are overlapping")
         setlist[range_start:range_end] = [True] * len(setbits)
         # do the actual update
         w = bitfield_update(w, range_start, range_end, new_value, truncating)
     return w
 
 
-def enum_mux(cntrl: WireVector, table: dict[int, WireVector],
-             default: WireVector = None, strict: bool = True) -> WireVector:
+def enum_mux(
+    cntrl: WireVector,
+    table: dict[int, WireVector],
+    default: WireVector = None,
+    strict: bool = True,
+) -> WireVector:
     """Build a mux for the control signals specified by an :class:`enum.IntEnum`.
 
     .. WARNING::
@@ -974,14 +1019,17 @@ def enum_mux(cntrl: WireVector, table: dict[int, WireVector],
     # check dictionary keys are of the right type
     keytypeset = set(type(x) for x in table.keys() if x is not otherwise)
     if len(keytypeset) != 1:
-        raise PyrtlError('table mixes multiple types {} as keys'.format(keytypeset))
+        raise PyrtlError("table mixes multiple types {} as keys".format(keytypeset))
     keytype = list(keytypeset)[0]
     # check that dictionary is complete for the enum
     try:
         enumkeys = list(keytype.__members__.values())
     except AttributeError:
-        raise PyrtlError('type {} not an Enum and does not support the same interface'
-                         .format(keytype))
+        raise PyrtlError(
+            "type {} not an Enum and does not support the same interface".format(
+                keytype
+            )
+        )
     missingkeys = [e for e in enumkeys if e not in table]
 
     # check for "otherwise" in table and move it to a default
@@ -992,12 +1040,14 @@ def enum_mux(cntrl: WireVector, table: dict[int, WireVector],
             default = table[otherwise]
 
     if strict and default is None and missingkeys:
-        raise PyrtlError('table provided is incomplete, missing: {}'.format(missingkeys))
+        raise PyrtlError(
+            "table provided is incomplete, missing: {}".format(missingkeys)
+        )
 
     # generate the actual mux
     vals = {k.value: d for k, d in table.items() if k is not otherwise}
     if default is not None:
-        vals['default'] = default
+        vals["default"] = default
     return muxes.sparse_mux(cntrl, vals)
 
 
@@ -1100,8 +1150,8 @@ def tree_reduce(op, vector: WireVector) -> WireVector:
         raise PyrtlError("Cannot reduce empty vectors")
     if len(vector) == 1:
         return vector[0]
-    left = tree_reduce(op, vector[:len(vector) // 2])
-    right = tree_reduce(op, vector[len(vector) // 2:])
+    left = tree_reduce(op, vector[: len(vector) // 2])
+    right = tree_reduce(op, vector[len(vector) // 2 :])
     return op(left, right)
 
 
@@ -1164,7 +1214,7 @@ def rtl_any(*vectorlist: WireVectorLike) -> WireVector:
         return as_wires(False)
     converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
-        raise PyrtlError('only length 1 WireVectors can be inputs to rtl_any')
+        raise PyrtlError("only length 1 WireVectors can be inputs to rtl_any")
     return or_all_bits(concat_list(converted_vectorlist))
 
 
@@ -1218,16 +1268,18 @@ def rtl_all(*vectorlist: WireVectorLike) -> WireVector:
         return as_wires(True)
     converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
-        raise PyrtlError('only length 1 WireVectors can be inputs to rtl_all')
+        raise PyrtlError("only length 1 WireVectors can be inputs to rtl_all")
     return and_all_bits(concat_list(converted_vectorlist))
 
 
 def _basic_mult(A, B):
-    """ A stripped-down copy of the Wallace multiplier in rtllib """
+    """A stripped-down copy of the Wallace multiplier in rtllib"""
     if len(B) == 1:
         A, B = B, A  # so that we can reuse the code below :)
     if len(A) == 1:
-        return concat_list(list(A & b for b in B) + [Const(0)])  # keep WireVector len consistent
+        return concat_list(
+            list(A & b for b in B) + [Const(0)]
+        )  # keep WireVector len consistent
 
     result_bitwidth = len(A) + len(B)
     bits = [[] for weight in range(result_bitwidth)]
@@ -1284,7 +1336,7 @@ def _basic_sub(a, b):
 
 
 def _basic_eq(a, b):
-    return ~ or_all_bits(a ^ b)
+    return ~or_all_bits(a ^ b)
 
 
 def _basic_lt(a, b):
@@ -1292,7 +1344,7 @@ def _basic_lt(a, b):
     a_msb = a[-1]
     b_msb = b[-1]
     if len(a) == 1:
-        return (b_msb & ~a_msb)
+        return b_msb & ~a_msb
     small = _basic_lt(a[:-1], b[:-1])
     return (b_msb & ~a_msb) | (small & ~(a_msb ^ b_msb))
 

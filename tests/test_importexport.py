@@ -87,7 +87,7 @@ state_machine_blif = r"""
 .names $false out[3]
 1 1
 .end
-"""
+"""  # noqa: E501
 
 # Manually set the .latch's init values from 2 to arbitrary non-1 numbers, for testing.
 # Should result in the same logic, but allows for testing the parser.
@@ -319,7 +319,7 @@ class TestInputFromBlif(unittest.TestCase):
         pyrtl.input_from_blif(full_adder_blif)
         x, y, cin, sumw, cout, bad = [
             pyrtl.working_block().get_wirevector_by_name(s)
-            for s in ['x', 'y', 'cin', 'sum', 'cout', 'bad']
+            for s in ["x", "y", "cin", "sum", "cout", "bad"]
         ]
         self.assertIsNotNone(x)
         self.assertIsNotNone(y)
@@ -344,7 +344,7 @@ class TestInputFromBlif(unittest.TestCase):
         pyrtl.input_from_blif(state_machine_blif)
         inw, reset, out = [
             pyrtl.working_block().get_wirevector_by_name(s)
-            for s in ['in', 'reset', 'out']
+            for s in ["in", "reset", "out"]
         ]
         self.assertIsNotNone(inw)
         self.assertIsNotNone(reset)
@@ -362,7 +362,7 @@ class TestInputFromBlif(unittest.TestCase):
         pyrtl.input_from_blif(counter4bit_blif)
         rst, en, count = [
             pyrtl.working_block().get_wirevector_by_name(s)
-            for s in ['rst', 'en', 'count']
+            for s in ["rst", "en", "count"]
         ]
         self.assertIsNotNone(rst)
         self.assertIsNotNone(en)
@@ -380,7 +380,7 @@ class TestInputFromBlif(unittest.TestCase):
         pyrtl.input_from_blif(simple_unmerged_io_blif, merge_io_vectors=False)
         a0, a1, a2, a3, b0, b1 = [
             pyrtl.working_block().get_wirevector_by_name(s)
-            for s in ['a[0]', 'a[1]', 'a[2]', 'a[3]', 'b[0]', 'b[1]']
+            for s in ["a[0]", "a[1]", "a[2]", "a[3]", "b[0]", "b[1]"]
         ]
         self.assertEqual(len(a0), 1)
         self.assertEqual(len(a1), 1)
@@ -388,32 +388,38 @@ class TestInputFromBlif(unittest.TestCase):
         self.assertEqual(len(a3), 1)
         self.assertEqual(len(b0), 1)
         self.assertEqual(len(b1), 1)
-        self.assertEqual({a0, a1, a2, a3}, pyrtl.working_block().wirevector_subset(pyrtl.Input))
-        self.assertEqual({b0, b1}, pyrtl.working_block().wirevector_subset(pyrtl.Output))
+        self.assertEqual(
+            {a0, a1, a2, a3}, pyrtl.working_block().wirevector_subset(pyrtl.Input)
+        )
+        self.assertEqual(
+            {b0, b1}, pyrtl.working_block().wirevector_subset(pyrtl.Output)
+        )
 
     def test_blif_input_simulates_correctly_with_merged_outputs(self):
-        # The 'counter_blif' string contains a model of a standard 4-bit synchronous-reset
-        # counter with enable. In particular, the model has 4 1-bit outputs named "count[0]",
-        # "count[1]", "count[2]", and "count[3]". The internal PyRTL representation will by
-        # default convert these related 1-bit wires into a single 4-bit wire called "count".
-        # This test simulates the design and, among other things, ensures that this output
-        # wire conversion occurred correctly.
+        # The 'counter_blif' string contains a model of a standard 4-bit
+        # synchronous-reset counter with enable. In particular, the model has 4 1-bit
+        # outputs named "count[0]", "count[1]", "count[2]", and "count[3]". The internal
+        # PyRTL representation will by default convert these related 1-bit wires into a
+        # single 4-bit wire called "count". This test simulates the design and, among
+        # other things, ensures that this output wire conversion occurred correctly.
         pyrtl.input_from_blif(counter4bit_blif)
-        io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
+        io_vectors = pyrtl.working_block().wirevector_subset(
+            (pyrtl.Input, pyrtl.Output)
+        )
         sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace(wires_to_track=io_vectors))
         inputs = {
-            'rst': [1] + [0] * 20,
-            'en': [1] + [1] * 20,
+            "rst": [1] + [0] * 20,
+            "en": [1] + [1] * 20,
         }
-        expected = {
-            'count': [0] + list(range(0, 16)) + list(range(0, 4))
-        }
+        expected = {"count": [0] + list(range(0, 16)) + list(range(0, 4))}
         sim.step_multiple(inputs, expected)
 
-        correct_output = ("  --- Values in base 10 ---\n"
-                          "count  0  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15  0  1  2  3\n"
-                          "en     1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1\n"
-                          "rst    1  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0\n")
+        correct_output = (
+            "  --- Values in base 10 ---\n"
+            "count  0  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15  0  1  2  3\n"
+            "en     1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1\n"
+            "rst    1  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0\n"
+        )
         output = io.StringIO()
         sim.tracer.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
@@ -422,35 +428,39 @@ class TestInputFromBlif(unittest.TestCase):
         pyrtl.input_from_blif(counter4bit_blif, merge_io_vectors=False)
         count0, count1, count2, count3 = [
             pyrtl.working_block().get_wirevector_by_name(s)
-            for s in ['count[0]', 'count[1]', 'count[2]', 'count[3]']
+            for s in ["count[0]", "count[1]", "count[2]", "count[3]"]
         ]
         self.assertEqual(len(count0), 1)
         self.assertEqual(len(count1), 1)
         self.assertEqual(len(count2), 1)
         self.assertEqual(len(count3), 1)
-        io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
+        io_vectors = pyrtl.working_block().wirevector_subset(
+            (pyrtl.Input, pyrtl.Output)
+        )
         sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace(wires_to_track=io_vectors))
         inputs = {
-            'rst': [1] + [0] * 20,
-            'en': [1] + [1] * 20,
+            "rst": [1] + [0] * 20,
+            "en": [1] + [1] * 20,
         }
         expected_merged = [0] + list(range(0, 16)) + list(range(0, 4))
 
         expected = {
-            'count[0]': [n & 0b0001 for n in expected_merged],
-            'count[1]': [(n & 0b0010) >> 1 for n in expected_merged],
-            'count[2]': [(n & 0b0100) >> 2 for n in expected_merged],
-            'count[3]': [(n & 0b1000) >> 3 for n in expected_merged],
+            "count[0]": [n & 0b0001 for n in expected_merged],
+            "count[1]": [(n & 0b0010) >> 1 for n in expected_merged],
+            "count[2]": [(n & 0b0100) >> 2 for n in expected_merged],
+            "count[3]": [(n & 0b1000) >> 3 for n in expected_merged],
         }
         sim.step_multiple(inputs, expected)
 
-        correct_output = ("     --- Values in base 10 ---\n"
-                          "count[0] 0 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1\n"
-                          "count[1] 0 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1\n"
-                          "count[2] 0 0 0 0 0 1 1 1 1 0 0 0 0 1 1 1 1 0 0 0 0\n"
-                          "count[3] 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 0 0 0 0\n"
-                          "en       1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1\n"
-                          "rst      1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n")
+        correct_output = (
+            "     --- Values in base 10 ---\n"
+            "count[0] 0 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1\n"
+            "count[1] 0 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1\n"
+            "count[2] 0 0 0 0 0 1 1 1 1 0 0 0 0 1 1 1 1 0 0 0 0\n"
+            "count[3] 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 0 0 0 0\n"
+            "en       1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1\n"
+            "rst      1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n"
+        )
         output = io.StringIO()
         sim.tracer.print_trace(output)
         self.assertEqual(output.getvalue(), correct_output)
@@ -458,8 +468,7 @@ class TestInputFromBlif(unittest.TestCase):
     def test_blif_with_output_as_arg(self):
         pyrtl.input_from_blif(blif_with_output_as_arg)
         inw, outw = [
-            pyrtl.working_block().get_wirevector_by_name(s)
-            for s in ['in', 'out']
+            pyrtl.working_block().get_wirevector_by_name(s) for s in ["in", "out"]
         ]
         self.assertIsNotNone(inw)
         self.assertIsNotNone(outw)
@@ -474,7 +483,7 @@ class TestInputFromBlif(unittest.TestCase):
         pyrtl.input_from_blif(four_bit_adder_multi_module)
         a, b, cin, s, cout = [
             pyrtl.working_block().get_wirevector_by_name(s)
-            for s in ['a', 'b', 'cin', 's', 'cout']
+            for s in ["a", "b", "cin", "s", "cout"]
         ]
         io_input = pyrtl.working_block().wirevector_subset(pyrtl.Input)
         self.assertIn(a, io_input)
@@ -497,22 +506,36 @@ class TestInputFromBlif(unittest.TestCase):
         res = utils.sim_and_ret_outws([a, b, cin], [avals, bvals, cinvals])
         self.assertEqual(
             res[s.name],
-            [(av + bv + cinv) & 0xf for av, bv, cinv in zip(avals, bvals, cinvals)]
+            [(av + bv + cinv) & 0xF for av, bv, cinv in zip(avals, bvals, cinvals)],
         )
         self.assertEqual(
             res[cout.name],
-            [((av + bv + cinv) & 0x10) >> 4 for av, bv, cinv in zip(avals, bvals, cinvals)]
+            [
+                ((av + bv + cinv) & 0x10) >> 4
+                for av, bv, cinv in zip(avals, bvals, cinvals)
+            ],
         )
 
     def test_blif_with_multiple_modules_unmerged_io(self):
         pyrtl.input_from_blif(four_bit_adder_multi_module, merge_io_vectors=False)
         a0, a1, a2, a3, b0, b1, b2, b3, cin, s0, s1, s2, s3, cout = [
             pyrtl.working_block().get_wirevector_by_name(s)
-            for s in ['a[0]', 'a[1]', 'a[2]', 'a[3]',
-                      'b[0]', 'b[1]', 'b[2]', 'b[3]',
-                      'cin',
-                      's[0]', 's[1]', 's[2]', 's[3]',
-                      'cout']
+            for s in [
+                "a[0]",
+                "a[1]",
+                "a[2]",
+                "a[3]",
+                "b[0]",
+                "b[1]",
+                "b[2]",
+                "b[3]",
+                "cin",
+                "s[0]",
+                "s[1]",
+                "s[2]",
+                "s[3]",
+                "cout",
+            ]
         ]
         io_input = pyrtl.working_block().wirevector_subset(pyrtl.Input)
         self.assertEqual({a0, a1, a2, a3, b0, b1, b2, b3, cin}, io_input)
@@ -538,28 +561,30 @@ class TestInputFromBlif(unittest.TestCase):
         for a in range(0, 16):
             for b in range(0, 16):
                 for cin in range(0, 1):
-                    sim.step({
-                        'a[0]': a & 0x1,
-                        'a[1]': (a & 0x2) >> 1,
-                        'a[2]': (a & 0x4) >> 2,
-                        'a[3]': (a & 0x8) >> 3,
-                        'b[0]': b & 0x1,
-                        'b[1]': (b & 0x2) >> 1,
-                        'b[2]': (b & 0x4) >> 2,
-                        'b[3]': (b & 0x8) >> 3,
-                        'cin': cin
-                    })
+                    sim.step(
+                        {
+                            "a[0]": a & 0x1,
+                            "a[1]": (a & 0x2) >> 1,
+                            "a[2]": (a & 0x4) >> 2,
+                            "a[3]": (a & 0x8) >> 3,
+                            "b[0]": b & 0x1,
+                            "b[1]": (b & 0x2) >> 1,
+                            "b[2]": (b & 0x4) >> 2,
+                            "b[3]": (b & 0x8) >> 3,
+                            "cin": cin,
+                        }
+                    )
                     res = a + b + cin
-                    self.assertEqual(sim.inspect('s[0]'), res & 0x1)
-                    self.assertEqual(sim.inspect('s[1]'), (res & 0x2) >> 1)
-                    self.assertEqual(sim.inspect('s[2]'), (res & 0x4) >> 2)
-                    self.assertEqual(sim.inspect('s[3]'), (res & 0x8) >> 3)
-                    self.assertEqual(sim.inspect('cout'), (res & 0x10) >> 4)
+                    self.assertEqual(sim.inspect("s[0]"), res & 0x1)
+                    self.assertEqual(sim.inspect("s[1]"), (res & 0x2) >> 1)
+                    self.assertEqual(sim.inspect("s[2]"), (res & 0x4) >> 2)
+                    self.assertEqual(sim.inspect("s[3]"), (res & 0x8) >> 3)
+                    self.assertEqual(sim.inspect("cout"), (res & 0x10) >> 4)
 
     def test_blif_with_clock_passing(self):
         pyrtl.input_from_blif(clock_passing_blif)
         a, b, c = [
-            pyrtl.working_block().get_wirevector_by_name(s) for s in ['a', 'b', 'c']
+            pyrtl.working_block().get_wirevector_by_name(s) for s in ["a", "b", "c"]
         ]
         io_input = pyrtl.working_block().wirevector_subset(pyrtl.Input)
         self.assertEqual({a, b}, io_input)
@@ -567,10 +592,12 @@ class TestInputFromBlif(unittest.TestCase):
         self.assertEqual({c}, io_output)
 
         sim = pyrtl.Simulation()
-        sim.step_multiple({
-            'a': [0, 3, 1, 1, 1, 1, 0],
-            'b': [1, 7, 9, 9, 9, 9, 0],
-        })
+        sim.step_multiple(
+            {
+                "a": [0, 3, 1, 1, 1, 1, 0],
+                "b": [1, 7, 9, 9, 9, 9, 0],
+            }
+        )
         cvals = sim.tracer.trace[c.name]
         self.assertEqual(cvals, [0, 0, 0, 1, 1, 1, 0])
 
@@ -610,12 +637,14 @@ class TestInputFromBlif(unittest.TestCase):
         """
         pyrtl.input_from_blif(blif)
         block = pyrtl.working_block()
-        self.assertEqual(len(block.logic_subset('~')), 1)
+        self.assertEqual(len(block.logic_subset("~")), 1)
         sim = pyrtl.Simulation()
-        sim.step_multiple({
-            'a': '01',
-        })
-        self.assertEqual(sim.tracer.trace['o'], [1, 0])
+        sim.step_multiple(
+            {
+                "a": "01",
+            }
+        )
+        self.assertEqual(sim.tracer.trace["o"], [1, 0])
 
     def test_blif_and_gate_correct(self):
         blif = """\
@@ -628,13 +657,15 @@ class TestInputFromBlif(unittest.TestCase):
         """
         pyrtl.input_from_blif(blif)
         block = pyrtl.working_block()
-        self.assertEqual(len(block.logic_subset('&')), 1)
+        self.assertEqual(len(block.logic_subset("&")), 1)
         sim = pyrtl.Simulation()
-        sim.step_multiple({
-            'a': '0011',
-            'b': '0101',
-        })
-        self.assertEqual(sim.tracer.trace['o'], [0, 0, 0, 1])
+        sim.step_multiple(
+            {
+                "a": "0011",
+                "b": "0101",
+            }
+        )
+        self.assertEqual(sim.tracer.trace["o"], [0, 0, 0, 1])
 
     def test_blif_or_gate_correct(self):
         blif = """\
@@ -648,13 +679,15 @@ class TestInputFromBlif(unittest.TestCase):
         """
         pyrtl.input_from_blif(blif)
         block = pyrtl.working_block()
-        self.assertEqual(len(block.logic_subset('|')), 1)
+        self.assertEqual(len(block.logic_subset("|")), 1)
         sim = pyrtl.Simulation()
-        sim.step_multiple({
-            'a': '0011',
-            'b': '0101',
-        })
-        self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 1])
+        sim.step_multiple(
+            {
+                "a": "0011",
+                "b": "0101",
+            }
+        )
+        self.assertEqual(sim.tracer.trace["o"], [0, 1, 1, 1])
 
     def test_blif_nand_gate_to_primitives_correct(self):
         # This tests that there should be no NAND gates generated during BLIF import;
@@ -670,15 +703,17 @@ class TestInputFromBlif(unittest.TestCase):
         """
         pyrtl.input_from_blif(blif)
         block = pyrtl.working_block()
-        self.assertEqual(len(block.logic_subset('n')), 0)
-        self.assertEqual(len(block.logic_subset('&')), 1)
-        self.assertEqual(len(block.logic_subset('~')), 1)
+        self.assertEqual(len(block.logic_subset("n")), 0)
+        self.assertEqual(len(block.logic_subset("&")), 1)
+        self.assertEqual(len(block.logic_subset("~")), 1)
         sim = pyrtl.Simulation()
-        sim.step_multiple({
-            'a': '0011',
-            'b': '0101',
-        })
-        self.assertEqual(sim.tracer.trace['o'], [1, 1, 1, 0])
+        sim.step_multiple(
+            {
+                "a": "0011",
+                "b": "0101",
+            }
+        )
+        self.assertEqual(sim.tracer.trace["o"], [1, 1, 1, 0])
 
     def test_blif_xor_gate_correct(self):
         blif = """\
@@ -692,13 +727,15 @@ class TestInputFromBlif(unittest.TestCase):
         """
         pyrtl.input_from_blif(blif)
         block = pyrtl.working_block()
-        self.assertEqual(len(block.logic_subset('^')), 1)
+        self.assertEqual(len(block.logic_subset("^")), 1)
         sim = pyrtl.Simulation()
-        sim.step_multiple({
-            'a': '0011',
-            'b': '0101',
-        })
-        self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 0])
+        sim.step_multiple(
+            {
+                "a": "0011",
+                "b": "0101",
+            }
+        )
+        self.assertEqual(sim.tracer.trace["o"], [0, 1, 1, 0])
 
     def test_blif_nor_gate_correct(self):
         # This is a non-primitive, so tests the last branch of cover list parsing
@@ -712,14 +749,16 @@ class TestInputFromBlif(unittest.TestCase):
         """
         pyrtl.input_from_blif(blif)
         block = pyrtl.working_block()
-        self.assertEqual(len(block.logic_subset('~')), 2)
-        self.assertEqual(len(block.logic_subset('&')), 1)
+        self.assertEqual(len(block.logic_subset("~")), 2)
+        self.assertEqual(len(block.logic_subset("&")), 1)
         sim = pyrtl.Simulation()
-        sim.step_multiple({
-            'a': '0011',
-            'b': '0101',
-        })
-        self.assertEqual(sim.tracer.trace['o'], [1, 0, 0, 0])
+        sim.step_multiple(
+            {
+                "a": "0011",
+                "b": "0101",
+            }
+        )
+        self.assertEqual(sim.tracer.trace["o"], [1, 0, 0, 0])
 
 
 verilog_output_small = """\
@@ -1532,24 +1571,24 @@ class TestVerilogNames(unittest.TestCase):
         self.assertNotEqual(self.vnames.make_valid_string(name), name)
 
     def test_verilog_check_valid_name_good(self):
-        self.checkname('abc')
-        self.checkname('a')
-        self.checkname('BC')
-        self.checkname('Kabc')
-        self.checkname('B_ac')
-        self.checkname('_asdvqa')
-        self.checkname('_Bs_')
-        self.checkname('fd$oeoe')
-        self.checkname('_B$$s')
-        self.checkname('B')
+        self.checkname("abc")
+        self.checkname("a")
+        self.checkname("BC")
+        self.checkname("Kabc")
+        self.checkname("B_ac")
+        self.checkname("_asdvqa")
+        self.checkname("_Bs_")
+        self.checkname("fd$oeoe")
+        self.checkname("_B$$s")
+        self.checkname("B")
 
     def test_verilog_check_valid_name_bad(self):
-        self.assert_invalid_name('carne asda')
-        self.assert_invalid_name('')
-        self.assert_invalid_name('asd%kask')
+        self.assert_invalid_name("carne asda")
+        self.assert_invalid_name("")
+        self.assert_invalid_name("asd%kask")
         self.assert_invalid_name("flipin'")
-        self.assert_invalid_name(' jklol')
-        self.assert_invalid_name('a' * 2000)
+        self.assert_invalid_name(" jklol")
+        self.assert_invalid_name("a" * 2000)
 
 
 class TestVerilogOutput(unittest.TestCase):
@@ -1563,12 +1602,15 @@ class TestVerilogOutput(unittest.TestCase):
 
     def test_romblock_does_not_throw_error(self):
         from pyrtl.corecircuits import _basic_add
-        a = pyrtl.Input(bitwidth=3, name='a')
-        b = pyrtl.Input(bitwidth=3, name='b')
-        o = pyrtl.Output(bitwidth=3, name='o')
+
+        a = pyrtl.Input(bitwidth=3, name="a")
+        b = pyrtl.Input(bitwidth=3, name="b")
+        o = pyrtl.Output(bitwidth=3, name="o")
         res = _basic_add(a, b)
         rdat = {0: 1, 1: 2, 2: 5, 5: 0}
-        mixtable = pyrtl.RomBlock(addrwidth=3, bitwidth=3, pad_with_zeros=True, romdata=rdat)
+        mixtable = pyrtl.RomBlock(
+            addrwidth=3, bitwidth=3, pad_with_zeros=True, romdata=rdat
+        )
         o <<= mixtable[res[:-1]]
         with io.StringIO() as testbuffer:
             pyrtl.output_to_verilog(testbuffer)
@@ -1576,8 +1618,8 @@ class TestVerilogOutput(unittest.TestCase):
     def test_textual_consistency_small(self):
         i = pyrtl.Const(0b1100)
         j = pyrtl.Const(0b011, bitwidth=3)
-        k = pyrtl.Const(0b100110, name='k')
-        o = pyrtl.Output(13, 'o')
+        k = pyrtl.Const(0b100110, name="k")
+        o = pyrtl.Output(13, "o")
         o <<= pyrtl.concat(i, j, k)
 
         buffer = io.StringIO()
@@ -1594,11 +1636,11 @@ class TestVerilogOutput(unittest.TestCase):
         # makes sure at least two lines of code are created in
         # the always @ blocks associated with them (so we have
         # many different wire names to deal with and test against).
-        a = pyrtl.Input(4, 'a')
-        r = pyrtl.Register(4, name='r')
-        s = pyrtl.Register(4, name='s', reset_value=13)
+        a = pyrtl.Input(4, "a")
+        r = pyrtl.Register(4, name="r")
+        s = pyrtl.Register(4, name="s", reset_value=13)
         # This will have mem id 0, so prints first despite actual name
-        mt = pyrtl.MemBlock(4, 2, name='z')
+        mt = pyrtl.MemBlock(4, 2, name="z")
         m = [pyrtl.MemBlock(4, 2, max_write_ports=2) for _ in range(12)]
         for mem in m:
             mem[0] <<= a
@@ -1607,7 +1649,7 @@ class TestVerilogOutput(unittest.TestCase):
         r.next <<= b + 1 - s
         s.next <<= a - 1
         mt[0] <<= 9
-        o = pyrtl.Output(6, 'o')
+        o = pyrtl.Output(6, "o")
         o <<= b + m[0][0] + m[1][0]
 
         buffer = io.StringIO()
@@ -1619,8 +1661,8 @@ class TestVerilogOutput(unittest.TestCase):
         rdata = {0: 10, 1: 20, 2: 30, 3: 40, 4: 50, 5: 60}
         rom = pyrtl.RomBlock(8, 3, rdata, pad_with_zeros=True)
         mem = pyrtl.MemBlock(8, 8)
-        in1 = pyrtl.Input(3, 'in1')
-        out1 = pyrtl.Output(8, 'out1')
+        in1 = pyrtl.Input(3, "in1")
+        out1 = pyrtl.Output(8, "out1")
         w = rom[in1]
         out1 <<= w
         mem[w] <<= 42
@@ -1633,7 +1675,7 @@ class TestVerilogOutput(unittest.TestCase):
     def check_counter_text(self, add_reset, expected):
         r = pyrtl.Register(4, reset_value=2)
         r.next <<= r + 1
-        o = pyrtl.Output(4, 'o')
+        o = pyrtl.Output(4, "o")
         o <<= r
 
         buffer = io.StringIO()
@@ -1644,7 +1686,7 @@ class TestVerilogOutput(unittest.TestCase):
         self.check_counter_text(True, verilog_output_counter_sync_reset)
 
     def test_textual_consistency_with_async_reset(self):
-        self.check_counter_text('asynchronous', verilog_output_counter_async_reset)
+        self.check_counter_text("asynchronous", verilog_output_counter_async_reset)
 
     def test_textual_consistency_with_no_reset(self):
         self.check_counter_text(False, verilog_output_counter_no_reset)
@@ -1652,26 +1694,27 @@ class TestVerilogOutput(unittest.TestCase):
     def test_error_invalid_add_reset(self):
         buffer = io.StringIO()
         with self.assertRaisesRegex(pyrtl.PyrtlError, "Invalid add_reset option"):
-            pyrtl.output_to_verilog(buffer, add_reset='foobar')
+            pyrtl.output_to_verilog(buffer, add_reset="foobar")
 
     def test_error_existing_reset_wire(self):
         buffer = io.StringIO()
-        _rst = pyrtl.Input(1, 'rst')
-        with self.assertRaisesRegex(pyrtl.PyrtlError,
-                                    "Found a user-defined wire named 'rst'."):
+        _rst = pyrtl.Input(1, "rst")
+        with self.assertRaisesRegex(
+            pyrtl.PyrtlError, "Found a user-defined wire named 'rst'."
+        ):
             pyrtl.output_to_verilog(buffer)
 
     def test_existing_reset_wire_without_add_reset(self):
         buffer = io.StringIO()
-        rst = pyrtl.Input(1, 'rst')
-        r = pyrtl.Register(4, 'r')
+        rst = pyrtl.Input(1, "rst")
+        r = pyrtl.Register(4, "r")
         r.next <<= pyrtl.select(rst, 0, r + 1)
         pyrtl.output_to_verilog(buffer, add_reset=False)
         self.assertEqual(buffer.getvalue(), verilog_custom_reset)
 
     def test_register_reset_value(self):
-        _ = pyrtl.Register(name='register0', bitwidth=8, reset_value=0)
-        _ = pyrtl.Register(name='register1', bitwidth=4, reset_value=1)
+        _ = pyrtl.Register(name="register0", bitwidth=8, reset_value=0)
+        _ = pyrtl.Register(name="register1", bitwidth=4, reset_value=1)
 
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer, add_reset=False, initialize_registers=True)
@@ -1722,47 +1765,48 @@ endmodule
 class TestVerilogInput(unittest.TestCase):
     def setUp(self):
         import subprocess
+
         try:
-            _ = subprocess.check_output(['yosys', '-V'])
+            _ = subprocess.check_output(["yosys", "-V"])
         except OSError:
-            raise unittest.SkipTest('Testing Verilog input requires yosys')
+            raise unittest.SkipTest("Testing Verilog input requires yosys")
         pyrtl.reset_working_block()
 
     def test_import_counter(self):
         pyrtl.input_from_verilog(verilog_input_counter)
         sim = pyrtl.Simulation()
-        sim.step_multiple({'rst': '10000', 'en': '01111'})
-        self.assertEqual(sim.tracer.trace['count'], [0, 0, 1, 2, 3])
+        sim.step_multiple({"rst": "10000", "en": "01111"})
+        self.assertEqual(sim.tracer.trace["count"], [0, 0, 1, 2, 3])
 
     def test_import_small(self):
         pyrtl.input_from_verilog(verilog_output_small)
         sim = pyrtl.Simulation()
         sim.step({})
-        self.assertEqual(sim.tracer.trace['o'][0], 0b1100011100110)
+        self.assertEqual(sim.tracer.trace["o"][0], 0b1100011100110)
 
     def test_import_counter_with_reset(self):
         pyrtl.input_from_verilog(verilog_output_counter_sync_reset)
         sim = pyrtl.Simulation()
-        sim.step_multiple({'rst': '1000'})
-        self.assertEqual(sim.tracer.trace['o'], [0, 2, 3, 4])
+        sim.step_multiple({"rst": "1000"})
+        self.assertEqual(sim.tracer.trace["o"], [0, 2, 3, 4])
 
     def test_import_multi_module_specified_module(self):
         # Import foo module because occurs first in file
         pyrtl.input_from_verilog(verilog_input_multi_module, toplevel="foo")
         sim = pyrtl.Simulation()
-        sim.step_multiple({'a': '0011', 'b': '0101'})
-        self.assertEqual(sim.tracer.trace['o'], [0, 1, 1, 2])
+        sim.step_multiple({"a": "0011", "b": "0101"})
+        self.assertEqual(sim.tracer.trace["o"], [0, 1, 1, 2])
 
     def test_import_multi_module_auto_select_top_module(self):
         pyrtl.input_from_verilog(verilog_input_multi_module)
         sim = pyrtl.Simulation()
         sim.step_multiple(nsteps=5)
-        self.assertEqual(sim.tracer.trace['o'], [0, 2, 0, 2, 0])
+        self.assertEqual(sim.tracer.trace["o"], [0, 2, 0, 2, 0])
 
     def test_error_import_bad_file(self):
         with self.assertRaisesRegex(
-                pyrtl.PyrtlError,
-                "input_from_verilog expecting either open file or string"):
+            pyrtl.PyrtlError, "input_from_verilog expecting either open file or string"
+        ):
             pyrtl.input_from_verilog(3)
 
 
@@ -1868,7 +1912,7 @@ module tb();
         $finish;
     end
 endmodule
-"""
+"""  # noqa: E501
 
 verilog_testbench_custom_reset = """\
 module tb();
@@ -1889,7 +1933,7 @@ module tb();
         $finish;
     end
 endmodule
-"""
+"""  # noqa: E501
 
 
 class TestOutputTestbench(unittest.TestCase):
@@ -1902,9 +1946,9 @@ class TestOutputTestbench(unittest.TestCase):
         pyrtl.memory._reset_memory_indexer()
 
     def test_verilog_testbench_does_not_throw_error(self):
-        zero = pyrtl.Input(1, 'zero')
-        counter_output = pyrtl.Output(3, 'counter_output')
-        counter = pyrtl.Register(3, 'counter')
+        zero = pyrtl.Input(1, "zero")
+        counter_output = pyrtl.Output(3, "counter_output")
+        counter = pyrtl.Register(3, "counter")
         counter.next <<= pyrtl.mux(zero, counter + 1, 0)
         counter_output <<= counter
         sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace([counter_output, zero]))
@@ -1916,31 +1960,36 @@ class TestOutputTestbench(unittest.TestCase):
     def create_design(self):
         # Various wire names so we can verify they are printed
         # in deterministic order each time
-        i1, i2, i3 = pyrtl.input_list('w1/4 w12/3 a100/2')
-        r1, r2 = pyrtl.register_list('r1/3 r2/4')
+        i1, i2, i3 = pyrtl.input_list("w1/4 w12/3 a100/2")
+        r1, r2 = pyrtl.register_list("r1/3 r2/4")
         r3 = pyrtl.Register(8)
         mem = pyrtl.MemBlock(4, 5)
-        o1, o2 = pyrtl.output_list('out1/2 out10/9')
+        o1, o2 = pyrtl.output_list("out1/2 out10/9")
         r1.next <<= i1 + i2
         r2.next <<= r1 * i3
         r3.next <<= r1 & r2
         mem[i1] <<= r1 + 3
         o1 <<= i3 - r2
         o2 <<= r1
-        sim = pyrtl.Simulation(register_value_map={
-            r1: 2,
-            r2: 3,
-        }, memory_value_map={
-            mem: {
-                2: 9,
-                9: 12,
+        sim = pyrtl.Simulation(
+            register_value_map={
+                r1: 2,
+                r2: 3,
             },
-        })
-        sim.step_multiple({
-            'w1': [0, 4, 2, 3],
-            'w12': [0, 1, 7, 4],
-            'a100': [0, 1, 3, 2],
-        })
+            memory_value_map={
+                mem: {
+                    2: 9,
+                    9: 12,
+                },
+            },
+        )
+        sim.step_multiple(
+            {
+                "w1": [0, 4, 2, 3],
+                "w12": [0, 1, 7, 4],
+                "a100": [0, 1, 3, 2],
+            }
+        )
         return sim.tracer
 
     def test_verilog_testbench_consistency(self):
@@ -1958,19 +2007,20 @@ class TestOutputTestbench(unittest.TestCase):
     def test_error_verilog_testbench_invalid_add_reset(self):
         tbfile = io.StringIO()
         with self.assertRaisesRegex(pyrtl.PyrtlError, "Invalid add_reset option"):
-            pyrtl.output_verilog_testbench(tbfile, add_reset='foobar')
+            pyrtl.output_verilog_testbench(tbfile, add_reset="foobar")
 
     def test_error_verilog_testbench_existing_reset_wire(self):
         tbfile = io.StringIO()
-        _rst = pyrtl.Input(1, 'rst')
-        with self.assertRaisesRegex(pyrtl.PyrtlError,
-                                    "Found a user-defined wire named 'rst'."):
+        _rst = pyrtl.Input(1, "rst")
+        with self.assertRaisesRegex(
+            pyrtl.PyrtlError, "Found a user-defined wire named 'rst'."
+        ):
             pyrtl.output_verilog_testbench(tbfile)
 
     def test_verilog_testbench_existing_reset_wire_without_add_reset(self):
         buffer = io.StringIO()
-        rst = pyrtl.Input(1, 'rst')
-        r = pyrtl.Register(4, 'r')
+        rst = pyrtl.Input(1, "rst")
+        r = pyrtl.Register(4, "r")
         r.next <<= pyrtl.select(rst, 0, r + 1)
         pyrtl.output_verilog_testbench(buffer, add_reset=False)
         self.assertEqual(buffer.getvalue(), verilog_testbench_custom_reset)
@@ -2043,7 +2093,7 @@ class TestOutputFirrtl(unittest.TestCase):
         i = pyrtl.Const(0b1100)
         j = pyrtl.Const(0b011, bitwidth=3)
         k = pyrtl.Const(0b100110)
-        o = pyrtl.Output(13, 'o')
+        o = pyrtl.Output(13, "o")
         o <<= pyrtl.concat(i, j, k)
 
         buffer = io.StringIO()
@@ -2053,7 +2103,7 @@ class TestOutputFirrtl(unittest.TestCase):
 
     def test_textual_consistency_selects(self):
         a = pyrtl.Const(0b101101001101)
-        b = pyrtl.Output(6, 'b')
+        b = pyrtl.Output(6, "b")
         b <<= a[::2]
 
         buffer = io.StringIO()
@@ -2472,32 +2522,61 @@ class TestInputISCASBench(unittest.TestCase):
             self.assertIsNotNone(wire)
             self.assertIsInstance(wire, cls)
             self.assertEqual(len(wire), 1)
-        self.assertEqual(
-            len(block.wirevector_subset(cls)),
-            len(names)
-        )
+        self.assertEqual(len(block.wirevector_subset(cls)), len(names))
 
     def check_gate_amounts(self, nots, ands, ors, nands, xors, dffs):
         block = pyrtl.working_block()
-        self.assertEqual(len(block.logic_subset(op='~')), nots)
-        self.assertEqual(len(block.logic_subset(op='&')), ands)
-        self.assertEqual(len(block.logic_subset(op='|')), ors)
-        self.assertEqual(len(block.logic_subset(op='n')), nands)
-        self.assertEqual(len(block.logic_subset(op='^')), xors)
+        self.assertEqual(len(block.logic_subset(op="~")), nots)
+        self.assertEqual(len(block.logic_subset(op="&")), ands)
+        self.assertEqual(len(block.logic_subset(op="|")), ors)
+        self.assertEqual(len(block.logic_subset(op="n")), nands)
+        self.assertEqual(len(block.logic_subset(op="^")), xors)
         self.assertEqual(len(block.wirevector_subset(pyrtl.Register)), dffs)
 
     def test_combinational_bench(self):
         pyrtl.input_from_iscas_bench(iscas85_bench_c432)
 
         input_names = [
-            '1', '4', '8', '11', '14', '17', '21', '24', '27',
-            '30', '34', '37', '40', '43', '47', '50', '53', '56',
-            '60', '63', '66', '69', '73', '76', '79', '82', '86',
-            '89', '92', '95', '99', '102', '105', '108', '112', '115'
+            "1",
+            "4",
+            "8",
+            "11",
+            "14",
+            "17",
+            "21",
+            "24",
+            "27",
+            "30",
+            "34",
+            "37",
+            "40",
+            "43",
+            "47",
+            "50",
+            "53",
+            "56",
+            "60",
+            "63",
+            "66",
+            "69",
+            "73",
+            "76",
+            "79",
+            "82",
+            "86",
+            "89",
+            "92",
+            "95",
+            "99",
+            "102",
+            "105",
+            "108",
+            "112",
+            "115",
         ]
         self.check_io(pyrtl.Input, input_names)
 
-        output_names = ['223', '329', '370', '421', '430', '431', '432']
+        output_names = ["223", "329", "370", "421", "430", "431", "432"]
         self.check_io(pyrtl.Output, output_names)
 
         self.check_gate_amounts(59, 4, 19, 79, 18, 0)
@@ -2506,26 +2585,40 @@ class TestInputISCASBench(unittest.TestCase):
         pyrtl.input_from_iscas_bench(iscas89_bench_s208)
 
         input_names = [
-            'X', 'Clear', 'C_8', 'C_7', 'C_6', 'C_5', 'C_4', 'C_3', 'C_2', 'C_1', 'C_0'
+            "X",
+            "Clear",
+            "C_8",
+            "C_7",
+            "C_6",
+            "C_5",
+            "C_4",
+            "C_3",
+            "C_2",
+            "C_1",
+            "C_0",
         ]
         self.check_io(pyrtl.Input, input_names)
 
-        output_names = ['W', 'Z']
+        output_names = ["W", "Z"]
         self.check_io(pyrtl.Output, output_names)
 
         self.check_gate_amounts(56, 17, 25, 19, 0, 8)
 
     def test_simulation_bench(self):
         pyrtl.input_from_iscas_bench(iscas89_bench_s27)
-        trace = pyrtl.SimulationTrace({pyrtl.working_block().get_wirevector_by_name('G17')})
+        trace = pyrtl.SimulationTrace(
+            {pyrtl.working_block().get_wirevector_by_name("G17")}
+        )
         sim = pyrtl.Simulation(trace)
-        sim.step_multiple({
-            'G0': '01101001',
-            'G1': '11010100',
-            'G2': '00011001',
-            'G3': '11001100',
-        })
-        correct_output = ('G17 11110001\n')
+        sim.step_multiple(
+            {
+                "G0": "01101001",
+                "G1": "11010100",
+                "G2": "00011001",
+                "G3": "11001100",
+            }
+        )
+        correct_output = "G17 11110001\n"
         output = io.StringIO()
         trace.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_output)
@@ -2539,12 +2632,12 @@ class TestInputISCASBench(unittest.TestCase):
         self.assertEqual(
             output.getvalue(),
             "Found input and output wires with the same name. "
-            "Output 'G3' has now been renamed to 'tmp3'.\n"
+            "Output 'G3' has now been renamed to 'tmp3'.\n",
         )
         pyrtl.working_block().sanity_check()
 
-        self.check_io(pyrtl.Input, ['G1', 'G2', 'G3'])
-        self.check_io(pyrtl.Output, ['tmp3', 'G4'])
+        self.check_io(pyrtl.Input, ["G1", "G2", "G3"])
+        self.check_io(pyrtl.Output, ["tmp3", "G4"])
 
 
 if __name__ == "__main__":

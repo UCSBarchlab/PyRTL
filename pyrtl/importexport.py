@@ -30,19 +30,21 @@ if TYPE_CHECKING:
 
 
 def _natural_sort_key(key):
-    """ Convert the key into a form such that it will be sorted naturally,
-        e.g. such that "tmp4" appears before "tmp18".
+    """Convert the key into a form such that it will be sorted naturally,
+    e.g. such that "tmp4" appears before "tmp18".
     """
+
     def convert(text):
         return int(text) if text.isdigit() else text
-    return [convert(c) for c in re.split(r'(\d+)', key)]
+
+    return [convert(c) for c in re.split(r"(\d+)", key)]
 
 
 def _net_sorted(logic, name_mapper=lambda w: w.name):
     # Sort nets based on the name of the destination
     # wire, unless it's a memory write net.
     def natural_keys(n):
-        if n.op == '@':
+        if n.op == "@":
             # Sort based on the name of the wr_en wire, since
             # this particular net is used within 'always begin ... end'
             # blocks for memory update logic.
@@ -50,11 +52,13 @@ def _net_sorted(logic, name_mapper=lambda w: w.name):
         else:
             key = name_mapper(n.dests[0])
         return _natural_sort_key(key)
+
     return sorted(logic, key=natural_keys)
 
 
 def _name_sorted(wires, name_mapper=lambda w: w.name):
     return sorted(wires, key=lambda w: _natural_sort_key(name_mapper(w)))
+
 
 # -----------------------------------------------------------------
 #     __          ___
@@ -68,7 +72,7 @@ class Subcircuit:
     are not name clashes when we instantiate a module more than once.
     """
 
-    def __init__(self, model, is_top=False, clk_set={'clk'}, block=None):
+    def __init__(self, model, is_top=False, clk_set={"clk"}, block=None):
         self.model = model
         self.is_top = is_top
         self.clk_set = clk_set
@@ -92,7 +96,7 @@ class Subcircuit:
         self.clk_set.add(clock_name)
 
     def twire(self, x):
-        """ Find or make wire named x and return it. """
+        """Find or make wire named x and return it."""
         s = self.wirevector_by_name.get(x)
         if s is None:
             # Purposefully *not* setting its name to 'x', so we don't have name clashes
@@ -102,8 +106,12 @@ class Subcircuit:
 
 
 def input_from_blif(
-        blif, block: Block = None, merge_io_vectors: bool = True,
-        clock_name: str = 'clk', top_model: str = None):
+    blif,
+    block: Block = None,
+    merge_io_vectors: bool = True,
+    clock_name: str = "clk",
+    top_model: str = None,
+):
     """Read an open BLIF file or string as input, updating the block appropriately.
 
     If ``merge_io_vectors`` is ``True``, then given 1-bit :class:`Input` wires ``a[0]``
@@ -155,7 +163,7 @@ def input_from_blif(
         if isinstance(blif, str):
             blif_string = blif
         else:
-            raise PyrtlError('input_from_blif expecting either open file or string')
+            raise PyrtlError("input_from_blif expecting either open file or string")
 
     def SKeyword(x):
         return Suppress(Keyword(x))
@@ -164,69 +172,109 @@ def input_from_blif(
         return Suppress(Literal(x))
 
     # Begin BLIF language definition
-    signal_start = pyparsing.alphas + '$:[]_<>\\/?'
-    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\/.?-'
+    signal_start = pyparsing.alphas + "$:[]_<>\\/?"
+    signal_middle = pyparsing.alphas + pyparsing.nums + "$:[]_<>\\/.?-"
     signal_id = Word(signal_start, signal_middle)
-    header = SKeyword('.model') + signal_id('model_name')
-    input_list = Group(SKeyword('.inputs') + ZeroOrMore(signal_id))('input_list')
-    output_list = Group(SKeyword('.outputs') + ZeroOrMore(signal_id))('output_list')
+    header = SKeyword(".model") + signal_id("model_name")
+    input_list = Group(SKeyword(".inputs") + ZeroOrMore(signal_id))("input_list")
+    output_list = Group(SKeyword(".outputs") + ZeroOrMore(signal_id))("output_list")
 
-    cover_atom = Word('01-')
-    cover_list = Group(ZeroOrMore(cover_atom))('cover_list')
-    namesignal_list = Group(OneOrMore(signal_id))('namesignal_list')
-    name_def = Group(SKeyword('.names') + namesignal_list + cover_list)('name_def')
+    cover_atom = Word("01-")
+    cover_list = Group(ZeroOrMore(cover_atom))("cover_list")
+    namesignal_list = Group(OneOrMore(signal_id))("namesignal_list")
+    name_def = Group(SKeyword(".names") + namesignal_list + cover_list)("name_def")
 
     def make_dff_parsers(formals, names):
-        defs = functools.reduce(operator.__or__, (
-            Group(SKeyword('.subckt') + SKeyword(name) + formals)(name) for name in names)
+        defs = functools.reduce(
+            operator.__or__,
+            (
+                Group(SKeyword(".subckt") + SKeyword(name) + formals)(name)
+                for name in names
+            ),
         )
         return defs
 
-    # This is purposefully not supporting any DFFs that use negedges in the sensitivity list.
-    # Currently don't have the '$_ALDFF*' dffs (with load signal).
-    # Also, we may want to look into doing something similar for the $_DLATCH* types.
-    # NOTE: Unfortunately, this list needs to be kept consistent with the
-    # flop_next function in extract_flops().
+    # This is purposefully not supporting any DFFs that use negedges in the sensitivity
+    # list. Currently don't have the '$_ALDFF*' dffs (with load signal). Also, we may
+    # want to look into doing something similar for the $_DLATCH* types. NOTE:
+    # Unfortunately, this list needs to be kept consistent with the flop_next function
+    # in extract_flops().
     dff_names = [
-        '$_DFF_P_', '$_DFFE_PN_', '$_DFFE_PP_', '$_DFF_PP0_', '$_DFF_PP1_',
-        '$_DFFE_PP0N_', '$_DFFE_PP0P_', '$_DFFE_PP1N_', '$_DFFE_PP1P_', '$_DFFSR_PPP',
-        '$_DFFSRE_PPPN_', '$_DFFSRE_PPPP_', '$_SDFF_PN0_', '$_SDFF_PN1_', '$_SDFF_PP0_',
-        '$_SDFF_PP1_', '$_SDFFE_PN0N_', '$_SDFFE_PN0P_', '$_SDFFE_PN1N_', '$_SDFFE_PN1P_',
-        '$_SDFFE_PP0N_', '$_SDFFE_PP0P_', '$_SDFFE_PP1N_', '$_SDFFE_PP1P_', '$_SDFFCE_PN0N_',
-        '$_SDFFCE_PN0P_', '$_SDFFCE_PN1N_', '$_SDFFCE_PN1P_', '$_SDFFCE_PP0N_', '$_SDFFCE_PP0P_',
-        '$_SDFFCE_PP1N_', '$_SDFFCE_PP1P_',
+        "$_DFF_P_",
+        "$_DFFE_PN_",
+        "$_DFFE_PP_",
+        "$_DFF_PP0_",
+        "$_DFF_PP1_",
+        "$_DFFE_PP0N_",
+        "$_DFFE_PP0P_",
+        "$_DFFE_PP1N_",
+        "$_DFFE_PP1P_",
+        "$_DFFSR_PPP",
+        "$_DFFSRE_PPPN_",
+        "$_DFFSRE_PPPP_",
+        "$_SDFF_PN0_",
+        "$_SDFF_PN1_",
+        "$_SDFF_PP0_",
+        "$_SDFF_PP1_",
+        "$_SDFFE_PN0N_",
+        "$_SDFFE_PN0P_",
+        "$_SDFFE_PN1N_",
+        "$_SDFFE_PN1P_",
+        "$_SDFFE_PP0N_",
+        "$_SDFFE_PP0P_",
+        "$_SDFFE_PP1N_",
+        "$_SDFFE_PP1P_",
+        "$_SDFFCE_PN0N_",
+        "$_SDFFCE_PN0P_",
+        "$_SDFFCE_PN1N_",
+        "$_SDFFCE_PN1P_",
+        "$_SDFFCE_PP0N_",
+        "$_SDFFCE_PP0P_",
+        "$_SDFFCE_PP1N_",
+        "$_SDFFCE_PP1P_",
     ]
 
     # (a)synchronous Flip-flop (positive/negative polarity reset/set/enable)
-    dffs_formal = (SLiteral('C=') + signal_id('C')
-                   + SLiteral('D=') + signal_id('D')
-                   + Opt(SLiteral('E=') + signal_id('E'))
-                   + SLiteral('Q=') + signal_id('Q')
-                   + Opt(SLiteral('S=') + signal_id('S'))
-                   + Opt(SLiteral('R=') + signal_id('R')))
+    dffs_formal = (
+        SLiteral("C=")
+        + signal_id("C")
+        + SLiteral("D=")
+        + signal_id("D")
+        + Opt(SLiteral("E=") + signal_id("E"))
+        + SLiteral("Q=")
+        + signal_id("Q")
+        + Opt(SLiteral("S=") + signal_id("S"))
+        + Opt(SLiteral("R=") + signal_id("R"))
+    )
     dffs_def = make_dff_parsers(dffs_formal, dff_names)
 
     # synchronous Flip-flop (using .latch format)
-    latches_init_val = Opt(one_of('0 1 2 3'), default='0')
-    # TODO I think <type> and <control> ('re' and 'C') below are technically optional too
-    latches_def = Group(SKeyword('.latch')
-                        + signal_id('D')
-                        + signal_id('Q')
-                        + SLiteral('re')
-                        + signal_id('C')
-                        + latches_init_val('I'))('latches_def')
+    latches_init_val = Opt(one_of("0 1 2 3"), default="0")
+    # TODO I think <type> and <control> ('re' and 'C') below are technically optional
+    # too
+    latches_def = Group(
+        SKeyword(".latch")
+        + signal_id("D")
+        + signal_id("Q")
+        + SLiteral("re")
+        + signal_id("C")
+        + latches_init_val("I")
+    )("latches_def")
 
     # model reference
-    formal_actual = Group(signal_id('formal') + SLiteral('=')
-                          + signal_id('actual'))('formal_actual')
-    formal_actual_list = Group(OneOrMore(formal_actual))('formal_actual_list')
-    model_name = signal_id('model_name')
-    model_ref = Group(SKeyword('.subckt') + model_name + formal_actual_list)('model_ref')
+    formal_actual = Group(signal_id("formal") + SLiteral("=") + signal_id("actual"))(
+        "formal_actual"
+    )
+    formal_actual_list = Group(OneOrMore(formal_actual))("formal_actual_list")
+    model_name = signal_id("model_name")
+    model_ref = Group(SKeyword(".subckt") + model_name + formal_actual_list)(
+        "model_ref"
+    )
 
     command_def = name_def | dffs_def | latches_def | model_ref
-    command_list = Group(OneOrMore(command_def))('command_list')
+    command_list = Group(OneOrMore(command_def))("command_list")
 
-    footer = SKeyword('.end')
+    footer = SKeyword(".end")
     model_def = Group(header + input_list + output_list + command_list + footer)
     model_list = OneOrMore(model_def)
     parser = model_list.ignore(pyparsing.pythonStyleComment)
@@ -241,7 +289,9 @@ def input_from_blif(
             # NOTE: Assumes that:
             # - Top-level inputs starting with the same prefix are part of the same wire
             # - Indices start at 0
-            start_names = [re.sub(r'\[([0-9]+)\]$', '', x) for x in subckt.model['input_list']]
+            start_names = [
+                re.sub(r"\[([0-9]+)\]$", "", x) for x in subckt.model["input_list"]
+            ]
             name_counts = collections.Counter(start_names)
             for input_name in name_counts:
                 bitwidth = name_counts[input_name]
@@ -254,13 +304,13 @@ def input_from_blif(
                 elif merge_io_vectors:
                     wire_in = Input(bitwidth=bitwidth, name=input_name, block=block)
                     for i in range(bitwidth):
-                        bit_name = input_name + '[' + str(i) + ']'
+                        bit_name = input_name + "[" + str(i) + "]"
                         bit_wire = WireVector(bitwidth=1, block=block)
                         bit_wire <<= wire_in[i]
                         subckt.add_input(bit_name, bit_wire)
                 else:
                     for i in range(bitwidth):
-                        bit_name = input_name + '[' + str(i) + ']'
+                        bit_name = input_name + "[" + str(i) + "]"
                         wire_in = Input(bitwidth=1, name=bit_name, block=block)
                         subckt.add_input(bit_name, wire_in)
                         block.add_wirevector(wire_in)
@@ -268,165 +318,183 @@ def input_from_blif(
             # For subckts:
             # - Never merge input vectors
             # - All inputs are 1-bit
-            for input_name in subckt.model['input_list']:
+            for input_name in subckt.model["input_list"]:
                 if input_name in subckt.clk_set:
                     continue
-                wire_in = WireVector(bitwidth=1, block=block)  # Internal name prevents name clash
+                wire_in = WireVector(
+                    bitwidth=1, block=block
+                )  # Internal name prevents name clash
                 subckt.add_input(input_name, wire_in)
                 block.add_wirevector(wire_in)
 
     def extract_outputs(subckt):
         if subckt.is_top:
             # NOTE: Assumes that:
-            # - Top-level outputs starting with the same prefix are part of the same wire
+            # - Top-level outputs starting with the same prefix are part of the same
+            #   wire
             # - Indices start at 0
-            start_names = [re.sub(r'\[([0-9]+)\]$', '', x) for x in subckt.model['output_list']]
+            start_names = [
+                re.sub(r"\[([0-9]+)\]$", "", x) for x in subckt.model["output_list"]
+            ]
             name_counts = collections.Counter(start_names)
             for output_name in name_counts:
                 bitwidth = name_counts[output_name]
-                # To allow an output wire to be used as an argument (legal in BLIF),
-                # we need to create an intermediate wire, which will be used in twire()
-                # whenever the original wire is referenced. For example, given 2-bit Output 'a',
-                # every access to 'a[1]' will really be a reference to 'a[1]_i', a normal
-                # WireVector connected to 'a[1]'. A key property is that the name by
-                # which all other parts of the code refer to this wire doesn't change;
-                # the only thing that changes is what underlying wire is used.
+                # To allow an output wire to be used as an argument (legal in BLIF), we
+                # need to create an intermediate wire, which will be used in twire()
+                # whenever the original wire is referenced. For example, given 2-bit
+                # Output 'a', every access to 'a[1]' will really be a reference to
+                # 'a[1]_i', a normal WireVector connected to 'a[1]'. A key property is
+                # that the name by which all other parts of the code refer to this wire
+                # doesn't change; the only thing that changes is what underlying wire is
+                # used.
                 if bitwidth == 1:
                     bit_internal = WireVector(bitwidth=1, block=block)
                     bit_out = Output(bitwidth=1, name=output_name, block=block)
                     bit_out <<= bit_internal
-                    # NOTE this is important: redirecting user-visible name to internal wire
+                    # NOTE this is important: redirecting user-visible name to internal
+                    # wire
                     subckt.add_output(output_name, bit_internal)
                 elif merge_io_vectors:
                     wire_out = Output(bitwidth=bitwidth, name=output_name, block=block)
                     bit_list = []
                     for i in range(bitwidth):
-                        bit_name = output_name + '[' + str(i) + ']'
+                        bit_name = output_name + "[" + str(i) + "]"
                         bit_wire = WireVector(bitwidth=1, block=block)
                         bit_list.append(bit_wire)
                         subckt.add_output(bit_name, bit_wire)
                     wire_out <<= concat_list(bit_list)
                 else:
                     for i in range(bitwidth):
-                        bit_name = output_name + '[' + str(i) + ']'
+                        bit_name = output_name + "[" + str(i) + "]"
                         bit_internal = WireVector(bitwidth=1, block=block)
                         bit_out = Output(bitwidth=1, name=bit_name, block=block)
                         bit_out <<= bit_internal
-                        # NOTE this is important: redirecting user-visible name to internal wire
+                        # NOTE this is important: redirecting user-visible name to
+                        # internal wire
                         subckt.add_output(bit_name, bit_internal)
         else:
             # For subckts:
             # - Never merge outputs vectors
             # - All outputs are 1-bit
-            for output_name in subckt.model['output_list']:
+            for output_name in subckt.model["output_list"]:
                 bit_out = WireVector(bitwidth=1, block=block)
                 block.add_wirevector(bit_out)
                 subckt.add_output(output_name, bit_out)
 
     def extract_commands(subckt):
         # for each "command" (dff or net) in the model
-        for command in subckt.model['command_list']:
+        for command in subckt.model["command_list"]:
             # if it is a net (specified as a cover)
-            if command.getName() == 'name_def':
+            if command.getName() == "name_def":
                 extract_cover(subckt, command)
             # else if the command is a d flop flop
             elif command.getName() in dff_names:
                 extract_flop(subckt, command)
             # same as dff, but using different .latch format
-            elif command.getName() == 'latches_def':
+            elif command.getName() == "latches_def":
                 extract_latch(subckt, command)
             # a subckt
-            elif command.getName() == 'model_ref':
+            elif command.getName() == "model_ref":
                 extract_model_reference(subckt, command)
             else:
-                raise PyrtlError('unknown command type')
+                raise PyrtlError("unknown command type")
 
     def extract_cover(subckt, command):
-
         def twire(w):
             return subckt.twire(w)
 
         # pylint: disable=invalid-unary-operand-type
-        netio = command['namesignal_list']
-        if len(command['cover_list']) == 0:
+        netio = command["namesignal_list"]
+        if len(command["cover_list"]) == 0:
             output_wire = twire(netio[0])
             output_wire <<= Const(0, bitwidth=1, block=block)  # const "FALSE"
-        elif command['cover_list'].asList() == ['1']:
+        elif command["cover_list"].asList() == ["1"]:
             output_wire = twire(netio[0])
             output_wire <<= Const(1, bitwidth=1, block=block)  # const "TRUE"
-        elif command['cover_list'].asList() == ['1', '1']:
+        elif command["cover_list"].asList() == ["1", "1"]:
             # Populate clock list if one input is already a clock
-            if (netio[1] in subckt.clk_set):
+            if netio[1] in subckt.clk_set:
                 subckt.add_clock(netio[0])
-            elif (netio[0] in subckt.clk_set):
+            elif netio[0] in subckt.clk_set:
                 subckt.add_clock(netio[1])
             else:
                 output_wire = twire(netio[1])
                 output_wire <<= twire(netio[0])  # simple wire
-        elif command['cover_list'].asList() == ['0', '1']:
+        elif command["cover_list"].asList() == ["0", "1"]:
             output_wire = twire(netio[1])
-            output_wire <<= ~ twire(netio[0])  # not gate
-        elif command['cover_list'].asList() == ['11', '1']:
+            output_wire <<= ~twire(netio[0])  # not gate
+        elif command["cover_list"].asList() == ["11", "1"]:
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) & twire(netio[1])  # and gate
-        elif command['cover_list'].asList() == ['1-', '1', '-1', '1']:
+        elif command["cover_list"].asList() == ["1-", "1", "-1", "1"]:
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) | twire(netio[1])  # or gate
-        elif command['cover_list'].asList() == ['0-', '1', '-0', '1']:
-            # nand is not really a PyRTL primitive and so should only be added to a netlist
-            # via a call to nand_synth(). We instead convert it to ~(a & b) rather than
-            # (~a | ~b) as would be generated if handled by the else case below.
+        elif command["cover_list"].asList() == ["0-", "1", "-0", "1"]:
+            # nand is not really a PyRTL primitive and so should only be added to a
+            # netlist via a call to nand_synth(). We instead convert it to ~(a & b)
+            # rather than (~a | ~b) as would be generated if handled by the else case
+            # below.
             output_wire = twire(netio[2])
-            output_wire <<= ~(twire(netio[0]) & twire(netio[1]))  # nand gate -> not+and gates
-        elif command['cover_list'].asList() == ['10', '1', '01', '1']:
+            output_wire <<= ~(
+                twire(netio[0]) & twire(netio[1])
+            )  # nand gate -> not+and gates
+        elif command["cover_list"].asList() == ["10", "1", "01", "1"]:
             output_wire = twire(netio[2])
             output_wire <<= twire(netio[0]) ^ twire(netio[1])  # xor gate
         else:
             # Although the following is fully generic and thus encompasses all of the
-            # special cases after the simple wire case above, we leave the above in because
-            # they are commonly found and lead to a slightly cleaner (though equivalent) netlist,
-            # because we can use the xor primitive/save a gate when converting the nand, or avoid
-            # the extra fluff of concat/select wires that might be created implicitly as part of
-            # rtl_all/rtl_any.
+            # special cases after the simple wire case above, we leave the above in
+            # because they are commonly found and lead to a slightly cleaner (though
+            # equivalent) netlist, because we can use the xor primitive/save a gate when
+            # converting the nand, or avoid the extra fluff of concat/select wires that
+            # might be created implicitly as part of rtl_all/rtl_any.
             def convert_val(ix, val):
                 wire = twire(netio[ix])
-                if val == '0':
+                if val == "0":
                     wire = ~wire
                 return wire
 
-            cover = command['cover_list'].asList()
+            cover = command["cover_list"].asList()
             output_wire = twire(netio[-1])
             conjunctions = []
             while cover:
                 if len(cover) < 2:
-                    raise PyrtlError('BLIF file with malformed cover set "%s" '
-                                     % command['cover_list'])
+                    raise PyrtlError(
+                        'BLIF file with malformed cover set "%s" '
+                        % command["cover_list"]
+                    )
                 input_plane, output_plane, cover = cover[0], cover[1], cover[2:]
-                if output_plane != '1':
-                    raise PyrtlError('Off-set found in the output plane of BLIF cover set "%s" '
-                                     '(only on-sets are supported)' % command['cover_list'])
-                conj = rtl_all(*[convert_val(ix, val) for ix, val
-                                 in enumerate(input_plane) if val != '-'])
+                if output_plane != "1":
+                    raise PyrtlError(
+                        'Off-set found in the output plane of BLIF cover set "%s" '
+                        "(only on-sets are supported)" % command["cover_list"]
+                    )
+                conj = rtl_all(
+                    *[
+                        convert_val(ix, val)
+                        for ix, val in enumerate(input_plane)
+                        if val != "-"
+                    ]
+                )
                 conjunctions.append(conj)
             output_wire <<= rtl_any(*conjunctions)
 
     def extract_latch(subckt, command):
-
         def twire(w):
             return subckt.twire(w)
 
-        if command['C'] not in ff_clk_set:
-            ff_clk_set.add(command['C'])
+        if command["C"] not in ff_clk_set:
+            ff_clk_set.add(command["C"])
 
         # Create register and assign next state to D and output to Q
         # We ignore initialization values of 2 (don't care) and 3 (unknown).
-        regname = command['Q'] + '_reg'
-        init_val = command['I']
-        rval = {'0': 0, '1': 1, '2': None, '3': None}[init_val]
+        regname = command["Q"] + "_reg"
+        init_val = command["I"]
+        rval = {"0": 0, "1": 1, "2": None, "3": None}[init_val]
         flop = Register(bitwidth=1, reset_value=rval)
         subckt.add_reg(regname, flop)
-        flop.next <<= twire(command['D'])
-        flop_output = twire(command['Q'])
+        flop.next <<= twire(command["D"])
+        flop_output = twire(command["Q"])
         flop_output <<= flop
 
     def extract_flop(subckt, command):
@@ -438,74 +506,90 @@ def input_from_blif(
         def opt_twire(w):
             return twire(w) if w is not None else None
 
-        if command['C'] not in ff_clk_set:
-            ff_clk_set.add(command['C'])
+        if command["C"] not in ff_clk_set:
+            ff_clk_set.add(command["C"])
 
-        regname = command['Q'] + '_reg'
+        regname = command["Q"] + "_reg"
 
         def flop_next(data, enable, set, reset, prev):
             return {
-                '$_DFF_P_': lambda: data,
-                '$_DFFE_PN_': lambda: select(~enable, data, prev),
-                '$_DFFE_PP_': lambda: select(enable, data, prev),
-                '$_DFF_PP0_': lambda: select(reset, 0, data),
-                '$_DFF_PP1_': lambda: select(reset, 1, data),
-                '$_DFFE_PP0N_': lambda: select(reset, 0, select(~enable, data, prev)),
-                '$_DFFE_PP0P_': lambda: select(reset, 0, select(enable, data, prev)),
-                '$_DFFE_PP1N_': lambda: select(reset, 1, select(~enable, data, prev)),
-                '$_DFFE_PP1P_': lambda: select(reset, 1, select(enable, data, prev)),
-                '$_DFFSR_PPP': lambda: select(reset, 0, select(set, 1, data)),
-                '$_DFFSRE_PPPN_': lambda: select(reset, 0, select(set, 1, select(~enable, data, prev))),  # noqa
-                '$_DFFSRE_PPPP_': lambda: select(reset, 0, select(set, 1, select(enable, data, prev))),   # noqa
-                '$_SDFF_PN0_': lambda: select(~reset, 0, data),
-                '$_SDFF_PN1_': lambda: select(~reset, 1, data),
-                '$_SDFF_PP0_': lambda: select(reset, 0, data),
-                '$_SDFF_PP1_': lambda: select(reset, 1, data),
-                '$_SDFFE_PN0N_': lambda: select(~reset, 0, select(~enable, data, prev)),
-                '$_SDFFE_PN0P_': lambda: select(~reset, 0, select(enable, data, prev)),
-                '$_SDFFE_PN1N_': lambda: select(~reset, 1, select(~enable, data, prev)),
-                '$_SDFFE_PN1P_': lambda: select(~reset, 1, select(enable, data, prev)),
-                '$_SDFFE_PP0N_': lambda: select(reset, 0, select(~enable, data, prev)),
-                '$_SDFFE_PP0P_': lambda: select(reset, 0, select(enable, data, prev)),
-                '$_SDFFE_PP1N_': lambda: select(reset, 1, select(~enable, data, prev)),
-                '$_SDFFE_PP1P_': lambda: select(reset, 1, select(enable, data, prev)),
-                '$_SDFFCE_PN0N_': lambda: select(~enable, select(~reset, 0, data), prev),
-                '$_SDFFCE_PN0P_': lambda: select(enable, select(~reset, 0, data), prev),
-                '$_SDFFCE_PN1N_': lambda: select(~enable, select(~reset, 1, data), prev),
-                '$_SDFFCE_PN1P_': lambda: select(enable, select(~reset, 1, data), prev),
-                '$_SDFFCE_PP0N_': lambda: select(~enable, select(reset, 0, data), prev),
-                '$_SDFFCE_PP0P_': lambda: select(enable, select(reset, 0, data), prev),
-                '$_SDFFCE_PP1N_': lambda: select(~enable, select(reset, 1, data), prev),
-                '$_SDFFCE_PP1P_': lambda: select(enable, select(reset, 1, data), prev),
+                "$_DFF_P_": lambda: data,
+                "$_DFFE_PN_": lambda: select(~enable, data, prev),
+                "$_DFFE_PP_": lambda: select(enable, data, prev),
+                "$_DFF_PP0_": lambda: select(reset, 0, data),
+                "$_DFF_PP1_": lambda: select(reset, 1, data),
+                "$_DFFE_PP0N_": lambda: select(reset, 0, select(~enable, data, prev)),
+                "$_DFFE_PP0P_": lambda: select(reset, 0, select(enable, data, prev)),
+                "$_DFFE_PP1N_": lambda: select(reset, 1, select(~enable, data, prev)),
+                "$_DFFE_PP1P_": lambda: select(reset, 1, select(enable, data, prev)),
+                "$_DFFSR_PPP": lambda: select(reset, 0, select(set, 1, data)),
+                "$_DFFSRE_PPPN_": lambda: select(
+                    reset, 0, select(set, 1, select(~enable, data, prev))
+                ),  # noqa
+                "$_DFFSRE_PPPP_": lambda: select(
+                    reset, 0, select(set, 1, select(enable, data, prev))
+                ),  # noqa
+                "$_SDFF_PN0_": lambda: select(~reset, 0, data),
+                "$_SDFF_PN1_": lambda: select(~reset, 1, data),
+                "$_SDFF_PP0_": lambda: select(reset, 0, data),
+                "$_SDFF_PP1_": lambda: select(reset, 1, data),
+                "$_SDFFE_PN0N_": lambda: select(~reset, 0, select(~enable, data, prev)),
+                "$_SDFFE_PN0P_": lambda: select(~reset, 0, select(enable, data, prev)),
+                "$_SDFFE_PN1N_": lambda: select(~reset, 1, select(~enable, data, prev)),
+                "$_SDFFE_PN1P_": lambda: select(~reset, 1, select(enable, data, prev)),
+                "$_SDFFE_PP0N_": lambda: select(reset, 0, select(~enable, data, prev)),
+                "$_SDFFE_PP0P_": lambda: select(reset, 0, select(enable, data, prev)),
+                "$_SDFFE_PP1N_": lambda: select(reset, 1, select(~enable, data, prev)),
+                "$_SDFFE_PP1P_": lambda: select(reset, 1, select(enable, data, prev)),
+                "$_SDFFCE_PN0N_": lambda: select(
+                    ~enable, select(~reset, 0, data), prev
+                ),
+                "$_SDFFCE_PN0P_": lambda: select(enable, select(~reset, 0, data), prev),
+                "$_SDFFCE_PN1N_": lambda: select(
+                    ~enable, select(~reset, 1, data), prev
+                ),
+                "$_SDFFCE_PN1P_": lambda: select(enable, select(~reset, 1, data), prev),
+                "$_SDFFCE_PP0N_": lambda: select(~enable, select(reset, 0, data), prev),
+                "$_SDFFCE_PP0P_": lambda: select(enable, select(reset, 0, data), prev),
+                "$_SDFFCE_PP1N_": lambda: select(~enable, select(reset, 1, data), prev),
+                "$_SDFFCE_PP1P_": lambda: select(enable, select(reset, 1, data), prev),
             }[command.getName()]()
+
         # TODO May want to consider setting reset_value in the Register.
         # Right now it's mainly used to signal how we want to *output* Verilog
         # from PyRTL, and not how we want to interpret *input* to PyRTL.
         flop = Register(bitwidth=1)
         subckt.add_reg(regname, flop)
-        flop.next <<= flop_next(twire(command['D']), opt_twire(command.get('E')),
-                                opt_twire(command.get('S')), opt_twire(command.get('R')), flop)
-        flop_output = twire(command['Q'])
+        flop.next <<= flop_next(
+            twire(command["D"]),
+            opt_twire(command.get("E")),
+            opt_twire(command.get("S")),
+            opt_twire(command.get("R")),
+            flop,
+        )
+        flop_output = twire(command["Q"])
         flop_output <<= flop
 
     def extract_model_reference(parent, command):
-
         def twire(w):
             return parent.twire(w)
 
         def get_formal_connected_to_parent_clocks():
             clks = set()
-            for fa in command['formal_actual_list']:
-                if fa['actual'] in parent.clk_set:
-                    clks.add(fa['formal'])
+            for fa in command["formal_actual_list"]:
+                if fa["actual"] in parent.clk_set:
+                    clks.add(fa["formal"])
             return clks
+
         formal_clks = get_formal_connected_to_parent_clocks()
 
-        subckt = Subcircuit(models[command['model_name']], clk_set=formal_clks, block=block)
+        subckt = Subcircuit(
+            models[command["model_name"]], clk_set=formal_clks, block=block
+        )
         instantiate(subckt)
-        for fa in command['formal_actual_list']:
-            formal = fa['formal']
-            actual = fa['actual']
+        for fa in command["formal_actual_list"]:
+            formal = fa["formal"]
+            actual = fa["actual"]
             if actual in parent.clk_set:
                 assert formal in subckt.clk_set
                 # We didn't create an input wire corresponding to this.
@@ -519,8 +603,10 @@ def input_from_blif(
                 wa = twire(actual)
                 wa <<= wf
             else:
-                raise PyrtlError("%s formal parameter is neither an input nor output of subckt %s"
-                                 % (formal, command['model_name']))
+                raise PyrtlError(
+                    "%s formal parameter is neither an input nor output of subckt %s"
+                    % (formal, command["model_name"])
+                )
 
     def instantiate(subckt):
         extract_inputs(subckt)
@@ -530,8 +616,8 @@ def input_from_blif(
     # Get all model definitions
     for model in result:
         if not top_model:
-            top_model = model['model_name']
-        models[model['model_name']] = model
+            top_model = model["model_name"]
+        models[model["model_name"]] = model
 
     top = Subcircuit(models[top_model], is_top=True, clk_set={clock_name}, block=block)
     instantiate(top)
@@ -545,8 +631,12 @@ def input_from_blif(
 
 
 def input_from_verilog(
-        verilog, clock_name: str = 'clk', toplevel: str = None,
-        leave_in_dir: bool = None, block: Block = None):
+    verilog,
+    clock_name: str = "clk",
+    toplevel: str = None,
+    leave_in_dir: bool = None,
+    block: Block = None,
+):
     """Read an open Verilog file or string as input via `Yosys
     <https://github.com/YosysHQ/yosys>`_ conversion, updating the block.
 
@@ -570,71 +660,78 @@ def input_from_verilog(
     """
 
     # Dev Notes:
-    # 1) We pass in an open file or string to keep the same API as input_from_blif (even though
-    #    we are essentially putting that Verilog code back in a file for Yosys to operate on).
-    # 2) The Yosys script does not have a call to `flatten`, since we now have support for
-    #    multi-module BLIFs. `flatten` replaces the .subckt (i.e. the module inclusions) with their
-    #    actual contents, so if things aren't working for some reason, add this command for help.
-    # 3) The Yosys script *does* have a call to `setundef -zero -undriven`, which we use to set
-    #    undriven nets to 0; we do this so PyRTL doesn't complain about used but undriven wires.
-
+    # 1) We pass in an open file or string to keep the same API as input_from_blif (even
+    #    though we are essentially putting that Verilog code back in a file for Yosys to
+    #    operate on).
+    # 2) The Yosys script does not have a call to `flatten`, since we now have support
+    #    for multi-module BLIFs. `flatten` replaces the .subckt (i.e. the module
+    #    inclusions) with their actual contents, so if things aren't working for some
+    #    reason, add this command for help.
+    # 3) The Yosys script *does* have a call to `setundef -zero -undriven`, which we use
+    #    to set undriven nets to 0; we do this so PyRTL doesn't complain about used but
+    #    undriven wires.
     try:
         verilog_string = verilog.read()
     except AttributeError:
         if isinstance(verilog, str):
             verilog_string = verilog
         else:
-            raise PyrtlError('input_from_verilog expecting either open file or string')
+            raise PyrtlError("input_from_verilog expecting either open file or string")
 
     block = working_block(block)
 
     # Create a temporary Verilog file
-    temp_vd, tmp_verilog_path = tempfile.mkstemp(prefix='pyrtl_verilog', suffix='.v',
-                                                 dir=leave_in_dir, text=True)
-    with open(tmp_verilog_path, 'w') as f:
+    temp_vd, tmp_verilog_path = tempfile.mkstemp(
+        prefix="pyrtl_verilog", suffix=".v", dir=leave_in_dir, text=True
+    )
+    with open(tmp_verilog_path, "w") as f:
         f.write(verilog_string)
 
     # Create a temporary BLIF file
-    temp_bd, tmp_blif_path = tempfile.mkstemp(prefix='pyrtl_blif', suffix='.blif',
-                                              dir=leave_in_dir, text=True)
-
-    yosys_arg_template = (
-        "-p "
-        "read_verilog %s; "
-        "synth %s; "
-        "setundef -zero -undriven; "
-        "opt; "
-        "write_blif %s; "
+    temp_bd, tmp_blif_path = tempfile.mkstemp(
+        prefix="pyrtl_blif", suffix=".blif", dir=leave_in_dir, text=True
     )
 
-    yosys_arg = yosys_arg_template % (tmp_verilog_path,
-                                      ('-top ' + toplevel) if toplevel is not None else '-auto-top',
-                                      tmp_blif_path)
+    yosys_arg_template = (
+        "-p read_verilog %s; synth %s; setundef -zero -undriven; opt; write_blif %s; "
+    )
+
+    yosys_arg = yosys_arg_template % (
+        tmp_verilog_path,
+        ("-top " + toplevel) if toplevel is not None else "-auto-top",
+        tmp_blif_path,
+    )
 
     try:
         os.close(temp_vd)
         os.close(temp_bd)
         # call yosys on the script, and grab the output
-        _yosys_output = subprocess.check_output(['yosys', yosys_arg])
+        _yosys_output = subprocess.check_output(["yosys", yosys_arg])
         with open(tmp_blif_path) as blif:
-            input_from_blif(blif, block=block, clock_name=clock_name, top_model=toplevel)
+            input_from_blif(
+                blif, block=block, clock_name=clock_name, top_model=toplevel
+            )
     except (subprocess.CalledProcessError, ValueError) as e:
-        print('Error with call to yosys...', file=sys.stderr)
-        print('---------------------------------------------', file=sys.stderr)
-        print(str(e.output).replace('\\n', '\n'), file=sys.stderr)
-        print('---------------------------------------------', file=sys.stderr)
-        raise PyrtlError('Yosys call failed')
+        print("Error with call to yosys...", file=sys.stderr)
+        print("---------------------------------------------", file=sys.stderr)
+        print(str(e.output).replace("\\n", "\n"), file=sys.stderr)
+        print("---------------------------------------------", file=sys.stderr)
+        raise PyrtlError("Yosys call failed")
     except OSError:
-        print('Error with call to yosys...', file=sys.stderr)
-        raise PyrtlError('Call to yosys failed (not installed or on path?)')
+        print("Error with call to yosys...", file=sys.stderr)
+        raise PyrtlError("Call to yosys failed (not installed or on path?)")
     finally:
         os.remove(tmp_verilog_path)
         if leave_in_dir is None:
             os.remove(tmp_blif_path)
 
 
-def output_to_verilog(dest_file, add_reset: Union[bool, str] = True,
-                      block: Block = None, initialize_registers: bool = False):
+def output_to_verilog(
+    dest_file,
+    add_reset: Union[bool, str] = True,
+    block: Block = None,
+    initialize_registers: bool = False,
+):
     """A function to walk the ``block`` and output it in Verilog format to the open
     file.
 
@@ -657,18 +754,22 @@ def output_to_verilog(dest_file, add_reset: Union[bool, str] = True,
     """
 
     if not isinstance(add_reset, bool):
-        if add_reset != 'asynchronous':
-            raise PyrtlError("Invalid add_reset option %s. Acceptable options are "
-                             "False, True, and 'asynchronous'")
+        if add_reset != "asynchronous":
+            raise PyrtlError(
+                "Invalid add_reset option %s. Acceptable options are "
+                "False, True, and 'asynchronous'"
+            )
 
     block = working_block(block)
     file = dest_file
-    internal_names = _VerilogSanitizer('_ver_out_tmp_')
+    internal_names = _VerilogSanitizer("_ver_out_tmp_")
 
     if add_reset:  # True or 'asynchronous'
-        if block.get_wirevector_by_name('rst') is not None:
-            raise PyrtlError("Found a user-defined wire named 'rst'. Pass in "
-                             "'add_reset=False' to use your existing reset logic.")
+        if block.get_wirevector_by_name("rst") is not None:
+            raise PyrtlError(
+                "Found a user-defined wire named 'rst'. Pass in "
+                "'add_reset=False' to use your existing reset logic."
+            )
 
     for wire in block.wirevector_set:
         internal_names.make_valid_string(wire.name)
@@ -684,41 +785,43 @@ def output_to_verilog(dest_file, add_reset: Union[bool, str] = True,
 
 
 def OutputToVerilog(dest_file, block=None):
-    """ A deprecated function to output Verilog, use "output_to_verilog" instead. """
+    """A deprecated function to output Verilog, use "output_to_verilog" instead."""
     return output_to_verilog(dest_file, block)
 
 
 class _VerilogSanitizer(_NameSanitizer):
-    _ver_regex = r'[_A-Za-z][_a-zA-Z0-9\$]*$'
+    _ver_regex = r"[_A-Za-z][_a-zA-Z0-9\$]*$"
 
-    _verilog_reserved = \
-        """always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos
-        config deassign default defparam design disable edge else end endcase endconfig
-        endfunction endgenerate endmodule endprimitive endspecify endtable endtask
-        event for force forever fork function generate genvar highz0 highz1 if ifnone
-        incdir include initial inout input instance integer join large liblist library
-        localparam macromodule medium module nand negedge nmos nor noshowcancelledno
-        not notif0 notif1 or output parameter pmos posedge primitive pull0 pull1
-        pulldown pullup pulsestyle_oneventglitch pulsestyle_ondetectglitch remos real
-        realtime reg release repeat rnmos rpmos rtran rtranif0 rtranif1 scalared
-        showcancelled signed small specify specparam strong0 strong1 supply0 supply1
-        table task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg unsigned
-        use vectored wait wand weak0 weak1 while wire wor xnor xor
+    _verilog_reserved = """always and assign automatic begin buf bufif0 bufif1 case
+        casex casez cell cmos config deassign default defparam design disable edge else
+        end endcase endconfig endfunction endgenerate endmodule endprimitive endspecify
+        endtable endtask event for force forever fork function generate genvar highz0
+        highz1 if ifnone incdir include initial inout input instance integer join large
+        liblist library localparam macromodule medium module nand negedge nmos nor
+        noshowcancelledno not notif0 notif1 or output parameter pmos posedge primitive
+        pull0 pull1 pulldown pullup pulsestyle_oneventglitch pulsestyle_ondetectglitch
+        remos real realtime reg release repeat rnmos rpmos rtran rtranif0 rtranif1
+        scalared showcancelled signed small specify specparam strong0 strong1 supply0
+        supply1 table task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg
+        unsigned use vectored wait wand weak0 weak1 while wire wor xnor xor
         """
 
-    def __init__(self, internal_prefix='_sani_temp', map_valid_vals=True):
+    def __init__(self, internal_prefix="_sani_temp", map_valid_vals=True):
         self._verilog_reserved_set = frozenset(self._verilog_reserved.split())
         super().__init__(
-            self._ver_regex, internal_prefix, map_valid_vals, self._extra_checks)
+            self._ver_regex, internal_prefix, map_valid_vals, self._extra_checks
+        )
 
     def _extra_checks(self, str):
-        return (str not in self._verilog_reserved_set  # is not a Verilog reserved keyword
-                and str != 'clk'                       # not the clock signal
-                and len(str) <= 1024)                  # not too long to be a Verilog id
+        return (
+            str not in self._verilog_reserved_set  # is not a Verilog reserved keyword
+            and str != "clk"  # not the clock signal
+            and len(str) <= 1024
+        )  # not too long to be a Verilog id
 
 
 def _verilog_vector_size_decl(n):
-    return '' if n == 1 else '[{:d}:0]'.format(n - 1)
+    return "" if n == 1 else "[{:d}:0]".format(n - 1)
 
 
 def _verilog_vector_decl(w):
@@ -730,12 +833,12 @@ def _verilog_block_parts(block):
     outputs = block.wirevector_subset(Output)
     registers = block.wirevector_subset(Register)
     wires = block.wirevector_subset() - (inputs | outputs | registers)
-    memories = {n.op_param[1] for n in block.logic_subset('m@')}
+    memories = {n.op_param[1] for n in block.logic_subset("m@")}
     return inputs, outputs, registers, wires, memories
 
 
 def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
-    """ Print the header of the verilog implementation. """
+    """Print the header of the verilog implementation."""
 
     def name_sorted(wires):
         return _name_sorted(wires, name_mapper=varname)
@@ -743,186 +846,238 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
     def name_list(wires):
         return [varname(w) for w in wires]
 
-    print('// Generated automatically via PyRTL', file=file)
-    print('// As one initial test of synthesis, map to FPGA with:', file=file)
+    print("// Generated automatically via PyRTL", file=file)
+    print("// As one initial test of synthesis, map to FPGA with:", file=file)
     print('//   yosys -p "synth_xilinx -top toplevel" thisfile.v\n', file=file)
 
     inputs, outputs, registers, wires, memories = _verilog_block_parts(block)
 
     # module name
-    io_list = ['clk'] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
+    io_list = ["clk"] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
     if add_reset:
-        io_list.insert(1, 'rst')
-    if any(w.startswith('tmp') for w in io_list):
-        raise PyrtlError('input or output with name starting with "tmp" indicates unnamed IO')
-    io_list_str = ', '.join(io_list)
-    print('module toplevel({:s});'.format(io_list_str), file=file)
+        io_list.insert(1, "rst")
+    if any(w.startswith("tmp") for w in io_list):
+        raise PyrtlError(
+            'input or output with name starting with "tmp" indicates unnamed IO'
+        )
+    io_list_str = ", ".join(io_list)
+    print("module toplevel({:s});".format(io_list_str), file=file)
 
     # inputs and outputs
-    print('    input clk;', file=file)
+    print("    input clk;", file=file)
     if add_reset:
-        print('    input rst;', file=file)
+        print("    input rst;", file=file)
     for w in name_sorted(inputs):
-        print('    input{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
+        print(
+            "    input{:s} {:s};".format(_verilog_vector_decl(w), varname(w)), file=file
+        )
     for w in name_sorted(outputs):
-        print('    output{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
-    print('', file=file)
+        print(
+            "    output{:s} {:s};".format(_verilog_vector_decl(w), varname(w)),
+            file=file,
+        )
+    print("", file=file)
 
     # memories and registers
     for m in sorted(memories, key=lambda m: m.id):
         memwidth_str = _verilog_vector_size_decl(m.bitwidth)
         memsize_str = _verilog_vector_size_decl(1 << m.addrwidth)
-        print('    reg{:s} mem_{}{:s}; //{}'.format(memwidth_str, m.id,
-                                                    memsize_str, m.name), file=file)
+        print(
+            "    reg{:s} mem_{}{:s}; //{}".format(
+                memwidth_str, m.id, memsize_str, m.name
+            ),
+            file=file,
+        )
     for reg in name_sorted(registers):
-        register_initialization = ''
+        register_initialization = ""
         if initialize_registers:
             reset_value = 0
             if reg.reset_value is not None:
                 reset_value = reg.reset_value
             register_initialization = f" = {reg.bitwidth}'d{reset_value}"
-        print(f'    reg{_verilog_vector_decl(reg)} {varname(reg)}'
-              f'{register_initialization};', file=file)
-    if (memories or registers):
-        print('', file=file)
+        print(
+            f"    reg{_verilog_vector_decl(reg)} {varname(reg)}"
+            f"{register_initialization};",
+            file=file,
+        )
+    if memories or registers:
+        print("", file=file)
 
     # wires
     for w in name_sorted(wires):
-        print('    wire{:s} {:s};'.format(_verilog_vector_decl(w), varname(w)), file=file)
-    print('', file=file)
+        print(
+            "    wire{:s} {:s};".format(_verilog_vector_decl(w), varname(w)), file=file
+        )
+    print("", file=file)
 
     # Write the initial values for read-only memories.
     # If we ever add support outside of simulation for initial values
     #  for MemBlocks, that would also go here.
     roms = {m for m in memories if isinstance(m, RomBlock)}
     for m in sorted(roms, key=lambda m: m.id):
-        print('    initial begin', file=file)
+        print("    initial begin", file=file)
         for i in range(1 << m.addrwidth):
-            mem_elem_str = 'mem_{}[{:d}]'.format(m.id, i)
+            mem_elem_str = "mem_{}[{:d}]".format(m.id, i)
             mem_data_str = "{:d}'h{:x}".format(m.bitwidth, m._get_read_data(i))
-            print('        {:s}={:s};'.format(mem_elem_str, mem_data_str), file=file)
-        print('    end', file=file)
-        print('', file=file)
+            print("        {:s}={:s};".format(mem_elem_str, mem_data_str), file=file)
+        print("    end", file=file)
+        print("", file=file)
 
 
 def _to_verilog_combinational(file, block, varname):
-    """ Print the combinational logic of the verilog implementation. """
+    """Print the combinational logic of the verilog implementation."""
 
     def name_sorted(wires):
         return _name_sorted(wires, name_mapper=varname)
 
-    print('    // Combinational', file=file)
+    print("    // Combinational", file=file)
 
     # assign constants (these could be folded for readability later)
     for const in name_sorted(block.wirevector_subset(Const)):
-        print('    assign {:s} = {:d};'.format(varname(const), const.val), file=file)
+        print("    assign {:s} = {:d};".format(varname(const), const.val), file=file)
 
     # walk the block and output combination logic
     for net in _net_sorted(block.logic, varname):
-        if net.op in 'w~':  # unary ops
-            opstr = '' if net.op == 'w' else net.op
+        if net.op in "w~":  # unary ops
+            opstr = "" if net.op == "w" else net.op
             t = (varname(net.dests[0]), opstr, varname(net.args[0]))
-            print('    assign %s = %s%s;' % t, file=file)
-        elif net.op in '&|^+-*<>':  # binary ops
-            t = (varname(net.dests[0]), varname(net.args[0]),
-                 net.op, varname(net.args[1]))
-            print('    assign %s = %s %s %s;' % t, file=file)
-        elif net.op == '=':
-            t = (varname(net.dests[0]), varname(net.args[0]),
-                 varname(net.args[1]))
-            print('    assign %s = %s == %s;' % t, file=file)
-        elif net.op == 'x':
-            # note that the argument order for 'x' is backwards from the ternary operator
-            t = (varname(net.dests[0]), varname(net.args[0]),
-                 varname(net.args[2]), varname(net.args[1]))
-            print('    assign %s = %s ? %s : %s;' % t, file=file)
-        elif net.op == 'c':
-            catlist = ', '.join([varname(w) for w in net.args])
+            print("    assign %s = %s%s;" % t, file=file)
+        elif net.op in "&|^+-*<>":  # binary ops
+            t = (
+                varname(net.dests[0]),
+                varname(net.args[0]),
+                net.op,
+                varname(net.args[1]),
+            )
+            print("    assign %s = %s %s %s;" % t, file=file)
+        elif net.op == "=":
+            t = (varname(net.dests[0]), varname(net.args[0]), varname(net.args[1]))
+            print("    assign %s = %s == %s;" % t, file=file)
+        elif net.op == "x":
+            # note that the argument order for 'x' is backwards from the ternary
+            # operator
+            t = (
+                varname(net.dests[0]),
+                varname(net.args[0]),
+                varname(net.args[2]),
+                varname(net.args[1]),
+            )
+            print("    assign %s = %s ? %s : %s;" % t, file=file)
+        elif net.op == "c":
+            catlist = ", ".join([varname(w) for w in net.args])
             t = (varname(net.dests[0]), catlist)
-            print('    assign %s = {%s};' % t, file=file)
-        elif net.op == 's':
+            print("    assign %s = {%s};" % t, file=file)
+        elif net.op == "s":
             # someone please check if we need this special handling for scalars
-            catlist = ', '.join([varname(net.args[0]) + '[%s]' % str(i)
-                                if len(net.args[0]) > 1 else varname(net.args[0])
-                                for i in reversed(net.op_param)])
+            catlist = ", ".join(
+                [
+                    varname(net.args[0]) + "[%s]" % str(i)
+                    if len(net.args[0]) > 1
+                    else varname(net.args[0])
+                    for i in reversed(net.op_param)
+                ]
+            )
             t = (varname(net.dests[0]), catlist)
-            print('    assign %s = {%s};' % t, file=file)
-        elif net.op in 'rm@':
+            print("    assign %s = {%s};" % t, file=file)
+        elif net.op in "rm@":
             pass  # do nothing for registers and memories
         else:
             raise PyrtlInternalError("nets with op '{}' not supported".format(net.op))
-    print('', file=file)
+    print("", file=file)
 
 
 def _to_verilog_sequential(file, block, varname, add_reset):
-    """ Print the sequential logic of the verilog implementation. """
-    if not block.logic_subset(op='r'):
+    """Print the sequential logic of the verilog implementation."""
+    if not block.logic_subset(op="r"):
         return
 
-    print('    // Registers', file=file)
-    if add_reset == 'asynchronous':
-        print('    always @(posedge clk or posedge rst)', file=file)
+    print("    // Registers", file=file)
+    if add_reset == "asynchronous":
+        print("    always @(posedge clk or posedge rst)", file=file)
     else:
-        print('    always @(posedge clk)', file=file)
-    print('    begin', file=file)
+        print("    always @(posedge clk)", file=file)
+    print("    begin", file=file)
     if add_reset:
-        print('        if (rst) begin', file=file)
+        print("        if (rst) begin", file=file)
         for net in _net_sorted(block.logic, varname):
-            if net.op == 'r':
+            if net.op == "r":
                 dest = varname(net.dests[0])
                 rval = net.dests[0].reset_value
                 if rval is None:
                     rval = 0
-                print('            {:s} <= {:d};'.format(dest, rval), file=file)
-        print('        end', file=file)
-        print('        else begin', file=file)
+                print("            {:s} <= {:d};".format(dest, rval), file=file)
+        print("        end", file=file)
+        print("        else begin", file=file)
     else:
-        print('        begin', file=file)
+        print("        begin", file=file)
 
     for net in _net_sorted(block.logic, varname):
-        if net.op == 'r':
+        if net.op == "r":
             dest, src = (varname(net.dests[0]), varname(net.args[0]))
-            print('            {:s} <= {:s};'.format(dest, src), file=file)
-    print('        end', file=file)
-    print('    end', file=file)
-    print('', file=file)
+            print("            {:s} <= {:s};".format(dest, src), file=file)
+    print("        end", file=file)
+    print("    end", file=file)
+    print("", file=file)
 
 
 def _to_verilog_memories(file, block, varname):
-    """ Print the memories of the verilog implementation. """
-    memories = {n.op_param[1] for n in block.logic_subset('m@')}
+    """Print the memories of the verilog implementation."""
+    memories = {n.op_param[1] for n in block.logic_subset("m@")}
     for m in sorted(memories, key=lambda m: m.id):
-        print('    // Memory mem_{}: {}'.format(m.id, m.name), file=file)
-        writes = [net for net in _net_sorted(block.logic_subset('@'), varname)
-                  if net.op_param[1] == m]
+        print("    // Memory mem_{}: {}".format(m.id, m.name), file=file)
+        writes = [
+            net
+            for net in _net_sorted(block.logic_subset("@"), varname)
+            if net.op_param[1] == m
+        ]
         if writes:
-            print('    always @(posedge clk)', file=file)
-            print('    begin', file=file)
+            print("    always @(posedge clk)", file=file)
+            print("    begin", file=file)
             for net in writes:
-                t = (varname(net.args[2]), net.op_param[0],
-                     varname(net.args[0]), varname(net.args[1]))
-                print(('        if (%s) begin\n'
-                       '            mem_%s[%s] <= %s;\n'
-                       '        end') % t, file=file)
-            print('    end', file=file)
-        reads = [net for net in _net_sorted(block.logic_subset('m'), varname)
-                 if net.op_param[1] == m]
+                t = (
+                    varname(net.args[2]),
+                    net.op_param[0],
+                    varname(net.args[0]),
+                    varname(net.args[1]),
+                )
+                print(
+                    (
+                        "        if (%s) begin\n"
+                        "            mem_%s[%s] <= %s;\n"
+                        "        end"
+                    )
+                    % t,
+                    file=file,
+                )
+            print("    end", file=file)
+        reads = [
+            net
+            for net in _net_sorted(block.logic_subset("m"), varname)
+            if net.op_param[1] == m
+        ]
         for net in reads:
             dest = varname(net.dests[0])
             m_id = net.op_param[0]
             index = varname(net.args[0])
-            print('    assign {:s} = mem_{}[{:s}];'.format(dest, m_id, index), file=file)
-        print('', file=file)
+            print(
+                "    assign {:s} = mem_{}[{:s}];".format(dest, m_id, index), file=file
+            )
+        print("", file=file)
 
 
 def _to_verilog_footer(file):
-    print('endmodule\n', file=file)
+    print("endmodule\n", file=file)
 
 
 def output_verilog_testbench(
-        dest_file, simulation_trace: SimulationTrace = None,
-        toplevel_include: str = None, vcd: str = "waveform.vcd", cmd: str = None,
-        add_reset: Union[bool, str] = True, block: Block = None):
+    dest_file,
+    simulation_trace: SimulationTrace = None,
+    toplevel_include: str = None,
+    vcd: str = "waveform.vcd",
+    cmd: str = None,
+    add_reset: Union[bool, str] = True,
+    block: Block = None,
+):
     """Output a Verilog testbench for the block/inputs used in the simulation trace.
 
     If ``add_reset`` is ``True``, a ``rst`` input wire is added to the instantiated
@@ -945,7 +1100,8 @@ def output_verilog_testbench(
 
         with open('hardware.v', 'w') as fp:
             output_to_verilog(fp)
-            output_verilog_testbench(fp, sim.tracer, vcd=None, cmd='$display("%d", out);')
+            output_verilog_testbench(
+                fp, sim.tracer, vcd=None, cmd='$display("%d", out);')
 
     :param dest_file: An open file to which the test bench will be printed.
     :param simulation_trace: A trace from which the inputs will be extracted for
@@ -976,20 +1132,24 @@ def output_verilog_testbench(
     :param block: Block containing design to test. Defaults to the :ref:`working_block`.
     """
     if not isinstance(add_reset, bool):
-        if add_reset != 'asynchronous':
-            raise PyrtlError("Invalid add_reset option %s. Acceptable options are "
-                             "False, True, and 'asynchronous'")
+        if add_reset != "asynchronous":
+            raise PyrtlError(
+                "Invalid add_reset option %s. Acceptable options are "
+                "False, True, and 'asynchronous'"
+            )
 
     block = working_block(block)
 
     if add_reset:  # True or 'asynchronous'
-        if block.get_wirevector_by_name('rst') is not None:
-            raise PyrtlError("Found a user-defined wire named 'rst'. Pass in "
-                             "'add_reset=False' to use your existing reset logic.")
+        if block.get_wirevector_by_name("rst") is not None:
+            raise PyrtlError(
+                "Found a user-defined wire named 'rst'. Pass in "
+                "'add_reset=False' to use your existing reset logic."
+            )
 
     inputs, outputs, registers, wires, memories = _verilog_block_parts(block)
 
-    ver_name = _VerilogSanitizer('_ver_out_tmp_')
+    ver_name = _VerilogSanitizer("_ver_out_tmp_")
     for wire in block.wirevector_set:
         ver_name.make_valid_string(wire.name)
 
@@ -1015,12 +1175,14 @@ def output_verilog_testbench(
             return 0
 
     def init_memvalue(m, ix):
-        # Return None if not present, or if already equal to default value, so we know not to
-        # emit any additional Verilog initing this mem address.
+        # Return None if not present, or if already equal to default value, so we know
+        # not to emit any additional Verilog initing this mem address.
         if simulation_trace:
             if m not in simulation_trace.init_memvalue:
                 return None
-            v = simulation_trace.init_memvalue[m].get(ix, simulation_trace.default_value)
+            v = simulation_trace.init_memvalue[m].get(
+                ix, simulation_trace.default_value
+            )
             return None if v == simulation_trace.default_value else v
         else:
             return None
@@ -1031,81 +1193,96 @@ def output_verilog_testbench(
     # Output an include, if given
     if toplevel_include:
         print('`include "{:s}"'.format(toplevel_include), file=dest_file)
-        print('', file=dest_file)
+        print("", file=dest_file)
 
     # Output header
-    print('module tb();', file=dest_file)
+    print("module tb();", file=dest_file)
 
     # Declare all block inputs as reg
-    print('    reg clk;', file=dest_file)
+    print("    reg clk;", file=dest_file)
     if add_reset:
-        print('    reg rst;', file=dest_file)
+        print("    reg rst;", file=dest_file)
     for w in name_sorted(inputs):
-        print('    reg{:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
-              file=dest_file)
+        print(
+            "    reg{:s} {:s};".format(_verilog_vector_decl(w), ver_name[w.name]),
+            file=dest_file,
+        )
 
     # Declare all block outputs as wires
     for w in name_sorted(outputs):
-        print('    wire{:s} {:s};'.format(_verilog_vector_decl(w), ver_name[w.name]),
-              file=dest_file)
-    print('', file=dest_file)
+        print(
+            "    wire{:s} {:s};".format(_verilog_vector_decl(w), ver_name[w.name]),
+            file=dest_file,
+        )
+    print("", file=dest_file)
 
     # Declare an integer used for init of memories
     if len(memories) > 0:
-        print('    integer tb_iter;', file=dest_file)
+        print("    integer tb_iter;", file=dest_file)
 
     # Instantiate logic block
-    io_list = ['clk'] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
+    io_list = ["clk"] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
     if add_reset:
-        io_list.insert(1, 'rst')
-    io_list_str = ['.{0:s}({0:s})'.format(w) for w in io_list]
-    print('    toplevel block({:s});\n'.format(', '.join(io_list_str)), file=dest_file)
+        io_list.insert(1, "rst")
+    io_list_str = [".{0:s}({0:s})".format(w) for w in io_list]
+    print("    toplevel block({:s});\n".format(", ".join(io_list_str)), file=dest_file)
 
     # Generate clock signal
-    print('    always', file=dest_file)
-    print('        #5 clk = ~clk;\n', file=dest_file)
+    print("    always", file=dest_file)
+    print("        #5 clk = ~clk;\n", file=dest_file)
 
     # Move through all steps of trace, writing out input assignments per cycle
-    print('    initial begin', file=dest_file)
+    print("    initial begin", file=dest_file)
 
     # If a VCD output is requested, set that up
     if vcd:
         print('        $dumpfile ("%s");' % vcd, file=dest_file)
-        print('        $dumpvars;\n', file=dest_file)
+        print("        $dumpvars;\n", file=dest_file)
 
     # Initialize clk, and all the registers and memories
-    print('        clk = 0;', file=dest_file)
+    print("        clk = 0;", file=dest_file)
     if add_reset:
-        print('        rst = 0;', file=dest_file)
+        print("        rst = 0;", file=dest_file)
     for r in name_sorted(registers):
-        print('        block.%s = %d;' % (ver_name[r.name], init_regvalue(r)), file=dest_file)
+        print(
+            "        block.%s = %d;" % (ver_name[r.name], init_regvalue(r)),
+            file=dest_file,
+        )
     for m in sorted(memories, key=lambda m: m.id):
         max_iter = 1 << m.addrwidth
-        print('        for (tb_iter = 0; tb_iter < %d; tb_iter++) '
-              'begin block.mem_%s[tb_iter] = %d; end' % (max_iter, m.id, default_value()),
-              file=dest_file)
+        print(
+            "        for (tb_iter = 0; tb_iter < %d; tb_iter++) "
+            "begin block.mem_%s[tb_iter] = %d; end" % (max_iter, m.id, default_value()),
+            file=dest_file,
+        )
         for ix in range(max_iter):
             # Now just individually update the memory values that aren't the default
             val = init_memvalue(m.id, ix)
             if val is not None:
-                print('        block.mem_%s[%d] = %d;' % (m.id, ix, val), file=dest_file)
+                print(
+                    "        block.mem_%s[%d] = %d;" % (m.id, ix, val), file=dest_file
+                )
 
     if simulation_trace:
         tracelen = max(len(t) for t in simulation_trace.trace.values())
         for i in range(tracelen):
             for w in name_sorted(inputs):
-                print('        {:s} = {:s}{:d};'.format(
-                    ver_name[w.name],
-                    "{:d}'d".format(len(w)),
-                    simulation_trace.trace[w.name][i]), file=dest_file)
-            print('\n        #10', file=dest_file)
+                print(
+                    "        {:s} = {:s}{:d};".format(
+                        ver_name[w.name],
+                        "{:d}'d".format(len(w)),
+                        simulation_trace.trace[w.name][i],
+                    ),
+                    file=dest_file,
+                )
+            print("\n        #10", file=dest_file)
             if cmd:
-                print('        %s' % cmd, file=dest_file)
+                print("        %s" % cmd, file=dest_file)
 
     # Footer
-    print('        $finish;', file=dest_file)
-    print('    end', file=dest_file)
-    print('endmodule', file=dest_file)
+    print("        $finish;", file=dest_file)
+    print("    end", file=dest_file)
+    print("endmodule", file=dest_file)
 
 
 # ----------------------------------------------------------------
@@ -1113,6 +1290,7 @@ def output_verilog_testbench(
 #   |___ | |__) |__)  |  |
 #   |    | |  \ |  \  |  |___
 #
+
 
 def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block = None):
     """Output the block as FIRRTL code to the output file.
@@ -1146,7 +1324,9 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
         f.write("    input %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
     for wire in _name_sorted(block.wirevector_subset(Output)):
         f.write("    output %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
-    for wire in _name_sorted(block.wirevector_subset(exclude=(Input, Output, Register, Const))):
+    for wire in _name_sorted(
+        block.wirevector_subset(exclude=(Input, Output, Register, Const))
+    ):
         f.write("    wire %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
     for wire in _name_sorted(block.wirevector_subset(Register)):
         f.write("    reg %s : UInt<%d>, clock\n" % (wire.name, wire.bitwidth))
@@ -1160,112 +1340,201 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
     node_cntr = 0
     initializedMem = []
     for log_net in _net_sorted(block.logic_subset()):
-        if log_net.op == '&':
-            f.write("    %s <= and(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                 log_net.args[1].name))
-        elif log_net.op == '|':
-            f.write("    %s <= or(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                log_net.args[1].name))
-        elif log_net.op == '^':
-            f.write("    %s <= xor(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                 log_net.args[1].name))
-        elif log_net.op == 'n':
-            f.write("    node T_%d = and(%s, %s)\n" % (node_cntr, log_net.args[0].name,
-                                                       log_net.args[1].name))
+        if log_net.op == "&":
+            f.write(
+                "    %s <= and(%s, %s)\n"
+                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+            )
+        elif log_net.op == "|":
+            f.write(
+                "    %s <= or(%s, %s)\n"
+                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+            )
+        elif log_net.op == "^":
+            f.write(
+                "    %s <= xor(%s, %s)\n"
+                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+            )
+        elif log_net.op == "n":
+            f.write(
+                "    node T_%d = and(%s, %s)\n"
+                % (node_cntr, log_net.args[0].name, log_net.args[1].name)
+            )
             f.write("    %s <= not(T_%d)\n" % (log_net.dests[0].name, node_cntr))
             node_cntr += 1
-        elif log_net.op == '~':
-            f.write("    %s <= not(%s)\n" % (log_net.dests[0].name, log_net.args[0].name))
-        elif log_net.op == '+':
-            f.write("    %s <= add(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                 log_net.args[1].name))
-        elif log_net.op == '-':
-            f.write("    %s <= sub(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                 log_net.args[1].name))
-        elif log_net.op == '*':
-            f.write("    %s <= mul(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                 log_net.args[1].name))
-        elif log_net.op == '=':
-            f.write("    %s <= eq(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                log_net.args[1].name))
-        elif log_net.op == '<':
-            f.write("    %s <= lt(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                log_net.args[1].name))
-        elif log_net.op == '>':
-            f.write("    %s <= gt(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                log_net.args[1].name))
-        elif log_net.op == 'w':
+        elif log_net.op == "~":
+            f.write(
+                "    %s <= not(%s)\n" % (log_net.dests[0].name, log_net.args[0].name)
+            )
+        elif log_net.op == "+":
+            f.write(
+                "    %s <= add(%s, %s)\n"
+                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+            )
+        elif log_net.op == "-":
+            f.write(
+                "    %s <= sub(%s, %s)\n"
+                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+            )
+        elif log_net.op == "*":
+            f.write(
+                "    %s <= mul(%s, %s)\n"
+                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+            )
+        elif log_net.op == "=":
+            f.write(
+                "    %s <= eq(%s, %s)\n"
+                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+            )
+        elif log_net.op == "<":
+            f.write(
+                "    %s <= lt(%s, %s)\n"
+                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+            )
+        elif log_net.op == ">":
+            f.write(
+                "    %s <= gt(%s, %s)\n"
+                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+            )
+        elif log_net.op == "w":
             f.write("    %s <= %s\n" % (log_net.dests[0].name, log_net.args[0].name))
-        elif log_net.op == 'x':
-            f.write("    %s <= mux(%s, %s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                     log_net.args[2].name, log_net.args[1].name))
-        elif log_net.op == 'c':
+        elif log_net.op == "x":
+            f.write(
+                "    %s <= mux(%s, %s, %s)\n"
+                % (
+                    log_net.dests[0].name,
+                    log_net.args[0].name,
+                    log_net.args[2].name,
+                    log_net.args[1].name,
+                )
+            )
+        elif log_net.op == "c":
             if len(log_net.args) != 2:
                 raise PyrtlInternalError(
                     "Expected concat net to have only two "
                     "argument wires; has %d" % len(log_net.args)
                 )
-            f.write("    %s <= cat(%s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                 log_net.args[1].name))
-        elif log_net.op == 's':
+            f.write(
+                "    %s <= cat(%s, %s)\n"
+                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+            )
+        elif log_net.op == "s":
             if len(log_net.op_param) != 1:
                 raise PyrtlInternalError(
                     "Expected select net to have single "
                     "select bit; has %d" % len(log_net.op_param)
                 )
-            f.write("    %s <= bits(%s, %s, %s)\n" % (log_net.dests[0].name, log_net.args[0].name,
-                                                      log_net.op_param[0], log_net.op_param[0]))
-        elif log_net.op == 'r':
-            f.write("    %s <= mux(reset, UInt<%s>(0), %s)\n" %
-                    (log_net.dests[0].name, log_net.dests[0].bitwidth, log_net.args[0].name))
-        elif log_net.op == 'm':
+            f.write(
+                "    %s <= bits(%s, %s, %s)\n"
+                % (
+                    log_net.dests[0].name,
+                    log_net.args[0].name,
+                    log_net.op_param[0],
+                    log_net.op_param[0],
+                )
+            )
+        elif log_net.op == "r":
+            f.write(
+                "    %s <= mux(reset, UInt<%s>(0), %s)\n"
+                % (
+                    log_net.dests[0].name,
+                    log_net.dests[0].bitwidth,
+                    log_net.args[0].name,
+                )
+            )
+        elif log_net.op == "m":
             # if there are rom blocks, need to be initialized
             if rom_blocks is not None:
                 if log_net.op_param[0] not in initializedMem:
                     initializedMem.append(log_net.op_param[0])
 
                     # find corresponding rom block according to memid
-                    curr_rom = next((x for x in rom_blocks if x.id == log_net.op_param[0]), None)
-                    f.write("    wire %s : UInt<%s>[%s]\n" %
-                            (log_net.op_param[1].name, log_net.op_param[1].bitwidth,
-                             2**log_net.op_param[1].addrwidth))
+                    curr_rom = next(
+                        (x for x in rom_blocks if x.id == log_net.op_param[0]), None
+                    )
+                    f.write(
+                        "    wire %s : UInt<%s>[%s]\n"
+                        % (
+                            log_net.op_param[1].name,
+                            log_net.op_param[1].bitwidth,
+                            2 ** log_net.op_param[1].addrwidth,
+                        )
+                    )
 
                     # if rom data is a function, calculate the data first
                     if callable(curr_rom.data):
-                        romdata = [curr_rom.data(i) for i in range(2**curr_rom.addrwidth)]
+                        romdata = [
+                            curr_rom.data(i) for i in range(2**curr_rom.addrwidth)
+                        ]
                         curr_rom.data = romdata
 
                     # write rom block initialization data
                     for i in range(len(curr_rom.data)):
-                        f.write("    %s[%s] <= UInt<%s>(%s)\n" %
-                                (log_net.op_param[1].name, i, log_net.op_param[1].bitwidth,
-                                 curr_rom.data[i]))
+                        f.write(
+                            "    %s[%s] <= UInt<%s>(%s)\n"
+                            % (
+                                log_net.op_param[1].name,
+                                i,
+                                log_net.op_param[1].bitwidth,
+                                curr_rom.data[i],
+                            )
+                        )
 
                 # write the connection
-                f.write("    %s <= %s[%s]\n" % (log_net.dests[0].name, log_net.op_param[1].name,
-                                                log_net.args[0].name))
+                f.write(
+                    "    %s <= %s[%s]\n"
+                    % (
+                        log_net.dests[0].name,
+                        log_net.op_param[1].name,
+                        log_net.args[0].name,
+                    )
+                )
 
             else:
                 if log_net.op_param[0] not in initializedMem:
                     initializedMem.append(log_net.op_param[0])
-                    f.write("    cmem %s_%s : UInt<%s>[%s]\n" %
-                            (log_net.op_param[1].name, log_net.op_param[0],
-                             log_net.op_param[1].bitwidth, 2**log_net.op_param[1].addrwidth))
-                f.write("    infer mport T_%d  = %s_%s[%s], clock\n" %
-                        (node_cntr, log_net.op_param[1].name, log_net.op_param[0],
-                         log_net.args[0].name))
+                    f.write(
+                        "    cmem %s_%s : UInt<%s>[%s]\n"
+                        % (
+                            log_net.op_param[1].name,
+                            log_net.op_param[0],
+                            log_net.op_param[1].bitwidth,
+                            2 ** log_net.op_param[1].addrwidth,
+                        )
+                    )
+                f.write(
+                    "    infer mport T_%d  = %s_%s[%s], clock\n"
+                    % (
+                        node_cntr,
+                        log_net.op_param[1].name,
+                        log_net.op_param[0],
+                        log_net.args[0].name,
+                    )
+                )
                 f.write("    %s <= T_%d\n" % (log_net.dests[0].name, node_cntr))
                 node_cntr += 1
-        elif log_net.op == '@':
+        elif log_net.op == "@":
             if log_net.op_param[0] not in initializedMem:
                 initializedMem.append(log_net.op_param[0])
-                f.write("    cmem %s_%s : UInt<%s>[%s]\n" %
-                        (log_net.op_param[1].name, log_net.op_param[0],
-                         log_net.op_param[1].bitwidth, 2**log_net.op_param[1].addrwidth))
+                f.write(
+                    "    cmem %s_%s : UInt<%s>[%s]\n"
+                    % (
+                        log_net.op_param[1].name,
+                        log_net.op_param[0],
+                        log_net.op_param[1].bitwidth,
+                        2 ** log_net.op_param[1].addrwidth,
+                    )
+                )
             f.write("    when %s :\n" % log_net.args[2].name)
-            f.write("      infer mport T_%d  = %s_%s[%s], clock\n" %
-                    (node_cntr, log_net.op_param[1].name, log_net.op_param[0],
-                     log_net.args[0].name))
+            f.write(
+                "      infer mport T_%d  = %s_%s[%s], clock\n"
+                % (
+                    node_cntr,
+                    log_net.op_param[1].name,
+                    log_net.op_param[0],
+                    log_net.args[0].name,
+                )
+            )
             f.write("      T_%d <= %s\n" % (node_cntr, log_net.args[1].name))
             f.write("      skip\n")
             node_cntr += 1
@@ -1274,6 +1543,7 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
 
     return 0
 
+
 # -----------------------------------------------------------------
 #       __   __       __     __   ___       __
 #    | /__` /    /\  /__`   |__) |__  |\ | /   |__|
@@ -1281,15 +1551,24 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
 
 
 def input_from_iscas_bench(bench, block: Block = None):
-    ''' Import an ISCAS .bench file
+    """Import an ISCAS .bench file
 
     :param bench: an open ISCAS .bench file to read
     :param block: block to add the imported logic (defaults to current
         :ref:`working_block`)
-    '''
+    """
 
     import pyparsing
-    from pyparsing import Group, Keyword, Literal, OneOrMore, Suppress, Word, ZeroOrMore, one_of
+    from pyparsing import (
+        Group,
+        Keyword,
+        Literal,
+        OneOrMore,
+        Suppress,
+        Word,
+        ZeroOrMore,
+        one_of,
+    )
 
     block = working_block(block)
 
@@ -1299,7 +1578,7 @@ def input_from_iscas_bench(bench, block: Block = None):
         if isinstance(bench, str):
             bench_string = bench
         else:
-            raise PyrtlError('input_from_bench expecting either open file or string')
+            raise PyrtlError("input_from_bench expecting either open file or string")
 
     def SKeyword(x):
         return Suppress(Keyword(x))
@@ -1309,20 +1588,28 @@ def input_from_iscas_bench(bench, block: Block = None):
 
     # NOTE: The acceptable signal characters are based on viewing the I/O names
     # in the available ISCAS benchmark files, and may not be complete.
-    signal_start = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\/?'
-    signal_middle = pyparsing.alphas + pyparsing.nums + '$:[]_<>\\/.?-'
+    signal_start = pyparsing.alphas + pyparsing.nums + "$:[]_<>\\/?"
+    signal_middle = pyparsing.alphas + pyparsing.nums + "$:[]_<>\\/.?-"
     signal_id = Word(signal_start, signal_middle)
 
     gate_names = "AND OR NAND NOR XOR NOT BUFF DFF"
 
     src_list = Group(signal_id + ZeroOrMore(SLiteral(",") + signal_id))("src_list")
-    net_def = Group(signal_id("dst") + SLiteral("=") + one_of(gate_names)("gate")
-                    + SLiteral("(") + src_list + SLiteral(")"))("net_def")
+    net_def = Group(
+        signal_id("dst")
+        + SLiteral("=")
+        + one_of(gate_names)("gate")
+        + SLiteral("(")
+        + src_list
+        + SLiteral(")")
+    )("net_def")
 
-    input_def = Group(SKeyword("INPUT") + SLiteral("(")
-                      + signal_id + SLiteral(")"))("input_def")
-    output_def = Group(SKeyword("OUTPUT") + SLiteral("(")
-                       + signal_id + SLiteral(")"))("output_def")
+    input_def = Group(SKeyword("INPUT") + SLiteral("(") + signal_id + SLiteral(")"))(
+        "input_def"
+    )
+    output_def = Group(SKeyword("OUTPUT") + SLiteral("(") + signal_id + SLiteral(")"))(
+        "output_def"
+    )
     command_def = input_def | output_def | net_def
 
     commands = OneOrMore(command_def)("command_list")
@@ -1334,7 +1621,7 @@ def input_from_iscas_bench(bench, block: Block = None):
     output_to_internal = {}  # dict: name -> wire
 
     def twire(name):
-        """ Find or make wire named 'name' and return it. """
+        """Find or make wire named 'name' and return it."""
         w = output_to_internal.get(name)
         if w is None:
             w = block.wirevector_by_name.get(name)
@@ -1346,7 +1633,8 @@ def input_from_iscas_bench(bench, block: Block = None):
         if cmd.getName() == "input_def":
             _wire_in = Input(bitwidth=1, name=str(cmd[0]), block=block)
         elif cmd.getName() == "output_def":
-            # Create internal wire for indirection, since Outputs can't be inputs to nets in PyRTL
+            # Create internal wire for indirection, since Outputs can't be inputs to
+            # nets in PyRTL
             wire_internal = WireVector(bitwidth=1, block=block)
             wire_out = Output(bitwidth=1, name=str(cmd[0]), block=block)
             wire_out <<= wire_internal
@@ -1389,12 +1677,16 @@ def input_from_iscas_bench(bench, block: Block = None):
         inputs = [i for i in block.wirevector_subset(Input) if i.name == o.name]
         if inputs:
             if len(inputs) > 1:
-                raise PyrtlError("More than one input found with the name %s" % inputs[0].name)
+                raise PyrtlError(
+                    "More than one input found with the name %s" % inputs[0].name
+                )
             i = inputs[0]
             o_internal = twire(o.name)
             o_internal <<= i
             o.name = next_tempvar_name()
             # Ensure the input is the one mapped by the original name
             block.wirevector_by_name[i.name] = i
-            print("Found input and output wires with the same name. "
-                  "Output '%s' has now been renamed to '%s'." % (i.name, o.name))
+            print(
+                "Found input and output wires with the same name. "
+                "Output '%s' has now been renamed to '%s'." % (i.name, o.name)
+            )

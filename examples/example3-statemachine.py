@@ -1,8 +1,8 @@
 """Example 3:  A State Machine built with conditional_assignment
 
-   In this example we describe how conditional_assignment works in the context
-   of a vending machine that will dispense an item when it has received 4
-   tokens. If a refund is requested, it returns the tokens.
+In this example we describe how conditional_assignment works in the context
+of a vending machine that will dispense an item when it has received 4
+tokens. If a refund is requested, it returns the tokens.
 
 """
 
@@ -10,11 +10,11 @@ import enum
 
 import pyrtl
 
-token_in = pyrtl.Input(1, 'token_in')
-req_refund = pyrtl.Input(1, 'req_refund')
-dispense = pyrtl.Output(1, 'dispense')
-refund = pyrtl.Output(1, 'refund')
-state = pyrtl.Register(3, 'state')
+token_in = pyrtl.Input(1, "token_in")
+req_refund = pyrtl.Input(1, "req_refund")
+dispense = pyrtl.Output(1, "dispense")
+refund = pyrtl.Output(1, "refund")
+state = pyrtl.Register(3, "state")
 
 
 # First new step, let's enumerate a set of constants to serve as our states
@@ -109,10 +109,7 @@ sim = pyrtl.Simulation()
 # sim.step_multiple, which takes in a dictionary mapping each input to its
 # value on each step.
 
-sim_inputs = {
-    'token_in': '0010100111010000',
-    'req_refund': '1100010000000000'
-}
+sim_inputs = {"token_in": "0010100111010000", "req_refund": "1100010000000000"}
 
 sim.step_multiple(sim_inputs)
 
@@ -120,8 +117,9 @@ sim.step_multiple(sim_inputs)
 # the traces. We also use `enum_name` to display the state names (WAIT, TOK1,
 # ...) rather than their numbers (0, 1, ...).
 sim.tracer.render_trace(
-    trace_list=['token_in', 'req_refund', 'state', 'dispense', 'refund'],
-    repr_per_name={'state': pyrtl.enum_name(State)})
+    trace_list=["token_in", "req_refund", "state", "dispense", "refund"],
+    repr_per_name={"state": pyrtl.enum_name(State)},
+)
 
 # Finally, suppose you want to simulate your design and verify its output
 # matches your expectations. sim.step_multiple also accepts as a second
@@ -131,10 +129,7 @@ sim.tracer.render_trace(
 # after some tweaks, you'd like to test for functional equivalence, or as a
 # basic sanity check.
 
-sim_outputs = {
-    'dispense': '0000000000001000',
-    'refund': '0111001000000000'
-}
+sim_outputs = {"dispense": "0000000000001000", "refund": "0111001000000000"}
 
 # Note that you don't need to explicitly supply a tracer to Simulation(); it
 # will create one internally for you if needed.

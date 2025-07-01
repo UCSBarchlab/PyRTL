@@ -16,7 +16,7 @@ def calculate_max_and_min_bitwidths(max_bitwidth=None, exact_bitwidth=None):
 
 def inverse_power_dist(bitwidth):
     # Note that this is not uniformly distributed
-    return int(2**random.uniform(0, bitwidth) - 1)
+    return int(2 ** random.uniform(0, bitwidth) - 1)
 
 
 def uniform_dist(bitwidth):
@@ -24,9 +24,12 @@ def uniform_dist(bitwidth):
 
 
 def make_inputs_and_values(
-        num_wires: int, max_bitwidth: int = None, exact_bitwidth: int = None,
-        dist: Callable[[int], int] = uniform_dist,
-        test_vals: int = 20) -> tuple[list[pyrtl.Input], list[list[int]]]:
+    num_wires: int,
+    max_bitwidth: int = None,
+    exact_bitwidth: int = None,
+    dist: Callable[[int], int] = uniform_dist,
+    test_vals: int = 20,
+) -> tuple[list[pyrtl.Input], list[list[int]]]:
     """Generates multiple :class:`.Input` wires and their test values.
 
     The generated list of test values is a list of lists. The inner lists each represent
@@ -44,16 +47,29 @@ def make_inputs_and_values(
              :class:`Inputs<.Input>`, and ``values`` is a list of values for each
              ``input``.
     """
-    min_bitwidth, max_bitwidth = calculate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
-    wires, vals = list(zip(*(
-        an_input_and_vals(random.randrange(min_bitwidth, max_bitwidth + 1), test_vals,
-                          random_dist=dist) for i in range(num_wires))))
+    min_bitwidth, max_bitwidth = calculate_max_and_min_bitwidths(
+        max_bitwidth, exact_bitwidth
+    )
+    wires, vals = list(
+        zip(
+            *(
+                an_input_and_vals(
+                    random.randrange(min_bitwidth, max_bitwidth + 1),
+                    test_vals,
+                    random_dist=dist,
+                )
+                for i in range(num_wires)
+            )
+        )
+    )
     return wires, vals
 
 
 def an_input_and_vals(
-        bitwidth: int, test_vals: int = 20, name: str = '',
-        random_dist: Callable[[int], int] = uniform_dist
+    bitwidth: int,
+    test_vals: int = 20,
+    name: str = "",
+    random_dist: Callable[[int], int] = uniform_dist,
 ) -> tuple[pyrtl.Input, list[int]]:
     """Generate an :class:`.Input` wire and random test values for it.
 
@@ -74,8 +90,10 @@ generate_in_wire_and_values = an_input_and_vals
 
 
 def make_consts(
-        num_wires: int, max_bitwidth: int = None, exact_bitwidth: int = None,
-        random_dist: Callable[[int], int] = inverse_power_dist
+    num_wires: int,
+    max_bitwidth: int = None,
+    exact_bitwidth: int = None,
+    random_dist: Callable[[int], int] = inverse_power_dist,
 ) -> tuple[list[pyrtl.Const], list[int]]:
     """Generate random :class:`.Const` values.
 
@@ -90,15 +108,20 @@ def make_consts(
              :class:`Consts<.Const>`, and ``values`` is a list of each ``const``'s
              value.
     """
-    min_bitwidth, max_bitwidth = calculate_max_and_min_bitwidths(max_bitwidth, exact_bitwidth)
-    bitwidths = [random.randrange(min_bitwidth, max_bitwidth + 1) for i in range(num_wires)]
+    min_bitwidth, max_bitwidth = calculate_max_and_min_bitwidths(
+        max_bitwidth, exact_bitwidth
+    )
+    bitwidths = [
+        random.randrange(min_bitwidth, max_bitwidth + 1) for i in range(num_wires)
+    ]
     wires = [pyrtl.Const(random_dist(b), b) for b in bitwidths]
     vals = [w.val for w in wires]
     return wires, vals
 
 
-def sim_and_ret_out(outwire: pyrtl.WireVector, inwires: list[pyrtl.WireVector],
-                    invals: list[list[int]]) -> list[int]:
+def sim_and_ret_out(
+    outwire: pyrtl.WireVector, inwires: list[pyrtl.WireVector], invals: list[list[int]]
+) -> list[int]:
     """Run a simulation with ``invals`` for ``inwires`` and return ``outwire``'s values.
 
     .. WARNING::
@@ -119,8 +142,9 @@ def sim_and_ret_out(outwire: pyrtl.WireVector, inwires: list[pyrtl.WireVector],
     return sim_and_ret_outws(inwires, invals)[outwire.name]
 
 
-def sim_and_ret_outws(inwires: list[pyrtl.WireVector],
-                      invals: list[list[int]]) -> dict[str, list[int]]:
+def sim_and_ret_outws(
+    inwires: list[pyrtl.WireVector], invals: list[list[int]]
+) -> dict[str, list[int]]:
     """Run a simulation with ``invals`` for ``inwires`` and return all wire values.
 
     .. WARNING::

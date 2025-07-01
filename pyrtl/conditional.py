@@ -32,6 +32,7 @@ class _ConditionalAssignment:
         return self
 
     """ Context providing functionality of "conditional_assignment". """
+
     def __enter__(self):
         global _depth
         _check_no_nesting()
@@ -55,7 +56,7 @@ class _Otherwise:
 
 
 def _reset_conditional_state():
-    """ Set or reset all the module state required for conditionals. """
+    """Set or reset all the module state required for conditionals."""
     global _conditions_list_stack
     global _conflicts_map
     global _predicate_map
@@ -64,11 +65,13 @@ def _reset_conditional_state():
     _conditions_list_stack = [[]]  # stack of lists of current conditions
     # _predicate_map: map wirevector or mem -> [(final_pred, rhs), ...]
     _predicate_map = {}
-    # _conflicts_map: map wirevector or mem -> [ set([(pred,bool), (pred,bool)]), set([(pred,bool)..
+    # _conflicts_map: map wirevector or mem ->
+    #     [ set([(pred,bool), (pred,bool)]), set([(pred,bool)..
     # * each element maps to a list of sets of tuples of (predicate id, bool)
     # * each time a value is written (lhs) we add the predicate set to the list
-    # * each new write happens we have to check that the new predicate has at least one negated
-    #   term with the value we are now trying to write.  Otherwise it is an error.
+    # * each new write happens we have to check that the new predicate has at least one
+    #   negated term with the value we are now trying to write. Otherwise it is an
+    #   error.
     _conflicts_map = {}
 
 
@@ -79,8 +82,9 @@ otherwise = _Otherwise()
 
 
 # -----------------------------------------------------------------------
-# The following functions should not be PyRTL programmer visible, but are called in other
-# places in the pyrtl module.
+# The following functions should not be PyRTL programmer visible, but are called in
+# other places in the pyrtl module.
+
 
 def _push_condition(predicate):
     """As we enter new conditions, this pushes them on the predicate stack."""
@@ -88,7 +92,9 @@ def _push_condition(predicate):
     _check_under_condition()
     _depth += 1
     if predicate is not otherwise and len(predicate) > 1:
-        raise PyrtlError('all predicates for conditional assignments must be wirevectors of len 1')
+        raise PyrtlError(
+            "all predicates for conditional assignments must be wirevectors of len 1"
+        )
     _conditions_list_stack[-1].append(predicate)
     _conditions_list_stack.append([])
 
@@ -117,9 +123,10 @@ def _build_read_port(mem, addr):
 # -----------------------------------------------------------------------
 # The following helper functions are used only internally
 
+
 def _check_no_nesting():
     if _depth != 0:
-        raise PyrtlError('no nesting of conditional assignments allowed')
+        raise PyrtlError("no nesting of conditional assignments allowed")
 
 
 def _check_under_condition():
@@ -130,12 +137,12 @@ def _check_under_condition():
 def _check_and_add_pred_set(lhs, pred_set):
     for test_set in _conflicts_map.setdefault(lhs, []):
         if _pred_sets_are_in_conflict(pred_set, test_set):
-            raise PyrtlError('conflicting conditions for %s' % lhs)
+            raise PyrtlError("conflicting conditions for %s" % lhs)
     _conflicts_map[lhs].append(pred_set)
 
 
 def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
-    """ Find conflict in sets, return conflict if found, else None. """
+    """Find conflict in sets, return conflict if found, else None."""
     # pred_sets conflict if we cannot find one shared predicate that is "negated" in one
     # and "non-negated" in the other
     for pred_a, bool_a in pred_set_a:
@@ -146,9 +153,13 @@ def _pred_sets_are_in_conflict(pred_set_a, pred_set_b):
 
 
 def _finalize(defaults):
-    """Build the required muxes and call back to WireVector to finalize the wirevector build."""
+    """
+    Build the required muxes and call back to WireVector to finalize the wirevector
+    build.
+    """
     from pyrtl.corecircuits import select
     from pyrtl.memory import MemBlock
+
     for lhs in _predicate_map:
         # handle memory write ports
         if isinstance(lhs, MemBlock):
@@ -177,7 +188,7 @@ def _finalize(defaults):
                 else:
                     result = 0  # default for wire is "0"
             else:
-                raise PyrtlInternalError('unknown assignment in finalize')
+                raise PyrtlInternalError("unknown assignment in finalize")
             predlist = _predicate_map[lhs]
             for p, rhs in predlist:
                 result = select(p, truecase=rhs, falsecase=result)
@@ -185,7 +196,7 @@ def _finalize(defaults):
 
 
 def _current_select():
-    """ Function to calculate the current "predicate" in the current context.
+    """Function to calculate the current "predicate" in the current context.
 
     Returns a tuple of information: (predicate, pred_set).
     The value pred_set is a set([ (predicate, bool), ... ]) as described in
@@ -209,7 +220,7 @@ def _current_select():
         if lastother is None:
             return predlist[:-1]
         else:
-            return predlist[lastother + 1:-1]
+            return predlist[lastother + 1 : -1]
 
     select = None
     pred_set = set()
@@ -227,11 +238,12 @@ def _current_select():
             pred_set.add((predicate, False))
 
     if select is None:
-        raise PyrtlError('problem with conditional assignment')
+        raise PyrtlError("problem with conditional assignment")
     if len(select) != 1:
-        raise PyrtlInternalError('conditional predicate with length greater than 1')
+        raise PyrtlInternalError("conditional predicate with length greater than 1")
 
     return select, pred_set
+
 
 # Some examples that were helpful in the design and testing of conditional
 

@@ -1,5 +1,4 @@
-""" Helper functions that make constructing hardware easier.
-"""
+"""Helper functions that make constructing hardware easier."""
 
 from __future__ import annotations
 
@@ -18,7 +17,15 @@ from pyrtl.corecircuits import (
     shift_left_logical,
 )
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.wire import Const, Input, Output, Register, WireVector, WireVectorLike, WrappedWireVector
+from pyrtl.wire import (
+    Const,
+    Input,
+    Output,
+    Register,
+    WireVector,
+    WireVectorLike,
+    WrappedWireVector,
+)
 
 if TYPE_CHECKING:
     from pyrtl.simulation import Simulation
@@ -29,7 +36,7 @@ if TYPE_CHECKING:
 #  |__| |__  |    |__) |__  |__) /__`
 #  |  | |___ |___ |    |___ |  \ .__/
 #
-probeIndexer = _NameIndexer('Probe-')
+probeIndexer = _NameIndexer("Probe-")
 
 
 def probe(w: WireVector, name: str = None) -> WireVector:
@@ -66,19 +73,19 @@ def probe(w: WireVector, name: str = None) -> WireVector:
     :return: original :class:`WireVector` ``w``
     """
     if not isinstance(w, WireVector):
-        raise PyrtlError('Only WireVectors can be probed')
+        raise PyrtlError("Only WireVectors can be probed")
 
     if name is None:
-        name = '(%s: %s)' % (probeIndexer.make_valid_string(), w.name)
+        name = "(%s: %s)" % (probeIndexer.make_valid_string(), w.name)
     if _get_debug_mode():
-        print("Probe: " + name + ' ' + get_stack(w))
+        print("Probe: " + name + " " + get_stack(w))
 
     p = Output(name=name)
     p <<= w  # late assigns len from w automatically
     return w
 
 
-assertIndexer = _NameIndexer('assertion')
+assertIndexer = _NameIndexer("assertion")
 
 
 def rtl_assert(w: WireVector, exp: Exception, block: Block = None) -> Output:
@@ -101,22 +108,30 @@ def rtl_assert(w: WireVector, exp: Exception, block: Block = None) -> Output:
     block = working_block(block)
 
     if not isinstance(w, WireVector):
-        raise PyrtlError('Only WireVectors can be asserted with rtl_assert')
+        raise PyrtlError("Only WireVectors can be asserted with rtl_assert")
     if len(w) != 1:
-        raise PyrtlError('rtl_assert checks only a WireVector of bitwidth 1')
+        raise PyrtlError("rtl_assert checks only a WireVector of bitwidth 1")
     if not isinstance(exp, Exception):
-        raise PyrtlError('the second argument to rtl_assert must be an instance of Exception')
+        raise PyrtlError(
+            "the second argument to rtl_assert must be an instance of Exception"
+        )
     if isinstance(exp, KeyError):
-        raise PyrtlError('the second argument to rtl_assert cannot be a KeyError')
+        raise PyrtlError("the second argument to rtl_assert cannot be a KeyError")
     if w not in block.wirevector_set:
-        raise PyrtlError('assertion wire not part of the block to which it is being added')
+        raise PyrtlError(
+            "assertion wire not part of the block to which it is being added"
+        )
     if w not in block.wirevector_set:
-        raise PyrtlError('assertion not a known wirevector in the target block')
+        raise PyrtlError("assertion not a known wirevector in the target block")
 
     if w in block.rtl_assert_dict:
-        raise PyrtlInternalError('assertion conflicts with existing registered assertion')
+        raise PyrtlInternalError(
+            "assertion conflicts with existing registered assertion"
+        )
 
-    assert_wire = Output(bitwidth=1, name=assertIndexer.make_valid_string(), block=block)
+    assert_wire = Output(
+        bitwidth=1, name=assertIndexer.make_valid_string(), block=block
+    )
     assert_wire <<= w
     block.rtl_assert_dict[assert_wire] = exp
     return assert_wire
@@ -130,7 +145,7 @@ def check_rtl_assertions(sim: Simulation):
 
     :param sim: Simulation in which to check assertions.
     """
-    for (w, exp) in sim.block.rtl_assert_dict.items():
+    for w, exp in sim.block.rtl_assert_dict.items():
         try:
             value = sim.inspect(w)
             if not value:
@@ -163,16 +178,17 @@ def log2(integer_val: int) -> int:
     """
     i = integer_val
     if not isinstance(i, int):
-        raise PyrtlError('this function can only take integers')
+        raise PyrtlError("this function can only take integers")
     if i <= 0:
-        raise PyrtlError('this function can only take positive numbers 1 or greater')
+        raise PyrtlError("this function can only take positive numbers 1 or greater")
     if i & (i - 1) != 0:
-        raise PyrtlError('this function can only take even powers of 2')
+        raise PyrtlError("this function can only take even powers of 2")
     return i.bit_length() - 1
 
 
-def truncate(wirevector_or_integer: Union[WireVector, int],
-             bitwidth: int) -> Union[WireVector, int]:
+def truncate(
+    wirevector_or_integer: Union[WireVector, int], bitwidth: int
+) -> Union[WireVector, int]:
     """Returns a :class:`WireVector` or integer truncated to the specified
     ``bitwidth``.
 
@@ -220,7 +236,7 @@ def truncate(wirevector_or_integer: Union[WireVector, int],
              type.
     """
     if bitwidth < 1:
-        raise PyrtlError('bitwidth must be a positive integer')
+        raise PyrtlError("bitwidth must be a positive integer")
     x = wirevector_or_integer
     try:
         return x.truncate(bitwidth)
@@ -230,6 +246,7 @@ def truncate(wirevector_or_integer: Union[WireVector, int],
 
 class MatchedFields(NamedTuple):
     """Result returned by :func:`match_bitpattern`."""
+
     matched: WireVector
     """1-bit :class:`WireVector` indicating if ``w`` matches ``bitpattern``."""
     fields: NamedTuple
@@ -237,16 +254,19 @@ class MatchedFields(NamedTuple):
 
     def __enter__(self):
         from pyrtl.conditional import _push_condition
+
         _push_condition(self.matched)
         return self.fields
 
     def __exit__(self, *execinfo):
         from pyrtl.conditional import _pop_condition
+
         _pop_condition()
 
 
-def match_bitpattern(w: WireVector, bitpattern: str,
-                     field_map: dict[str, str] = None) -> MatchedFields:
+def match_bitpattern(
+    w: WireVector, bitpattern: str, field_map: dict[str, str] = None
+) -> MatchedFields:
     """Returns a single-bit :class:`WireVector` that is ``1`` if and only if ``w``
     matches the ``bitpattern``, and a tuple containing the matched fields, if any.
     Compatible with the ``with`` statement.
@@ -277,28 +297,45 @@ def match_bitpattern(w: WireVector, bitpattern: str,
     A prime example of this is for decoding instructions. Here we decode some RISC-V::
 
         with pyrtl.conditional_assignment:
-            with match_bitpattern(inst, "iiiiiiiiiiiirrrrr010ddddd0000011") as (imm, rs1, rd):
+            with match_bitpattern(
+                inst, "iiiiiiiiiiiirrrrr010ddddd0000011"
+            ) as (imm, rs1, rd):
                 regfile[rd] |= mem[(regfile[rs1] + imm.sign_extended(32)).truncate(32)]
                 pc.next |= pc + 1
-            with match_bitpattern(inst, "iiiiiiirrrrrsssss010iiiii0100011") as (imm, rs2, rs1):
+            with match_bitpattern(
+                inst, "iiiiiiirrrrrsssss010iiiii0100011"
+            ) as (imm, rs2, rs1):
                 mem[(regfile[rs1] + imm.sign_extended(32)).truncate(32)] |= regfile[rs2]
                 pc.next |= pc + 1
-            with match_bitpattern(inst, "0000000rrrrrsssss111ddddd0110011") as (rs2, rs1, rd):
+            with match_bitpattern(
+                inst, "0000000rrrrrsssss111ddddd0110011"
+            ) as (rs2, rs1, rd):
                 regfile[rd] |= regfile[rs1] & regfile[rs2]
                 pc.next |= pc + 1
-            with match_bitpattern(inst, "0000000rrrrrsssss000ddddd0110011") as (rs2, rs1, rd):
+            with match_bitpattern(
+                inst, "0000000rrrrrsssss000ddddd0110011")
+            as (rs2, rs1, rd):
                 regfile[rd] |= (regfile[rs1] + regfile[rs2]).truncate(32)
                 pc.next |= pc + 1
             # ...etc...
 
     Some smaller examples::
 
-        m, _ = match_bitpattern(w, '0101')  # basically the same as w == '0b0101'
-        m, _ = match_bitpattern(w, '01?1')  # m will be true when w is '0101' or '0111'
-        m, _ = match_bitpattern(w, '??01')  # m will be true when last two bits of w are '01'
-        m, _ = match_bitpattern(w, '??_0 1')  # spaces/underscores are ignored, same as line above
+        # Basically the same as w == '0b0101'.
+        m, _ = match_bitpattern(w, '0101')
+
+        # m will be true when w is '0101' or '0111'.
+        m, _ = match_bitpattern(w, '01?1')
+
+        # m will be true when last two bits of w are '01'.
+        m, _ = match_bitpattern(w, '??01')
+
+        # spaces/underscores are ignored, same as line above.
+        m, _ = match_bitpattern(w, '??_0 1')
+
         # All bits with the same letter make up same field.
         m, (a, b) = match_bitpattern(w, '01aa1?bbb11a')
+
         # Fields will be named `fs.foo` and `fs.bar`.
         m, fs = match_bitpattern(w, '01aa1?bbb11a', {'a': 'foo', 'b': 'bar'})
 
@@ -315,24 +352,26 @@ def match_bitpattern(w: WireVector, bitpattern: str,
     """
     w = as_wires(w)
     if not isinstance(bitpattern, str):
-        raise PyrtlError('bitpattern must be a string')
+        raise PyrtlError("bitpattern must be a string")
     bitpattern = bitpattern.replace("_", "").replace(" ", "")
     if len(w) != len(bitpattern):
-        raise PyrtlError('bitpattern string different length than wirevector provided')
+        raise PyrtlError("bitpattern string different length than wirevector provided")
     # Reverse ``bitpattern`` so index 0 is the least significant bit. This makes
     # ``w[i]`` and ``reversed_bitpattern[i]`` refer to the same bit ``i``.
     reversed_bitpattern = bitpattern[::-1]
 
-    zero_bits = [w[index] for index, x in enumerate(reversed_bitpattern) if x == '0']
-    one_bits = [w[index] for index, x in enumerate(reversed_bitpattern) if x == '1']
+    zero_bits = [w[index] for index, x in enumerate(reversed_bitpattern) if x == "0"]
+    one_bits = [w[index] for index, x in enumerate(reversed_bitpattern) if x == "1"]
     match = rtl_all(*one_bits) & ~rtl_any(*zero_bits)
 
     def field_name(name: str) -> str:
         """Retrieve a field's name from ``field_map``."""
         if field_map is not None:
             if name not in field_map:
-                raise PyrtlError('field_map argument has been given, '
-                                 'but %s field is not present' % name)
+                raise PyrtlError(
+                    "field_map argument has been given, "
+                    "but %s field is not present" % name
+                )
             return field_map[name]
         return name
 
@@ -340,14 +379,18 @@ def match_bitpattern(w: WireVector, bitpattern: str,
     # ``field_name``.
     fields = collections.defaultdict(list)
     for i, c in enumerate(reversed_bitpattern):
-        if c not in '01?':
+        if c not in "01?":
             fields[c].append(w[i])
     # Sort ``fields`` by each field's position in ``bitpattern`` and convert ``fields``
     # to a list of tuples.
     fields = sorted(fields.items(), key=lambda m: bitpattern.index(m[0]))
-    Fields = collections.namedtuple('Fields', [field_name(name) for name, _ in fields])
-    fields = Fields(**{field_name(name): concat_list(wirevector_list)
-                    for name, wirevector_list in fields})
+    Fields = collections.namedtuple("Fields", [field_name(name) for name, _ in fields])
+    fields = Fields(
+        **{
+            field_name(name): concat_list(wirevector_list)
+            for name, wirevector_list in fields
+        }
+    )
 
     return MatchedFields(match, fields)
 
@@ -402,54 +445,62 @@ def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
     """
 
     if not bitpattern:
-        raise PyrtlError('bitpattern must be nonempty')
+        raise PyrtlError("bitpattern must be nonempty")
 
     if len(ordered_fields) > 0 and len(named_fields) > 0:
-        raise PyrtlError('named and ordered fields cannot be mixed')
+        raise PyrtlError("named and ordered fields cannot be mixed")
 
     def letters_in_field_order():
         seen = []
         for c in bitpattern:
-            if c != '0' and c != '1' and c not in seen:
+            if c != "0" and c != "1" and c not in seen:
                 seen.append(c)
         return seen
 
     field_map = None
-    if 'field_map' in named_fields:
-        field_map = named_fields['field_map']
-        named_fields.pop('field_map')
+    if "field_map" in named_fields:
+        field_map = named_fields["field_map"]
+        named_fields.pop("field_map")
 
     bitlist = []
     lifo = letters_in_field_order()
     if ordered_fields:
         if len(lifo) != len(ordered_fields):
-            raise PyrtlError('number of fields and number of unique patterns do not match')
+            raise PyrtlError(
+                "number of fields and number of unique patterns do not match"
+            )
         intfields = [int(f) for f in ordered_fields]
     else:
         if len(lifo) != len(named_fields):
-            raise PyrtlError('number of fields and number of unique patterns do not match')
+            raise PyrtlError(
+                "number of fields and number of unique patterns do not match"
+            )
         try:
+
             def fn(n):
                 return field_map[n] if field_map else n
+
             intfields = [int(named_fields[fn(n)]) for n in lifo]
         except KeyError as e:
-            raise PyrtlError('bitpattern field %s was not provided in named_field list' % e.args[0])
+            raise PyrtlError(
+                "bitpattern field %s was not provided in named_field list" % e.args[0]
+            )
 
     fmap = dict(zip(lifo, intfields))
     for c in bitpattern[::-1]:
-        if c == '0' or c == '1':
+        if c == "0" or c == "1":
             bitlist.append(c)
-        elif c == '?':
-            raise PyrtlError('all fields in the bitpattern must have names')
+        elif c == "?":
+            raise PyrtlError("all fields in the bitpattern must have names")
         else:
             bitlist.append(str(fmap[c] & 0x1))  # append lsb of the field
             fmap[c] = fmap[c] >> 1  # and bit shift by one position
     for f in fmap:
         if fmap[f] not in [0, -1]:
-            raise PyrtlError('too many bits given to value to fit in field %s' % f)
+            raise PyrtlError("too many bits given to value to fit in field %s" % f)
     if len(bitpattern) != len(bitlist):
-        raise PyrtlInternalError('resulting values have different bitwidths')
-    final_str = ''.join(bitlist[::-1])
+        raise PyrtlInternalError("resulting values have different bitwidths")
+    final_str = "".join(bitlist[::-1])
     return int(final_str, 2)
 
 
@@ -512,18 +563,19 @@ def chop(w: WireVector, *segment_widths: int) -> list[WireVector]:
     w = as_wires(w)
     for seg in segment_widths:
         if not isinstance(seg, int):
-            raise PyrtlError('segment widths must be integers')
+            raise PyrtlError("segment widths must be integers")
     if sum(segment_widths) != len(w):
-        raise PyrtlError('sum of segment widths must equal length of wirevetor')
+        raise PyrtlError("sum of segment widths must equal length of wirevetor")
 
     n_segments = len(segment_widths)
-    starts = [sum(segment_widths[i + 1:]) for i in range(n_segments)]
+    starts = [sum(segment_widths[i + 1 :]) for i in range(n_segments)]
     ends = [sum(segment_widths[i:]) for i in range(n_segments)]
     return [w[s:e] for s, e in zip(starts, ends)]
 
 
-def input_list(names: Union[str, list[str]],
-               bitwidth: Union[int, list[int]] = None) -> list[Input]:
+def input_list(
+    names: Union[str, list[str]], bitwidth: Union[int, list[int]] = None
+) -> list[Input]:
     """Allocate and return a list of :class:`Inputs<Input>`.
 
     See :func:`wirevector_list`. Equivalent to::
@@ -543,8 +595,9 @@ def input_list(names: Union[str, list[str]],
     return wirevector_list(names, bitwidth, wvtype=Input)
 
 
-def output_list(names: Union[str, list[str]],
-                bitwidth: Union[int, list[int]] = None) -> list[Output]:
+def output_list(
+    names: Union[str, list[str]], bitwidth: Union[int, list[int]] = None
+) -> list[Output]:
     """Allocate and return a list of :class:`Outputs<Output>`.
 
     See :func:`wirevector_list`. Equivalent to::
@@ -564,8 +617,9 @@ def output_list(names: Union[str, list[str]],
     return wirevector_list(names, bitwidth, wvtype=Output)
 
 
-def register_list(names: Union[str, list[str]],
-                  bitwidth: Union[int, list[int]] = None) -> list[Register]:
+def register_list(
+    names: Union[str, list[str]], bitwidth: Union[int, list[int]] = None
+) -> list[Register]:
     """Allocate and return a list of :class:`Registers<Register>`.
 
     See :func:`wirevector_list`. Equivalent to::
@@ -585,9 +639,11 @@ def register_list(names: Union[str, list[str]],
     return wirevector_list(names, bitwidth, wvtype=Register)
 
 
-def wirevector_list(names: Union[str, list[str]],
-                    bitwidth: Union[int, list[int]] = None,
-                    wvtype: type[WireVector] = WireVector) -> list[WireVector]:
+def wirevector_list(
+    names: Union[str, list[str]],
+    bitwidth: Union[int, list[int]] = None,
+    wvtype: type[WireVector] = WireVector,
+) -> list[WireVector]:
     """Allocate and return a list of :class:`WireVectors<WireVector>`.
 
     The strings in ``names`` can also contain an additional bitwidth specification,
@@ -605,9 +661,9 @@ def wirevector_list(names: Union[str, list[str]],
 
     .. WARNING::
 
-        Avoid using this function. Create lists of :class:`WireVectors<WireVector>` with list
-        comprehensions, which are easier to understand because they compose familiar
-        concepts, rather than introducing a new concept::
+        Avoid using this function. Create lists of :class:`WireVectors<WireVector>` with
+        list comprehensions, which are easier to understand because they compose
+        familiar concepts, rather than introducing a new concept::
 
             [WireVector(name) for name in ['name1', 'name2', 'name3']]
             [Input(name) for name in 'input1 input2 input3'.split(' ')]
@@ -619,9 +675,9 @@ def wirevector_list(names: Union[str, list[str]],
     :param wvtype: The :class:`WireVector` type to create.
     """
     if isinstance(names, str):
-        names = names.replace(',', ' ').split()
+        names = names.replace(",", " ").split()
 
-    if any('/' in name for name in names) and bitwidth is not None:
+    if any("/" in name for name in names) and bitwidth is not None:
         raise PyrtlError('only one of optional "/" or bitwidth parameter allowed')
 
     if bitwidth is None:
@@ -629,13 +685,17 @@ def wirevector_list(names: Union[str, list[str]],
     if isinstance(bitwidth, numbers.Integral):
         bitwidth = [bitwidth] * len(names)
     if len(bitwidth) != len(names):
-        raise ValueError('number of names ' + str(len(names))
-                         + ' should match number of bitwidths ' + str(len(bitwidth)))
+        raise ValueError(
+            "number of names "
+            + str(len(names))
+            + " should match number of bitwidths "
+            + str(len(bitwidth))
+        )
 
     wirelist = []
     for fullname, bw in zip(names, bitwidth):
         try:
-            name, bw = fullname.split('/')
+            name, bw = fullname.split("/")
         except ValueError:
             name, bw = fullname, bw
         wirelist.append(wvtype(bitwidth=int(bw), name=name))
@@ -678,9 +738,9 @@ def val_to_signed_integer(value: int, bitwidth: int) -> int:
     :return: ``value`` as a signed integer
     """
     if isinstance(value, WireVector) or isinstance(bitwidth, WireVector):
-        raise PyrtlError('inputs must not be wirevectors')
+        raise PyrtlError("inputs must not be wirevectors")
     if bitwidth < 1:
-        raise PyrtlError('bitwidth must be a positive integer')
+        raise PyrtlError("bitwidth must be a positive integer")
 
     neg_mask = 1 << (bitwidth - 1)
     neg_part = value & neg_mask
@@ -733,27 +793,28 @@ def formatted_str_to_val(data: str, format: str, enum_set=None) -> int:
     :return: ``data`` as a signed integer
     """
     type = format[0]
-    bitwidth = int(format[1:].split('/')[0])
+    bitwidth = int(format[1:].split("/")[0])
     bitmask = (1 << bitwidth) - 1
-    if type == 's':
+    if type == "s":
         rval = int(data) & bitmask
-    elif type == 'x':
+    elif type == "x":
         rval = int(data, 16)
-    elif type == 'b':
+    elif type == "b":
         rval = int(data, 2)
-    elif type == 'u':
+    elif type == "u":
         rval = int(data)
         if rval < 0:
-            raise PyrtlError('unsigned format requested, but negative value provided')
-    elif type == 'e':
-        enumname = format.split('/')[1]
+            raise PyrtlError("unsigned format requested, but negative value provided")
+    elif type == "e":
+        enumname = format.split("/")[1]
         enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
         if len(enum_inst_list) == 0:
-            raise PyrtlError('enum "{}" not found in passed enum_set "{}"'
-                             .format(enumname, enum_set))
+            raise PyrtlError(
+                'enum "{}" not found in passed enum_set "{}"'.format(enumname, enum_set)
+            )
         rval = getattr(enum_inst_list[0], data).value
     else:
-        raise PyrtlError('unknown format type {}'.format(format))
+        raise PyrtlError("unknown format type {}".format(format))
     return rval
 
 
@@ -799,29 +860,31 @@ def val_to_formatted_str(val: int, format: str, enum_set=None) -> str:
     :return: a human-readable string representing `val`.
     """
     type = format[0]
-    bitwidth = int(format[1:].split('/')[0])
-    if type == 's':
+    bitwidth = int(format[1:].split("/")[0])
+    if type == "s":
         rval = str(val_to_signed_integer(val, bitwidth))
-    elif type == 'x':
+    elif type == "x":
         rval = hex(val)[2:]  # cuts off '0x' at the start
-    elif type == 'b':
+    elif type == "b":
         rval = bin(val)[2:]  # cuts off '0b' at the start
-    elif type == 'u':
+    elif type == "u":
         rval = str(int(val))  # nothing fancy
-    elif type == 'e':
-        enumname = format.split('/')[1]
+    elif type == "e":
+        enumname = format.split("/")[1]
         enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
         if len(enum_inst_list) == 0:
-            raise PyrtlError('enum "{}" not found in passed enum_set "{}"'
-                             .format(enumname, enum_set))
+            raise PyrtlError(
+                'enum "{}" not found in passed enum_set "{}"'.format(enumname, enum_set)
+            )
         rval = enum_inst_list[0](val).name
     else:
-        raise PyrtlError('unknown format type {}'.format(format))
+        raise PyrtlError("unknown format type {}".format(format))
     return rval
 
 
 class ValueBitwidthTuple(NamedTuple):
     """Return type for :func:`infer_val_and_bitwidth`."""
+
     value: int
     """Inferred value."""
     bitwidth: int
@@ -829,8 +892,8 @@ class ValueBitwidthTuple(NamedTuple):
 
 
 def infer_val_and_bitwidth(
-        rawinput: Union[int, bool, str], bitwidth: int = None,
-        signed: bool = False) -> ValueBitwidthTuple:
+    rawinput: Union[int, bool, str], bitwidth: int = None, signed: bool = False
+) -> ValueBitwidthTuple:
     """Return a ``(value, bitwidth)`` :class:`tuple` inferred from the specified input.
 
     Given a boolean, integer, or verilog-style string constant, this function returns a
@@ -881,24 +944,28 @@ def infer_val_and_bitwidth(
     elif isinstance(rawinput, str):
         return _convert_verilog_str(rawinput, bitwidth, signed)
     else:
-        raise PyrtlError('error, the value provided is of an improper type, "%s"'
-                         'proper types are bool, int, and string' % type(rawinput))
+        raise PyrtlError(
+            'error, the value provided is of an improper type, "%s"'
+            "proper types are bool, int, and string" % type(rawinput)
+        )
 
 
-def _convert_bool(bool_val: bool, bitwidth: int = None,
-                  signed: bool = False) -> ValueBitwidthTuple:
+def _convert_bool(
+    bool_val: bool, bitwidth: int = None, signed: bool = False
+) -> ValueBitwidthTuple:
     if signed:
-        raise PyrtlError('error, booleans cannot be signed (convert to int first)')
+        raise PyrtlError("error, booleans cannot be signed (convert to int first)")
     num = int(bool_val)
     if bitwidth is None:
         bitwidth = 1
     if bitwidth != 1:
-        raise PyrtlError('error, boolean has bitwidth not equal to 1')
+        raise PyrtlError("error, boolean has bitwidth not equal to 1")
     return ValueBitwidthTuple(num, bitwidth)
 
 
-def _convert_int(val: numbers.Integral, bitwidth: int = None,
-                 signed: bool = False) -> ValueBitwidthTuple:
+def _convert_int(
+    val: numbers.Integral, bitwidth: int = None, signed: bool = False
+) -> ValueBitwidthTuple:
     # Convert val from numbers.Integral to int. This avoids issues with
     # limited-precision types like numpy.int32.
     val = int(val)
@@ -906,7 +973,9 @@ def _convert_int(val: numbers.Integral, bitwidth: int = None,
     if val >= 0:
         num = val
         # infer bitwidth if it is not specified explicitly
-        min_bitwidth = len(bin(num)) - 2  # the -2 for the "0b" at the start of the string
+        min_bitwidth = (
+            len(bin(num)) - 2
+        )  # the -2 for the "0b" at the start of the string
         if signed and val != 0:
             min_bitwidth += 1  # extra bit needed for the zero
 
@@ -914,96 +983,112 @@ def _convert_int(val: numbers.Integral, bitwidth: int = None,
             bitwidth = min_bitwidth
         elif bitwidth < min_bitwidth:
             raise PyrtlError(
-                f'bitwidth specified ({bitwidth}) is insufficient to '
-                f'represent constant {val}')
+                f"bitwidth specified ({bitwidth}) is insufficient to "
+                f"represent constant {val}"
+            )
 
     else:  # val is negative
         if not signed and bitwidth is None:
             raise PyrtlError(
-                f'negative constant {val} requires either signed=True or '
-                'specified bitwidth')
+                f"negative constant {val} requires either signed=True or "
+                "specified bitwidth"
+            )
 
         if bitwidth is None:
             bitwidth = 1 if val == -1 else len(bin(~val)) - 1
 
         if (val >> bitwidth - 1) != -1:
             raise PyrtlError(
-                f'insufficient bits ({bitwidth}) for negative number {val}')
+                f"insufficient bits ({bitwidth}) for negative number {val}"
+            )
 
         num = val & ((1 << bitwidth) - 1)  # result is a two's complement value
     return ValueBitwidthTuple(num, bitwidth)
 
 
-def _convert_verilog_str(val: str, bitwidth: int = None,
-                         signed: bool = False) -> ValueBitwidthTuple:
+def _convert_verilog_str(
+    val: str, bitwidth: int = None, signed: bool = False
+) -> ValueBitwidthTuple:
     if signed:
-        raise PyrtlError('error, "signed" option with verilog-style string constants not supported')
+        raise PyrtlError(
+            'error, "signed" option with verilog-style string constants not supported'
+        )
 
-    bases = {'b': 2, 'o': 8, 'd': 10, 'h': 16, 'x': 16}
+    bases = {"b": 2, "o": 8, "d": 10, "h": 16, "x": 16}
 
     neg = False
-    if val.startswith('-'):
+    if val.startswith("-"):
         neg = True
         val = val[1:]
 
     split_string = val.lower().split("'")
     if len(split_string) != 2:
-        raise PyrtlError('error, string not in verilog style format')
+        raise PyrtlError("error, string not in verilog style format")
     try:
         verilog_bitwidth = int(split_string[0])
-        bitwidth = bitwidth or verilog_bitwidth  # if bitwidth is None, use verilog_bitwidth
+        bitwidth = (
+            bitwidth or verilog_bitwidth
+        )  # if bitwidth is None, use verilog_bitwidth
         if verilog_bitwidth > bitwidth:
             raise PyrtlError(
-                "bitwidth parameter passed (%d) cannot fit Verilog-style constant with bitwidth %d"
-                % (bitwidth, verilog_bitwidth)
-                + " (if bitwidth=None is used, PyRTL will determine the bitwidth from the "
-                "Verilog-style constant specification)"
+                f"bitwidth parameter passed ({bitwidth}) cannot fit Verilog-style "
+                f"constant with bitwidth {verilog_bitwidth} (if bitwidth=None is used, "
+                "PyRTL will determine the bitwidth from the Verilog-style constant "
+                "specification)"
             )
 
         sval = split_string[1]
-        if sval[0] == 's':
-            raise PyrtlError('error, signed integers are not supported in Verilog-style constants')
+        if sval[0] == "s":
+            raise PyrtlError(
+                "error, signed integers are not supported in Verilog-style constants"
+            )
         base = 10
         if sval[0] in bases:
             base = bases[sval[0]]
             sval = sval[1:]
-        sval = sval.replace('_', '')
+        sval = sval.replace("_", "")
         num = int(sval, base)
     except (IndexError, ValueError):
-        raise PyrtlError('error, string not in verilog style format')
+        raise PyrtlError("error, string not in verilog style format")
 
     if neg and num:
-        if (num >> bitwidth - 1):
-            raise PyrtlError('error, insufficient bits for negative number')
+        if num >> bitwidth - 1:
+            raise PyrtlError("error, insufficient bits for negative number")
         num = (1 << bitwidth) - num
 
     if num >> bitwidth != 0:
-        raise PyrtlError('specified bitwidth %d for verilog constant insufficient to store value %d'
-                         % (bitwidth, num))
+        raise PyrtlError(
+            "specified bitwidth %d for verilog constant insufficient to store value %d"
+            % (bitwidth, num)
+        )
 
     return ValueBitwidthTuple(num, bitwidth)
 
 
 def get_stacks(*wires):
-    call_stack = getattr(wires[0], 'init_call_stack', None)
+    call_stack = getattr(wires[0], "init_call_stack", None)
     if not call_stack:
-        return '    No call info found for wires: use set_debug_mode() ' \
-               'to provide more information\n'
+        return (
+            "    No call info found for wires: use set_debug_mode() "
+            "to provide more information\n"
+        )
     else:
-        return '\n'.join(str(wire) + ":\n" + get_stack(wire) for wire in wires)
+        return "\n".join(str(wire) + ":\n" + get_stack(wire) for wire in wires)
 
 
 def get_stack(wire):
     if not isinstance(wire, WireVector):
-        raise PyrtlError('Only WireVectors can be traced')
+        raise PyrtlError("Only WireVectors can be traced")
 
-    call_stack = getattr(wire, 'init_call_stack', None)
+    call_stack = getattr(wire, "init_call_stack", None)
     if call_stack:
-        frames = ' '.join(frame for frame in call_stack[:-1])
+        frames = " ".join(frame for frame in call_stack[:-1])
         return "Wire Traceback, most recent call last \n" + frames + "\n"
     else:
-        return '    No call info found for wire: use set_debug_mode()'\
-               ' to provide more information'
+        return (
+            "    No call info found for wire: use set_debug_mode()"
+            " to provide more information"
+        )
 
 
 def _check_for_loop(block=None):
@@ -1013,7 +1098,9 @@ def _check_for_loop(block=None):
     prev_logic_left = len(logic_left) + 1
     while prev_logic_left > len(logic_left):
         prev_logic_left = len(logic_left)
-        nets_to_remove = set()  # bc it's not safe to mutate a set inside its own iterator
+        nets_to_remove = (
+            set()
+        )  # bc it's not safe to mutate a set inside its own iterator
         for net in logic_left:
             if not any(n_wire in wires_left for n_wire in net.args):
                 nets_to_remove.add(net)
@@ -1053,7 +1140,8 @@ def find_loop(block=None):
     current_wires = set()
     checking_stack = [_FilteringState(initial_w)]
 
-    # we don't use a recursive method as Python has a limited stack (default: 999 frames)
+    # we don't use a recursive method as Python has a limited stack (default: 999
+    # frames)
     while checking_stack:
         cur_item = checking_stack[-1]
         if cur_item.arg_num == -1:
@@ -1063,7 +1151,7 @@ def find_loop(block=None):
                 continue
             current_wires.add(cur_item.dst_w)
             cur_item.net = dest_nets[cur_item.dst_w]
-            if cur_item.net.op == 'r':
+            if cur_item.net.op == "r":
                 dead_end()
                 continue
         cur_item.arg_num += 1  # go to the next item
@@ -1097,13 +1185,12 @@ def print_loop(loop_data):
         print("No Loop Found")
     else:
         print("Loop found:")
-        print('\n'.join("{}".format(fs.net) for fs in loop_data))
-        # print '\n'.join("{} (dest wire: {})".format(fs.net, fs.dst_w) for fs in loop_info)
+        print("\n".join("{}".format(fs.net) for fs in loop_data))
         print("")
 
 
 def _currently_in_jupyter_notebook():
-    """ Return true if running under Jupyter notebook, otherwise return False.
+    """Return true if running under Jupyter notebook, otherwise return False.
 
     We want to check for more than just the presence of __IPYTHON__ because
     that is present in both Jupyter notebooks and IPython terminals.
@@ -1111,31 +1198,33 @@ def _currently_in_jupyter_notebook():
     try:
         # get_ipython() is in the global namespace when ipython is started
         shell = get_ipython().__class__.__name__
-        if shell == 'ZMQInteractiveShell':
-            return True   # Jupyter notebook or qtconsole
-        elif shell == 'TerminalInteractiveShell':
+        if shell == "ZMQInteractiveShell":
+            return True  # Jupyter notebook or qtconsole
+        elif shell == "TerminalInteractiveShell":
             return False  # Terminal running IPython
         else:
             return False  # Other type
     except NameError:
-        return False      # Probably standard Python interpreter
+        return False  # Probably standard Python interpreter
 
 
 def _print_netlist_latex(netlist):
-    """ Print each net in netlist in a Latex array """
+    """Print each net in netlist in a Latex array"""
     from IPython.display import Latex, display  # pylint: disable=import-error
-    out = '\n\\begin{array}{ \\| c \\| c \\| l \\| }\n'
-    out += '\n\\hline\n'
-    out += '\\hline\n'.join(str(n) for n in netlist)
-    out += '\\hline\n\\end{array}\n'
+
+    out = "\n\\begin{array}{ \\| c \\| c \\| l \\| }\n"
+    out += "\n\\hline\n"
+    out += "\\hline\n".join(str(n) for n in netlist)
+    out += "\\hline\n\\end{array}\n"
     display(Latex(out))
 
 
 class _NetCount:
-    """ Helper class to track when to stop an iteration that depends on number of nets
+    """Helper class to track when to stop an iteration that depends on number of nets
 
     Mainly useful for iterations that are for optimization
     """
+
     def __init__(self, block=None):
         self.block = working_block(block)
         self.prev_nets = len(self.block.logic) * 1000
@@ -1157,7 +1246,7 @@ class _NetCount:
             block = self.block
         cur_nets = len(block.logic)
         net_goal = self.prev_nets * (1 - percent_diff) - abs_diff
-        less_nets = (cur_nets <= net_goal)
+        less_nets = cur_nets <= net_goal
         self.prev_nets = cur_nets
         return less_nets
 
@@ -1167,13 +1256,17 @@ class _NetCount:
 # _ComponentMeta holds the component's name, bitwidth, and type. If the
 # _ComponentMeta's type is None, then the default component_type should be used
 # instead.
-_ComponentMeta = collections.namedtuple('_ComponentMeta',
-                                        ['name', 'bitwidth', 'type'])
+_ComponentMeta = collections.namedtuple("_ComponentMeta", ["name", "bitwidth", "type"])
 
 
-def _make_component(component_meta: _ComponentMeta, block: Block, name: str,
-                    component_type, component_value):
-    '''Determine the component's type, instantiate it, and set its value.'''
+def _make_component(
+    component_meta: _ComponentMeta,
+    block: Block,
+    name: str,
+    component_type,
+    component_value,
+):
+    """Determine the component's type, instantiate it, and set its value."""
     # Determine the component's actual type.
     #
     # If the _ComponentMeta specifies a type, then the component is a
@@ -1188,16 +1281,16 @@ def _make_component(component_meta: _ComponentMeta, block: Block, name: str,
     else:
         actual_component_type = component_meta.type
 
-    component_name = ''
+    component_name = ""
     if len(name) > 0:
         if isinstance(component_meta.name, str):
             # wire_struct components are named with strings and printed with
             # dots, like `struct.component`.
-            component_name = name + '.' + component_meta.name
+            component_name = name + "." + component_meta.name
         else:
             # wire_matrix components are numbered with integers and printed
             # with brackets, like `matrix[0]`.
-            component_name = name + '[' + str(component_meta.name) + ']'
+            component_name = name + "[" + str(component_meta.name) + "]"
 
     # The logic below always creates a new wire_struct, wire_matrix, or
     # WireVector for each component. If the component_value already has the
@@ -1208,35 +1301,36 @@ def _make_component(component_meta: _ComponentMeta, block: Block, name: str,
     # Components are always initialized with one concatenated component_value,
     # which provides values for all its wires. This implies that component
     # wire_structs and wire_matricies always call _split().
-    if hasattr(actual_component_type, '_is_wire_struct'):
+    if hasattr(actual_component_type, "_is_wire_struct"):
         # Make a wire_struct component. component_value may be None.
-        component_kwargs = {
-            actual_component_type._class_name: component_value
-        }
+        component_kwargs = {actual_component_type._class_name: component_value}
         component = actual_component_type(
             name=component_name,
             block=block,
             concatenated_type=component_type,
-            **component_kwargs)
-    elif hasattr(actual_component_type, '_is_wire_matrix'):
+            **component_kwargs,
+        )
+    elif hasattr(actual_component_type, "_is_wire_matrix"):
         # Make a wire_matrix component. component_value may be None.
         component = actual_component_type(
             name=component_name,
             block=block,
             concatenated_type=component_type,
-            values=[component_value])
-    elif (isinstance(component_value, int)
-          and actual_component_type is WireVector):
+            values=[component_value],
+        )
+    elif isinstance(component_value, int) and actual_component_type is WireVector:
         # Special case: simplify the component type to Const.
         component = Const(
-            bitwidth=component_meta.bitwidth, name=component_name,
-            block=block, val=component_value)
+            bitwidth=component_meta.bitwidth,
+            name=component_name,
+            block=block,
+            val=component_value,
+        )
     else:
         # Make a WireVector component.
         component = actual_component_type(
-            bitwidth=component_meta.bitwidth,
-            name=component_name,
-            block=block)
+            bitwidth=component_meta.bitwidth, name=component_name, block=block
+        )
         if component_value is not None:
             component <<= component_value
 
@@ -1244,26 +1338,28 @@ def _make_component(component_meta: _ComponentMeta, block: Block, name: str,
 
 
 def _bitslice(value: int, start: int, end: int) -> int:
-    '''Slice an integer value bitwise, from start to end.'''
+    """Slice an integer value bitwise, from start to end."""
     mask = (1 << (end - start)) - 1
     return (value >> start) & mask
 
 
-def _slice(block: Block,
-           schema: list[_ComponentMeta],
-           bitwidth: int,
-           component_type: type,
-           name: str,
-           concatenated,
-           components,
-           concatenated_value):
-    '''Slice ``concatenated`` into components.
+def _slice(
+    block: Block,
+    schema: list[_ComponentMeta],
+    bitwidth: int,
+    component_type: type,
+    name: str,
+    concatenated,
+    components,
+    concatenated_value,
+):
+    """Slice ``concatenated`` into components.
 
     ``concatenated_value`` is the driver for ``concatenated``. Some
     optimizations are possible by inspecting ``concatenated_value``, for
     example we immediately slice Consts rather than generating slicing logic.
 
-    '''
+    """
     if concatenated_value is not None and not isinstance(concatenated, Const):
         concatenated <<= concatenated_value
 
@@ -1271,37 +1367,48 @@ def _slice(block: Block,
     for component_meta in schema:
         if isinstance(concatenated_value, int):
             # Special case: immediately slice Const values.
-            component_value = _bitslice(concatenated_value,
-                                        end_index - component_meta.bitwidth,
-                                        end_index)
+            component_value = _bitslice(
+                concatenated_value, end_index - component_meta.bitwidth, end_index
+            )
         else:
             component_value = concatenated[
-                end_index - component_meta.bitwidth:end_index]
+                end_index - component_meta.bitwidth : end_index
+            ]
 
         end_index -= component_meta.bitwidth
 
-        component = _make_component(component_meta=component_meta, block=block,
-                                    name=name, component_type=component_type,
-                                    component_value=component_value)
+        component = _make_component(
+            component_meta=component_meta,
+            block=block,
+            name=name,
+            component_type=component_type,
+            component_value=component_value,
+        )
 
         components[component_meta.name] = component
 
 
-def _concatenate(block: Block,
-                 schema: list[_ComponentMeta],
-                 component_type: type,
-                 name: str,
-                 concatenated,
-                 components,
-                 component_map):
-    '''Concatenate components from ``component_map`` to ``concatenated``.'''
+def _concatenate(
+    block: Block,
+    schema: list[_ComponentMeta],
+    component_type: type,
+    name: str,
+    concatenated,
+    components,
+    component_map,
+):
+    """Concatenate components from ``component_map`` to ``concatenated``."""
     all_components = []
     for component_meta in schema:
         component_value = component_map[component_meta.name]
 
-        component = _make_component(component_meta=component_meta, block=block,
-                                    name=name, component_type=component_type,
-                                    component_value=component_value)
+        component = _make_component(
+            component_meta=component_meta,
+            block=block,
+            name=name,
+            component_type=component_type,
+            component_value=component_value,
+        )
 
         components[component_meta.name] = component
         all_components.append(component)
@@ -1497,8 +1604,7 @@ def wire_struct(wire_struct_spec):
     #
     # dict iteration order is guaranteed to be insertion order in Python 3.7+.
     schema = []
-    for component_name, component_bitwidth in (
-            wire_struct_spec.__annotations__.items()):
+    for component_name, component_bitwidth in wire_struct_spec.__annotations__.items():
         # This is a hack for doctests, which convert all __annotations__ to str due to
         # its use of `exec`.
         if isinstance(component_bitwidth, str):
@@ -1507,15 +1613,21 @@ def wire_struct(wire_struct_spec):
         if isinstance(component_bitwidth, int):
             # An ordinary component ("foo: 4") that should use the default
             # component_type.
-            schema.append(_ComponentMeta(
-                name=component_name, bitwidth=component_bitwidth,
-                type=None))
+            schema.append(
+                _ComponentMeta(
+                    name=component_name, bitwidth=component_bitwidth, type=None
+                )
+            )
         else:
             # A nested component ("bar: Byte") that must use the nested
             # component's type.
-            schema.append(_ComponentMeta(
-                name=component_name, bitwidth=component_bitwidth._bitwidth,
-                type=component_bitwidth))
+            schema.append(
+                _ComponentMeta(
+                    name=component_name,
+                    bitwidth=component_bitwidth._bitwidth,
+                    type=component_bitwidth,
+                )
+            )
 
     total_bitwidth = sum([component.bitwidth for component in schema])
 
@@ -1523,7 +1635,7 @@ def wire_struct(wire_struct_spec):
     class_name = wire_struct_spec.__name__
 
     class _WireStruct(WrappedWireVector):
-        '''``wire_struct`` implementation: Concatenate or slice :class:`WireVector`.
+        """``wire_struct`` implementation: Concatenate or slice :class:`WireVector`.
 
         ``wire_struct`` works by either concatenating component :class:`WireVector`
         to create the ``wire_struct``'s full value, *or* slicing a
@@ -1531,15 +1643,21 @@ def wire_struct(wire_struct_spec):
         ``wire_struct`` can only concatenate or slice, not both. The decision
         to concatenate or slice is made in __init__.
 
-        '''
+        """
+
         _bitwidth = total_bitwidth
         _class_name = class_name
         _is_wire_struct = True
 
-        def __init__(self, name='', block=None,
-                     concatenated_type=WireVector, component_type=WireVector,
-                     **kwargs):
-            '''Concatenate or slice :class:`WireVector` components.
+        def __init__(
+            self,
+            name="",
+            block=None,
+            concatenated_type=WireVector,
+            component_type=WireVector,
+            **kwargs,
+        ):
+            """Concatenate or slice :class:`WireVector` components.
 
             :param str name: The name of the concatenated wire. Must be unique.
                 If none is provided, one will be autogenerated. If a name is
@@ -1569,87 +1687,108 @@ def wire_struct(wire_struct_spec):
 
                 byte = Byte(low=0xA, high=0xB)
 
-            '''
+            """
             # The concatenated WireVector contains all the _WireStruct's wires.
             # WrappedWireVector (base class) will forward all attribute and
             # method accesses on this _WireStruct to the concatenated
             # WireVector.
-            if ((class_name in kwargs and isinstance(kwargs[class_name], int)
-                 and concatenated_type is WireVector)):
+            if (
+                class_name in kwargs
+                and isinstance(kwargs[class_name], int)
+                and concatenated_type is WireVector
+            ):
                 # Special case: simplify the concatenated type to Const.
                 concatenated = Const(
-                    bitwidth=self._bitwidth, name=name, block=block,
-                    val=kwargs[class_name])
+                    bitwidth=self._bitwidth,
+                    name=name,
+                    block=block,
+                    val=kwargs[class_name],
+                )
             else:
                 concatenated = concatenated_type(
-                    bitwidth=self._bitwidth, name=name, block=block)
+                    bitwidth=self._bitwidth, name=name, block=block
+                )
             super().__init__(wire=concatenated)
 
             # self._components maps from component name to each component's
             # WireVector.
             components = {}
-            self.__dict__['_components'] = components
+            self.__dict__["_components"] = components
 
             # Handle Input and Register special cases.
             if concatenated_type is Input or concatenated_type is Register:
                 kwargs = {class_name: None}
             elif component_type is Input or component_type is Register:
-                kwargs = {component_meta.name: None
-                          for component_meta in schema}
+                kwargs = {component_meta.name: None for component_meta in schema}
 
             if class_name in kwargs:
                 # Check for unused kwargs.
                 for component_name in kwargs:
                     if component_name != class_name:
                         raise PyrtlError(
-                            'Do not pass additional kwargs to @wire_struct '
+                            "Do not pass additional kwargs to @wire_struct "
                             f'when slicing. ("{class_name}" was passed so '
-                            f'don\'t pass "{component_name}")')
+                            f'don\'t pass "{component_name}")'
+                        )
                 # Concatenated value was provided. Slice it into components.
-                _slice(block=block, schema=schema, bitwidth=self._bitwidth,
-                       component_type=component_type, name=name,
-                       concatenated=concatenated, components=components,
-                       concatenated_value=kwargs[class_name])
+                _slice(
+                    block=block,
+                    schema=schema,
+                    bitwidth=self._bitwidth,
+                    component_type=component_type,
+                    name=name,
+                    concatenated=concatenated,
+                    components=components,
+                    concatenated_value=kwargs[class_name],
+                )
             else:
                 # Component values were provided; concatenate them.
                 # Check that values were provided for all components.
-                expected_component_names = (
-                    [component_meta.name for component_meta in schema])
+                expected_component_names = [
+                    component_meta.name for component_meta in schema
+                ]
                 for expected_component_name in expected_component_names:
                     if expected_component_name not in kwargs:
                         raise PyrtlError(
-                            'You must provide kwargs for all @wire_struct '
-                            'components when concatenating (missing kwarg '
-                            f'"{expected_component_name}")')
+                            "You must provide kwargs for all @wire_struct "
+                            "components when concatenating (missing kwarg "
+                            f'"{expected_component_name}")'
+                        )
                 # Check for unused kwargs.
                 for component_name in kwargs:
                     if component_name not in expected_component_names:
                         raise PyrtlError(
-                            'Do not pass additional kwargs to @wire_struct '
-                            'when concatenating (don\'t pass '
-                            f'"{component_name}")')
+                            "Do not pass additional kwargs to @wire_struct "
+                            "when concatenating (don't pass "
+                            f'"{component_name}")'
+                        )
 
-                _concatenate(block=block, schema=schema,
-                             component_type=component_type, name=name,
-                             concatenated=concatenated, components=components,
-                             component_map=kwargs)
+                _concatenate(
+                    block=block,
+                    schema=schema,
+                    component_type=component_type,
+                    name=name,
+                    concatenated=concatenated,
+                    components=components,
+                    component_map=kwargs,
+                )
 
         def __getattr__(self, component_name: str):
-            '''Retrieve a component by name.
+            """Retrieve a component by name.
 
             Components are concatenated to form the concatenated
             :class:`WireVector`, or sliced from the concatenated :class:`WireVector`.
 
             :param component_name: The name of the component wire.
 
-            '''
-            components = self.__dict__['_components']
+            """
+            components = self.__dict__["_components"]
             if component_name in components:
                 return components[component_name]
             return super().__getattr__(component_name)
 
         def __len__(self):
-            components = self.__dict__['_components']
+            components = self.__dict__["_components"]
             return len(components)
 
     return _WireStruct
@@ -1797,8 +1936,9 @@ def wire_matrix(component_schema, size: int):
 
     """
     # Determine each component's bitwidth.
-    if ((hasattr(component_schema, '_is_wire_struct')
-         or hasattr(component_schema, '_is_wire_matrix'))):
+    if hasattr(component_schema, "_is_wire_struct") or hasattr(
+        component_schema, "_is_wire_matrix"
+    ):
         component_bitwidth = component_schema._bitwidth
     else:
         component_bitwidth = component_schema
@@ -1812,29 +1952,42 @@ def wire_matrix(component_schema, size: int):
         _bitwidth = component_bitwidth * size
         _is_wire_matrix = True
 
-        def __init__(self, name: str = '', block: Block = None,
-                     concatenated_type=WireVector, component_type=WireVector,
-                     values: list = []):
+        def __init__(
+            self,
+            name: str = "",
+            block: Block = None,
+            concatenated_type=WireVector,
+            component_type=WireVector,
+            values: list = [],
+        ):
             # The concatenated WireVector contains all the _WireMatrix's wires.
             # WrappedWireVector (base class) will forward all attribute and
             # method accesses on this _WireMatrix to the concatenated
             # WireVector.
-            if ((len(values) == 1 and isinstance(values[0], int)
-                 and concatenated_type is WireVector)):
+            if (
+                len(values) == 1
+                and isinstance(values[0], int)
+                and concatenated_type is WireVector
+            ):
                 # Special case: simplify the concatenated type to Const.
                 concatenated = Const(
-                    bitwidth=self._bitwidth, name=name, block=block,
-                    val=values[0])
+                    bitwidth=self._bitwidth, name=name, block=block, val=values[0]
+                )
             else:
                 concatenated = concatenated_type(
-                    bitwidth=self._bitwidth, name=name, block=block)
+                    bitwidth=self._bitwidth, name=name, block=block
+                )
             super().__init__(wire=concatenated)
 
             schema = []
             for component_name in range(self._size):
-                schema.append(_ComponentMeta(
-                    name=component_name, bitwidth=self._component_bitwidth,
-                    type=component_schema))
+                schema.append(
+                    _ComponentMeta(
+                        name=component_name,
+                        bitwidth=self._component_bitwidth,
+                        type=component_schema,
+                    )
+                )
 
             # By default, slice the concatenated value into components iff
             # exactly one value is provided.
@@ -1866,21 +2019,33 @@ def wire_matrix(component_schema, size: int):
             self._components = [None for i in range(len(schema))]
             if slicing:
                 # Concatenated value was provided. Slice it into components.
-                _slice(block=block, schema=schema, bitwidth=self._bitwidth,
-                       component_type=component_type, name=name,
-                       concatenated=concatenated, components=self._components,
-                       concatenated_value=values[0])
+                _slice(
+                    block=block,
+                    schema=schema,
+                    bitwidth=self._bitwidth,
+                    component_type=component_type,
+                    name=name,
+                    concatenated=concatenated,
+                    components=self._components,
+                    concatenated_value=values[0],
+                )
             else:
                 if len(values) != len(schema):
                     raise PyrtlError(
-                        'wire_matrix constructor expects 1 value to slice, or '
-                        f'{len(schema)} values to concatenate (received '
-                        f'{len(values)} values)')
+                        "wire_matrix constructor expects 1 value to slice, or "
+                        f"{len(schema)} values to concatenate (received "
+                        f"{len(values)} values)"
+                    )
                 # Component values were provided; concatenate them.
-                _concatenate(block=block, schema=schema,
-                             component_type=component_type, name=name,
-                             concatenated=concatenated,
-                             components=self._components, component_map=values)
+                _concatenate(
+                    block=block,
+                    schema=schema,
+                    component_type=component_type,
+                    name=name,
+                    concatenated=concatenated,
+                    components=self._components,
+                    component_map=values,
+                )
 
         def __getitem__(self, key):
             return self._components[key]
@@ -1952,7 +2117,9 @@ def one_hot_to_binary(w: WireVectorLike) -> WireVector:
     return pos
 
 
-def binary_to_one_hot(bit_position: WireVectorLike, max_bitwidth: int = None) -> WireVector:
+def binary_to_one_hot(
+    bit_position: WireVectorLike, max_bitwidth: int = None
+) -> WireVector:
     """Given a ``bit_position``, return a :class:`WireVector` with only that bit set to
     ``1``.
 
@@ -2000,5 +2167,6 @@ def binary_to_one_hot(bit_position: WireVectorLike, max_bitwidth: int = None) ->
     else:
         bitwidth = 2 ** len(bit_position)
 
-    # Need to dynamically set the appropriate bit position since bit_position may not be a Const
+    # Need to dynamically set the appropriate bit position since bit_position may not be
+    # a Const
     return shift_left_logical(Const(1, bitwidth=bitwidth), bit_position)

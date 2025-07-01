@@ -10,6 +10,7 @@ gen_in = utils.an_input_and_vals
 
 class TestDocTests(unittest.TestCase):
     """Test documentation examples."""
+
     def test_doctests(self):
         failures, tests = doctest.testmod(m=pyrtl.rtllib.muxes)
         self.assertGreater(tests, 0)
@@ -65,18 +66,24 @@ class TestPrioritizedMuxSim(unittest.TestCase):
         out = pyrtl.Output(val_width, "out")
         out <<= muxes.prioritized_mux(sels, mux_ins)
         actual = utils.sim_and_ret_out(out, sels + mux_ins, sel_vals + vals)
-        expected = [pri_mux_actual(sel, val) for sel, val in zip(zip(*sel_vals), zip(*vals))]
+        expected = [
+            pri_mux_actual(sel, val) for sel, val in zip(zip(*sel_vals), zip(*vals))
+        ]
         self.assertEqual(actual, expected)
 
     def test_select_with_5_wires(self):
         val_width = 5
         sels, sel_vals = utils.make_inputs_and_values(5, exact_bitwidth=1, test_vals=50)
-        mux_ins, vals = utils.make_inputs_and_values(5, exact_bitwidth=val_width, test_vals=50)
+        mux_ins, vals = utils.make_inputs_and_values(
+            5, exact_bitwidth=val_width, test_vals=50
+        )
 
         out = pyrtl.Output(val_width, "out")
         out <<= muxes.prioritized_mux(sels, mux_ins)
         actual = utils.sim_and_ret_out(out, sels + mux_ins, sel_vals + vals)
-        expected = [pri_mux_actual(sel, val) for sel, val in zip(zip(*sel_vals), zip(*vals))]
+        expected = [
+            pri_mux_actual(sel, val) for sel, val in zip(zip(*sel_vals), zip(*vals))
+        ]
         self.assertEqual(actual, expected)
 
 
@@ -174,9 +181,13 @@ class TestSmartMux(unittest.TestCase):
         sel_vals = [utils.uniform_dist(1) for i in range(20)]
         real_sel = [6 if s else 2 for s in sel_vals]
         res <<= muxes.sparse_mux(sel, {2: a1, 6: a2})
-        out_res = utils.sim_and_ret_out(res, [sel, a1, a2], [real_sel, a1_vals, a2_vals])
+        out_res = utils.sim_and_ret_out(
+            res, [sel, a1, a2], [real_sel, a1_vals, a2_vals]
+        )
 
-        expected_out = [e2 if sel else e1 for sel, e1, e2 in zip(sel_vals, a1_vals, a2_vals)]
+        expected_out = [
+            e2 if sel else e1 for sel, e1, e2 in zip(sel_vals, a1_vals, a2_vals)
+        ]
         self.assertEqual(out_res, expected_out)
 
     def test_multiple_bitwidths(self):
@@ -197,9 +208,13 @@ class TestSmartMux(unittest.TestCase):
         sel_vals = [utils.uniform_dist(1) for i in range(20)]
         real_sel = [6 if s else 5 for s in sel_vals]
         res <<= muxes.sparse_mux(sel, {5: a1, 6: a2})
-        out_res = utils.sim_and_ret_out(res, [sel, a1, a2], [real_sel, a1_vals, a2_vals])
+        out_res = utils.sim_and_ret_out(
+            res, [sel, a1, a2], [real_sel, a1_vals, a2_vals]
+        )
 
-        expected_out = [e2 if sel else e1 for sel, e1, e2 in zip(sel_vals, a1_vals, a2_vals)]
+        expected_out = [
+            e2 if sel else e1 for sel, e1, e2 in zip(sel_vals, a1_vals, a2_vals)
+        ]
         self.assertEqual(out_res, expected_out)
 
 
@@ -215,11 +230,14 @@ class TestSmartMuxDefault(unittest.TestCase):
         res = pyrtl.Output(name="output")
 
         res <<= muxes.sparse_mux(sel, {5: a1, 6: a2, muxes.SparseDefault: default})
-        out_res = utils.sim_and_ret_out(res, [sel, a1, a2, default],
-                                        [sel_vals, a1_vals, a2_vals, default_vals])
+        out_res = utils.sim_and_ret_out(
+            res, [sel, a1, a2, default], [sel_vals, a1_vals, a2_vals, default_vals]
+        )
 
-        expected_out = [e2 if sel == 6 else e1 if sel == 5 else d
-                        for sel, e1, e2, d in zip(sel_vals, a1_vals, a2_vals, default_vals)]
+        expected_out = [
+            e2 if sel == 6 else e1 if sel == 5 else d
+            for sel, e1, e2, d in zip(sel_vals, a1_vals, a2_vals, default_vals)
+        ]
         self.assertEqual(out_res, expected_out)
 
 
@@ -277,11 +295,16 @@ class TestMultiSelectorSim(unittest.TestCase):
             mul_sel.option(0, i1_0, i2_0)
             mul_sel.option(1, i1_1, i2_1)
 
-        actual_outputs =\
-            utils.sim_and_ret_outws([sel, i1_0, i1_1, i2_0, i2_1],
-                                    [sel_vals, i1_0_vals, i1_1_vals, i2_0_vals, i2_1_vals])
-        expected_i1_out = [v1 if s else v0 for s, v0, v1 in zip(sel_vals, i1_0_vals, i1_1_vals)]
-        expected_i2_out = [v1 if s else v0 for s, v0, v1 in zip(sel_vals, i2_0_vals, i2_1_vals)]
+        actual_outputs = utils.sim_and_ret_outws(
+            [sel, i1_0, i1_1, i2_0, i2_1],
+            [sel_vals, i1_0_vals, i1_1_vals, i2_0_vals, i2_1_vals],
+        )
+        expected_i1_out = [
+            v1 if s else v0 for s, v0, v1 in zip(sel_vals, i1_0_vals, i1_1_vals)
+        ]
+        expected_i2_out = [
+            v1 if s else v0 for s, v0, v1 in zip(sel_vals, i2_0_vals, i2_1_vals)
+        ]
 
         self.assertEqual(actual_outputs[i1_out.name], expected_i1_out)
         self.assertEqual(actual_outputs[i2_out.name], expected_i2_out)

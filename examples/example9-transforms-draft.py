@@ -5,7 +5,6 @@ from pyrtl import transform
 
 
 def insert_random_inversions(rate=0.5):
-
     def randomly_replace(wire):
         if random.random() < rate:
             new_src, new_dst = transform.clone_wire(wire), transform.clone_wire(wire)

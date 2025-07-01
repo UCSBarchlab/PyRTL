@@ -14,8 +14,9 @@ from typing import Callable
 import pyrtl
 
 
-def kogge_stone(a: pyrtl.WireVector, b: pyrtl.WireVector,
-                cin: pyrtl.wire.WireVectorLike = 0) -> pyrtl.WireVector:
+def kogge_stone(
+    a: pyrtl.WireVector, b: pyrtl.WireVector, cin: pyrtl.wire.WireVectorLike = 0
+) -> pyrtl.WireVector:
     """Creates a Kogge-Stone adder given two inputs.
 
     The Kogge-Stone adder is a fast tree-based adder with `O(log(n))` propagation delay,
@@ -95,8 +96,12 @@ def ripple_half_add(a, cin=0):
         return pyrtl.concat(msbits, ripplecarry[1])
 
 
-def carrysave_adder(a: pyrtl.WireVector, b: pyrtl.WireVector, c: pyrtl.WireVector,
-                    final_adder: Callable = ripple_add) -> pyrtl.WireVector:
+def carrysave_adder(
+    a: pyrtl.WireVector,
+    b: pyrtl.WireVector,
+    c: pyrtl.WireVector,
+    final_adder: Callable = ripple_add,
+) -> pyrtl.WireVector:
     """Adds three :class:`WireVectors<.WireVector>` up in an efficient manner.
 
     :param a: A :class:`.WireVector` to add up. Bitwidths don't need to match.
@@ -112,8 +117,12 @@ def carrysave_adder(a: pyrtl.WireVector, b: pyrtl.WireVector, c: pyrtl.WireVecto
     return pyrtl.concat(final_adder(partial_sum[1:], shift_carry), partial_sum[0])
 
 
-def cla_adder(a: pyrtl.WireVector, b: pyrtl.WireVector, cin: pyrtl.WireVector = 0,
-              la_unit_len: int = 4) -> pyrtl.WireVector:
+def cla_adder(
+    a: pyrtl.WireVector,
+    b: pyrtl.WireVector,
+    cin: pyrtl.WireVector = 0,
+    la_unit_len: int = 4,
+) -> pyrtl.WireVector:
     """Carry Look-Ahead Adder.
 
     A Carry Look-Ahead Adder is an adder that is faster than :func:`ripple_add`, as it
@@ -161,8 +170,11 @@ def _cla_adder_unit(a, b, cin):
     return sum_bit, cout
 
 
-def wallace_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: int,
-                    final_adder: Callable = kogge_stone) -> pyrtl.WireVector:
+def wallace_reducer(
+    wire_array_2: list[list[pyrtl.WireVector]],
+    result_bitwidth: int,
+    final_adder: Callable = kogge_stone,
+) -> pyrtl.WireVector:
     """The reduction and final adding part of a dada tree.
 
     Useful for adding many numbers together with :func:`fast_group_adder`. The use of
@@ -183,11 +195,14 @@ def wallace_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth:
             if not isinstance(a_wire, pyrtl.WireVector) or len(a_wire) != 1:
                 raise pyrtl.PyrtlError(
                     "The item {} is not a valid element for the wire_array_2. "
-                    "It must be a WireVector of bitwidth 1".format(a_wire))
+                    "It must be a WireVector of bitwidth 1".format(a_wire)
+                )
 
     while not all(len(i) <= 2 for i in wire_array_2):
         deferred = [[] for weight in range(result_bitwidth + 1)]
-        for i, w_array in enumerate(wire_array_2):  # Start with low weights and start reducing
+        for i, w_array in enumerate(
+            wire_array_2
+        ):  # Start with low weights and start reducing
             while len(w_array) >= 3:
                 cout, sum = _one_bit_add_no_concat(*(w_array.pop(0) for j in range(3)))
                 deferred[i].append(sum)
@@ -210,8 +225,11 @@ def wallace_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth:
         return result
 
 
-def dada_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: int,
-                 final_adder: Callable = kogge_stone) -> pyrtl.WireVector:
+def dada_reducer(
+    wire_array_2: list[list[pyrtl.WireVector]],
+    result_bitwidth: int,
+    final_adder: Callable = kogge_stone,
+) -> pyrtl.WireVector:
     """The reduction and final adding part of a dada tree.
 
     Useful for adding many numbers together with :func:`fast_group_adder`. The use of
@@ -232,7 +250,8 @@ def dada_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: in
             if not isinstance(a_wire, pyrtl.WireVector) or len(a_wire) != 1:
                 raise pyrtl.PyrtlError(
                     "The item {} is not a valid element for the wire_array_2. "
-                    "It must be a WireVector of bitwidth 1".format(a_wire))
+                    "It must be a WireVector of bitwidth 1".format(a_wire)
+                )
 
     max_width = max(len(i) for i in wire_array_2)
     reduction_schedule = [2]
@@ -241,10 +260,14 @@ def dada_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: in
 
     for reduction_target in reversed(reduction_schedule[:-1]):
         deferred = [[] for weight in range(result_bitwidth + 1)]
-        for i, w_array in enumerate(wire_array_2):  # Start with low weights and start reducing
+        for i, w_array in enumerate(
+            wire_array_2
+        ):  # Start with low weights and start reducing
             while len(w_array) + len(deferred[i]) > reduction_target:
                 if len(w_array) + len(deferred[i]) - reduction_target >= 2:
-                    cout, sum = _one_bit_add_no_concat(*(w_array.pop(0) for j in range(3)))
+                    cout, sum = _one_bit_add_no_concat(
+                        *(w_array.pop(0) for j in range(3))
+                    )
                     deferred[i].append(sum)
                     deferred[i + 1].append(cout)
                 else:
@@ -253,7 +276,9 @@ def dada_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: in
                     deferred[i + 1].append(cout)
             deferred[i].extend(w_array)
             if len(deferred[i]) > reduction_target:
-                raise pyrtl.PyrtlError("Expected that the code would be able to reduce more wires")
+                raise pyrtl.PyrtlError(
+                    "Expected that the code would be able to reduce more wires"
+                )
         wire_array_2 = deferred[:result_bitwidth]
 
     # At this stage in the multiplication we have only 2 wire vectors left.
@@ -268,13 +293,17 @@ def dada_reducer(wire_array_2: list[list[pyrtl.WireVector]], result_bitwidth: in
 def _sparse_adder(wire_array_2, adder):
     result = []
     for single_w_index in range(len(wire_array_2)):
-        if len(wire_array_2[single_w_index]) == 2:  # Check if the two wire vectors overlap yet
+        if (
+            len(wire_array_2[single_w_index]) == 2
+        ):  # Check if the two wire vectors overlap yet
             break
         result.append(wire_array_2[single_w_index][0])
 
     wires_to_zip = wire_array_2[single_w_index:]
     add_wires = tuple(itertools.zip_longest(*wires_to_zip, fillvalue=pyrtl.Const(0)))
-    adder_result = adder(pyrtl.concat_list(add_wires[0]), pyrtl.concat_list(add_wires[1]))
+    adder_result = adder(
+        pyrtl.concat_list(add_wires[0]), pyrtl.concat_list(add_wires[1])
+    )
     return pyrtl.concat(adder_result, *reversed(result))
 
 
@@ -283,9 +312,11 @@ Some adders that utilize these tree reducers
 """
 
 
-def fast_group_adder(wires_to_add: list[pyrtl.WireVector],
-                     reducer: Callable = wallace_reducer,
-                     final_adder: Callable = kogge_stone):
+def fast_group_adder(
+    wires_to_add: list[pyrtl.WireVector],
+    reducer: Callable = wallace_reducer,
+    final_adder: Callable = kogge_stone,
+):
     """A generalization of :func:`carrysave_adder`, ``fast_group_adder`` is designed to
     add many numbers together in a both area and time efficient manner. Uses a tree
     reducer to achieve this performance.
@@ -302,6 +333,7 @@ def fast_group_adder(wires_to_add: list[pyrtl.WireVector],
     :return: A :class:`.WireVector` with the result of the addition.
     """
     import math
+
     longest_wire_len = max(len(w) for w in wires_to_add)
     result_bitwidth = longest_wire_len + int(math.ceil(math.log(len(wires_to_add), 2)))
 

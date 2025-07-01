@@ -15,7 +15,7 @@ class TestSynthesis(unittest.TestCase):
         pyrtl.reset_working_block()
         self.bitwidth = 3
         self.r = pyrtl.Register(bitwidth=self.bitwidth)
-        self.output = pyrtl.Output(bitwidth=self.bitwidth, name='r')
+        self.output = pyrtl.Output(bitwidth=self.bitwidth, name="r")
         self.output <<= self.r
 
     def check_trace(self, correct_string):
@@ -28,46 +28,46 @@ class TestSynthesis(unittest.TestCase):
         self.assertEqual(output.getvalue(), correct_string)
 
     def test_not_simulation(self):
-        self.r.next <<= ~ self.r
-        self.check_trace('r 07070707\n')
+        self.r.next <<= ~self.r
+        self.check_trace("r 07070707\n")
 
     def test_and_simulation(self):
-        self.r.next <<= (~ self.r) & pyrtl.Const(6, bitwidth=self.bitwidth)
-        self.check_trace('r 06060606\n')
+        self.r.next <<= (~self.r) & pyrtl.Const(6, bitwidth=self.bitwidth)
+        self.check_trace("r 06060606\n")
 
     def test_or_simulation(self):
         result = self.r | pyrtl.Const(4, bitwidth=self.bitwidth)
         self.r.next <<= result
         self.assertEqual(len(result), self.bitwidth)
-        self.check_trace('r 04444444\n')
+        self.check_trace("r 04444444\n")
 
     def test_xor_simulation(self):
         self.r.next <<= self.r ^ pyrtl.Const(4, bitwidth=self.bitwidth)
-        self.check_trace('r 04040404\n')
+        self.check_trace("r 04040404\n")
 
     def test_plus_simulation(self):
         self.r.next <<= self.r + pyrtl.Const(2, bitwidth=self.bitwidth)
-        self.check_trace('r 02460246\n')
+        self.check_trace("r 02460246\n")
 
     def test_minus_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1, bitwidth=self.bitwidth)
-        self.check_trace('r 07654321\n')
+        self.check_trace("r 07654321\n")
 
     def test_minus_simulation2(self):
         self.r.next <<= self.r - pyrtl.Const(3, bitwidth=self.bitwidth)
-        self.check_trace('r 05274163\n')
+        self.check_trace("r 05274163\n")
 
     def test_const_nobitwidth_simulation(self):
         self.r.next <<= self.r - pyrtl.Const(1)
-        self.check_trace('r 07654321\n')
+        self.check_trace("r 07654321\n")
 
     def test_mux_simulation(self):
         self.r.next <<= pyrtl.mux(self.r, 4, 3, 1, 7, 2, 6, 0, 5)
-        self.check_trace('r 04213756\n')
+        self.check_trace("r 04213756\n")
 
     def test_synthesize_regs_mapped_correctly(self):
         r2 = pyrtl.Register(5)
-        self.r.next <<= ~ self.r
+        self.r.next <<= ~self.r
         r2.next <<= self.r + 1
         synth_block = pyrtl.synthesize()
         self.assertEqual(len(synth_block.reg_map), 2)
@@ -78,26 +78,25 @@ class TestSynthesis(unittest.TestCase):
 class TestIOInterfaceSynthesis(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        a, b = pyrtl.input_list('a/4 b/4')
-        o = pyrtl.Output(5, 'o')
+        a, b = pyrtl.input_list("a/4 b/4")
+        o = pyrtl.Output(5, "o")
         o <<= a + b
 
     def check_merged_names(self, block):
         inputs = block.wirevector_subset(pyrtl.Input)
         outputs = block.wirevector_subset(pyrtl.Output)
-        self.assertEqual({w.name for w in inputs}, {'a', 'b'})
-        self.assertEqual({w.name for w in outputs}, {'o'})
+        self.assertEqual({w.name for w in inputs}, {"a", "b"})
+        self.assertEqual({w.name for w in outputs}, {"o"})
 
     def check_unmerged_names(self, block):
         inputs = block.wirevector_subset(pyrtl.Input)
         outputs = block.wirevector_subset(pyrtl.Output)
         self.assertEqual(
             {w.name for w in inputs},
-            {'a[0]', 'a[1]', 'a[2]', 'a[3]', 'b[0]', 'b[1]', 'b[2]', 'b[3]'}
+            {"a[0]", "a[1]", "a[2]", "a[3]", "b[0]", "b[1]", "b[2]", "b[3]"},
         )
         self.assertEqual(
-            {w.name for w in outputs},
-            {'o[0]', 'o[1]', 'o[2]', 'o[3]', 'o[4]'}
+            {w.name for w in outputs}, {"o[0]", "o[1]", "o[2]", "o[3]", "o[4]"}
         )
 
     def test_synthesize_merged_io_names_correct(self):
@@ -118,18 +117,15 @@ class TestIOInterfaceSynthesis(unittest.TestCase):
     def test_synthesize_merged_io_simulates_correctly(self):
         pyrtl.synthesize()
         sim = pyrtl.Simulation()
-        sim.step_multiple({
-            'a': [4, 6, 2, 3],
-            'b': [2, 9, 11, 4],
-        })
+        sim.step_multiple(
+            {
+                "a": [4, 6, 2, 3],
+                "b": [2, 9, 11, 4],
+            }
+        )
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
-        self.assertEqual(
-            output.getvalue(),
-            'a 4623\n'
-            'b 29114\n'
-            'o 615137\n'
-        )
+        self.assertEqual(output.getvalue(), "a 4623\nb 29114\no 615137\n")
 
     def test_synthesize_unmerged_io_names_correct(self):
         pyrtl.synthesize(merge_io_vectors=False)
@@ -144,26 +140,29 @@ class TestIOInterfaceSynthesis(unittest.TestCase):
             self.assertEqual(len(io_list), len(oi))
             for ni in new_io:
                 if ni.name.startswith(oi.name):
-                    # Dev note: comparing names because comparing wires (e.g. list/set inclusion)
-                    # creates an '=' net, which is definitely not what we want here.
+                    # Dev note: comparing names because comparing wires (e.g. list/set
+                    # inclusion) creates an '=' net, which is definitely not what we
+                    # want here.
                     self.assertIn(ni.name, io_list)
 
     def test_synthesize_unmerged_io_simulates_correctly(self):
         pyrtl.synthesize(merge_io_vectors=False)
         sim = pyrtl.Simulation()
-        for (a, b) in [(4, 2), (6, 9), (2, 11), (3, 4)]:
+        for a, b in [(4, 2), (6, 9), (2, 11), (3, 4)]:
             args = {}
             for ix in range(4):
-                args['a[' + str(ix) + ']'] = (a >> ix) & 1
-                args['b[' + str(ix) + ']'] = (b >> ix) & 1
+                args["a[" + str(ix) + "]"] = (a >> ix) & 1
+                args["b[" + str(ix) + "]"] = (b >> ix) & 1
             sim.step(args)
             expected = a + b
             for ix in range(5):
-                out = sim.inspect('o[' + str(ix) + ']')
+                out = sim.inspect("o[" + str(ix) + "]")
                 self.assertEqual(out, (expected >> ix) & 1)
 
     def test_synthesize_does_not_update_working_block(self):
-        synth_block = pyrtl.synthesize(update_working_block=False, merge_io_vectors=False)
+        synth_block = pyrtl.synthesize(
+            update_working_block=False, merge_io_vectors=False
+        )
         self.check_merged_names(pyrtl.working_block())
         self.check_unmerged_names(synth_block)
 
@@ -171,60 +170,63 @@ class TestIOInterfaceSynthesis(unittest.TestCase):
 class TestMultiplierSynthesis(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        self.output = pyrtl.Output(name='r')
+        self.output = pyrtl.Output(name="r")
 
     def test_single_mul(self):
-        ina, inb = pyrtl.Input(bitwidth=4, name='a'), pyrtl.Input(bitwidth=4, name='b')
+        ina, inb = pyrtl.Input(bitwidth=4, name="a"), pyrtl.Input(bitwidth=4, name="b")
         self.output <<= ina * inb
         pyrtl.synthesize()
         sim = pyrtl.Simulation()
         for a in range(16):
             for b in range(16):
-                sim.step({'a': a, 'b': b})
-        result = sim.tracer.trace['r']
+                sim.step({"a": a, "b": b})
+        result = sim.tracer.trace["r"]
         self.assertEqual(result, [a * b for a in range(16) for b in range(16)])
 
     def test_chained_mul(self):
         ina, inb, inc = (
-            pyrtl.Input(bitwidth=2, name='a'),
-            pyrtl.Input(bitwidth=2, name='b'),
-            pyrtl.Input(bitwidth=2, name='c'))
+            pyrtl.Input(bitwidth=2, name="a"),
+            pyrtl.Input(bitwidth=2, name="b"),
+            pyrtl.Input(bitwidth=2, name="c"),
+        )
         self.output <<= ina * inb * inc
         pyrtl.synthesize()
         sim = pyrtl.Simulation()
         for a in range(4):
             for b in range(4):
                 for c in range(4):
-                    sim.step({'a': a, 'b': b, 'c': c})
-        result = sim.tracer.trace['r']
-        self.assertEqual(result, [a * b * c for a in range(4) for b in range(4) for c in range(4)])
+                    sim.step({"a": a, "b": b, "c": c})
+        result = sim.tracer.trace["r"]
+        self.assertEqual(
+            result, [a * b * c for a in range(4) for b in range(4) for c in range(4)]
+        )
 
     def test_singlebit_mul(self):
-        ina, inb = pyrtl.Input(bitwidth=1, name='a'), pyrtl.Input(bitwidth=3, name='b')
+        ina, inb = pyrtl.Input(bitwidth=1, name="a"), pyrtl.Input(bitwidth=3, name="b")
         self.output <<= ina * inb
         pyrtl.synthesize()
         sim = pyrtl.Simulation()
         for a in range(2):
             for b in range(8):
-                sim.step({'a': a, 'b': b})
-        result = sim.tracer.trace['r']
+                sim.step({"a": a, "b": b})
+        result = sim.tracer.trace["r"]
         self.assertEqual(result, [a * b for a in range(2) for b in range(8)])
 
 
 class TestComparisonSynthesis(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        self.output = pyrtl.Output(name='r')
+        self.output = pyrtl.Output(name="r")
 
     def check_op(self, op):
-        ina, inb = pyrtl.Input(bitwidth=4, name='a'), pyrtl.Input(bitwidth=4, name='b')
+        ina, inb = pyrtl.Input(bitwidth=4, name="a"), pyrtl.Input(bitwidth=4, name="b")
         self.output <<= op(ina, inb)
         pyrtl.synthesize()
         sim = pyrtl.Simulation()
         for a in range(16):
             for b in range(16):
-                sim.step({'a': a, 'b': b})
-        result = sim.tracer.trace['r']
+                sim.step({"a": a, "b": b})
+        result = sim.tracer.trace["r"]
         self.assertEqual(result, [op(a, b) for a in range(16) for b in range(16)])
 
     def test_eq(self):
@@ -238,7 +240,6 @@ class TestComparisonSynthesis(unittest.TestCase):
 
 
 class TestOptimization(NetWireNumTestCases):
-
     def test_wire_net_removal_1(self):
         inwire = pyrtl.Input(bitwidth=3)
         tempwire = pyrtl.WireVector()
@@ -274,8 +275,8 @@ class TestOptimization(NetWireNumTestCases):
         outwire <<= constwire ^ inwire
         pyrtl.optimize()
         block = pyrtl.working_block()
-        self.num_net_of_type('s', 0, block)
-        self.num_net_of_type('~', 1, block)
+        self.num_net_of_type("s", 0, block)
+        self.num_net_of_type("~", 1, block)
 
     def test_slice_net_removal_2(self):
         inwire = pyrtl.Input(bitwidth=3)
@@ -284,8 +285,8 @@ class TestOptimization(NetWireNumTestCases):
         outwire <<= tempwire[0:3]
         pyrtl.optimize()
         block = pyrtl.working_block()
-        self.num_net_of_type('s', 0, block)
-        self.num_net_of_type('w', 1, block)
+        self.num_net_of_type("s", 0, block)
+        self.num_net_of_type("w", 1, block)
 
     def test_slice_net_removal_3(self):
         inwire = pyrtl.Input(bitwidth=3)
@@ -295,8 +296,8 @@ class TestOptimization(NetWireNumTestCases):
         pyrtl.optimize()
         # Removes one of the slices, which does nothing.
         block = pyrtl.working_block()
-        self.num_net_of_type('s', 1, block)
-        self.num_net_of_type('w', 1, block)
+        self.num_net_of_type("s", 1, block)
+        self.num_net_of_type("w", 1, block)
 
     def test_slice_net_removal_4(self):
         inwire = pyrtl.Input(bitwidth=4)
@@ -307,8 +308,8 @@ class TestOptimization(NetWireNumTestCases):
         pyrtl.optimize()
         # Removes just the outwire1 slice, which does nothing.
         block = pyrtl.working_block()
-        self.num_net_of_type('s', 1, block)
-        self.num_net_of_type('w', 2, block)
+        self.num_net_of_type("s", 1, block)
+        self.num_net_of_type("w", 2, block)
 
     def test_remove_double_inverts_1_invert(self):
         inwire = pyrtl.Input(bitwidth=1)
@@ -397,7 +398,7 @@ class TestConstFolding(NetWireNumTestCases):
         pyrtl.reset_working_block()
         # Redirect stdout because we don't care to see the specific messages about
         # wires being deemed useless by optimization sent to stdout.
-        f = open(os.devnull, 'w')
+        f = open(os.devnull, "w")
         sys.stdout = f
 
     def tearDown(self):
@@ -413,8 +414,8 @@ class TestConstFolding(NetWireNumTestCases):
         pyrtl.optimize()
 
         block = pyrtl.working_block()
-        self.num_net_of_type('~', 0, block)
-        self.num_net_of_type('w', 1, block)
+        self.num_net_of_type("~", 0, block)
+        self.num_net_of_type("w", 1, block)
         self.assertEqual(len(block.logic), 1)
         self.assertEqual(len(block.wirevector_set), 2)
         self.num_wire_of_type(pyrtl.Const, 1, block)
@@ -423,7 +424,7 @@ class TestConstFolding(NetWireNumTestCases):
         constwire = pyrtl.Const(0, 1)
         outwire = pyrtl.Output()
         tempwire = pyrtl.WireVector()
-        reg = pyrtl.Register(1, 'test register')
+        reg = pyrtl.Register(1, "test register")
 
         tempwire <<= ~constwire
         reg.next <<= tempwire
@@ -432,7 +433,7 @@ class TestConstFolding(NetWireNumTestCases):
         pyrtl.optimize()
 
         block = pyrtl.working_block(None)
-        self.num_net_of_type('w', 1, block)
+        self.num_net_of_type("w", 1, block)
         self.assert_num_net(1, block)
         self.assert_num_wires(2, block)
         self.num_wire_of_type(pyrtl.Const, 1, block)
@@ -444,7 +445,7 @@ class TestConstFolding(NetWireNumTestCases):
         inwire = pyrtl.Input(bitwidth=1)
         outwire = pyrtl.Output()
         tempwire = pyrtl.WireVector()
-        reg = pyrtl.Register(1, 'test register')
+        reg = pyrtl.Register(1, "test register")
 
         tempwire <<= ~inwire
         reg.next <<= tempwire
@@ -457,7 +458,7 @@ class TestConstFolding(NetWireNumTestCases):
 
         # Note: the current implementation still sticks a wire net between
         # a register 'nextsetter' wire and the output wire
-        self.num_net_of_type('w', 1, block)
+        self.num_net_of_type("w", 1, block)
         self.assert_num_net(3, block)
         self.assert_num_wires(4, block)
         self.num_wire_of_type(pyrtl.Const, 0, block)
@@ -474,8 +475,8 @@ class TestConstFolding(NetWireNumTestCases):
         # should remove the and block and replace it with a
         # wire net (to separate the const from the output)
         block = pyrtl.working_block(None)
-        self.num_net_of_type('&', 0, block)
-        self.num_net_of_type('w', 1, block)
+        self.num_net_of_type("&", 0, block)
+        self.num_net_of_type("w", 1, block)
         self.assert_num_net(1, block)
         self.assert_num_wires(3, block)
         self.num_wire_of_type(pyrtl.Const, 1, block)
@@ -490,8 +491,8 @@ class TestConstFolding(NetWireNumTestCases):
         # should remove the or block and replace it with a
         # wire net (to separate the const from the output)
         block = pyrtl.working_block(None)
-        self.num_net_of_type('|', 0, block)
-        self.num_net_of_type('w', 1, block)
+        self.num_net_of_type("|", 0, block)
+        self.num_net_of_type("w", 1, block)
         self.assert_num_net(1, block)
         self.assert_num_wires(2, block)
         self.num_wire_of_type(pyrtl.Const, 0, block)
@@ -507,8 +508,8 @@ class TestConstFolding(NetWireNumTestCases):
         # should remove the and block and replace it with a
         # wirevector (to separate the input from the output)
         block = pyrtl.working_block(None)
-        self.num_net_of_type('^', 0, block)
-        self.num_net_of_type('w', 1, block)
+        self.num_net_of_type("^", 0, block)
+        self.num_net_of_type("w", 1, block)
         self.assert_num_net(1, block)
         self.assert_num_wires(2, block)
         self.num_wire_of_type(pyrtl.Const, 1, block)
@@ -525,9 +526,9 @@ class TestConstFolding(NetWireNumTestCases):
         # should remove the and block and replace it with a
         # wirevector (to separate the input from the output)
         block = pyrtl.working_block(None)
-        self.num_net_of_type('~', 1, block)
-        self.num_net_of_type('w', 1, block)
-        self.num_net_of_type('s', 0, block)
+        self.num_net_of_type("~", 1, block)
+        self.num_net_of_type("w", 1, block)
+        self.num_net_of_type("s", 0, block)
         self.assert_num_net(2, block)
         self.assert_num_wires(3, block)
         self.num_wire_of_type(pyrtl.Const, 0, block)
@@ -546,8 +547,8 @@ class TestConstFolding(NetWireNumTestCases):
         block = pyrtl.working_block()
         block.sanity_check()  # just in case
 
-        self.num_net_of_type('&', 2)
-        self.num_net_of_type('w', 1)
+        self.num_net_of_type("&", 2)
+        self.num_net_of_type("w", 1)
         self.assert_num_net(3)
         self.assert_num_wires(6)
         self.num_wire_of_type(pyrtl.Const, 0)
@@ -567,27 +568,26 @@ class TestConstFolding(NetWireNumTestCases):
         block = pyrtl.working_block()
         block.sanity_check()  # just in case
 
-        self.num_net_of_type('&', 2)
-        self.num_net_of_type('~', 1)
-        self.num_net_of_type('w', 1)
+        self.num_net_of_type("&", 2)
+        self.num_net_of_type("~", 1)
+        self.num_net_of_type("w", 1)
         self.assert_num_net(4)
         self.assert_num_wires(7)
         self.num_wire_of_type(pyrtl.Const, 0)
 
     def test_unsynthesized_inversion(self):
         constwire = pyrtl.Const(0b1101, bitwidth=4)
-        outwire = pyrtl.Output(name='out')
+        outwire = pyrtl.Output(name="out")
 
         outwire <<= ~constwire
         pyrtl.optimize()
 
         sim = pyrtl.Simulation()
         sim.step({})
-        self.assertEqual(sim.inspect('out'), 0b0010)
+        self.assertEqual(sim.inspect("out"), 0b0010)
 
 
 class TestSubexpElimination(NetWireNumTestCases):
-
     def test_basic_1(self):
         ins = [pyrtl.Input(5) for i in range(2)]
         outs = [pyrtl.Output(5) for i in range(2)]
@@ -595,8 +595,8 @@ class TestSubexpElimination(NetWireNumTestCases):
         outs[1] <<= ins[1] & ins[0]
 
         pyrtl.common_subexp_elimination()
-        self.num_net_of_type('&', 1)
-        self.num_net_of_type('w', 2)
+        self.num_net_of_type("&", 1)
+        self.num_net_of_type("w", 2)
         self.assert_num_net(3)
         self.assert_num_wires(5)
         pyrtl.working_block().sanity_check()
@@ -608,8 +608,8 @@ class TestSubexpElimination(NetWireNumTestCases):
         outs[1] <<= ins[0] & ins[1]
 
         pyrtl.common_subexp_elimination()
-        self.num_net_of_type('&', 1)
-        self.num_net_of_type('w', 2)
+        self.num_net_of_type("&", 1)
+        self.num_net_of_type("w", 2)
         self.assert_num_net(3)
         self.assert_num_wires(5)
         pyrtl.working_block().sanity_check()
@@ -623,8 +623,8 @@ class TestSubexpElimination(NetWireNumTestCases):
         outs[1] <<= pyrtl.concat(ins[0], ins[1])
 
         pyrtl.common_subexp_elimination()
-        self.num_net_of_type('c', 2)
-        self.num_net_of_type('w', 2)
+        self.num_net_of_type("c", 2)
+        self.num_net_of_type("w", 2)
         self.assert_num_net(4)
         self.assert_num_wires(6)
         pyrtl.working_block().sanity_check()
@@ -632,7 +632,7 @@ class TestSubexpElimination(NetWireNumTestCases):
     def test_order_dependent_ops(self):
         # subtract, lt, gt simarlarly are order dependent.
         # therefore we need to check that we aren't mangling them
-        for op, opcode in ((operator.sub, '-'), (operator.gt, '>'), (operator.lt, '<')):
+        for op, opcode in ((operator.sub, "-"), (operator.gt, ">"), (operator.lt, "<")):
             pyrtl.reset_working_block()
             ins = [pyrtl.Input(5) for i in range(2)]
             outs = [pyrtl.Output(10) for i in range(2)]
@@ -641,7 +641,7 @@ class TestSubexpElimination(NetWireNumTestCases):
 
             pyrtl.common_subexp_elimination()
             self.num_net_of_type(opcode, 2)
-            self.num_net_of_type('w', 2)
+            self.num_net_of_type("w", 2)
             pyrtl.working_block().sanity_check()
 
     def test_const_values_1(self):
@@ -653,8 +653,8 @@ class TestSubexpElimination(NetWireNumTestCases):
         out <<= wire_1 | wire_2
 
         pyrtl.common_subexp_elimination()
-        self.num_net_of_type('+', 1)
-        self.num_net_of_type('w', 1)
+        self.num_net_of_type("+", 1)
+        self.num_net_of_type("w", 1)
         self.assert_num_net(4)  # because we cut off a bit after the add
         self.assert_num_wires(6)
         pyrtl.working_block().sanity_check()
@@ -667,7 +667,7 @@ class TestSubexpElimination(NetWireNumTestCases):
         _ = in_w + const_2
 
         pyrtl.common_subexp_elimination()
-        self.num_net_of_type('+', 1)
+        self.num_net_of_type("+", 1)
         pyrtl.working_block().sanity_check()
 
     def test_const_different_bitwidth_1(self):
@@ -678,7 +678,7 @@ class TestSubexpElimination(NetWireNumTestCases):
         _ = in_w + const_2
 
         pyrtl.common_subexp_elimination()
-        self.num_net_of_type('+', 2)
+        self.num_net_of_type("+", 2)
         pyrtl.working_block().sanity_check()
 
     def test_no_elimination_of_different_const_bitwidths(self):
@@ -692,8 +692,8 @@ class TestSubexpElimination(NetWireNumTestCases):
         out_2 <<= const_2 | const_2
         pyrtl.common_subexp_elimination()
 
-        self.num_net_of_type('|', 2)
-        self.num_net_of_type('w', 2)
+        self.num_net_of_type("|", 2)
+        self.num_net_of_type("w", 2)
         self.assert_num_net(6)
         self.assert_num_wires(9)
         pyrtl.working_block().sanity_check()
@@ -707,8 +707,8 @@ class TestSubexpElimination(NetWireNumTestCases):
 
         out_1 <<= a | b | c
         pyrtl.common_subexp_elimination()
-        self.num_net_of_type('^', 1)
-        self.num_net_of_type('|', 2)
+        self.num_net_of_type("^", 1)
+        self.num_net_of_type("|", 2)
         pyrtl.working_block().sanity_check()
 
     def test_nested_elimination(self):
@@ -722,8 +722,8 @@ class TestSubexpElimination(NetWireNumTestCases):
 
         out_1 <<= a2 | b2
         pyrtl.common_subexp_elimination()
-        self.num_net_of_type('^', 1)
-        self.num_net_of_type('&', 1)
+        self.num_net_of_type("^", 1)
+        self.num_net_of_type("&", 1)
         pyrtl.working_block().sanity_check()
 
 
@@ -734,17 +734,19 @@ class TestSynthPasses(unittest.TestCase):
 
     def setUp(self):
         pyrtl.reset_working_block()
-        self.in0 = pyrtl.Input(bitwidth=5, name='in0')
-        self.in1 = pyrtl.Input(bitwidth=5, name='in1')
-        self.out = pyrtl.Output(bitwidth=5, name='out')
+        self.in0 = pyrtl.Input(bitwidth=5, name="in0")
+        self.in1 = pyrtl.Input(bitwidth=5, name="in1")
+        self.out = pyrtl.Output(bitwidth=5, name="out")
 
     def check_synth(self, operation: Callable[[int, int], int]):
         """
-        Simulates the current circuit with some test input pairs (in0, in1) and checks the outputs
-        against the provided operation. Any synthesis/passes should be run before this gets called.
+        Simulates the current circuit with some test input pairs (in0, in1) and checks
+        the outputs against the provided operation. Any synthesis/passes should be run
+        before this gets called.
 
-        :param operation: The operation to test against. This should be a lambda taking an input
-            pair (in0, in1) and returning the expected output from this circuit.
+        :param operation: The operation to test against. This should be a lambda taking
+            an input pair (in0, in1) and returning the expected output from this
+            circuit.
         """
         sim = pyrtl.Simulation()
 
@@ -753,10 +755,13 @@ class TestSynthPasses(unittest.TestCase):
 
         for in0, in1 in values:
             expected_output = operation(in0, in1)
-            sim.step({'in0': in0, 'in1': in1})
+            sim.step({"in0": in0, "in1": in1})
             # compare simulation output to expected output
-            self.assertEqual(sim.inspect('out'), expected_output,
-                             msg=f"Failed on inputs {in0} and {in1}")
+            self.assertEqual(
+                sim.inspect("out"),
+                expected_output,
+                msg=f"Failed on inputs {in0} and {in1}",
+            )
 
     def test_nand_synth_and(self):
         self.out <<= self.in0 & self.in1
@@ -843,8 +848,8 @@ class TestSynthOptTiming(NetWireNumTestCases):
         timing_max_length = timing.max_length()
         _ = timing.critical_path(print_cp=False)
         block = pyrtl.working_block()
-        self.num_net_of_type('|', 0, block)
-        self.num_net_of_type('^', 0, block)
+        self.num_net_of_type("|", 0, block)
+        self.num_net_of_type("^", 0, block)
 
         pyrtl.nand_synth()
         pyrtl.optimize()
@@ -854,13 +859,13 @@ class TestSynthOptTiming(NetWireNumTestCases):
         timing_max_length = timing.max_length()
         _ = timing.critical_path(print_cp=False)
         block.sanity_check()
-        self.num_net_of_type('|', 0, block)
-        self.num_net_of_type('^', 0, block)
-        self.num_net_of_type('&', 0, block)
+        self.num_net_of_type("|", 0, block)
+        self.num_net_of_type("^", 0, block)
+        self.num_net_of_type("&", 0, block)
 
     def test_const_folding_complex_1(self):
-        output = pyrtl.Output(bitwidth=3, name='output')
-        counter = pyrtl.Register(bitwidth=3, name='counter')
+        output = pyrtl.Output(bitwidth=3, name="output")
+        counter = pyrtl.Register(bitwidth=3, name="counter")
         counter.next <<= counter + 1
         output <<= counter
 
@@ -899,7 +904,10 @@ class TestSynthOptTiming(NetWireNumTestCases):
 
     def test_wirevector_1(self):
         inwire = pyrtl.Input(bitwidth=1)
-        tempwire0, tempwire1 = pyrtl.WireVector(bitwidth=1), pyrtl.WireVector(bitwidth=1)
+        tempwire0, tempwire1 = (
+            pyrtl.WireVector(bitwidth=1),
+            pyrtl.WireVector(bitwidth=1),
+        )
         tempwire2 = pyrtl.WireVector(bitwidth=1)
         outwire = pyrtl.Output()
 
@@ -930,8 +938,9 @@ class TestSynthOptTiming(NetWireNumTestCases):
         self.everything_t_procedure()
 
     def test_all_mem_1(self):
-        readAdd1, readAdd2, writeAdd1, writeAdd2, readData1, readData2 = \
-            (pyrtl.Input(bitwidth=3) for i in range(6))
+        readAdd1, readAdd2, writeAdd1, writeAdd2, readData1, readData2 = (
+            pyrtl.Input(bitwidth=3) for i in range(6)
+        )
 
         dataOut = pyrtl.Output(bitwidth=3)
 
@@ -950,17 +959,17 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
         i = pyrtl.Const(0b1100)
         j = pyrtl.Const(0b011, bitwidth=3)
         k = pyrtl.Const(0b100110)
-        o = pyrtl.Output(13, 'o')
+        o = pyrtl.Output(13, "o")
         o <<= pyrtl.concat(i, j, k)
 
         block = pyrtl.working_block()
-        concat_nets = list(block.logic_subset(op='c'))
+        concat_nets = list(block.logic_subset(op="c"))
         self.assertEqual(len(concat_nets), 1)
         self.assertEqual(concat_nets[0].args, (i, j, k))
 
         pyrtl.two_way_concat()
 
-        concat_nets = list(block.logic_subset(op='c'))
+        concat_nets = list(block.logic_subset(op="c"))
         self.assertEqual(len(concat_nets), 2)
         upper_concat = next(n for n in concat_nets if i is n.args[0])
         lower_concat = next(n for n in concat_nets if k is n.args[1])
@@ -970,28 +979,28 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
 
         sim = pyrtl.Simulation()
         sim.step({})
-        self.assertEqual(sim.inspect('o'), 0b1100011100110)
+        self.assertEqual(sim.inspect("o"), 0b1100011100110)
 
     def test_one_bit_selects(self):
         a = pyrtl.Const(0b101101001101)
-        b = pyrtl.Output(6, 'b')
+        b = pyrtl.Output(6, "b")
         b <<= a[::2]  # bits 0, 2, 4, 6, 8, and 10 of wire a
 
         block = pyrtl.working_block()
-        select_nets = list(block.logic_subset(op='s'))
+        select_nets = list(block.logic_subset(op="s"))
         self.assertEqual(len(select_nets), 1)
         self.assertEqual(tuple(select_nets[0].op_param), (0, 2, 4, 6, 8, 10))
 
         pyrtl.one_bit_selects()
 
-        select_nets = list(block.logic_subset(op='s'))
+        select_nets = list(block.logic_subset(op="s"))
         for net in select_nets:
             indices = net.op_param
             self.assertEqual(len(indices), 1)
 
         sim = pyrtl.Simulation()
         sim.step({})
-        self.assertEqual(sim.inspect('b'), 0b00011011)
+        self.assertEqual(sim.inspect("b"), 0b00011011)
 
 
 class TestDirectlyConnectedOutputs(unittest.TestCase):
@@ -999,8 +1008,8 @@ class TestDirectlyConnectedOutputs(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_single_output(self):
-        i, j = pyrtl.input_list('i/4 j/4')
-        o = pyrtl.Output(8, 'o')
+        i, j = pyrtl.input_list("i/4 j/4")
+        o = pyrtl.Output(8, "o")
         o <<= i * j
 
         self.assertEqual(len(pyrtl.working_block().logic), 2)
@@ -1011,9 +1020,9 @@ class TestDirectlyConnectedOutputs(unittest.TestCase):
         self.assertEqual(pyrtl.working_block().wirevector_set, {i, j, o})
 
     def test_single_output_simulates_correctly(self):
-        i, ivals = utils.an_input_and_vals(4, name='i')
-        j, jvals = utils.an_input_and_vals(4, name='j')
-        o = pyrtl.Output(8, 'o')
+        i, ivals = utils.an_input_and_vals(4, name="i")
+        j, jvals = utils.an_input_and_vals(4, name="j")
+        o = pyrtl.Output(8, "o")
         o <<= i * j
 
         pyrtl.direct_connect_outputs()
@@ -1022,22 +1031,22 @@ class TestDirectlyConnectedOutputs(unittest.TestCase):
         self.assertEqual(true_result, sim_result)
 
     def test_several_outputs(self):
-        i, j = pyrtl.input_list('i/2 j/2')
-        o, p, q = pyrtl.output_list('o p q')
+        i, j = pyrtl.input_list("i/2 j/2")
+        o, p, q = pyrtl.output_list("o p q")
         o <<= i * j
         w = i + 2
         p <<= w
         q <<= ~w
 
         self.assertEqual(len(pyrtl.working_block().logic), 9)
-        self.assertEqual(len(pyrtl.working_block().logic_subset(op='w')), 3)
+        self.assertEqual(len(pyrtl.working_block().logic_subset(op="w")), 3)
         pyrtl.direct_connect_outputs()
         self.assertEqual(len(pyrtl.working_block().logic), 6)
-        self.assertEqual(len(pyrtl.working_block().logic_subset(op='w')), 0)
+        self.assertEqual(len(pyrtl.working_block().logic_subset(op="w")), 0)
 
     def test_several_outputs_simulates_correctly(self):
-        i, j = pyrtl.input_list('i/2 j/2')
-        o, p, q = pyrtl.output_list('o p q')
+        i, j = pyrtl.input_list("i/2 j/2")
+        o, p, q = pyrtl.output_list("o p q")
         o <<= i * j
         w = i + 2
         p <<= w
@@ -1047,7 +1056,7 @@ class TestDirectlyConnectedOutputs(unittest.TestCase):
         trace_pre = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=trace_pre)
         for x, y in inputs:
-            inp_map = {'i': x, 'j': y}
+            inp_map = {"i": x, "j": y}
             sim.step(inp_map)
 
         pyrtl.direct_connect_outputs()
@@ -1055,30 +1064,30 @@ class TestDirectlyConnectedOutputs(unittest.TestCase):
         trace_post = pyrtl.SimulationTrace()
         sim = pyrtl.Simulation(tracer=trace_post)
         for x, y in inputs:
-            inp_map = {'i': x, 'j': y}
+            inp_map = {"i": x, "j": y}
             sim.step(inp_map)
 
         self.assertEqual(trace_pre.trace, trace_post.trace)
 
     def test_some_outputs_unaffected(self):
-        i = pyrtl.Input(2, 'i')
-        o, p, q = pyrtl.output_list('o/4 p/4 q/2')
+        i = pyrtl.Input(2, "i")
+        o, p, q = pyrtl.output_list("o/4 p/4 q/2")
         w = i * 2
         o <<= w
         p <<= w
         q <<= ~i
 
         src_nets, _ = pyrtl.working_block().net_connections()
-        self.assertEqual(src_nets[o].op, 'w')
-        self.assertEqual(src_nets[p].op, 'w')
-        self.assertEqual(src_nets[q].op, 'w')
+        self.assertEqual(src_nets[o].op, "w")
+        self.assertEqual(src_nets[p].op, "w")
+        self.assertEqual(src_nets[q].op, "w")
         self.assertEqual(len(pyrtl.working_block().logic), 5)
 
         pyrtl.direct_connect_outputs()
         src_nets, _ = pyrtl.working_block().net_connections()
-        self.assertEqual(src_nets[o].op, 'w')
-        self.assertEqual(src_nets[p].op, 'w')
-        self.assertEqual(src_nets[q].op, '~')
+        self.assertEqual(src_nets[o].op, "w")
+        self.assertEqual(src_nets[p].op, "w")
+        self.assertEqual(src_nets[q].op, "~")
         self.assertEqual(len(pyrtl.working_block().logic), 4)
 
 
@@ -1091,8 +1100,8 @@ class TestTwoWayFanout(unittest.TestCase):
             self.assertLessEqual(pyrtl.fanout(w), 2)
 
     def test_two_way_fanout_small_design(self):
-        i = pyrtl.Input(1, 'i')
-        o, p, q = pyrtl.output_list('o p q')
+        i = pyrtl.Input(1, "i")
+        o, p, q = pyrtl.output_list("o p q")
         o <<= ~i
         p <<= i
         q <<= i & 0
@@ -1102,8 +1111,8 @@ class TestTwoWayFanout(unittest.TestCase):
         self.check_all_leq_two()
 
     def test_two_way_fanout_medium_design(self):
-        i = pyrtl.Input(1, 'i')
-        o, p = pyrtl.output_list('o p')
+        i = pyrtl.Input(1, "i")
+        o, p = pyrtl.output_list("o p")
         w = i & 0
         x = (w & w) ^ w
         o <<= x
@@ -1114,8 +1123,8 @@ class TestTwoWayFanout(unittest.TestCase):
         self.check_all_leq_two()
 
     def test_two_way_fanout_large_design(self):
-        i, j = pyrtl.input_list('i/1 j/2')
-        o, p, q, r = pyrtl.output_list('o p q r')
+        i, j = pyrtl.input_list("i/1 j/2")
+        o, p, q, r = pyrtl.output_list("o p q r")
         o <<= ~i
         p <<= i * j
         q <<= i & 0

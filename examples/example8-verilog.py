@@ -1,10 +1,10 @@
-""" Example 8:  Interfacing with Verilog.
+"""Example 8:  Interfacing with Verilog.
 
-    While there is much more about PyRTL design to discuss, at some point somebody
-    might ask you to do something with your code other than have it print
-    pretty things out to the terminal.  We provide import from and export to
-    Verilog of designs, export of waveforms to VCD, and a set of transforms
-    that make doing netlist-level transforms and analysis directly in PyRTL easy.
+While there is much more about PyRTL design to discuss, at some point somebody
+might ask you to do something with your code other than have it print
+pretty things out to the terminal.  We provide import from and export to
+Verilog of designs, export of waveforms to VCD, and a set of transforms
+that make doing netlist-level transforms and analysis directly in PyRTL easy.
 """
 
 import io
@@ -67,7 +67,7 @@ full_adder_blif = """
 
 pyrtl.input_from_blif(full_adder_blif)
 # Have to find the actual wire vectors generated from the names in the blif file
-x, y, cin = [pyrtl.working_block().get_wirevector_by_name(s) for s in ['x', 'y', 'cin']]
+x, y, cin = [pyrtl.working_block().get_wirevector_by_name(s) for s in ["x", "y", "cin"]]
 io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output))
 
 # We are only going to trace the input and output vectors for clarity
@@ -75,11 +75,13 @@ io_vectors = pyrtl.working_block().wirevector_subset((pyrtl.Input, pyrtl.Output)
 sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace(wires_to_track=io_vectors))
 for i in range(15):
     # here we actually generate random booleans for the inputs
-    sim.step({
-        'x': random.choice([0, 1]),
-        'y': random.choice([0, 1]),
-        'cin': random.choice([0, 1])
-    })
+    sim.step(
+        {
+            "x": random.choice([0, 1]),
+            "y": random.choice([0, 1]),
+            "cin": random.choice([0, 1]),
+        }
+    )
 sim.tracer.render_trace(symbol_len=2)
 
 
@@ -92,9 +94,9 @@ sim.tracer.render_trace(symbol_len=2)
 
 pyrtl.reset_working_block()
 
-zero = pyrtl.Input(1, 'zero')
-counter_output = pyrtl.Output(3, 'counter_output')
-counter = pyrtl.Register(3, 'counter')
+zero = pyrtl.Input(1, "zero")
+counter_output = pyrtl.Output(3, "counter_output")
+counter = pyrtl.Register(3, "counter")
 counter.next <<= pyrtl.mux(zero, counter + 1, 0)
 counter_output <<= counter
 
@@ -117,7 +119,7 @@ with io.StringIO() as vfile:
 print("--- Simulation Results ---")
 sim = pyrtl.Simulation(tracer=pyrtl.SimulationTrace([counter_output, zero]))
 for cycle in range(15):
-    sim.step({'zero': random.choice([0, 0, 0, 1])})
+    sim.step({"zero": random.choice([0, 0, 0, 1])})
 sim.tracer.render_trace()
 
 # We already did the "hard" work of generating a test input for this simulation, so
@@ -131,13 +133,13 @@ with io.StringIO() as tbfile:
     print(tbfile.getvalue())
 
 
-# Now let's talk about transformations of the hardware block.  Many times when you are
+# Now let's talk about transformations of the hardware block. Many times when you are
 # doing some hardware-level analysis you might wish to ignore higher level things like
 # multi-bit wirevectors, adds, concatenation, etc. and just think about wires and basic
-# gates.  PyRTL supports "lowering" of designs into this more restricted set of functionality
-# though the function "synthesize".  Once we lower a design to this form we can then apply
-# basic optimizations like constant propagation and dead wire elimination as well.  By
-# printing it out to Verilog we can see exactly how the design changed.
+# gates. PyRTL supports "lowering" of designs into this more restricted set of
+# functionality though the function "synthesize". Once we lower a design to this form we
+# can then apply basic optimizations like constant propagation and dead wire elimination
+# as well. By printing it out to Verilog we can see exactly how the design changed.
 
 print("--- Optimized Single-bit Verilog for the Counter ---")
 pyrtl.synthesize()

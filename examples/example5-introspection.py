@@ -1,4 +1,4 @@
-""" Example 5: Making use of PyRTL and Introspection. """
+"""Example 5: Making use of PyRTL and Introspection."""
 
 import pyrtl
 
@@ -9,13 +9,14 @@ import pyrtl
 # stages, and new members with names not starting with "_" are to be registered
 # for the next stage.
 
+
 class SimplePipeline:
-    """ Pipeline builder with auto generation of pipeline registers. """
+    """Pipeline builder with auto generation of pipeline registers."""
 
     def __init__(self):
         self._pipeline_register_map = {}
         self._current_stage_num = 0
-        stage_list = [method for method in dir(self) if method.startswith('stage')]
+        stage_list = [method for method in dir(self) if method.startswith("stage")]
         for stage in sorted(stage_list):
             stage_method = getattr(self, stage)
             stage_method()
@@ -27,16 +28,17 @@ class SimplePipeline:
         except KeyError:
             raise pyrtl.PyrtlError(
                 'error, no pipeline register "%s" defined for stage %d'
-                % (name, self._current_stage_num))
+                % (name, self._current_stage_num)
+            )
 
     def __setattr__(self, name, value):
-        if name.startswith('_'):
+        if name.startswith("_"):
             # do not do anything tricky with variables starting with '_'
             object.__setattr__(self, name, value)
         else:
             next_stage = self._current_stage_num + 1
-            pipereg_id = str(self._current_stage_num) + 'to' + str(next_stage)
-            rname = 'pipereg_' + pipereg_id + '_' + name
+            pipereg_id = str(self._current_stage_num) + "to" + str(next_stage)
+            rname = "pipereg_" + pipereg_id + "_" + name
             new_pipereg = pyrtl.Register(bitwidth=len(value), name=rname)
             if next_stage not in self._pipeline_register_map:
                 self._pipeline_register_map[next_stage] = {}
@@ -45,14 +47,14 @@ class SimplePipeline:
 
 
 class SimplePipelineExample(SimplePipeline):
-    """ A very simple pipeline to show how registers are inferred. """
+    """A very simple pipeline to show how registers are inferred."""
 
     def __init__(self):
-        self._loopback = pyrtl.WireVector(1, 'loopback')
+        self._loopback = pyrtl.WireVector(1, "loopback")
         super(SimplePipelineExample, self).__init__()
 
     def stage0(self):
-        self.n = ~ self._loopback
+        self.n = ~self._loopback
 
     def stage1(self):
         self.n = self.n

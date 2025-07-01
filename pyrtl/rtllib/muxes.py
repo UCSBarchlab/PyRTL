@@ -7,6 +7,7 @@ Basic multiplexers are defined in PyRTL's core library, see:
 
 The functions below provide more complex alternatives.
 """
+
 import pyrtl
 from pyrtl import WireVector
 
@@ -30,9 +31,11 @@ def prioritized_mux(selects: list[WireVector], vals: list[WireVector]) -> WireVe
         return vals[0]
     else:
         half = len(vals) // 2
-        return pyrtl.select(pyrtl.rtl_any(*selects[:half]),
-                            truecase=prioritized_mux(selects[:half], vals[:half]),
-                            falsecase=prioritized_mux(selects[half:], vals[half:]))
+        return pyrtl.select(
+            pyrtl.rtl_any(*selects[:half]),
+            truecase=prioritized_mux(selects[:half], vals[:half]),
+            falsecase=prioritized_mux(selects[half:], vals[half:]),
+        )
 
 
 def _is_equivalent(w1, w2):
@@ -62,7 +65,7 @@ def sparse_mux(sel: WireVector, vals: dict[int, WireVector]) -> WireVector:
     """
     import numbers
 
-    max_val = 2**len(sel) - 1
+    max_val = 2 ** len(sel) - 1
     if SparseDefault in vals:
         default_val = vals[SparseDefault]
         del vals[SparseDefault]
@@ -72,15 +75,19 @@ def sparse_mux(sel: WireVector, vals: dict[int, WireVector]) -> WireVector:
 
     for key in vals.keys():
         if not isinstance(key, numbers.Integral):
-            raise pyrtl.PyrtlError("value %s nust be either an integer or 'default'" % str(key))
+            raise pyrtl.PyrtlError(
+                "value %s nust be either an integer or 'default'" % str(key)
+            )
         if key < 0 or key > max_val:
-            raise pyrtl.PyrtlError("value %s is out of range of the sel wire" % str(key))
+            raise pyrtl.PyrtlError(
+                "value %s is out of range of the sel wire" % str(key)
+            )
 
     return _sparse_mux(sel, vals)
 
 
 def _sparse_mux(sel, vals):
-    """ Mux that avoids instantiating unnecessary mux_2s when possible.
+    """Mux that avoids instantiating unnecessary mux_2s when possible.
 
     :param WireVector sel: Select wire, determines what is selected on a given cycle
     :param {int: WireVector} vals: dictionary to store the values that are
@@ -100,10 +107,12 @@ def _sparse_mux(sel, vals):
             false_result = vals[0]
             true_result = vals[1]
         except KeyError:
-            raise pyrtl.PyrtlError("Failed to retrieve values for smartmux. "
-                                   "The length of sel might be wrong")
+            raise pyrtl.PyrtlError(
+                "Failed to retrieve values for smartmux. "
+                "The length of sel might be wrong"
+            )
     else:
-        half = 2**(len(sel) - 1)
+        half = 2 ** (len(sel) - 1)
 
         first_dict = {indx: wire for indx, wire in vals.items() if indx < half}
         second_dict = {indx - half: wire for indx, wire in vals.items() if indx >= half}
@@ -140,6 +149,7 @@ class MultiSelector:
         New uses of this class are discouraged. Use :ref:`conditional_assignment`
         instead.
     """
+
     def __init__(self, signal_wire, *dest_wires):
         self._final = False
         self.dest_wires = dest_wires
@@ -148,7 +158,7 @@ class MultiSelector:
         self.dest_instrs_info = {dest_w: [] for dest_w in dest_wires}
 
     def __enter__(self):
-        """ For compatibility with `with` statements, which is the recommended
+        """For compatibility with `with` statements, which is the recommended
         method of using a MultiSelector.
         """
         return self
@@ -179,17 +189,19 @@ class MultiSelector:
     def _add_signal(self, data_signals):
         self._check_finalized()
         if len(data_signals) != len(self.dest_wires):
-            raise pyrtl.PyrtlError("Incorrect number of data_signals for "
-                                   "instruction received {} , expected {}"
-                                   .format(len(data_signals), len(self.dest_wires)))
+            raise pyrtl.PyrtlError(
+                "Incorrect number of data_signals for "
+                "instruction received {} , expected {}".format(
+                    len(data_signals), len(self.dest_wires)
+                )
+            )
 
         for dw, sig in zip(self.dest_wires, data_signals):
             data_signal = pyrtl.as_wires(sig, dw.bitwidth)
             self.dest_instrs_info[dw].append(data_signal)
 
     def finalize(self):
-        """ Connects the wires.
-        """
+        """Connects the wires."""
         self._check_finalized()
         self._final = True
 

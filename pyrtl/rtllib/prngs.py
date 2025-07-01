@@ -1,8 +1,12 @@
 import pyrtl
 
 
-def prng_lfsr(bitwidth: int, load: pyrtl.WireVector, req: pyrtl.WireVector,
-              seed: pyrtl.WireVector = None) -> pyrtl.Register:
+def prng_lfsr(
+    bitwidth: int,
+    load: pyrtl.WireVector,
+    req: pyrtl.WireVector,
+    seed: pyrtl.WireVector = None,
+) -> pyrtl.Register:
     """Builds a single-cycle PRNG using a 127 bits Fibonacci LFSR.
 
     A very fast and compact PRNG that generates a random number using only one clock
@@ -52,6 +56,7 @@ def prng_lfsr(bitwidth: int, load: pyrtl.WireVector, req: pyrtl.WireVector,
     # LFSR maximized at 2**127 - 1 for any requested bitwidth
     if seed is None:
         import random
+
         cryptogen = random.SystemRandom()
         seed = cryptogen.randrange(1, 2**127)  # seed itself if no seed signal is given
 
@@ -70,8 +75,11 @@ def prng_lfsr(bitwidth: int, load: pyrtl.WireVector, req: pyrtl.WireVector,
 
 
 def prng_xoroshiro128(
-        bitwidth: int, load: pyrtl.WireVector, req: pyrtl.WireVector,
-        seed: pyrtl.WireVector = None) -> tuple[pyrtl.WireVector, pyrtl.Register]:
+    bitwidth: int,
+    load: pyrtl.WireVector,
+    req: pyrtl.WireVector,
+    seed: pyrtl.WireVector = None,
+) -> tuple[pyrtl.WireVector, pyrtl.Register]:
     """Builds a PRNG using the Xoroshiro128+ algorithm in hardware.
 
     An efficient noncryptographic PRNG, has much smaller area than
@@ -116,8 +124,10 @@ def prng_xoroshiro128(
     from pyrtl import shift_left_logical as sll
     from pyrtl import shift_right_logical as srl
     from pyrtl.rtllib import adders
+
     if seed is None:
         import random
+
         cryptogen = random.SystemRandom()
         seed = cryptogen.randrange(1, 2**128)  # seed itself if no seed signal is given
     seed = pyrtl.as_wires(seed, 128)
@@ -133,7 +143,7 @@ def prng_xoroshiro128(
     gen_cycles = int(ceil(bitwidth / 64))
     counter_bitwidth = int(ceil(log(gen_cycles, 2))) if gen_cycles > 1 else 1
     rand = pyrtl.Register(gen_cycles * 64)
-    counter = pyrtl.Register(counter_bitwidth, 'counter')
+    counter = pyrtl.Register(counter_bitwidth, "counter")
     gen_done = counter == gen_cycles - 1
     state = pyrtl.Register(1)
     WAIT, GEN = (pyrtl.Const(x) for x in range(2))
@@ -159,9 +169,13 @@ def prng_xoroshiro128(
     return ready, rand[-bitwidth:]  # return MSBs because LSBs are less random
 
 
-def csprng_trivium(bitwidth: int, load: pyrtl.WireVector, req: pyrtl.WireVector,
-                   seed: pyrtl.WireVector = None,
-                   bits_per_cycle: int = 64) -> tuple[pyrtl.WireVector, pyrtl.Register]:
+def csprng_trivium(
+    bitwidth: int,
+    load: pyrtl.WireVector,
+    req: pyrtl.WireVector,
+    seed: pyrtl.WireVector = None,
+    bits_per_cycle: int = 64,
+) -> tuple[pyrtl.WireVector, pyrtl.Register]:
     """Builds a cyptographically secure PRNG using the Trivium stream cipher.
 
     This PRNG uses Trivium's key stream as its random bits output. Both ``seed`` and the
@@ -216,10 +230,12 @@ def csprng_trivium(bitwidth: int, load: pyrtl.WireVector, req: pyrtl.WireVector,
              given ``bitwidth``.
     """
     from math import ceil, log
+
     if (64 // bits_per_cycle) * bits_per_cycle != 64:
-        raise pyrtl.PyrtlError('bits_per_cycle is invalid')
+        raise pyrtl.PyrtlError("bits_per_cycle is invalid")
     if seed is None:
         import random
+
         cryptogen = random.SystemRandom()
         seed = cryptogen.randrange(2**160)  # seed itself if no seed signal is given
     seed = pyrtl.as_wires(seed, 160)
@@ -247,7 +263,7 @@ def csprng_trivium(bitwidth: int, load: pyrtl.WireVector, req: pyrtl.WireVector,
     gen_cycles = int(ceil(bitwidth / bits_per_cycle))
     counter_bitwidth = int(ceil(log(max(init_cycles + 1, gen_cycles), 2)))
     rand = pyrtl.Register(bitwidth)
-    counter = pyrtl.Register(counter_bitwidth, 'counter')
+    counter = pyrtl.Register(counter_bitwidth, "counter")
     init_done = counter == init_cycles
     gen_done = counter == gen_cycles - 1
     state = pyrtl.Register(2)

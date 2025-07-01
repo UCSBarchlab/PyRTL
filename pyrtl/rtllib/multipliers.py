@@ -13,8 +13,9 @@ import pyrtl
 from pyrtl.rtllib import adders
 
 
-def simple_mult(A: pyrtl.WireVector, B: pyrtl.WireVector,
-                start: pyrtl.WireVector) -> tuple[pyrtl.Register, pyrtl.WireVector]:
+def simple_mult(
+    A: pyrtl.WireVector, B: pyrtl.WireVector, start: pyrtl.WireVector
+) -> tuple[pyrtl.Register, pyrtl.WireVector]:
     """Builds a slow, small multiplier using the simple shift-and-add algorithm.
 
     Requires very small area (it uses only a single adder), but has long delay (worst
@@ -35,7 +36,7 @@ def simple_mult(A: pyrtl.WireVector, B: pyrtl.WireVector,
     areg = pyrtl.Register(alen)
     breg = pyrtl.Register(blen + alen)
     accum = pyrtl.Register(blen + alen)
-    done = (areg == 0)  # Multiplication is finished when a becomes 0
+    done = areg == 0  # Multiplication is finished when a becomes 0
 
     # During multiplication, shift a right every cycle, b left every cycle
     with pyrtl.conditional_assignment:
@@ -72,8 +73,9 @@ def _trivial_mult(A, B):
         return pyrtl.concat_list([a_vals & B, pyrtl.Const(0)])
 
 
-def complex_mult(A: pyrtl.WireVector, B: pyrtl.WireVector, shifts: int,
-                 start: pyrtl.WireVector) -> tuple[pyrtl.Register, pyrtl.WireVector]:
+def complex_mult(
+    A: pyrtl.WireVector, B: pyrtl.WireVector, shifts: int, start: pyrtl.WireVector
+) -> tuple[pyrtl.Register, pyrtl.WireVector]:
     """Generate shift-and-add multiplier that can shift and add multiple bits per clock
     cycle. Uses substantially more space than :func:`simple_mult` but is much faster.
 
@@ -91,10 +93,12 @@ def complex_mult(A: pyrtl.WireVector, B: pyrtl.WireVector, shifts: int,
     areg = pyrtl.Register(alen)
     breg = pyrtl.Register(alen + blen)
     accum = pyrtl.Register(alen + blen)
-    done = (areg == 0)  # Multiplication is finished when a becomes 0
+    done = areg == 0  # Multiplication is finished when a becomes 0
     if (shifts > alen) or (shifts > blen):
-        raise pyrtl.PyrtlError("shift is larger than one or both of the parameters A or B,"
-                               "please choose smaller shift")
+        raise pyrtl.PyrtlError(
+            "shift is larger than one or both of the parameters A or B,"
+            "please choose smaller shift"
+        )
 
     # During multiplication, shift a right every cycle 'shift' times,
     # shift b left every cycle 'shift' times
@@ -114,28 +118,38 @@ def complex_mult(A: pyrtl.WireVector, B: pyrtl.WireVector, shifts: int,
 
 
 def _one_cycle_mult(areg, breg, rem_bits, sum_sf=0, curr_bit=0):
-    """ returns a WireVector sum of rem_bits multiplies (in one clock cycle)
-    note: this method requires a lot of area because of the indexing in the else statement """
+    """returns a WireVector sum of rem_bits multiplies (in one clock cycle) note: this
+    method requires a lot of area because of the indexing in the else statement
+    """
     if rem_bits == 0:
         return sum_sf
     else:
         a_curr_val = areg[curr_bit].sign_extended(len(breg))
         if curr_bit == 0:  # if no shift
-            return (_one_cycle_mult(areg, breg, rem_bits - 1,  # areg, breg, rem_bits
-                                    sum_sf + (a_curr_val & breg),  # sum_sf
-                                    curr_bit + 1))  # curr_bit
+            return _one_cycle_mult(
+                areg,
+                breg,
+                rem_bits - 1,  # areg, breg, rem_bits
+                sum_sf + (a_curr_val & breg),  # sum_sf
+                curr_bit + 1,
+            )  # curr_bit
         else:
             return _one_cycle_mult(
-                areg, breg, rem_bits - 1,  # areg, breg, rem_bits
-                sum_sf + (a_curr_val
-                          & pyrtl.concat(breg, pyrtl.Const(0, curr_bit))),  # sum_sf
-                curr_bit + 1  # curr_bit
+                areg,
+                breg,
+                rem_bits - 1,  # areg, breg, rem_bits
+                sum_sf
+                + (a_curr_val & pyrtl.concat(breg, pyrtl.Const(0, curr_bit))),  # sum_sf
+                curr_bit + 1,  # curr_bit
             )
 
 
-def tree_multiplier(A: pyrtl.WireVector, B: pyrtl.WireVector,
-                    reducer: Callable = adders.wallace_reducer,
-                    adder_func: Callable = adders.kogge_stone) -> pyrtl.WireVector:
+def tree_multiplier(
+    A: pyrtl.WireVector,
+    B: pyrtl.WireVector,
+    reducer: Callable = adders.wallace_reducer,
+    adder_func: Callable = adders.kogge_stone,
+) -> pyrtl.WireVector:
     """Build an fast unclocked multiplier using a Wallace or Dada Tree.
 
     Delay is `O(log(N))`, while area is `O(N^2)`.
@@ -155,12 +169,13 @@ def tree_multiplier(A: pyrtl.WireVector, B: pyrtl.WireVector,
     if triv_res is not None:
         return triv_res
 
-    bits_length = (len(A) + len(B))
+    bits_length = len(A) + len(B)
 
     # create a list of lists, with slots for all the weights (bit-positions)
     bits = [[] for weight in range(bits_length)]
 
-    # AND every bit of A with every bit of B (N^2 results) and store by "weight" (bit-position)
+    # AND every bit of A with every bit of B (N^2 results) and store by "weight"
+    # (bit-position)
     for i, a in enumerate(A):
         for j, b in enumerate(B):
             bits[i + j].append(a & b)
@@ -168,7 +183,9 @@ def tree_multiplier(A: pyrtl.WireVector, B: pyrtl.WireVector,
     return reducer(bits, bits_length, adder_func)
 
 
-def signed_tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone):
+def signed_tree_multiplier(
+    A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone
+):
     """Same as :func:`tree_multiplier`, but uses two's-complement signed integers."""
     if len(A) == 1 or len(B) == 1:
         raise pyrtl.PyrtlError("sign bit required, one or both wires too small")
@@ -181,18 +198,21 @@ def signed_tree_multiplier(A, B, reducer=adders.wallace_reducer, adder_func=adde
     return _twos_comp_conditional(res, aneg ^ bneg)
 
 
-def _twos_comp_conditional(orig_wire: pyrtl.WireVector,
-                           sign_bit: pyrtl.WireVector) -> pyrtl.WireVector:
+def _twos_comp_conditional(
+    orig_wire: pyrtl.WireVector, sign_bit: pyrtl.WireVector
+) -> pyrtl.WireVector:
     """Returns two's complement of ``orig_wire`` if ``sign_bit`` == 1"""
-    return pyrtl.select(sign_bit,
-                        (~orig_wire + 1).truncate(len(orig_wire)),
-                        orig_wire)
+    return pyrtl.select(sign_bit, (~orig_wire + 1).truncate(len(orig_wire)), orig_wire)
 
 
 def fused_multiply_adder(
-        mult_A: pyrtl.WireVector, mult_B: pyrtl.WireVector, add: pyrtl.WireVector,
-        signed: bool = False, reducer: Callable = adders.wallace_reducer,
-        adder_func: Callable = adders.kogge_stone) -> pyrtl.WireVector:
+    mult_A: pyrtl.WireVector,
+    mult_B: pyrtl.WireVector,
+    add: pyrtl.WireVector,
+    signed: bool = False,
+    reducer: Callable = adders.wallace_reducer,
+    adder_func: Callable = adders.kogge_stone,
+) -> pyrtl.WireVector:
     """Generate efficient hardware for ``mult_A * mult_B + add``.
 
     Multiplies two :class:`WireVectors<.WireVector>` together and adds a third
@@ -219,10 +239,12 @@ def fused_multiply_adder(
 
 
 def generalized_fma(
-        mult_pairs: list[tuple[pyrtl.WireVector, pyrtl.WireVector]],
-        add_wires: list[pyrtl.WireVector], signed: bool = False,
-        reducer: Callable = adders.wallace_reducer,
-        adder_func: Callable = adders.kogge_stone):
+    mult_pairs: list[tuple[pyrtl.WireVector, pyrtl.WireVector]],
+    add_wires: list[pyrtl.WireVector],
+    signed: bool = False,
+    reducer: Callable = adders.wallace_reducer,
+    adder_func: Callable = adders.kogge_stone,
+):
     """Generated an optimized fused multiply adder.
 
     A generalized FMA unit that multiplies each pair of numbers in ``mult_pairs``, then
@@ -268,6 +290,8 @@ def generalized_fma(
             bits[bit_loc].append(bit)
 
     import math
-    result_bitwidth = (longest_wire_len
-                       + int(math.ceil(math.log(len(add_wires) + len(mult_pairs), 2))))
+
+    result_bitwidth = longest_wire_len + int(
+        math.ceil(math.log(len(add_wires) + len(mult_pairs), 2))
+    )
     return reducer(bits, result_bitwidth, adder_func)

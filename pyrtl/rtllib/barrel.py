@@ -8,6 +8,7 @@ Basic shifting is defined in PyRTL's core library, see:
 :func:`barrel_shifter` should only be used when more complex shifting behavior is
 required.
 """
+
 from enum import IntEnum
 
 from pyrtl.wire import WireVector, WireVectorLike
@@ -15,13 +16,18 @@ from pyrtl.wire import WireVector, WireVectorLike
 
 class Direction(IntEnum):
     """Assigns names to each shift direction, to improve code readability."""
+
     RIGHT = 0
     LEFT = 1
 
 
-def barrel_shifter(bits_to_shift: WireVector, bit_in: WireVectorLike,
-                   direction: WireVectorLike, shift_dist: WireVector,
-                   wrap_around=0) -> WireVector:
+def barrel_shifter(
+    bits_to_shift: WireVector,
+    bit_in: WireVectorLike,
+    direction: WireVectorLike,
+    shift_dist: WireVector,
+    wrap_around=0,
+) -> WireVector:
     """Create a barrel shifter.
 
     :param bits_to_shift: :class:`.WireVector` with the value to shift.
@@ -48,18 +54,24 @@ def barrel_shifter(bits_to_shift: WireVector, bit_in: WireVectorLike,
     for i in range(len(shift_dist)):
         shift_amt = pow(2, i)  # stages shift 1,2,4,8,...
         if shift_amt < final_width:
-            newval = select(direction,
-                            concat(val[:-shift_amt], append_val),  # shift left
-                            concat(append_val, val[shift_amt:]))  # shift right
-            val = select(shift_dist[i],
-                         truecase=newval,  # if bit of shift is 1, do the shift
-                         falsecase=val)  # otherwise, don't
+            newval = select(
+                direction,
+                concat(val[:-shift_amt], append_val),  # shift left
+                concat(append_val, val[shift_amt:]),
+            )  # shift right
+            val = select(
+                shift_dist[i],
+                truecase=newval,  # if bit of shift is 1, do the shift
+                falsecase=val,
+            )  # otherwise, don't
             # the value to append grows exponentially, but is capped at full width
             append_val = concat(append_val, append_val)[:final_width]
         else:
             # if we are shifting this much, all the data is gone
-            val = select(shift_dist[i],
-                         truecase=append_val,  # if bit of shift is 1, do the shift
-                         falsecase=val)  # otherwise, don't
+            val = select(
+                shift_dist[i],
+                truecase=append_val,  # if bit of shift is 1, do the shift
+                falsecase=val,
+            )  # otherwise, don't
 
     return val

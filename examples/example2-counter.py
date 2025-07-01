@@ -1,20 +1,22 @@
-""" Example 2:  A Counter with Ripple Carry Adder.
+"""Example 2:  A Counter with Ripple Carry Adder.
 
-    This next example shows how you make stateful things with registers
-    and more complex hardware structures with functions.  We generate
-    a 3-bit ripple carry adder building off of the 1-bit adder from
-    the prior example, and then hook it to a register to count up modulo 8.
+This next example shows how you make stateful things with registers
+and more complex hardware structures with functions.  We generate
+a 3-bit ripple carry adder building off of the 1-bit adder from
+the prior example, and then hook it to a register to count up modulo 8.
 """
 
 import pyrtl
 
 # Let's just dive right in.
 
+
 def one_bit_add(a, b, carry_in):
     assert len(a) == len(b) == 1  # len returns the bitwidth
     sum = a ^ b ^ carry_in
     carry_out = a & b | a & carry_in | b & carry_in
     return sum, carry_out
+
 
 # A function in PyRTL is nothing special -- it just so happens that the statements
 # it encapsulate tell PyRTL to build some hardware.  If we call "one_bit_add"
@@ -29,6 +31,7 @@ def one_bit_add(a, b, carry_in):
 # enough structure to be mildly interesting.  Let's define an adder of arbitrary
 # length recursively and (hopefully) Pythonically.  More comments after the code.
 
+
 def ripple_add(a, b, carry_in=0):
     a, b = pyrtl.match_bitwidth(a, b)
     # This function is a function that allows us to match the bitwidth of multiple
@@ -40,6 +43,7 @@ def ripple_add(a, b, carry_in=0):
         msbits, carry_out = ripple_add(a[1:], b[1:], ripplecarry)
         sumbits = pyrtl.concat(msbits, lsbit)
     return sumbits, carry_out
+
 
 # The above code breaks down into two cases.  1) If the size of the inputs
 # is one-bit just do one_bit_add.  2) If they are more than one bit, do
@@ -57,7 +61,7 @@ def ripple_add(a, b, carry_in=0):
 
 # Now let's build a 3-bit counter from our N-bit ripple carry adder.
 
-counter = pyrtl.Register(bitwidth=3, name='counter')
+counter = pyrtl.Register(bitwidth=3, name="counter")
 sum, carry_out = ripple_add(counter, pyrtl.Const("1'b1"))
 counter.next <<= sum
 

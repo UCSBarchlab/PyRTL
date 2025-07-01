@@ -13,48 +13,48 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath(".."))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'PyRTL'
-copyright = '2025, Timothy Sherwood'
-author = 'Timothy Sherwood'
+project = "PyRTL"
+copyright = "2025, Timothy Sherwood"
+author = "Timothy Sherwood"
 
 # -- General configuration ---------------------------------------------------
 
-master_doc = 'index'
+master_doc = "index"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.inheritance_diagram',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.inheritance_diagram",
     "sphinx.ext.intersphinx",
-    'sphinx.ext.viewcode',
-    'sphinx_autodoc_typehints',
-    'sphinx_copybutton',
+    "sphinx.ext.viewcode",
+    "sphinx_autodoc_typehints",
+    "sphinx_copybutton",
 ]
 
-graphviz_output_format = 'svg'
+graphviz_output_format = "svg"
 
 # Omit redundant method names in right sidebar (step() instead of Simulation.step()).
-toc_object_entries_show_parents = 'hide'
+toc_object_entries_show_parents = "hide"
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-primary_domain = 'py'
+primary_domain = "py"
 
 # Enable links to Python standard library classes (str, list, dict, etc).
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -63,15 +63,15 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 #
 html_theme = "furo"
 html_theme_options = {
-    'sidebar_hide_name': True,
+    "sidebar_hide_name": True,
 }
-html_logo = 'brand/pyrtl_logo.png'
+html_logo = "brand/pyrtl_logo.png"
 
 # Force a light blue background color for inheritance-diagrams. The default is
 # transparent, which does not work well with Furo's dark mode.
 inheritance_graph_attrs = {
-    'bgcolor': 'aliceblue',
+    "bgcolor": "aliceblue",
 }
 
 # The copy button excludes line numbers, prompts, and outputs.
-copybutton_exclude = '.linenos, .gp, .go'
+copybutton_exclude = ".linenos, .gp, .go"

@@ -1,4 +1,3 @@
-
 """
 Contains functions to estimate aspects of blocks (like area and delay)
 by either using internal models or by making calls out to external tool chains.
@@ -25,6 +24,7 @@ from pyrtl.wire import Const, Input, Output, Register, WireVector
 #    /\  |__) |__   /\     |__  /__`  |  |  |\/|  /\   |  | /  \ |\ |
 #   /~~\ |  \ |___ /~~\    |___ .__/  |  |  |  | /~~\  |  | \__/ | \|
 #
+
 
 def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
     """Estimates the total area of the block.
@@ -69,23 +69,25 @@ def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
             return -958 + (150 * width) + (45 * width**2)
 
     def stdcell_estimate(net):
-        if net.op in 'w~sc':
+        if net.op in "w~sc":
             return 0
-        elif net.op in '&|n':
-            return 40 / 8.0 * len(net.args[0])   # 40 lambda
-        elif net.op in '^=<>x':
-            return 80 / 8.0 * len(net.args[0])   # 80 lambda
-        elif net.op == 'r':
+        elif net.op in "&|n":
+            return 40 / 8.0 * len(net.args[0])  # 40 lambda
+        elif net.op in "^=<>x":
+            return 80 / 8.0 * len(net.args[0])  # 80 lambda
+        elif net.op == "r":
             return 144 / 8.0 * len(net.args[0])  # 144 lambda
-        elif net.op in '+-':
+        elif net.op in "+-":
             return adder_stdcell_estimate(len(net.args[0]))
-        elif net.op == '*':
+        elif net.op == "*":
             return multiplier_stdcell_estimate(len(net.args[0]))
-        elif net.op in 'm@':
+        elif net.op in "m@":
             return 0  # memories handled elsewhere
         else:
-            raise PyrtlInternalError('Unable to estimate the following net '
-                                     'due to unimplemented op :\n%s' % str(net))
+            raise PyrtlInternalError(
+                "Unable to estimate the following net "
+                "due to unimplemented op :\n%s" % str(net)
+            )
 
     block = working_block(block)
 
@@ -110,7 +112,7 @@ def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
 
     # now sum up the area of the memories
     mem_area = 0
-    for mem in set(net.op_param[1] for net in block.logic_subset('@m')):
+    for mem in set(net.op_param[1] for net in block.logic_subset("@m")):
         bits, ports, is_rom = _bits_ports_and_isrom_from_memory(mem)
         mem_area += mem_area_estimate(tech_in_nm, bits, ports, is_rom)
 
@@ -118,7 +120,7 @@ def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
 
 
 def _bits_ports_and_isrom_from_memory(mem):
-    """ Helper to extract mem bits and ports for estimation. """
+    """Helper to extract mem bits and ports for estimation."""
     is_rom = False
     bits = 2**mem.addrwidth * mem.bitwidth
     read_ports = len(mem.readport_nets)
@@ -134,6 +136,7 @@ def _bits_ports_and_isrom_from_memory(mem):
 #    |  |  |\/| | |\ | /  `      /~~\ |\ |  /\  |  \_/  /__` |  /__`
 #    |  |  |  | | | \| \__>     /    \| \| /~~\ |_  |   .__/ |  .__/
 #
+
 
 class TimingAnalysis:
     """Timing analysis estimates the timing delays in the block
@@ -162,7 +165,6 @@ class TimingAnalysis:
         self._generate_timing_map(gate_delay_funcs)
 
     def _generate_timing_map(self, gate_delay_funcs):
-
         # The functions above were gathered and calibrated by mapping
         # reference designs to an openly available 130nm stdcell library.
         # Note that this is will compute the critical logic delay, but does
@@ -170,30 +172,32 @@ class TimingAnalysis:
 
         if gate_delay_funcs is None:
             gate_delay_funcs = {
-                '~': lambda width: 48.5,
-                '&': lambda width: 98.5,
-                '|': lambda width: 105.3,
-                '^': lambda width: 135.07,
-                'n': lambda width: 66.0,
-                'w': lambda width: 0,
-                '+': self._logconst_func(184.0, 18.9),
-                '-': self._logconst_func(184.0, 18.9),
-                '*': self._multiplier_stdcell_estimate,
-                '<': self._logconst_func(101.9, 105.4),
-                '>': self._logconst_func(101.9, 105.4),
-                '=': self._logconst_func(60.1, 147),
-                'x': lambda width: 138.0,
-                'c': lambda width: 0,
-                's': lambda width: 0,
-                'r': lambda width: -1,
-                'm': self._memory_read_estimate,
-                '@': lambda width: -1,
+                "~": lambda width: 48.5,
+                "&": lambda width: 98.5,
+                "|": lambda width: 105.3,
+                "^": lambda width: 135.07,
+                "n": lambda width: 66.0,
+                "w": lambda width: 0,
+                "+": self._logconst_func(184.0, 18.9),
+                "-": self._logconst_func(184.0, 18.9),
+                "*": self._multiplier_stdcell_estimate,
+                "<": self._logconst_func(101.9, 105.4),
+                ">": self._logconst_func(101.9, 105.4),
+                "=": self._logconst_func(60.1, 147),
+                "x": lambda width: 138.0,
+                "c": lambda width: 0,
+                "s": lambda width: 0,
+                "r": lambda width: -1,
+                "m": self._memory_read_estimate,
+                "@": lambda width: -1,
             }
         cleared = self.block.wirevector_subset((Input, Const, Register))
         self.timing_map = {wirevector: 0 for wirevector in cleared}
         for _gate in self.block:  # ordered iteration
-            if _gate.op == 'm':
-                gate_delay = gate_delay_funcs['m'](_gate.op_param[1])  # reads require a memid
+            if _gate.op == "m":
+                gate_delay = gate_delay_funcs["m"](
+                    _gate.op_param[1]
+                )  # reads require a memid
             else:
                 gate_delay = gate_delay_funcs[_gate.op](len(_gate.args[0]))
 
@@ -258,15 +262,16 @@ class TimingAnalysis:
         return max(self.timing_map.values())
 
     def print_max_length(self):
-        """Prints the max timing delay of the circuit """
+        """Prints the max timing delay of the circuit"""
         print("The total block timing delay is ", self.max_length())
 
     class _TooManyCPsError(Exception):
         pass
 
-    def critical_path(self, print_cp: bool = True, cp_limit=100
-                      ) -> list[WireVector, list[LogicNet]]:
-        """ Takes a timing map and returns the critical paths of the system.
+    def critical_path(
+        self, print_cp: bool = True, cp_limit=100
+    ) -> list[WireVector, list[LogicNet]]:
+        """Takes a timing map and returns the critical paths of the system.
 
         :param print_cp: Whether to print the critical path to the terminal
             after calculation
@@ -290,7 +295,8 @@ class TimingAnalysis:
             critical_path.extend(old_critical_path)
             arg_max_time = max(self.timing_map[arg_wire] for arg_wire in source.args)
             for arg_wire in source.args:
-                # if the time for both items are the max, both will be on a critical path
+                # If the time for both items are the max, both will be on a critical
+                # path.
                 if self.timing_map[arg_wire] == arg_max_time:
                     critical_path_pass(critical_path, arg_wire)
 
@@ -308,8 +314,8 @@ class TimingAnalysis:
 
     @staticmethod
     def print_critical_paths(critical_paths):
-        """ Prints the results of the critical path length analysis.
-            Done by default by the :meth:`critical_path` function.
+        """Prints the results of the critical path length analysis.
+        Done by default by the :meth:`critical_path` function.
         """
         line_indent = " " * 2
         #  print the critical path
@@ -330,8 +336,10 @@ class TimingAnalysis:
 #      |  \__/ .__/  |  .__/
 #
 
-def yosys_area_delay(library: str, abc_cmd: str = None, leave_in_dir: str = None,
-                     block: Block = None) -> tuple[float, float]:
+
+def yosys_area_delay(
+    library: str, abc_cmd: str = None, leave_in_dir: str = None, block: Block = None
+) -> tuple[float, float]:
     """Synthesize with `Yosys <https://yosyshq.net/yosys/>`_ and return estimate of area
     and delay.
 
@@ -358,19 +366,19 @@ def yosys_area_delay(library: str, abc_cmd: str = None, leave_in_dir: str = None
     """
 
     if abc_cmd is None:
-        abc_cmd = 'strash;scorr;ifraig;retime;dch,-f;map;print_stats;'
+        abc_cmd = "strash;scorr;ifraig;retime;dch,-f;map;print_stats;"
     else:
         # first, replace whitespace with commas as per yosys requirements
-        re.sub(r"\s+", ',', abc_cmd)
+        re.sub(r"\s+", ",", abc_cmd)
         # then append with "print_stats" to generate the area and delay info
-        abc_cmd = '%s;print_stats;' % abc_cmd
+        abc_cmd = "%s;print_stats;" % abc_cmd
 
     def extract_area_delay_from_yosys_output(yosys_output):
-        report_lines = [line
-                        for line in yosys_output.decode().split('\n')
-                        if 'ABC: netlist' in line]
-        area = re.match(r'.*area\s*=\s*([0-9\.]*)', report_lines[0]).group(1)
-        delay = re.match(r'.*delay\s*=\s*([0-9\.]*)', report_lines[0]).group(1)
+        report_lines = [
+            line for line in yosys_output.decode().split("\n") if "ABC: netlist" in line
+        ]
+        area = re.match(r".*area\s*=\s*([0-9\.]*)", report_lines[0]).group(1)
+        delay = re.match(r".*delay\s*=\s*([0-9\.]*)", report_lines[0]).group(1)
         return float(area), float(delay)
 
     yosys_arg_template = """-p
@@ -378,30 +386,31 @@ def yosys_area_delay(library: str, abc_cmd: str = None, leave_in_dir: str = None
     synth -top toplevel;
     dfflibmap -liberty %s;
     abc -liberty %s -script +%s
-    """.replace('\n', ' ')
+    """.replace("\n", " ")
 
-    temp_d, temp_path = tempfile.mkstemp(prefix='pyrtl_verilog', suffix='.v',
-                                         dir=leave_in_dir, text=True)
+    temp_d, temp_path = tempfile.mkstemp(
+        prefix="pyrtl_verilog", suffix=".v", dir=leave_in_dir, text=True
+    )
     try:
         # write the verilog to a temp
         yosys_arg = yosys_arg_template % (temp_path, library, library, abc_cmd)
-        with open(temp_path, 'w') as f:
-            print('// generated via pyrtl yosys_area_delay', file=f)
-            print('// yosys %s' % yosys_arg, file=f)
+        with open(temp_path, "w") as f:
+            print("// generated via pyrtl yosys_area_delay", file=f)
+            print("// yosys %s" % yosys_arg, file=f)
             output_to_verilog(f, block=block)
         os.close(temp_d)
         # call yosys on the temp, and grab the output
-        yosys_output = subprocess.check_output(['yosys', yosys_arg])
+        yosys_output = subprocess.check_output(["yosys", yosys_arg])
         area, delay = extract_area_delay_from_yosys_output(yosys_output)
     except (subprocess.CalledProcessError, ValueError) as e:
-        print('Error with call to yosys...', file=sys.stderr)
-        print('---------------------------------------------', file=sys.stderr)
-        print(str(e.output).replace('\\n', '\n'), file=sys.stderr)
-        print('---------------------------------------------', file=sys.stderr)
-        raise PyrtlError('Yosys callfailed')
+        print("Error with call to yosys...", file=sys.stderr)
+        print("---------------------------------------------", file=sys.stderr)
+        print(str(e.output).replace("\\n", "\n"), file=sys.stderr)
+        print("---------------------------------------------", file=sys.stderr)
+        raise PyrtlError("Yosys callfailed")
     except OSError:
-        print('Error with call to yosys...', file=sys.stderr)
-        raise PyrtlError('Call to yosys failed (not installed or on path?)')
+        print("Error with call to yosys...", file=sys.stderr)
+        raise PyrtlError("Call to yosys failed (not installed or on path?)")
     finally:
         if leave_in_dir is None:
             os.remove(temp_path)
@@ -410,14 +419,15 @@ def yosys_area_delay(library: str, abc_cmd: str = None, leave_in_dir: str = None
 
 class PathsResult(dict):
     def print(self, file=sys.stdout):
-        """ Pretty print the result of calling :func:`paths`
+        """Pretty print the result of calling :func:`paths`
 
         :param f: the open file to print to (defaults to stdout)
         :return: None
         """
+
         # All this work, to make sure it's determinstic
         def path_sort_key(path):
-            dst_names = [net.dests[0].name if net.dests else '' for net in path]
+            dst_names = [net.dests[0].name if net.dests else "" for net in path]
             return (len(path), dst_names)
 
         for start in sorted(self.keys(), key=lambda w: w.name):
@@ -434,10 +444,12 @@ class PathsResult(dict):
                     print("    (No paths)", file=file)
 
 
-def paths(src: Union[WireVector, Iterable[WireVector]] = None,
-          dst: Union[WireVector, Iterable[WireVector]] = None,
-          dst_nets: dict[WireVector, LogicNet] = None, block: Block = None
-          ) -> PathsResult:
+def paths(
+    src: Union[WireVector, Iterable[WireVector]] = None,
+    dst: Union[WireVector, Iterable[WireVector]] = None,
+    dst_nets: dict[WireVector, LogicNet] = None,
+    block: Block = None,
+) -> PathsResult:
     """Get the list of all paths from ``src`` to ``dst``.
 
     You can provide ``dst_nets`` (the result of calling :meth:`Block.net_connections`,
@@ -479,10 +491,10 @@ def paths(src: Union[WireVector, Iterable[WireVector]] = None,
     block = working_block(block)
 
     if dst_nets is None:
-        # Note: if you set `include_virtual_nodes=True`, Output wires will actually
-        # be present as the destination "net" of Output wires in the dst_nets map.
-        # That would overly complicate this algorithm: we will assume all values()
-        # in the dst_nets map are logic nets only. We set this to False for explicitness...
+        # Note: if you set `include_virtual_nodes=True`, Output wires will actually be
+        # present as the destination "net" of Output wires in the dst_nets map. That
+        # would overly complicate this algorithm: we will assume all values() in the
+        # dst_nets map are logic nets only. We set this to False for explicitness...
         _, dst_nets = block.net_connections(include_virtual_nodes=False)
     else:
         # ... or make sure it's not present otherwise.
@@ -514,11 +526,12 @@ def paths(src: Union[WireVector, Iterable[WireVector]] = None,
             for dst_net in dst_nets.get(w, []):
                 # Avoid loops and the mem net (has no output wire)
                 if dst_net not in curr_path:
-                    if dst_net.op == '@':  # dests will be the read ports
+                    if dst_net.op == "@":  # dests will be the read ports
                         for read_net in dst_net.op_param[1].readport_nets:
                             dfs(read_net.dests[0], curr_path + [dst_net, read_net])
                     else:
                         dfs(dst_net.dests[0], curr_path + [dst_net])
+
         dfs(src, [])
         return paths
 
@@ -537,7 +550,7 @@ def paths(src: Union[WireVector, Iterable[WireVector]] = None,
                     # of paths[i] (paths[i] is at least as large as each path in
                     # paths[i+1:]). If so, paths[i] contains a loop since both start
                     # at src_wire, so don't keep it.
-                    if not any(paths[i][-len(p):] == p for p in paths[i + 1:]):
+                    if not any(paths[i][-len(p) :] == p for p in paths[i + 1 :]):
                         keep.append(paths[i])
                 paths = keep
             all_paths[src_wire][dst_wire] = paths
@@ -545,8 +558,12 @@ def paths(src: Union[WireVector, Iterable[WireVector]] = None,
     return PathsResult(all_paths)
 
 
-def distance(src: WireVector, dst: WireVector, f: Callable[list[LogicNet], int],
-             block: Block = None) -> dict[tuple[LogicNet], int]:
+def distance(
+    src: WireVector,
+    dst: WireVector,
+    f: Callable[list[LogicNet], int],
+    block: Block = None,
+) -> dict[tuple[LogicNet], int]:
     """Calculate the distance along each path from ``src`` to ``dst`` according to ``f``
 
     This calls the given function ``f`` on each net in a path, summing the result.

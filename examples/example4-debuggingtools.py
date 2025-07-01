@@ -1,4 +1,4 @@
-""" Example 4: Debugging
+"""Example 4: Debugging
 
 Debugging is half the coding process in software, and in PyRTL, it's no
 different. PyRTL provides some additional challenges when it comes to
@@ -48,31 +48,27 @@ debug_out <<= add1_out
 
 # Now simulate the circuit.  Let's create some random inputs to feed our adder.
 
-vals1 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
-vals2 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
-vals3 = [int(2**random.uniform(1, 8) - 2) for _ in range(20)]
+vals1 = [int(2 ** random.uniform(1, 8) - 2) for _ in range(20)]
+vals2 = [int(2 ** random.uniform(1, 8) - 2) for _ in range(20)]
+vals3 = [int(2 ** random.uniform(1, 8) - 2) for _ in range(20)]
 
 sim = pyrtl.Simulation()
-sim.step_multiple({
-    'in1': vals1,
-    'in2': vals2,
-    'in3': vals3
-})
+sim.step_multiple({"in1": vals1, "in2": vals2, "in3": vals3})
 
 # In order to get the result data, you do not need to print a waveform of the trace.
 # You always have the option to just pull the data out of the tracer directly
 print("---- Inputs and debug_out ----")
-print("in1:       ", str(sim.tracer.trace['in1']))
-print("in2:       ", str(sim.tracer.trace['in2']))
-print("debug_out: ", str(sim.tracer.trace['debug_out']))
-print('\n')
+print("in1:       ", str(sim.tracer.trace["in1"]))
+print("in2:       ", str(sim.tracer.trace["in2"]))
+print("debug_out: ", str(sim.tracer.trace["debug_out"]))
+print("\n")
 
 # Below, I am using the ability to directly retrieve the trace data to
 # verify the correctness of the first adder
 
 for i in range(len(vals1)):
-    actual = sim.tracer.trace['debug_out'][i]
-    expected = sim.tracer.trace['in1'][i] + sim.tracer.trace['in2'][i]
+    actual = sim.tracer.trace["debug_out"][i]
+    expected = sim.tracer.trace["in1"][i] + sim.tracer.trace["in2"][i]
     assert actual == expected
 
 
@@ -92,21 +88,22 @@ out1, out2 = (pyrtl.Output(8, "out" + str(x)) for x in range(1, 3))
 
 multout = multipliers.tree_multiplier(in1, in2)
 
-# The following line will create a probe named 'std_probe" for later use, like an output.
-pyrtl.probe(multout, 'std_probe')
+# The following line will create a probe named 'std_probe" for later use, like an
+# output.
+pyrtl.probe(multout, "std_probe")
 
-# We could also do the same thing during assignment. The next command will
-# create a probe (named 'stdout_probe') that refers to multout (returns the wire multout).
-# This achieves virtually the same thing as 4 lines above, but it is done during assignment,
-# so we skip a step by probing the wire before the multiplication.
-# The probe returns multout, the original wire, and out will be assigned multout * 2
-out1 <<= pyrtl.probe(multout, 'stdout_probe') * 2
+# We could also do the same thing during assignment. The next command will create a
+# probe (named 'stdout_probe') that refers to multout (returns the wire multout). This
+# achieves virtually the same thing as 4 lines above, but it is done during assignment,
+# so we skip a step by probing the wire before the multiplication. The probe returns
+# multout, the original wire, and out will be assigned multout * 2
+out1 <<= pyrtl.probe(multout, "stdout_probe") * 2
 
 # probe can also be used with other operations like this:
-pyrtl.probe(multout + 32, 'adder_probe')
+pyrtl.probe(multout + 32, "adder_probe")
 
 # or this:
-pyrtl.probe(multout[2:7], 'select_probe')
+pyrtl.probe(multout[2:7], "select_probe")
 
 # or, similarly:
 # (this will create a probe of multout while passing multout[2:16] to out2)
@@ -117,14 +114,16 @@ out2 <<= pyrtl.probe(multout)[2:16]  # notice probe names are not absolutely nec
 
 # Now on to the simulation...
 # For variation, we'll recreate the random inputs:
-vals1 = [int(2**random.uniform(1, 8) - 2) for _ in range(10)]
-vals2 = [int(2**random.uniform(1, 8) - 2) for _ in range(10)]
+vals1 = [int(2 ** random.uniform(1, 8) - 2) for _ in range(10)]
+vals2 = [int(2 ** random.uniform(1, 8) - 2) for _ in range(10)]
 
 sim = pyrtl.Simulation()
-sim.step_multiple({
-    'in1': vals1,
-    'in2': vals2,
-})
+sim.step_multiple(
+    {
+        "in1": vals1,
+        "in2": vals2,
+    }
+)
 
 # Now we will show the values of the inputs and probes
 # and look at that, we didn't need to make any outputs!
@@ -137,17 +136,17 @@ print("--- Probe w/ debugging: ---")
 # one of those probes above at declaration.
 # We could have used pyrtl.set_debug_mode() before their creation, like so:
 pyrtl.set_debug_mode()
-pyrtl.probe(multout - 16, 'debugsubtr_probe')
+pyrtl.probe(multout - 16, "debugsubtr_probe")
 pyrtl.set_debug_mode(debug=False)
 
 
 # ---- WireVector Stack Trace ----
 
-# Another case that might arise is that a certain wire is causing an error to occur
-# in your program. WireVector Stack Traces allow you to find out more about where a particular
-# WireVector was made in your code. With this enabled the WireVector will
-# store exactly were it was created, which should help with issues where
-# there is a problem with an identified wire.
+# Another case that might arise is that a certain wire is causing an error to occur in
+# your program. WireVector Stack Traces allow you to find out more about where a
+# particular WireVector was made in your code. With this enabled the WireVector will
+# store exactly were it was created, which should help with issues where there is a
+# problem with an identified wire.
 
 # Like above, just add the following line before the relevant WireVector
 # might be made or at the beginning of the program.
@@ -208,7 +207,9 @@ pyrtl.working_block().remove_wirevector(dummy_wv)
 # "hierarchical" rendering to draw something that looks quite like a circuit.
 
 pyrtl.working_block().sanity_check()
-pyrtl.passes._remove_unused_wires(pyrtl.working_block())  # so that trivial_graph() will work
+
+# So that trivial_graph() will work.
+pyrtl.passes._remove_unused_wires(pyrtl.working_block())
 
 print("--- Trivial Graph Format  ---")
 with io.StringIO() as tgf:

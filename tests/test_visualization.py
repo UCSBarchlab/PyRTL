@@ -178,35 +178,37 @@ class TestOutputGraphs(unittest.TestCase):
 
     def test_output_to_tgf_does_not_throw_error(self):
         from tests.test_importexport import full_adder_blif
+
         with io.StringIO() as vfile:
             pyrtl.input_from_blif(full_adder_blif)
             pyrtl.output_to_trivialgraph(vfile)
 
     def test_output_to_graphviz_does_not_throw_error(self):
         from tests.test_importexport import full_adder_blif
+
         with io.StringIO() as vfile:
             pyrtl.input_from_blif(full_adder_blif)
             pyrtl.output_to_graphviz(vfile)
 
     def test_output_to_graphviz_with_custom_namer_does_not_throw_error(self):
         from tests.test_importexport import full_adder_blif
+
         with io.StringIO() as vfile:
             pyrtl.input_from_blif(full_adder_blif)
             timing = pyrtl.TimingAnalysis()
             node_fan_in = {net: len(net.args) for net in pyrtl.working_block()}
             graph_namer = pyrtl.graphviz_detailed_namer(
-                extra_node_info=node_fan_in,
-                extra_edge_info=timing.timing_map
+                extra_node_info=node_fan_in, extra_edge_info=timing.timing_map
             )
             pyrtl.output_to_graphviz(vfile, namer=graph_namer)
 
     def test_output_to_graphviz_correct_detailed_output(self):
         pyrtl.wire._reset_wire_indexers()
 
-        a = pyrtl.Input(2, 'a')
+        a = pyrtl.Input(2, "a")
         b = a * 8
         c = b[2:]
-        d = pyrtl.Output(10, 'd')
+        d = pyrtl.Output(10, "d")
         d <<= c
 
         analysis = pyrtl.TimingAnalysis()
@@ -214,7 +216,7 @@ class TestOutputGraphs(unittest.TestCase):
 
         def get_fanout(n):
             if isinstance(n, pyrtl.LogicNet):
-                if n.op == '@':
+                if n.op == "@":
                     return 0
                 w = n.dests[0]
             else:
@@ -225,24 +227,27 @@ class TestOutputGraphs(unittest.TestCase):
             else:
                 return len(dst_map[w])
 
-        node_fanout = {n: "Fanout: %d" % get_fanout(n) for n in pyrtl.working_block().logic}
+        node_fanout = {
+            n: "Fanout: %d" % get_fanout(n) for n in pyrtl.working_block().logic
+        }
         wire_delay = {
-            w: "Delay: %.2f" % analysis.timing_map[w] for w in pyrtl.working_block().wirevector_set
+            w: "Delay: %.2f" % analysis.timing_map[w]
+            for w in pyrtl.working_block().wirevector_set
         }
 
         with io.StringIO() as vfile:
             pyrtl.output_to_graphviz(
                 file=vfile,
                 namer=pyrtl.graphviz_detailed_namer(node_fanout, wire_delay),
-                maintain_arg_order=True
+                maintain_arg_order=True,
             )
             self.assertEqual(vfile.getvalue(), graphviz_string_detailed)
 
     def test_output_to_graphviz_correct_output_with_arg_ordering(self):
-        i = pyrtl.Input(8, 'i')
-        j = pyrtl.Input(4, 'j')
-        o = pyrtl.Output(8, 'o')
-        q = pyrtl.Output(1, 'q')
+        i = pyrtl.Input(8, "i")
+        j = pyrtl.Input(4, "j")
+        o = pyrtl.Output(8, "o")
+        q = pyrtl.Output(1, "q")
         o <<= i < j
         q <<= j > i
 
@@ -251,10 +256,10 @@ class TestOutputGraphs(unittest.TestCase):
             self.assertEqual(vfile.getvalue(), graphviz_string_arg_ordered)
 
     def test_output_to_graphviz_correct_output_without_arg_ordering(self):
-        i = pyrtl.Input(8, 'i')
-        j = pyrtl.Input(4, 'j')
-        o = pyrtl.Output(8, 'o')
-        q = pyrtl.Output(1, 'q')
+        i = pyrtl.Input(8, "i")
+        j = pyrtl.Input(4, "j")
+        o = pyrtl.Output(8, "o")
+        q = pyrtl.Output(1, "q")
         o <<= i < j
         q <<= j > i
 
@@ -287,7 +292,7 @@ class TestNetGraph(unittest.TestCase):
         self.assertEqual(len(g), 10)
 
         self.assertEqual(len(g[inwire]), 1)
-        self.assertEqual(list(g[inwire].keys())[0].op, '|')
+        self.assertEqual(list(g[inwire].keys())[0].op, "|")
         self.assertEqual(len(g[inwire].values()), 1)
         edges = list(g[inwire].values())[0]
         self.assertEqual(len(edges), 1)
@@ -320,68 +325,72 @@ class TestOutputIPynb(unittest.TestCase):
         self.maxDiff = None
 
     def test_one_bit_adder_matches_expected(self):
-        temp1 = pyrtl.WireVector(bitwidth=1, name='temp1')
+        temp1 = pyrtl.WireVector(bitwidth=1, name="temp1")
         temp2 = pyrtl.WireVector()
 
-        a, b, c = pyrtl.Input(1, 'a'), pyrtl.Input(1, 'b'), pyrtl.Input(1, 'c')
-        sum, carry_out = pyrtl.Output(1, 'sum'), pyrtl.Output(1, 'carry_out')
+        a, b, c = pyrtl.Input(1, "a"), pyrtl.Input(1, "b"), pyrtl.Input(1, "c")
+        sum, carry_out = pyrtl.Output(1, "sum"), pyrtl.Output(1, "carry_out")
 
         sum <<= a ^ b ^ c
 
         temp1 <<= a & b  # connect the result of a & b to the pre-allocated wirevector
         temp2 <<= a & c
-        temp3 = b & c  # temp3 IS the result of b & c (this is the first mention of temp3)
+        temp3 = (
+            b & c
+        )  # temp3 IS the result of b & c (this is the first mention of temp3)
         carry_out <<= temp1 | temp2 | temp3
 
         sim = pyrtl.Simulation()
         for cycle in range(15):
-            sim.step({
-                'a': random.choice([0, 1]),
-                'b': random.choice([0, 1]),
-                'c': random.choice([0, 1])
-            })
+            sim.step(
+                {
+                    "a": random.choice([0, 1]),
+                    "b": random.choice([0, 1]),
+                    "c": random.choice([0, 1]),
+                }
+            )
 
         _ = pyrtl.trace_to_html(sim.tracer)  # tests if it compiles or not
 
     def test_trace_to_html(self):
-        i = pyrtl.Input(1, 'i')
-        o = pyrtl.Output(2, 'o')
+        i = pyrtl.Input(1, "i")
+        o = pyrtl.Output(2, "o")
         o <<= i + 1
 
         sim = pyrtl.Simulation()
-        sim.step_multiple({'i': '0100110'})
+        sim.step_multiple({"i": "0100110"})
         htmlstring = pyrtl.trace_to_html(sim.tracer)
         expected = (
             '<script type="WaveDrom">\n'
-            '{\n'
-            '  signal : [\n'
+            "{\n"
+            "  signal : [\n"
             '    { name: "i",  wave: "010.1.0" },\n'
-            '    { name: "o",  wave: "===.=.=", data: ["0x1", "0x2", "0x1", "0x2", "0x1"] },\n'
-            '  ],\n'
-            '  config: { hscale: 1 }\n'
-            '}\n'
-            '</script>\n'
+            '    { name: "o",  wave: "===.=.=", data: ["0x1", "0x2", "0x1", "0x2", "0x1"] },\n'  # noqa: E501
+            "  ],\n"
+            "  config: { hscale: 1 }\n"
+            "}\n"
+            "</script>\n"
         )
         self.assertEqual(htmlstring, expected)
 
     def test_trace_to_html_repr_func(self):
-        i = pyrtl.Input(1, 'i')
-        o = pyrtl.Output(2, 'o')
+        i = pyrtl.Input(1, "i")
+        o = pyrtl.Output(2, "o")
         o <<= i + 1
 
         sim = pyrtl.Simulation()
-        sim.step_multiple({'i': '0100110'})
+        sim.step_multiple({"i": "0100110"})
         htmlstring = pyrtl.trace_to_html(sim.tracer, repr_func=bin)
         expected = (
             '<script type="WaveDrom">\n'
-            '{\n'
-            '  signal : [\n'
+            "{\n"
+            "  signal : [\n"
             '    { name: "i",  wave: "010.1.0" },\n'
-            '    { name: "o",  wave: "===.=.=", data: ["0b1", "0b10", "0b1", "0b10", "0b1"] },\n'
-            '  ],\n'
-            '  config: { hscale: 1 }\n'
-            '}\n'
-            '</script>\n'
+            '    { name: "o",  wave: "===.=.=", data: ["0b1", "0b10", "0b1", "0b10", "0b1"] },\n'  # noqa: E501
+            "  ],\n"
+            "  config: { hscale: 1 }\n"
+            "}\n"
+            "</script>\n"
         )
         self.assertEqual(htmlstring, expected)
 
@@ -392,9 +401,9 @@ class TestOutputIPynb(unittest.TestCase):
             C = 2
             D = 3
 
-        i = pyrtl.Input(4, 'i')
-        state = pyrtl.Register(max(Foo).bit_length(), name='state')
-        o = pyrtl.Output(name='o')
+        i = pyrtl.Input(4, "i")
+        state = pyrtl.Register(max(Foo).bit_length(), name="state")
+        o = pyrtl.Output(name="o")
         o <<= state
 
         with pyrtl.conditional_assignment:
@@ -408,24 +417,22 @@ class TestOutputIPynb(unittest.TestCase):
                 state.next |= Foo.D
 
         sim = pyrtl.Simulation()
-        sim.step_multiple({
-            'i': [1, 2, 4, 8, 0]
-        })
+        sim.step_multiple({"i": [1, 2, 4, 8, 0]})
 
         htmlstring = pyrtl.trace_to_html(
-            sim.tracer,
-            repr_per_name={'state': pyrtl.enum_name(Foo)})
+            sim.tracer, repr_per_name={"state": pyrtl.enum_name(Foo)}
+        )
         expected = (
             '<script type="WaveDrom">\n'
-            '{\n'
-            '  signal : [\n'
-            '    { name: "i",  wave: "=====", data: ["0x1", "0x2", "0x4", "0x8", "0x0"] },\n'
+            "{\n"
+            "  signal : [\n"
+            '    { name: "i",  wave: "=====", data: ["0x1", "0x2", "0x4", "0x8", "0x0"] },\n'  # noqa: E501
             '    { name: "o",  wave: "=.===", data: ["0x0", "0x1", "0x2", "0x3"] },\n'
             '    { name: "state",  wave: "=.===", data: ["A", "B", "C", "D"] },\n'
-            '  ],\n'
-            '  config: { hscale: 1 }\n'
-            '}\n'
-            '</script>\n'
+            "  ],\n"
+            "  config: { hscale: 1 }\n"
+            "}\n"
+            "</script>\n"
         )
         self.assertEqual(htmlstring, expected)
 
@@ -434,9 +441,9 @@ class TestOutputIPynb(unittest.TestCase):
             A = 0
             B = 1
 
-        i = pyrtl.Input(2, 'i')
-        state = pyrtl.Register(max(Foo).bit_length(), name='state')
-        o = pyrtl.Output(name='o')
+        i = pyrtl.Input(2, "i")
+        state = pyrtl.Register(max(Foo).bit_length(), name="state")
+        o = pyrtl.Output(name="o")
         o <<= state
 
         with pyrtl.conditional_assignment:
@@ -446,23 +453,22 @@ class TestOutputIPynb(unittest.TestCase):
                 state.next |= Foo.B
 
         sim = pyrtl.Simulation()
-        sim.step_multiple({
-            'i': [1, 2, 1, 2, 2]
-        })
+        sim.step_multiple({"i": [1, 2, 1, 2, 2]})
 
         htmlstring = pyrtl.trace_to_html(
-            sim.tracer, repr_per_name={'state': pyrtl.enum_name(Foo)})
+            sim.tracer, repr_per_name={"state": pyrtl.enum_name(Foo)}
+        )
         expected = (
             '<script type="WaveDrom">\n'
-            '{\n'
-            '  signal : [\n'
+            "{\n"
+            "  signal : [\n"
             '    { name: "i",  wave: "====.", data: ["0x1", "0x2", "0x1", "0x2"] },\n'
             '    { name: "o",  wave: "0.101" },\n'
             '    { name: "state",  wave: "=.===", data: ["A", "B", "A", "B"] },\n'
-            '  ],\n'
-            '  config: { hscale: 1 }\n'
-            '}\n'
-            '</script>\n'
+            "  ],\n"
+            "  config: { hscale: 1 }\n"
+            "}\n"
+            "</script>\n"
         )
         self.assertEqual(htmlstring, expected)
 

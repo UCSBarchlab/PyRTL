@@ -3,7 +3,7 @@ import pyrtl
 
 def match_bitwidth(*args: pyrtl.WireVector):
     # TODO: allow for custom bit extension functions
-    """ Matches the bitwidth of all of the input arguments.
+    """Matches the bitwidth of all of the input arguments.
 
     .. WARNING::
 
@@ -15,8 +15,9 @@ def match_bitwidth(*args: pyrtl.WireVector):
     return pyrtl.match_bitwidth(*args)
 
 
-def partition_wire(wire: pyrtl.WireVector,
-                   partition_size: int) -> list[pyrtl.WireVector]:
+def partition_wire(
+    wire: pyrtl.WireVector, partition_size: int
+) -> list[pyrtl.WireVector]:
     """Partitions a wire into a list of ``N`` wires of size ``partition_size``.
 
     The ``wire``'s bitwidth must be evenly divisible by ``partition_size``.
@@ -29,9 +30,15 @@ def partition_wire(wire: pyrtl.WireVector,
     :param partition_size: Integer representing size of each partition.
     """
     if len(wire) % partition_size != 0:
-        raise pyrtl.PyrtlError("Wire {} cannot be evenly partitioned into items of size {}"
-                               .format(wire, partition_size))
-    return [wire[offset:offset + partition_size] for offset in range(0, len(wire), partition_size)]
+        raise pyrtl.PyrtlError(
+            "Wire {} cannot be evenly partitioned into items of size {}".format(
+                wire, partition_size
+            )
+        )
+    return [
+        wire[offset : offset + partition_size]
+        for offset in range(0, len(wire), partition_size)
+    ]
 
 
 def str_to_int_array(string, base=16):
@@ -68,7 +75,7 @@ def twos_comp_repr(val: int, bitwidth: int) -> int:
     if val >= 0:
         return val
     else:
-        return (~abs(val) & (2 ** bitwidth - 1)) + 1  # flip the bits and add one
+        return (~abs(val) & (2**bitwidth - 1)) + 1  # flip the bits and add one
 
 
 def rev_twos_comp_repr(val: int, bitwidth: int) -> int:
@@ -83,7 +90,9 @@ def rev_twos_comp_repr(val: int, bitwidth: int) -> int:
     if bitwidth < val.bit_length() or val == 2 ** (bitwidth - 1):
         raise pyrtl.PyrtlError("please choose a larger target bitwidth")
     if bitwidth == valbl:  # MSB is a 1, value is negative
-        return -((~val & (2 ** bitwidth - 1)) + 1)  # flip the bits, add one, and make negative
+        return -(
+            (~val & (2**bitwidth - 1)) + 1
+        )  # flip the bits, add one, and make negative
     else:
         return val
 
@@ -103,16 +112,17 @@ def _shifted_reg_next(reg: pyrtl.Register, direct: str, num: int = 1):
 
     :return: Register containing reg's (shifted) next state
     """
-    if direct == 'l':
+    if direct == "l":
         if num >= len(reg):
             return 0
         else:
             return pyrtl.concat(reg, pyrtl.Const(0, num))
-    elif direct == 'r':
+    elif direct == "r":
         if num >= len(reg):
             return 0
         else:
             return reg[num:]
     else:
-        raise pyrtl.PyrtlError("direction must be specified with 'direct'"
-                               "parameter as either 'l' or 'r'")
+        raise pyrtl.PyrtlError(
+            "direction must be specified with 'direct'parameter as either 'l' or 'r'"
+        )

@@ -49,6 +49,7 @@ def net_graph(block: Block = None, split_state: bool = False):
     # FIXME: make it not try to add unused wires (issue #204)
     block = working_block(block)
     from pyrtl.wire import Register
+
     # self.sanity_check()
     graph = {}
 
@@ -67,7 +68,7 @@ def net_graph(block: Block = None, split_state: bool = False):
             graph[w] = {}
 
     # add all of the edges
-    for w in (dest_set | arg_set):
+    for w in dest_set | arg_set:
         try:
             _from = wire_src_dict[w]
         except Exception:
@@ -91,28 +92,33 @@ def net_graph(block: Block = None, split_state: bool = False):
 #     |  / _` |___
 #     |  \__> |
 
+
 def _trivialgraph_default_namer(thing, is_edge=True):
-    """ Returns a "good" string for thing in printed graphs. """
+    """Returns a "good" string for thing in printed graphs."""
     if is_edge:
-        if thing.name is None or thing.name.startswith('tmp'):
-            return ''
+        if thing.name is None or thing.name.startswith("tmp"):
+            return ""
         else:
-            return '/'.join([thing.name, str(len(thing))])
+            return "/".join([thing.name, str(len(thing))])
     elif isinstance(thing, Const):
         return str(thing.val)
     elif isinstance(thing, WireVector):
-        return thing.name or '??'
+        return thing.name or "??"
     else:
         try:
-            return thing.op + str(thing.op_param or '')
+            return thing.op + str(thing.op_param or "")
         except AttributeError:
             raise PyrtlError('no naming rule for "%s"' % str(thing))
 
 
 def output_to_trivialgraph(
-        file,
-        namer: Callable[[Union[WireVector, LogicNet], bool], str] = _trivialgraph_default_namer,
-        block: Block = None, split_state: bool = False):
+    file,
+    namer: Callable[
+        [Union[WireVector, LogicNet], bool], str
+    ] = _trivialgraph_default_namer,
+    block: Block = None,
+    split_state: bool = False,
+):
     """Walk the block and output it in `trivial graph format
     <https://en.wikipedia.org/wiki/Trivial_Graph_Format>`_ to the open file.
 
@@ -132,10 +138,10 @@ def output_to_trivialgraph(
 
     # print the list of nodes
     for index, node in enumerate(graph):
-        print('%d %s' % (index, namer(node, is_edge=False)), file=file)
+        print("%d %s" % (index, namer(node, is_edge=False)), file=file)
         node_index_map[node] = index
 
-    print('#', file=file)
+    print("#", file=file)
 
     # print the list of edges
     for _from in graph:
@@ -143,7 +149,7 @@ def output_to_trivialgraph(
             from_index = node_index_map[_from]
             to_index = node_index_map[_to]
             for edge in graph[_from][_to]:
-                print('%d %d %s' % (from_index, to_index, namer(edge)), file=file)
+                print("%d %d %s" % (from_index, to_index, namer(edge)), file=file)
 
 
 # -----------------------------------------------------------------
@@ -151,8 +157,12 @@ def output_to_trivialgraph(
 #    / _` |__)  /\  |__) |__| \  / |  /
 #    \__> |  \ /~~\ |    |  |  \/  | /__
 
-def _default_edge_namer(edge: WireVector, is_to_splitmerge: bool = False,
-                        extra_edge_info: dict[WireVector, str] = None):
+
+def _default_edge_namer(
+    edge: WireVector,
+    is_to_splitmerge: bool = False,
+    extra_edge_info: dict[WireVector, str] = None,
+):
     """
     A function for naming an edge for use in the ``graphviz`` graph.
 
@@ -165,22 +175,27 @@ def _default_edge_namer(edge: WireVector, is_to_splitmerge: bool = False,
         in to ``block_to_graphviz_string``
     """
 
-    name = '' if edge.name is None else '/'.join([edge.name, str(len(edge))])
+    name = "" if edge.name is None else "/".join([edge.name, str(len(edge))])
     if extra_edge_info and edge in extra_edge_info:
         # Always label an edge if present in the extra_edge_info map
         name = name + " (" + str(extra_edge_info[edge]) + ")"
-    elif (edge.name is None
-          or edge.name.startswith('tmp')
-          or isinstance(edge, (Input, Output, Const, Register))):
-        name = ''
+    elif (
+        edge.name is None
+        or edge.name.startswith("tmp")
+        or isinstance(edge, (Input, Output, Const, Register))
+    ):
+        name = ""
 
     penwidth = 2 if len(edge) == 1 else 6
-    arrowhead = 'none' if is_to_splitmerge else 'normal'
+    arrowhead = "none" if is_to_splitmerge else "normal"
     return '[label="%s", penwidth="%d", arrowhead="%s"]' % (name, penwidth, arrowhead)
 
 
-def _default_node_namer(node: WireVector, split_state: bool = False, extra_node_info:
-                        dict[WireVector, str] = None):
+def _default_node_namer(
+    node: WireVector,
+    split_state: bool = False,
+    extra_node_info: dict[WireVector, str] = None,
+):
     """
     A function for naming a node for use in the ``graphviz`` graph.
 
@@ -195,14 +210,17 @@ def _default_node_namer(node: WireVector, split_state: bool = False, extra_node_
     :return: a function that can be called by graph namer function you pass in to
              :func:`block_to_graphviz_string`
     """
+
     def label(v):
         if extra_node_info and node in extra_node_info:
             v = v + " (" + str(extra_node_info[node]) + ")"
         return v
 
     if isinstance(node, Const):
-        name = node.name + ': ' if not node.name.startswith('const_') else ''
-        return '[label="%s", shape=circle, fillcolor=lightgrey]' % label(name + str(node.val))
+        name = node.name + ": " if not node.name.startswith("const_") else ""
+        return '[label="%s", shape=circle, fillcolor=lightgrey]' % label(
+            name + str(node.val)
+        )
     elif isinstance(node, Input):
         return '[label="%s", shape=invhouse, fillcolor=coral]' % label(node.name)
     elif isinstance(node, Output):
@@ -213,40 +231,47 @@ def _default_node_namer(node: WireVector, split_state: bool = False, extra_node_
         return '[label="%s", shape=circle, fillcolor=none]' % label(node.name)
     else:
         try:
-            if node.op == '&':
+            if node.op == "&":
                 return '[label="%s"]' % label("and")
-            elif node.op == '|':
+            elif node.op == "|":
                 return '[label="%s"]' % label("or")
-            elif node.op == '^':
+            elif node.op == "^":
                 return '[label="%s"]' % label("xor")
-            elif node.op == '~':
+            elif node.op == "~":
                 return '[label="%s", shape=invtriangle]' % label("not")
-            elif node.op == 'x':
+            elif node.op == "x":
                 return '[label="%s", shape=invtrapezium]' % label("mux")
-            elif node.op == 's':
-                # node.op_param is a tuple of the selected bits to pull from the argument wire,
-                # so it could look something like (0,0,0,0,0,0,0), meaning dest wire is going
-                # to be a concatenation of the zero-th bit of the argument wire, 7 times.
+            elif node.op == "s":
+                # node.op_param is a tuple of the selected bits to pull from the
+                # argument wire, so it could look something like (0,0,0,0,0,0,0),
+                # meaning dest wire is going to be a concatenation of the zero-th bit of
+                # the argument wire, 7 times.
                 selLower = node.op_param[0]
                 selUpper = node.op_param[-1]
                 if len(node.op_param) == 1:
                     bits = "[%d]" % selLower
-                elif node.op_param == tuple(range(selLower, selUpper + 1)):  # consecutive
+                elif node.op_param == tuple(
+                    range(selLower, selUpper + 1)
+                ):  # consecutive
                     bits = "[%d:%d]" % (selUpper, selLower)
-                elif all([ix == node.op_param[0] for ix in node.op_param[1:]]):  # all the same
+                elif all(
+                    [ix == node.op_param[0] for ix in node.op_param[1:]]
+                ):  # all the same
                     bits = "[%d]*%d" % (node.op_param[0], len(node.op_param))
                 else:
                     bits = "bits" + str(tuple(reversed(node.op_param)))
-                return '[label="%s", fillcolor=azure1, height=.25, width=.25]' % label(bits)
-            elif node.op in 'c':
+                return '[label="%s", fillcolor=azure1, height=.25, width=.25]' % label(
+                    bits
+                )
+            elif node.op in "c":
                 return '[label="%s", height=.1, width=.1]' % label("concat")
-            elif node.op == 'r':
-                name = node.dests[0].name or ''
+            elif node.op == "r":
+                name = node.dests[0].name or ""
                 name = ("%s.next" % name) if split_state else name
                 return '[label="%s", shape=square, fillcolor=gold]' % label(name)
-            elif node.op == 'w':
+            elif node.op == "w":
                 return '[label="%s", height=.1, width=.1]' % label("")
-            elif node.op in 'm@':
+            elif node.op in "m@":
                 name = node.op_param[1].name
                 if name.startswith("tmp"):
                     name = ""
@@ -254,18 +279,19 @@ def _default_node_namer(node: WireVector, split_state: bool = False, extra_node_
                     name = "(" + name + ")"
                 return '[label="%s"]' % label(node.op + name)
             else:
-                return '[label="%s"]' % label(node.op + str(node.op_param or ''))
+                return '[label="%s"]' % label(node.op + str(node.op_param or ""))
         except AttributeError:
             raise PyrtlError('no naming rule for "%s"' % str(node))
 
 
 def _graphviz_default_namer(
-        thing: Union[WireVector, LogicNet],
-        is_edge: bool,
-        is_to_splitmerge: bool,
-        split_state: bool,
-        node_namer=_default_node_namer,
-        edge_namer=_default_edge_namer):
+    thing: Union[WireVector, LogicNet],
+    is_edge: bool,
+    is_to_splitmerge: bool,
+    split_state: bool,
+    node_namer=_default_node_namer,
+    edge_namer=_default_edge_namer,
+):
     """Returns a "good" Graphviz label for thing.
 
     :param thing: The edge (:class:`WireVector`) or node (:class:`LogicNet` or
@@ -289,9 +315,7 @@ def _graphviz_default_namer(
         return node_namer(thing, split_state=split_state)
 
 
-def graphviz_detailed_namer(
-        extra_node_info: dict = None,
-        extra_edge_info: dict = None):
+def graphviz_detailed_namer(extra_node_info: dict = None, extra_edge_info: dict = None):
     """Returns a detailed Graphviz namer that prints extra information about nodes/edges
     in the given maps.
 
@@ -317,13 +341,24 @@ def graphviz_detailed_namer(
 
     def namer(thing, is_edge, is_to_splitmerge, split_state):
         return _graphviz_default_namer(
-            thing, is_edge, is_to_splitmerge, split_state,
-            node_namer=node_namer, edge_namer=edge_namer)
+            thing,
+            is_edge,
+            is_to_splitmerge,
+            split_state,
+            node_namer=node_namer,
+            edge_namer=edge_namer,
+        )
+
     return namer
 
 
-def output_to_graphviz(file, block: Block = None, namer=_graphviz_default_namer,
-                       split_state: bool = True, maintain_arg_order: bool = False):
+def output_to_graphviz(
+    file,
+    block: Block = None,
+    namer=_graphviz_default_namer,
+    split_state: bool = True,
+    maintain_arg_order: bool = False,
+):
     """Walk the :class:`Block` and output it in `Graphviz <https://graphviz.org/>`_
     format to the open file.
 
@@ -345,12 +380,18 @@ def output_to_graphviz(file, block: Block = None, namer=_graphviz_default_namer,
         Keeping this as ``False`` results in a cleaner, though less visually precise,
         graphical output.
     """
-    print(block_to_graphviz_string(block, namer, split_state, maintain_arg_order), file=file)
+    print(
+        block_to_graphviz_string(block, namer, split_state, maintain_arg_order),
+        file=file,
+    )
 
 
 def block_to_graphviz_string(
-        block: Block = None, namer=_graphviz_default_namer,
-        split_state: bool = True, maintain_arg_order: bool = False):
+    block: Block = None,
+    namer=_graphviz_default_namer,
+    split_state: bool = True,
+    maintain_arg_order: bool = False,
+):
     """Return a Graphviz string for the ``block``.
 
     The normal namer function will label user-named wires with their names and label the
@@ -370,11 +411,14 @@ def block_to_graphviz_string(
     returns a namer function that can subsequently be passed to
     :func:`output_to_graphviz` or :func:`block_to_graphviz_string`::
 
-        node_fanout = {n: "Fanout: %d" % my_fanout_func(n) for n in working_block().logic}
-        wire_delay = {w: "Delay: %.2f" % my_delay_func(w) for w in working_block().wirevector_set}
+        node_fanout = {n: f"Fanout: {my_fanout_func(n)}"
+                       for n in working_block().logic}
+        wire_delay = {w: f"Delay: {my_delay_func(w):.2f}"
+                      for w in working_block().wirevector_set}
 
         with open("out.gv", "w") as f:
-            output_to_graphviz(f, namer=graphviz_detailed_namer(node_fanout, wire_delay))
+            output_to_graphviz(
+                f, namer=graphviz_detailed_namer(node_fanout, wire_delay))
 
     :param namer: A function mapping graph objects (wires/logic nets) to labels. If you
         want a more detailed namer, pass in a call to :func:`graphviz_detailed_namer`.
@@ -405,18 +449,18 @@ digraph g {
         # If a LogicNet and a wire share the same name, we want the LogicNet
         # to sort first, so we arbitrarily 'A' and 'B' suffixes to break ties.
         if isinstance(node, LogicNet):
-            if node.op == '@':
-                key = str(node.args[2]) + 'A'
+            if node.op == "@":
+                key = str(node.args[2]) + "A"
             else:
-                key = node.dests[0].name + 'A'
+                key = node.dests[0].name + "A"
         else:
-            key = node.name + 'B'
+            key = node.name + "B"
         return _natural_sort_key(key)
 
     # print the list of nodes
     for index, node in enumerate(sorted(graph.keys(), key=_node_sort_key)):
         label = namer(node, False, False, split_state)
-        rstring += '    n%s %s;\n' % (index, label)
+        rstring += "    n%s %s;\n" % (index, label)
         node_index_map[node] = index
 
     # print the list of edges
@@ -426,9 +470,11 @@ digraph g {
             from_index = node_index_map[_from]
             to_index = node_index_map[_to]
             for edge in graph[_from][_to]:
-                is_to_splitmerge = True if hasattr(_to, 'op') and _to.op in 'cs' else False
+                is_to_splitmerge = (
+                    True if hasattr(_to, "op") and _to.op in "cs" else False
+                )
                 label = namer(edge, True, is_to_splitmerge, False)
-                rstring += '    n%d -> n%d %s;\n' % (from_index, to_index, label)
+                rstring += "    n%d -> n%d %s;\n" % (from_index, to_index, label)
                 srcs[_to].append((_from, edge))
 
     # Maintain left-to-right order of incoming wires for nets where order matters.
@@ -442,22 +488,22 @@ digraph g {
             if w is arg:
                 return ix
             ix += 1
-        raise PyrtlInternalError('Expected to find wire in set of args')
+        raise PyrtlInternalError("Expected to find wire in set of args")
 
     if maintain_arg_order:
         block = working_block(block)
-        for net in sorted(block.logic_subset(op='c-<>x@'), key=_node_sort_key):
+        for net in sorted(block.logic_subset(op="c-<>x@"), key=_node_sort_key):
             args = [(node_index_map[n], wire) for (n, wire) in srcs[net]]
             args.sort(key=lambda t: index_of(t[1], net.args))
-            s = ' -> '.join(['n%d' % n for n, _ in args])
-            rstring += '    {\n'
-            rstring += '        rank=same;\n'
-            rstring += '        edge[style=invis];\n'
-            rstring += '        ' + s + ';\n'
-            rstring += '        rankdir=LR;\n'
-            rstring += '    }\n'
+            s = " -> ".join(["n%d" % n for n, _ in args])
+            rstring += "    {\n"
+            rstring += "        rank=same;\n"
+            rstring += "        edge[style=invis];\n"
+            rstring += "        " + s + ";\n"
+            rstring += "        rankdir=LR;\n"
+            rstring += "    }\n"
 
-    rstring += '}\n'
+    rstring += "}\n"
     return rstring
 
 
@@ -465,6 +511,7 @@ digraph g {
 #     __        __
 #    /__` \  / / _`
 #    .__/  \/  \__>
+
 
 def output_to_svg(file, block: Block = None, split_state: bool = True):
     """Output the block as an SVG to the open file.
@@ -477,8 +524,9 @@ def output_to_svg(file, block: Block = None, split_state: bool = True):
     print(block_to_svg(block, split_state), file=file)
 
 
-def block_to_svg(block: Block = None, split_state: bool = True,
-                 maintain_arg_order: bool = False):
+def block_to_svg(
+    block: Block = None, split_state: bool = True, maintain_arg_order: bool = False
+):
     """Return an SVG for the block.
 
     :param block: :class:`Block` to use (defaults to current :ref:`working_block`).
@@ -493,8 +541,12 @@ def block_to_svg(block: Block = None, split_state: bool = True,
     """
     try:
         from graphviz import Source
-        src = Source(block_to_graphviz_string(block, split_state=split_state,
-                                              maintain_arg_order=maintain_arg_order))
+
+        src = Source(
+            block_to_graphviz_string(
+                block, split_state=split_state, maintain_arg_order=maintain_arg_order
+            )
+        )
         try:
             svg = src._repr_image_svg_xml()
         except AttributeError:
@@ -512,9 +564,14 @@ def block_to_svg(block: Block = None, split_state: bool = True,
 #    |__|  |  |\/| |
 #    |  |  |  |  | |___
 
-def trace_to_html(simtrace: SimulationTrace, trace_list: list[str] = None,
-                  sortkey=None, repr_func: Callable[[int], str] = hex,
-                  repr_per_name: dict[str, Callable[[int], str]] = {}) -> str:
+
+def trace_to_html(
+    simtrace: SimulationTrace,
+    trace_list: list[str] = None,
+    sortkey=None,
+    repr_func: Callable[[int], str] = hex,
+    repr_per_name: dict[str, Callable[[int], str]] = {},
+) -> str:
     """Return a HTML block showing the trace.
 
     :param simtrace: A trace to render in HTML.
@@ -532,8 +589,9 @@ def trace_to_html(simtrace: SimulationTrace, trace_list: list[str] = None,
     """
 
     from pyrtl.simulation import SimulationTrace, _trace_sort_key
+
     if not isinstance(simtrace, SimulationTrace):
-        raise PyrtlError('first arguement must be of type SimulationTrace')
+        raise PyrtlError("first arguement must be of type SimulationTrace")
 
     trace = simtrace.trace
     if sortkey is None:
@@ -542,8 +600,7 @@ def trace_to_html(simtrace: SimulationTrace, trace_list: list[str] = None,
     if trace_list is None:
         trace_list = sorted(trace, key=sortkey)
 
-    wave_template = (
-        """\
+    wave_template = """\
 <script type="WaveDrom">
 {
   signal : [
@@ -553,7 +610,6 @@ def trace_to_html(simtrace: SimulationTrace, trace_list: list[str] = None,
 }
 </script>
 """
-    )
 
     vallens = []  # For determining longest value length
 
@@ -564,23 +620,23 @@ def trace_to_html(simtrace: SimulationTrace, trace_list: list[str] = None,
 
         for i, value in enumerate(trace[w]):
             if last == value:
-                wavelist.append('.')
+                wavelist.append(".")
             else:
                 f = repr_per_name.get(w)
                 if f is not None:
-                    wavelist.append('=')
+                    wavelist.append("=")
                     datalist.append(str(f(value)))
                 elif len(simtrace._wires[w]) == 1:
                     # int() to convert True/False to 0/1
                     wavelist.append(str(int(value)))
                 else:
-                    wavelist.append('=')
+                    wavelist.append("=")
                     datalist.append(str(repr_func(value)))
 
                 last = value
 
-        wavestring = ''.join(wavelist)
-        datastring = ', '.join(['"%s"' % data for data in datalist])
+        wavestring = "".join(wavelist)
+        datastring = ", ".join(['"%s"' % data for data in datalist])
         if repr_per_name.get(w) is None and len(simtrace._wires[w]) == 1:
             vallens.append(1)  # all are the same length
             return bool_signal_template % (w, wavestring)
@@ -591,7 +647,7 @@ def trace_to_html(simtrace: SimulationTrace, trace_list: list[str] = None,
     bool_signal_template = '    { name: "%s",  wave: "%s" },'
     int_signal_template = '    { name: "%s",  wave: "%s", data: [%s] },'
     signals = [extract(w) for w in trace_list]
-    all_signals = '\n'.join(signals)
+    all_signals = "\n".join(signals)
     maxvallen = max(vallens)
     scale = (maxvallen // 5) + 1
     wave = wave_template % (all_signals, scale)
