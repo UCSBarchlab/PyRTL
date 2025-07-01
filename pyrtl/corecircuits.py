@@ -92,8 +92,8 @@ def mux(
 
     if 2 ** len(index) != len(mux_ins):
         raise PyrtlError(
-            "Mux select line is %d bits, but selecting from %d inputs. "
-            % (len(index), len(mux_ins))
+            f"Mux select line is {len(index)} bits, but selecting from {len(mux_ins)} "
+            "inputs."
         )
 
     if len(index) == 1:
@@ -816,7 +816,7 @@ def as_wires(
     elif not isinstance(val, WireVector):
         raise PyrtlError(
             "error, expecting a wirevector, int, or verilog-style "
-            "const string got %s instead" % repr(val)
+            f"const string got {repr(val)} instead"
         )
     elif bitwidth == "0":
         raise PyrtlError("error, bitwidth must be >= 1")
@@ -909,8 +909,8 @@ def bitfield_update(
     newvalue = as_wires(newvalue, bitwidth=len(idxs_middle), truncating=truncating)
     if len(idxs_middle) != len(newvalue):
         raise PyrtlError(
-            "Cannot update bitfield of length %d with value of length %d "
-            "unless truncating=True is specified" % (len(idxs_middle), len(newvalue))
+            f"Cannot update bitfield of length {len(idxs_middle)} with value of length "
+            f"{len(newvalue)} unless truncating=True is specified"
         )
 
     result_list = []
@@ -922,9 +922,7 @@ def bitfield_update(
     result = concat_list(result_list)
 
     if len(result) != len(w):
-        raise PyrtlInternalError(
-            "len(result)=%d, len(original)=%d" % (len(result), len(w))
-        )
+        raise PyrtlInternalError(f"len(result)={len(result)}, len(original)={len(w)}")
     return result
 
 
@@ -1019,16 +1017,14 @@ def enum_mux(
     # check dictionary keys are of the right type
     keytypeset = set(type(x) for x in table.keys() if x is not otherwise)
     if len(keytypeset) != 1:
-        raise PyrtlError("table mixes multiple types {} as keys".format(keytypeset))
+        raise PyrtlError(f"table mixes multiple types {keytypeset} as keys")
     keytype = list(keytypeset)[0]
     # check that dictionary is complete for the enum
     try:
         enumkeys = list(keytype.__members__.values())
     except AttributeError:
         raise PyrtlError(
-            "type {} not an Enum and does not support the same interface".format(
-                keytype
-            )
+            f"type {keytype} not an Enum and does not support the same interface"
         )
     missingkeys = [e for e in enumkeys if e not in table]
 
@@ -1040,9 +1036,7 @@ def enum_mux(
             default = table[otherwise]
 
     if strict and default is None and missingkeys:
-        raise PyrtlError(
-            "table provided is incomplete, missing: {}".format(missingkeys)
-        )
+        raise PyrtlError(f"table provided is incomplete, missing: {missingkeys}")
 
     # generate the actual mux
     vals = {k.value: d for k, d in table.items() if k is not otherwise}

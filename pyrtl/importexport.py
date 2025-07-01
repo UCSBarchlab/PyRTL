@@ -460,14 +460,15 @@ def input_from_blif(
             while cover:
                 if len(cover) < 2:
                     raise PyrtlError(
-                        'BLIF file with malformed cover set "%s" '
-                        % command["cover_list"]
+                        'BLIF file with malformed cover set "{}" '.format(
+                            command["cover_list"]
+                        )
                     )
                 input_plane, output_plane, cover = cover[0], cover[1], cover[2:]
                 if output_plane != "1":
                     raise PyrtlError(
-                        'Off-set found in the output plane of BLIF cover set "%s" '
-                        "(only on-sets are supported)" % command["cover_list"]
+                        'Off-set found in the output plane of BLIF cover set "{}" '
+                        "(only on-sets are supported)".format(command["cover_list"])
                     )
                 conj = rtl_all(
                     *[
@@ -604,8 +605,8 @@ def input_from_blif(
                 wa <<= wf
             else:
                 raise PyrtlError(
-                    "%s formal parameter is neither an input nor output of subckt %s"
-                    % (formal, command["model_name"])
+                    f"{formal} formal parameter is neither an input nor output of "
+                    f"subckt {command['model_name']}"
                 )
 
     def instantiate(subckt):
@@ -821,7 +822,7 @@ class _VerilogSanitizer(_NameSanitizer):
 
 
 def _verilog_vector_size_decl(n):
-    return "" if n == 1 else "[{:d}:0]".format(n - 1)
+    return "" if n == 1 else f"[{n - 1:d}:0]"
 
 
 def _verilog_vector_decl(w):
@@ -861,19 +862,17 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
             'input or output with name starting with "tmp" indicates unnamed IO'
         )
     io_list_str = ", ".join(io_list)
-    print("module toplevel({:s});".format(io_list_str), file=file)
+    print(f"module toplevel({io_list_str:s});", file=file)
 
     # inputs and outputs
     print("    input clk;", file=file)
     if add_reset:
         print("    input rst;", file=file)
     for w in name_sorted(inputs):
-        print(
-            "    input{:s} {:s};".format(_verilog_vector_decl(w), varname(w)), file=file
-        )
+        print(f"    input{_verilog_vector_decl(w):s} {varname(w):s};", file=file)
     for w in name_sorted(outputs):
         print(
-            "    output{:s} {:s};".format(_verilog_vector_decl(w), varname(w)),
+            f"    output{_verilog_vector_decl(w):s} {varname(w):s};",
             file=file,
         )
     print("", file=file)
@@ -883,9 +882,7 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
         memwidth_str = _verilog_vector_size_decl(m.bitwidth)
         memsize_str = _verilog_vector_size_decl(1 << m.addrwidth)
         print(
-            "    reg{:s} mem_{}{:s}; //{}".format(
-                memwidth_str, m.id, memsize_str, m.name
-            ),
+            f"    reg{memwidth_str:s} mem_{m.id}{memsize_str:s}; //{m.name}",
             file=file,
         )
     for reg in name_sorted(registers):
@@ -905,9 +902,7 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
 
     # wires
     for w in name_sorted(wires):
-        print(
-            "    wire{:s} {:s};".format(_verilog_vector_decl(w), varname(w)), file=file
-        )
+        print(f"    wire{_verilog_vector_decl(w):s} {varname(w):s};", file=file)
     print("", file=file)
 
     # Write the initial values for read-only memories.
@@ -917,9 +912,9 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
     for m in sorted(roms, key=lambda m: m.id):
         print("    initial begin", file=file)
         for i in range(1 << m.addrwidth):
-            mem_elem_str = "mem_{}[{:d}]".format(m.id, i)
-            mem_data_str = "{:d}'h{:x}".format(m.bitwidth, m._get_read_data(i))
-            print("        {:s}={:s};".format(mem_elem_str, mem_data_str), file=file)
+            mem_elem_str = f"mem_{m.id}[{i:d}]"
+            mem_data_str = f"{m.bitwidth:d}'h{m._get_read_data(i):x}"
+            print(f"        {mem_elem_str:s}={mem_data_str:s};", file=file)
         print("    end", file=file)
         print("", file=file)
 
@@ -934,14 +929,14 @@ def _to_verilog_combinational(file, block, varname):
 
     # assign constants (these could be folded for readability later)
     for const in name_sorted(block.wirevector_subset(Const)):
-        print("    assign {:s} = {:d};".format(varname(const), const.val), file=file)
+        print(f"    assign {varname(const):s} = {const.val:d};", file=file)
 
     # walk the block and output combination logic
     for net in _net_sorted(block.logic, varname):
         if net.op in "w~":  # unary ops
             opstr = "" if net.op == "w" else net.op
             t = (varname(net.dests[0]), opstr, varname(net.args[0]))
-            print("    assign %s = %s%s;" % t, file=file)
+            print("    assign {} = {}{};".format(*t), file=file)
         elif net.op in "&|^+-*<>":  # binary ops
             t = (
                 varname(net.dests[0]),
@@ -949,10 +944,10 @@ def _to_verilog_combinational(file, block, varname):
                 net.op,
                 varname(net.args[1]),
             )
-            print("    assign %s = %s %s %s;" % t, file=file)
+            print("    assign {} = {} {} {};".format(*t), file=file)
         elif net.op == "=":
             t = (varname(net.dests[0]), varname(net.args[0]), varname(net.args[1]))
-            print("    assign %s = %s == %s;" % t, file=file)
+            print("    assign {} = {} == {};".format(*t), file=file)
         elif net.op == "x":
             # note that the argument order for 'x' is backwards from the ternary
             # operator
@@ -962,27 +957,27 @@ def _to_verilog_combinational(file, block, varname):
                 varname(net.args[2]),
                 varname(net.args[1]),
             )
-            print("    assign %s = %s ? %s : %s;" % t, file=file)
+            print("    assign {} = {} ? {} : {};".format(*t), file=file)
         elif net.op == "c":
             catlist = ", ".join([varname(w) for w in net.args])
             t = (varname(net.dests[0]), catlist)
-            print("    assign %s = {%s};" % t, file=file)
+            print("    assign {} = {{{}}};".format(*t), file=file)
         elif net.op == "s":
             # someone please check if we need this special handling for scalars
             catlist = ", ".join(
                 [
-                    varname(net.args[0]) + "[%s]" % str(i)
+                    varname(net.args[0]) + f"[{str(i)}]"
                     if len(net.args[0]) > 1
                     else varname(net.args[0])
                     for i in reversed(net.op_param)
                 ]
             )
             t = (varname(net.dests[0]), catlist)
-            print("    assign %s = {%s};" % t, file=file)
+            print("    assign {} = {{{}}};".format(*t), file=file)
         elif net.op in "rm@":
             pass  # do nothing for registers and memories
         else:
-            raise PyrtlInternalError("nets with op '{}' not supported".format(net.op))
+            raise PyrtlInternalError(f"nets with op '{net.op}' not supported")
     print("", file=file)
 
 
@@ -1005,7 +1000,7 @@ def _to_verilog_sequential(file, block, varname, add_reset):
                 rval = net.dests[0].reset_value
                 if rval is None:
                     rval = 0
-                print("            {:s} <= {:d};".format(dest, rval), file=file)
+                print(f"            {dest:s} <= {rval:d};", file=file)
         print("        end", file=file)
         print("        else begin", file=file)
     else:
@@ -1014,7 +1009,7 @@ def _to_verilog_sequential(file, block, varname, add_reset):
     for net in _net_sorted(block.logic, varname):
         if net.op == "r":
             dest, src = (varname(net.dests[0]), varname(net.args[0]))
-            print("            {:s} <= {:s};".format(dest, src), file=file)
+            print(f"            {dest:s} <= {src:s};", file=file)
     print("        end", file=file)
     print("    end", file=file)
     print("", file=file)
@@ -1024,7 +1019,7 @@ def _to_verilog_memories(file, block, varname):
     """Print the memories of the verilog implementation."""
     memories = {n.op_param[1] for n in block.logic_subset("m@")}
     for m in sorted(memories, key=lambda m: m.id):
-        print("    // Memory mem_{}: {}".format(m.id, m.name), file=file)
+        print(f"    // Memory mem_{m.id}: {m.name}", file=file)
         writes = [
             net
             for net in _net_sorted(block.logic_subset("@"), varname)
@@ -1042,11 +1037,10 @@ def _to_verilog_memories(file, block, varname):
                 )
                 print(
                     (
-                        "        if (%s) begin\n"
-                        "            mem_%s[%s] <= %s;\n"
+                        "        if ({}) begin\n"
+                        "            mem_{}[{}] <= {};\n"
                         "        end"
-                    )
-                    % t,
+                    ).format(*t),
                     file=file,
                 )
             print("    end", file=file)
@@ -1059,9 +1053,7 @@ def _to_verilog_memories(file, block, varname):
             dest = varname(net.dests[0])
             m_id = net.op_param[0]
             index = varname(net.args[0])
-            print(
-                "    assign {:s} = mem_{}[{:s}];".format(dest, m_id, index), file=file
-            )
+            print(f"    assign {dest:s} = mem_{m_id}[{index:s}];", file=file)
         print("", file=file)
 
 
@@ -1192,7 +1184,7 @@ def output_verilog_testbench(
 
     # Output an include, if given
     if toplevel_include:
-        print('`include "{:s}"'.format(toplevel_include), file=dest_file)
+        print(f'`include "{toplevel_include:s}"', file=dest_file)
         print("", file=dest_file)
 
     # Output header
@@ -1204,14 +1196,14 @@ def output_verilog_testbench(
         print("    reg rst;", file=dest_file)
     for w in name_sorted(inputs):
         print(
-            "    reg{:s} {:s};".format(_verilog_vector_decl(w), ver_name[w.name]),
+            f"    reg{_verilog_vector_decl(w):s} {ver_name[w.name]:s};",
             file=dest_file,
         )
 
     # Declare all block outputs as wires
     for w in name_sorted(outputs):
         print(
-            "    wire{:s} {:s};".format(_verilog_vector_decl(w), ver_name[w.name]),
+            f"    wire{_verilog_vector_decl(w):s} {ver_name[w.name]:s};",
             file=dest_file,
         )
     print("", file=dest_file)
@@ -1224,7 +1216,7 @@ def output_verilog_testbench(
     io_list = ["clk"] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
     if add_reset:
         io_list.insert(1, "rst")
-    io_list_str = [".{0:s}({0:s})".format(w) for w in io_list]
+    io_list_str = [f".{w:s}({w:s})" for w in io_list]
     print("    toplevel block({:s});\n".format(", ".join(io_list_str)), file=dest_file)
 
     # Generate clock signal
@@ -1236,7 +1228,7 @@ def output_verilog_testbench(
 
     # If a VCD output is requested, set that up
     if vcd:
-        print('        $dumpfile ("%s");' % vcd, file=dest_file)
+        print(f'        $dumpfile ("{vcd}");', file=dest_file)
         print("        $dumpvars;\n", file=dest_file)
 
     # Initialize clk, and all the registers and memories
@@ -1245,23 +1237,21 @@ def output_verilog_testbench(
         print("        rst = 0;", file=dest_file)
     for r in name_sorted(registers):
         print(
-            "        block.%s = %d;" % (ver_name[r.name], init_regvalue(r)),
+            f"        block.{ver_name[r.name]} = {init_regvalue(r)};",
             file=dest_file,
         )
     for m in sorted(memories, key=lambda m: m.id):
         max_iter = 1 << m.addrwidth
         print(
-            "        for (tb_iter = 0; tb_iter < %d; tb_iter++) "
-            "begin block.mem_%s[tb_iter] = %d; end" % (max_iter, m.id, default_value()),
+            f"        for (tb_iter = 0; tb_iter < {max_iter}; tb_iter++) "
+            f"begin block.mem_{m.id}[tb_iter] = {default_value()}; end",
             file=dest_file,
         )
         for ix in range(max_iter):
             # Now just individually update the memory values that aren't the default
             val = init_memvalue(m.id, ix)
             if val is not None:
-                print(
-                    "        block.mem_%s[%d] = %d;" % (m.id, ix, val), file=dest_file
-                )
+                print(f"        block.mem_{m.id}[{ix}] = {val};", file=dest_file)
 
     if simulation_trace:
         tracelen = max(len(t) for t in simulation_trace.trace.values())
@@ -1270,14 +1260,14 @@ def output_verilog_testbench(
                 print(
                     "        {:s} = {:s}{:d};".format(
                         ver_name[w.name],
-                        "{:d}'d".format(len(w)),
+                        f"{len(w):d}'d",
                         simulation_trace.trace[w.name][i],
                     ),
                     file=dest_file,
                 )
             print("\n        #10", file=dest_file)
             if cmd:
-                print("        %s" % cmd, file=dest_file)
+                print(f"        {cmd}", file=dest_file)
 
     # Footer
     print("        $finish;", file=dest_file)
@@ -1321,19 +1311,19 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
     f.write("    input clock : Clock\n    input reset : UInt<1>\n")
     # write out IO signals, wires and registers
     for wire in _name_sorted(block.wirevector_subset(Input)):
-        f.write("    input %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+        f.write(f"    input {wire.name} : UInt<{wire.bitwidth}>\n")
     for wire in _name_sorted(block.wirevector_subset(Output)):
-        f.write("    output %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+        f.write(f"    output {wire.name} : UInt<{wire.bitwidth}>\n")
     for wire in _name_sorted(
         block.wirevector_subset(exclude=(Input, Output, Register, Const))
     ):
-        f.write("    wire %s : UInt<%d>\n" % (wire.name, wire.bitwidth))
+        f.write(f"    wire {wire.name} : UInt<{wire.bitwidth}>\n")
     for wire in _name_sorted(block.wirevector_subset(Register)):
-        f.write("    reg %s : UInt<%d>, clock\n" % (wire.name, wire.bitwidth))
+        f.write(f"    reg {wire.name} : UInt<{wire.bitwidth}>, clock\n")
     for wire in _name_sorted(block.wirevector_subset(Const)):
         # some const is in the form like const_0_1'b1, is this legal operation?
         wire.name = wire.name.split("'").pop(0)
-        f.write("    node %s = UInt<%d>(%d)\n" % (wire.name, wire.bitwidth, wire.val))
+        f.write(f"    node {wire.name} = UInt<{wire.bitwidth}>({wire.val})\n")
     f.write("\n")
 
     # write "Main"
@@ -1342,105 +1332,89 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
     for log_net in _net_sorted(block.logic_subset()):
         if log_net.op == "&":
             f.write(
-                "    %s <= and(%s, %s)\n"
-                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+                f"    {log_net.dests[0].name} <= "
+                f"and({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "|":
             f.write(
-                "    %s <= or(%s, %s)\n"
-                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+                f"    {log_net.dests[0].name} <= "
+                f"or({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "^":
             f.write(
-                "    %s <= xor(%s, %s)\n"
-                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+                f"    {log_net.dests[0].name} <= "
+                f"xor({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "n":
             f.write(
-                "    node T_%d = and(%s, %s)\n"
-                % (node_cntr, log_net.args[0].name, log_net.args[1].name)
+                f"    node T_{node_cntr} = "
+                f"and({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
-            f.write("    %s <= not(T_%d)\n" % (log_net.dests[0].name, node_cntr))
+            f.write(f"    {log_net.dests[0].name} <= not(T_{node_cntr})\n")
             node_cntr += 1
         elif log_net.op == "~":
-            f.write(
-                "    %s <= not(%s)\n" % (log_net.dests[0].name, log_net.args[0].name)
-            )
+            f.write(f"    {log_net.dests[0].name} <= not({log_net.args[0].name})\n")
         elif log_net.op == "+":
             f.write(
-                "    %s <= add(%s, %s)\n"
-                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+                f"    {log_net.dests[0].name} <= "
+                f"add({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "-":
             f.write(
-                "    %s <= sub(%s, %s)\n"
-                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+                f"    {log_net.dests[0].name} <= "
+                f"sub({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "*":
             f.write(
-                "    %s <= mul(%s, %s)\n"
-                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+                f"    {log_net.dests[0].name} <= "
+                f"mul({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "=":
             f.write(
-                "    %s <= eq(%s, %s)\n"
-                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+                f"    {log_net.dests[0].name} <= "
+                f"eq({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "<":
             f.write(
-                "    %s <= lt(%s, %s)\n"
-                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+                f"    {log_net.dests[0].name} <= "
+                f"lt({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == ">":
             f.write(
-                "    %s <= gt(%s, %s)\n"
-                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+                f"    {log_net.dests[0].name} <= "
+                f"gt({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "w":
-            f.write("    %s <= %s\n" % (log_net.dests[0].name, log_net.args[0].name))
+            f.write(f"    {log_net.dests[0].name} <= {log_net.args[0].name}\n")
         elif log_net.op == "x":
             f.write(
-                "    %s <= mux(%s, %s, %s)\n"
-                % (
-                    log_net.dests[0].name,
-                    log_net.args[0].name,
-                    log_net.args[2].name,
-                    log_net.args[1].name,
-                )
+                f"    {log_net.dests[0].name} <= mux({log_net.args[0].name}, "
+                f"{log_net.args[2].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "c":
             if len(log_net.args) != 2:
                 raise PyrtlInternalError(
-                    "Expected concat net to have only two "
-                    "argument wires; has %d" % len(log_net.args)
+                    "Expected concat net to have only two argument wires; has "
+                    f"{len(log_net.args)}"
                 )
             f.write(
-                "    %s <= cat(%s, %s)\n"
-                % (log_net.dests[0].name, log_net.args[0].name, log_net.args[1].name)
+                f"    {log_net.dests[0].name} <= "
+                f"cat({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "s":
             if len(log_net.op_param) != 1:
                 raise PyrtlInternalError(
-                    "Expected select net to have single "
-                    "select bit; has %d" % len(log_net.op_param)
+                    "Expected select net to have single select bit; has "
+                    f"{len(log_net.op_param)}"
                 )
             f.write(
-                "    %s <= bits(%s, %s, %s)\n"
-                % (
-                    log_net.dests[0].name,
-                    log_net.args[0].name,
-                    log_net.op_param[0],
-                    log_net.op_param[0],
-                )
+                f"    {log_net.dests[0].name} <= bits({log_net.args[0].name}, "
+                f"{log_net.op_param[0]}, {log_net.op_param[0]})\n"
             )
         elif log_net.op == "r":
             f.write(
-                "    %s <= mux(reset, UInt<%s>(0), %s)\n"
-                % (
-                    log_net.dests[0].name,
-                    log_net.dests[0].bitwidth,
-                    log_net.args[0].name,
-                )
+                f"    {log_net.dests[0].name} <= mux(reset, "
+                f"UInt<{log_net.dests[0].bitwidth}>(0), {log_net.args[0].name})\n"
             )
         elif log_net.op == "m":
             # if there are rom blocks, need to be initialized
@@ -1453,12 +1427,9 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
                         (x for x in rom_blocks if x.id == log_net.op_param[0]), None
                     )
                     f.write(
-                        "    wire %s : UInt<%s>[%s]\n"
-                        % (
-                            log_net.op_param[1].name,
-                            log_net.op_param[1].bitwidth,
-                            2 ** log_net.op_param[1].addrwidth,
-                        )
+                        f"    wire {log_net.op_param[1].name} : "
+                        f"UInt<{log_net.op_param[1].bitwidth}>"
+                        f"[{2 ** log_net.op_param[1].addrwidth}]\n"
                     )
 
                     # if rom data is a function, calculate the data first
@@ -1471,71 +1442,45 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
                     # write rom block initialization data
                     for i in range(len(curr_rom.data)):
                         f.write(
-                            "    %s[%s] <= UInt<%s>(%s)\n"
-                            % (
-                                log_net.op_param[1].name,
-                                i,
-                                log_net.op_param[1].bitwidth,
-                                curr_rom.data[i],
-                            )
+                            f"    {log_net.op_param[1].name}[{i}] <= "
+                            f"UInt<{log_net.op_param[1].bitwidth}>"
+                            f"({curr_rom.data[i]})\n"
                         )
 
                 # write the connection
                 f.write(
-                    "    %s <= %s[%s]\n"
-                    % (
-                        log_net.dests[0].name,
-                        log_net.op_param[1].name,
-                        log_net.args[0].name,
-                    )
+                    f"    {log_net.dests[0].name} <= "
+                    f"{log_net.op_param[1].name}[{log_net.args[0].name}]\n"
                 )
 
             else:
                 if log_net.op_param[0] not in initializedMem:
                     initializedMem.append(log_net.op_param[0])
                     f.write(
-                        "    cmem %s_%s : UInt<%s>[%s]\n"
-                        % (
-                            log_net.op_param[1].name,
-                            log_net.op_param[0],
-                            log_net.op_param[1].bitwidth,
-                            2 ** log_net.op_param[1].addrwidth,
-                        )
+                        f"    cmem {log_net.op_param[1].name}_{log_net.op_param[0]} : "
+                        f"UInt<{log_net.op_param[1].bitwidth}>"
+                        f"[{2 ** log_net.op_param[1].addrwidth}]\n"
                     )
                 f.write(
-                    "    infer mport T_%d  = %s_%s[%s], clock\n"
-                    % (
-                        node_cntr,
-                        log_net.op_param[1].name,
-                        log_net.op_param[0],
-                        log_net.args[0].name,
-                    )
+                    f"    infer mport T_{node_cntr}  = {log_net.op_param[1].name}_"
+                    f"{log_net.op_param[0]}[{log_net.args[0].name}], clock\n"
                 )
-                f.write("    %s <= T_%d\n" % (log_net.dests[0].name, node_cntr))
+                f.write(f"    {log_net.dests[0].name} <= T_{node_cntr}\n")
                 node_cntr += 1
         elif log_net.op == "@":
             if log_net.op_param[0] not in initializedMem:
                 initializedMem.append(log_net.op_param[0])
                 f.write(
-                    "    cmem %s_%s : UInt<%s>[%s]\n"
-                    % (
-                        log_net.op_param[1].name,
-                        log_net.op_param[0],
-                        log_net.op_param[1].bitwidth,
-                        2 ** log_net.op_param[1].addrwidth,
-                    )
+                    f"    cmem {log_net.op_param[1].name}_{log_net.op_param[0]} : "
+                    f"UInt<{log_net.op_param[1].bitwidth}>"
+                    f"[{2 ** log_net.op_param[1].addrwidth}]\n"
                 )
-            f.write("    when %s :\n" % log_net.args[2].name)
+            f.write(f"    when {log_net.args[2].name} :\n")
             f.write(
-                "      infer mport T_%d  = %s_%s[%s], clock\n"
-                % (
-                    node_cntr,
-                    log_net.op_param[1].name,
-                    log_net.op_param[0],
-                    log_net.args[0].name,
-                )
+                f"      infer mport T_{node_cntr}  = {log_net.op_param[1].name}_"
+                f"{log_net.op_param[0]}[{log_net.args[0].name}], clock\n"
             )
-            f.write("      T_%d <= %s\n" % (node_cntr, log_net.args[1].name))
+            f.write(f"      T_{node_cntr} <= {log_net.args[1].name}\n")
             f.write("      skip\n")
             node_cntr += 1
         else:
@@ -1668,7 +1613,7 @@ def input_from_iscas_bench(bench, block: Block = None):
                 reg.next <<= twire(srcs[0])
                 dst_wire <<= reg
             else:
-                raise PyrtlError("Unexpected gate {%s}" % cmd["gate"])
+                raise PyrtlError("Unexpected gate {{{}}}".format(cmd["gate"]))
 
     # Benchmarks like c1196, b18, etc. have inputs and outputs by the
     # same name, that are therefore directly connected. This pass will
@@ -1678,7 +1623,7 @@ def input_from_iscas_bench(bench, block: Block = None):
         if inputs:
             if len(inputs) > 1:
                 raise PyrtlError(
-                    "More than one input found with the name %s" % inputs[0].name
+                    f"More than one input found with the name {inputs[0].name}"
                 )
             i = inputs[0]
             o_internal = twire(o.name)
@@ -1688,5 +1633,5 @@ def input_from_iscas_bench(bench, block: Block = None):
             block.wirevector_by_name[i.name] = i
             print(
                 "Found input and output wires with the same name. "
-                "Output '%s' has now been renamed to '%s'." % (i.name, o.name)
+                f"Output '{i.name}' has now been renamed to '{o.name}'."
             )

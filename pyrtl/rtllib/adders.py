@@ -194,8 +194,8 @@ def wallace_reducer(
         for a_wire in wire_set:
             if not isinstance(a_wire, pyrtl.WireVector) or len(a_wire) != 1:
                 raise pyrtl.PyrtlError(
-                    "The item {} is not a valid element for the wire_array_2. "
-                    "It must be a WireVector of bitwidth 1".format(a_wire)
+                    f"The item {a_wire} is not a valid element for the wire_array_2. "
+                    "It must be a WireVector of bitwidth 1"
                 )
 
     while not all(len(i) <= 2 for i in wire_array_2):
@@ -249,8 +249,8 @@ def dada_reducer(
         for a_wire in wire_set:
             if not isinstance(a_wire, pyrtl.WireVector) or len(a_wire) != 1:
                 raise pyrtl.PyrtlError(
-                    "The item {} is not a valid element for the wire_array_2. "
-                    "It must be a WireVector of bitwidth 1".format(a_wire)
+                    f"The item {a_wire} is not a valid element for the wire_array_2. "
+                    "It must be a WireVector of bitwidth 1"
                 )
 
     max_width = max(len(i) for i in wire_array_2)

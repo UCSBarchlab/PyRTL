@@ -27,8 +27,8 @@ class SimplePipeline:
             return self._pipeline_register_map[self._current_stage_num][name]
         except KeyError:
             raise pyrtl.PyrtlError(
-                'error, no pipeline register "%s" defined for stage %d'
-                % (name, self._current_stage_num)
+                f'error, no pipeline register "{name}" defined for stage '
+                f"{self._current_stage_num}"
             )
 
     def __setattr__(self, name, value):
@@ -51,7 +51,7 @@ class SimplePipelineExample(SimplePipeline):
 
     def __init__(self):
         self._loopback = pyrtl.WireVector(1, "loopback")
-        super(SimplePipelineExample, self).__init__()
+        super().__init__()
 
     def stage0(self):
         self.n = ~self._loopback

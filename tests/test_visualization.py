@@ -228,10 +228,10 @@ class TestOutputGraphs(unittest.TestCase):
                 return len(dst_map[w])
 
         node_fanout = {
-            n: "Fanout: %d" % get_fanout(n) for n in pyrtl.working_block().logic
+            n: f"Fanout: {get_fanout(n)}" for n in pyrtl.working_block().logic
         }
         wire_delay = {
-            w: "Delay: %.2f" % analysis.timing_map[w]
+            w: f"Delay: {analysis.timing_map[w]:.2f}"
             for w in pyrtl.working_block().wirevector_set
         }
 

@@ -319,8 +319,8 @@ class TestCloning(unittest.TestCase):
         for ix, cls in enumerate(
             [pyrtl.WireVector, pyrtl.Register, pyrtl.Input, pyrtl.Output]
         ):
-            w1 = cls(4, "w%d" % ix)
-            w2 = pyrtl.clone_wire(w1, "y%d" % ix)
+            w1 = cls(4, f"w{ix}")
+            w2 = pyrtl.clone_wire(w1, f"y{ix}")
             self.assertIsInstance(w2, cls)
             self.assertEqual(w1.bitwidth, w2.bitwidth)
 

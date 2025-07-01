@@ -137,7 +137,7 @@ def _check_under_condition():
 def _check_and_add_pred_set(lhs, pred_set):
     for test_set in _conflicts_map.setdefault(lhs, []):
         if _pred_sets_are_in_conflict(pred_set, test_set):
-            raise PyrtlError("conflicting conditions for %s" % lhs)
+            raise PyrtlError(f"conflicting conditions for {lhs}")
     _conflicts_map[lhs].append(pred_set)
 
 

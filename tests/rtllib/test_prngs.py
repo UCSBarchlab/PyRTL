@@ -50,10 +50,8 @@ class TestPrngs(unittest.TestCase):
             self.assertEqual(
                 circuit_out,
                 true_val,
-                "\nAssertion failed on trial {}\n"
-                "Expected value: {}\nGotten value: {}".format(
-                    trial, hex(true_val), hex(circuit_out)
-                ),
+                f"\nAssertion failed on trial {trial}\n"
+                f"Expected value: {hex(true_val)}\nGotten value: {hex(circuit_out)}",
             )
 
     def test_prng_xoroshiro128(self):
@@ -79,10 +77,8 @@ class TestPrngs(unittest.TestCase):
             self.assertEqual(
                 circuit_out,
                 true_val,
-                "\nAssertion failed on trial {}\n"
-                "Expected value: {}\nGotten value: {}".format(
-                    trial, hex(true_val), hex(circuit_out)
-                ),
+                f"\nAssertion failed on trial {trial}\n"
+                f"Expected value: {hex(true_val)}\nGotten value: {hex(circuit_out)}",
             )
 
         for ready_signal in sim.tracer.trace["ready"][:3]:
@@ -132,10 +128,9 @@ class TestPrngs(unittest.TestCase):
             self.assertEqual(
                 circuit_out,
                 true_vals[trial],
-                "\nAssertion failed on trial {}\n"
-                "Expected value: {}\nGotten value: {}".format(
-                    trial, hex(true_vals[trial]), hex(circuit_out)
-                ),
+                f"\nAssertion failed on trial {trial}\n"
+                f"Expected value: {hex(true_vals[trial])}\n"
+                f"Gotten value: {hex(circuit_out)}",
             )
 
         for ready_signal in sim.tracer.trace["ready"][:19]:

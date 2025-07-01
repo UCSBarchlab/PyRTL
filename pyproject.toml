@@ -63,8 +63,16 @@ select = [
     "E", "W",
     # Pyflakes
     "F",
+     # pyupgrade
+    "UP",
     # isort
     "I",
     # pylint
     "PLE",
+]
+ignore = [
+    # Use `X | Y` for type annotations
+    # We can't enable this because the new syntax was added in Python 3.10, and we still
+    # need to support Python 3.9.
+    "UP007",
 ]

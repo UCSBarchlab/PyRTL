@@ -10,7 +10,8 @@ import re
 import subprocess
 import sys
 import tempfile
-from typing import Callable, Iterable, Union
+from collections.abc import Iterable
+from typing import Callable, Union
 
 from pyrtl.core import Block, LogicNet, working_block
 from pyrtl.helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
@@ -86,7 +87,7 @@ def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
         else:
             raise PyrtlInternalError(
                 "Unable to estimate the following net "
-                "due to unimplemented op :\n%s" % str(net)
+                f"due to unimplemented op :\n{str(net)}"
             )
 
     block = working_block(block)
@@ -371,7 +372,7 @@ def yosys_area_delay(
         # first, replace whitespace with commas as per yosys requirements
         re.sub(r"\s+", ",", abc_cmd)
         # then append with "print_stats" to generate the area and delay info
-        abc_cmd = "%s;print_stats;" % abc_cmd
+        abc_cmd = f"{abc_cmd};print_stats;"
 
     def extract_area_delay_from_yosys_output(yosys_output):
         report_lines = [
@@ -396,7 +397,7 @@ def yosys_area_delay(
         yosys_arg = yosys_arg_template % (temp_path, library, library, abc_cmd)
         with open(temp_path, "w") as f:
             print("// generated via pyrtl yosys_area_delay", file=f)
-            print("// yosys %s" % yosys_arg, file=f)
+            print(f"// yosys {yosys_arg}", file=f)
             output_to_verilog(f, block=block)
         os.close(temp_d)
         # call yosys on the temp, and grab the output
@@ -431,15 +432,15 @@ class PathsResult(dict):
             return (len(path), dst_names)
 
         for start in sorted(self.keys(), key=lambda w: w.name):
-            print("From %s" % start.name, file=file)
+            print(f"From {start.name}", file=file)
             for end in sorted(self[start].keys(), key=lambda w: w.name):
-                print("  To %s" % end.name, file=file)
+                print(f"  To {end.name}", file=file)
                 paths = self[start][end]
                 if len(paths) > 0:
                     for i, paths in enumerate(sorted(paths, key=path_sort_key)):
-                        print("    Path %d" % i, file=file)
+                        print(f"    Path {i}", file=file)
                         for path in paths:
-                            print("      %s" % str(path), file=file)
+                            print(f"      {str(path)}", file=file)
                 else:
                     print("    (No paths)", file=file)
 

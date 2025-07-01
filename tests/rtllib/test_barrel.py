@@ -49,7 +49,7 @@ class TestBarrel(unittest.TestCase):
             sim.step({self.inp_val: vals[i], self.inp_shift: shifts[i]})
             base_sum = int(vals[i] / pow(2, shifts[i]))
             self.assertEqual(
-                sim.inspect(self.out_zeros), base_sum, "failed on value %d" % vals[i]
+                sim.inspect(self.out_zeros), base_sum, f"failed on value {vals[i]}"
             )
             extra_sum = sum(
                 [pow(2, len(self.inp_val) - b - 1) for b in range(shifts[i])]
@@ -57,7 +57,7 @@ class TestBarrel(unittest.TestCase):
             self.assertEqual(
                 sim.inspect(self.out_ones),
                 base_sum + extra_sum,
-                "failed on value %d" % vals[i],
+                f"failed on value {vals[i]}",
             )
 
 

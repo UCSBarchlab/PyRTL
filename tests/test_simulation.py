@@ -1264,9 +1264,10 @@ class MemBlockLargeBase(unittest.TestCase):
         output = io.StringIO()
         correct_outp = (
             "--- Values in base 10 ---\n"
-            "o1                    0 %d %d                    6                    0\n"
-            "o2                    0                    0 %d                    6                    0\n"  # noqa
-            % (write_data, write_data, write_data)
+            f"o1                    0 {write_data} {write_data}                    6   "
+            "                 0\n"
+            f"o2                    0                    0 {write_data}                "
+            "    6                    0\n"
         )
         sim.tracer.print_trace(output)
         self.assertEqual(output.getvalue(), correct_outp)

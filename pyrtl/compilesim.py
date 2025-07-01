@@ -225,7 +225,7 @@ class CompiledSimulation:
                 s = "on one or more steps:"
             file.write("Unexpected output " + s + "\n")
             file.write(
-                "{0:>5} {1:>10} {2:>8} {3:>8}\n".format(
+                "{:>5} {:>10} {:>8} {:>8}\n".format(
                     "step", "name", "expected", "actual"
                 )
             )
@@ -236,11 +236,7 @@ class CompiledSimulation:
 
             failed_sorted = sorted(failed, key=_sort_tuple)
             for step, name, expected, actual in failed_sorted:
-                file.write(
-                    "{0:>5} {1:>10} {2:>8} {3:>8}\n".format(
-                        step, name, expected, actual
-                    )
-                )
+                file.write(f"{step:>5} {name:>10} {expected:>8} {actual:>8}\n")
             file.flush()
 
     def run(self, inputs: list[dict[str, int]]):
@@ -397,7 +393,7 @@ class CompiledSimulation:
         Limb number `pos` of `dest` is being assigned to.
         """
         if (res is None or dest.bitwidth < res) and 0 < (dest.bitwidth - 64 * pos) < 64:
-            return "&0x{:X}".format((1 << (dest.bitwidth % 64)) - 1)
+            return f"&0x{(1 << (dest.bitwidth % 64)) - 1:X}"
         return ""
 
     def _getarglimb(self, arg, n):
@@ -405,11 +401,7 @@ class CompiledSimulation:
 
         Returns '0' when the wire does not have sufficient limbs.
         """
-        return (
-            "{vn}[{n}]".format(vn=self.varname[arg], n=n)
-            if arg.bitwidth > 64 * n
-            else "0"
-        )
+        return f"{self.varname[arg]}[{n}]" if arg.bitwidth > 64 * n else "0"
 
     def _clean_name(self, prefix, obj):
         """Create a C variable name with the given prefix based on the name of obj."""
@@ -429,9 +421,8 @@ class CompiledSimulation:
             # extract data from mem
             romval = [mem._get_read_data(n) for n in range(1 << mem.addrwidth)]
             write(
-                "static const uint{width}_t {name}[][{limbs}] = {{".format(
-                    name=vn, width=self._romwidth(mem), limbs=self._limbs(mem)
-                )
+                f"static const uint{self._romwidth(mem)}_t {vn}[]"
+                f"[{self._limbs(mem)}] = {{"
             )
             for rv in romval:
                 write(self._makeini(mem, rv) + ",")
@@ -441,98 +432,63 @@ class CompiledSimulation:
         for mem in mems:
             self.varname[mem] = vn = self._clean_name("m", mem)
             write("EXPORT")
-            write("hashmap_t *{name};".format(name=vn))
+            write(f"hashmap_t *{vn};")
 
         next_tmp = 0
         write("EXPORT")
         write("void initialize_mems() {")
         for mem in mems:
             # Create hashmap
-            write(
-                "{name} = create_hash_map(256, {limbs});".format(
-                    name=self.varname[mem], limbs=self._limbs(mem)
-                )
-            )
+            write(f"{self.varname[mem]} = create_hash_map(256, {self._limbs(mem)});")
             if mem in self._memmap:
                 # Insert default values
                 for k, v in self._memmap[mem].items():
-                    write(
-                        "val_t t{n}[] = {val};".format(
-                            n=next_tmp, val=self._makeini(mem, v)
-                        )
-                    )
-                    write(
-                        "insert({name}, {key}, t{n});".format(
-                            name=self.varname[mem], key=k, n=next_tmp
-                        )
-                    )
+                    write(f"val_t t{next_tmp}[] = {self._makeini(mem, v)};")
+                    write(f"insert({self.varname[mem]}, {k}, t{next_tmp});")
                     next_tmp += 1
         write("}")
 
     def _declare_wv(self, write, w):
         self.varname[w] = vn = self._clean_name("w", w)
         if isinstance(w, Const):
-            write(
-                "const uint64_t {name}[{limbs}] = {val};".format(
-                    limbs=self._limbs(w), name=vn, val=self._makeini(w, w.val)
-                )
-            )
+            write(f"const uint64_t {vn}[{self._limbs(w)}] = {self._makeini(w, w.val)};")
         elif isinstance(w, Register):
             rval = self._regmap.get(w, w.reset_value)
             if rval is None:
                 rval = self.default_value
-            write(
-                "static uint64_t {name}[{limbs}] = {val};".format(
-                    limbs=self._limbs(w), name=vn, val=self._makeini(w, rval)
-                )
-            )
+            write(f"static uint64_t {vn}[{self._limbs(w)}] = {self._makeini(w, rval)};")
         else:
-            write("uint64_t {name}[{limbs}];".format(limbs=self._limbs(w), name=vn))
+            write(f"uint64_t {vn}[{self._limbs(w)}];")
 
     def _build_memread(self, write, op, param, args, dest):
         mem = param[1]
         for n in range(self._limbs(dest)):
             if isinstance(mem, RomBlock):
                 write(
-                    "{dest}[{n}] = {mem}[{addr}[0]][{n}]{mask};".format(
-                        dest=self.varname[dest],
-                        n=n,
-                        mem=self.varname[mem],
-                        addr=self.varname[args[0]],
-                        mask=self._makemask(dest, mem.bitwidth, n),
-                    )
+                    f"{self.varname[dest]}[{n}] = {self.varname[mem]}["
+                    f"{self.varname[args[0]]}[0]][{n}]"
+                    f"{self._makemask(dest, mem.bitwidth, n)};"
                 )
             else:
                 write(
-                    "{dest}[{n}] = lookup({mem}, {addr}[0])[{n}]{mask};".format(
-                        dest=self.varname[dest],
-                        n=n,
-                        mem=self.varname[mem],
-                        addr=self.varname[args[0]],
-                        mask=self._makemask(dest, mem.bitwidth, n),
-                    )
+                    f"{self.varname[dest]}[{n}] = lookup({self.varname[mem]}, "
+                    f"{self.varname[args[0]]}[0])[{n}]"
+                    f"{self._makemask(dest, mem.bitwidth, n)};"
                 )
 
     def _build_wire(self, write, op, param, args, dest):
         for n in range(self._limbs(dest)):
             write(
-                "{dest}[{n}] = {arg}[{n}]{mask};".format(
-                    dest=self.varname[dest],
-                    n=n,
-                    arg=self.varname[args[0]],
-                    mask=self._makemask(dest, args[0].bitwidth, n),
-                )
+                f"{self.varname[dest]}[{n}] = "
+                f"{self.varname[args[0]]}[{n}]"
+                f"{self._makemask(dest, args[0].bitwidth, n)};"
             )
 
     def _build_not(self, write, op, param, args, dest):
         for n in range(self._limbs(dest)):
             write(
-                "{dest}[{n}] = (~{arg}[{n}]){mask};".format(
-                    dest=self.varname[dest],
-                    n=n,
-                    arg=self.varname[args[0]],
-                    mask=self._makemask(dest, None, n),
-                )
+                f"{self.varname[dest]}[{n}] = "
+                f"(~{self.varname[args[0]]}[{n}]){self._makemask(dest, None, n)};"
             )
 
     def _build_bitwise(self, write, op, param, args, dest):  # &, |, ^ only
@@ -557,13 +513,8 @@ class CompiledSimulation:
             arg0 = self._getarglimb(args[0], n)
             arg1 = self._getarglimb(args[1], n)
             write(
-                "{dest}[{n}] = (~({arg0}&{arg1})){mask};".format(
-                    dest=self.varname[dest],
-                    n=n,
-                    arg0=arg0,
-                    arg1=arg1,
-                    mask=self._makemask(dest, None, n),
-                )
+                f"{self.varname[dest]}[{n}] = "
+                f"(~({arg0}&{arg1})){self._makemask(dest, None, n)};"
             )
 
     def _build_eq(self, write, op, param, args, dest):
@@ -571,7 +522,7 @@ class CompiledSimulation:
         for n in range(max(self._limbs(args[0]), self._limbs(args[1]))):
             arg0 = self._getarglimb(args[0], n)
             arg1 = self._getarglimb(args[1], n)
-            cond.append("({arg0}=={arg1})".format(arg0=arg0, arg1=arg1))
+            cond.append(f"({arg0}=={arg1})")
         write(
             "{dest}[0] = {cond};".format(dest=self.varname[dest], cond="&&".join(cond))
         )
@@ -581,35 +532,27 @@ class CompiledSimulation:
         for n in range(max(self._limbs(args[0]), self._limbs(args[1]))):
             arg0 = self._getarglimb(args[0], n)
             arg1 = self._getarglimb(args[1], n)
-            c = "({arg0}{op}{arg1})".format(arg0=arg0, op=op, arg1=arg1)
+            c = f"({arg0}{op}{arg1})"
             if cond is None:
                 cond = c
             else:
-                cond = "({c}||(({arg0}=={arg1})&&{inner}))".format(
-                    c=c, arg0=arg0, arg1=arg1, inner=cond
-                )
-        write("{dest}[0] = {cond};".format(dest=self.varname[dest], cond=cond))
+                cond = f"({c}||(({arg0}=={arg1})&&{cond}))"
+        write(f"{self.varname[dest]}[0] = {cond};")
 
     def _build_mux(self, write, op, param, args, dest):
-        write("if ({mux}[0]) {{".format(mux=self.varname[args[0]]))
+        write(f"if ({self.varname[args[0]]}[0]) {{")
         for n in range(self._limbs(dest)):
             write(
-                "{dest}[{n}] = {arg}[{n}]{mask};".format(
-                    dest=self.varname[dest],
-                    n=n,
-                    arg=self.varname[args[2]],
-                    mask=self._makemask(dest, args[2].bitwidth, n),
-                )
+                f"{self.varname[dest]}[{n}] = "
+                f"{self.varname[args[2]]}[{n}]"
+                f"{self._makemask(dest, args[2].bitwidth, n)};"
             )
         write("} else {")
         for n in range(self._limbs(dest)):
             write(
-                "{dest}[{n}] = {arg}[{n}]{mask};".format(
-                    dest=self.varname[dest],
-                    n=n,
-                    arg=self.varname[args[1]],
-                    mask=self._makemask(dest, args[1].bitwidth, n),
-                )
+                f"{self.varname[dest]}[{n}] = "
+                f"{self.varname[args[1]]}[{n}]"
+                f"{self._makemask(dest, args[1].bitwidth, n)};"
             )
         write("}")
 
@@ -618,7 +561,7 @@ class CompiledSimulation:
         for n in range(self._limbs(dest)):
             arg0 = self._getarglimb(args[0], n)
             arg1 = self._getarglimb(args[1], n)
-            write("tmp = {arg0}+{arg1};".format(arg0=arg0, arg1=arg1))
+            write(f"tmp = {arg0}+{arg1};")
             write(
                 "{dest}[{n}] = (tmp + carry){mask};".format(
                     dest=self.varname[dest],
@@ -628,32 +571,23 @@ class CompiledSimulation:
                     ),
                 )
             )
-            write(
-                "carry = (tmp < {arg0})|({dest}[{n}] < tmp);".format(
-                    arg0=arg0, dest=self.varname[dest], n=n
-                )
-            )
+            write(f"carry = (tmp < {arg0})|({self.varname[dest]}[{n}] < tmp);")
 
     def _build_sub(self, write, op, param, args, dest):
         write("carry = 0;")
         for n in range(self._limbs(dest)):
             arg0 = self._getarglimb(args[0], n)
             arg1 = self._getarglimb(args[1], n)
-            write("tmp = {arg0}-{arg1};".format(arg0=arg0, arg1=arg1))
+            write(f"tmp = {arg0}-{arg1};")
             write(
-                "{dest}[{n}] = (tmp - carry){mask};".format(
-                    dest=self.varname[dest], n=n, mask=self._makemask(dest, None, n)
-                )
+                f"{self.varname[dest]}[{n}] = (tmp - carry)"
+                f"{self._makemask(dest, None, n)};"
             )
-            write(
-                "carry = (tmp > {arg0})|({dest}[{n}] > tmp);".format(
-                    arg0=arg0, dest=self.varname[dest], n=n
-                )
-            )
+            write(f"carry = (tmp > {arg0})|({self.varname[dest]}[{n}] > tmp);")
 
     def _build_mul(self, write, op, param, args, dest):
         for n in range(self._limbs(dest)):
-            write("{dest}[{n}] = 0;".format(dest=self.varname[dest], n=n))
+            write(f"{self.varname[dest]}[{n}] = 0;")
         for p0 in range(self._limbs(args[0])):
             write("carry = 0;")
             arg0 = self._getarglimb(args[0], p0)
@@ -661,10 +595,8 @@ class CompiledSimulation:
                 if self._limbs(dest) <= p0 + p1:
                     break
                 arg1 = self._getarglimb(args[1], p1)
-                write(
-                    "mul128({arg0}, {arg1}, tmplo, tmphi);".format(arg0=arg0, arg1=arg1)
-                )
-                write("tmp = {dest}[{p}];".format(dest=self.varname[dest], p=p0 + p1))
+                write(f"mul128({arg0}, {arg1}, tmplo, tmphi);")
+                write(f"tmp = {self.varname[dest]}[{p0 + p1}];")
                 write("tmplo += carry; carry = tmplo < carry; tmplo += tmp;")
                 write("tmphi += carry + (tmplo < tmp); carry = tmphi;")
                 write(
@@ -702,11 +634,7 @@ class CompiledSimulation:
             dpos = 0
             while True:
                 arg, alimb, astart, asize = curr
-                res.append(
-                    "(({arg}[{limb}]>>{start})<<{pos})".format(
-                        arg=arg, limb=alimb, start=astart, pos=dpos
-                    )
-                )
+                res.append(f"(({arg}[{alimb}]>>{astart})<<{dpos})")
                 dpos += asize
                 if dpos >= dest.bitwidth - 64 * n:
                     break
@@ -728,9 +656,7 @@ class CompiledSimulation:
     def _build_select(self, write, op, param, args, dest):
         for n in range(self._limbs(dest)):
             bits = [
-                "((1&({src}[{limb}]>>{sb}))<<{db})".format(
-                    src=self.varname[args[0]], sb=(b % 64), limb=(b // 64), db=en
-                )
+                f"((1&({self.varname[args[0]]}[{b // 64}]>>{b % 64}))<<{en})"
                 for en, b in enumerate(param[64 * n : min(dest.bitwidth, 64 * (n + 1))])
             ]
             write(
@@ -845,9 +771,7 @@ class CompiledSimulation:
             '"mfhi %1":"=r"(pl),"=r"(ph):"r"(t0),"r"(t1)',
         }
         if machine in mulinstr:
-            write(
-                "#define mul128(t0, t1, pl, ph) __asm__({})".format(mulinstr[machine])
-            )
+            write(f"#define mul128(t0, t1, pl, ph) __asm__({mulinstr[machine]})")
 
         # declare memories
         mems = {net.op_param[1] for net in self.block.logic_subset("m@")}
@@ -884,11 +808,7 @@ class CompiledSimulation:
             self._inputpos[w.name] = ipos, self._limbs(w)
             self._inputbw[w.name] = w.bitwidth
             for n in range(self._limbs(w)):
-                write(
-                    "{vn}[{n}] = inputs[{pos}];".format(
-                        vn=self.varname[w], n=n, pos=ipos
-                    )
-                )
+                write(f"{self.varname[w]}[{n}] = inputs[{ipos}];")
                 ipos += 1
         self._ibufsz = ipos  # total length of input array
 
@@ -927,13 +847,10 @@ class CompiledSimulation:
         # memory writes
         for net in self.block.logic_subset("@"):
             mem = net.op_param[1]
-            write("if ({enable}[0]) {{".format(enable=self.varname[net.args[2]]))
+            write(f"if ({self.varname[net.args[2]]}[0]) {{")
             write(
-                "insert({mem}, {addr}[0], {vn});".format(
-                    mem=self.varname[mem],
-                    addr=self.varname[net.args[0]],
-                    vn=self.varname[net.args[1]],
-                )
+                f"insert({self.varname[mem]}, {self.varname[net.args[0]]}[0], "
+                f"{self.varname[net.args[1]]});"
             )
             write("}")
 
@@ -941,20 +858,14 @@ class CompiledSimulation:
         regnets = list(self.block.logic_subset("r"))
         for x, net in enumerate(regnets):
             rin = net.args[0]
-            write("uint64_t regtmp{x}[{limbs}];".format(x=x, limbs=self._limbs(rin)))
+            write(f"uint64_t regtmp{x}[{self._limbs(rin)}];")
             for n in range(self._limbs(rin)):
-                write(
-                    "regtmp{x}[{n}] = {vn}[{n}];".format(x=x, vn=self.varname[rin], n=n)
-                )
+                write(f"regtmp{x}[{n}] = {self.varname[rin]}[{n}];")
         # double loop to ensure register-to-register chains update correctly
         for x, net in enumerate(regnets):
             rout = net.dests[0]
             for n in range(self._limbs(rout)):
-                write(
-                    "{vn}[{n}] = regtmp{x}[{n}];".format(
-                        vn=self.varname[rout], x=x, n=n
-                    )
-                )
+                write(f"{self.varname[rout]}[{n}] = regtmp{x}[{n}];")
 
         # output copied out
         outputs = list(self.block.wirevector_subset(Output))
@@ -964,11 +875,7 @@ class CompiledSimulation:
         for w in outputs:
             self._outputpos[w.name] = opos, self._limbs(w)
             for n in range(self._limbs(w)):
-                write(
-                    "outputs[{pos}] = {vn}[{n}];".format(
-                        pos=opos, vn=self.varname[w], n=n
-                    )
-                )
+                write(f"outputs[{opos}] = {self.varname[w]}[{n}];")
                 opos += 1
         self._obufsz = opos  # total length of output array
         write("}")
@@ -982,8 +889,8 @@ class CompiledSimulation:
         write("uint64_t input_pos = 0, output_pos = 0;")
         write("for (uint64_t stepnum = 0; stepnum < stepcount; stepnum++) {")
         write("sim_run_step(inputs+input_pos, outputs+output_pos);")
-        write("input_pos += {};".format(self._ibufsz))
-        write("output_pos += {};".format(self._obufsz))
+        write(f"input_pos += {self._ibufsz};")
+        write(f"output_pos += {self._obufsz};")
         write("}}")
 
     def __del__(self):

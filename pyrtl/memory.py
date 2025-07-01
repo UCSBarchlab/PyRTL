@@ -326,7 +326,7 @@ class MemBlock:
             self.num_read_ports += 1
             if self.num_read_ports > self.max_read_ports:
                 raise PyrtlError(
-                    "maximum number of read ports (%d) exceeded" % self.max_read_ports
+                    f"maximum number of read ports ({self.max_read_ports}) exceeded"
                 )
         data = WireVector(bitwidth=self.bitwidth)
         readport_net = LogicNet(
@@ -367,7 +367,7 @@ class MemBlock:
             self.num_write_ports += 1
             if self.num_write_ports > self.max_write_ports:
                 raise PyrtlError(
-                    "maximum number of write ports (%d) exceeded" % self.max_write_ports
+                    f"maximum number of write ports ({self.max_write_ports}) exceeded"
                 )
         writeport_net = LogicNet(
             op="@", op_param=(self.id, self), args=(addr, data, enable), dests=tuple()
@@ -507,7 +507,7 @@ class RomBlock(MemBlock):
             if address < 0 or address > 2**self.addrwidth - 1:
                 raise PyrtlError("Invalid address, " + str(address) + " specified")
         except TypeError:
-            raise PyrtlError("Address: {} with invalid type specified".format(address))
+            raise PyrtlError(f"Address: {address} with invalid type specified")
         if isinstance(self.data, types.FunctionType):
             try:
                 value = self.data(address)
@@ -538,9 +538,7 @@ class RomBlock(MemBlock):
         try:
             value = infer_val_and_bitwidth(value, bitwidth=self.bitwidth).value
         except TypeError:
-            raise PyrtlError(
-                "Value: {} from rom {} has an invalid type".format(value, self)
-            )
+            raise PyrtlError(f"Value: {value} from rom {self} has an invalid type")
         return value
 
     def _build_read_port(self, addr):

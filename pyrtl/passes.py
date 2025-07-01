@@ -380,7 +380,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
 
     def _constant_prop_error(net, error_str):
         if not silence_unexpected_net_warnings:
-            raise PyrtlError("Unexpected net, {}, has {}".format(net, error_str))
+            raise PyrtlError(f"Unexpected net, {net}, has {error_str}")
 
     def constant_prop_check(net_checking):
         def replace_net(new_net):
@@ -408,7 +408,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
             )
             return  # skip if we are ignoring unoptimizable ops
 
-        num_constants = sum((isinstance(arg, Const) for arg in net_checking.args))
+        num_constants = sum(isinstance(arg, Const) for arg in net_checking.args)
 
         if num_constants == 0 or net_checking.op in no_optimization_ops:
             return  # assuming wire nets are already optimized
@@ -420,7 +420,7 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
             if long_wires:
                 _constant_prop_error(
                     net_checking,
-                    "has wire(s) {} with bitwidths that are not 1".format(long_wires),
+                    f"has wire(s) {long_wires} with bitwidths that are not 1",
                 )
                 return  # skip if we are ignoring unoptimizable ops
 
@@ -870,7 +870,7 @@ def _decompose(net, wv_map, mems, block_out):
     else:
         raise PyrtlInternalError(
             "Unable to synthesize the following net "
-            "due to unimplemented op :\n%s" % str(net)
+            f"due to unimplemented op :\n{str(net)}"
         )
     return
 
@@ -897,7 +897,7 @@ def nand_synth(net: LogicNet):
         temp_0 = arg(0).nand(arg(1))
         dest <<= temp_0.nand(arg(0)).nand(temp_0.nand(arg(1)))
     else:
-        raise PyrtlError("Op, '{}' is not supported in nand_synth".format(net.op))
+        raise PyrtlError(f"Op, '{net.op}' is not supported in nand_synth")
 
 
 @transform.all_nets
@@ -922,7 +922,7 @@ def and_inverter_synth(net: LogicNet):
     elif net.op == "n":
         dest <<= ~(arg(0) & arg(1))
     else:
-        raise PyrtlError("Op, '{}' is not supported in and_inv_synth".format(net.op))
+        raise PyrtlError(f"Op, '{net.op}' is not supported in and_inv_synth")
 
 
 @transform.all_nets

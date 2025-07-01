@@ -108,7 +108,7 @@ def _trivialgraph_default_namer(thing, is_edge=True):
         try:
             return thing.op + str(thing.op_param or "")
         except AttributeError:
-            raise PyrtlError('no naming rule for "%s"' % str(thing))
+            raise PyrtlError(f'no naming rule for "{str(thing)}"')
 
 
 def output_to_trivialgraph(
@@ -138,7 +138,7 @@ def output_to_trivialgraph(
 
     # print the list of nodes
     for index, node in enumerate(graph):
-        print("%d %s" % (index, namer(node, is_edge=False)), file=file)
+        print(index, namer(node, is_edge=False), file=file)
         node_index_map[node] = index
 
     print("#", file=file)
@@ -149,7 +149,7 @@ def output_to_trivialgraph(
             from_index = node_index_map[_from]
             to_index = node_index_map[_to]
             for edge in graph[_from][_to]:
-                print("%d %d %s" % (from_index, to_index, namer(edge)), file=file)
+                print(from_index, to_index, namer(edge), file=file)
 
 
 # -----------------------------------------------------------------
@@ -188,7 +188,7 @@ def _default_edge_namer(
 
     penwidth = 2 if len(edge) == 1 else 6
     arrowhead = "none" if is_to_splitmerge else "normal"
-    return '[label="%s", penwidth="%d", arrowhead="%s"]' % (name, penwidth, arrowhead)
+    return f'[label="{name}", penwidth="{penwidth}", arrowhead="{arrowhead}"]'
 
 
 def _default_node_namer(
@@ -218,29 +218,30 @@ def _default_node_namer(
 
     if isinstance(node, Const):
         name = node.name + ": " if not node.name.startswith("const_") else ""
-        return '[label="%s", shape=circle, fillcolor=lightgrey]' % label(
-            name + str(node.val)
+        return (
+            f'[label="{label(name + str(node.val))}", shape=circle, '
+            "fillcolor=lightgrey]"
         )
     elif isinstance(node, Input):
-        return '[label="%s", shape=invhouse, fillcolor=coral]' % label(node.name)
+        return f'[label="{label(node.name)}", shape=invhouse, fillcolor=coral]'
     elif isinstance(node, Output):
-        return '[label="%s", shape=house, fillcolor=lawngreen]' % label(node.name)
+        return f'[label="{label(node.name)}", shape=house, fillcolor=lawngreen]'
     elif isinstance(node, Register):
-        return '[label="%s", shape=square, fillcolor=gold]' % label(node.name)
+        return f'[label="{label(node.name)}", shape=square, fillcolor=gold]'
     elif isinstance(node, WireVector):
-        return '[label="%s", shape=circle, fillcolor=none]' % label(node.name)
+        return f'[label="{label(node.name)}", shape=circle, fillcolor=none]'
     else:
         try:
             if node.op == "&":
-                return '[label="%s"]' % label("and")
+                return '[label="{}"]'.format(label("and"))
             elif node.op == "|":
-                return '[label="%s"]' % label("or")
+                return '[label="{}"]'.format(label("or"))
             elif node.op == "^":
-                return '[label="%s"]' % label("xor")
+                return '[label="{}"]'.format(label("xor"))
             elif node.op == "~":
-                return '[label="%s", shape=invtriangle]' % label("not")
+                return '[label="{}", shape=invtriangle]'.format(label("not"))
             elif node.op == "x":
-                return '[label="%s", shape=invtrapezium]' % label("mux")
+                return '[label="{}", shape=invtrapezium]'.format(label("mux"))
             elif node.op == "s":
                 # node.op_param is a tuple of the selected bits to pull from the
                 # argument wire, so it could look something like (0,0,0,0,0,0,0),
@@ -249,39 +250,39 @@ def _default_node_namer(
                 selLower = node.op_param[0]
                 selUpper = node.op_param[-1]
                 if len(node.op_param) == 1:
-                    bits = "[%d]" % selLower
+                    bits = f"[{selLower}]"
                 elif node.op_param == tuple(
                     range(selLower, selUpper + 1)
                 ):  # consecutive
-                    bits = "[%d:%d]" % (selUpper, selLower)
+                    bits = f"[{selUpper}:{selLower}]"
                 elif all(
                     [ix == node.op_param[0] for ix in node.op_param[1:]]
                 ):  # all the same
-                    bits = "[%d]*%d" % (node.op_param[0], len(node.op_param))
+                    bits = f"[{node.op_param[0]}]*{len(node.op_param)}"
                 else:
                     bits = "bits" + str(tuple(reversed(node.op_param)))
-                return '[label="%s", fillcolor=azure1, height=.25, width=.25]' % label(
-                    bits
+                return (
+                    f'[label="{label(bits)}", fillcolor=azure1, height=.25, width=.25]'
                 )
             elif node.op in "c":
-                return '[label="%s", height=.1, width=.1]' % label("concat")
+                return '[label="{}", height=.1, width=.1]'.format(label("concat"))
             elif node.op == "r":
                 name = node.dests[0].name or ""
-                name = ("%s.next" % name) if split_state else name
-                return '[label="%s", shape=square, fillcolor=gold]' % label(name)
+                name = (f"{name}.next") if split_state else name
+                return f'[label="{label(name)}", shape=square, fillcolor=gold]'
             elif node.op == "w":
-                return '[label="%s", height=.1, width=.1]' % label("")
+                return '[label="{}", height=.1, width=.1]'.format(label(""))
             elif node.op in "m@":
                 name = node.op_param[1].name
                 if name.startswith("tmp"):
                     name = ""
                 else:
                     name = "(" + name + ")"
-                return '[label="%s"]' % label(node.op + name)
+                return f'[label="{label(node.op + name)}"]'
             else:
-                return '[label="%s"]' % label(node.op + str(node.op_param or ""))
+                return '[label="{}"]'.format(label(node.op + str(node.op_param or "")))
         except AttributeError:
-            raise PyrtlError('no naming rule for "%s"' % str(node))
+            raise PyrtlError(f'no naming rule for "{str(node)}"')
 
 
 def _graphviz_default_namer(
@@ -460,7 +461,7 @@ digraph g {
     # print the list of nodes
     for index, node in enumerate(sorted(graph.keys(), key=_node_sort_key)):
         label = namer(node, False, False, split_state)
-        rstring += "    n%s %s;\n" % (index, label)
+        rstring += f"    n{index} {label};\n"
         node_index_map[node] = index
 
     # print the list of edges
@@ -474,7 +475,7 @@ digraph g {
                     True if hasattr(_to, "op") and _to.op in "cs" else False
                 )
                 label = namer(edge, True, is_to_splitmerge, False)
-                rstring += "    n%d -> n%d %s;\n" % (from_index, to_index, label)
+                rstring += f"    n{from_index} -> n{to_index} {label};\n"
                 srcs[_to].append((_from, edge))
 
     # Maintain left-to-right order of incoming wires for nets where order matters.
@@ -495,7 +496,7 @@ digraph g {
         for net in sorted(block.logic_subset(op="c-<>x@"), key=_node_sort_key):
             args = [(node_index_map[n], wire) for (n, wire) in srcs[net]]
             args.sort(key=lambda t: index_of(t[1], net.args))
-            s = " -> ".join(["n%d" % n for n, _ in args])
+            s = " -> ".join([f"n{n}" for n, _ in args])
             rstring += "    {\n"
             rstring += "        rank=same;\n"
             rstring += "        edge[style=invis];\n"
@@ -636,7 +637,7 @@ def trace_to_html(
                 last = value
 
         wavestring = "".join(wavelist)
-        datastring = ", ".join(['"%s"' % data for data in datalist])
+        datastring = ", ".join([f'"{data}"' for data in datalist])
         if repr_per_name.get(w) is None and len(simtrace._wires[w]) == 1:
             vallens.append(1)  # all are the same length
             return bool_signal_template % (w, wavestring)

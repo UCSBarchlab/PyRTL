@@ -188,8 +188,7 @@ class Simulation:
             for addr, val in mem_map.items():
                 if addr < 0 or addr >= max_addr_val:
                     raise PyrtlError(
-                        "error, address %s in %s outside of bounds"
-                        % (str(addr), mem.name)
+                        f"error, address {str(addr)} in {mem.name} outside of bounds"
                     )
 
         # set all other variables to default value
@@ -197,9 +196,9 @@ class Simulation:
             if w not in self.value:
                 self.value[w] = self.default_value
 
-        self.ordered_nets = tuple((i for i in self.block))
-        self.reg_update_nets = tuple((self.block.logic_subset("r")))
-        self.mem_update_nets = tuple((self.block.logic_subset("@")))
+        self.ordered_nets = tuple(i for i in self.block)
+        self.reg_update_nets = tuple(self.block.logic_subset("r"))
+        self.mem_update_nets = tuple(self.block.logic_subset("@"))
 
         if self.tracer is not None:
             self.tracer._set_initial_values(
@@ -246,13 +245,13 @@ class Simulation:
             sim_wire = self.block.wirevector_by_name[name]
             if sim_wire not in input_set:
                 raise PyrtlError(
-                    'step provided a value for input for "%s" which is '
-                    "not a known input " % name
+                    f'step provided a value for input for "{name}" which is '
+                    "not a known input "
                 )
             if not isinstance(provided_inputs[i], numbers.Integral):
                 raise PyrtlError(
-                    'step provided an input "%s" which is not a valid '
-                    "integer" % provided_inputs[i]
+                    f'step provided an input "{provided_inputs[i]}" which is not a '
+                    "valid integer"
                 )
             provided_inputs[i] = infer_val_and_bitwidth(
                 provided_inputs[i], bitwidth=sim_wire.bitwidth
@@ -264,7 +263,7 @@ class Simulation:
         # Check that only inputs are specified, and set the values
         if input_set != supplied_inputs:
             for i in input_set.difference(supplied_inputs):
-                raise PyrtlError('Input "%s" has no input value specified' % i.name)
+                raise PyrtlError(f'Input "{i.name}" has no input value specified')
 
         self.value.update(self.regvalue)  # apply register updates from previous step
 
@@ -413,7 +412,7 @@ class Simulation:
                 s = "on one or more steps:"
             file.write("Unexpected output " + s + "\n")
             file.write(
-                "{0:>5} {1:>10} {2:>8} {3:>8}\n".format(
+                "{:>5} {:>10} {:>8} {:>8}\n".format(
                     "step", "name", "expected", "actual"
                 )
             )
@@ -424,11 +423,7 @@ class Simulation:
 
             failed_sorted = sorted(failed, key=_sort_tuple)
             for step, name, expected, actual in failed_sorted:
-                file.write(
-                    "{0:>5} {1:>10} {2:>8} {3:>8}\n".format(
-                        step, name, expected, actual
-                    )
-                )
+                file.write(f"{step:>5} {name:>10} {expected:>8} {actual:>8}\n")
             file.flush()
 
     def inspect(self, w: str) -> int:
@@ -779,7 +774,7 @@ class FastSimulation:
                 s = "on one or more steps:"
             file.write("Unexpected output " + s + "\n")
             file.write(
-                "{0:>5} {1:>10} {2:>8} {3:>8}\n".format(
+                "{:>5} {:>10} {:>8} {:>8}\n".format(
                     "step", "name", "expected", "actual"
                 )
             )
@@ -790,11 +785,7 @@ class FastSimulation:
 
             failed_sorted = sorted(failed, key=_sort_tuple)
             for step, name, expected, actual in failed_sorted:
-                file.write(
-                    "{0:>5} {1:>10} {2:>8} {3:>8}\n".format(
-                        step, name, expected, actual
-                    )
-                )
+                file.write(f"{step:>5} {name:>10} {expected:>8} {actual:>8}\n")
             file.flush()
 
     def inspect(self, w: str) -> int:
@@ -894,26 +885,22 @@ class FastSimulation:
             "<": lambda left, right: "int(" + left + "<" + right + ")",
             ">": lambda left, right: "int(" + left + ">" + right + ")",
             "=": lambda left, right: "int(" + left + "==" + right + ")",
-            "x": lambda sel, f, t: "({}) if ({}==0) else ({})".format(f, sel, t),
+            "x": lambda sel, f, t: f"({f}) if ({sel}==0) else ({t})",
         }
 
         def shift(value, direction, shift_amt):
             if shift_amt == 0:
                 return value
             else:
-                return "(%s %s %d)" % (value, direction, shift_amt)
+                return f"({value} {direction} {shift_amt})"
 
         def make_split(source, split_length, split_start_bit, split_res_start_bit):
             if split_start_bit == 0:
-                bit = "(%d & %s)" % ((1 << split_length) - 1, source)
+                bit = f"({(1 << split_length) - 1} & {source})"
             elif len(net.args[0]) - split_start_bit == split_length:
-                bit = "(%s >> %d)" % (source, split_start_bit)
+                bit = f"({source} >> {split_start_bit})"
             else:
-                bit = "(%d & (%s >> %d))" % (
-                    (1 << split_length) - 1,
-                    source,
-                    split_start_bit,
-                )
+                bit = f"({(1 << split_length) - 1} & ({source} >> {split_start_bit}))"
             return shift(bit, "<<", split_res_start_bit)
 
         for net in self.block:
@@ -959,38 +946,32 @@ class FastSimulation:
                 read_addr = self._arg_varname(net.args[0])
                 mem = net.op_param[1]
                 if isinstance(net.op_param[1], RomBlock):
-                    expr = 'd["%s"]._get_read_data(%s)' % (
-                        self._mem_varname(mem),
-                        read_addr,
-                    )
+                    expr = f'd["{self._mem_varname(mem)}"]._get_read_data({read_addr})'
                 else:  # memories act async for reads
-                    expr = 'd["%s"].get(%s, %s)' % (
-                        self._mem_varname(mem),
-                        read_addr,
-                        self.default_value,
+                    expr = (
+                        f'd["{self._mem_varname(mem)}"].get('
+                        f"{read_addr}, {self.default_value})"
                     )
             elif net.op == "@":
                 mem = self._mem_varname(net.op_param[1])
                 write_addr, write_val, write_enable = (
                     self._arg_varname(a) for a in net.args
                 )
-                prog.append("    if {}:".format(write_enable))
+                prog.append(f"    if {write_enable}:")
                 prog.append(
-                    '        mem_ws.append(("{}", {}, {}))'.format(
-                        mem, write_addr, write_val
-                    )
+                    f'        mem_ws.append(("{mem}", {write_addr}, {write_val}))'
                 )
                 continue  # memwrites are special
             else:
-                raise PyrtlError('FastSimulation cannot handle primitive "%s"' % net.op)
+                raise PyrtlError(f'FastSimulation cannot handle primitive "{net.op}"')
 
             # prog.append('    #  ' + str(net))
             result = self._dest_varname(net.dests[0])
             if len(net.dests[0]) == self._no_mask_bitwidth[net.op](net):
-                prog.append("    %s = %s" % (result, expr))
+                prog.append(f"    {result} = {expr}")
             else:
                 mask = str(net.dests[0].bitmask)
-                prog.append("    %s = %s & %s" % (result, mask, expr))
+                prog.append(f"    {result} = {mask} & {expr}")
 
         # add traced wires to dict
         if self.tracer is not None:
@@ -1002,7 +983,7 @@ class FastSimulation:
                         if isinstance(wire, Const)
                         else self._varname(wire)
                     )
-                    prog.append('    outs["%s"] = %s' % (wire_name, value))
+                    prog.append(f'    outs["{wire_name}"] = {value}')
 
         prog.append("    return regs, outs, mem_ws")
         return "\n".join(prog)
@@ -1509,9 +1490,9 @@ class TraceStorage(Mapping):
             key = key.name
         if key not in self.__data:
             raise PyrtlError(
-                'Cannot find "%s" in trace -- if using CompiledSim, you may be '
+                f'Cannot find "{key}" in trace -- if using CompiledSim, you may be '
                 "attempting to access internal states but only inputs/outputs are "
-                "available." % key
+                "available."
             )
         return self.__data[key]
 
@@ -1631,7 +1612,7 @@ class SimulationTrace:
                 for w in self.trace
                 for x in self.trace[w]
             )
-            file.write(" " * (ident_len - 3) + "--- Values in base %d ---\n" % base)
+            file.write(" " * (ident_len - 3) + f"--- Values in base {base} ---\n")
             for w in sorted(self.trace, key=_trace_sort_key):
                 vals = " ".join(
                     "{0:>{1}{2}}".format(x, maxlenval, basekey) for x in self.trace[w]

@@ -54,34 +54,34 @@ class Matrix:
         """
         if not isinstance(rows, int):
             raise PyrtlError(
-                'Rows must be of type int, instead "%s" '
-                "was passed of type %s" % (str(rows), type(rows))
+                f'Rows must be of type int, instead "{str(rows)}" '
+                f"was passed of type {type(rows)}"
             )
         if rows <= 0:
             raise PyrtlError(
                 "Rows cannot be less than or equal to zero. "
-                "Rows value passed: %s" % str(rows)
+                f"Rows value passed: {str(rows)}"
             )
 
         if not isinstance(columns, int):
             raise PyrtlError(
-                'Columns must be of type int, instead "%s" '
-                "was passed of type %s" % (str(columns), type(columns))
+                f'Columns must be of type int, instead "{str(columns)}" '
+                f"was passed of type {type(columns)}"
             )
         if columns <= 0:
             raise PyrtlError(
                 "Columns cannot be less than or equal to zero. "
-                "Columns value passed: %s" % str(columns)
+                f"Columns value passed: {str(columns)}"
             )
 
         if not isinstance(bits, int):
             raise PyrtlError(
-                'Bits must be of type int, instead "%s" '
-                "was passed of type %s" % (str(bits), type(bits))
+                f'Bits must be of type int, instead "{str(bits)}" '
+                f"was passed of type {type(bits)}"
             )
         if bits <= 0:
             raise PyrtlError(
-                'Bits cannot be negative or zero, instead "%s" was passed' % str(bits)
+                f'Bits cannot be negative or zero, instead "{str(bits)}" was passed'
             )
 
         if max_bits is not None:
@@ -98,8 +98,8 @@ class Matrix:
             if value.bitwidth != bits * rows * columns:
                 raise PyrtlError(
                     "Initialized bitwidth value does not match "
-                    "given value.bitwidth: %s, expected: %s"
-                    "" % (str(value.bitwidth), str(bits * rows * columns))
+                    f"given value.bitwidth: {str(value.bitwidth)}, expected: "
+                    f"{str(bits * rows * columns)}"
                 )
             for i in range(rows):
                 for j in range(columns):
@@ -112,9 +112,8 @@ class Matrix:
             if len(value) != rows or any(len(row) != columns for row in value):
                 raise PyrtlError(
                     "Rows and columns mismatch\n"
-                    "Rows: %s, expected: %s\n"
-                    "Columns: %s, expected: %s"
-                    "" % (str(len(value)), str(rows), str(len(value[0])), str(columns))
+                    f"Rows: {str(len(value))}, expected: {str(rows)}\n"
+                    f"Columns: {str(len(value[0]))}, expected: {str(columns)}"
                 )
             for i in range(rows):
                 for j in range(columns):
@@ -123,7 +122,7 @@ class Matrix:
         else:
             raise PyrtlError(
                 "Initialized value must be of type WireVector or "
-                "list. Instead was passed value of type %s" % (type(value))
+                f"list. Instead was passed value of type {type(value)}"
             )
 
         self.rows = rows
@@ -146,12 +145,12 @@ class Matrix:
     def bits(self, bits):
         if not isinstance(bits, int):
             raise PyrtlError(
-                'Bits must be of type int, instead "%s" '
-                "was passed of type %s" % (str(bits), type(bits))
+                f'Bits must be of type int, instead "{str(bits)}" '
+                f"was passed of type {type(bits)}"
             )
         if bits <= 0:
             raise PyrtlError(
-                'Bits cannot be negative or zero, instead "%s" was passed' % str(bits)
+                f'Bits cannot be negative or zero, instead "{str(bits)}" was passed'
             )
 
         self._bits = bits
@@ -250,14 +249,14 @@ class Matrix:
                 if not isinstance(rows, int):
                     raise PyrtlError(
                         "Rows must be of type int or slice, "
-                        'instead "%s" was passed of type %s' % (str(rows), type(rows))
+                        f'instead "{str(rows)}" was passed of type {type(rows)}'
                     )
                 if rows < 0:
                     rows = self.rows - abs(rows)
                     if rows < 0:
                         raise PyrtlError(
-                            "Invalid bounds for rows. Max rows: %s, got: %s"
-                            % (str(self.rows), str(rows))
+                            f"Invalid bounds for rows. Max rows: {str(self.rows)}, "
+                            f"got: {str(rows)}"
                         )
                 rows = slice(rows, rows + 1, 1)
 
@@ -265,15 +264,14 @@ class Matrix:
                 if not isinstance(columns, int):
                     raise PyrtlError(
                         "Columns must be of type int or slice, "
-                        'instead "%s" was passed of type %s'
-                        % (str(columns), type(columns))
+                        f'instead "{str(columns)}" was passed of type {type(columns)}'
                     )
                 if columns < 0:
                     columns = self.columns - abs(columns)
                     if columns < 0:
                         raise PyrtlError(
-                            "Invalid bounds for columns. Max columns: %s, got: %s"
-                            % (str(self.columns), str(columns))
+                            "Invalid bounds for columns. Max columns: "
+                            f"{str(self.columns)}, got: {str(columns)}"
                         )
                 columns = slice(columns, columns + 1, 1)
 
@@ -313,8 +311,9 @@ class Matrix:
                 or rows.stop < 0
             ):
                 raise PyrtlError(
-                    "Invalid bounds for rows. Max rows: %s, got: %s"
-                    % (str(self.rows), str(rows.start) + ":" + str(rows.stop))
+                    "Invalid bounds for rows. Max rows: {}, got: {}".format(
+                        str(self.rows), str(rows.start) + ":" + str(rows.stop)
+                    )
                 )
             if (
                 columns.start > self.columns
@@ -323,8 +322,9 @@ class Matrix:
                 or columns.stop < 0
             ):
                 raise PyrtlError(
-                    "Invalid bounds for columns. Max columns: %s, got: %s"
-                    % (str(self.columns), str(columns.start) + ":" + str(columns.stop))
+                    "Invalid bounds for columns. Max columns: {}, got: {}".format(
+                        str(self.columns), str(columns.start) + ":" + str(columns.stop)
+                    )
                 )
 
             # If it's a single value we want to return a wirevector
@@ -355,8 +355,7 @@ class Matrix:
                 start = self.rows - abs(key)
                 if start < 0:
                     raise PyrtlError(
-                        "Index %d is out of bounds for "
-                        "matrix with %d rows" % (key, self.rows)
+                        f"Index {key} is out of bounds for matrix with {self.rows} rows"
                     )
                 key = slice(start, start + 1, None)
             else:
@@ -370,7 +369,7 @@ class Matrix:
         # Otherwise improper value was passed
         raise PyrtlError(
             "Rows must be of type int or slice, "
-            'instead "%s" was passed of type %s' % (str(key), type(key))
+            f'instead "{str(key)}" was passed of type {type(key)}'
         )
 
     def __setitem__(
@@ -400,7 +399,7 @@ class Matrix:
                 if not isinstance(rows, int):
                     raise PyrtlError(
                         "Rows must be of type int or slice, "
-                        'instead "%s" was passed of type %s' % (str(rows), type(rows))
+                        f'instead "{str(rows)}" was passed of type {type(rows)}'
                     )
                 rows = slice(rows, rows + 1, 1)
 
@@ -408,8 +407,7 @@ class Matrix:
                 if not isinstance(columns, int):
                     raise PyrtlError(
                         "Columns must be of type int or slice, "
-                        'instead "%s" was passed of type %s'
-                        % (str(columns), type(columns))
+                        f'instead "{str(columns)}" was passed of type {type(columns)}'
                     )
                 columns = slice(columns, columns + 1, 1)
 
@@ -445,8 +443,9 @@ class Matrix:
                 or rows.stop < 0
             ):
                 raise PyrtlError(
-                    "Invalid bounds for rows. Max rows: %s, got: %s"
-                    % (str(self.rows), str(rows.start) + ":" + str(rows.stop))
+                    "Invalid bounds for rows. Max rows: {}, got: {}".format(
+                        str(self.rows), str(rows.start) + ":" + str(rows.stop)
+                    )
                 )
             if (
                 columns.start > self.columns
@@ -455,8 +454,9 @@ class Matrix:
                 or columns.stop < 0
             ):
                 raise PyrtlError(
-                    "Invalid bounds for columns. Max columns: %s, got: %s"
-                    % (str(self.columns), str(columns.start) + ":" + str(columns.stop))
+                    "Invalid bounds for columns. Max columns: {}, got: {}".format(
+                        str(self.columns), str(columns.start) + ":" + str(columns.stop)
+                    )
                 )
 
             # First case when setting value to Matrix
@@ -464,14 +464,14 @@ class Matrix:
                 if value.rows != (rows.stop - rows.start):
                     raise PyrtlError(
                         "Value rows mismatch. Expected Matrix "
-                        'of rows "%s", instead recieved Matrix of rows "%s"'
-                        % (str(rows.stop - rows.start), str(value.rows))
+                        f'of rows "{str(rows.stop - rows.start)}", instead received '
+                        f'Matrix of rows "{str(value.rows)}"'
                     )
                 if value.columns != (columns.stop - columns.start):
                     raise PyrtlError(
                         "Value columns mismatch. Expected Matrix "
-                        'of columns "%s", instead recieved Matrix of columns "%s"'
-                        % (str(columns.stop - columns.start), str(value.columns))
+                        f'of columns "{str(columns.stop - columns.start)}", instead '
+                        f'received Matrix of columns "{str(value.columns)}"'
                     )
 
                 for i in range(rows.stop - rows.start):
@@ -493,7 +493,7 @@ class Matrix:
                 )
             # Otherwise Error
             else:
-                raise PyrtlError("Invalid value of type %s" % type(value))
+                raise PyrtlError(f"Invalid value of type {type(value)}")
         else:
             # Second case if we just want to set a full row
             if isinstance(key, int):
@@ -501,8 +501,8 @@ class Matrix:
                     start = self.rows - abs(key)
                     if start < 0:
                         raise PyrtlError(
-                            "Index %d is out of bounds for "
-                            "matrix with %d rows" % (key, self.rows)
+                            f"Index {key} is out of bounds for matrix with {self.rows} "
+                            "rows"
                         )
                     key = slice(start, start + 1, None)
                 else:
@@ -514,7 +514,7 @@ class Matrix:
             else:
                 raise PyrtlError(
                     "Rows must be of type int or slice, "
-                    'instead "%s" was passed of type %s' % (str(key), type(key))
+                    f'instead "{str(key)}" was passed of type {type(key)}'
                 )
 
     def copy(self) -> Matrix:
@@ -555,19 +555,17 @@ class Matrix:
         :return: a Matrix object containing the elementwise sum.
         """
         if not isinstance(other, Matrix):
-            raise PyrtlError("error: expecting a Matrix, got %s instead" % type(other))
+            raise PyrtlError(f"error: expecting a Matrix, got {type(other)} instead")
 
         if self.columns != other.columns:
             raise PyrtlError(
-                "error: columns mismatch. "
-                "Matrix a: %s columns, Matrix b: %s rows"
-                % (str(self.columns), str(other.columns))
+                f"error: columns mismatch. Matrix a: {str(self.columns)} columns, "
+                f"Matrix b: {str(other.columns)} columns"
             )
         elif self.rows != other.rows:
             raise PyrtlError(
-                "error: row mismatch. "
-                "Matrix a: %s columns, Matrix b: %s column"
-                % (str(self.rows), str(other.rows))
+                f"error: row mismatch. Matrix a: {str(self.rows)} rows, Matrix b: "
+                f"{str(other.rows)} rows"
             )
 
         new_bits = self.bits
@@ -609,20 +607,18 @@ class Matrix:
         :return: a ``Matrix`` object with the result of elementwise subtraction.
         """
         if not isinstance(other, Matrix):
-            raise PyrtlError("error: expecting a Matrix, got %s instead" % type(other))
+            raise PyrtlError(f"error: expecting a Matrix, got {type(other)} instead")
 
         if self.columns != other.columns:
             raise PyrtlError(
-                "error: columns mismatch. "
-                "Matrix a: %s columns, Matrix b: %s rows"
-                % (str(self.columns), str(other.columns))
+                f"error: columns mismatch. Matrix a: {str(self.columns)} columns, "
+                f"Matrix b: {str(other.columns)} columns"
             )
 
         if self.rows != other.rows:
             raise PyrtlError(
-                "error: row mismatch. "
-                "Matrix a: %s columns, Matrix b: %s column"
-                % (str(self.rows), str(other.rows))
+                f"error: row mismatch. Matrix a: {str(self.rows)} rows, Matrix b: "
+                f"{str(other.rows)} rows"
             )
 
         new_bits = self.bits
@@ -669,15 +665,13 @@ class Matrix:
         if isinstance(other, Matrix):
             if self.columns != other.columns:
                 raise PyrtlError(
-                    "error: columns mismatch. "
-                    "Martrix a: %s columns, Matrix b: %s rows"
-                    % (str(self.columns), str(other.columns))
+                    f"error: columns mismatch. Matrix a: {str(self.columns)} columns, "
+                    f"Matrix b: {str(other.columns)} columns"
                 )
             if self.rows != other.rows:
                 raise PyrtlError(
-                    "error, row mismatch "
-                    "Martrix a: %s columns, Matrix b: %s column"
-                    % (str(self.rows), str(other.rows))
+                    f"error, row mismatch Matrix a: {str(self.rows)} rows, Matrix b: "
+                    f"{str(other.rows)} rows"
                 )
 
             bits = self.bits + other.bits
@@ -685,7 +679,7 @@ class Matrix:
             bits = self.bits + len(other)
         else:
             raise PyrtlError(
-                "Expecting a Matrix or WireVector got %s instead" % type(other)
+                f"Expecting a Matrix or WireVector got {type(other)} instead"
             )
 
         result = Matrix(self.rows, self.columns, bits, max_bits=self.max_bits)
@@ -724,13 +718,12 @@ class Matrix:
         :return: A ``Matrix`` that contains the product.
         """
         if not isinstance(other, Matrix):
-            raise PyrtlError("error: expecting a Matrix, got %s instead" % type(other))
+            raise PyrtlError(f"error: expecting a Matrix, got {type(other)} instead")
 
         if self.columns != other.rows:
             raise PyrtlError(
-                "error: rows and columns mismatch. "
-                "Matrix a: %s columns, Matrix b: %s rows"
-                % (str(self.columns), str(other.rows))
+                f"error: rows and columns mismatch. Matrix a: {str(self.columns)} "
+                f"columns, Matrix b: {str(other.rows)} rows"
             )
 
         result = Matrix(
@@ -779,8 +772,8 @@ class Matrix:
         """
         if not isinstance(power, int):
             raise PyrtlError(
-                "Unexpected power given. Type int expected, "
-                "but recieved type %s" % type(power)
+                "Unexpected power given. Type int expected, but received type "
+                f"{type(power)}"
             )
 
         if self.rows != self.columns:
@@ -828,7 +821,7 @@ class Matrix:
         if isinstance(ind, int):
             ind = (ind,)
         elif not isinstance(ind, (tuple, list)):
-            raise PyrtlError("Expected int or list-like indices, got %s" % type(ind))
+            raise PyrtlError(f"Expected int or list-like indices, got {type(ind)}")
 
         if isinstance(v, int):
             v = (v,)
@@ -838,14 +831,14 @@ class Matrix:
         elif isinstance(v, Matrix):
             if v.rows != 1:
                 raise PyrtlError(
-                    "Expected a row-vector matrix, instead got matrix with %d rows"
-                    % v.rows
+                    f"Expected a row-vector matrix, instead got matrix with {v.rows} "
+                    "rows"
                 )
 
         if mode not in ["raise", "wrap", "clip"]:
             raise PyrtlError(
-                "Unexpected mode %s; allowable modes are 'raise', 'wrap', and 'clip'"
-                % mode
+                f"Unexpected mode {mode}; allowable modes are 'raise', 'wrap', and "
+                "'clip'"
             )
 
         def get_ix(ix):
@@ -853,9 +846,7 @@ class Matrix:
                 ix = count - abs(ix)
             if ix < 0 or ix >= count:
                 if mode == "raise":
-                    raise PyrtlError(
-                        "index %d is out of bounds with size %d" % (ix, count)
-                    )
+                    raise PyrtlError(f"index {ix} is out of bounds with size {count}")
                 elif mode == "wrap":
                     ix = ix % count
                 elif mode == "clip":
@@ -926,8 +917,8 @@ class Matrix:
             rows, cols = newshape
             if not isinstance(rows, int) or not isinstance(cols, int):
                 raise PyrtlError(
-                    "newshape dimensions must be integers, instead got %s"
-                    % type(newshape)
+                    "newshape dimensions must be integers, instead got "
+                    f"{type(newshape)}"
                 )
             if rows == -1 and cols == -1:
                 raise PyrtlError("Both dimensions in newshape cannot be -1")
@@ -939,15 +930,13 @@ class Matrix:
                 newshape = (rows, cols)
         else:
             raise PyrtlError(
-                "newshape can be an integer or tuple of integers, not %s"
-                % type(newshape)
+                f"newshape can be an integer or tuple of integers, not {type(newshape)}"
             )
 
         rows, cols = newshape
         if rows * cols != count:
             raise PyrtlError(
-                "Cannot reshape matrix of size %d into shape %s"
-                % (count, str(newshape))
+                f"Cannot reshape matrix of size {count} into shape {str(newshape)}"
             )
 
         if order not in "CF":
@@ -1002,7 +991,7 @@ def multiply(first, second):
              performed
     """
     if not isinstance(first, Matrix):
-        raise PyrtlError("error: expecting a Matrix, got %s instead" % type(second))
+        raise PyrtlError(f"error: expecting a Matrix, got {type(second)} instead")
     return first * second
 
 
@@ -1031,26 +1020,24 @@ def sum(
     if not isinstance(matrix, Matrix):
         raise PyrtlError(
             "error: expecting a Matrix or Wirevector for matrix, "
-            "got %s instead" % type(matrix)
+            f"got {type(matrix)} instead"
         )
 
     if not isinstance(bits, int) and bits is not None:
         raise PyrtlError(
-            "error: expecting an int/None for bits, got %s instead" % type(bits)
+            f"error: expecting an int/None for bits, got {type(bits)} instead"
         )
 
     if not isinstance(axis, int) and axis is not None:
         raise PyrtlError(
-            "error: expecting an int or None for axis, got %s instead" % type(axis)
+            f"error: expecting an int or None for axis, got {type(axis)} instead"
         )
 
     if bits is None:
         bits = matrix.bits
 
     if bits <= 0:
-        raise PyrtlError(
-            "error: bits cannot be negative or zero, got %s instead" % bits
-        )
+        raise PyrtlError(f"error: bits cannot be negative or zero, got {bits} instead")
 
     if axis is None:
         inputs = []
@@ -1078,7 +1065,7 @@ def sum(
             result[0, i] = reduce(sum_2, inputs)
         return result
 
-    raise PyrtlError("Axis invalid: expected (None, 0, or 1), got %s" % axis)
+    raise PyrtlError(f"Axis invalid: expected (None, 0, or 1), got {axis}")
 
 
 def min(
@@ -1106,26 +1093,24 @@ def min(
     if not isinstance(matrix, Matrix):
         raise PyrtlError(
             "error: expecting a Matrix or Wirevector for matrix, "
-            "got %s instead" % type(matrix)
+            f"got {type(matrix)} instead"
         )
 
     if not isinstance(bits, int) and bits is not None:
         raise PyrtlError(
-            "error: expecting an int/None for bits, got %s instead" % type(bits)
+            f"error: expecting an int/None for bits, got {type(bits)} instead"
         )
 
     if not isinstance(axis, int) and axis is not None:
         raise PyrtlError(
-            "error: expecting an int or None for axis, got %s instead" % type(axis)
+            f"error: expecting an int or None for axis, got {type(axis)} instead"
         )
 
     if bits is None:
         bits = matrix.bits
 
     if bits <= 0:
-        raise PyrtlError(
-            "error: bits cannot be negative or zero, got %s instead" % bits
-        )
+        raise PyrtlError(f"error: bits cannot be negative or zero, got {bits} instead")
 
     if axis is None:
         inputs = []
@@ -1153,7 +1138,7 @@ def min(
             result[0, i] = reduce(min_2, inputs)
         return result
 
-    raise PyrtlError("Axis invalid: expected (None, 0, or 1), got %s" % axis)
+    raise PyrtlError(f"Axis invalid: expected (None, 0, or 1), got {axis}")
 
 
 def max(
@@ -1181,26 +1166,24 @@ def max(
     if not isinstance(matrix, Matrix):
         raise PyrtlError(
             "error: expecting a Matrix or WireVector for matrix, "
-            "got %s instead" % type(matrix)
+            f"got {type(matrix)} instead"
         )
 
     if not isinstance(bits, int) and bits is not None:
         raise PyrtlError(
-            "error: expecting an int/None for bits, got %s instead" % type(bits)
+            f"error: expecting an int/None for bits, got {type(bits)} instead"
         )
 
     if not isinstance(axis, int) and axis is not None:
         raise PyrtlError(
-            "error: expecting an int or None for axis, got %s instead" % type(axis)
+            f"error: expecting an int or None for axis, got {type(axis)} instead"
         )
 
     if bits is None:
         bits = matrix.bits
 
     if bits <= 0:
-        raise PyrtlError(
-            "error: bits cannot be negative or zero, got %s instead" % bits
-        )
+        raise PyrtlError(f"error: bits cannot be negative or zero, got {bits} instead")
 
     if axis is None:
         inputs = []
@@ -1228,7 +1211,7 @@ def max(
             result[0, i] = reduce(max_2, inputs)
         return result
 
-    raise PyrtlError("Axis invalid: expected (None, 0, or 1), got %s" % axis)
+    raise PyrtlError(f"Axis invalid: expected (None, 0, or 1), got {axis}")
 
 
 def argmax(
@@ -1256,26 +1239,24 @@ def argmax(
     if not isinstance(matrix, Matrix):
         raise PyrtlError(
             "error: expecting a Matrix or Wirevector for matrix, "
-            "got %s instead" % type(matrix)
+            f"got {type(matrix)} instead"
         )
 
     if not isinstance(bits, int) and bits is not None:
         raise PyrtlError(
-            "error: expecting an int/None for bits, got %s instead" % type(bits)
+            f"error: expecting an int/None for bits, got {type(bits)} instead"
         )
 
     if not isinstance(axis, int) and axis is not None:
         raise PyrtlError(
-            "error: expecting an int or None for axis, got %s instead" % type(axis)
+            f"error: expecting an int or None for axis, got {type(axis)} instead"
         )
 
     if bits is None:
         bits = matrix.bits
 
     if bits <= 0:
-        raise PyrtlError(
-            "error: bits cannot be negative or zero, got %s instead" % bits
-        )
+        raise PyrtlError(f"error: bits cannot be negative or zero, got {bits} instead")
 
     max_number = max(matrix, axis=axis, bits=bits)
     if axis is None:
@@ -1333,10 +1314,10 @@ def dot(first: Matrix, second: Matrix) -> Matrix:
     :return: A ``Matrix`` that contains the dot product of ``first`` and ``second``.
     """
     if not isinstance(first, (WireVector, Matrix)):
-        raise PyrtlError("error: expecting a Matrix, got %s instead" % type(first))
+        raise PyrtlError(f"error: expecting a Matrix, got {type(first)} instead")
     if not isinstance(second, (WireVector, Matrix)):
         raise PyrtlError(
-            "error: expecting a Matrix/WireVector, got %s instead" % type(second)
+            f"error: expecting a Matrix/WireVector, got {type(second)} instead"
         )
 
     # First case when it is multiply
@@ -1612,7 +1593,7 @@ def list_to_int(matrix: list[list[int]], n_bits: int) -> int:
     """
     if n_bits <= 0:
         raise PyrtlError(
-            "Number of bits per element must be positive, instead got %d" % n_bits
+            f"Number of bits per element must be positive, instead got {n_bits}"
         )
 
     result = 0

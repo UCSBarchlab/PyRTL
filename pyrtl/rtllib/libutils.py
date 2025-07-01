@@ -31,9 +31,8 @@ def partition_wire(
     """
     if len(wire) % partition_size != 0:
         raise pyrtl.PyrtlError(
-            "Wire {} cannot be evenly partitioned into items of size {}".format(
-                wire, partition_size
-            )
+            f"Wire {wire} cannot be evenly partitioned into items of size "
+            f"{partition_size}"
         )
     return [
         wire[offset : offset + partition_size]

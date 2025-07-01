@@ -44,7 +44,7 @@ def next_tempvar_name(name=""):
             safename = re.sub(
                 r"[\W]+", "", filename
             )  # strip out non alphanumeric characters
-            wire_name += "_%s_line%d" % (safename, lineno)
+            wire_name += f"_{safename}_line{lineno}"
         return wire_name
     else:
         if name.lower() in ["clk", "clock"]:
@@ -358,8 +358,8 @@ class WireVector:
         if bitwidth is not None:
             if not isinstance(bitwidth, numbers.Integral):
                 raise PyrtlError(
-                    'bitwidth must be from type int or unspecified, instead "%s"'
-                    " was passed of type %s" % (str(bitwidth), type(bitwidth))
+                    "bitwidth must be from type int or unspecified, instead "
+                    f'"{str(bitwidth)}" was passed of type {type(bitwidth)}'
                 )
             elif bitwidth == 0:
                 raise PyrtlError("bitwidth must be greater than or equal to 1")
@@ -1118,7 +1118,7 @@ class WireVector:
             selectednums = tuple(allindex[item])
         if not selectednums:
             raise PyrtlError(
-                "selection %s must have at least one selected wire" % str(item)
+                f"selection {str(item)} must have at least one selected wire"
             )
         outwire = WireVector(bitwidth=len(selectednums))
         net = LogicNet(op="s", op_param=selectednums, args=(self,), dests=(outwire,))
@@ -1438,17 +1438,17 @@ class Input(WireVector):
     def __ilshift__(self, _):
         """This is an illegal op for Inputs. They cannot be assigned to in this way"""
         raise PyrtlError(
-            "Connection using <<= operator attempted on Input. "
-            'Inputs, such as "%s", cannot have values generated internally. '
-            "aka they can't have other wires driving it" % str(self.name)
+            "Connection using <<= operator attempted on Input. Inputs, such as "
+            f'"{str(self.name)}", cannot have values generated internally. aka they '
+            "can't have other wires driving it"
         )
 
     def __ior__(self, _):
         """This is an illegal op for Inputs. They cannot be assigned to in this way"""
         raise PyrtlError(
-            "Connection using |= operator attempted on Input. "
-            'Inputs, such as "%s", cannot have values generated internally. '
-            "aka they can't have other wires driving it" % str(self.name)
+            "Connection using |= operator attempted on Input. Inputs, such as "
+            f'"{str(self.name)}", cannot have values generated internally. aka they '
+            "can't have other wires driving it"
         )
 
 
@@ -1547,16 +1547,16 @@ class Const(WireVector):
         This is an illegal op for Consts. Their value is set in the __init__ function
         """
         raise PyrtlError(
-            'ConstWires, such as "%s", should never be assigned to with <<='
-            % str(self.name)
+            f'ConstWires, such as "{str(self.name)}", should never be assigned to with '
+            "<<="
         )
 
     def __ior__(self, _):
         """This is an illegal op for Consts. They cannot be assigned to in this way"""
         raise PyrtlError(
-            "Connection using |= operator attempted on Const. "
-            'ConstWires, such as "%s", cannot have values generated internally. '
-            "aka they cannot have other wires driving it" % str(self.name)
+            "Connection using |= operator attempted on Const. ConstWires, such as "
+            f'"{str(self.name)}", cannot have values generated internally. aka they '
+            "cannot have other wires driving it"
         )
 
 

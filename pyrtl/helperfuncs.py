@@ -76,7 +76,7 @@ def probe(w: WireVector, name: str = None) -> WireVector:
         raise PyrtlError("Only WireVectors can be probed")
 
     if name is None:
-        name = "(%s: %s)" % (probeIndexer.make_valid_string(), w.name)
+        name = f"({probeIndexer.make_valid_string()}: {w.name})"
     if _get_debug_mode():
         print("Probe: " + name + " " + get_stack(w))
 
@@ -370,7 +370,7 @@ def match_bitpattern(
             if name not in field_map:
                 raise PyrtlError(
                     "field_map argument has been given, "
-                    "but %s field is not present" % name
+                    f"but {name} field is not present"
                 )
             return field_map[name]
         return name
@@ -483,7 +483,7 @@ def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
             intfields = [int(named_fields[fn(n)]) for n in lifo]
         except KeyError as e:
             raise PyrtlError(
-                "bitpattern field %s was not provided in named_field list" % e.args[0]
+                f"bitpattern field {e.args[0]} was not provided in named_field list"
             )
 
     fmap = dict(zip(lifo, intfields))
@@ -497,7 +497,7 @@ def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
             fmap[c] = fmap[c] >> 1  # and bit shift by one position
     for f in fmap:
         if fmap[f] not in [0, -1]:
-            raise PyrtlError("too many bits given to value to fit in field %s" % f)
+            raise PyrtlError(f"too many bits given to value to fit in field {f}")
     if len(bitpattern) != len(bitlist):
         raise PyrtlInternalError("resulting values have different bitwidths")
     final_str = "".join(bitlist[::-1])
@@ -810,11 +810,11 @@ def formatted_str_to_val(data: str, format: str, enum_set=None) -> int:
         enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
         if len(enum_inst_list) == 0:
             raise PyrtlError(
-                'enum "{}" not found in passed enum_set "{}"'.format(enumname, enum_set)
+                f'enum "{enumname}" not found in passed enum_set "{enum_set}"'
             )
         rval = getattr(enum_inst_list[0], data).value
     else:
-        raise PyrtlError("unknown format type {}".format(format))
+        raise PyrtlError(f"unknown format type {format}")
     return rval
 
 
@@ -874,11 +874,11 @@ def val_to_formatted_str(val: int, format: str, enum_set=None) -> str:
         enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
         if len(enum_inst_list) == 0:
             raise PyrtlError(
-                'enum "{}" not found in passed enum_set "{}"'.format(enumname, enum_set)
+                f'enum "{enumname}" not found in passed enum_set "{enum_set}"'
             )
         rval = enum_inst_list[0](val).name
     else:
-        raise PyrtlError("unknown format type {}".format(format))
+        raise PyrtlError(f"unknown format type {format}")
     return rval
 
 
@@ -945,8 +945,8 @@ def infer_val_and_bitwidth(
         return _convert_verilog_str(rawinput, bitwidth, signed)
     else:
         raise PyrtlError(
-            'error, the value provided is of an improper type, "%s"'
-            "proper types are bool, int, and string" % type(rawinput)
+            f'error, the value provided is of an improper type, "{type(rawinput)}"'
+            "proper types are bool, int, and string"
         )
 
 
@@ -1058,8 +1058,8 @@ def _convert_verilog_str(
 
     if num >> bitwidth != 0:
         raise PyrtlError(
-            "specified bitwidth %d for verilog constant insufficient to store value %d"
-            % (bitwidth, num)
+            f"specified bitwidth {bitwidth} for verilog constant insufficient to store "
+            f"value {num}"
         )
 
     return ValueBitwidthTuple(num, bitwidth)
@@ -1185,7 +1185,7 @@ def print_loop(loop_data):
         print("No Loop Found")
     else:
         print("Loop found:")
-        print("\n".join("{}".format(fs.net) for fs in loop_data))
+        print("\n".join(f"{fs.net}" for fs in loop_data))
         print("")
 
 

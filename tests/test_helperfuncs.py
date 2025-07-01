@@ -659,7 +659,7 @@ class TestBitField_Update_Set(unittest.TestCase):
             update_set_constraints
         ):
             upd, upd_vals = utils.an_input_and_vals(
-                update_width, test_vals=test_amt, name="upd%d" % ix
+                update_width, test_vals=test_amt, name=f"upd{ix}"
             )
             update_set_list.append(Update_Info(range_start, range_end, upd, upd_vals))
         out = pyrtl.Output(input_width, "out")
