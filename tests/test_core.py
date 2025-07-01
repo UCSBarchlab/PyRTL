@@ -254,7 +254,7 @@ class TestSanityCheckNet(unittest.TestCase):
         self.invalid_net("op_param out of bounds", net)
         net = self.new_net(op="s", op_param=(0, 1, 3), args=1)
         self.invalid_net("op_param out of bounds", net)
-        net = self.new_net(op="s", op_param=(0, True, False, dict(), "hi"), args=1)
+        net = self.new_net(op="s", op_param=(0, True, False, {}, "hi"), args=1)
         self.invalid_net("select op_param requires ints", net)
 
     def test_net_wrong_op_param_mem(self):

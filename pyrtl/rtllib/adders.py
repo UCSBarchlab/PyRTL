@@ -33,8 +33,8 @@ def kogge_stone(
     a, b = pyrtl.match_bitwidth(a, b)
 
     prop_orig = a ^ b
-    prop_bits = [i for i in prop_orig]
-    gen_bits = [i for i in a & b]
+    prop_bits = list(prop_orig)
+    gen_bits = list(a & b)
     prop_dist = 1
 
     # creation of the carry calculation

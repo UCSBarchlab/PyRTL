@@ -92,7 +92,7 @@ class TestWireTransform(NetWireNumTestCases):
         self.assertIn(a, dst_nets)
         self.assertIn(b, dst_nets)
 
-        pyrtl.wire_transform(f, select_types=pyrtl.Input, exclude_types=tuple())
+        pyrtl.wire_transform(f, select_types=pyrtl.Input, exclude_types=())
 
         w2 = pyrtl.working_block().get_wirevector_by_name("w2")
         w3 = pyrtl.working_block().get_wirevector_by_name("w3")
@@ -115,7 +115,7 @@ class TestWireTransform(NetWireNumTestCases):
         self.assertEqual(dst_nets[w1], [pyrtl.LogicNet("w", None, (w1,), (o,))])
         self.assertIn(o, src_nets)
 
-        pyrtl.wire_transform(f, select_types=pyrtl.Output, exclude_types=tuple())
+        pyrtl.wire_transform(f, select_types=pyrtl.Output, exclude_types=())
 
         w2 = pyrtl.working_block().get_wirevector_by_name("w2")
         src_nets, dst_nets = pyrtl.working_block().net_connections()

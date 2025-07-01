@@ -370,7 +370,7 @@ class MemBlock:
                     f"maximum number of write ports ({self.max_write_ports}) exceeded"
                 )
         writeport_net = LogicNet(
-            op="@", op_param=(self.id, self), args=(addr, data, enable), dests=tuple()
+            op="@", op_param=(self.id, self), args=(addr, data, enable), dests=()
         )
         working_block().add_net(writeport_net)
         self.writeport_nets.append(writeport_net)

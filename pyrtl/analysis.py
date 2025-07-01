@@ -113,7 +113,7 @@ def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
 
     # now sum up the area of the memories
     mem_area = 0
-    for mem in set(net.op_param[1] for net in block.logic_subset("@m")):
+    for mem in {net.op_param[1] for net in block.logic_subset("@m")}:
         bits, ports, is_rom = _bits_ports_and_isrom_from_memory(mem)
         mem_area += mem_area_estimate(tech_in_nm, bits, ports, is_rom)
 
@@ -193,7 +193,7 @@ class TimingAnalysis:
                 "@": lambda _width: -1,
             }
         cleared = self.block.wirevector_subset((Input, Const, Register))
-        self.timing_map = {wirevector: 0 for wirevector in cleared}
+        self.timing_map = dict.fromkeys(cleared, 0)
         for _gate in self.block:  # ordered iteration
             if _gate.op == "m":
                 gate_delay = gate_delay_funcs["m"](
@@ -324,7 +324,7 @@ class TimingAnalysis:
             print("Critical path", cp_with_num[0], ":")
             print(line_indent, "The first wire is:", cp_with_num[1][0])
             if _currently_in_jupyter_notebook():
-                _print_netlist_latex(list(net for net in cp_with_num[1][1]))
+                _print_netlist_latex(cp_with_num[1][1])
             else:
                 for net in cp_with_num[1][1]:
                     print(line_indent, (net))

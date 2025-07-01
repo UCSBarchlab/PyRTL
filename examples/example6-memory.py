@@ -79,8 +79,8 @@ simvals = {
 # For simulation purposes, we can give the spots in memory an initial value.
 # Note that in the actual circuit, the values are initially undefined.
 # Below, we are building the data with which to initialize memory.
-mem1_init = {addr: 9 for addr in range(8)}
-mem2_init = {addr: 9 for addr in range(8)}
+mem1_init = dict.fromkeys(range(8), 9)
+mem2_init = dict.fromkeys(range(8), 9)
 
 # The simulation only recognizes initial values of memories when they are in a
 # dictionary composed of memory : mem_values pairs.

@@ -1508,7 +1508,7 @@ class TestWireStruct(unittest.TestCase):
 
         # The other wires are not named, so 'h' and 'l' should be the only
         # traced wires.
-        self.assertEqual(list(sorted(sim.tracer.trace.keys())), ["h", "l"])
+        self.assertEqual(sorted(sim.tracer.trace.keys()), ["h", "l"])
 
     def test_pixel_slice(self):
         pixel = Pixel(name="pixel", Pixel=0xABCDEF)
@@ -1584,7 +1584,7 @@ class TestWireStruct(unittest.TestCase):
         self.assertEqual(sim.inspect("bl"), 0xF)
 
         self.assertEqual(
-            list(sorted(sim.tracer.trace.keys())), ["bh", "bl", "gh", "gl", "rh", "rl"]
+            sorted(sim.tracer.trace.keys()), ["bh", "bl", "gh", "gl", "rh", "rl"]
         )
 
     def test_anonymous_pixel_concatenate(self):
@@ -1707,9 +1707,7 @@ class TestWireMatrix(unittest.TestCase):
         self.assertEqual(sim.inspect("w1"), 0xCD)
         self.assertEqual(sim.inspect("w1l"), 0xD)
 
-        self.assertEqual(
-            list(sorted(sim.tracer.trace.keys())), ["w0", "w0h", "w1", "w1l"]
-        )
+        self.assertEqual(sorted(sim.tracer.trace.keys()), ["w0", "w0h", "w1", "w1l"])
 
     def test_anonymous_wire_matrix_concatenate(self):
         word = Word(values=[0xAB, Byte(high=0xC, low=0xD)])
@@ -1720,7 +1718,7 @@ class TestWireMatrix(unittest.TestCase):
         sim.step(provided_inputs={})
         self.assertEqual(sim.inspect("w"), 0xABCD)
 
-        self.assertEqual(list(sorted(sim.tracer.trace.keys())), ["w"])
+        self.assertEqual(sorted(sim.tracer.trace.keys()), ["w"])
 
     def test_wire_matrix_input(self):
         word = Word(name="word", component_type=pyrtl.Input)

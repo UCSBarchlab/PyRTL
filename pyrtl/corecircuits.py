@@ -1014,7 +1014,7 @@ def enum_mux(
     :return: Result of the mux.
     """
     # check dictionary keys are of the right type
-    keytypeset = set(type(x) for x in table if x is not otherwise)
+    keytypeset = {type(x) for x in table if x is not otherwise}
     if len(keytypeset) != 1:
         raise PyrtlError(f"table mixes multiple types {keytypeset} as keys")
     keytype = list(keytypeset)[0]
@@ -1271,7 +1271,7 @@ def _basic_mult(A, B):
         A, B = B, A  # so that we can reuse the code below :)
     if len(A) == 1:
         return concat_list(
-            list(A & b for b in B) + [Const(0)]
+            [A & b for b in B] + [Const(0)]
         )  # keep WireVector len consistent
 
     result_bitwidth = len(A) + len(B)

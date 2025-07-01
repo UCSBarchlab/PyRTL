@@ -281,7 +281,7 @@ def input_from_blif(
 
     # Begin actually reading and parsing the BLIF file
     result = parser.parse_string(blif_string, parseAll=True)
-    ff_clk_set = set([])
+    ff_clk_set = set()
     models = {}  # model name -> model, for subckt instantiation
 
     def extract_inputs(subckt):

@@ -1145,7 +1145,7 @@ class RomBlockSimBase(unittest.TestCase):
         read_data = pyrtl.Output(name="read_data")
         read_data <<= mem[counter]
         memory_values = [-4, -3, -2, -1, 0, 1, 2, 3]
-        memory_value_map = {index: value for index, value in enumerate(memory_values)}
+        memory_value_map = dict(enumerate(memory_values))
         sim = self.sim(memory_value_map={mem: memory_value_map})
         for i in range(2**mem.addrwidth):
             sim.step()
@@ -1161,7 +1161,7 @@ class RomBlockSimBase(unittest.TestCase):
         read_data = pyrtl.Output(name="read_data")
         read_data <<= mem[counter]
         memory_values = [0, 1, 2, 3, 4, 5, 6, 7]
-        memory_value_map = {index: value for index, value in enumerate(memory_values)}
+        memory_value_map = dict(enumerate(memory_values))
         sim = self.sim(memory_value_map={mem: memory_value_map})
         for i in range(2**mem.addrwidth):
             sim.step()

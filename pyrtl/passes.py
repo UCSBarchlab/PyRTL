@@ -514,7 +514,7 @@ def _find_common_subexps(block: Block) -> dict[LogicNet, [LogicNet]]:
         that can be replaced with the single common subexp.
     """
     net_table = {}  # {net (without dest) : [net, ...]
-    t = tuple()  # just a placeholder
+    t = ()  # just a placeholder
     const_dict = {}
     for net in block.logic:
         if net.op in ops_where_arg_order_matters:

@@ -179,7 +179,7 @@ class CompiledSimulation:
 
         if len(provided_inputs) > 0:
             longest = sorted(
-                list(provided_inputs.items()), key=lambda t: len(t[1]), reverse=True
+                provided_inputs.items(), key=lambda t: len(t[1]), reverse=True
             )[0]
             msteps = len(longest[1])
             if nsteps:

@@ -256,7 +256,7 @@ def _default_node_namer(
                 ):  # consecutive
                     bits = f"[{selUpper}:{selLower}]"
                 elif all(
-                    [ix == node.op_param[0] for ix in node.op_param[1:]]
+                    ix == node.op_param[0] for ix in node.op_param[1:]
                 ):  # all the same
                     bits = f"[{node.op_param[0]}]*{len(node.op_param)}"
                 else:

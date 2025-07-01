@@ -464,7 +464,7 @@ class Block:
             return None
 
     def wirevector_subset(
-        self, cls: tuple[type] = None, exclude: tuple[type] = tuple()
+        self, cls: tuple[type] = None, exclude: tuple[type] = ()
     ) -> set[WireVector]:
         """Return a subset of the ``Block's`` :class:`WireVectors<WireVector>`.
 
@@ -511,10 +511,10 @@ class Block:
             initial_set = self.wirevector_set
         else:
             initial_set = (x for x in self.wirevector_set if isinstance(x, cls))
-        if exclude == tuple():
+        if exclude == ():
             return set(initial_set)
         else:
-            return set(x for x in initial_set if not isinstance(x, exclude))
+            return {x for x in initial_set if not isinstance(x, exclude)}
 
     def logic_subset(self, op: tuple[str] = None) -> set[LogicNet]:
         """Return a subset of the ``Block's`` :class:`LogicNets<LogicNet>`.
@@ -535,7 +535,7 @@ class Block:
         if op is None:
             return self.logic
         else:
-            return set(x for x in self.logic if x.op in op)
+            return {x for x in self.logic if x.op in op}
 
     def get_wirevector_by_name(self, name: str, strict: bool = False) -> WireVector:
         """Return the :class:`WireVector` with matching ``name``.
@@ -709,7 +709,7 @@ class Block:
                 )
 
         # check for unique names
-        wirevector_names_set = set(x.name for x in self.wirevector_set)
+        wirevector_names_set = {x.name for x in self.wirevector_set}
         if len(self.wirevector_set) != len(wirevector_names_set):
             wirevector_names_list = [x.name for x in self.wirevector_set]
             for w in wirevector_names_set:
@@ -804,9 +804,9 @@ class Block:
         logic structure and throw an error on any memory if finds that has an index that
         is not ready at the beginning of the cycle.
         """
-        sync_mems = set(
+        sync_mems = {
             m for m in self.logic_subset("m") if not m.op_param[1].asynchronous
-        )
+        }
         if not sync_mems:
             return  # nothing to check here
 

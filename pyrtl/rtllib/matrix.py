@@ -1377,20 +1377,20 @@ def hstack(*matrices: Matrix) -> Matrix:
     if len(matrices) == 0:
         raise PyrtlError("Must supply at least one matrix to hstack()")
 
-    if any([not isinstance(matrix, Matrix) for matrix in matrices]):
+    if any(not isinstance(matrix, Matrix) for matrix in matrices):
         raise PyrtlError("All arguments to hstack must be matrices.")
 
     if len(matrices) == 1:
         return matrices[0].copy()
 
     new_rows = matrices[0].rows
-    if any([m.rows != new_rows for m in matrices]):
+    if any(m.rows != new_rows for m in matrices):
         raise PyrtlError(
             "All matrices being hstacked together must have the same number of rows"
         )
 
     new_signed = matrices[0].signed
-    if any([m.signed != new_signed for m in matrices]):
+    if any(m.signed != new_signed for m in matrices):
         raise PyrtlError(
             "All matrices being hstacked together must have the same signedness"
         )
@@ -1442,20 +1442,20 @@ def vstack(*matrices: Matrix) -> Matrix:
     if len(matrices) == 0:
         raise PyrtlError("Must supply at least one matrix to hstack()")
 
-    if any([not isinstance(matrix, Matrix) for matrix in matrices]):
+    if any(not isinstance(matrix, Matrix) for matrix in matrices):
         raise PyrtlError("All arguments to vstack must be matrices.")
 
     if len(matrices) == 1:
         return matrices[0].copy()
 
     new_cols = matrices[0].columns
-    if any([m.columns != new_cols for m in matrices]):
+    if any(m.columns != new_cols for m in matrices):
         raise PyrtlError(
             "All matrices being vstacked together must have the same number of columns"
         )
 
     new_signed = matrices[0].signed
-    if any([m.signed != new_signed for m in matrices]):
+    if any(m.signed != new_signed for m in matrices):
         raise PyrtlError(
             "All matrices being hstacked together must have the same signedness"
         )
