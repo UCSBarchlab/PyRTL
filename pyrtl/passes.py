@@ -244,7 +244,8 @@ class _ProducerList:
         self.dict = {}  # map from wirevector to its direct producer wirevector
 
     def __getitem__(self, item):
-        raise PyrtlError("You usually don't want the immediate producer")
+        msg = "You usually don't want the immediate producer"
+        raise PyrtlError(msg)
 
     def __setitem__(self, key, item):
         self.dict[key] = item
@@ -380,7 +381,8 @@ def _constant_prop_pass(block, silence_unexpected_net_warnings=False):
 
     def _constant_prop_error(net, error_str):
         if not silence_unexpected_net_warnings:
-            raise PyrtlError(f"Unexpected net, {net}, has {error_str}")
+            msg = f"Unexpected net, {net}, has {error_str}"
+            raise PyrtlError(msg)
 
     def constant_prop_check(net_checking):
         def replace_net(new_net):
@@ -866,10 +868,11 @@ def _decompose(net, wv_map, mems, block_out):
         new_mem = _get_new_block_mem_instance(net.op_param, mems, block_out)[1]
         new_mem[addr] <<= MemBlock.EnabledWrite(data=data, enable=enable)
     else:
-        raise PyrtlInternalError(
-            "Unable to synthesize the following net "
-            f"due to unimplemented op :\n{str(net)}"
+        msg = (
+            "Unable to synthesize the following net due to unimplemented op :\n"
+            f"{str(net)}"
         )
+        raise PyrtlInternalError(msg)
     return
 
 
@@ -895,7 +898,8 @@ def nand_synth(net: LogicNet):
         temp_0 = arg(0).nand(arg(1))
         dest <<= temp_0.nand(arg(0)).nand(temp_0.nand(arg(1)))
     else:
-        raise PyrtlError(f"Op, '{net.op}' is not supported in nand_synth")
+        msg = f"Op, '{net.op}' is not supported in nand_synth"
+        raise PyrtlError(msg)
     return None
 
 
@@ -921,7 +925,8 @@ def and_inverter_synth(net: LogicNet):
     elif net.op == "n":
         dest <<= ~(arg(0) & arg(1))
     else:
-        raise PyrtlError(f"Op, '{net.op}' is not supported in and_inv_synth")
+        msg = f"Op, '{net.op}' is not supported in and_inv_synth"
+        raise PyrtlError(msg)
     return None
 
 
@@ -1106,9 +1111,8 @@ def two_way_fanout(block=None):
                         nets_to_update[dst_net].append((wire, i, s[curr_ix]))
                         curr_ix += 1
             if curr_ix != curr_fanout:
-                raise PyrtlInternalError(
-                    "Calculated fanout does not equal number of wires found"
-                )
+                msg = "Calculated fanout does not equal number of wires found"
+                raise PyrtlInternalError(msg)
 
     for old_net, args in nets_to_update.items():
 

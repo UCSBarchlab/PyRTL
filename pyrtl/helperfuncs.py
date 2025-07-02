@@ -74,7 +74,8 @@ def probe(w: WireVector, name: str = None) -> WireVector:
     :return: original :class:`WireVector` ``w``
     """
     if not isinstance(w, WireVector):
-        raise PyrtlError("Only WireVectors can be probed")
+        msg = "Only WireVectors can be probed"
+        raise PyrtlError(msg)
 
     if name is None:
         name = f"({probeIndexer.make_valid_string()}: {w.name})"
@@ -109,26 +110,27 @@ def rtl_assert(w: WireVector, exp: Exception, block: Block = None) -> Output:
     block = working_block(block)
 
     if not isinstance(w, WireVector):
-        raise PyrtlError("Only WireVectors can be asserted with rtl_assert")
+        msg = "Only WireVectors can be asserted with rtl_assert"
+        raise PyrtlError(msg)
     if len(w) != 1:
-        raise PyrtlError("rtl_assert checks only a WireVector of bitwidth 1")
+        msg = "rtl_assert checks only a WireVector of bitwidth 1"
+        raise PyrtlError(msg)
     if not isinstance(exp, Exception):
-        raise PyrtlError(
-            "the second argument to rtl_assert must be an instance of Exception"
-        )
+        msg = "the second argument to rtl_assert must be an instance of Exception"
+        raise PyrtlError(msg)
     if isinstance(exp, KeyError):
-        raise PyrtlError("the second argument to rtl_assert cannot be a KeyError")
+        msg = "the second argument to rtl_assert cannot be a KeyError"
+        raise PyrtlError(msg)
     if w not in block.wirevector_set:
-        raise PyrtlError(
-            "assertion wire not part of the block to which it is being added"
-        )
+        msg = "assertion wire not part of the block to which it is being added"
+        raise PyrtlError(msg)
     if w not in block.wirevector_set:
-        raise PyrtlError("assertion not a known wirevector in the target block")
+        msg = "assertion not a known wirevector in the target block"
+        raise PyrtlError(msg)
 
     if w in block.rtl_assert_dict:
-        raise PyrtlInternalError(
-            "assertion conflicts with existing registered assertion"
-        )
+        msg = "assertion conflicts with existing registered assertion"
+        raise PyrtlInternalError(msg)
 
     assert_wire = Output(
         bitwidth=1, name=assertIndexer.make_valid_string(), block=block
@@ -179,11 +181,14 @@ def log2(integer_val: int) -> int:
     """
     i = integer_val
     if not isinstance(i, int):
-        raise PyrtlError("this function can only take integers")
+        msg = "this function can only take integers"
+        raise PyrtlError(msg)
     if i <= 0:
-        raise PyrtlError("this function can only take positive numbers 1 or greater")
+        msg = "this function can only take positive numbers 1 or greater"
+        raise PyrtlError(msg)
     if i & (i - 1) != 0:
-        raise PyrtlError("this function can only take even powers of 2")
+        msg = "this function can only take even powers of 2"
+        raise PyrtlError(msg)
     return i.bit_length() - 1
 
 
@@ -237,7 +242,8 @@ def truncate(
              type.
     """
     if bitwidth < 1:
-        raise PyrtlError("bitwidth must be a positive integer")
+        msg = "bitwidth must be a positive integer"
+        raise PyrtlError(msg)
     x = wirevector_or_integer
     try:
         return x.truncate(bitwidth)
@@ -353,10 +359,12 @@ def match_bitpattern(
     """
     w = as_wires(w)
     if not isinstance(bitpattern, str):
-        raise PyrtlError("bitpattern must be a string")
+        msg = "bitpattern must be a string"
+        raise PyrtlError(msg)
     bitpattern = bitpattern.replace("_", "").replace(" ", "")
     if len(w) != len(bitpattern):
-        raise PyrtlError("bitpattern string different length than wirevector provided")
+        msg = "bitpattern string different length than wirevector provided"
+        raise PyrtlError(msg)
     # Reverse ``bitpattern`` so index 0 is the least significant bit. This makes
     # ``w[i]`` and ``reversed_bitpattern[i]`` refer to the same bit ``i``.
     reversed_bitpattern = bitpattern[::-1]
@@ -369,10 +377,11 @@ def match_bitpattern(
         """Retrieve a field's name from ``field_map``."""
         if field_map is not None:
             if name not in field_map:
-                raise PyrtlError(
-                    "field_map argument has been given, "
-                    f"but {name} field is not present"
+                msg = (
+                    f"field_map argument has been given, but {name} field is not "
+                    "present"
                 )
+                raise PyrtlError(msg)
             return field_map[name]
         return name
 
@@ -446,10 +455,12 @@ def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
     """
 
     if not bitpattern:
-        raise PyrtlError("bitpattern must be nonempty")
+        msg = "bitpattern must be nonempty"
+        raise PyrtlError(msg)
 
     if len(ordered_fields) > 0 and len(named_fields) > 0:
-        raise PyrtlError("named and ordered fields cannot be mixed")
+        msg = "named and ordered fields cannot be mixed"
+        raise PyrtlError(msg)
 
     def letters_in_field_order():
         seen = []
@@ -467,15 +478,13 @@ def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
     lifo = letters_in_field_order()
     if ordered_fields:
         if len(lifo) != len(ordered_fields):
-            raise PyrtlError(
-                "number of fields and number of unique patterns do not match"
-            )
+            msg = "number of fields and number of unique patterns do not match"
+            raise PyrtlError(msg)
         intfields = [int(f) for f in ordered_fields]
     else:
         if len(lifo) != len(named_fields):
-            raise PyrtlError(
-                "number of fields and number of unique patterns do not match"
-            )
+            msg = "number of fields and number of unique patterns do not match"
+            raise PyrtlError(msg)
         try:
 
             def fn(n):
@@ -483,24 +492,26 @@ def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
 
             intfields = [int(named_fields[fn(n)]) for n in lifo]
         except KeyError as exc:
-            raise PyrtlError(
-                f"bitpattern field {exc.args[0]} was not provided in named_field list"
-            ) from exc
+            msg = f"bitpattern field {exc.args[0]} was not provided in named_field list"
+            raise PyrtlError(msg) from exc
 
     fmap = dict(zip(lifo, intfields))
     for c in bitpattern[::-1]:
         if c == "0" or c == "1":
             bitlist.append(c)
         elif c == "?":
-            raise PyrtlError("all fields in the bitpattern must have names")
+            msg = "all fields in the bitpattern must have names"
+            raise PyrtlError(msg)
         else:
             bitlist.append(str(fmap[c] & 0x1))  # append lsb of the field
             fmap[c] = fmap[c] >> 1  # and bit shift by one position
     for f, intfield in fmap.items():
         if intfield not in [0, -1]:
-            raise PyrtlError(f"too many bits given to value to fit in field {f}")
+            msg = f"too many bits given to value to fit in field {f}"
+            raise PyrtlError(msg)
     if len(bitpattern) != len(bitlist):
-        raise PyrtlInternalError("resulting values have different bitwidths")
+        msg = "resulting values have different bitwidths"
+        raise PyrtlInternalError(msg)
     final_str = "".join(bitlist[::-1])
     return int(final_str, 2)
 
@@ -564,9 +575,11 @@ def chop(w: WireVector, *segment_widths: int) -> list[WireVector]:
     w = as_wires(w)
     for seg in segment_widths:
         if not isinstance(seg, int):
-            raise PyrtlError("segment widths must be integers")
+            msg = "segment widths must be integers"
+            raise PyrtlError(msg)
     if sum(segment_widths) != len(w):
-        raise PyrtlError("sum of segment widths must equal length of wirevetor")
+        msg = "sum of segment widths must equal length of wirevetor"
+        raise PyrtlError(msg)
 
     n_segments = len(segment_widths)
     starts = [sum(segment_widths[i + 1 :]) for i in range(n_segments)]
@@ -677,7 +690,8 @@ def wirevector_list(
         names = names.replace(",", " ").split()
 
     if any("/" in name for name in names) and bitwidth is not None:
-        raise PyrtlError('only one of optional "/" or bitwidth parameter allowed')
+        msg = 'only one of optional "/" or bitwidth parameter allowed'
+        raise PyrtlError(msg)
 
     if bitwidth is None:
         bitwidth = 1
@@ -737,9 +751,11 @@ def val_to_signed_integer(value: int, bitwidth: int) -> int:
     :return: ``value`` as a signed integer
     """
     if isinstance(value, WireVector) or isinstance(bitwidth, WireVector):
-        raise PyrtlError("inputs must not be wirevectors")
+        msg = "inputs must not be wirevectors"
+        raise PyrtlError(msg)
     if bitwidth < 1:
-        raise PyrtlError("bitwidth must be a positive integer")
+        msg = "bitwidth must be a positive integer"
+        raise PyrtlError(msg)
 
     neg_mask = 1 << (bitwidth - 1)
     neg_part = value & neg_mask
@@ -803,17 +819,18 @@ def formatted_str_to_val(data: str, format: str, enum_set=None) -> int:
     elif type == "u":
         rval = int(data)
         if rval < 0:
-            raise PyrtlError("unsigned format requested, but negative value provided")
+            msg = "unsigned format requested, but negative value provided"
+            raise PyrtlError(msg)
     elif type == "e":
         enumname = format.split("/")[1]
         enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
         if len(enum_inst_list) == 0:
-            raise PyrtlError(
-                f'enum "{enumname}" not found in passed enum_set "{enum_set}"'
-            )
+            msg = f'enum "{enumname}" not found in passed enum_set "{enum_set}"'
+            raise PyrtlError(msg)
         rval = getattr(enum_inst_list[0], data).value
     else:
-        raise PyrtlError(f"unknown format type {format}")
+        msg = f"unknown format type {format}"
+        raise PyrtlError(msg)
     return rval
 
 
@@ -872,12 +889,12 @@ def val_to_formatted_str(val: int, format: str, enum_set=None) -> str:
         enumname = format.split("/")[1]
         enum_inst_list = [e for e in enum_set if e.__name__ == enumname]
         if len(enum_inst_list) == 0:
-            raise PyrtlError(
-                f'enum "{enumname}" not found in passed enum_set "{enum_set}"'
-            )
+            msg = f'enum "{enumname}" not found in passed enum_set "{enum_set}"'
+            raise PyrtlError(msg)
         rval = enum_inst_list[0](val).name
     else:
-        raise PyrtlError(f"unknown format type {format}")
+        msg = f"unknown format type {format}"
+        raise PyrtlError(msg)
     return rval
 
 
@@ -895,7 +912,7 @@ def infer_val_and_bitwidth(
 ) -> ValueBitwidthTuple:
     """Return a ``(value, bitwidth)`` :class:`tuple` inferred from the specified input.
 
-    Given a boolean, integer, or verilog-style string constant, this function returns a
+    Given a boolean, integer, or Verilog-style string constant, this function returns a
     :class:`ValueBitwidthTuple` ``(value, bitwidth)`` which are inferred from the
     specified ``rawinput``. If ``signed`` is ``True``, bits will be included to ensure a
     proper two's complement representation is possible, otherwise it assumes a standard
@@ -928,7 +945,7 @@ def infer_val_and_bitwidth(
         >>> val_to_signed_integer(val, bitwidth)
         -1
 
-    :param rawinput: a bool, int, or verilog-style string constant
+    :param rawinput: a bool, int, or Verilog-style string constant
     :param bitwidth: an integer bitwidth or (by default) ``None``
     :param signed: a bool (by default ``False``) to include bits for proper two's
         complement
@@ -942,22 +959,25 @@ def infer_val_and_bitwidth(
         return _convert_int(rawinput, bitwidth, signed)
     if isinstance(rawinput, str):
         return _convert_verilog_str(rawinput, bitwidth, signed)
-    raise PyrtlError(
-        f'error, the value provided is of an improper type, "{type(rawinput)}"'
-        "proper types are bool, int, and string"
+    msg = (
+        f'error, the value provided is of an improper type, "{type(rawinput)}" proper '
+        "types are bool, int, and string"
     )
+    raise PyrtlError(msg)
 
 
 def _convert_bool(
     bool_val: bool, bitwidth: int = None, signed: bool = False
 ) -> ValueBitwidthTuple:
     if signed:
-        raise PyrtlError("error, booleans cannot be signed (convert to int first)")
+        msg = "error, booleans cannot be signed (convert to int first)"
+        raise PyrtlError(msg)
     num = int(bool_val)
     if bitwidth is None:
         bitwidth = 1
     if bitwidth != 1:
-        raise PyrtlError("error, boolean has bitwidth not equal to 1")
+        msg = "error, boolean has bitwidth not equal to 1"
+        raise PyrtlError(msg)
     return ValueBitwidthTuple(num, bitwidth)
 
 
@@ -980,25 +1000,26 @@ def _convert_int(
         if bitwidth is None:
             bitwidth = min_bitwidth
         elif bitwidth < min_bitwidth:
-            raise PyrtlError(
-                f"bitwidth specified ({bitwidth}) is insufficient to "
-                f"represent constant {val}"
+            msg = (
+                f"bitwidth specified ({bitwidth}) is insufficient to represent "
+                f"constant {val}"
             )
+            raise PyrtlError(msg)
 
     else:  # val is negative
         if not signed and bitwidth is None:
-            raise PyrtlError(
-                f"negative constant {val} requires either signed=True or "
-                "specified bitwidth"
+            msg = (
+                f"negative constant {val} requires either signed=True or specified "
+                "bitwidth"
             )
+            raise PyrtlError(msg)
 
         if bitwidth is None:
             bitwidth = 1 if val == -1 else len(bin(~val)) - 1
 
         if (val >> bitwidth - 1) != -1:
-            raise PyrtlError(
-                f"insufficient bits ({bitwidth}) for negative number {val}"
-            )
+            msg = f"insufficient bits ({bitwidth}) for negative number {val}"
+            raise PyrtlError(msg)
 
         num = val & ((1 << bitwidth) - 1)  # result is a two's complement value
     return ValueBitwidthTuple(num, bitwidth)
@@ -1008,9 +1029,8 @@ def _convert_verilog_str(
     val: str, bitwidth: int = None, signed: bool = False
 ) -> ValueBitwidthTuple:
     if signed:
-        raise PyrtlError(
-            'error, "signed" option with verilog-style string constants not supported'
-        )
+        msg = 'error, "signed" option with Verilog-style string constants not supported'
+        raise PyrtlError(msg)
 
     bases = {"b": 2, "o": 8, "d": 10, "h": 16, "x": 16}
 
@@ -1021,25 +1041,26 @@ def _convert_verilog_str(
 
     split_string = val.lower().split("'")
     if len(split_string) != 2:
-        raise PyrtlError("error, string not in verilog style format")
+        msg = "error, string not in Verilog style format"
+        raise PyrtlError(msg)
     try:
         verilog_bitwidth = int(split_string[0])
         bitwidth = (
             bitwidth or verilog_bitwidth
         )  # if bitwidth is None, use verilog_bitwidth
         if verilog_bitwidth > bitwidth:
-            raise PyrtlError(
+            msg = (
                 f"bitwidth parameter passed ({bitwidth}) cannot fit Verilog-style "
                 f"constant with bitwidth {verilog_bitwidth} (if bitwidth=None is used, "
                 "PyRTL will determine the bitwidth from the Verilog-style constant "
                 "specification)"
             )
+            raise PyrtlError(msg)
 
         sval = split_string[1]
         if sval[0] == "s":
-            raise PyrtlError(
-                "error, signed integers are not supported in Verilog-style constants"
-            )
+            msg = "error, signed integers are not supported in Verilog-style constants"
+            raise PyrtlError(msg)
         base = 10
         if sval[0] in bases:
             base = bases[sval[0]]
@@ -1047,18 +1068,21 @@ def _convert_verilog_str(
         sval = sval.replace("_", "")
         num = int(sval, base)
     except (IndexError, ValueError) as exc:
-        raise PyrtlError("error, string not in verilog style format") from exc
+        msg = "error, string not in Verilog style format"
+        raise PyrtlError(msg) from exc
 
     if neg and num:
         if num >> bitwidth - 1:
-            raise PyrtlError("error, insufficient bits for negative number")
+            msg = "error, insufficient bits for negative number"
+            raise PyrtlError(msg)
         num = (1 << bitwidth) - num
 
     if num >> bitwidth != 0:
-        raise PyrtlError(
-            f"specified bitwidth {bitwidth} for verilog constant insufficient to store "
+        msg = (
+            f"specified bitwidth {bitwidth} for Verilog constant insufficient to store "
             f"value {num}"
         )
+        raise PyrtlError(msg)
 
     return ValueBitwidthTuple(num, bitwidth)
 
@@ -1075,7 +1099,8 @@ def get_stacks(*wires):
 
 def get_stack(wire):
     if not isinstance(wire, WireVector):
-        raise PyrtlError("Only WireVectors can be traced")
+        msg = "Only WireVectors can be traced"
+        raise PyrtlError(msg)
 
     call_stack = getattr(wire, "init_call_stack", None)
     if call_stack:
@@ -1164,9 +1189,11 @@ def find_loop(block=None):
                 if f_state.dst_w is next_wire:
                     break
             else:
-                raise PyrtlError("Shouldn't get here! Couldn't figure out the loop")
+                msg = "Shouldn't get here! Couldn't figure out the loop"
+                raise PyrtlError(msg)
             return loop_info
-    raise PyrtlError("Error in detecting loop")
+    msg = "Error in detecting loop"
+    raise PyrtlError(msg)
 
 
 def find_and_print_loop(block=None):
@@ -1719,11 +1746,12 @@ def wire_struct(wire_struct_spec):
                 # Check for unused kwargs.
                 for component_name in kwargs:
                     if component_name != class_name:
-                        raise PyrtlError(
-                            "Do not pass additional kwargs to @wire_struct "
-                            f'when slicing. ("{class_name}" was passed so '
-                            f'don\'t pass "{component_name}")'
+                        msg = (
+                            "Do not pass additional kwargs to @wire_struct when "
+                            f'slicing. ("{class_name}" was passed so don\'t pass '
+                            f'"{component_name}")'
                         )
+                        raise PyrtlError(msg)
                 # Concatenated value was provided. Slice it into components.
                 _slice(
                     block=block,
@@ -1743,19 +1771,20 @@ def wire_struct(wire_struct_spec):
                 ]
                 for expected_component_name in expected_component_names:
                     if expected_component_name not in kwargs:
-                        raise PyrtlError(
-                            "You must provide kwargs for all @wire_struct "
-                            "components when concatenating (missing kwarg "
+                        msg = (
+                            "You must provide kwargs for all @wire_struct components "
+                            "when concatenating (missing kwarg "
                             f'"{expected_component_name}")'
                         )
+                        raise PyrtlError(msg)
                 # Check for unused kwargs.
                 for component_name in kwargs:
                     if component_name not in expected_component_names:
-                        raise PyrtlError(
-                            "Do not pass additional kwargs to @wire_struct "
-                            "when concatenating (don't pass "
-                            f'"{component_name}")'
+                        msg = (
+                            "Do not pass additional kwargs to @wire_struct when "
+                            f'concatenating (don\'t pass "{component_name}")'
                         )
+                        raise PyrtlError(msg)
 
                 _concatenate(
                     block=block,
@@ -2027,11 +2056,12 @@ def wire_matrix(component_schema, size: int):
                 )
             else:
                 if len(values) != len(schema):
-                    raise PyrtlError(
+                    msg = (
                         "wire_matrix constructor expects 1 value to slice, or "
                         f"{len(schema)} values to concatenate (received "
                         f"{len(values)} values)"
                     )
+                    raise PyrtlError(msg)
                 # Component values were provided; concatenate them.
                 _concatenate(
                     block=block,

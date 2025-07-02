@@ -155,7 +155,7 @@ class TestWireVectorFail(unittest.TestCase):
             x.truncate(y)
 
 
-class TestWirevectorSlicing(unittest.TestCase):
+class TestWireVectorSlicing(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 

@@ -92,9 +92,8 @@ def _push_condition(predicate):
     _check_under_condition()
     _depth += 1
     if predicate is not otherwise and len(predicate) > 1:
-        raise PyrtlError(
-            "all predicates for conditional assignments must be wirevectors of len 1"
-        )
+        msg = "all predicates for conditional assignments must be wirevectors of len 1"
+        raise PyrtlError(msg)
     _conditions_list_stack[-1].append(predicate)
     _conditions_list_stack.append([])
 
@@ -126,18 +125,21 @@ def _build_read_port(mem, addr):
 
 def _check_no_nesting():
     if _depth != 0:
-        raise PyrtlError("no nesting of conditional assignments allowed")
+        msg = "no nesting of conditional assignments allowed"
+        raise PyrtlError(msg)
 
 
 def _check_under_condition():
     if not currently_under_condition():
-        raise PyrtlError('conditional assignment "|=" only valid under a condition')
+        msg = 'conditional assignment "|=" only valid under a condition'
+        raise PyrtlError(msg)
 
 
 def _check_and_add_pred_set(lhs, pred_set):
     for test_set in _conflicts_map.setdefault(lhs, []):
         if _pred_sets_are_in_conflict(pred_set, test_set):
-            raise PyrtlError(f"conflicting conditions for {lhs}")
+            msg = f"conflicting conditions for {lhs}"
+            raise PyrtlError(msg)
     _conflicts_map[lhs].append(pred_set)
 
 
@@ -188,7 +190,8 @@ def _finalize(defaults):
                 else:
                     result = 0  # default for wire is "0"
             else:
-                raise PyrtlInternalError("unknown assignment in finalize")
+                msg = "unknown assignment in finalize"
+                raise PyrtlInternalError(msg)
             predlist = _predicate_map[lhs]
             for p, rhs in predlist:
                 result = select(p, truecase=rhs, falsecase=result)
@@ -237,9 +240,11 @@ def _current_select():
             pred_set.add((predicate, False))
 
     if select is None:
-        raise PyrtlError("problem with conditional assignment")
+        msg = "problem with conditional assignment"
+        raise PyrtlError(msg)
     if len(select) != 1:
-        raise PyrtlInternalError("conditional predicate with length greater than 1")
+        msg = "conditional predicate with length greater than 1"
+        raise PyrtlInternalError(msg)
 
     return select, pred_set
 

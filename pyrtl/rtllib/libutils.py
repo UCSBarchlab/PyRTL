@@ -30,10 +30,11 @@ def partition_wire(
     :param partition_size: Integer representing size of each partition.
     """
     if len(wire) % partition_size != 0:
-        raise pyrtl.PyrtlError(
+        msg = (
             f"Wire {wire} cannot be evenly partitioned into items of size "
             f"{partition_size}"
         )
+        raise pyrtl.PyrtlError(msg)
     return [
         wire[offset : offset + partition_size]
         for offset in range(0, len(wire), partition_size)
@@ -70,7 +71,8 @@ def twos_comp_repr(val: int, bitwidth: int) -> int:
     """
     correctbw = abs(val).bit_length() + 1
     if bitwidth < correctbw:
-        raise pyrtl.PyrtlError("please choose a larger target bitwidth")
+        msg = "please choose a larger target bitwidth"
+        raise pyrtl.PyrtlError(msg)
     if val >= 0:
         return val
     return (~abs(val) & (2**bitwidth - 1)) + 1  # flip the bits and add one
@@ -86,7 +88,8 @@ def rev_twos_comp_repr(val: int, bitwidth: int) -> int:
     """
     valbl = val.bit_length()
     if bitwidth < val.bit_length() or val == 2 ** (bitwidth - 1):
-        raise pyrtl.PyrtlError("please choose a larger target bitwidth")
+        msg = "please choose a larger target bitwidth"
+        raise pyrtl.PyrtlError(msg)
     if bitwidth == valbl:  # MSB is a 1, value is negative
         return -(
             (~val & (2**bitwidth - 1)) + 1
@@ -117,6 +120,5 @@ def _shifted_reg_next(reg: pyrtl.Register, direct: str, num: int = 1):
         if num >= len(reg):
             return 0
         return reg[num:]
-    raise pyrtl.PyrtlError(
-        "direction must be specified with 'direct'parameter as either 'l' or 'r'"
-    )
+    msg = "direction must be specified with 'direct' parameter as either 'l' or 'r'"
+    raise pyrtl.PyrtlError(msg)

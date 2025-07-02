@@ -97,10 +97,11 @@ def complex_mult(
     accum = pyrtl.Register(alen + blen)
     done = areg == 0  # Multiplication is finished when a becomes 0
     if (shifts > alen) or (shifts > blen):
-        raise pyrtl.PyrtlError(
-            "shift is larger than one or both of the parameters A or B,"
-            "please choose smaller shift"
+        msg = (
+            "shift is larger than one or both of the parameters A or B, please choose "
+            "smaller shift"
         )
+        raise pyrtl.PyrtlError(msg)
 
     # During multiplication, shift a right every cycle 'shift' times,
     # shift b left every cycle 'shift' times
@@ -187,7 +188,8 @@ def signed_tree_multiplier(
 ):
     """Same as :func:`tree_multiplier`, but uses two's-complement signed integers."""
     if len(A) == 1 or len(B) == 1:
-        raise pyrtl.PyrtlError("sign bit required, one or both wires too small")
+        msg = "sign bit required, one or both wires too small"
+        raise pyrtl.PyrtlError(msg)
 
     aneg, bneg = A[-1], B[-1]
     a = _twos_comp_conditional(A, aneg)

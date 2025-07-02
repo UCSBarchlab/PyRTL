@@ -1600,10 +1600,11 @@ def make_unittests():
         else:
             # Add Base to the end of your unittest name to tell this that you actually
             # made the unittest as such
-            raise Exception(
-                "You should be making unittests that are compatible with"
-                "both Fastsim and Simulation"
+            msg = (
+                "You should be making unittests that are compatible with both "
+                "FastSimulation and Simulation"
             )
+            raise Exception(msg)
         for sim in sims:
             unit_name = "Test" + name + sim.__name__
             unittests[unit_name] = type(unit_name, (v,), {"sim": sim})

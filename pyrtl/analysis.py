@@ -85,10 +85,10 @@ def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
             return multiplier_stdcell_estimate(len(net.args[0]))
         if net.op in "m@":
             return 0  # memories handled elsewhere
-        raise PyrtlInternalError(
-            "Unable to estimate the following net "
-            f"due to unimplemented op :\n{str(net)}"
+        msg = (
+            "Unable to estimate the following net due to unimplemented op :\n{str(net)}"
         )
+        raise PyrtlInternalError(msg)
 
     block = working_block(block)
 
@@ -407,10 +407,12 @@ def yosys_area_delay(
         print("---------------------------------------------", file=sys.stderr)
         print(str(exc.output).replace("\\n", "\n"), file=sys.stderr)
         print("---------------------------------------------", file=sys.stderr)
-        raise PyrtlError("Yosys call failed") from exc
+        msg = "Yosys call failed"
+        raise PyrtlError(msg) from exc
     except OSError as exc:
         print("Error with call to yosys...", file=sys.stderr)
-        raise PyrtlError("Call to yosys failed (not installed or on path?)") from exc
+        msg = "Call to yosys failed (not installed or on path?)"
+        raise PyrtlError(msg) from exc
     finally:
         if leave_in_dir is None:
             os.remove(temp_path)

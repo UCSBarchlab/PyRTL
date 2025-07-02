@@ -10,7 +10,8 @@ def calculate_max_and_min_bitwidths(max_bitwidth=None, exact_bitwidth=None):
     elif exact_bitwidth is not None:
         min_bitwidth = max_bitwidth = exact_bitwidth
     else:
-        raise pyrtl.PyrtlError("A max or exact bitwidth must be specified")
+        msg = "A max or exact bitwidth must be specified"
+        raise pyrtl.PyrtlError(msg)
     return min_bitwidth, max_bitwidth
 
 

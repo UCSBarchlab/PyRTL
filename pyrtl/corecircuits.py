@@ -91,10 +91,11 @@ def mux(
         mux_ins.extend([default] * short_by)
 
     if 2 ** len(index) != len(mux_ins):
-        raise PyrtlError(
+        msg = (
             f"Mux select line is {len(index)} bits, but selecting from {len(mux_ins)} "
             "inputs."
         )
+        raise PyrtlError(msg)
 
     if len(index) == 1:
         return select(index, falsecase=mux_ins[0], truecase=mux_ins[1])
@@ -206,7 +207,8 @@ def concat(*args: WireVectorLike) -> WireVector:
              all ``args``' :attr:`bitwidths<~WireVector.bitwidth>`.
     """
     if len(args) <= 0:
-        raise PyrtlError("error, concat requires at least 1 argument")
+        msg = "error, concat requires at least 1 argument"
+        raise PyrtlError(msg)
     if len(args) == 1:
         return as_wires(args[0])
 
@@ -813,14 +815,17 @@ def as_wires(
     if isinstance(val, WrappedWireVector):
         return val.wire
     if not isinstance(val, WireVector):
-        raise PyrtlError(
-            "error, expecting a wirevector, int, or verilog-style "
-            f"const string got {repr(val)} instead"
+        msg = (
+            "error, expecting a wirevector, int, or Verilog-style const string got "
+            f"{repr(val)} instead"
         )
+        raise PyrtlError(msg)
     if bitwidth == "0":
-        raise PyrtlError("error, bitwidth must be >= 1")
+        msg = "error, bitwidth must be >= 1"
+        raise PyrtlError(msg)
     if val.bitwidth is None:
-        raise PyrtlError("error, attempting to use wirevector with no defined bitwidth")
+        msg = "error, attempting to use wirevector with no defined bitwidth"
+        raise PyrtlError(msg)
     if bitwidth and bitwidth > val.bitwidth:
         return val.zero_extended(bitwidth)
     if bitwidth and truncating and bitwidth < val.bitwidth:
@@ -896,18 +901,18 @@ def bitfield_update(
     )  # we make a list of integers and slice those up to use as indexes
     idxs_middle = idxs[range_start:range_end]
     if len(idxs_middle) == 0:
-        raise PyrtlError(
-            "Cannot update bitfield of size 0 (i.e. there are no bits to update)"
-        )
+        msg = "Cannot update bitfield of size 0 (i.e. there are no bits to update)"
+        raise PyrtlError(msg)
     idxs_lower = idxs[: idxs_middle[0]]
     idxs_upper = idxs[idxs_middle[-1] + 1 :]
 
     newvalue = as_wires(newvalue, bitwidth=len(idxs_middle), truncating=truncating)
     if len(idxs_middle) != len(newvalue):
-        raise PyrtlError(
+        msg = (
             f"Cannot update bitfield of length {len(idxs_middle)} with value of length "
             f"{len(newvalue)} unless truncating=True is specified"
         )
+        raise PyrtlError(msg)
 
     result_list = []
     if idxs_lower:
@@ -918,7 +923,8 @@ def bitfield_update(
     result = concat_list(result_list)
 
     if len(result) != len(w):
-        raise PyrtlInternalError(f"len(result)={len(result)}, len(original)={len(w)}")
+        msg = f"len(result)={len(result)}, len(original)={len(w)}"
+        raise PyrtlInternalError(msg)
     return result
 
 
@@ -965,7 +971,8 @@ def bitfield_update_set(
         # check for overlaps
         setbits = setlist[range_start:range_end]
         if any(setbits):
-            raise PyrtlError("Bitfields for update are overlapping")
+            msg = "Bitfields for update are overlapping"
+            raise PyrtlError(msg)
         setlist[range_start:range_end] = [True] * len(setbits)
         # do the actual update
         w = bitfield_update(w, range_start, range_end, new_value, truncating)
@@ -1011,25 +1018,27 @@ def enum_mux(
     # check dictionary keys are of the right type
     keytypeset = {type(x) for x in table if x is not otherwise}
     if len(keytypeset) != 1:
-        raise PyrtlError(f"table mixes multiple types {keytypeset} as keys")
+        msg = f"table mixes multiple types {keytypeset} as keys"
+        raise PyrtlError(msg)
     keytype = list(keytypeset)[0]
     # check that dictionary is complete for the enum
     try:
         enumkeys = list(keytype.__members__.values())
     except AttributeError as exc:
-        raise PyrtlError(
-            f"type {keytype} not an Enum and does not support the same interface"
-        ) from exc
+        msg = f"type {keytype} not an Enum and does not support the same interface"
+        raise PyrtlError(msg) from exc
     missingkeys = [e for e in enumkeys if e not in table]
 
     # check for "otherwise" in table and move it to a default
     if otherwise in table:
         if default is not None:
-            raise PyrtlError('both "otherwise" and default provided to enum_mux')
+            msg = 'both "otherwise" and default provided to enum_mux'
+            raise PyrtlError(msg)
         default = table[otherwise]
 
     if strict and default is None and missingkeys:
-        raise PyrtlError(f"table provided is incomplete, missing: {missingkeys}")
+        msg = f"table provided is incomplete, missing: {missingkeys}"
+        raise PyrtlError(msg)
 
     # generate the actual mux
     vals = {k.value: d for k, d in table.items() if k is not otherwise}
@@ -1134,7 +1143,8 @@ parity = xor_all_bits  # shadowing the xor_all_bits function
 
 def tree_reduce(op, vector: WireVector) -> WireVector:
     if len(vector) < 1:
-        raise PyrtlError("Cannot reduce empty vectors")
+        msg = "Cannot reduce empty vectors"
+        raise PyrtlError(msg)
     if len(vector) == 1:
         return vector[0]
     left = tree_reduce(op, vector[: len(vector) // 2])
@@ -1144,7 +1154,8 @@ def tree_reduce(op, vector: WireVector) -> WireVector:
 
 def _apply_op_over_all_bits(op, vector):
     if len(vector) < 1:
-        raise PyrtlError("Cannot reduce empty vectors")
+        msg = "Cannot reduce empty vectors"
+        raise PyrtlError(msg)
     if len(vector) == 1:
         return vector[0]
     rest = _apply_op_over_all_bits(op, vector[1:])
@@ -1201,7 +1212,8 @@ def rtl_any(*vectorlist: WireVectorLike) -> WireVector:
         return as_wires(False)
     converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
-        raise PyrtlError("only length 1 WireVectors can be inputs to rtl_any")
+        msg = "only length 1 WireVectors can be inputs to rtl_any"
+        raise PyrtlError(msg)
     return or_all_bits(concat_list(converted_vectorlist))
 
 
@@ -1255,7 +1267,8 @@ def rtl_all(*vectorlist: WireVectorLike) -> WireVector:
         return as_wires(True)
     converted_vectorlist = [as_wires(v) for v in vectorlist]
     if any(len(v) != 1 for v in converted_vectorlist):
-        raise PyrtlError("only length 1 WireVectors can be inputs to rtl_all")
+        msg = "only length 1 WireVectors can be inputs to rtl_all"
+        raise PyrtlError(msg)
     return and_all_bits(concat_list(converted_vectorlist))
 
 

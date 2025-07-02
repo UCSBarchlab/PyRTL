@@ -1767,7 +1767,8 @@ class TestVerilogInput(unittest.TestCase):
         try:
             _ = subprocess.check_output(["yosys", "-V"])
         except OSError as exc:
-            raise unittest.SkipTest("Testing Verilog input requires yosys") from exc
+            msg = "Testing Verilog input requires yosys"
+            raise unittest.SkipTest(msg) from exc
         pyrtl.reset_working_block()
 
     def test_import_counter(self):

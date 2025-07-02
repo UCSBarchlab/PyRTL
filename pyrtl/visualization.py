@@ -105,7 +105,8 @@ def _trivialgraph_default_namer(thing, is_edge=True):
     try:
         return thing.op + str(thing.op_param or "")
     except AttributeError as exc:
-        raise PyrtlError(f'no naming rule for "{str(thing)}"') from exc
+        msg = f'no naming rule for "{str(thing)}"'
+        raise PyrtlError(msg) from exc
 
 
 def output_to_trivialgraph(
@@ -271,7 +272,8 @@ def _default_node_namer(
             return f'[label="{label(node.op + name)}"]'
         return '[label="{}"]'.format(label(node.op + str(node.op_param or "")))
     except AttributeError as exc:
-        raise PyrtlError(f'no naming rule for "{str(node)}"') from exc
+        msg = f'no naming rule for "{str(node)}"'
+        raise PyrtlError(msg) from exc
 
 
 def _graphviz_default_namer(
@@ -473,7 +475,8 @@ digraph g {
         for i, arg in enumerate(args):
             if w is arg:
                 return i
-        raise PyrtlInternalError("Expected to find wire in set of args")
+        msg = "Expected to find wire in set of args"
+        raise PyrtlInternalError(msg)
 
     if maintain_arg_order:
         block = working_block(block)
@@ -541,9 +544,8 @@ def block_to_svg(
             # py-graphviz 0.19 or later
             return svg
     except ImportError as exc:
-        raise PyrtlError(
-            'need graphviz installed (try "pip install graphviz")'
-        ) from exc
+        msg = 'need graphviz installed (try "pip install graphviz")'
+        raise PyrtlError(msg) from exc
 
 
 # -----------------------------------------------------------------
@@ -580,7 +582,8 @@ def trace_to_html(
     if repr_per_name is None:
         repr_per_name = {}
     if not isinstance(simtrace, SimulationTrace):
-        raise PyrtlError("first arguement must be of type SimulationTrace")
+        msg = "first arguement must be of type SimulationTrace"
+        raise PyrtlError(msg)
 
     trace = simtrace.trace
     if sortkey is None:

@@ -269,9 +269,11 @@ class MemBlock:
         name = next_tempvar_name(name)
 
         if bitwidth <= 0:
-            raise PyrtlError("bitwidth must be >= 1")
+            msg = "bitwidth must be >= 1"
+            raise PyrtlError(msg)
         if addrwidth <= 0:
-            raise PyrtlError("addrwidth must be >= 1")
+            msg = "addrwidth must be >= 1"
+            raise PyrtlError(msg)
 
         self.bitwidth = bitwidth
         self.name = name
@@ -287,7 +289,8 @@ class MemBlock:
 
     @property
     def read_ports(self):
-        raise PyrtlError("read_ports now called num_read_ports for clarity")
+        msg = "read_ports now called num_read_ports for clarity"
+        raise PyrtlError(msg)
 
     def __getitem__(self, addr: WireVectorLike) -> WireVector:
         """Create a read port to read data from the ``MemBlock``.
@@ -300,7 +303,8 @@ class MemBlock:
         """
         addr = as_wires(addr, bitwidth=self.addrwidth, truncating=False)
         if len(addr) > self.addrwidth:
-            raise PyrtlError("memory index bitwidth > addrwidth")
+            msg = "memory index bitwidth > addrwidth"
+            raise PyrtlError(msg)
         return _MemIndexed(mem=self, index=addr)
 
     def __setitem__(
@@ -317,9 +321,8 @@ class MemBlock:
         if isinstance(data, _MemAssignment):
             self._assignment(addr, data.rhs, is_conditional=data.is_conditional)
         else:
-            raise PyrtlError(
-                'error, assigment to memories should use "<<=" not "=" operator'
-            )
+            msg = 'error, assigment to memories should use "<<=" not "=" operator'
+            raise PyrtlError(msg)
 
     def _readaccess(self, addr):
         # FIXME: add conditional read ports
@@ -329,9 +332,8 @@ class MemBlock:
         if self.max_read_ports is not None:
             self.num_read_ports += 1
             if self.num_read_ports > self.max_read_ports:
-                raise PyrtlError(
-                    f"maximum number of read ports ({self.max_read_ports}) exceeded"
-                )
+                msg = f"maximum number of read ports ({self.max_read_ports}) exceeded"
+                raise PyrtlError(msg)
         data = WireVector(bitwidth=self.bitwidth)
         readport_net = LogicNet(
             op="m", op_param=(self.id, self), args=(addr,), dests=(data,)
@@ -356,9 +358,11 @@ class MemBlock:
         enable = as_wires(enable, bitwidth=1, truncating=False)
 
         if len(data) != self.bitwidth:
-            raise PyrtlError("error, write data larger than memory bitwidth")
+            msg = "error, write data larger than memory bitwidth"
+            raise PyrtlError(msg)
         if len(enable) != 1:
-            raise PyrtlError("error, enable signal not exactly 1 bit")
+            msg = "error, enable signal not exactly 1 bit"
+            raise PyrtlError(msg)
 
         if is_conditional:
             _build(self, (addr, data, enable))
@@ -370,9 +374,8 @@ class MemBlock:
         if self.max_write_ports is not None:
             self.num_write_ports += 1
             if self.num_write_ports > self.max_write_ports:
-                raise PyrtlError(
-                    f"maximum number of write ports ({self.max_write_ports}) exceeded"
-                )
+                msg = f"maximum number of write ports ({self.max_write_ports}) exceeded"
+                raise PyrtlError(msg)
         writeport_net = LogicNet(
             op="@", op_param=(self.id, self), args=(addr, data, enable), dests=()
         )
@@ -486,15 +489,17 @@ class RomBlock(MemBlock):
                  address ``addr``.
         """
         if isinstance(addr, numbers.Number):
-            raise PyrtlError(
-                "There is no point in indexing into a RomBlock with an int. "
-                "Instead, get the value from the source data for this Rom"
+            msg = (
+                "There is no point in indexing into a RomBlock with an int. Instead, "
+                "get the value from the source data for this Rom"
             )
+            raise PyrtlError(msg)
             # If you really know what you are doing, use a Const WireVector instead.
         return super().__getitem__(addr)
 
     def __setitem__(self, item, assignment):
-        raise PyrtlError("no writing to a read-only memory")
+        msg = "no writing to a read-only memory"
+        raise PyrtlError(msg)
 
     def _get_read_data(self, address: int):
         """_get_read_data is called by the simulator to fetch RomBlock data.
@@ -507,12 +512,14 @@ class RomBlock(MemBlock):
             if address < 0 or address > 2**self.addrwidth - 1:
                 raise PyrtlError("Invalid address, " + str(address) + " specified")
         except TypeError as exc:
-            raise PyrtlError(f"Address: {address} with invalid type specified") from exc
+            msg = f"Address: {address} with invalid type specified"
+            raise PyrtlError(msg) from exc
         if isinstance(self.data, types.FunctionType):
             try:
                 value = self.data(address)
             except Exception as exc:
-                raise PyrtlError("Invalid data function for RomBlock") from exc
+                msg = "Invalid data function for RomBlock"
+                raise PyrtlError(msg) from exc
         else:
             try:
                 value = self.data[address]
@@ -520,27 +527,29 @@ class RomBlock(MemBlock):
                 if self.pad_with_zeros:
                     value = 0
                 else:
-                    raise PyrtlError(
-                        f"RomBlock key {address} is invalid, "
-                        "consider using pad_with_zeros=True for defaults"
-                    ) from exc
+                    msg = (
+                        f"RomBlock key {address} is invalid, consider using "
+                        "pad_with_zeros=True for defaults"
+                    )
+                    raise PyrtlError(msg) from exc
             except IndexError as exc:
                 if self.pad_with_zeros:
                     value = 0
                 else:
-                    raise PyrtlError(
-                        f"RomBlock index {address} is invalid, "
-                        "consider using pad_with_zeros=True for defaults"
-                    ) from exc
+                    msg = (
+                        f"RomBlock index {address} is invalid, consider using "
+                        "pad_with_zeros=True for defaults"
+                    )
+                    raise PyrtlError(msg) from exc
             except Exception as exc:
-                raise PyrtlError("invalid type for RomBlock data object") from exc
+                msg = "invalid type for RomBlock data object"
+                raise PyrtlError(msg) from exc
 
         try:
             value = infer_val_and_bitwidth(value, bitwidth=self.bitwidth).value
         except TypeError as exc:
-            raise PyrtlError(
-                f"Value: {value} from rom {self} has an invalid type"
-            ) from exc
+            msg = f"Value: {value} from rom {self} has an invalid type"
+            raise PyrtlError(msg) from exc
         return value
 
     def _build_read_port(self, addr):

@@ -69,6 +69,8 @@ select = [
     "B",
     # flake8-comprehensions
     "C4",
+    # flake8-errmsg
+    "EM",
     # flake8-future-annotations
     "FA",
     # flake8-return

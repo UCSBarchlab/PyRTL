@@ -165,9 +165,8 @@ def input_from_blif(
         if isinstance(blif, str):
             blif_string = blif
         else:
-            raise PyrtlError(
-                "input_from_blif expecting either open file or string"
-            ) from exc
+            msg = "input_from_blif expecting either open file or string"
+            raise PyrtlError(msg) from exc
 
     def SKeyword(x):
         return Suppress(Keyword(x))
@@ -400,7 +399,8 @@ def input_from_blif(
             elif command.getName() == "model_ref":
                 extract_model_reference(subckt, command)
             else:
-                raise PyrtlError("unknown command type")
+                msg = "unknown command type"
+                raise PyrtlError(msg)
 
     def extract_cover(subckt, command):
         def twire(w):
@@ -461,17 +461,17 @@ def input_from_blif(
             conjunctions = []
             while cover:
                 if len(cover) < 2:
-                    raise PyrtlError(
-                        'BLIF file with malformed cover set "{}" '.format(
-                            command["cover_list"]
-                        )
+                    msg = (
+                        f'BLIF file with malformed cover set "{command["cover_list"]}"'
                     )
+                    raise PyrtlError(msg)
                 input_plane, output_plane, cover = cover[0], cover[1], cover[2:]
                 if output_plane != "1":
-                    raise PyrtlError(
-                        'Off-set found in the output plane of BLIF cover set "{}" '
-                        "(only on-sets are supported)".format(command["cover_list"])
+                    msg = (
+                        "Off-set found in the output plane of BLIF cover set "
+                        f'"{command["cover_list"]}" (only on-sets are supported)'
                     )
+                    raise PyrtlError(msg)
                 conj = rtl_all(
                     *[
                         convert_val(ix, val)
@@ -606,10 +606,11 @@ def input_from_blif(
                 wa = twire(actual)
                 wa <<= wf
             else:
-                raise PyrtlError(
+                msg = (
                     f"{formal} formal parameter is neither an input nor output of "
                     f"subckt {command['model_name']}"
                 )
+                raise PyrtlError(msg)
 
     def instantiate(subckt):
         extract_inputs(subckt)
@@ -679,9 +680,8 @@ def input_from_verilog(
         if isinstance(verilog, str):
             verilog_string = verilog
         else:
-            raise PyrtlError(
-                "input_from_verilog expecting either open file or string"
-            ) from exc
+            msg = "input_from_verilog expecting either open file or string"
+            raise PyrtlError(msg) from exc
 
     block = working_block(block)
 
@@ -721,10 +721,12 @@ def input_from_verilog(
         print("---------------------------------------------", file=sys.stderr)
         print(str(exc.output).replace("\\n", "\n"), file=sys.stderr)
         print("---------------------------------------------", file=sys.stderr)
-        raise PyrtlError("Yosys call failed") from exc
+        msg = "Yosys call failed"
+        raise PyrtlError(msg) from exc
     except OSError as exc:
         print("Error with call to yosys...", file=sys.stderr)
-        raise PyrtlError("Call to yosys failed (not installed or on path?)") from exc
+        msg = "Call to yosys failed (not installed or on path?)"
+        raise PyrtlError(msg) from exc
     finally:
         os.remove(tmp_verilog_path)
         if leave_in_dir is None:
@@ -759,20 +761,22 @@ def output_to_verilog(
     """
 
     if not isinstance(add_reset, bool) and add_reset != "asynchronous":
-        raise PyrtlError(
-            "Invalid add_reset option %s. Acceptable options are False, True, and "
-            "'asynchronous'"
+        msg = (
+            f"Invalid add_reset option {add_reset}. Acceptable options are False, "
+            "True, and 'asynchronous'"
         )
+        raise PyrtlError(msg)
 
     block = working_block(block)
     file = dest_file
     internal_names = _VerilogSanitizer("_ver_out_tmp_")
 
     if add_reset and block.get_wirevector_by_name("rst") is not None:
-        raise PyrtlError(
+        msg = (
             "Found a user-defined wire named 'rst'. Pass in 'add_reset=False' to use "
             "your existing reset logic."
         )
+        raise PyrtlError(msg)
 
     for wire in block.wirevector_set:
         internal_names.make_valid_string(wire.name)
@@ -860,9 +864,8 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
     if add_reset:
         io_list.insert(1, "rst")
     if any(w.startswith("tmp") for w in io_list):
-        raise PyrtlError(
-            'input or output with name starting with "tmp" indicates unnamed IO'
-        )
+        msg = 'input or output with name starting with "tmp" indicates unnamed IO'
+        raise PyrtlError(msg)
     io_list_str = ", ".join(io_list)
     print(f"module toplevel({io_list_str:s});", file=file)
 
@@ -979,7 +982,8 @@ def _to_verilog_combinational(file, block, varname):
         elif net.op in "rm@":
             pass  # do nothing for registers and memories
         else:
-            raise PyrtlInternalError(f"nets with op '{net.op}' not supported")
+            msg = f"nets with op '{net.op}' not supported"
+            raise PyrtlInternalError(msg)
     print(file=file)
 
 
@@ -1126,18 +1130,20 @@ def output_verilog_testbench(
     :param block: Block containing design to test. Defaults to the :ref:`working_block`.
     """
     if not isinstance(add_reset, bool) and add_reset != "asynchronous":
-        raise PyrtlError(
-            "Invalid add_reset option %s. Acceptable options are False, True, and "
-            "'asynchronous'"
+        msg = (
+            f"Invalid add_reset option {add_reset}. Acceptable options are False, "
+            "True, and 'asynchronous'"
         )
+        raise PyrtlError(msg)
 
     block = working_block(block)
 
     if add_reset and block.get_wirevector_by_name("rst") is not None:
-        raise PyrtlError(
+        msg = (
             "Found a user-defined wire named 'rst'. Pass in 'add_reset=False' to use "
             "your existing reset logic."
         )
+        raise PyrtlError(msg)
 
     inputs, outputs, registers, wires, memories = _verilog_block_parts(block)
 
@@ -1391,20 +1397,22 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
             )
         elif log_net.op == "c":
             if len(log_net.args) != 2:
-                raise PyrtlInternalError(
+                msg = (
                     "Expected concat net to have only two argument wires; has "
                     f"{len(log_net.args)}"
                 )
+                raise PyrtlInternalError(msg)
             f.write(
                 f"    {log_net.dests[0].name} <= "
                 f"cat({log_net.args[0].name}, {log_net.args[1].name})\n"
             )
         elif log_net.op == "s":
             if len(log_net.op_param) != 1:
-                raise PyrtlInternalError(
+                msg = (
                     "Expected select net to have single select bit; has "
                     f"{len(log_net.op_param)}"
                 )
+                raise PyrtlInternalError(msg)
             f.write(
                 f"    {log_net.dests[0].name} <= bits({log_net.args[0].name}, "
                 f"{log_net.op_param[0]}, {log_net.op_param[0]})\n"
@@ -1521,9 +1529,8 @@ def input_from_iscas_bench(bench, block: Block = None):
         if isinstance(bench, str):
             bench_string = bench
         else:
-            raise PyrtlError(
-                "input_from_bench expecting either open file or string"
-            ) from exc
+            msg = "input_from_bench expecting either open file or string"
+            raise PyrtlError(msg) from exc
 
     def SKeyword(x):
         return Suppress(Keyword(x))
@@ -1613,7 +1620,8 @@ def input_from_iscas_bench(bench, block: Block = None):
                 reg.next <<= twire(srcs[0])
                 dst_wire <<= reg
             else:
-                raise PyrtlError("Unexpected gate {{{}}}".format(cmd["gate"]))
+                msg = f"Unexpected gate {{{cmd['gate']}}}"
+                raise PyrtlError(msg)
 
     # Benchmarks like c1196, b18, etc. have inputs and outputs by the
     # same name, that are therefore directly connected. This pass will
@@ -1622,9 +1630,8 @@ def input_from_iscas_bench(bench, block: Block = None):
         inputs = [i for i in block.wirevector_subset(Input) if i.name == o.name]
         if inputs:
             if len(inputs) > 1:
-                raise PyrtlError(
-                    f"More than one input found with the name {inputs[0].name}"
-                )
+                msg = f"More than one input found with the name {inputs[0].name}"
+                raise PyrtlError(msg)
             i = inputs[0]
             o_internal = twire(o.name)
             o_internal <<= i

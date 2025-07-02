@@ -52,7 +52,7 @@ def ripple_add(a, b, carry_in=0):
 # interesting features of PyRTL can be seen here:  WireVectors can be indexed
 # like lists, with [0] accessing the least significant bit and [1:] being an
 # example of the use of Python slicing syntax.  While you can add two lists
-# together in Python, a WireVector + Wirevector means "make an adder", so to
+# together in Python, a WireVector + WireVector means "make an adder", so to
 # concatenate the bits of two vectors one needs to use "concat".  Finally,
 # if we look at "carry_in" it seems to have a default value of the integer "0" but
 # is a WireVector at other times.  Python supports polymorphism throughout

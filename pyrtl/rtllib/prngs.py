@@ -229,7 +229,8 @@ def csprng_trivium(
              given ``bitwidth``.
     """
     if (64 // bits_per_cycle) * bits_per_cycle != 64:
-        raise pyrtl.PyrtlError("bits_per_cycle is invalid")
+        msg = "bits_per_cycle is invalid"
+        raise pyrtl.PyrtlError(msg)
     if seed is None:
         cryptogen = random.SystemRandom()
         seed = cryptogen.randrange(2**160)  # seed itself if no seed signal is given

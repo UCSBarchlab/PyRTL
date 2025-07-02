@@ -179,9 +179,8 @@ class Simulation:
 
         for mem, mem_map in memory_value_map.items():
             if isinstance(mem, RomBlock):
-                raise PyrtlError(
-                    "error, one or more of the memories in the map is a RomBlock"
-                )
+                msg = "error, one or more of the memories in the map is a RomBlock"
+                raise PyrtlError(msg)
             if isinstance(self.block, PostSynthBlock):
                 mem = self.block.mem_map[mem]
             self.memvalue[mem.id] = mem_map
@@ -192,9 +191,8 @@ class Simulation:
             }
             for addr, _val in mem_map.items():
                 if addr < 0 or addr >= max_addr_val:
-                    raise PyrtlError(
-                        f"error, address {str(addr)} in {mem.name} outside of bounds"
-                    )
+                    msg = f"error, address {str(addr)} in {mem.name} outside of bounds"
+                    raise PyrtlError(msg)
 
         # set all other variables to default value
         for w in self.block.wirevector_set:
@@ -251,15 +249,17 @@ class Simulation:
                 name = i
             sim_wire = self.block.wirevector_by_name[name]
             if sim_wire not in input_set:
-                raise PyrtlError(
-                    f'step provided a value for input for "{name}" which is '
-                    "not a known input "
+                msg = (
+                    f'step provided a value for input for "{name}" which is not a '
+                    "known input "
                 )
+                raise PyrtlError(msg)
             if not isinstance(provided_inputs[i], numbers.Integral):
-                raise PyrtlError(
+                msg = (
                     f'step provided an input "{provided_inputs[i]}" which is not a '
                     "valid integer"
                 )
+                raise PyrtlError(msg)
             provided_inputs[i] = infer_val_and_bitwidth(
                 provided_inputs[i], bitwidth=sim_wire.bitwidth
             ).value
@@ -270,7 +270,8 @@ class Simulation:
         # Check that only inputs are specified, and set the values
         if input_set != supplied_inputs:
             for i in input_set.difference(supplied_inputs):
-                raise PyrtlError(f'Input "{i.name}" has no input value specified')
+                msg = f'Input "{i.name}" has no input value specified'
+                raise PyrtlError(msg)
 
         self.value.update(self.regvalue)  # apply register updates from previous step
 
@@ -368,9 +369,8 @@ class Simulation:
         if provided_inputs is None:
             provided_inputs = {}
         if not nsteps and len(provided_inputs) == 0:
-            raise PyrtlError(
-                "need to supply either input values or a number of steps to simulate"
-            )
+            msg = "need to supply either input values or a number of steps to simulate"
+            raise PyrtlError(msg)
 
         if len(provided_inputs) > 0:
             longest = sorted(
@@ -379,26 +379,30 @@ class Simulation:
             msteps = len(longest[1])
             if nsteps:
                 if nsteps > msteps:
-                    raise PyrtlError(
+                    msg = (
                         "nsteps is specified but is greater than the number of values "
                         "supplied for each input"
                     )
+                    raise PyrtlError(msg)
             else:
                 nsteps = msteps
 
         if nsteps < 1:
-            raise PyrtlError("must simulate at least one step")
+            msg = "must simulate at least one step"
+            raise PyrtlError(msg)
 
         if list(filter(lambda value: len(value) < nsteps, provided_inputs.values())):
-            raise PyrtlError(
+            msg = (
                 "must supply a value for each provided wire for each step of simulation"
             )
+            raise PyrtlError(msg)
 
         if list(filter(lambda value: len(value) < nsteps, expected_outputs.values())):
-            raise PyrtlError(
+            msg = (
                 "any expected outputs must have a supplied value each step of "
                 "simulation"
             )
+            raise PyrtlError(msg)
 
         failed = []
         for i in range(nsteps):
@@ -542,7 +546,8 @@ class Simulation:
             else:
                 result = self.memvalue[memid].get(read_addr, self.default_value)
         else:
-            raise PyrtlInternalError("error, unknown op type")
+            msg = "error, unknown op type"
+            raise PyrtlInternalError(msg)
 
         self.value[net.dests[0]] = self._sanitize(result, net.dests[0])
 
@@ -676,9 +681,8 @@ class FastSimulation:
     def _initialize_mems(self, memory_value_map):
         for mem, mem_map in memory_value_map.items():
             if isinstance(mem, RomBlock):
-                raise PyrtlError(
-                    "error, one or more of the memories in the map is a RomBlock"
-                )
+                msg = "error, one or more of the memories in the map is a RomBlock"
+                raise PyrtlError(msg)
             name = self._mem_varname(mem)
             self.mems[name] = mem_map
 
@@ -735,9 +739,8 @@ class FastSimulation:
         if provided_inputs is None:
             provided_inputs = {}
         if not nsteps and len(provided_inputs) == 0:
-            raise PyrtlError(
-                "need to supply either input values or a number of steps to simulate"
-            )
+            msg = "need to supply either input values or a number of steps to simulate"
+            raise PyrtlError(msg)
 
         if len(provided_inputs) > 0:
             longest = sorted(
@@ -746,26 +749,30 @@ class FastSimulation:
             msteps = len(longest[1])
             if nsteps:
                 if nsteps > msteps:
-                    raise PyrtlError(
-                        "nsteps is specified but is greater than the "
-                        "number of values supplied for each input"
+                    msg = (
+                        "nsteps is specified but is greater than the number of values "
+                        "supplied for each input"
                     )
+                    raise PyrtlError(msg)
             else:
                 nsteps = msteps
 
         if nsteps < 1:
-            raise PyrtlError("must simulate at least one step")
+            msg = "must simulate at least one step"
+            raise PyrtlError(msg)
 
         if list(filter(lambda value: len(value) < nsteps, provided_inputs.values())):
-            raise PyrtlError(
+            msg = (
                 "must supply a value for each provided wire for each step of simulation"
             )
+            raise PyrtlError(msg)
 
         if list(filter(lambda value: len(value) < nsteps, expected_outputs.values())):
-            raise PyrtlError(
-                "any expected outputs must have a supplied value "
-                "each step of simulation"
+            msg = (
+                "any expected outputs must have a supplied value each step of "
+                "simulation"
             )
+            raise PyrtlError(msg)
 
         def to_num(v):
             if isinstance(v, str):
@@ -817,14 +824,16 @@ class FastSimulation:
         try:
             return self.context[self._to_name(w)]
         except AttributeError as exc:
-            raise PyrtlError(
+            msg = (
                 "No context available. Please run a simulation step in order to "
                 "populate values for wires"
-            ) from exc
+            )
+            raise PyrtlError(msg) from exc
 
     def inspect_mem(self, mem: MemBlock) -> dict[int, int]:
         if isinstance(mem, RomBlock):
-            raise PyrtlError("ROM blocks are not stored in the simulation object")
+            msg = "ROM blocks are not stored in the simulation object"
+            raise PyrtlError(msg)
         return self.mems[self._mem_varname(mem)]
 
     def _to_name(self, name):
@@ -985,7 +994,8 @@ class FastSimulation:
                 )
                 continue  # memwrites are special
             else:
-                raise PyrtlError(f'FastSimulation cannot handle primitive "{net.op}"')
+                msg = f'FastSimulation cannot handle primitive "{net.op}"'
+                raise PyrtlError(msg)
 
             # prog.append('    #  ' + str(net))
             result = self._dest_varname(net.dests[0])
@@ -1507,11 +1517,12 @@ class TraceStorage(Mapping):
             )
             key = key.name
         if key not in self.__data:
-            raise PyrtlError(
+            msg = (
                 f'Cannot find "{key}" in trace -- if using CompiledSim, you may be '
                 "attempting to access internal states but only inputs/outputs are "
                 "available."
             )
+            raise PyrtlError(msg)
         return self.__data[key]
 
 
@@ -1564,10 +1575,11 @@ class SimulationTrace:
             filter(lambda w: not isinstance(w, Const), wires_to_track)
         )
         if not non_const_tracked:
-            raise PyrtlError(
-                "There needs to be at least one named non-constant wire "
-                "for simulation to be useful"
+            msg = (
+                "There needs to be at least one named non-constant wire for simulation "
+                "to be useful"
             )
+            raise PyrtlError(msg)
         self.wires_to_track = wires_to_track
         self.trace = TraceStorage(wires_to_track)
         self._wires = {wv.name: wv for wv in wires_to_track}
@@ -1579,7 +1591,8 @@ class SimulationTrace:
     def __len__(self):
         """Return the current length of the trace in cycles."""
         if len(self.trace) == 0:
-            raise PyrtlError("error, length of trace undefined if no signals tracked")
+            msg = "error, length of trace undefined if no signals tracked"
+            raise PyrtlError(msg)
         # return the length of the list of some element in the dictionary (all should be
         # the same)
         wire, value_list = next(x for x in self.trace.items())
@@ -1588,11 +1601,12 @@ class SimulationTrace:
     def add_step(self, value_map):
         """Add the values in ``value_map`` to the end of the trace."""
         if len(self.trace) == 0:
-            raise PyrtlError(
-                "error, simulation trace needs at least 1 signal to track "
-                "(by default, unnamed signals are not traced -- try either passing "
-                'a name to a WireVector or setting a "wirevector_subset" option)'
+            msg = (
+                "error, simulation trace needs at least 1 signal to track (by default, "
+                "unnamed signals are not traced -- try either passing a name to a "
+                'WireVector or setting a "wirevector_subset" option)'
             )
+            raise PyrtlError(msg)
         for wire_name in self.trace:
             tracelist = self.trace[wire_name]
             wirevec = self._wires[wire_name]
@@ -1616,9 +1630,11 @@ class SimulationTrace:
         :param compact: Whether to omit spaces in output lines.
         """
         if len(self.trace) == 0:
-            raise PyrtlError("error, cannot print an empty trace")
+            msg = "error, cannot print an empty trace"
+            raise PyrtlError(msg)
         if base not in (2, 8, 10, 16):
-            raise PyrtlError("please choose a valid base (2,8,10,16)")
+            msg = "please choose a valid base (2,8,10,16)"
+            raise PyrtlError(msg)
 
         basekey = {2: "b", 8: "o", 10: "d", 16: "x"}[base]
         ident_len = max(len(w) for w in self.trace)
@@ -1849,11 +1865,11 @@ class SimulationTrace:
             trace_list = [getattr(x, "name", x) for x in trace_list]
 
         if not trace_list:
-            raise PyrtlError(
-                "Empty trace list. This may have occurred because "
-                "untraceable wires were removed prior to simulation, "
-                "if a CompiledSimulation was used."
+            msg = (
+                "Empty trace list. This may have occurred because untraceable wires "
+                "were removed prior to simulation, if a CompiledSimulation was used."
             )
+            raise PyrtlError(msg)
 
         if symbol_len is None:
             max_symbol_len = 0
@@ -1918,10 +1934,11 @@ class SimulationTrace:
         for trace_name in trace_names:
             wire_length = len(self._wires[trace_name])
             if wire_length != 1:
-                raise PyrtlError(
-                    "print_perf_counters can only be used with single-bit "
-                    f"wires but wire {trace_name} has bitwidth {wire_length}"
+                msg = (
+                    "print_perf_counters can only be used with single-bit wires but "
+                    f"wire {trace_name} has bitwidth {wire_length}"
                 )
+                raise PyrtlError(msg)
 
             name_values.append([trace_name, str(sum(self.trace[trace_name]))])
 

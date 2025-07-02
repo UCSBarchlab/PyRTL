@@ -191,10 +191,11 @@ def wallace_reducer(
     for wire_set in wire_array_2:
         for a_wire in wire_set:
             if not isinstance(a_wire, pyrtl.WireVector) or len(a_wire) != 1:
-                raise pyrtl.PyrtlError(
+                msg = (
                     f"The item {a_wire} is not a valid element for the wire_array_2. "
                     "It must be a WireVector of bitwidth 1"
                 )
+                raise pyrtl.PyrtlError(msg)
 
     while not all(len(i) <= 2 for i in wire_array_2):
         deferred = [[] for weight in range(result_bitwidth + 1)]
@@ -245,10 +246,11 @@ def dada_reducer(
     for wire_set in wire_array_2:
         for a_wire in wire_set:
             if not isinstance(a_wire, pyrtl.WireVector) or len(a_wire) != 1:
-                raise pyrtl.PyrtlError(
+                msg = (
                     f"The item {a_wire} is not a valid element for the wire_array_2. "
                     "It must be a WireVector of bitwidth 1"
                 )
+                raise pyrtl.PyrtlError(msg)
 
     max_width = max(len(i) for i in wire_array_2)
     reduction_schedule = [2]
@@ -273,9 +275,8 @@ def dada_reducer(
                     deferred[i + 1].append(cout)
             deferred[i].extend(w_array)
             if len(deferred[i]) > reduction_target:
-                raise pyrtl.PyrtlError(
-                    "Expected that the code would be able to reduce more wires"
-                )
+                msg = "Expected that the code would be able to reduce more wires"
+                raise pyrtl.PyrtlError(msg)
         wire_array_2 = deferred[:result_bitwidth]
 
     # At this stage in the multiplication we have only 2 wire vectors left.

@@ -155,11 +155,11 @@ class CompiledSimulation:
             pass
         else:
             if not vals:
-                raise PyrtlError("No context available. Please run a simulation step")
+                msg = "No context available. Please run a simulation step"
+                raise PyrtlError(msg)
             return vals[-1]
-        raise PyrtlError(
-            "CompiledSimulation does not support inspecting internal WireVectors"
-        )
+        msg = "CompiledSimulation does not support inspecting internal WireVectors"
+        raise PyrtlError(msg)
 
     def step(self, provided_inputs: dict[str, int] = None, inputs=None):
         if provided_inputs is None:
@@ -186,9 +186,8 @@ class CompiledSimulation:
         if provided_inputs is None:
             provided_inputs = {}
         if not nsteps and len(provided_inputs) == 0:
-            raise PyrtlError(
-                "need to supply either input values or a number of steps to simulate"
-            )
+            msg = "need to supply either input values or a number of steps to simulate"
+            raise PyrtlError(msg)
 
         if len(provided_inputs) > 0:
             longest = sorted(
@@ -197,26 +196,30 @@ class CompiledSimulation:
             msteps = len(longest[1])
             if nsteps:
                 if nsteps > msteps:
-                    raise PyrtlError(
-                        "nsteps is specified but is greater than the "
-                        "number of values supplied for each input"
+                    msg = (
+                        "nsteps is specified but is greater than the number of values "
+                        "supplied for each input"
                     )
+                    raise PyrtlError(msg)
             else:
                 nsteps = msteps
 
         if nsteps < 1:
-            raise PyrtlError("must simulate at least one step")
+            msg = "must simulate at least one step"
+            raise PyrtlError(msg)
 
         if list(filter(lambda value: len(value) < nsteps, provided_inputs.values())):
-            raise PyrtlError(
+            msg = (
                 "must supply a value for each provided wire for each step of simulation"
             )
+            raise PyrtlError(msg)
 
         if list(filter(lambda value: len(value) < nsteps, expected_outputs.values())):
-            raise PyrtlError(
-                "any expected outputs must have a supplied value "
-                "each step of simulation"
+            msg = (
+                "any expected outputs must have a supplied value each step of "
+                "simulation"
             )
+            raise PyrtlError(msg)
 
         failed = []
         for i in range(nsteps):
@@ -302,7 +305,8 @@ class CompiledSimulation:
                 start, count = self._inputpos[rname]
                 buf, sz = ibuf, self._ibufsz
             else:
-                raise PyrtlInternalError("Untraceable wire in tracer")
+                msg = "Untraceable wire in tracer"
+                raise PyrtlInternalError(msg)
             res = []
             for _step in range(steps):
                 val = 0
@@ -793,9 +797,11 @@ class CompiledSimulation:
         mems = {net.op_param[1] for net in self.block.logic_subset("m@")}
         for key in self._memmap:
             if key not in mems:
-                raise PyrtlError("unrecognized MemBlock in memory_value_map")
+                msg = "unrecognized MemBlock in memory_value_map"
+                raise PyrtlError(msg)
             if isinstance(key, RomBlock):
-                raise PyrtlError("RomBlock in memory_value_map")
+                msg = "RomBlock in memory_value_map"
+                raise PyrtlError(msg)
         self._declare_mem_helpers(write)
         roms = {mem for mem in mems if isinstance(mem, RomBlock)}
         self._declare_roms(write, roms)

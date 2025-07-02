@@ -16,7 +16,7 @@ in order to make your first transform, some knowledge about the
 structure of PyRTL Internal Representation (IR) of the circuit
 is necessary. Specifically, one must know what Block, LogicNet,
 and WireVector are as well as how Blocks store the latter two
-structures (through Block.logic, block.Wirevector_set, etc).
+structures (through Block.logic, Block.wirevector_set, etc).
 """
 
 import functools
@@ -238,16 +238,16 @@ def clone_wire(old_wire, name=None):
     """
     if name is None:
         if working_block() is old_wire._block:
-            raise PyrtlError(
-                "Must provide a name for the newly cloned wire "
-                "when cloning within the same block."
+            msg = (
+                "Must provide a name for the newly cloned wire when cloning within the "
+                "same block."
             )
+            raise PyrtlError(msg)
         name = old_wire.name
 
     if name in working_block().wirevector_by_name:
-        raise PyrtlError(
-            "Cannot give a newly cloned wire the same name as an existing wire."
-        )
+        msg = "Cannot give a newly cloned wire the same name as an existing wire."
+        raise PyrtlError(msg)
 
     if isinstance(old_wire, Const):
         return Const(old_wire.val, old_wire.bitwidth, name=name)

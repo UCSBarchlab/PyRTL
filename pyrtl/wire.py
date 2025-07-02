@@ -48,7 +48,8 @@ def next_tempvar_name(name=""):
             wire_name += f"_{safename}_line{lineno}"
         return wire_name
     if name.lower() in ["clk", "clock"]:
-        raise PyrtlError("Clock signals should never be explicit")
+        msg = "Clock signals should never be explicit"
+        raise PyrtlError(msg)
     return name
 
 
@@ -337,7 +338,8 @@ class WireVector:
     @name.setter
     def name(self, value: str):
         if not isinstance(value, str):
-            raise PyrtlError("WireVector names must be strings")
+            msg = "WireVector names must be strings"
+            raise PyrtlError(msg)
         self._block.wirevector_by_name.pop(self._name, None)
         self._name = value
         self._block.add_wirevector(self)
@@ -355,16 +357,17 @@ class WireVector:
     def _validate_bitwidth(self, bitwidth):
         if bitwidth is not None:
             if not isinstance(bitwidth, numbers.Integral):
-                raise PyrtlError(
+                msg = (
                     "bitwidth must be from type int or unspecified, instead "
                     f'"{str(bitwidth)}" was passed of type {type(bitwidth)}'
                 )
+                raise PyrtlError(msg)
             if bitwidth == 0:
-                raise PyrtlError("bitwidth must be greater than or equal to 1")
+                msg = "bitwidth must be greater than or equal to 1"
+                raise PyrtlError(msg)
             if bitwidth < 0:
-                raise PyrtlError(
-                    "you are trying a negative bitwidth? awesome but wrong"
-                )
+                msg = "you are trying a negative bitwidth? awesome but wrong"
+                raise PyrtlError(msg)
         self.bitwidth = bitwidth
 
     def _build(self, other: WireVectorLike):
@@ -411,10 +414,11 @@ class WireVector:
         from pyrtl.conditional import _build, currently_under_condition
 
         if not self.bitwidth:
-            raise PyrtlError(
-                "Conditional assignment only defined on "
-                "WireVectors with pre-defined bitwidths"
+            msg = (
+                "Conditional assignment only defined on WireVectors with pre-defined "
+                "bitwidths"
             )
+            raise PyrtlError(msg)
         other = self._prepare_for_assignment(other)
         if currently_under_condition():
             _build(self, other)
@@ -448,12 +452,12 @@ class WireVector:
         # python provides no way to overload these logical operations, and thus they
         # are very much not likely to be doing the thing that the programmer would be
         # expecting.
-        raise PyrtlError(
-            "cannot convert WireVector to compile-time boolean.  This error "
-            'often happens when you attempt to use WireVectors with "==" or '
-            'something that calls "__eq__", such as when you test if a '
-            'WireVector is "in" something'
+        msg = (
+            "cannot convert WireVector to compile-time boolean.  This error often "
+            'happens when you attempt to use WireVectors with "==" or something that '
+            'calls "__eq__", such as when you test if a WireVector is "in" something'
         )
+        raise PyrtlError(msg)
 
     def __and__(self, other: WireVectorLike) -> WireVector:
         """Returns the result of bitwise ANDing ``self`` and ``other``.
@@ -494,7 +498,8 @@ class WireVector:
         return self._two_var_op(other, "&")
 
     def __iand__(self, other: WireVectorLike):
-        raise PyrtlError("error, operation not allowed on WireVectors")
+        msg = "error, operation not allowed on WireVectors"
+        raise PyrtlError(msg)
 
     def __or__(self, other: WireVectorLike) -> WireVector:
         """Returns the result of bitwise ORing ``self`` and ``other``.
@@ -575,7 +580,8 @@ class WireVector:
         return self._two_var_op(other, "^")
 
     def __ixor__(self, other: WireVectorLike):
-        raise PyrtlError("error, operation not allowed on WireVectors")
+        msg = "error, operation not allowed on WireVectors"
+        raise PyrtlError(msg)
 
     def __add__(self, other: WireVectorLike) -> WireVector:
         """Returns the result of adding ``self`` and ``other``.
@@ -621,7 +627,8 @@ class WireVector:
         return self._two_var_op(other, "+")
 
     def __iadd__(self, other: WireVectorLike):
-        raise PyrtlError("error, operation not allowed on WireVectors")
+        msg = "error, operation not allowed on WireVectors"
+        raise PyrtlError(msg)
 
     def __sub__(self, other: WireVectorLike) -> WireVector:
         """Returns the result of subtracting ``self`` and ``other``.
@@ -670,7 +677,8 @@ class WireVector:
         return other._two_var_op(self, "-")
 
     def __isub__(self, other: WireVectorLike):
-        raise PyrtlError("error, operation not allowed on WireVectors")
+        msg = "error, operation not allowed on WireVectors"
+        raise PyrtlError(msg)
 
     def __mul__(self, other: WireVectorLike) -> WireVector:
         """Returns the result of multiplying ``self`` and ``other``.
@@ -716,7 +724,8 @@ class WireVector:
         return self._two_var_op(other, "*")
 
     def __imul__(self, other: WireVectorLike):
-        raise PyrtlError("error, operation not allowed on WireVectors")
+        msg = "error, operation not allowed on WireVectors"
+        raise PyrtlError(msg)
 
     def __lt__(self, other: WireVectorLike) -> WireVector:
         """Checks if ``self`` is less than ``other``. Returns a one-bit ``WireVector``.
@@ -1106,7 +1115,8 @@ class WireVector:
             ``self``.
         """
         if self.bitwidth is None:
-            raise PyrtlError("You cannot get a subset of a wire with no bitwidth")
+            msg = "You cannot get a subset of a wire with no bitwidth"
+            raise PyrtlError(msg)
         allindex = range(self.bitwidth)
         if isinstance(item, int):
             selectednums = (
@@ -1115,37 +1125,34 @@ class WireVector:
         else:  # slice
             selectednums = tuple(allindex[item])
         if not selectednums:
-            raise PyrtlError(
-                f"selection {str(item)} must have at least one selected wire"
-            )
+            msg = f"selection {str(item)} must have at least one selected wire"
+            raise PyrtlError(msg)
         outwire = WireVector(bitwidth=len(selectednums))
         net = LogicNet(op="s", op_param=selectednums, args=(self,), dests=(outwire,))
         working_block().add_net(net)
         return outwire
 
     def __lshift__(self, other: WireVectorLike):
-        raise PyrtlError(
-            "Shifting using the << and >> operators are not supported "
-            "in PyRTL. "
-            "If you are trying to select bits in a wire, use "
-            "the indexing operator (wire[indexes]) instead.\n\n"
-            "For example: wire[2:9] selects the wires from index 2 to "
-            "index 8 to make a new length 7 wire. \n\n If you are really "
+        msg = (
+            "Shifting using the << and >> operators are not supported in PyRTL. If you "
+            "are trying to select bits in a wire, use the indexing operator "
+            "(wire[indexes]) instead.\n\nFor example: wire[2:9] selects the wires from "
+            "index 2 to index 8 to make a new length 7 wire. \n\nIf you are really "
             'trying to *execution time* shift you can use "shift_left_arithmetic", '
             '"shift_right_arithmetic", "shift_left_logical", "shift_right_logical"'
         )
+        raise PyrtlError(msg)
 
     __rshift__ = __lshift__
 
     def __mod__(self, other: WireVectorLike):
-        raise PyrtlError(
-            "Masking with the % operator is not supported"
-            "in PyRTL. "
-            "Instead if you are trying to select bits in a wire, use"
-            "the indexing operator (wire[indexes]) instead.\n\n"
-            "For example: wire[2:9] selects the wires from index 2 to "
-            "index 8 to make a new length 7 wire."
+        msg = (
+            "Masking with the % operator is not supported in PyRTL. Instead if you are "
+            "trying to select bits in a wire, use the indexing operator "
+            "(wire[indexes]) instead.\n\nFor example: wire[2:9] selects the wires from "
+            "index 2 to index 8 to make a new length 7 wire."
         )
+        raise PyrtlError(msg)
 
     def __len__(self) -> int:
         """Return the ``WireVector``'s :attr:`bitwidth`.
@@ -1177,7 +1184,8 @@ class WireVector:
         :raises PyrtlError: If the :attr:`bitwidth` is not yet defined.
         """
         if self.bitwidth is None:
-            raise PyrtlError("length of WireVector not yet defined")
+            msg = "length of WireVector not yet defined"
+            raise PyrtlError(msg)
         return self.bitwidth
 
     def __enter__(self):
@@ -1290,11 +1298,11 @@ class WireVector:
             ``self.bitwidth``.
         """
         if not isinstance(bitwidth, int):
-            raise PyrtlError("Can only truncate to an integer number of bits")
+            msg = "Can only truncate to an integer number of bits"
+            raise PyrtlError(msg)
         if bitwidth > self.bitwidth:
-            raise PyrtlError(
-                "Cannot truncate a WireVector to have more bits than it started with"
-            )
+            msg = "Cannot truncate a WireVector to have more bits than it started with"
+            raise PyrtlError(msg)
         return self[:bitwidth]
 
     def sign_extended(self, bitwidth) -> WireVector:
@@ -1368,9 +1376,10 @@ class WireVector:
         if numext == 0:
             return self
         if numext < 0:
-            raise PyrtlError(
+            msg = (
                 "Neither zero_extended nor sign_extended can reduce the number of bits"
             )
+            raise PyrtlError(msg)
         from pyrtl.corecircuits import concat
 
         if isinstance(extbit, int):
@@ -1433,19 +1442,21 @@ class Input(WireVector):
 
     def __ilshift__(self, _):
         """This is an illegal op for Inputs. They cannot be assigned to in this way"""
-        raise PyrtlError(
+        msg = (
             "Connection using <<= operator attempted on Input. Inputs, such as "
             f'"{str(self.name)}", cannot have values generated internally. aka they '
             "can't have other wires driving it"
         )
+        raise PyrtlError(msg)
 
     def __ior__(self, _):
         """This is an illegal op for Inputs. They cannot be assigned to in this way"""
-        raise PyrtlError(
+        msg = (
             "Connection using |= operator attempted on Input. Inputs, such as "
             f'"{str(self.name)}", cannot have values generated internally. aka they '
             "can't have other wires driving it"
         )
+        raise PyrtlError(msg)
 
 
 class Output(WireVector):
@@ -1523,14 +1534,14 @@ class Const(WireVector):
         num, bitwidth = infer_val_and_bitwidth(val, bitwidth, signed)
 
         if num < 0:
-            raise PyrtlInternalError(
-                "Const somehow evaluating to negative integer after checks"
-            )
+            msg = "Const somehow evaluating to negative integer after checks"
+            raise PyrtlInternalError(msg)
         if (num >> bitwidth) != 0:
-            raise PyrtlInternalError(
+            msg = (
                 f"constant {num} returned by infer_val_and_bitwidth somehow not "
                 f"fitting in {bitwidth} bits"
             )
+            raise PyrtlInternalError(msg)
 
         name = name if name else _constIndexer.make_valid_string() + "_" + str(val)
 
@@ -1542,18 +1553,20 @@ class Const(WireVector):
         """
         This is an illegal op for Consts. Their value is set in the __init__ function
         """
-        raise PyrtlError(
+        msg = (
             f'ConstWires, such as "{str(self.name)}", should never be assigned to with '
             "<<="
         )
+        raise PyrtlError(msg)
 
     def __ior__(self, _):
         """This is an illegal op for Consts. They cannot be assigned to in this way"""
-        raise PyrtlError(
+        msg = (
             "Connection using |= operator attempted on Const. ConstWires, such as "
             f'"{str(self.name)}", cannot have values generated internally. aka they '
             "cannot have other wires driving it"
         )
+        raise PyrtlError(msg)
 
 
 class Register(WireVector):
@@ -1641,7 +1654,8 @@ class Register(WireVector):
                 self.reg.bitwidth = other.bitwidth
 
             if self.reg.reg_in is not None:
-                raise PyrtlError("error, .next value should be set once and only once")
+                msg = "error, .next value should be set once and only once"
+                raise PyrtlError(msg)
             self.reg._build(other)
 
             return self
@@ -1652,25 +1666,28 @@ class Register(WireVector):
 
             other = as_wires(other, bitwidth=self.reg.bitwidth)
             if not self.reg.bitwidth:
-                raise PyrtlError(
-                    "Conditional assignment only defined on "
-                    "Registers with pre-defined bitwidths"
+                msg = (
+                    "Conditional assignment only defined on Registers with pre-defined "
+                    "bitwidths"
                 )
+                raise PyrtlError(msg)
 
             if self.reg.reg_in is not None:
-                raise PyrtlError("error, .next value should be set once and only once")
+                msg = "error, .next value should be set once and only once"
+                raise PyrtlError(msg)
             _build(self.reg, other)
 
             return self
 
         def __bool__(self):
             """Use of a _next in a statement like "a or b" is forbidden."""
-            raise PyrtlError(
+            msg = (
                 "cannot convert Register.next to compile-time boolean.  This error "
                 'often happens when you attempt to use a Register.next with "==" or '
                 'something that calls "__eq__", such as when you test if a '
                 'Register.next is "in" something'
             )
+            raise PyrtlError(msg)
 
     def __init__(
         self,
@@ -1705,10 +1722,11 @@ class Register(WireVector):
                 bitwidth=bitwidth,
             )
             if rst_bitwidth > bitwidth:
-                raise PyrtlError(
+                msg = (
                     f'reset_value "{str(reset_value)}" cannot fit in the specified '
                     f"{bitwidth} bits for this register"
                 )
+                raise PyrtlError(msg)
         self.reset_value = reset_value
 
     @property
@@ -1717,15 +1735,18 @@ class Register(WireVector):
         return Register._Next(self)
 
     def __ilshift__(self, other: WireVectorLike):
-        raise PyrtlError("error, you cannot set registers directly, net .next instead")
+        msg = "error, you cannot set registers directly, net .next instead"
+        raise PyrtlError(msg)
 
     def __ior__(self, other: WireVectorLike):
-        raise PyrtlError("error, you cannot set registers directly, net .next instead")
+        msg = "error, you cannot set registers directly, net .next instead"
+        raise PyrtlError(msg)
 
     @next.setter
     def next(self, other: WireVectorLike):
         if not isinstance(other, Register._Next):
-            raise PyrtlError('error, .next should be set with "<<=" or "|=" operators')
+            msg = 'error, .next should be set with "<<=" or "|=" operators'
+            raise PyrtlError(msg)
 
     def _build(self, next):
         # Actually build the register. This happens immediately when setting the `next`

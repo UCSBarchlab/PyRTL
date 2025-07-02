@@ -63,9 +63,11 @@ class AES:
         :return: A :class:`.WireVector` containing the ciphertext.
         """
         if len(plaintext) != self._key_len:
-            raise pyrtl.PyrtlError("Ciphertext length is invalid")
+            msg = "Ciphertext length is invalid"
+            raise pyrtl.PyrtlError(msg)
         if len(key) != self._key_len:
-            raise pyrtl.PyrtlError("key length is invalid")
+            msg = "key length is invalid"
+            raise pyrtl.PyrtlError(msg)
 
         key_list = self._key_gen(key)
         t = self._add_round_key(plaintext, key_list[0])
@@ -95,7 +97,8 @@ class AES:
                  the encryption result (``cipher_text``) has been calculated.
         """
         if len(key_in) != len(plaintext_in):
-            raise pyrtl.PyrtlError("AES key and plaintext should be the same length")
+            msg = "AES key and plaintext should be the same length"
+            raise pyrtl.PyrtlError(msg)
 
         plain_text, key = (pyrtl.Register(len(plaintext_in)) for i in range(2))
         key_exp_in, add_round_in = (
@@ -146,9 +149,11 @@ class AES:
         :return: A :class:`.WireVector` containing the plaintext.
         """
         if len(ciphertext) != self._key_len:
-            raise pyrtl.PyrtlError("Ciphertext length is invalid")
+            msg = "Ciphertext length is invalid"
+            raise pyrtl.PyrtlError(msg)
         if len(key) != self._key_len:
-            raise pyrtl.PyrtlError("key length is invalid")
+            msg = "key length is invalid"
+            raise pyrtl.PyrtlError(msg)
         key_list = self._key_gen(key)
         t = self._add_round_key(ciphertext, key_list[10])
 
@@ -178,7 +183,8 @@ class AES:
                  decryption result (``plain_text``) has been calculated.
         """
         if len(key_in) != len(ciphertext_in):
-            raise pyrtl.PyrtlError("AES key and ciphertext should be the same length")
+            msg = "AES key and ciphertext should be the same length"
+            raise pyrtl.PyrtlError(msg)
 
         cipher_text, key = (pyrtl.Register(len(ciphertext_in)) for i in range(2))
         key_exp_in, add_round_in = (

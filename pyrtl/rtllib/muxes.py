@@ -26,9 +26,11 @@ def prioritized_mux(selects: list[WireVector], vals: list[WireVector]) -> WireVe
     :return: The selected value.
     """
     if len(selects) != len(vals):
-        raise pyrtl.PyrtlError("Number of select and val signals must match")
+        msg = "Number of select and val signals must match"
+        raise pyrtl.PyrtlError(msg)
     if len(vals) == 0:
-        raise pyrtl.PyrtlError("Must have a signal to mux")
+        msg = "Must have a signal to mux"
+        raise pyrtl.PyrtlError(msg)
     if len(vals) == 1:
         return vals[0]
     half = len(vals) // 2
@@ -74,11 +76,11 @@ def sparse_mux(sel: WireVector, vals: dict[int, WireVector]) -> WireVector:
 
     for key in vals:
         if not isinstance(key, numbers.Integral):
-            raise pyrtl.PyrtlError(
-                f"value {str(key)} nust be either an integer or 'default'"
-            )
+            msg = f"value {str(key)} nust be either an integer or 'default'"
+            raise pyrtl.PyrtlError(msg)
         if key < 0 or key > max_val:
-            raise pyrtl.PyrtlError(f"value {str(key)} is out of range of the sel wire")
+            msg = f"value {str(key)} is out of range of the sel wire"
+            raise pyrtl.PyrtlError(msg)
 
     return _sparse_mux(sel, vals)
 
@@ -88,7 +90,7 @@ def _sparse_mux(sel, vals):
 
     :param WireVector sel: Select wire, determines what is selected on a given cycle
     :param {int: WireVector} vals: dictionary to store the values that are
-    :return: Wirevector that signifies the change
+    :return: WireVector that signifies the change
 
     This mux supports not having a full specification. indices that are not
     specified are treated as Don't Cares
@@ -96,7 +98,8 @@ def _sparse_mux(sel, vals):
     items = list(vals.values())
     if len(vals) <= 1:
         if len(vals) == 0:
-            raise pyrtl.PyrtlError("Needs at least one parameter for val")
+            msg = "Needs at least one parameter for val"
+            raise pyrtl.PyrtlError(msg)
         return items[0]
 
     if len(sel) == 1:
@@ -104,10 +107,11 @@ def _sparse_mux(sel, vals):
             false_result = vals[0]
             true_result = vals[1]
         except KeyError as exc:
-            raise pyrtl.PyrtlError(
+            msg = (
                 "Failed to retrieve values for smartmux. The length of sel might be "
                 "wrong"
-            ) from exc
+            )
+            raise pyrtl.PyrtlError(msg) from exc
     else:
         half = 2 ** (len(sel) - 1)
 
@@ -168,13 +172,15 @@ class MultiSelector:
 
     def _check_finalized(self):
         if self._final:
-            raise pyrtl.PyrtlError("Cannot change InstrConnector, already finalized")
+            msg = "Cannot change InstrConnector, already finalized"
+            raise pyrtl.PyrtlError(msg)
 
     def option(self, select_val, *data_signals):
         self._check_finalized()
         instr, ib = pyrtl.infer_val_and_bitwidth(select_val, self.signal_wire.bitwidth)
         if instr in self.instructions:
-            raise pyrtl.PyrtlError(f"instruction {str(select_val)} already exists")
+            msg = f"instruction {str(select_val)} already exists"
+            raise pyrtl.PyrtlError(msg)
         self.instructions.append(instr)
         self._add_signal(data_signals)
 
@@ -186,10 +192,11 @@ class MultiSelector:
     def _add_signal(self, data_signals):
         self._check_finalized()
         if len(data_signals) != len(self.dest_wires):
-            raise pyrtl.PyrtlError(
+            msg = (
                 "Incorrect number of data_signals for instruction received "
                 f"{len(data_signals)}, expected {len(self.dest_wires)}"
             )
+            raise pyrtl.PyrtlError(msg)
 
         for dw, sig in zip(self.dest_wires, data_signals):
             data_signal = pyrtl.as_wires(sig, dw.bitwidth)
