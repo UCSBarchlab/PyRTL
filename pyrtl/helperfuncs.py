@@ -697,7 +697,7 @@ def wirevector_list(
         try:
             name, bw = fullname.split("/")
         except ValueError:
-            name, bw = fullname, bw
+            name = fullname
         wirelist.append(wvtype(bitwidth=int(bw), name=name))
     return wirelist
 

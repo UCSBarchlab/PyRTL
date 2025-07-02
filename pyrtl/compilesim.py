@@ -53,6 +53,9 @@ class DllMemInspector(Mapping):
             return True
         return all(self[x] == other.get(x, 0) for x in self)
 
+    def __hash__(self):
+        return hash(self._sim) ^ hash(self._vn)
+
 
 class CompiledSimulation:
     """Simulate a block by generating, compiling, and running C code.

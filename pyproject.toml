@@ -76,7 +76,7 @@ select = [
     # isort
     "I",
     # pylint
-    "PLE",
+    "PLE", "PLW",
 ]
 ignore = [
     # Use `X | Y` for type annotations:
@@ -89,5 +89,11 @@ ignore = [
     # Use a single `with` statement with multiple contexts instead of nested
     # `with` statements:
     # conditional_assignment is harder to read when combined.
-    "SIM117"
+    "SIM117",
+    # Using the global statement to update ___ is discouraged:
+    # PyRTL uses many globals.
+    "PLW0603",
+    # `for` loop variable ___ overwritten by assignment target:
+    # Fixing this introduces more variables, which is harder to read.
+    "PLW2901",
 ]
