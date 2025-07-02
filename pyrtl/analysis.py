@@ -210,7 +210,7 @@ class TimingAnalysis:
 
     @staticmethod
     def _logconst_func(a, b):
-        return lambda x: a * math.log(float(x), 2) + b
+        return lambda x: a * math.log2(float(x)) + b
 
     @staticmethod
     def _multiplier_stdcell_estimate(width):
@@ -218,7 +218,7 @@ class TimingAnalysis:
             return 98.57
         if width == 2:
             return 200.17
-        return 549.1 * math.log(width, 2) - 391.7
+        return 549.1 * math.log2(width) - 391.7
 
     @staticmethod
     def _memory_read_estimate(mem):

@@ -1181,7 +1181,7 @@ def print_loop(loop_data):
     else:
         print("Loop found:")
         print("\n".join(f"{fs.net}" for fs in loop_data))
-        print("")
+        print()
 
 
 def _currently_in_jupyter_notebook():

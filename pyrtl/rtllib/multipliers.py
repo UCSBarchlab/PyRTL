@@ -291,6 +291,6 @@ def generalized_fma(
             bits[bit_loc].append(bit)
 
     result_bitwidth = longest_wire_len + int(
-        math.ceil(math.log(len(add_wires) + len(mult_pairs), 2))
+        math.ceil(math.log2(len(add_wires) + len(mult_pairs)))
     )
     return reducer(bits, result_bitwidth, adder_func)

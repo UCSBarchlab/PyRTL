@@ -1532,7 +1532,7 @@ class TestMatrixMultiply(MatrixTestBase):
 
     def multiply_number(self, int_matrix, rows, columns, bits, number, expected_output):
         first_matrix = Matrix.Matrix(rows, columns, bits, value=int_matrix)
-        bits = int(math.log(number, 2)) + 1 if number != 0 else 1
+        bits = int(math.log2(number)) + 1 if number != 0 else 1
         result_matrix = first_matrix * pyrtl.Const(number, bits)
 
         self.assertEqual(result_matrix.rows, rows)

@@ -329,7 +329,7 @@ def fast_group_adder(
     :return: A :class:`.WireVector` with the result of the addition.
     """
     longest_wire_len = max(len(w) for w in wires_to_add)
-    result_bitwidth = longest_wire_len + int(math.ceil(math.log(len(wires_to_add), 2)))
+    result_bitwidth = longest_wire_len + int(math.ceil(math.log2(len(wires_to_add))))
 
     bits = [[] for i in range(longest_wire_len)]
 

@@ -1,5 +1,5 @@
 import random
-from math import ceil, log
+from math import ceil, log2
 
 import pyrtl
 from pyrtl import shift_left_logical, shift_right_logical
@@ -63,7 +63,7 @@ def prng_lfsr(
         cryptogen = random.SystemRandom()
         seed = cryptogen.randrange(1, 2**127)  # seed itself if no seed signal is given
 
-    lfsr = pyrtl.Register(127 if bitwidth < 127 else bitwidth)
+    lfsr = pyrtl.Register(max(bitwidth, 127))
     # leap ahead by shifting the LFSR bitwidth times
     leap_ahead = lfsr
     for _i in range(bitwidth):
@@ -140,7 +140,7 @@ def prng_xoroshiro128(
     output <<= adders.kogge_stone(s0, s1)
 
     gen_cycles = int(ceil(bitwidth / 64))
-    counter_bitwidth = int(ceil(log(gen_cycles, 2))) if gen_cycles > 1 else 1
+    counter_bitwidth = int(ceil(log2(gen_cycles))) if gen_cycles > 1 else 1
     rand = pyrtl.Register(gen_cycles * 64)
     counter = pyrtl.Register(counter_bitwidth, "counter")
     gen_done = counter == gen_cycles - 1
@@ -256,7 +256,7 @@ def csprng_trivium(
 
     init_cycles = 1152 // bits_per_cycle
     gen_cycles = int(ceil(bitwidth / bits_per_cycle))
-    counter_bitwidth = int(ceil(log(max(init_cycles + 1, gen_cycles), 2)))
+    counter_bitwidth = int(ceil(log2(max(init_cycles + 1, gen_cycles))))
     rand = pyrtl.Register(bitwidth)
     counter = pyrtl.Register(counter_bitwidth, "counter")
     init_done = counter == init_cycles

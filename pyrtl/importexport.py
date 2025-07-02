@@ -877,7 +877,7 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
             f"    output{_verilog_vector_decl(w):s} {varname(w):s};",
             file=file,
         )
-    print("", file=file)
+    print(file=file)
 
     # memories and registers
     for m in sorted(memories, key=lambda m: m.id):
@@ -900,12 +900,12 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
             file=file,
         )
     if memories or registers:
-        print("", file=file)
+        print(file=file)
 
     # wires
     for w in name_sorted(wires):
         print(f"    wire{_verilog_vector_decl(w):s} {varname(w):s};", file=file)
-    print("", file=file)
+    print(file=file)
 
     # Write the initial values for read-only memories.
     # If we ever add support outside of simulation for initial values
@@ -918,7 +918,7 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
             mem_data_str = f"{m.bitwidth:d}'h{m._get_read_data(i):x}"
             print(f"        {mem_elem_str:s}={mem_data_str:s};", file=file)
         print("    end", file=file)
-        print("", file=file)
+        print(file=file)
 
 
 def _to_verilog_combinational(file, block, varname):
@@ -980,7 +980,7 @@ def _to_verilog_combinational(file, block, varname):
             pass  # do nothing for registers and memories
         else:
             raise PyrtlInternalError(f"nets with op '{net.op}' not supported")
-    print("", file=file)
+    print(file=file)
 
 
 def _to_verilog_sequential(file, block, varname, add_reset):
@@ -1014,7 +1014,7 @@ def _to_verilog_sequential(file, block, varname, add_reset):
             print(f"            {dest:s} <= {src:s};", file=file)
     print("        end", file=file)
     print("    end", file=file)
-    print("", file=file)
+    print(file=file)
 
 
 def _to_verilog_memories(file, block, varname):
@@ -1056,7 +1056,7 @@ def _to_verilog_memories(file, block, varname):
             m_id = net.op_param[0]
             index = varname(net.args[0])
             print(f"    assign {dest:s} = mem_{m_id}[{index:s}];", file=file)
-        print("", file=file)
+        print(file=file)
 
 
 def _to_verilog_footer(file):
@@ -1183,7 +1183,7 @@ def output_verilog_testbench(
     # Output an include, if given
     if toplevel_include:
         print(f'`include "{toplevel_include:s}"', file=dest_file)
-        print("", file=dest_file)
+        print(file=dest_file)
 
     # Output header
     print("module tb();", file=dest_file)
@@ -1204,7 +1204,7 @@ def output_verilog_testbench(
             f"    wire{_verilog_vector_decl(w):s} {ver_name[w.name]:s};",
             file=dest_file,
         )
-    print("", file=dest_file)
+    print(file=dest_file)
 
     # Declare an integer used for init of memories
     if len(memories) > 0:

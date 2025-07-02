@@ -77,10 +77,14 @@ select = [
     "SIM",
     # flake8-unused-arguments
     "ARG",
+    # flynt
+    "FLY",
     # isort
     "I",
     # pylint
     "PLE", "PLW", "PLC",
+    # refurb
+    "FURB",
 ]
 ignore = [
     # Use ternary operator:

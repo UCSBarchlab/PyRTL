@@ -1663,8 +1663,8 @@ class SimulationTrace:
             """Converts WireVector names to internal names"""
             return self.internal_names[wireName]
 
-        print(" ".join(["$timescale", "1ns", "$end"]), file=file)
-        print(" ".join(["$scope", "module logic", "$end"]), file=file)
+        print("$timescale 1ns $end", file=file)
+        print("$scope module logic $end", file=file)
 
         def print_trace_strs(time):
             for wn in sorted(self.trace, key=_trace_sort_key):
@@ -1675,7 +1675,7 @@ class SimulationTrace:
 
         # dump variables
         if include_clock:
-            print(" ".join(["$var", "wire", "1", "clk", "clk", "$end"]), file=file)
+            print("$var wire 1 clk clk $end", file=file)
         for wn in sorted(self.trace, key=_trace_sort_key):
             print(
                 " ".join(
@@ -1690,11 +1690,11 @@ class SimulationTrace:
                 ),
                 file=file,
             )
-        print(" ".join(["$upscope", "$end"]), file=file)
-        print(" ".join(["$enddefinitions", "$end"]), file=file)
-        print(" ".join(["$dumpvars"]), file=file)
+        print("$upscope $end", file=file)
+        print("$enddefinitions $end", file=file)
+        print("$dumpvars", file=file)
         print_trace_strs(0)
-        print(" ".join(["$end"]), file=file)
+        print("$end", file=file)
 
         # dump values
         endtime = max([len(self.trace[w]) for w in self.trace])
@@ -1703,10 +1703,10 @@ class SimulationTrace:
             print_trace_strs(timestamp)
             if include_clock:
                 print("b1 clk", file=file)
-                print("", file=file)
+                print(file=file)
                 print("".join(["#", str(timestamp * 10 + 5)]), file=file)
                 print("b0 clk", file=file)
-            print("", file=file)
+            print(file=file)
         print("".join(["#", str(endtime * 10)]), file=file)
         file.flush()
 
