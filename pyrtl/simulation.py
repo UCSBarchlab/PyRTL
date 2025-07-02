@@ -519,7 +519,7 @@ class Simulation:
         """
         if net.op in "r@":
             return  # registers and memory write ports have no logic function
-        elif net.op in self.simple_func:
+        if net.op in self.simple_func:
             argvals = (self.value[arg] for arg in net.args)
             result = self.simple_func[net.op](*argvals)
         elif net.op == "c":
@@ -846,18 +846,16 @@ class FastSimulation:
         """
         if isinstance(wire, (Input, Register)):
             return "d[" + repr(wire.name) + "]"  # passed in
-        elif isinstance(wire, Const):
+        if isinstance(wire, Const):
             return str(int(wire.val))  # hardcoded
-        else:
-            return self._varname(wire)
+        return self._varname(wire)
 
     def _dest_varname(self, wire):
         if isinstance(wire, Output):
             return "outs[" + repr(wire.name) + "]"
-        elif isinstance(wire, Register):
+        if isinstance(wire, Register):
             return "regs[" + repr(wire.name) + "]"
-        else:
-            return self._varname(wire)
+        return self._varname(wire)
 
     # bitwidth that the dest has to have in order to not need masking.
     _no_mask_bitwidth = {
@@ -916,8 +914,7 @@ class FastSimulation:
         def shift(value, direction, shift_amt):
             if shift_amt == 0:
                 return value
-            else:
-                return f"({value} {direction} {shift_amt})"
+            return f"({value} {direction} {shift_amt})"
 
         def make_split(source, split_length, split_start_bit, split_res_start_bit):
             if split_start_bit == 0:
@@ -1066,8 +1063,7 @@ class WaveRenderer:
         if n + segment_size >= maxtracelen:
             segment_size = maxtracelen - n
         # Pad major_tick out to segment_size.
-        ticks = major_tick.ljust(cycle_len * segment_size)
-        return ticks
+        return major_tick.ljust(cycle_len * segment_size)
 
     def val_to_str(
         self,
@@ -1094,13 +1090,11 @@ class WaveRenderer:
         def invoke_f(f, value):
             if f is val_to_signed_integer:
                 return str(val_to_signed_integer(value=value, bitwidth=wire.bitwidth))
-            else:
-                return str(f(value))
+            return str(f(value))
 
         if f is not None:
             return invoke_f(f, value)
-        else:
-            return invoke_f(repr_func, value)
+        return invoke_f(repr_func, value)
 
     def render_val(
         self,

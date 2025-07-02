@@ -78,23 +78,21 @@ def ripple_add(a, b, cin=0):
     cin = pyrtl.as_wires(cin)
     if len(a) == 1:
         return one_bit_add(a, b, cin)
+    ripplecarry = one_bit_add(a[0], b[0], cin)
+    if len(b) == 1:
+        msbits = ripple_half_add(a[1:], ripplecarry[1])
     else:
-        ripplecarry = one_bit_add(a[0], b[0], cin)
-        if len(b) == 1:
-            msbits = ripple_half_add(a[1:], ripplecarry[1])
-        else:
-            msbits = ripple_add(a[1:], b[1:], ripplecarry[1])
-        return pyrtl.concat(msbits, ripplecarry[0])
+        msbits = ripple_add(a[1:], b[1:], ripplecarry[1])
+    return pyrtl.concat(msbits, ripplecarry[0])
 
 
 def ripple_half_add(a, cin=0):
     cin = pyrtl.as_wires(cin)
     if len(a) == 1:
         return pyrtl.concat(*half_adder(a, cin))
-    else:
-        ripplecarry = half_adder(a[0], cin)
-        msbits = ripple_half_add(a[1:], ripplecarry[0])
-        return pyrtl.concat(msbits, ripplecarry[1])
+    ripplecarry = half_adder(a[0], cin)
+    msbits = ripple_half_add(a[1:], ripplecarry[0])
+    return pyrtl.concat(msbits, ripplecarry[1])
 
 
 def carrysave_adder(
@@ -141,10 +139,9 @@ def cla_adder(
     if len(a) <= la_unit_len:
         sum, cout = _cla_adder_unit(a, b, cin)
         return pyrtl.concat(cout, sum)
-    else:
-        sum, cout = _cla_adder_unit(a[0:la_unit_len], b[0:la_unit_len], cin)
-        msbits = cla_adder(a[la_unit_len:], b[la_unit_len:], cout, la_unit_len)
-        return pyrtl.concat(msbits, sum)
+    sum, cout = _cla_adder_unit(a[0:la_unit_len], b[0:la_unit_len], cin)
+    msbits = cla_adder(a[la_unit_len:], b[la_unit_len:], cout, la_unit_len)
+    return pyrtl.concat(msbits, sum)
 
 
 def _cla_adder_unit(a, b, cin):
@@ -222,8 +219,7 @@ def wallace_reducer(
     result = _sparse_adder(wire_array_2, final_adder)
     if len(result) > result_bitwidth:
         return result[:result_bitwidth]
-    else:
-        return result
+    return result
 
 
 def dada_reducer(
@@ -287,8 +283,7 @@ def dada_reducer(
     result = _sparse_adder(wire_array_2, final_adder)
     if len(result) > result_bitwidth:
         return result[:result_bitwidth]
-    else:
-        return result
+    return result
 
 
 def _sparse_adder(wire_array_2, adder):

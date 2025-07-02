@@ -558,7 +558,7 @@ class Matrix:
                 f"error: columns mismatch. Matrix a: {str(self.columns)} columns, "
                 f"Matrix b: {str(other.columns)} columns"
             )
-        elif self.rows != other.rows:
+        if self.rows != other.rows:
             raise PyrtlError(
                 f"error: row mismatch. Matrix a: {str(self.rows)} rows, Matrix b: "
                 f"{str(other.rows)} rows"
@@ -824,7 +824,7 @@ class Matrix:
 
         if isinstance(v, (tuple, list)) and len(v) == 0:
             return
-        elif isinstance(v, Matrix) and v.rows != 1:
+        if isinstance(v, Matrix) and v.rows != 1:
             raise PyrtlError(
                 f"Expected a row-vector matrix, instead got matrix with {v.rows} rows"
             )
@@ -841,7 +841,7 @@ class Matrix:
             if ix < 0 or ix >= count:
                 if mode == "raise":
                     raise PyrtlError(f"index {ix} is out of bounds with size {count}")
-                elif mode == "wrap":
+                if mode == "wrap":
                     ix = ix % count
                 elif mode == "clip":
                     ix = 0 if ix < 0 else count - 1
@@ -852,10 +852,11 @@ class Matrix:
                 if ix >= len(v):
                     return v[-1]  # if v is shorter than ind, repeat last as necessary
                 return v[ix]
-            elif isinstance(v, Matrix):
+            if isinstance(v, Matrix):
                 if ix >= count:
                     return v[0, -1]
                 return v[0, ix]
+            return None
 
         for v_ix, mat_ix in enumerate(ind):
             mat_ix = get_ix(mat_ix)
@@ -1283,6 +1284,7 @@ def argmax(
                 arg -= 1
             result[0, i] = index
         return result
+    return None
 
 
 def dot(first: Matrix, second: Matrix) -> Matrix:
@@ -1485,10 +1487,9 @@ def concatenate(matrices: Matrix, axis: int = 0) -> Matrix:
     """
     if axis == 0:
         return hstack(*matrices)
-    elif axis == 1:
+    if axis == 1:
         return vstack(*matrices)
-    else:
-        raise PyrtlError("Only allowable axes are 0 or 1")
+    raise PyrtlError("Only allowable axes are 0 or 1")
 
 
 def matrix_wv_to_list(

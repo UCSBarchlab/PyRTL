@@ -251,8 +251,7 @@ def clone_wire(old_wire, name=None):
 
     if isinstance(old_wire, Const):
         return Const(old_wire.val, old_wire.bitwidth, name=name)
-    else:
-        return old_wire.__class__(old_wire.bitwidth, name=name)
+    return old_wire.__class__(old_wire.bitwidth, name=name)
 
 
 def copy_block(block=None, update_working_block=True):

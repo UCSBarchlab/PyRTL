@@ -743,8 +743,7 @@ def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]
     max_len = max(len(wv) for wv in args)
     if signed:
         return (wv.sign_extended(max_len) for wv in args)
-    else:
-        return (wv.zero_extended(max_len) for wv in args)
+    return (wv.zero_extended(max_len) for wv in args)
 
 
 def as_wires(
@@ -804,30 +803,29 @@ def as_wires(
     if isinstance(val, (int, str)):
         # note that this case captures bool as well (as bools are instances of ints)
         return Const(val, bitwidth=bitwidth, block=block)
-    elif isinstance(val, _MemIndexed):
+    if isinstance(val, _MemIndexed):
         # convert to a memory read when the value is actually used
         if val.wire is None:
             val.wire = as_wires(
                 val.mem._readaccess(val.index), bitwidth, truncating, block
             )
         return val.wire
-    elif isinstance(val, WrappedWireVector):
+    if isinstance(val, WrappedWireVector):
         return val.wire
-    elif not isinstance(val, WireVector):
+    if not isinstance(val, WireVector):
         raise PyrtlError(
             "error, expecting a wirevector, int, or verilog-style "
             f"const string got {repr(val)} instead"
         )
-    elif bitwidth == "0":
+    if bitwidth == "0":
         raise PyrtlError("error, bitwidth must be >= 1")
-    elif val.bitwidth is None:
+    if val.bitwidth is None:
         raise PyrtlError("error, attempting to use wirevector with no defined bitwidth")
-    elif bitwidth and bitwidth > val.bitwidth:
+    if bitwidth and bitwidth > val.bitwidth:
         return val.zero_extended(bitwidth)
-    elif bitwidth and truncating and bitwidth < val.bitwidth:
+    if bitwidth and truncating and bitwidth < val.bitwidth:
         return val[:bitwidth]  # truncate the upper bits
-    else:
-        return val
+    return val
 
 
 def bitfield_update(
@@ -1028,8 +1026,7 @@ def enum_mux(
     if otherwise in table:
         if default is not None:
             raise PyrtlError('both "otherwise" and default provided to enum_mux')
-        else:
-            default = table[otherwise]
+        default = table[otherwise]
 
     if strict and default is None and missingkeys:
         raise PyrtlError(f"table provided is incomplete, missing: {missingkeys}")

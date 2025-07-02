@@ -189,14 +189,13 @@ def input_from_blif(
     name_def = Group(SKeyword(".names") + namesignal_list + cover_list)("name_def")
 
     def make_dff_parsers(formals, names):
-        defs = functools.reduce(
+        return functools.reduce(
             operator.__or__,
             (
                 Group(SKeyword(".subckt") + SKeyword(name) + formals)(name)
                 for name in names
             ),
         )
-        return defs
 
     # This is purposefully not supporting any DFFs that use negedges in the sensitivity
     # list. Currently don't have the '$_ALDFF*' dffs (with load signal). Also, we may
@@ -301,7 +300,7 @@ def input_from_blif(
                 bitwidth = name_counts[input_name]
                 if input_name in subckt.clk_set:
                     continue
-                elif bitwidth == 1:
+                if bitwidth == 1:
                     wire_in = Input(bitwidth=1, name=input_name, block=block)
                     subckt.add_input(input_name, wire_in)
                     block.add_wirevector(wire_in)
@@ -598,7 +597,7 @@ def input_from_blif(
                 assert formal in subckt.clk_set
                 # We didn't create an input wire corresponding to this.
                 continue
-            elif formal in subckt.inputs:
+            if formal in subckt.inputs:
                 wf = subckt.inputs[formal]
                 wa = twire(actual)
                 wf <<= wa
@@ -1164,8 +1163,7 @@ def output_verilog_testbench(
             if rval is None:
                 rval = simulation_trace.default_value
             return rval
-        else:
-            return 0
+        return 0
 
     def init_memvalue(m, ix):
         # Return None if not present, or if already equal to default value, so we know
@@ -1177,8 +1175,7 @@ def output_verilog_testbench(
                 ix, simulation_trace.default_value
             )
             return None if v == simulation_trace.default_value else v
-        else:
-            return None
+        return None
 
     def default_value():
         return simulation_trace.default_value if simulation_trace else 0

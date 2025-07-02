@@ -97,17 +97,15 @@ def _trivialgraph_default_namer(thing, is_edge=True):
     if is_edge:
         if thing.name is None or thing.name.startswith("tmp"):
             return ""
-        else:
-            return "/".join([thing.name, str(len(thing))])
-    elif isinstance(thing, Const):
+        return "/".join([thing.name, str(len(thing))])
+    if isinstance(thing, Const):
         return str(thing.val)
-    elif isinstance(thing, WireVector):
+    if isinstance(thing, WireVector):
         return thing.name or "??"
-    else:
-        try:
-            return thing.op + str(thing.op_param or "")
-        except AttributeError as exc:
-            raise PyrtlError(f'no naming rule for "{str(thing)}"') from exc
+    try:
+        return thing.op + str(thing.op_param or "")
+    except AttributeError as exc:
+        raise PyrtlError(f'no naming rule for "{str(thing)}"') from exc
 
 
 def output_to_trivialgraph(
@@ -219,67 +217,61 @@ def _default_node_namer(
             f'[label="{label(name + str(node.val))}", shape=circle, '
             "fillcolor=lightgrey]"
         )
-    elif isinstance(node, Input):
+    if isinstance(node, Input):
         return f'[label="{label(node.name)}", shape=invhouse, fillcolor=coral]'
-    elif isinstance(node, Output):
+    if isinstance(node, Output):
         return f'[label="{label(node.name)}", shape=house, fillcolor=lawngreen]'
-    elif isinstance(node, Register):
+    if isinstance(node, Register):
         return f'[label="{label(node.name)}", shape=square, fillcolor=gold]'
-    elif isinstance(node, WireVector):
+    if isinstance(node, WireVector):
         return f'[label="{label(node.name)}", shape=circle, fillcolor=none]'
-    else:
-        try:
-            if node.op == "&":
-                return '[label="{}"]'.format(label("and"))
-            elif node.op == "|":
-                return '[label="{}"]'.format(label("or"))
-            elif node.op == "^":
-                return '[label="{}"]'.format(label("xor"))
-            elif node.op == "~":
-                return '[label="{}", shape=invtriangle]'.format(label("not"))
-            elif node.op == "x":
-                return '[label="{}", shape=invtrapezium]'.format(label("mux"))
-            elif node.op == "s":
-                # node.op_param is a tuple of the selected bits to pull from the
-                # argument wire, so it could look something like (0,0,0,0,0,0,0),
-                # meaning dest wire is going to be a concatenation of the zero-th bit of
-                # the argument wire, 7 times.
-                selLower = node.op_param[0]
-                selUpper = node.op_param[-1]
-                if len(node.op_param) == 1:
-                    bits = f"[{selLower}]"
-                elif node.op_param == tuple(
-                    range(selLower, selUpper + 1)
-                ):  # consecutive
-                    bits = f"[{selUpper}:{selLower}]"
-                elif all(
-                    ix == node.op_param[0] for ix in node.op_param[1:]
-                ):  # all the same
-                    bits = f"[{node.op_param[0]}]*{len(node.op_param)}"
-                else:
-                    bits = "bits" + str(tuple(reversed(node.op_param)))
-                return (
-                    f'[label="{label(bits)}", fillcolor=azure1, height=.25, width=.25]'
-                )
-            elif node.op in "c":
-                return '[label="{}", height=.1, width=.1]'.format(label("concat"))
-            elif node.op == "r":
-                name = node.dests[0].name or ""
-                name = (f"{name}.next") if split_state else name
-                return f'[label="{label(name)}", shape=square, fillcolor=gold]'
-            elif node.op == "w":
-                return '[label="{}", height=.1, width=.1]'.format(label(""))
-            elif node.op in "m@":
-                name = node.op_param[1].name
-                if name.startswith("tmp"):
-                    name = ""
-                else:
-                    name = "(" + name + ")"
-                return f'[label="{label(node.op + name)}"]'
+    try:
+        if node.op == "&":
+            return '[label="{}"]'.format(label("and"))
+        if node.op == "|":
+            return '[label="{}"]'.format(label("or"))
+        if node.op == "^":
+            return '[label="{}"]'.format(label("xor"))
+        if node.op == "~":
+            return '[label="{}", shape=invtriangle]'.format(label("not"))
+        if node.op == "x":
+            return '[label="{}", shape=invtrapezium]'.format(label("mux"))
+        if node.op == "s":
+            # node.op_param is a tuple of the selected bits to pull from the
+            # argument wire, so it could look something like (0,0,0,0,0,0,0),
+            # meaning dest wire is going to be a concatenation of the zero-th bit of
+            # the argument wire, 7 times.
+            selLower = node.op_param[0]
+            selUpper = node.op_param[-1]
+            if len(node.op_param) == 1:
+                bits = f"[{selLower}]"
+            elif node.op_param == tuple(range(selLower, selUpper + 1)):  # consecutive
+                bits = f"[{selUpper}:{selLower}]"
+            elif all(
+                ix == node.op_param[0] for ix in node.op_param[1:]
+            ):  # all the same
+                bits = f"[{node.op_param[0]}]*{len(node.op_param)}"
             else:
-                return '[label="{}"]'.format(label(node.op + str(node.op_param or "")))
-        except AttributeError as exc:
-            raise PyrtlError(f'no naming rule for "{str(node)}"') from exc
+                bits = "bits" + str(tuple(reversed(node.op_param)))
+            return f'[label="{label(bits)}", fillcolor=azure1, height=.25, width=.25]'
+        if node.op in "c":
+            return '[label="{}", height=.1, width=.1]'.format(label("concat"))
+        if node.op == "r":
+            name = node.dests[0].name or ""
+            name = (f"{name}.next") if split_state else name
+            return f'[label="{label(name)}", shape=square, fillcolor=gold]'
+        if node.op == "w":
+            return '[label="{}", height=.1, width=.1]'.format(label(""))
+        if node.op in "m@":
+            name = node.op_param[1].name
+            if name.startswith("tmp"):
+                name = ""
+            else:
+                name = "(" + name + ")"
+            return f'[label="{label(node.op + name)}"]'
+        return '[label="{}"]'.format(label(node.op + str(node.op_param or "")))
+    except AttributeError as exc:
+        raise PyrtlError(f'no naming rule for "{str(node)}"') from exc
 
 
 def _graphviz_default_namer(
@@ -309,8 +301,7 @@ def _graphviz_default_namer(
     """
     if is_edge:
         return edge_namer(thing, is_to_splitmerge=is_to_splitmerge)
-    else:
-        return node_namer(thing, split_state=split_state)
+    return node_namer(thing, split_state=split_state)
 
 
 def graphviz_detailed_namer(extra_node_info: dict = None, extra_edge_info: dict = None):
@@ -638,9 +629,8 @@ def trace_to_html(
         if repr_per_name.get(w) is None and len(simtrace._wires[w]) == 1:
             vallens.append(1)  # all are the same length
             return bool_signal_template % (w, wavestring)
-        else:
-            vallens.extend([len(data) for data in datalist])
-            return int_signal_template % (w, wavestring, datastring)
+        vallens.extend([len(data) for data in datalist])
+        return int_signal_template % (w, wavestring, datastring)
 
     bool_signal_template = '    { name: "%s",  wave: "%s" },'
     int_signal_template = '    { name: "%s",  wave: "%s", data: [%s] },'
@@ -648,6 +638,5 @@ def trace_to_html(
     all_signals = "\n".join(signals)
     maxvallen = max(vallens)
     scale = (maxvallen // 5) + 1
-    wave = wave_template % (all_signals, scale)
+    return wave_template % (all_signals, scale)
     # print(wave)
-    return wave

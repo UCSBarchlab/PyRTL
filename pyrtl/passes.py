@@ -896,6 +896,7 @@ def nand_synth(net: LogicNet):
         dest <<= temp_0.nand(arg(0)).nand(temp_0.nand(arg(1)))
     else:
         raise PyrtlError(f"Op, '{net.op}' is not supported in nand_synth")
+    return None
 
 
 @transform.all_nets
@@ -921,6 +922,7 @@ def and_inverter_synth(net: LogicNet):
         dest <<= ~(arg(0) & arg(1))
     else:
         raise PyrtlError(f"Op, '{net.op}' is not supported in and_inv_synth")
+    return None
 
 
 @transform.all_nets
@@ -966,6 +968,7 @@ def two_way_concat(net: LogicNet):
 
     dest = net.dests[0]
     dest <<= w
+    return None
 
 
 @transform.all_nets
@@ -989,6 +992,7 @@ def one_bit_selects(net: LogicNet):
     catlist = [net.args[0][i] for i in net.op_param]
     dest = net.dests[0]
     dest <<= concat_list(catlist)
+    return None
 
 
 def direct_connect_outputs(block=None):
@@ -1063,18 +1067,17 @@ def _make_tree(wire, block, curr_fanout):
     def f(w, n):
         if n == 1:
             return (w,)
-        else:
-            l_fanout = n // 2
-            r_fanout = n - l_fanout
-            o = WireVector(len(w), block=block)
-            split_net = LogicNet(
-                op="w",
-                op_param=None,
-                args=(w,),
-                dests=(o,),
-            )
-            block.add_net(split_net)
-            return f(o, l_fanout) + f(o, r_fanout)
+        l_fanout = n // 2
+        r_fanout = n - l_fanout
+        o = WireVector(len(w), block=block)
+        split_net = LogicNet(
+            op="w",
+            op_param=None,
+            args=(w,),
+            dests=(o,),
+        )
+        block.add_net(split_net)
+        return f(o, l_fanout) + f(o, r_fanout)
 
     return f(wire, curr_fanout)
 

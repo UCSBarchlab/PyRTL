@@ -421,10 +421,9 @@ class TestDistance(unittest.TestCase):
         def cost(net):
             if net.op in "wcs":
                 return 0
-            elif net.op in "*+-":
+            if net.op in "*+-":
                 return 2
-            else:
-                return 1
+            return 1
 
         distances = pyrtl.distance(a, o, cost)
         self.assertEqual(len(distances), 1)

@@ -938,15 +938,14 @@ def infer_val_and_bitwidth(
 
     if isinstance(rawinput, bool):
         return _convert_bool(rawinput, bitwidth, signed)
-    elif isinstance(rawinput, numbers.Integral):
+    if isinstance(rawinput, numbers.Integral):
         return _convert_int(rawinput, bitwidth, signed)
-    elif isinstance(rawinput, str):
+    if isinstance(rawinput, str):
         return _convert_verilog_str(rawinput, bitwidth, signed)
-    else:
-        raise PyrtlError(
-            f'error, the value provided is of an improper type, "{type(rawinput)}"'
-            "proper types are bool, int, and string"
-        )
+    raise PyrtlError(
+        f'error, the value provided is of an improper type, "{type(rawinput)}"'
+        "proper types are bool, int, and string"
+    )
 
 
 def _convert_bool(
@@ -1071,8 +1070,7 @@ def get_stacks(*wires):
             "    No call info found for wires: use set_debug_mode() "
             "to provide more information\n"
         )
-    else:
-        return "\n".join(str(wire) + ":\n" + get_stack(wire) for wire in wires)
+    return "\n".join(str(wire) + ":\n" + get_stack(wire) for wire in wires)
 
 
 def get_stack(wire):
@@ -1083,11 +1081,10 @@ def get_stack(wire):
     if call_stack:
         frames = " ".join(frame for frame in call_stack[:-1])
         return "Wire Traceback, most recent call last \n" + frames + "\n"
-    else:
-        return (
-            "    No call info found for wire: use set_debug_mode()"
-            " to provide more information"
-        )
+    return (
+        "    No call info found for wire: use set_debug_mode()"
+        " to provide more information"
+    )
 
 
 def _check_for_loop(block=None):
@@ -1117,7 +1114,7 @@ def find_loop(block=None):
 
     result = _check_for_loop(block)
     if not result:
-        return
+        return None
     wires_left, logic_left = result
 
     class _FilteringState:
@@ -1198,10 +1195,9 @@ def _currently_in_jupyter_notebook():
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
             return True  # Jupyter notebook or qtconsole
-        elif shell == "TerminalInteractiveShell":
+        if shell == "TerminalInteractiveShell":
             return False  # Terminal running IPython
-        else:
-            return False  # Other type
+        return False  # Other type
     except NameError:
         return False  # Probably standard Python interpreter
 

@@ -71,6 +71,8 @@ select = [
     "C4",
     # flake8-future-annotations
     "FA",
+    # flake8-return
+    "RET",
     # flake8-simplify
     "SIM",
     # flake8-unused-arguments

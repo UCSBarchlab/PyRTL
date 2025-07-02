@@ -47,10 +47,9 @@ def next_tempvar_name(name=""):
             )  # strip out non alphanumeric characters
             wire_name += f"_{safename}_line{lineno}"
         return wire_name
-    else:
-        if name.lower() in ["clk", "clock"]:
-            raise PyrtlError("Clock signals should never be explicit")
-        return name
+    if name.lower() in ["clk", "clock"]:
+        raise PyrtlError("Clock signals should never be explicit")
+    return name
 
 
 class WireVector:
@@ -360,9 +359,9 @@ class WireVector:
                     "bitwidth must be from type int or unspecified, instead "
                     f'"{str(bitwidth)}" was passed of type {type(bitwidth)}'
                 )
-            elif bitwidth == 0:
+            if bitwidth == 0:
                 raise PyrtlError("bitwidth must be greater than or equal to 1")
-            elif bitwidth < 0:
+            if bitwidth < 0:
                 raise PyrtlError(
                     "you are trying a negative bitwidth? awesome but wrong"
                 )
@@ -1179,8 +1178,7 @@ class WireVector:
         """
         if self.bitwidth is None:
             raise PyrtlError("length of WireVector not yet defined")
-        else:
-            return self.bitwidth
+        return self.bitwidth
 
     def __enter__(self):
         """Use wires as contexts for conditional assignments."""
@@ -1369,21 +1367,20 @@ class WireVector:
         numext = bitwidth - self.bitwidth
         if numext == 0:
             return self
-        elif numext < 0:
+        if numext < 0:
             raise PyrtlError(
                 "Neither zero_extended nor sign_extended can reduce the number of bits"
             )
-        else:
-            from pyrtl.corecircuits import concat
+        from pyrtl.corecircuits import concat
 
-            if isinstance(extbit, int):
-                extbit = Const(extbit, bitwidth=1)
-            extvector = WireVector(bitwidth=numext)
-            net = LogicNet(
-                op="s", op_param=(0,) * numext, args=(extbit,), dests=(extvector,)
-            )
-            working_block().add_net(net)
-            return concat(extvector, self)
+        if isinstance(extbit, int):
+            extbit = Const(extbit, bitwidth=1)
+        extvector = WireVector(bitwidth=numext)
+        net = LogicNet(
+            op="s", op_param=(0,) * numext, args=(extbit,), dests=(extvector,)
+        )
+        working_block().add_net(net)
+        return concat(extvector, self)
 
 
 WireVectorLike = Union[WireVector, int, str, bool]

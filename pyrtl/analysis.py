@@ -64,33 +64,31 @@ def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
     def multiplier_stdcell_estimate(width):
         if width == 1:
             return 5
-        elif width == 2:
+        if width == 2:
             return 39
-        elif width == 3:
+        if width == 3:
             return 219
-        else:
-            return -958 + (150 * width) + (45 * width**2)
+        return -958 + (150 * width) + (45 * width**2)
 
     def stdcell_estimate(net):
         if net.op in "w~sc":
             return 0
-        elif net.op in "&|n":
+        if net.op in "&|n":
             return 40 / 8.0 * len(net.args[0])  # 40 lambda
-        elif net.op in "^=<>x":
+        if net.op in "^=<>x":
             return 80 / 8.0 * len(net.args[0])  # 80 lambda
-        elif net.op == "r":
+        if net.op == "r":
             return 144 / 8.0 * len(net.args[0])  # 144 lambda
-        elif net.op in "+-":
+        if net.op in "+-":
             return adder_stdcell_estimate(len(net.args[0]))
-        elif net.op == "*":
+        if net.op == "*":
             return multiplier_stdcell_estimate(len(net.args[0]))
-        elif net.op in "m@":
+        if net.op in "m@":
             return 0  # memories handled elsewhere
-        else:
-            raise PyrtlInternalError(
-                "Unable to estimate the following net "
-                f"due to unimplemented op :\n{str(net)}"
-            )
+        raise PyrtlInternalError(
+            "Unable to estimate the following net "
+            f"due to unimplemented op :\n{str(net)}"
+        )
 
     block = working_block(block)
 
@@ -218,10 +216,9 @@ class TimingAnalysis:
     def _multiplier_stdcell_estimate(width):
         if width == 1:
             return 98.57
-        elif width == 2:
+        if width == 2:
             return 200.17
-        else:
-            return 549.1 * math.log(width, 2) - 391.7
+        return 549.1 * math.log(width, 2) - 391.7
 
     @staticmethod
     def _memory_read_estimate(mem):
@@ -582,8 +579,7 @@ def distance(
     ps = paths(src, dst, block=block)
     ps = ps[src][dst]
     # Turning path into tuple so it can be the key
-    m = {tuple(path): sum(map(f, path)) for path in ps}
-    return m
+    return {tuple(path): sum(map(f, path)) for path in ps}
 
 
 def fanout(w: WireVector) -> int:

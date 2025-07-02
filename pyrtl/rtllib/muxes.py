@@ -31,13 +31,12 @@ def prioritized_mux(selects: list[WireVector], vals: list[WireVector]) -> WireVe
         raise pyrtl.PyrtlError("Must have a signal to mux")
     if len(vals) == 1:
         return vals[0]
-    else:
-        half = len(vals) // 2
-        return pyrtl.select(
-            pyrtl.rtl_any(*selects[:half]),
-            truecase=prioritized_mux(selects[:half], vals[:half]),
-            falsecase=prioritized_mux(selects[half:], vals[half:]),
-        )
+    half = len(vals) // 2
+    return pyrtl.select(
+        pyrtl.rtl_any(*selects[:half]),
+        truecase=prioritized_mux(selects[:half], vals[:half]),
+        falsecase=prioritized_mux(selects[half:], vals[half:]),
+    )
 
 
 def _is_equivalent(w1, w2):

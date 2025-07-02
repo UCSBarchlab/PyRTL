@@ -224,8 +224,7 @@ class TestOutputGraphs(unittest.TestCase):
 
             if isinstance(w, pyrtl.Output):
                 return 0
-            else:
-                return len(dst_map[w])
+            return len(dst_map[w])
 
         node_fanout = {
             n: f"Fanout: {get_fanout(n)}" for n in pyrtl.working_block().logic

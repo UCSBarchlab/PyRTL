@@ -73,8 +73,7 @@ def twos_comp_repr(val: int, bitwidth: int) -> int:
         raise pyrtl.PyrtlError("please choose a larger target bitwidth")
     if val >= 0:
         return val
-    else:
-        return (~abs(val) & (2**bitwidth - 1)) + 1  # flip the bits and add one
+    return (~abs(val) & (2**bitwidth - 1)) + 1  # flip the bits and add one
 
 
 def rev_twos_comp_repr(val: int, bitwidth: int) -> int:
@@ -92,8 +91,7 @@ def rev_twos_comp_repr(val: int, bitwidth: int) -> int:
         return -(
             (~val & (2**bitwidth - 1)) + 1
         )  # flip the bits, add one, and make negative
-    else:
-        return val
+    return val
 
 
 def _shifted_reg_next(reg: pyrtl.Register, direct: str, num: int = 1):
@@ -114,14 +112,11 @@ def _shifted_reg_next(reg: pyrtl.Register, direct: str, num: int = 1):
     if direct == "l":
         if num >= len(reg):
             return 0
-        else:
-            return pyrtl.concat(reg, pyrtl.Const(0, num))
-    elif direct == "r":
+        return pyrtl.concat(reg, pyrtl.Const(0, num))
+    if direct == "r":
         if num >= len(reg):
             return 0
-        else:
-            return reg[num:]
-    else:
-        raise pyrtl.PyrtlError(
-            "direction must be specified with 'direct'parameter as either 'l' or 'r'"
-        )
+        return reg[num:]
+    raise pyrtl.PyrtlError(
+        "direction must be specified with 'direct'parameter as either 'l' or 'r'"
+    )

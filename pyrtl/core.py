@@ -158,16 +158,16 @@ class LogicNet(NamedTuple):
             options = options.replace("_", "\\_")
             if self.op in "&|":
                 return f"{lhs} & \\leftarrow \\{self.op} \\, - & {rhs} {options} \\\\"
-            elif self.op in "wn+-*<>xcsr":
+            if self.op in "wn+-*<>xcsr":
                 return f"{lhs} & \\leftarrow {self.op} \\, - & {rhs} {options} \\\\"
-            elif self.op in "=":
+            if self.op in "=":
                 return f"{lhs} & \\leftarrow \\, {self.op} \\, - & {rhs} {options} \\\\"
-            elif self.op in "^":
+            if self.op in "^":
                 return f"{lhs} & \\leftarrow \\oplus \\, - & {rhs} {options} \\\\"
-            elif self.op in "~":
+            if self.op in "~":
                 return f"{lhs} & \\leftarrow \\sim \\, - & {rhs} {options} \\\\"
 
-            elif self.op in "m@":
+            if self.op in "m@":
                 memid, memblock = self.op_param
                 extrainfo = "memid=" + str(memid)
                 extrainfo = extrainfo.replace("_", "\\_")
@@ -178,34 +178,28 @@ class LogicNet(NamedTuple):
                         f"{lhs} & \\leftarrow m \\, - &  "
                         f"{name}[{rhs}]({extrainfo}) \\\\"
                     )
-                else:
-                    addr, data, we = (str(x) for x in self.args)
-                    addr = addr.replace("_", "\\_")
-                    data = data.replace("_", "\\_")
-                    we = we.replace("_", "\\_")
-                    return (
-                        f"{name}[{addr}] & \\leftarrow @ \\, - & "
-                        f"{data} we={we} ({extrainfo}) \\\\"
-                    )
-            else:
-                raise PyrtlInternalError(f'error, unknown op "{str(self.op)}"')
+                addr, data, we = (str(x) for x in self.args)
+                addr = addr.replace("_", "\\_")
+                data = data.replace("_", "\\_")
+                we = we.replace("_", "\\_")
+                return (
+                    f"{name}[{addr}] & \\leftarrow @ \\, - & "
+                    f"{data} we={we} ({extrainfo}) \\\\"
+                )
+            raise PyrtlInternalError(f'error, unknown op "{str(self.op)}"')
 
-        else:  # not in ipython
-            if self.op in "w~&|^n+-*<>=xcsr":
-                options = " " + options if options else ""
-                return f"{lhs} <-- {self.op} -- {rhs}{options}"
-            elif self.op in "m@":
-                memid, memblock = self.op_param
-                extrainfo = "memid=" + str(memid)
-                if self.op == "m":
-                    return f"{lhs} <-- m --  {memblock.name}[{rhs}]({extrainfo})"
-                else:
-                    addr, data, we = (str(x) for x in self.args)
-                    return (
-                        f"{memblock.name}[{addr}] <-- @ -- {data} we={we} ({extrainfo})"
-                    )
-            else:
-                raise PyrtlInternalError(f'error, unknown op "{str(self.op)}"')
+        # not in ipython
+        if self.op in "w~&|^n+-*<>=xcsr":
+            options = " " + options if options else ""
+            return f"{lhs} <-- {self.op} -- {rhs}{options}"
+        if self.op in "m@":
+            memid, memblock = self.op_param
+            extrainfo = "memid=" + str(memid)
+            if self.op == "m":
+                return f"{lhs} <-- m --  {memblock.name}[{rhs}]({extrainfo})"
+            addr, data, we = (str(x) for x in self.args)
+            return f"{memblock.name}[{addr}] <-- @ -- {data} we={we} ({extrainfo})"
+        raise PyrtlInternalError(f'error, unknown op "{str(self.op)}"')
 
     def __hash__(self):
         # it seems that namedtuple is not always hashable
@@ -375,8 +369,7 @@ class Block:
         if _currently_in_jupyter_notebook():
             _print_netlist_latex(list(self))
             return " "
-        else:
-            return "\n".join(str(net) for net in self)
+        return "\n".join(str(net) for net in self)
 
     def add_wirevector(self, wirevector: WireVector):
         """
@@ -459,10 +452,9 @@ class Block:
         """
         if name in self.memblock_by_name:
             return self.memblock_by_name[name]
-        elif strict:
+        if strict:
             raise PyrtlError(f"error, block does not have a memblock named {name}")
-        else:
-            return None
+        return None
 
     def wirevector_subset(
         self, cls: tuple[type] = None, exclude: tuple[type] = ()
@@ -514,8 +506,7 @@ class Block:
             initial_set = (x for x in self.wirevector_set if isinstance(x, cls))
         if exclude == ():
             return set(initial_set)
-        else:
-            return {x for x in initial_set if not isinstance(x, exclude)}
+        return {x for x in initial_set if not isinstance(x, exclude)}
 
     def logic_subset(self, op: tuple[str] = None) -> set[LogicNet]:
         """Return a subset of the ``Block's`` :class:`LogicNets<LogicNet>`.
@@ -535,8 +526,7 @@ class Block:
         """
         if op is None:
             return self.logic
-        else:
-            return {x for x in self.logic if x.op in op}
+        return {x for x in self.logic if x.op in op}
 
     def get_wirevector_by_name(self, name: str, strict: bool = False) -> WireVector:
         """Return the :class:`WireVector` with matching ``name``.
@@ -552,10 +542,9 @@ class Block:
         """
         if name in self.wirevector_by_name:
             return self.wirevector_by_name[name]
-        elif strict:
+        if strict:
             raise PyrtlError(f"error, block does not have a WireVector named {name}")
-        else:
-            return None
+        return None
 
     class _NetConnectionsDict(dict):
         """Dictionary wrapper for returning the results of the enclosing function.
@@ -572,8 +561,7 @@ class Block:
                     "Cannot look up a _MemIndexed object's source or destination net. "
                     "Try using its '.wire' attribute as the lookup key instead."
                 )
-            else:
-                raise KeyError(key)
+            raise KeyError(key)
 
     def net_connections(
         self, include_virtual_nodes: bool = False
@@ -827,7 +815,7 @@ class Block:
                 src_net = wire_src_dict[wire]
                 if src_net.op == sync_src:
                     continue
-                elif src_net.op in sync_prop:
+                if src_net.op in sync_prop:
                     wires_to_check.extend(src_net.args)
                 else:
                     raise PyrtlError(
@@ -1068,10 +1056,9 @@ def working_block(block: Block = None) -> Block:
 
     if block is None:
         return _singleton_block
-    elif not isinstance(block, Block):
+    if not isinstance(block, Block):
         raise PyrtlError("error, expected instance of Block as block argument")
-    else:
-        return block
+    return block
 
 
 def reset_working_block():
@@ -1207,10 +1194,9 @@ class _NameSanitizer(_NameIndexer):
             internal_name = super().make_valid_string()
             self.val_map[string] = internal_name
             return internal_name
-        else:
-            if self.map_valid:
-                self.val_map[string] = string
-            return string
+        if self.map_valid:
+            self.val_map[string] = string
+        return string
 
 
 class _PythonSanitizer(_NameSanitizer):

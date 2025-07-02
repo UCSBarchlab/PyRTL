@@ -314,8 +314,7 @@ class AES:
     def _galois_mult(self, c, mult_table):
         if mult_table == 1:
             return c
-        else:
-            return self._galois_mults[mult_table][c]
+        return self._galois_mults[mult_table][c]
 
     def _mix_columns(self, in_vector, inverse=False):
         self._build_memories_if_not_exists()

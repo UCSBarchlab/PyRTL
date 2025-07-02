@@ -1021,8 +1021,7 @@ class TestShiftSimulation(unittest.TestCase):
             mask = (1 << input_width) - 1
             if (i >> input_width - 1) & 0x1 == 0x1:
                 return ((~mask | i) >> s) & mask  # negative number
-            else:
-                return (i >> s) & mask  # positive number
+            return (i >> s) & mask  # positive number
 
         self.shift_checker(
             pyrtl.shift_right_arithmetic, ref, input_width, shift_width, shift_amount
