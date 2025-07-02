@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import builtins
 from functools import reduce
-from typing import Union
 
 from pyrtl import (
     Const,
@@ -33,7 +32,7 @@ class Matrix:
         columns: int,
         bits: int,
         signed: bool = False,  # noqa: ARG002
-        value: Union[WireVector, list[list[WireVectorLike]]] = None,
+        value: WireVector | list[list[WireVectorLike]] = None,
         max_bits: int = 64,
     ):
         """Constructs a Matrix object.
@@ -206,9 +205,7 @@ class Matrix:
                 result[i, j] = self[self.rows - 1 - i, self.columns - 1 - j]
         return result
 
-    def __getitem__(
-        self, key: Union[int, slice, tuple[int, int]]
-    ) -> Union[WireVector, Matrix]:
+    def __getitem__(self, key: int | slice | tuple[int, int]) -> WireVector | Matrix:
         """Access elements in the ``Matrix``.
 
         Invoked with square brackets, like ``matrix[...]``.
@@ -373,8 +370,8 @@ class Matrix:
 
     def __setitem__(
         self,
-        key: Union[int, slice, tuple[int, int]],
-        value: Union[WireVectorLike, Matrix],
+        key: int | slice | tuple[int, int],
+        value: WireVectorLike | Matrix,
     ):
         """Mutate the ``Matrix``.
 
@@ -637,7 +634,7 @@ class Matrix:
 
         return result
 
-    def __imul__(self, other: Union[Matrix, WireVector]) -> Matrix:
+    def __imul__(self, other: Matrix | WireVector) -> Matrix:
         """Perform the in-place multiplication operation.
 
         Invoked with ``a *= b``. Performs elementwise or scalar multiplication.
@@ -651,7 +648,7 @@ class Matrix:
         self._bits = new_value._bits
         return self.copy()
 
-    def __mul__(self, other: Union[Matrix, WireVector]) -> Matrix:
+    def __mul__(self, other: Matrix | WireVector) -> Matrix:
         """Perform the elementwise or scalar multiplication operation.
 
         Invoked with ``a * b``.
@@ -802,8 +799,8 @@ class Matrix:
 
     def put(
         self,
-        ind: Union[int, list[int], tuple[int]],
-        v: Union[int, list[int], tuple[int], Matrix],
+        ind: int | list[int] | tuple[int],
+        v: int | list[int] | tuple[int] | Matrix,
         mode: str = "raise",
     ):
         """Replace specified elements of the ``Matrix`` with values ``v``.
@@ -866,7 +863,7 @@ class Matrix:
             col = mat_ix % self.columns
             self[row, col] = get_value(v_ix)
 
-    def reshape(self, *newshape: Union[int, tuple], order: str = "C"):
+    def reshape(self, *newshape: int | tuple, order: str = "C"):
         """Create a ``Matrix`` of the given shape from ``self``.
 
         One shape dimension in ``newshape`` can be ``-1``; in this case, the value for
@@ -993,8 +990,8 @@ def multiply(first, second):
 
 
 def sum(
-    matrix: Union[Matrix, WireVector], axis: int = None, bits: int = None
-) -> Union[Matrix, WireVector]:
+    matrix: Matrix | WireVector, axis: int = None, bits: int = None
+) -> Matrix | WireVector:
     """Returns the sum of values in a ``Matrix`` across ``axis``.
 
     This performs a reduction, summing over the specified ``axis``.
@@ -1066,8 +1063,8 @@ def sum(
 
 
 def min(
-    matrix: Union[Matrix, WireVector], axis: int = None, bits: int = None
-) -> Union[Matrix, WireVector]:
+    matrix: Matrix | WireVector, axis: int = None, bits: int = None
+) -> Matrix | WireVector:
     """Returns the minimum value in a ``Matrix``.
 
     This performs a reduction, taking the minimum over the specified ``axis``.
@@ -1139,8 +1136,8 @@ def min(
 
 
 def max(
-    matrix: Union[Matrix, WireVector], axis: int = None, bits: int = None
-) -> Union[Matrix, WireVector]:
+    matrix: Matrix | WireVector, axis: int = None, bits: int = None
+) -> Matrix | WireVector:
     """Returns the maximum value in a ``Matrix``.
 
     This performs a reduction, taking the maximum over the specified ``axis``.
@@ -1212,8 +1209,8 @@ def max(
 
 
 def argmax(
-    matrix: Union[Matrix, WireVector], axis: int = None, bits: int = None
-) -> Union[Matrix, WireVector]:
+    matrix: Matrix | WireVector, axis: int = None, bits: int = None
+) -> Matrix | WireVector:
     """Returns the index of the max value of the ``Matrix``.
 
     .. note::

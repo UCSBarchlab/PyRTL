@@ -3,6 +3,8 @@ Contains functions to estimate aspects of blocks (like area and delay)
 by either using internal models or by making calls out to external tool chains.
 """
 
+from __future__ import annotations
+
 import collections
 import math
 import os
@@ -11,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Iterable
-from typing import Callable, Union
+from typing import Callable
 
 from pyrtl.core import Block, LogicNet, working_block
 from pyrtl.helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex
@@ -446,8 +448,8 @@ class PathsResult(dict):
 
 
 def paths(
-    src: Union[WireVector, Iterable[WireVector]] = None,
-    dst: Union[WireVector, Iterable[WireVector]] = None,
+    src: WireVector | Iterable[WireVector] = None,
+    dst: WireVector | Iterable[WireVector] = None,
     dst_nets: dict[WireVector, LogicNet] = None,
     block: Block = None,
 ) -> PathsResult:

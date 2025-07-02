@@ -5,7 +5,7 @@ from __future__ import annotations
 import collections
 import numbers
 import random
-from typing import TYPE_CHECKING, NamedTuple, Union
+from typing import TYPE_CHECKING, NamedTuple
 
 from pyrtl.core import Block, _get_debug_mode, _NameIndexer, working_block
 from pyrtl.corecircuits import (
@@ -188,8 +188,8 @@ def log2(integer_val: int) -> int:
 
 
 def truncate(
-    wirevector_or_integer: Union[WireVector, int], bitwidth: int
-) -> Union[WireVector, int]:
+    wirevector_or_integer: WireVector | int, bitwidth: int
+) -> WireVector | int:
     """Returns a :class:`WireVector` or integer truncated to the specified
     ``bitwidth``.
 
@@ -574,9 +574,7 @@ def chop(w: WireVector, *segment_widths: int) -> list[WireVector]:
     return [w[s:e] for s, e in zip(starts, ends)]
 
 
-def input_list(
-    names: Union[str, list[str]], bitwidth: Union[int, list[int]] = None
-) -> list[Input]:
+def input_list(names: str | list[str], bitwidth: int | list[int] = None) -> list[Input]:
     """Allocate and return a list of :class:`Inputs<Input>`.
 
     See :func:`wirevector_list`. Equivalent to::
@@ -597,7 +595,7 @@ def input_list(
 
 
 def output_list(
-    names: Union[str, list[str]], bitwidth: Union[int, list[int]] = None
+    names: str | list[str], bitwidth: int | list[int] = None
 ) -> list[Output]:
     """Allocate and return a list of :class:`Outputs<Output>`.
 
@@ -619,7 +617,7 @@ def output_list(
 
 
 def register_list(
-    names: Union[str, list[str]], bitwidth: Union[int, list[int]] = None
+    names: str | list[str], bitwidth: int | list[int] = None
 ) -> list[Register]:
     """Allocate and return a list of :class:`Registers<Register>`.
 
@@ -641,8 +639,8 @@ def register_list(
 
 
 def wirevector_list(
-    names: Union[str, list[str]],
-    bitwidth: Union[int, list[int]] = None,
+    names: str | list[str],
+    bitwidth: int | list[int] = None,
     wvtype: type[WireVector] = WireVector,
 ) -> list[WireVector]:
     """Allocate and return a list of :class:`WireVectors<WireVector>`.
@@ -893,7 +891,7 @@ class ValueBitwidthTuple(NamedTuple):
 
 
 def infer_val_and_bitwidth(
-    rawinput: Union[int, bool, str], bitwidth: int = None, signed: bool = False
+    rawinput: int | bool | str, bitwidth: int = None, signed: bool = False
 ) -> ValueBitwidthTuple:
     """Return a ``(value, bitwidth)`` :class:`tuple` inferred from the specified input.
 

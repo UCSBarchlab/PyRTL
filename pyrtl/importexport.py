@@ -16,7 +16,7 @@ import re
 import subprocess
 import sys
 import tempfile
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from pyrtl.core import Block, _NameSanitizer, working_block
 from pyrtl.corecircuits import concat_list, rtl_all, rtl_any, select
@@ -734,7 +734,7 @@ def input_from_verilog(
 
 def output_to_verilog(
     dest_file,
-    add_reset: Union[bool, str] = True,
+    add_reset: bool | str = True,
     block: Block = None,
     initialize_registers: bool = False,
 ):
@@ -1070,7 +1070,7 @@ def output_verilog_testbench(
     toplevel_include: str = None,
     vcd: str = "waveform.vcd",
     cmd: str = None,
-    add_reset: Union[bool, str] = True,
+    add_reset: bool | str = True,
     block: Block = None,
 ):
     """Output a Verilog testbench for the block/inputs used in the simulation trace.

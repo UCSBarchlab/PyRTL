@@ -1,7 +1,8 @@
 """Some useful hardware generators (e.g. muxes, signed multipliers, etc.)"""
 
+from __future__ import annotations
+
 import itertools
-from typing import Union
 
 from pyrtl.conditional import otherwise
 from pyrtl.core import Block, LogicNet, working_block
@@ -555,7 +556,7 @@ def signed_ge(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 
 
 def shift_right_arithmetic(
-    bits_to_shift: WireVector, shift_amount: Union[WireVector, int]
+    bits_to_shift: WireVector, shift_amount: WireVector | int
 ) -> WireVector:
     """Arithmetic right shift operation.
 
@@ -601,7 +602,7 @@ def shift_right_arithmetic(
 
 
 def shift_left_logical(
-    bits_to_shift: WireVector, shift_amount: Union[WireVector, int]
+    bits_to_shift: WireVector, shift_amount: WireVector | int
 ) -> WireVector:
     """Logical left shift operation.
 
@@ -651,7 +652,7 @@ shift_left_arithmetic = shift_left_logical
 
 
 def shift_right_logical(
-    bits_to_shift: WireVector, shift_amount: Union[WireVector, int]
+    bits_to_shift: WireVector, shift_amount: WireVector | int
 ) -> WireVector:
     """Logical right shift operation.
 

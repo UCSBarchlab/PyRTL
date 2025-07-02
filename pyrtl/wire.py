@@ -973,7 +973,7 @@ class WireVector:
         working_block().add_net(net)
         return outwire
 
-    def __getitem__(self, item: Union[int, slice]) -> WireVector:
+    def __getitem__(self, item: int | slice) -> WireVector:
         """Returns a ``WireVector`` containing a subset of the wires in ``self``.
 
         There are two ways to retrieve ``WireVector`` subsets:
@@ -1491,7 +1491,7 @@ class Const(WireVector):
 
     def __init__(
         self,
-        val: Union[int, bool, str],
+        val: int | bool | str,
         bitwidth: int = None,
         name: str = "",
         signed: bool = False,

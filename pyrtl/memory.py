@@ -12,10 +12,12 @@ Based on the number of reads and writes a memory will be inferred
 with the correct number of ports to support that
 """
 
+from __future__ import annotations
+
 import collections
 import numbers
 import types
-from typing import NamedTuple, Union
+from typing import NamedTuple
 
 from pyrtl.core import Block, LogicNet, _NameIndexer, working_block
 from pyrtl.corecircuits import as_wires
@@ -302,7 +304,7 @@ class MemBlock:
         return _MemIndexed(mem=self, index=addr)
 
     def __setitem__(
-        self, addr: WireVectorLike, data: Union[EnabledWrite, WireVectorLike]
+        self, addr: WireVectorLike, data: MemBlock.EnabledWrite | WireVectorLike
     ):
         """Create a write port to write data to the ``MemBlock``.
 

@@ -8,7 +8,7 @@ The functions provided write the block as a given visual format to the file.
 from __future__ import annotations
 
 import collections
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Callable
 
 from pyrtl.core import Block, LogicNet, working_block
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
@@ -112,9 +112,7 @@ def _trivialgraph_default_namer(thing, is_edge=True):
 
 def output_to_trivialgraph(
     file,
-    namer: Callable[
-        [Union[WireVector, LogicNet], bool], str
-    ] = _trivialgraph_default_namer,
+    namer: Callable[[WireVector | LogicNet, bool], str] = _trivialgraph_default_namer,
     block: Block = None,
     split_state: bool = False,
 ):
@@ -285,7 +283,7 @@ def _default_node_namer(
 
 
 def _graphviz_default_namer(
-    thing: Union[WireVector, LogicNet],
+    thing: WireVector | LogicNet,
     is_edge: bool,
     is_to_splitmerge: bool,
     split_state: bool,

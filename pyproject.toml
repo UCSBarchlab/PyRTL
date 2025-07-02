@@ -69,6 +69,8 @@ select = [
     "B",
     # flake8-comprehensions
     "C4",
+    # flake8-future-annotations
+    "FA",
     # flake8-simplify
     "SIM",
     # flake8-unused-arguments
@@ -79,10 +81,6 @@ select = [
     "PLE", "PLW", "PLC",
 ]
 ignore = [
-    # Use `X | Y` for type annotations:
-    # We can't enable this because the new syntax was added in Python 3.10, and
-    # we still need to support Python 3.9.
-    "UP007",
     # Use ternary operator:
     # Resulting code is harder to read.
     "SIM108",
