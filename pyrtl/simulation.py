@@ -8,6 +8,7 @@ import numbers
 import os
 import re
 import sys
+import warnings
 from collections.abc import Mapping
 from typing import Callable
 
@@ -182,7 +183,7 @@ class Simulation:
                     "error, one or more of the memories in the map is a RomBlock"
                 )
             if isinstance(self.block, PostSynthBlock):
-                mem = self.block.mem_map[mem]  # pylint: disable=maybe-no-member
+                mem = self.block.mem_map[mem]
             self.memvalue[mem.id] = mem_map
             max_addr_val = 2**mem.addrwidth
             mem_map = {
@@ -1505,8 +1506,6 @@ class TraceStorage(Mapping):
 
     def __getitem__(self, key):
         if isinstance(key, WireVector):
-            import warnings
-
             warnings.warn(
                 "Access to trace by WireVector instead of name is deprecated.",
                 DeprecationWarning,
@@ -1752,7 +1751,7 @@ class SimulationTrace:
         if repr_per_name is None:
             repr_per_name = {}
         if _currently_in_jupyter_notebook():
-            from IPython.display import (  # pylint: disable=import-error
+            from IPython.display import (
                 HTML,
                 Javascript,
                 display,
@@ -1848,8 +1847,6 @@ class SimulationTrace:
         if trace_list is None:
             trace_list = sorted(self.trace, key=_trace_sort_key)
         elif any(isinstance(x, WireVector) for x in trace_list):
-            import warnings
-
             warnings.warn(
                 "Access to trace by WireVector instead of name is deprecated.",
                 DeprecationWarning,

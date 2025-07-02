@@ -48,7 +48,6 @@ def net_graph(block: Block = None, split_state: bool = False):
     """
     # FIXME: make it not try to add unused wires (issue #204)
     block = working_block(block)
-    from pyrtl.wire import Register
 
     # self.sanity_check()
     graph = {}

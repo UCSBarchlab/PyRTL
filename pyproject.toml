@@ -76,7 +76,7 @@ select = [
     # isort
     "I",
     # pylint
-    "PLE", "PLW",
+    "PLE", "PLW", "PLC",
 ]
 ignore = [
     # Use `X | Y` for type annotations:
@@ -96,4 +96,7 @@ ignore = [
     # `for` loop variable ___ overwritten by assignment target:
     # Fixing this introduces more variables, which is harder to read.
     "PLW2901",
+    # `import` should be at the top-level of a file:
+    # PyRTL uses many function-level imports to avoid circular dependencies.
+    "PLC0415",
 ]

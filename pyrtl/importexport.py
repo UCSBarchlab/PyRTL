@@ -407,7 +407,6 @@ def input_from_blif(
         def twire(w):
             return subckt.twire(w)
 
-        # pylint: disable=invalid-unary-operand-type
         netio = command["namesignal_list"]
         if len(command["cover_list"]) == 0:
             output_wire = twire(netio[0])
@@ -1299,12 +1298,12 @@ def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block 
     # FIRRTL only allows 'bits' operations to have two parameters: a high and low
     # index representing the inclusive bounds of a contiguous range. PyRTL uses
     # slice syntax, which aren't always contiguous, so we need to convert them.
-    one_bit_selects(block=block)  # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
+    one_bit_selects(block=block)
 
     # FIRRTL only allows 'concatenate' operations to have two arguments,
     # but PyRTL's 'c' op allows an arbitrary number of wires. We need to convert
     # these n-way concats to series of two-way concats accordingly.
-    two_way_concat(block=block)  # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
+    two_way_concat(block=block)
 
     f = open_file
     # write out all the implicit stuff

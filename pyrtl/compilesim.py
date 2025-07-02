@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import warnings
 from collections.abc import Mapping
 from os import path
 
@@ -164,8 +165,6 @@ class CompiledSimulation:
         if provided_inputs is None:
             provided_inputs = {}
         if inputs is not None:
-            import warnings
-
             warnings.warn(
                 "CompiledSimulation.step: `inputs` was renamed to `provided_inputs`",
                 DeprecationWarning,
@@ -915,9 +914,9 @@ class CompiledSimulation:
         if self._dll is not None:
             handle = self._dll._handle
             if platform.system() == "Windows":
-                _ctypes.FreeLibrary(handle)  # pylint: disable=no-member
+                _ctypes.FreeLibrary(handle)
             else:
-                _ctypes.dlclose(handle)  # pylint: disable=no-member
+                _ctypes.dlclose(handle)
             self._dll = None
         if self._dir is not None:
             shutil.rmtree(self._dir)

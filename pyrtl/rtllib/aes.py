@@ -1,3 +1,5 @@
+import numbers
+
 import pyrtl
 from pyrtl.rtllib import libutils
 
@@ -243,8 +245,6 @@ class AES:
         """
         One-byte left circular rotation, substitution of each byte
         """
-        import numbers
-
         self._build_memories_if_not_exists()
         a = libutils.partition_wire(word, 8)
         sub = [self.sbox[a[index]] for index in (3, 0, 1, 2)]

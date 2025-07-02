@@ -8,6 +8,8 @@ Basic multiplexers are defined in PyRTL's core library, see:
 The functions below provide more complex alternatives.
 """
 
+import numbers
+
 import pyrtl
 from pyrtl import WireVector
 
@@ -63,8 +65,6 @@ def sparse_mux(sel: WireVector, vals: dict[int, WireVector]) -> WireVector:
 
     :return: The :class:`.WireVector` selected from ``vals`` by ``sel``.
     """
-    import numbers
-
     max_val = 2 ** len(sel) - 1
     if SparseDefault in vals:
         default_val = vals[SparseDefault]

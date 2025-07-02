@@ -13,6 +13,7 @@ Included in this file you will find:
 from __future__ import annotations
 
 import collections
+import inspect
 import keyword
 import re
 from typing import TYPE_CHECKING, NamedTuple
@@ -1037,8 +1038,6 @@ def _get_useful_callpoint_name():
     """
     if not _setting_slower_but_more_descriptive_tmps:
         return None
-
-    import inspect
 
     loc = None
     frame_stack = inspect.stack()

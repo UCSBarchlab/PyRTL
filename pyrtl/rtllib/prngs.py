@@ -1,4 +1,9 @@
+import random
+from math import ceil, log
+
 import pyrtl
+from pyrtl import shift_left_logical, shift_right_logical
+from pyrtl.rtllib import adders
 
 
 def prng_lfsr(
@@ -55,8 +60,6 @@ def prng_lfsr(
     # 127 bits is chosen because 127 is a mersenne prime, which makes the period of the
     # LFSR maximized at 2**127 - 1 for any requested bitwidth
     if seed is None:
-        import random
-
         cryptogen = random.SystemRandom()
         seed = cryptogen.randrange(1, 2**127)  # seed itself if no seed signal is given
 
@@ -119,15 +122,7 @@ def prng_xoroshiro128(
              random number has been produced, and ``rand`` is a :class:`.Register`
              containing the random number with the given ``bitwidth``.
     """
-    from math import ceil, log
-
-    from pyrtl import shift_left_logical as sll
-    from pyrtl import shift_right_logical as srl
-    from pyrtl.rtllib import adders
-
     if seed is None:
-        import random
-
         cryptogen = random.SystemRandom()
         seed = cryptogen.randrange(1, 2**128)  # seed itself if no seed signal is given
     seed = pyrtl.as_wires(seed, 128)
@@ -136,8 +131,12 @@ def prng_xoroshiro128(
     output = pyrtl.WireVector(64)
     # update internal states by xoring, rotating, and shifting
     _s1 = s0 ^ s1
-    s0_next = (sll(s0, 55) | srl(s0, 9)) ^ sll(_s1, 14) ^ _s1
-    s1_next = sll(_s1, 36) | srl(_s1, 28)
+    s0_next = (
+        (shift_left_logical(s0, 55) | shift_right_logical(s0, 9))
+        ^ shift_left_logical(_s1, 14)
+        ^ _s1
+    )
+    s1_next = shift_left_logical(_s1, 36) | shift_right_logical(_s1, 28)
     output <<= adders.kogge_stone(s0, s1)
 
     gen_cycles = int(ceil(bitwidth / 64))
@@ -229,13 +228,9 @@ def csprng_trivium(
              ``rand`` is a :class:`.Register` containing the random number with the
              given ``bitwidth``.
     """
-    from math import ceil, log
-
     if (64 // bits_per_cycle) * bits_per_cycle != 64:
         raise pyrtl.PyrtlError("bits_per_cycle is invalid")
     if seed is None:
-        import random
-
         cryptogen = random.SystemRandom()
         seed = cryptogen.randrange(2**160)  # seed itself if no seed signal is given
     seed = pyrtl.as_wires(seed, 160)

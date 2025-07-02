@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import numbers
 import re
+import traceback
 from typing import Union
 
 from pyrtl import core  # needed for _setting_keep_wirevector_call_stack
@@ -312,8 +313,6 @@ class WireVector:
         self._validate_bitwidth(bitwidth)
 
         if core._setting_keep_wirevector_call_stack:
-            import traceback
-
             self.init_call_stack = traceback.format_stack()
 
     @property

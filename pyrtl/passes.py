@@ -243,7 +243,7 @@ class _ProducerList:
     def __init__(self):
         self.dict = {}  # map from wirevector to its direct producer wirevector
 
-    def __getitem__(self, item):  # this is really to make pylint happy
+    def __getitem__(self, item):
         raise PyrtlError("You usually don't want the immediate producer")
 
     def __setitem__(self, key, item):

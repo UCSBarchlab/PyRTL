@@ -13,6 +13,8 @@ with the correct number of ports to support that
 """
 
 import collections
+import numbers
+import types
 from typing import NamedTuple, Union
 
 from pyrtl.core import Block, LogicNet, _NameIndexer, working_block
@@ -481,8 +483,6 @@ class RomBlock(MemBlock):
         :return: A ``WireVector`` containing the data read from the ``RomBlock`` at
                  address ``addr``.
         """
-        import numbers
-
         if isinstance(addr, numbers.Number):
             raise PyrtlError(
                 "There is no point in indexing into a RomBlock with an int. "
@@ -501,8 +501,6 @@ class RomBlock(MemBlock):
             WireVector.
 
         """
-        import types
-
         try:
             if address < 0 or address > 2**self.addrwidth - 1:
                 raise PyrtlError("Invalid address, " + str(address) + " specified")

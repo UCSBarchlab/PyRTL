@@ -1,9 +1,11 @@
 import io
 import random
+import subprocess
 import sys
 import unittest
 
 import pyrtl
+from pyrtl.corecircuits import _basic_add
 from pyrtl.importexport import _VerilogSanitizer
 from pyrtl.rtllib import testingutils as utils
 
@@ -1601,8 +1603,6 @@ class TestVerilogOutput(unittest.TestCase):
         pyrtl.memory._reset_memory_indexer()
 
     def test_romblock_does_not_throw_error(self):
-        from pyrtl.corecircuits import _basic_add
-
         a = pyrtl.Input(bitwidth=3, name="a")
         b = pyrtl.Input(bitwidth=3, name="b")
         o = pyrtl.Output(bitwidth=3, name="o")
@@ -1764,8 +1764,6 @@ endmodule
 
 class TestVerilogInput(unittest.TestCase):
     def setUp(self):
-        import subprocess
-
         try:
             _ = subprocess.check_output(["yosys", "-V"])
         except OSError as exc:

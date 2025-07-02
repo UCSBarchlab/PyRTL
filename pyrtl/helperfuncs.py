@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import numbers
+import random
 from typing import TYPE_CHECKING, NamedTuple, Union
 
 from pyrtl.core import Block, _get_debug_mode, _NameIndexer, working_block
@@ -495,8 +496,8 @@ def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
         else:
             bitlist.append(str(fmap[c] & 0x1))  # append lsb of the field
             fmap[c] = fmap[c] >> 1  # and bit shift by one position
-    for f in fmap:
-        if fmap[f] not in [0, -1]:
+    for f, intfield in fmap.items():
+        if intfield not in [0, -1]:
             raise PyrtlError(f"too many bits given to value to fit in field {f}")
     if len(bitpattern) != len(bitlist):
         raise PyrtlInternalError("resulting values have different bitwidths")
@@ -1120,7 +1121,6 @@ def find_loop(block=None):
     if not result:
         return
     wires_left, logic_left = result
-    import random
 
     class _FilteringState:
         def __init__(self, dst_w):
@@ -1210,7 +1210,7 @@ def _currently_in_jupyter_notebook():
 
 def _print_netlist_latex(netlist):
     """Print each net in netlist in a Latex array"""
-    from IPython.display import Latex, display  # pylint: disable=import-error
+    from IPython.display import Latex, display
 
     out = "\n\\begin{array}{ \\| c \\| c \\| l \\| }\n"
     out += "\n\\hline\n"

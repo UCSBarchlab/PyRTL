@@ -7,6 +7,7 @@ Basic integer multiplication is defined in PyRTL's core library, see:
 The functions below provide more complex alternatives.
 """
 
+import math
 from typing import Callable
 
 import pyrtl
@@ -290,8 +291,6 @@ def generalized_fma(
     for wire in add_wires:
         for bit_loc, bit in enumerate(wire):
             bits[bit_loc].append(bit)
-
-    import math
 
     result_bitwidth = longest_wire_len + int(
         math.ceil(math.log(len(add_wires) + len(mult_pairs), 2))

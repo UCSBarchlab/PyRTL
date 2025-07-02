@@ -9,6 +9,7 @@ The functions below provide more complex alternatives.
 """
 
 import itertools
+import math
 from typing import Callable
 
 import pyrtl
@@ -332,8 +333,6 @@ def fast_group_adder(
 
     :return: A :class:`.WireVector` with the result of the addition.
     """
-    import math
-
     longest_wire_len = max(len(w) for w in wires_to_add)
     result_bitwidth = longest_wire_len + int(math.ceil(math.log(len(wires_to_add), 2)))
 

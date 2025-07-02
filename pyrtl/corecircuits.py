@@ -891,8 +891,6 @@ def bitfield_update(
 
     :return: ``w`` with some of the bits overwritten by ``newvalue``.
     """
-    from pyrtl.corecircuits import concat_list
-
     w = as_wires(w)
     idxs = list(
         range(len(w))
@@ -964,9 +962,7 @@ def bitfield_update_set(
     # keep a list of bits that are updated to find overlaps
     setlist = [False] * len(w)
     # call bitfield for each one
-    for range in update_set:
-        range_start, range_end = range
-        new_value = update_set[range]
+    for (range_start, range_end), new_value in update_set.items():
         # check for overlaps
         setbits = setlist[range_start:range_end]
         if any(setbits):

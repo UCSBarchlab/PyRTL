@@ -1,10 +1,13 @@
 import doctest
 import functools
 import io
+import operator
 import os
 import random
 import sys
 import unittest
+from collections import namedtuple
+from functools import reduce
 
 import pyrtl
 from pyrtl.rtllib import testingutils as utils
@@ -636,9 +639,6 @@ class TestBitField_Update_Set(unittest.TestCase):
     def bitfield_update_set_checker(
         self, input_width, update_set_constraints, test_amt=20
     ):
-        from collections import namedtuple
-        from functools import reduce
-
         Update_Info = namedtuple(
             "Update_Info", ["range_start", "range_end", "update_wire", "update_vals"]
         )
@@ -748,8 +748,6 @@ class TestTreeReduce(unittest.TestCase):
         )
         outwire = pyrtl.Output(name="test")
 
-        import operator
-
         outwire <<= pyrtl.tree_reduce(operator.xor, wires)
 
         out_vals = utils.sim_and_ret_out(outwire, wires, vals)
@@ -758,8 +756,6 @@ class TestTreeReduce(unittest.TestCase):
 
     def test_empty(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            import operator
-
             pyrtl.tree_reduce(operator.add, [])
 
 
