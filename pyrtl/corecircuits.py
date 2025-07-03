@@ -987,21 +987,40 @@ def enum_mux(
 ) -> WireVector:
     """Build a mux for the control signals specified by an :class:`enum.IntEnum`.
 
-    .. WARNING::
+    .. note::
 
-        Use :ref:`conditional_assignment` instead.
+        Consider using :ref:`conditional_assignment` instead.
 
-    Examples::
+    .. doctest only::
 
-        from enum import IntEnum
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
 
-        class Command(IntEnum):
-            ADD = 1
-            SUB = 2
-        enum_mux(cntrl, {Command.ADD: a + b, Command.SUB: a - b})
-        enum_mux(cntrl, {Command.ADD: a + b}, strict=False)  # SUB case undefined
-        enum_mux(cntrl, {Command.ADD: a + b, otherwise: a - b})
-        enum_mux(cntrl, {Command.ADD: a + b}, default=a - b)
+    Example::
+
+        >>> from enum import IntEnum
+        >>> class Command(IntEnum):
+        ...     ADD = 0
+        ...     SUB = 1
+
+        >>> command = pyrtl.Input(name="command", bitwidth=1)
+        >>> a = pyrtl.Input(name="a", bitwidth=4)
+        >>> b = pyrtl.Input(name="b", bitwidth=4)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.enum_mux(cntrl=command, table={
+        ...     Command.ADD: a + b,
+        ...     Command.SUB: a - b,
+        ... })
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"command": Command.ADD, "a": 1, "b": 2})
+        >>> sim.inspect("output")
+        3
+
+        >>> sim.step(provided_inputs={"command": Command.SUB, "a": 5, "b": 3})
+        >>> sim.inspect("output")
+        2
 
     :param cntrl: Control for the mux.
     :param table: Maps :class:`enum.IntEnum` values to :class:`WireVector`.

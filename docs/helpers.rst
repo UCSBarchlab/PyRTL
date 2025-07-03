@@ -38,6 +38,7 @@ Control Flow Hardware
 
 .. autofunction:: pyrtl.mux
 .. autofunction:: pyrtl.select
+.. autofunction:: pyrtl.enum_mux
 .. autoclass:: pyrtl.helperfuncs.MatchedFields
     :members:
     :undoc-members:
