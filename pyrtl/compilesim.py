@@ -105,8 +105,8 @@ class CompiledSimulation:
     def __init__(
         self,
         tracer: SimulationTrace = True,
-        register_value_map: dict[Register, int] = None,
-        memory_value_map: dict[MemBlock, dict[int, int]] = None,
+        register_value_map: dict[Register, int] | None = None,
+        memory_value_map: dict[MemBlock, dict[int, int]] | None = None,
         default_value: int = 0,
         block: Block = None,
     ):
@@ -161,7 +161,7 @@ class CompiledSimulation:
         msg = "CompiledSimulation does not support inspecting internal WireVectors"
         raise PyrtlError(msg)
 
-    def step(self, provided_inputs: dict[str, int] = None, inputs=None):
+    def step(self, provided_inputs: dict[str, int] | None = None, inputs=None):
         if provided_inputs is None:
             provided_inputs = {}
         if inputs is not None:
@@ -175,9 +175,9 @@ class CompiledSimulation:
 
     def step_multiple(
         self,
-        provided_inputs: dict[str, list[int]] = None,
-        expected_outputs: dict[str, int] = None,
-        nsteps: int = None,
+        provided_inputs: dict[str, list[int]] | None = None,
+        expected_outputs: dict[str, int] | None = None,
+        nsteps: int | None = None,
         file=sys.stdout,
         stop_after_first_error: bool = False,
     ):

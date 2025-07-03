@@ -397,7 +397,7 @@ class TestDistance(unittest.TestCase):
 
             distances = pyrtl.distance(a, o, lambda _: 1, b)
             self.assertEqual(len(distances), 1)
-            self.assertEqual(list(distances.values())[0], 2)
+            self.assertEqual(next(iter(distances.values())), 2)
 
     def test_several_distances(self):
         a = pyrtl.Input(4, "a")
@@ -427,7 +427,7 @@ class TestDistance(unittest.TestCase):
 
         distances = pyrtl.distance(a, o, cost)
         self.assertEqual(len(distances), 1)
-        self.assertEqual(list(distances.values())[0], 5)
+        self.assertEqual(next(iter(distances.values())), 5)
 
 
 class TestFanout(unittest.TestCase):

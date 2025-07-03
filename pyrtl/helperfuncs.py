@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 probeIndexer = _NameIndexer("Probe-")
 
 
-def probe(w: WireVector, name: str = None) -> WireVector:
+def probe(w: WireVector, name: str | None = None) -> WireVector:
     """Print useful information about a :class:`WireVector` in debug mode.
 
     ``probe`` can be inserted into a existing design easily because it returns the
@@ -272,7 +272,7 @@ class MatchedFields(NamedTuple):
 
 
 def match_bitpattern(
-    w: WireVector, bitpattern: str, field_map: dict[str, str] = None
+    w: WireVector, bitpattern: str, field_map: dict[str, str] | None = None
 ) -> MatchedFields:
     """Returns a single-bit :class:`WireVector` that is ``1`` if and only if ``w``
     matches the ``bitpattern``, and a tuple containing the matched fields, if any.
@@ -587,7 +587,9 @@ def chop(w: WireVector, *segment_widths: int) -> list[WireVector]:
     return [w[s:e] for s, e in zip(starts, ends)]
 
 
-def input_list(names: str | list[str], bitwidth: int | list[int] = None) -> list[Input]:
+def input_list(
+    names: str | list[str], bitwidth: int | list[int] | None = None
+) -> list[Input]:
     """Allocate and return a list of :class:`Inputs<Input>`.
 
     See :func:`wirevector_list`. Equivalent to::
@@ -608,7 +610,7 @@ def input_list(names: str | list[str], bitwidth: int | list[int] = None) -> list
 
 
 def output_list(
-    names: str | list[str], bitwidth: int | list[int] = None
+    names: str | list[str], bitwidth: int | list[int] | None = None
 ) -> list[Output]:
     """Allocate and return a list of :class:`Outputs<Output>`.
 
@@ -630,7 +632,7 @@ def output_list(
 
 
 def register_list(
-    names: str | list[str], bitwidth: int | list[int] = None
+    names: str | list[str], bitwidth: int | list[int] | None = None
 ) -> list[Register]:
     """Allocate and return a list of :class:`Registers<Register>`.
 
@@ -653,7 +655,7 @@ def register_list(
 
 def wirevector_list(
     names: str | list[str],
-    bitwidth: int | list[int] = None,
+    bitwidth: int | list[int] | None = None,
     wvtype: type[WireVector] = WireVector,
 ) -> list[WireVector]:
     """Allocate and return a list of :class:`WireVectors<WireVector>`.
@@ -908,7 +910,7 @@ class ValueBitwidthTuple(NamedTuple):
 
 
 def infer_val_and_bitwidth(
-    rawinput: int | bool | str, bitwidth: int = None, signed: bool = False
+    rawinput: int | bool | str, bitwidth: int | None = None, signed: bool = False
 ) -> ValueBitwidthTuple:
     """Return a ``(value, bitwidth)`` :class:`tuple` inferred from the specified input.
 
@@ -967,7 +969,7 @@ def infer_val_and_bitwidth(
 
 
 def _convert_bool(
-    bool_val: bool, bitwidth: int = None, signed: bool = False
+    bool_val: bool, bitwidth: int | None = None, signed: bool = False
 ) -> ValueBitwidthTuple:
     if signed:
         msg = "error, booleans cannot be signed (convert to int first)"
@@ -982,7 +984,7 @@ def _convert_bool(
 
 
 def _convert_int(
-    val: numbers.Integral, bitwidth: int = None, signed: bool = False
+    val: numbers.Integral, bitwidth: int | None = None, signed: bool = False
 ) -> ValueBitwidthTuple:
     # Convert val from numbers.Integral to int. This avoids issues with
     # limited-precision types like numpy.int32.
@@ -1026,7 +1028,7 @@ def _convert_int(
 
 
 def _convert_verilog_str(
-    val: str, bitwidth: int = None, signed: bool = False
+    val: str, bitwidth: int | None = None, signed: bool = False
 ) -> ValueBitwidthTuple:
     if signed:
         msg = 'error, "signed" option with Verilog-style string constants not supported'
@@ -1981,7 +1983,7 @@ def wire_matrix(component_schema, size: int):
             block: Block = None,
             concatenated_type=WireVector,
             component_type=WireVector,
-            values: list = None,
+            values: list | None = None,
         ):
             # The concatenated WireVector contains all the _WireMatrix's wires.
             # WrappedWireVector (base class) will forward all attribute and
@@ -2144,7 +2146,7 @@ def one_hot_to_binary(w: WireVectorLike) -> WireVector:
 
 
 def binary_to_one_hot(
-    bit_position: WireVectorLike, max_bitwidth: int = None
+    bit_position: WireVectorLike, max_bitwidth: int | None = None
 ) -> WireVector:
     """Given a ``bit_position``, return a :class:`WireVector` with only that bit set to
     ``1``.

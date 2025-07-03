@@ -750,7 +750,7 @@ def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]
 
 def as_wires(
     val: WireVectorLike,
-    bitwidth: int = None,
+    bitwidth: int | None = None,
     truncating: bool = True,
     block: Block = None,
 ) -> WireVector:
@@ -817,7 +817,7 @@ def as_wires(
     if not isinstance(val, WireVector):
         msg = (
             "error, expecting a wirevector, int, or Verilog-style const string got "
-            f"{repr(val)} instead"
+            f"{val} instead"
         )
         raise PyrtlError(msg)
     if bitwidth == "0":
@@ -1020,7 +1020,7 @@ def enum_mux(
     if len(keytypeset) != 1:
         msg = f"table mixes multiple types {keytypeset} as keys"
         raise PyrtlError(msg)
-    keytype = list(keytypeset)[0]
+    keytype = next(iter(keytypeset))
     # check that dictionary is complete for the enum
     try:
         enumkeys = list(keytype.__members__.values())

@@ -87,6 +87,8 @@ select = [
     "PLE", "PLW", "PLC",
     # refurb
     "FURB",
+    # ruff-specific checks
+    "RUF"
 ]
 ignore = [
     # Use ternary operator:
@@ -105,4 +107,8 @@ ignore = [
     # `import` should be at the top-level of a file:
     # PyRTL uses many function-level imports to avoid circular dependencies.
     "PLC0415",
+    # String/docstring/comment contains ambiguous <unicode>
+    "RUF001", "RUF002", "RUF003",
+    # `__all__` is not sorted
+    "RUF022",
 ]

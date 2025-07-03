@@ -351,8 +351,6 @@ class MemIndexedTests(unittest.TestCase):
 
 
 class RTLRomBlockWiring(unittest.TestCase):
-    data = list(range(2**5))
-
     def setUp(self):
         pyrtl.reset_working_block()
         self.bitwidth = 3
@@ -360,6 +358,7 @@ class RTLRomBlockWiring(unittest.TestCase):
         self.output1 = pyrtl.Output(self.bitwidth, "output1")
         self.in1 = pyrtl.Input(self.addrwidth, name="mem_write_address")
         self.in2 = pyrtl.Input(self.addrwidth, name="mem_write_address")
+        self.data = list(range(2**5))
         self.memory = pyrtl.RomBlock(
             bitwidth=self.bitwidth,
             addrwidth=self.addrwidth,

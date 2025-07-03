@@ -416,7 +416,7 @@ class TestAsGraph(unittest.TestCase):
                 if has_virtual:
                     self.assertIs(wire, net)
                 else:
-                    self.fail(f"Input or Const, {str(wire)} should not have a src")
+                    self.fail(f"Input or Const, {wire} should not have a src")
             else:
                 self.assertTrue(any(wire is w for w in net.dests))
 
@@ -426,7 +426,7 @@ class TestAsGraph(unittest.TestCase):
                     self.assertEqual(len(nets), 1)
                     self.assertIs(wire, nets[0])
                 else:
-                    self.fail(f"Output, {str(wire)} should not have a dst")
+                    self.fail(f"Output, {wire} should not have a dst")
             else:
                 for net in nets:
                     self.assertTrue(any(wire is w for w in net.args))

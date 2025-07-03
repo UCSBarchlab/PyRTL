@@ -76,10 +76,10 @@ def sparse_mux(sel: WireVector, vals: dict[int, WireVector]) -> WireVector:
 
     for key in vals:
         if not isinstance(key, numbers.Integral):
-            msg = f"value {str(key)} nust be either an integer or 'default'"
+            msg = f"value {key} must be either an integer or 'default'"
             raise pyrtl.PyrtlError(msg)
         if key < 0 or key > max_val:
-            msg = f"value {str(key)} is out of range of the sel wire"
+            msg = f"value {key} is out of range of the sel wire"
             raise pyrtl.PyrtlError(msg)
 
     return _sparse_mux(sel, vals)
@@ -179,7 +179,7 @@ class MultiSelector:
         self._check_finalized()
         instr, ib = pyrtl.infer_val_and_bitwidth(select_val, self.signal_wire.bitwidth)
         if instr in self.instructions:
-            msg = f"instruction {str(select_val)} already exists"
+            msg = f"instruction {select_val} already exists"
             raise pyrtl.PyrtlError(msg)
         self.instructions.append(instr)
         self._add_signal(data_signals)

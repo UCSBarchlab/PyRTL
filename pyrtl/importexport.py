@@ -112,7 +112,7 @@ def input_from_blif(
     block: Block = None,
     merge_io_vectors: bool = True,
     clock_name: str = "clk",
-    top_model: str = None,
+    top_model: str | None = None,
 ):
     """Read an open BLIF file or string as input, updating the block appropriately.
 
@@ -528,10 +528,10 @@ def input_from_blif(
                 "$_DFFSR_PPP": lambda: select(reset, 0, select(set, 1, data)),
                 "$_DFFSRE_PPPN_": lambda: select(
                     reset, 0, select(set, 1, select(~enable, data, prev))
-                ),  # noqa
+                ),
                 "$_DFFSRE_PPPP_": lambda: select(
                     reset, 0, select(set, 1, select(enable, data, prev))
-                ),  # noqa
+                ),
                 "$_SDFF_PN0_": lambda: select(~reset, 0, data),
                 "$_SDFF_PN1_": lambda: select(~reset, 1, data),
                 "$_SDFF_PP0_": lambda: select(reset, 0, data),
@@ -637,8 +637,8 @@ def input_from_blif(
 def input_from_verilog(
     verilog,
     clock_name: str = "clk",
-    toplevel: str = None,
-    leave_in_dir: bool = None,
+    toplevel: str | None = None,
+    leave_in_dir: bool | None = None,
     block: Block = None,
 ):
     """Read an open Verilog file or string as input via `Yosys
@@ -860,7 +860,7 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
     inputs, outputs, registers, wires, memories = _verilog_block_parts(block)
 
     # module name
-    io_list = ["clk"] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
+    io_list = ["clk", *name_list(name_sorted(inputs)), *name_list(name_sorted(outputs))]
     if add_reset:
         io_list.insert(1, "rst")
     if any(w.startswith("tmp") for w in io_list):
@@ -971,7 +971,7 @@ def _to_verilog_combinational(file, block, varname):
             # someone please check if we need this special handling for scalars
             catlist = ", ".join(
                 [
-                    varname(net.args[0]) + f"[{str(i)}]"
+                    varname(net.args[0]) + f"[{i}]"
                     if len(net.args[0]) > 1
                     else varname(net.args[0])
                     for i in reversed(net.op_param)
@@ -1070,9 +1070,9 @@ def _to_verilog_footer(file):
 def output_verilog_testbench(
     dest_file,
     simulation_trace: SimulationTrace = None,
-    toplevel_include: str = None,
+    toplevel_include: str | None = None,
     vcd: str = "waveform.vcd",
-    cmd: str = None,
+    cmd: str | None = None,
     add_reset: bool | str = True,
     block: Block = None,
 ):
@@ -1217,7 +1217,7 @@ def output_verilog_testbench(
         print("    integer tb_iter;", file=dest_file)
 
     # Instantiate logic block
-    io_list = ["clk"] + name_list(name_sorted(inputs)) + name_list(name_sorted(outputs))
+    io_list = ["clk", *name_list(name_sorted(inputs)), *name_list(name_sorted(outputs))]
     if add_reset:
         io_list.insert(1, "rst")
     io_list_str = [f".{w:s}({w:s})" for w in io_list]
@@ -1286,7 +1286,9 @@ def output_verilog_testbench(
 #
 
 
-def output_to_firrtl(open_file, rom_blocks: list[RomBlock] = None, block: Block = None):
+def output_to_firrtl(
+    open_file, rom_blocks: list[RomBlock] | None = None, block: Block = None
+):
     """Output the block as FIRRTL code to the output file.
 
     If ROM is initialized in PyRTL code, you can pass in the :class:`RomBlocks` as a

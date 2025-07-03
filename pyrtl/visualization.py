@@ -105,7 +105,7 @@ def _trivialgraph_default_namer(thing, is_edge=True):
     try:
         return thing.op + str(thing.op_param or "")
     except AttributeError as exc:
-        msg = f'no naming rule for "{str(thing)}"'
+        msg = f'no naming rule for "{thing}"'
         raise PyrtlError(msg) from exc
 
 
@@ -157,7 +157,7 @@ def output_to_trivialgraph(
 def _default_edge_namer(
     edge: WireVector,
     is_to_splitmerge: bool = False,
-    extra_edge_info: dict[WireVector, str] = None,
+    extra_edge_info: dict[WireVector, str] | None = None,
 ):
     """
     A function for naming an edge for use in the ``graphviz`` graph.
@@ -190,7 +190,7 @@ def _default_edge_namer(
 def _default_node_namer(
     node: WireVector,
     split_state: bool = False,
-    extra_node_info: dict[WireVector, str] = None,
+    extra_node_info: dict[WireVector, str] | None = None,
 ):
     """
     A function for naming a node for use in the ``graphviz`` graph.
@@ -272,7 +272,7 @@ def _default_node_namer(
             return f'[label="{label(node.op + name)}"]'
         return '[label="{}"]'.format(label(node.op + str(node.op_param or "")))
     except AttributeError as exc:
-        msg = f'no naming rule for "{str(node)}"'
+        msg = f'no naming rule for "{node}"'
         raise PyrtlError(msg) from exc
 
 
@@ -306,7 +306,9 @@ def _graphviz_default_namer(
     return node_namer(thing, split_state=split_state)
 
 
-def graphviz_detailed_namer(extra_node_info: dict = None, extra_edge_info: dict = None):
+def graphviz_detailed_namer(
+    extra_node_info: dict | None = None, extra_edge_info: dict | None = None
+):
     """Returns a detailed Graphviz namer that prints extra information about nodes/edges
     in the given maps.
 
@@ -556,10 +558,10 @@ def block_to_svg(
 
 def trace_to_html(
     simtrace: SimulationTrace,
-    trace_list: list[str] = None,
+    trace_list: list[str] | None = None,
     sortkey=None,
     repr_func: Callable[[int], str] = hex,
-    repr_per_name: dict[str, Callable[[int], str]] = None,
+    repr_per_name: dict[str, Callable[[int], str]] | None = None,
 ) -> str:
     """Return a HTML block showing the trace.
 

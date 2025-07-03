@@ -324,8 +324,8 @@ class TestMultiSelectorSim(unittest.TestCase):
             for i in range(4):
                 mu.option(i, x1s[i], x2s[i], x3s[i])
 
-        wires = [sel] + x1s + x2s + x3s
-        vals = [sel_vals] + x1_vals + x2_vals + x3_vals
+        wires = [sel, *x1s, *x2s, *x3s]
+        vals = [sel_vals, *x1_vals, *x2_vals, *x3_vals]
         actual_outputs = utils.sim_and_ret_outws(wires, vals)
 
         expected_i1_out = [v[s] for s, v in zip(sel_vals, zip(*x1_vals))]

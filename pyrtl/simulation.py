@@ -78,27 +78,11 @@ class Simulation:
     See :class:`SimulationTrace` for more display options.
     """
 
-    simple_func = {  # OPS
-        "w": lambda x: x,
-        "~": lambda x: ~int(x),
-        "&": lambda left, right: left & right,
-        "|": lambda left, right: left | right,
-        "^": lambda left, right: left ^ right,
-        "n": lambda left, right: ~(left & right),
-        "+": lambda left, right: left + right,
-        "-": lambda left, right: left - right,
-        "*": lambda left, right: left * right,
-        "<": lambda left, right: int(left < right),
-        ">": lambda left, right: int(left > right),
-        "=": lambda left, right: int(left == right),
-        "x": lambda sel, f, t: f if (sel == 0) else t,
-    }
-
     def __init__(
         self,
         tracer: SimulationTrace = True,
-        register_value_map: dict[Register, int] = None,
-        memory_value_map: dict[MemBlock, dict[int, int]] = None,
+        register_value_map: dict[Register, int] | None = None,
+        memory_value_map: dict[MemBlock, dict[int, int]] | None = None,
         default_value: int = 0,
         block: Block = None,
     ):
@@ -191,7 +175,7 @@ class Simulation:
             }
             for addr, _val in mem_map.items():
                 if addr < 0 or addr >= max_addr_val:
-                    msg = f"error, address {str(addr)} in {mem.name} outside of bounds"
+                    msg = f"error, address {addr} in {mem.name} outside of bounds"
                     raise PyrtlError(msg)
 
         # set all other variables to default value
@@ -208,7 +192,7 @@ class Simulation:
                 self.default_value, self.regvalue.copy(), copy.deepcopy(self.memvalue)
             )
 
-    def step(self, provided_inputs: dict[str, int] = None):
+    def step(self, provided_inputs: dict[str, int] | None = None):
         """Take the simulation forward one cycle.
 
         ``step`` causes the :class:`Block` to be updated as follows, in order:
@@ -297,9 +281,9 @@ class Simulation:
 
     def step_multiple(
         self,
-        provided_inputs: dict[str, list[int]] = None,
-        expected_outputs: dict[str, list[int]] = None,
-        nsteps: int = None,
+        provided_inputs: dict[str, list[int]] | None = None,
+        expected_outputs: dict[str, list[int]] | None = None,
+        nsteps: int | None = None,
         file=sys.stdout,
         stop_after_first_error: bool = False,
     ):
@@ -521,11 +505,27 @@ class Simulation:
         This function, along with edge_update, defined the semantics
         of the primitive ops. Function updates self.value accordingly.
         """
+        simple_func = {  # OPS
+            "w": lambda x: x,
+            "~": lambda x: ~int(x),
+            "&": lambda left, right: left & right,
+            "|": lambda left, right: left | right,
+            "^": lambda left, right: left ^ right,
+            "n": lambda left, right: ~(left & right),
+            "+": lambda left, right: left + right,
+            "-": lambda left, right: left - right,
+            "*": lambda left, right: left * right,
+            "<": lambda left, right: int(left < right),
+            ">": lambda left, right: int(left > right),
+            "=": lambda left, right: int(left == right),
+            "x": lambda sel, f, t: f if (sel == 0) else t,
+        }
+
         if net.op in "r@":
             return  # registers and memory write ports have no logic function
-        if net.op in self.simple_func:
+        if net.op in simple_func:
             argvals = (self.value[arg] for arg in net.args)
-            result = self.simple_func[net.op](*argvals)
+            result = simple_func[net.op](*argvals)
         elif net.op == "c":
             result = 0
             for arg in net.args:
@@ -600,12 +600,12 @@ class FastSimulation:
 
     def __init__(
         self,
-        register_value_map: dict[Register, int] = None,
-        memory_value_map: dict[MemBlock, dict[int, int]] = None,
+        register_value_map: dict[Register, int] | None = None,
+        memory_value_map: dict[MemBlock, dict[int, int]] | None = None,
         default_value: int = 0,
         tracer: SimulationTrace = True,
         block: Block = None,
-        code_file: str = None,
+        code_file: str | None = None,
     ):
         """
         The interfaces for ``FastSimulation`` and :class:`Simulation` are nearly
@@ -694,7 +694,7 @@ class FastSimulation:
                 else:
                     self.mems[self._mem_varname(mem)] = {}
 
-    def step(self, provided_inputs: dict[str, int] = None):
+    def step(self, provided_inputs: dict[str, int] | None = None):
         # Validate and collect simulation inputs.
         if provided_inputs is None:
             provided_inputs = {}
@@ -728,9 +728,9 @@ class FastSimulation:
 
     def step_multiple(
         self,
-        provided_inputs: dict[str, list[int]] = None,
-        expected_outputs: dict[str, list[int]] = None,
-        nsteps: int = None,
+        provided_inputs: dict[str, list[int]] | None = None,
+        expected_outputs: dict[str, list[int]] | None = None,
+        nsteps: int | None = None,
         file=sys.stdout,
         stop_after_first_error: bool = False,
     ):
@@ -866,27 +866,6 @@ class FastSimulation:
             return "regs[" + repr(wire.name) + "]"
         return self._varname(wire)
 
-    # bitwidth that the dest has to have in order to not need masking.
-    _no_mask_bitwidth = {
-        "w": lambda net: len(net.args[0]),
-        "r": lambda net: len(net.args[0]),
-        "~": lambda _net: -1,  # bitflips always need masking
-        "&": lambda net: len(net.args[0]),
-        "|": lambda net: len(net.args[0]),
-        "^": lambda net: len(net.args[0]),
-        "n": lambda _net: -1,  # bitflips always need masking
-        "+": lambda net: len(net.args[0]) + 1,
-        "-": lambda _net: -1,  # need to handle negative numbers correctly
-        "*": lambda net: len(net.args[0]) + len(net.args[1]),
-        "<": lambda _net: 1,
-        ">": lambda _net: 1,
-        "=": lambda _net: 1,
-        "x": lambda net: len(net.args[1]),
-        "c": lambda net: sum(len(a) for a in net.args),
-        "s": lambda net: len(net.op_param),
-        "m": lambda _net: -1,  # just not going to optimize this right now
-    }
-
     # Yeah, triple quotes don't respect indentation (aka the 4 spaces on the
     # start of each line is part of the string)
     _prog_start = """def sim_func(d):
@@ -897,6 +876,27 @@ class FastSimulation:
     def _compiled(self):
         """Return a string of the self.block compiled to a block of
         code that can be executed to get a function to execute"""
+        # bitwidth that the dest has to have in order to not need masking.
+        no_mask_bitwidth = {
+            "w": lambda net: len(net.args[0]),
+            "r": lambda net: len(net.args[0]),
+            "~": lambda _net: -1,  # bitflips always need masking
+            "&": lambda net: len(net.args[0]),
+            "|": lambda net: len(net.args[0]),
+            "^": lambda net: len(net.args[0]),
+            "n": lambda _net: -1,  # bitflips always need masking
+            "+": lambda net: len(net.args[0]) + 1,
+            "-": lambda _net: -1,  # need to handle negative numbers correctly
+            "*": lambda net: len(net.args[0]) + len(net.args[1]),
+            "<": lambda _net: 1,
+            ">": lambda _net: 1,
+            "=": lambda _net: 1,
+            "x": lambda net: len(net.args[1]),
+            "c": lambda net: sum(len(a) for a in net.args),
+            "s": lambda net: len(net.op_param),
+            "m": lambda _net: -1,  # just not going to optimize this right now
+        }
+
         # Dev Notes:
         # Because of fast locals in functions in both CPython and PyPy, getting a
         # function to execute makes the code a few times faster than
@@ -999,7 +999,7 @@ class FastSimulation:
 
             # prog.append('    #  ' + str(net))
             result = self._dest_varname(net.dests[0])
-            if len(net.dests[0]) == self._no_mask_bitwidth[net.op](net):
+            if len(net.dests[0]) == no_mask_bitwidth[net.op](net):
                 prog.append(f"    {result} = {expr}")
             else:
                 mask = str(net.dests[0].bitmask)
@@ -1544,7 +1544,9 @@ class SimulationTrace:
     values in each cycle.
     """
 
-    def __init__(self, wires_to_track: list[WireVector] = None, block: Block = None):
+    def __init__(
+        self, wires_to_track: list[WireVector] | None = None, block: Block = None
+    ):
         """
         Creates a new Simulation Trace
 
@@ -1728,12 +1730,12 @@ class SimulationTrace:
 
     def render_trace(
         self,
-        trace_list: list[str] = None,
+        trace_list: list[str] | None = None,
         file=sys.stdout,
         renderer: WaveRenderer = _default_renderer,
-        symbol_len: int = None,
+        symbol_len: int | None = None,
         repr_func: Callable[[int], str] = hex,
-        repr_per_name: dict[str, Callable[[int], str]] = None,
+        repr_per_name: dict[str, Callable[[int], str]] | None = None,
         segment_size: int = 1,
     ):
         """Render the trace to a file using unicode and ASCII escape sequences.

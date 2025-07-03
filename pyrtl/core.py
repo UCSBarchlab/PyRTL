@@ -186,7 +186,7 @@ class LogicNet(NamedTuple):
                     f"{name}[{addr}] & \\leftarrow @ \\, - & "
                     f"{data} we={we} ({extrainfo}) \\\\"
                 )
-            msg = f'error, unknown op "{str(self.op)}"'
+            msg = f'error, unknown op "{self.op}"'
             raise PyrtlInternalError(msg)
 
         # not in ipython
@@ -200,7 +200,7 @@ class LogicNet(NamedTuple):
                 return f"{lhs} <-- m --  {memblock.name}[{rhs}]({extrainfo})"
             addr, data, we = (str(x) for x in self.args)
             return f"{memblock.name}[{addr}] <-- @ -- {data} we={we} ({extrainfo})"
-        msg = f'error, unknown op "{str(self.op)}"'
+        msg = f'error, unknown op "{self.op}"'
         raise PyrtlInternalError(msg)
 
     def __hash__(self):
@@ -461,7 +461,7 @@ class Block:
         return None
 
     def wirevector_subset(
-        self, cls: tuple[type] = None, exclude: tuple[type] = ()
+        self, cls: tuple[type] | None = None, exclude: tuple[type] = ()
     ) -> set[WireVector]:
         """Return a subset of the ``Block's`` :class:`WireVectors<WireVector>`.
 
@@ -512,7 +512,7 @@ class Block:
             return set(initial_set)
         return {x for x in initial_set if not isinstance(x, exclude)}
 
-    def logic_subset(self, op: tuple[str] = None) -> set[LogicNet]:
+    def logic_subset(self, op: tuple[str] | None = None) -> set[LogicNet]:
         """Return a subset of the ``Block's`` :class:`LogicNets<LogicNet>`.
 
         Filters :class:`LogicNets<LogicNet>` by their :attr:`~LogicNet.op`.
@@ -715,9 +715,8 @@ class Block:
                 wirevector_names_list.remove(w)
             msg = (
                 "Duplicate wire names found for the following different signals: "
-                f"{repr(wirevector_names_list)} (make sure you are not using "
-                '"tmp" or "const_" as a signal name because those are reserved for '
-                "internal use)"
+                f'{wirevector_names_list} (make sure you are not using "tmp" or '
+                '"const_" as a signal name because those are reserved for internal use)'
             )
             raise PyrtlError(msg)
 
@@ -835,8 +834,7 @@ class Block:
                     msg = (
                         f'memory "{net.op_param[1].name}" is not specified as '
                         f'asynchronous but has an index "{net.args[0].name}" that is '
-                        "not ready at the start of the cycle due to net "
-                        f'"{str(src_net)}"'
+                        f'not ready at the start of the cycle due to net "{src_net}"'
                     )
                     raise PyrtlError(msg)
 

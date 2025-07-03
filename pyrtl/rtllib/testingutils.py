@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 from typing import Callable
 
@@ -26,8 +28,8 @@ def uniform_dist(bitwidth):
 
 def make_inputs_and_values(
     num_wires: int,
-    max_bitwidth: int = None,
-    exact_bitwidth: int = None,
+    max_bitwidth: int | None = None,
+    exact_bitwidth: int | None = None,
     dist: Callable[[int], int] = uniform_dist,
     test_vals: int = 20,
 ) -> tuple[list[pyrtl.Input], list[list[int]]]:
@@ -92,8 +94,8 @@ generate_in_wire_and_values = an_input_and_vals
 
 def make_consts(
     num_wires: int,
-    max_bitwidth: int = None,
-    exact_bitwidth: int = None,
+    max_bitwidth: int | None = None,
+    exact_bitwidth: int | None = None,
     random_dist: Callable[[int], int] = inverse_power_dist,
 ) -> tuple[list[pyrtl.Const], list[int]]:
     """Generate random :class:`.Const` values.
@@ -179,7 +181,7 @@ def sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
 def multi_sim_multicycle(in_dict, hold_dict, hold_cycles, sim=None):
     if sim is None:
         sim = pyrtl.Simulation()
-    cycles = len(list(in_dict.values())[0])
+    cycles = len(next(iter(in_dict.values())))
     for cycle in range(cycles):
         current_dict = {wire: values[cycle] for wire, values in in_dict}
         cur_result = sim_multicycle(current_dict, hold_dict, hold_cycles, sim)

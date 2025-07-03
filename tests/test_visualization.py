@@ -291,9 +291,9 @@ class TestNetGraph(unittest.TestCase):
         self.assertEqual(len(g), 10)
 
         self.assertEqual(len(g[inwire]), 1)
-        self.assertEqual(list(g[inwire].keys())[0].op, "|")
+        self.assertEqual(next(iter(g[inwire].keys())).op, "|")
         self.assertEqual(len(g[inwire].values()), 1)
-        edges = list(g[inwire].values())[0]
+        edges = next(iter(g[inwire].values()))
         self.assertEqual(len(edges), 1)
         self.assertIs(edges[0], inwire)
 
@@ -312,7 +312,7 @@ class TestNetGraph(unittest.TestCase):
         w = pyrtl.concat(c, c, c)
         g = pyrtl.net_graph()
         self.assertEqual(len(g[c]), 1)
-        edges = list(g[c].values())[0]
+        edges = next(iter(g[c].values()))
         self.assertEqual(len(edges), 3)
         for w in edges:
             self.assertIs(w, c)

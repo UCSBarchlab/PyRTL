@@ -136,10 +136,10 @@ def _get_inverter_chains(wire_creator, wire_users):
             next_inverter_chains.append(append_to + prepend_to)
         elif append_to:
             # Add the current inverter after 'append_to'.
-            next_inverter_chains.append(append_to + [current_dest])
+            next_inverter_chains.append([*append_to, current_dest])
         elif prepend_to:
             # Add the current inverter before 'prepend_to'.
-            next_inverter_chains.append([current_arg] + prepend_to)
+            next_inverter_chains.append([current_arg, *prepend_to])
         else:
             # The current inverter is not connected to any inverter chain, so
             # we start a new inverter chain with it
@@ -868,10 +868,7 @@ def _decompose(net, wv_map, mems, block_out):
         new_mem = _get_new_block_mem_instance(net.op_param, mems, block_out)[1]
         new_mem[addr] <<= MemBlock.EnabledWrite(data=data, enable=enable)
     else:
-        msg = (
-            "Unable to synthesize the following net due to unimplemented op :\n"
-            f"{str(net)}"
-        )
+        msg = f"Unable to synthesize the following net due to unimplemented op :\n{net}"
         raise PyrtlInternalError(msg)
     return
 

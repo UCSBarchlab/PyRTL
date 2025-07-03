@@ -228,7 +228,9 @@ class TimingAnalysis:
         tech_in_um = 0.130
         return 270 * tech_in_um**1.38 * bits**0.25 * ports**1.30 + 1.05
 
-    def max_freq(self, tech_in_nm: float = 130, ffoverhead: float = None) -> float:
+    def max_freq(
+        self, tech_in_nm: float = 130, ffoverhead: float | None = None
+    ) -> float:
         """Estimates the max frequency of a block in MHz.
 
         :param tech_in_nm: the size of the circuit technology to be estimated
@@ -338,7 +340,10 @@ class TimingAnalysis:
 
 
 def yosys_area_delay(
-    library: str, abc_cmd: str = None, leave_in_dir: str = None, block: Block = None
+    library: str,
+    abc_cmd: str | None = None,
+    leave_in_dir: str | None = None,
+    block: Block = None,
 ) -> tuple[float, float]:
     """Synthesize with `Yosys <https://yosyshq.net/yosys/>`_ and return estimate of area
     and delay.
@@ -441,7 +446,7 @@ class PathsResult(dict):
                     for i, paths in enumerate(sorted(all_paths, key=path_sort_key)):
                         print(f"    Path {i}", file=file)
                         for path in paths:
-                            print(f"      {str(path)}", file=file)
+                            print(f"      {path}", file=file)
                 else:
                     print("    (No paths)", file=file)
 
@@ -449,7 +454,7 @@ class PathsResult(dict):
 def paths(
     src: WireVector | Iterable[WireVector] = None,
     dst: WireVector | Iterable[WireVector] = None,
-    dst_nets: dict[WireVector, LogicNet] = None,
+    dst_nets: dict[WireVector, LogicNet] | None = None,
     block: Block = None,
 ) -> PathsResult:
     """Get the list of all paths from ``src`` to ``dst``.
@@ -530,9 +535,9 @@ def paths(
                 if dst_net not in curr_path:
                     if dst_net.op == "@":  # dests will be the read ports
                         for read_net in dst_net.op_param[1].readport_nets:
-                            dfs(read_net.dests[0], curr_path + [dst_net, read_net])
+                            dfs(read_net.dests[0], [*curr_path, dst_net, read_net])
                     else:
-                        dfs(dst_net.dests[0], curr_path + [dst_net])
+                        dfs(dst_net.dests[0], [*curr_path, dst_net])
 
         dfs(src, [])
         return paths
