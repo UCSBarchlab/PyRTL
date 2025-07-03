@@ -330,8 +330,8 @@ class TestCloning(unittest.TestCase):
             pyrtl.clone_wire(a)
         self.assertEqual(
             str(error.exception),
-            "Must provide a name for the newly cloned wire "
-            "when cloning within the same block.",
+            "Must provide a name for the newly cloned wire when cloning within the "
+            "same block.",
         )
 
     def test_clone_wire_same_name_same_block(self):

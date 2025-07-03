@@ -190,9 +190,8 @@ From k
 class TestPaths(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        # To compare textual consistency, need to make
-        # sure we're starting at the same index for all
-        # automatically created names.
+        # To compare textual consistency, need to make sure we're starting at the same
+        # index for all automatically created names.
         pyrtl.wire._reset_wire_indexers()
         pyrtl.memory._reset_memory_indexer()
 
@@ -326,8 +325,8 @@ class TestPaths(unittest.TestCase):
         self.assertEqual(path[4].op, "m")
         self.assertEqual(path[5].op, "w")
 
-        # TODO Once issue with _MemIndexed lookups is resolved,
-        #      these should be `data` instead of `data.wire`.
+        # TODO Once issue with _MemIndexed lookups is resolved, these should be `data`
+        # instead of `data.wire`.
         paths = pyrtl.paths(data.wire, data.wire)
         path = paths[data.wire][data.wire][0]
         self.assertEqual(path[0].op, "~")

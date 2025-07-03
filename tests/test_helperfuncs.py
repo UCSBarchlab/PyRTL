@@ -1326,16 +1326,16 @@ class TestLoopDetection(unittest.TestCase):
 
 @pyrtl.wire_struct
 class Byte:
-    # A Byte can be decomposed into high and low nibbles, or composed from
-    # high and low nibbles.
+    # A Byte can be decomposed into high and low nibbles, or composed from high and low
+    # nibbles.
     high: 4
     low: 4
 
 
 @pyrtl.wire_struct
 class Pixel:
-    # A Pixel can be decomposed into red, green and blue bytes, or composed
-    # from red, green and blue bytes.
+    # A Pixel can be decomposed into red, green and blue bytes, or composed from red,
+    # green and blue bytes.
     red: Byte
     green: Byte
     blue: Byte
@@ -1357,8 +1357,8 @@ class TestWireStruct(unittest.TestCase):
 
         sim = pyrtl.Simulation()
         sim.step()
-        # Because the Byte has the name 'byte', its components are
-        # automatically assigned the names 'byte.high' and 'byte.low'.
+        # Because the Byte has the name 'byte', its components are automatically
+        # assigned the names 'byte.high' and 'byte.low'.
         self.assertEqual(sim.inspect("byte"), 0xAB)
         self.assertEqual(sim.inspect("byte.high"), 0xA)
         self.assertEqual(sim.inspect("byte.low"), 0xB)
@@ -1452,8 +1452,8 @@ class TestWireStruct(unittest.TestCase):
         self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Register))
 
         sim = pyrtl.Simulation()
-        # On the first cycle, set the register's value to 0xAB, but it will
-        # take one cycle for that value to propagate to the register's outputs.
+        # On the first cycle, set the register's value to 0xAB, but it will take one
+        # cycle for that value to propagate to the register's outputs.
         sim.step(provided_inputs={"next_value": 0xAB})
         self.assertEqual(sim.inspect("byte"), 0x0)
         self.assertEqual(sim.inspect("byte.high"), 0x0)
@@ -1476,8 +1476,7 @@ class TestWireStruct(unittest.TestCase):
         sim.step()
         self.assertEqual(sim.inspect("out"), 0xAB)
 
-        # The other wires are not named, so 'out' should be the only traced
-        # wire.
+        # The other wires are not named, so 'out' should be the only traced wire.
         self.assertEqual(list(sim.tracer.trace.keys()), ["out"])
 
     def test_anonymous_slice(self):
@@ -1494,8 +1493,7 @@ class TestWireStruct(unittest.TestCase):
         self.assertEqual(sim.inspect("h"), 0xC)
         self.assertEqual(sim.inspect("l"), 0xD)
 
-        # The other wires are not named, so 'h' and 'l' should be the only
-        # traced wires.
+        # The other wires are not named, so 'h' and 'l' should be the only traced wires.
         self.assertEqual(sorted(sim.tracer.trace.keys()), ["h", "l"])
 
     def test_pixel_slice(self):
@@ -1584,8 +1582,7 @@ class TestWireStruct(unittest.TestCase):
         sim.step()
         self.assertEqual(sim.inspect("out"), 0xABCDEF)
 
-        # The other wires are not named, so 'out' should be the only traced
-        # wire.
+        # The other wires are not named, so 'out' should be the only traced wire.
         self.assertEqual(list(sim.tracer.trace.keys()), ["out"])
 
 
@@ -1593,8 +1590,8 @@ class TestWireStruct(unittest.TestCase):
 BitPair = pyrtl.wire_matrix(component_schema=1, size=2)
 
 
-# Word is an array of two Bytes. This checks that a @wire_struct (Byte) can be
-# a component of a wire_matrix (Word).
+# Word is an array of two Bytes. This checks that a @wire_struct (Byte) can be a
+# component of a wire_matrix (Word).
 Word = pyrtl.wire_matrix(component_schema=Byte, size=2)
 
 
@@ -1602,13 +1599,13 @@ Word = pyrtl.wire_matrix(component_schema=Byte, size=2)
 ByteMatrix = pyrtl.wire_matrix(component_schema=Byte, size=1)
 
 
-# DWord is an array of two Words, or effectively a 2x2 array of Bytes. This
-# check that a wire_matrix (Word) can be a component of a wire_matrix (DWord).
+# DWord is an array of two Words, or effectively a 2x2 array of Bytes. This checks that
+# a wire_matrix (Word) can be a component of a wire_matrix (DWord).
 DWord = pyrtl.wire_matrix(component_schema=Word, size=2)
 
 
-# CachedData is valid bit paired with some data. This checks that a wire_matrix
-# (Word) can be a component of a @wire_struct (CachedData).
+# CachedData is valid bit paired with some data. This checks that a wire_matrix (Word)
+# can be a component of a @wire_struct (CachedData).
 @pyrtl.wire_struct
 class CachedData:
     valid: 1

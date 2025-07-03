@@ -37,16 +37,22 @@ class Simulation:
     A ``Simulation`` step works as follows:
 
     1. :class:`Registers<Register>` are updated:
-        1. (If this is the first step) With the default values passed in
-           to the ``Simulation`` during instantiation and/or any ``reset_values``
-           specified in the individual :class:`Registers<Register>`.
-        2. (Otherwise) With their next values calculated in the previous step
-           (``r`` :class:`LogicNets<LogicNet>`).
+
+    1. (If this is the first step) With the default values passed in to the
+       ``Simulation`` during instantiation and/or any ``reset_values`` specified in the
+       individual :class:`Registers<Register>`.
+
+    2. (Otherwise) With their next values calculated in the previous step (``r``
+       :class:`LogicNets<LogicNet>`).
+
     2. The new values of these :class:`Registers<Register>` as well as the values of
        :class:`Block` :class:`Inputs<Input>` are propagated through the combinational
        logic.
+
     3. :class:`MemBlock` writes are performed (``@`` :class:`LogicNets<LogicNet>`).
+
     4. The current values of all wires are recorded in the :attr:`tracer`.
+
     5. The next values for the :class:`Registers<Register>` are saved, ready to be
        applied at the beginning of the next step.
 
@@ -54,14 +60,15 @@ class Simulation:
     simulation step are from *before* the :class:`Register` has latched in its newly
     calculated values, since that latching occurs at the beginning of the *next* step.
 
-    In addition to the functions methods listed below, it is sometimes
-    useful to reach into this class and access internal state directly.
-    Of particular usefulness are:
+    In addition to the functions methods listed below, it is sometimes useful to reach
+    into this class and access internal state directly. Of particular usefulness are:
 
-    * ``.value``: a map from every signal in the :class:`Block` to its current
+    - ``.value``: a map from every signal in the :class:`Block` to its current
       simulation value.
-    * ``.regvalue``: a map from :class:`Register` to its value on the next cycle.
-    * ``.memvalue``: a map from ``memid`` to a dictionary of ``{address: value}``.
+
+    - ``.regvalue``: a map from :class:`Register` to its value on the next cycle.
+
+    - ``.memvalue``: a map from ``memid`` to a dictionary of ``{address: value}``.
     """
 
     tracer: SimulationTrace
@@ -210,8 +217,7 @@ class Simulation:
 
         All :class:`Input` wires must be in the ``provided_inputs``.
 
-        Example: if we have :class:`Inputs<Input>` named ``a`` and ``x``, we can
-        call::
+        Example: if we have :class:`Inputs<Input>` named ``a`` and ``x``, we can call::
 
             sim.step({'a': 1, 'x': 23})
 
@@ -275,8 +281,8 @@ class Simulation:
             argval = self.value[net.args[0]]
             self.regvalue[net.dests[0]] = self._sanitize(argval, net.dests[0])
 
-        # finally, if any of the rtl_assert assertions are failing then we should
-        # raise the appropriate exceptions
+        # finally, if any of the rtl_assert assertions are failing then we should raise
+        # the appropriate exceptions
         check_rtl_assertions(self)
 
     def step_multiple(
@@ -493,17 +499,16 @@ class Simulation:
     def _sanitize(val, wirevector):
         """Return a modified version of val that would fit in wirevector.
 
-        This function should be applied to every primitive call, and it's
-        default behavior is to mask the upper bits of value and return that
-        new value.
+        This function should be applied to every primitive call, and it's default
+        behavior is to mask the upper bits of value and return that new value.
         """
         return val & wirevector.bitmask
 
     def _execute(self, net):
         """Handle the combinational logic update rules for the given net.
 
-        This function, along with edge_update, defined the semantics
-        of the primitive ops. Function updates self.value accordingly.
+        This function, along with edge_update, defined the semantics of the primitive
+        ops. Function updates self.value accordingly.
         """
         simple_func = {  # OPS
             "w": lambda x: x,
@@ -588,15 +593,13 @@ class FastSimulation:
     documentation, and more details about PyRTL simulations.
     """
 
-    # Dev Notes:
-    #  Wire name processing:
-    #  Sanitized names are only used when using and assigning variables inside of
-    #  the generated function. Normal names are used when interacting with
-    #  the dictionaries passed in and created by the exec'ed function.
-    #  Therefore, everything outside of this function uses normal
-    #  WireVector names.
-    #  Careful use of repr() is used to make sure that strings stay the same
-    #  when put into the generated code
+    # Dev Notes on Wire name processing:
+    #
+    # Sanitized names are only used when using and assigning variables inside of the
+    # generated function. Normal names are used when interacting with the dictionaries
+    # passed in and created by the exec'ed function. Therefore, everything outside of
+    # this function uses normal WireVector names. Careful use of repr() is used to make
+    # sure that strings stay the same when put into the generated code
 
     def __init__(
         self,
@@ -776,11 +779,11 @@ class FastSimulation:
 
         def to_num(v):
             if isinstance(v, str):
-                # Don't use infer_val_and_bitwidth because they aren't in
-                # Verilog-style format, but are instead in plain decimal.
+                # Don't use infer_val_and_bitwidth because they aren't in Verilog-style
+                # format, but are instead in plain decimal.
                 return int(v)
-            # Don't just call int(v) on all of them since it's nice
-            # to retain class info if they were a subclass of int.
+            # Don't just call int(v) on all of them since it's nice to retain class info
+            # if they were a subclass of int.
             return v
 
         failed = []
@@ -866,16 +869,17 @@ class FastSimulation:
             return "regs[" + repr(wire.name) + "]"
         return self._varname(wire)
 
-    # Yeah, triple quotes don't respect indentation (aka the 4 spaces on the
-    # start of each line is part of the string)
+    # Yeah, triple quotes don't respect indentation (aka the 4 spaces on the start of
+    # each line is part of the string)
     _prog_start = """def sim_func(d):
     regs = {}
     outs = {}
     mem_ws = []"""
 
     def _compiled(self):
-        """Return a string of the self.block compiled to a block of
-        code that can be executed to get a function to execute"""
+        """Return a string of the self.block compiled to a block of code that can be
+        executed to get a function to execute
+        """
         # bitwidth that the dest has to have in order to not need masking.
         no_mask_bitwidth = {
             "w": lambda net: len(net.args[0]),
@@ -898,9 +902,10 @@ class FastSimulation:
         }
 
         # Dev Notes:
+        #
         # Because of fast locals in functions in both CPython and PyPy, getting a
-        # function to execute makes the code a few times faster than
-        # just executing it in the global exec scope.
+        # function to execute makes the code a few times faster than just executing it
+        # in the global exec scope.
         prog = [self._prog_start]
 
         simple_func = {  # OPS
@@ -1140,12 +1145,12 @@ class WaveRenderer:
         :param is_last: If True, current_val is in the last cycle.
         """
         if len(w) > 1 or w.name in repr_per_name:
-            # Render values in boxes for multi-bit wires ("bus"), or single-bit
-            # wires with a specific representation.
+            # Render values in boxes for multi-bit wires ("bus"), or single-bit wires
+            # with a specific representation.
             #
-            # We display multi-wire zero values as a centered horizontal line
-            # when a specific `repr_per_name` is not requested for this trace,
-            # and a standard numeric format is requested.
+            # We display multi-wire zero values as a centered horizontal line when a
+            # specific `repr_per_name` is not requested for this trace, and a standard
+            # numeric format is requested.
             flat_zero = w.name not in repr_per_name and (
                 repr_func is hex
                 or repr_func is oct
@@ -1220,8 +1225,8 @@ class WaveRenderer:
 class RendererConstants:
     """Abstract base class for renderer constants.
 
-    These constants determine which characters are used to render waveforms in
-    a terminal.
+    These constants determine which characters are used to render waveforms in a
+    terminal.
 
     .. inheritance-diagram:: pyrtl.simulation.Utf8RendererConstants
                              pyrtl.simulation.Utf8AltRendererConstants
@@ -1232,53 +1237,49 @@ class RendererConstants:
 
     """
 
-    # Print _tick before rendering a ruler segment. Must have a display length
-    # of 1 character.
+    # Print _tick before rendering a ruler segment. Must have a display length of 1
+    # character.
     _tick = ""
 
-    # Print _up when a binary wire transitions from low to high. Print _down
-    # when a binary wire transitions from high to low. _up and _down must have
-    # display length of _chars_between_cycles characters.
+    # Print _up when a binary wire transitions from low to high. Print _down when a
+    # binary wire transitions from high to low. _up and _down must have display length
+    # of _chars_between_cycles characters.
     _up, _down = "", ""
 
-    # Print _low when a binary wire maintains a low value, and print _high when
-    # a binary wire maintains a high value. _low and _high must have display
-    # length of 1 character.
+    # Print _low when a binary wire maintains a low value, and print _high when a binary
+    # wire maintains a high value. _low and _high must have display length of 1
+    # character.
     _low, _high = "", ""
 
-    # These are like _up, _down, _low, _high, except they are printed on the
-    # previous line. These are useful for displaying a binary wire across two
-    # lines.
+    # These are like _up, _down, _low, _high, except they are printed on the previous
+    # line. These are useful for displaying a binary wire across two lines.
     _prev_line_up, _prev_line_down = "", ""
     _prev_line_low, _prev_line_high = "", ""
 
-    # Print _bus_start before rendering a bus wire, and print _bus_stop after
-    # rendering a bus wire. _bus_start and _bus_stop must have zero display
-    # length characters. Escape codes never count towards display length.
+    # Print _bus_start before rendering a bus wire, and print _bus_stop after rendering
+    # a bus wire. _bus_start and _bus_stop must have zero display length characters.
+    # Escape codes never count towards display length.
     _bus_start, _bus_stop = "", ""
 
-    # Print _x when a bus wire changes from one non-zero value to another
-    # non-zero value. _x must have display length of _chars_between_cycles
-    # characters.
+    # Print _x when a bus wire changes from one non-zero value to another non-zero
+    # value. _x must have display length of _chars_between_cycles characters.
     _x = ""
 
-    # Print _zero_x when a bus wire changes from a zero value to a non-zero
-    # value. _zero_x must have display length of _chars_between_cycles
-    # characters.
+    # Print _zero_x when a bus wire changes from a zero value to a non-zero value.
+    # _zero_x must have display length of _chars_between_cycles characters.
     _zero_x = ""
 
-    # Print _x_zero when a bus wire changes from a non-zero value to a zero
-    # value. _x_zero must have display length of _chars_between_cycles
-    # characters.
+    # Print _x_zero when a bus wire changes from a non-zero value to a zero value.
+    # _x_zero must have display length of _chars_between_cycles characters.
     _x_zero = ""
 
-    # Print _zero when a bus wire maintains a zero value. _zero must have
-    # display length of 1 character.
+    # Print _zero when a bus wire maintains a zero value. _zero must have display length
+    # of 1 character.
     _zero = ""
 
-    # Number of characters between cycles. The cycle changes halfway between
-    # this width. The first half of this width belongs to the previous cycle
-    # and the second half of this width belongs to the next cycle.
+    # Number of characters between cycles. The cycle changes halfway between this width.
+    # The first half of this width belongs to the previous cycle and the second half of
+    # this width belongs to the next cycle.
     _chars_between_cycles = 0
 
 
@@ -1315,9 +1316,9 @@ class Utf8RendererConstants(RendererConstants):
     _x_zero = "▕" + _bus_stop + "─"
     _zero = "─"
 
-    # Number of characters needed between cycles. The cycle changes halfway
-    # between this width (2), so the first character belongs to the previous
-    # cycle and the second character belongs to the next cycle.
+    # Number of characters needed between cycles. The cycle changes halfway between this
+    # width (2), so the first character belongs to the previous cycle and the second
+    # character belongs to the next cycle.
     _chars_between_cycles = 2
 
 
@@ -1352,9 +1353,9 @@ class Utf8AltRendererConstants(RendererConstants):
     _x_zero = _bus_stop + " "
     _zero = "─"
 
-    # Number of characters needed between cycles. The cycle changes halfway
-    # between this width (1), so the first character belongs to the previous
-    # cycle and the second character belongs to the next cycle.
+    # Number of characters needed between cycles. The cycle changes halfway between this
+    # width (1), so the first character belongs to the previous cycle and the second
+    # character belongs to the next cycle.
     _chars_between_cycles = 1
 
 
@@ -1477,9 +1478,8 @@ def default_renderer() -> WaveRenderer:
         constants = renderer_map[renderer]
     else:
         print(
-            f"WARNING: Unsupported $PYRTL_RENDERER value '{renderer}' "
-            f"supported values are ({' '.join(renderer_map.keys())}). "
-            "Defaulting to utf-8"
+            f"WARNING: Unsupported $PYRTL_RENDERER value '{renderer}' supported values "
+            f"are ({' '.join(renderer_map.keys())}). Defaulting to utf-8"
         )
         constants = Utf8RendererConstants()
 
@@ -1547,12 +1547,11 @@ class SimulationTrace:
     def __init__(
         self, wires_to_track: list[WireVector] | None = None, block: Block = None
     ):
-        """
-        Creates a new Simulation Trace
+        """Creates a new Simulation Trace
 
-        :param wires_to_track: The wires that the tracer should track.
-            If unspecified, will track all explicitly-named wires.
-            If set to ``'all'``, will track all wires, including internal wires.
+        :param wires_to_track: The wires that the tracer should track. If unspecified,
+            will track all explicitly-named wires. If set to ``'all'``, will track all
+            wires, including internal wires.
         :param block: :class:`Block` containing logic to trace. Defaults to the
             :ref:`working_block`.
         """
@@ -1625,8 +1624,7 @@ class SimulationTrace:
             self.trace[wire_name].append(fastsim.context[wire_name])
 
     def print_trace(self, file=sys.stdout, base: int = 10, compact: bool = False):
-        """
-        Prints a list of wires and their current values.
+        """Prints a list of wires and their current values.
 
         :param base: The base the values are to be printed in.
         :param compact: Whether to omit spaces in output lines.
@@ -1813,10 +1811,10 @@ class SimulationTrace:
             second_trace_line = ""
             prior_val = None
             for i in range(len(trace)):
-                # There is no cycle change before the first cycle or after the
-                # last cycle, so the first and last cycles may have additional
-                # width. These additional widths make each cycle line up under
-                # the ruler, and appear the same length.
+                # There is no cycle change before the first cycle or after the last
+                # cycle, so the first and last cycles may have additional width. These
+                # additional widths make each cycle line up under the ruler, and appear
+                # the same length.
                 additional_symbol_len = 0
                 additional_cycle_len = 0
                 half_chars_between_cycles = math.floor(
@@ -1890,8 +1888,7 @@ class SimulationTrace:
 
         cycle_len = symbol_len + renderer.constants._chars_between_cycles
 
-        # print the 'ruler' which is just a list of 'ticks'
-        # mapped by the pretty map
+        # print the 'ruler' which is just a list of 'ticks' mapped by the pretty map
         maxnamelen = max(len(trace_name) for trace_name in trace_list)
         maxtracelen = max(len(self.trace[trace_name]) for trace_name in trace_list)
         if segment_size is None:
@@ -1910,13 +1907,13 @@ class SimulationTrace:
     def _set_initial_values(self, default_value, init_regvalue, init_memvalue):
         """Remember the default values that were used when starting the trace.
 
-        :param default_value: Default value to be used for all registers and
-            memory locations if not found in the other passed in maps
+        This is needed when using this trace for outputting a Verilog testbench, and is
+        automatically called during simulation.
+
+        :param default_value: Default value to be used for all registers and memory
+            locations if not found in the other passed in maps
         :param init_regvalue: Default value for all the registers
         :param init_memvvalue: Default value for memory locations of given maps
-
-        This is needed when using this trace for outputting a Verilog testbench,
-        and is automatically called during simulation.
         """
         self.default_value = default_value
         self.init_regvalue = init_regvalue

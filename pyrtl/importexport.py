@@ -1,9 +1,9 @@
 """
 Helper functions for reading and writing hardware files.
 
-Each of the functions in inputoutput take a block and a file descriptor.
-The functions provided either read the file and update the Block
-accordingly, or write information from the Block out to the file.
+Each of the functions in inputoutput take a block and a file descriptor. The functions
+provided either read the file and update the Block accordingly, or write information
+from the Block out to the file.
 """
 
 from __future__ import annotations
@@ -30,8 +30,8 @@ if TYPE_CHECKING:
 
 
 def _natural_sort_key(key):
-    """Convert the key into a form such that it will be sorted naturally,
-    e.g. such that "tmp4" appears before "tmp18".
+    """Convert the key into a form such that it will be sorted naturally, e.g. such that
+    "tmp4" appears before "tmp18".
     """
 
     def convert(text):
@@ -41,13 +41,12 @@ def _natural_sort_key(key):
 
 
 def _net_sorted(logic, name_mapper=lambda w: w.name):
-    # Sort nets based on the name of the destination
-    # wire, unless it's a memory write net.
+    # Sort nets based on the name of the destination wire, unless it's a memory write
+    # net.
     def natural_keys(n):
         if n.op == "@":
-            # Sort based on the name of the wr_en wire, since
-            # this particular net is used within 'always begin ... end'
-            # blocks for memory update logic.
+            # Sort based on the name of the wr_en wire, since this particular net is
+            # used within 'always begin ... end' blocks for memory update logic.
             key = str(n.args[2])
         else:
             key = name_mapper(n.dests[0])
@@ -68,8 +67,8 @@ def _name_sorted(wires, name_mapper=lambda w: w.name):
 
 class Subcircuit:
     """
-    This is a way to create and track per-module-instance wire names, so there
-    are not name clashes when we instantiate a module more than once.
+    This is a way to create and track per-module-instance wire names, so there are not
+    name clashes when we instantiate a module more than once.
     """
 
     def __init__(self, model, is_top=False, clk_set=None, block=None):
@@ -489,8 +488,8 @@ def input_from_blif(
         if command["C"] not in ff_clk_set:
             ff_clk_set.add(command["C"])
 
-        # Create register and assign next state to D and output to Q
-        # We ignore initialization values of 2 (don't care) and 3 (unknown).
+        # Create register and assign next state to D and output to Q. We ignore
+        # initialization values of 2 (don't care) and 3 (unknown).
         regname = command["Q"] + "_reg"
         init_val = command["I"]
         rval = {"0": 0, "1": 1, "2": None, "3": None}[init_val]
@@ -501,8 +500,8 @@ def input_from_blif(
         flop_output <<= flop
 
     def extract_flop(subckt, command):
-        # Generate a register like extract_latch, only we're doing
-        # so because of a .subckt rather than a .latch
+        # Generate a register like extract_latch, only we're doing so because of a
+        # .subckt rather than a .latch
         def twire(w):
             return subckt.twire(w)
 
@@ -558,9 +557,9 @@ def input_from_blif(
                 "$_SDFFCE_PP1P_": lambda: select(enable, select(reset, 1, data), prev),
             }[command.getName()]()
 
-        # TODO May want to consider setting reset_value in the Register.
-        # Right now it's mainly used to signal how we want to *output* Verilog
-        # from PyRTL, and not how we want to interpret *input* to PyRTL.
+        # TODO May want to consider setting reset_value in the Register. Right now it's
+        # mainly used to signal how we want to *output* Verilog from PyRTL, and not how
+        # we want to interpret *input* to PyRTL.
         flop = Register(bitwidth=1)
         subckt.add_reg(regname, flop)
         flop.next <<= flop_next(
@@ -910,9 +909,8 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
         print(f"    wire{_verilog_vector_decl(w):s} {varname(w):s};", file=file)
     print(file=file)
 
-    # Write the initial values for read-only memories.
-    # If we ever add support outside of simulation for initial values
-    #  for MemBlocks, that would also go here.
+    # Write the initial values for read-only memories. If we ever add support outside of
+    # simulation for initial values for MemBlocks, that would also go here.
     roms = {m for m in memories if isinstance(m, RomBlock)}
     for m in sorted(roms, key=lambda m: m.id):
         print("    initial begin", file=file)
@@ -1160,10 +1158,10 @@ def output_verilog_testbench(
     def init_regvalue(r):
         if simulation_trace:
             rval = simulation_trace.init_regvalue.get(r)
-            # Currently, the simulation stores the initial value for all registers
-            # in init_regvalue, so rval should not be None at this point.
-            # For the strange case where the trace was made by hand/other special use
-            # cases, check it against None anyway.
+            # Currently, the simulation stores the initial value for all registers in
+            # init_regvalue, so rval should not be None at this point. For the strange
+            # case where the trace was made by hand/other special use cases, check it
+            # against None anyway.
             if rval is None:
                 rval = r.reset_value
             if rval is None:
@@ -1300,14 +1298,14 @@ def output_to_firrtl(
     """
     block = working_block(block)
 
-    # FIRRTL only allows 'bits' operations to have two parameters: a high and low
-    # index representing the inclusive bounds of a contiguous range. PyRTL uses
-    # slice syntax, which aren't always contiguous, so we need to convert them.
+    # FIRRTL only allows 'bits' operations to have two parameters: a high and low index
+    # representing the inclusive bounds of a contiguous range. PyRTL uses slice syntax,
+    # which aren't always contiguous, so we need to convert them.
     one_bit_selects(block=block)
 
-    # FIRRTL only allows 'concatenate' operations to have two arguments,
-    # but PyRTL's 'c' op allows an arbitrary number of wires. We need to convert
-    # these n-way concats to series of two-way concats accordingly.
+    # FIRRTL only allows 'concatenate' operations to have two arguments, but PyRTL's 'c'
+    # op allows an arbitrary number of wires. We need to convert these n-way concats to
+    # series of two-way concats accordingly.
     two_way_concat(block=block)
 
     f = open_file
@@ -1540,8 +1538,8 @@ def input_from_iscas_bench(bench, block: Block = None):
     def SLiteral(x):
         return Suppress(Literal(x))
 
-    # NOTE: The acceptable signal characters are based on viewing the I/O names
-    # in the available ISCAS benchmark files, and may not be complete.
+    # NOTE: The acceptable signal characters are based on viewing the I/O names in the
+    # available ISCAS benchmark files, and may not be complete.
     signal_start = pyparsing.alphas + pyparsing.nums + "$:[]_<>\\/?"
     signal_middle = pyparsing.alphas + pyparsing.nums + "$:[]_<>\\/.?-"
     signal_id = Word(signal_start, signal_middle)
@@ -1625,9 +1623,9 @@ def input_from_iscas_bench(bench, block: Block = None):
                 msg = f"Unexpected gate {{{cmd['gate']}}}"
                 raise PyrtlError(msg)
 
-    # Benchmarks like c1196, b18, etc. have inputs and outputs by the
-    # same name, that are therefore directly connected. This pass will
-    # rename the outputs so that this is still okay.
+    # Benchmarks like c1196, b18, etc. have inputs and outputs by the same name, that
+    # are therefore directly connected. This pass will rename the outputs so that this
+    # is still okay.
     for o in block.wirevector_subset(Output):
         inputs = [i for i in block.wirevector_subset(Input) if i.name == o.name]
         if inputs:

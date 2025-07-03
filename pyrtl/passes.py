@@ -1,7 +1,6 @@
 """
-Passes contains prebuilt transformantion passes to do optimization,
-lowering of the design to single wire gates (synthesis), along with other
-ways to change a block.
+Passes contains prebuilt transformantion passes to do optimization, lowering of the
+design to single wire gates (synthesis), along with other ways to change a block.
 """
 
 import collections
@@ -83,15 +82,17 @@ def optimize(
 def _get_inverter_chains(wire_creator, wire_users):
     """Returns all inverter chains in the block.
 
-    The function returns a list of inverter chains in the block.
-    Each inverter chain is represented as a list of the WireVectors
-    in the chain.
+    The function returns a list of inverter chains in the block. Each inverter chain is
+    represented as a list of the WireVectors in the chain.
 
-    Consider the following circuit, for example:
-    A -~-> B -~-> C -w-> X
-    D -~-> E -w-> Y
-    If the function is called on this circuit, it will return
-    [[A, B, C], [D, E]].
+    Consider the following circuit, for example::
+
+        A -~-> B -~-> C -w-> X
+        D -~-> E -w-> Y
+
+    If the function is called on this circuit, it will return::
+
+        [[A, B, C], [D, E]].
     """
 
     # Build a list of inverter chains. Each inverter chain is a list of WireVectors,
@@ -141,8 +142,8 @@ def _get_inverter_chains(wire_creator, wire_users):
             # Add the current inverter before 'prepend_to'.
             next_inverter_chains.append([current_arg, *prepend_to])
         else:
-            # The current inverter is not connected to any inverter chain, so
-            # we start a new inverter chain with it
+            # The current inverter is not connected to any inverter chain, so we start a
+            # new inverter chain with it
             next_inverter_chains.append([current_arg, current_dest])
 
         inverter_chains = next_inverter_chains
@@ -152,18 +153,19 @@ def _get_inverter_chains(wire_creator, wire_users):
 def _optimize_inverter_chains(block, skip_sanity_check=False):
     """Optimizes inverter chains in the block.
 
-    An inverter chain means two or more inverters directly connected
-    to each other. Inverter chains are redundant and can be removed.
-    For example, A -~-> B -~-> C -w-> X can be reduced to A -w-> X.
+    An inverter chain means two or more inverters directly connected to each other.
+    Inverter chains are redundant and can be removed. For example, ``A -~-> B -~-> C
+    -w-> X`` can be reduced to ``A -w-> X``.
 
-    After optimization, a chain of an even number of inverters will
-    be reduced a direct connection, and a chain of an odd number of
-    inverters will be reduced to one inverter.
+    After optimization, a chain of an even number of inverters will be reduced a direct
+    connection, and a chain of an odd number of inverters will be reduced to one
+    inverter.
 
-    If an inverter chain has intermediate users it won't be removed.
-    For example, the inverter chain in the following circuit won't be removed:
-    A -~-> B -~-> C -w-> X
-    B -w-> Y
+    If an inverter chain has intermediate users it won't be removed. For example, the
+    inverter chain in the following circuit won't be removed::
+
+        A -~-> B -~-> C -w-> X
+        B -w-> Y
     """
 
     # wire_creator maps from WireVector to the LogicNet that defines its value.
@@ -174,30 +176,34 @@ def _optimize_inverter_chains(block, skip_sanity_check=False):
     net_removal_set = set()
     wire_removal_set = set()
 
-    # This ProducerList maps the end wire of an inverter chain to its beginning wire.
-    # We need this because when removing an inverter chain its end wire gets removed,
-    # so we need to replace the source of LogicNets using the end wire of the inverter
-    # chain with the chain's beginning wire.
+    # This ProducerList maps the end wire of an inverter chain to its beginning wire. We
+    # need this because when removing an inverter chain its end wire gets removed, so we
+    # need to replace the source of LogicNets using the end wire of the inverter chain
+    # with the chain's beginning wire.
     #
-    # We need a ProducerList, rather than a simple dict, because if an inverter chain
-    # of more than two inverters has intermediate users, we may have to query the dict
-    # multiple times to get the replacement for the inverter chain's last wire.
-    # Consider the following circuit, for example:
+    # We need a ProducerList, rather than a simple dict, because if an inverter chain of
+    # more than two inverters has intermediate users, we may have to query the dict
+    # multiple times to get the replacement for the inverter chain's last wire. Consider
+    # the following circuit, for example:
+    #
     # A -~-> B -~-> C -w-> X
     # C -~-> D -~-> E -w-> Y
+    #
     # This is the optimized version of the circuit:
+    #
     # A -w-> X
     # A -w-> Y
+    #
     # The inverter chains found will be A-B-C and C-D-E (two separate chains will be
-    # found instead of A-B-C-D-E because C has an intermediate user). In the dict,
-    # C will be mapped to A and E will be mapped to C. Hence, when finding the
-    # replacement of E, we have to first query the dict to get C, and then query
-    # the dict again on C to get A.
+    # found instead of A-B-C-D-E because C has an intermediate user). In the dict, C
+    # will be mapped to A and E will be mapped to C. Hence, when finding the replacement
+    # of E, we have to first query the dict to get C, and then query the dict again on C
+    # to get A.
     wire_src_dict = _ProducerList()
 
     for inverter_chain in _get_inverter_chains(wire_creator, wire_users):
-        # If len(inverter_chain) = n, there are n-1 inverters in the chain.
-        # We only remove inverters if there are at least two inverters in a chain.
+        # If len(inverter_chain) = n, there are n-1 inverters in the chain. We only
+        # remove inverters if there are at least two inverters in a chain.
         if len(inverter_chain) > 2:
             if (
                 len(inverter_chain) % 2 == 1
@@ -214,10 +220,10 @@ def _optimize_inverter_chains(block, skip_sanity_check=False):
             # Map the end wire of the inverter chain to the beginning wire.
             wire_src_dict[inverter_chain[-1]] = inverter_chain[start_idx - 1]
 
-    # This loop recreates the block with inverter chains removed. It adds each
-    # LogicNet in the original block to the new block if it is not marked for
-    # removal, and replaces the source of the LogicNet if its source was the end wire
-    # of a removed inverter chain.
+    # This loop recreates the block with inverter chains removed. It adds each LogicNet
+    # in the original block to the new block if it is not marked for removal, and
+    # replaces the source of the LogicNet if its source was the end wire of a removed
+    # inverter chain.
     for net in block.logic:
         if net not in net_removal_set:
             new_logic.add(
@@ -262,8 +268,8 @@ def _remove_wire_nets(block, skip_sanity_check=False):
     wire_src_dict = _ProducerList()
     wire_removal_set = set()  # set of all wirevectors to be removed
 
-    # one pass to build the map of value producers and
-    # all of the nets and wires to be removed
+    # one pass to build the map of value producers and all of the nets and wires to be
+    # removed
     for net in block.logic:
         if net.op == "w":
             wire_src_dict[net.dests[0]] = net.args[0]
@@ -324,8 +330,8 @@ def _remove_slice_nets(block, skip_sanity_check=False):
         # LSB)
         return net.op_param == tuple(range(selLower, selUpper + 1))
 
-    # one pass to build the map of value producers and
-    # all of the nets and wires to be removed
+    # one pass to build the map of value producers and all of the nets and wires to be
+    # removed
     for net in block.logic:
         if is_net_slicing_entire_wire(net):
             wire_src_dict[net.dests[0]] = net.args[0]
@@ -504,16 +510,20 @@ def _find_common_subexps(block: Block) -> dict[LogicNet, [LogicNet]]:
     """Finds nets that can be considered the same based on op type, op param, and
     arguments.
 
-    Nets are the "same" if 1) their op types are the same, 2) their op_params are the
-    same (e.g. same memory if a memory-related op), and 3) their arguments are the same
-    (same constant value and bitwidth for const wires, otherwise same wire object). The
-    destination wire for a net is not considered.
+    Nets are the "same" if:
+
+    1. their op types are the same,
+
+    2. their op_params are the same (e.g. same memory if a memory-related op), and
+
+    3. their arguments are the same (same constant value and bitwidth for const wires,
+       otherwise same wire object). The destination wire for a net is not considered.
 
     :param block: Block to operate over
 
-    :return: mapping from a logic net (with a placehold dest)
-        representing the common subexp, to a list of nets matching that common subexp
-        that can be replaced with the single common subexp.
+    :return: mapping from a logic net (with a placehold dest) representing the common
+             subexp, to a list of nets matching that common subexp that can be replaced
+             with the single common subexp.
     """
     net_table = {}  # {net (without dest) : [net, ...]
     t = ()  # just a placeholder
@@ -634,8 +644,8 @@ def _remove_unused_wires(block, keep_inputs=True):
     """Removes all unconnected wires from a block's wirevector_set.
 
     :param block: The block to operate over.
-    :param keep_inputs: If True, retain any Input wires that are not connected
-        to any net.
+    :param keep_inputs: If True, retain any Input wires that are not connected to any
+        net.
     """
     valid_wires = set()
     for logic_net in block.logic:
@@ -1000,12 +1010,14 @@ def one_bit_selects(net: LogicNet):
 def direct_connect_outputs(block=None):
     """Remove 'w' nets immediately before outputs, if possible.
 
-    :param block: block to update (defaults to :ref:`working_block`)
+    The 'w' nets that are eligible for removal with this pass meet the following
+    requirements:
 
-    The 'w' nets that are eligible for removal with this pass
-    meet the following requirements:
-    * The destination wirevector of the net is an Output
-    * The source wirevector of the net doesn't go to any other nets.
+    - The destination wirevector of the net is an Output
+
+    - The source wirevector of the net doesn't go to any other nets.
+
+    :param block: block to update (defaults to :ref:`working_block`)
     """
     # Turns a netlist of the form (where [] denote nets and o is an Output):
     #
@@ -1027,8 +1039,8 @@ def direct_connect_outputs(block=None):
     #    |
     #    o
 
-    # NOTE: would use transform.all_nets(), but it becomes tricky when
-    # we want to remove more than just the current net on a single pass
+    # NOTE: would use transform.all_nets(), but it becomes tricky when we want to remove
+    # more than just the current net on a single pass
     block = working_block(block)
     _, dst_nets = block.net_connections()
 
@@ -1094,8 +1106,8 @@ def two_way_fanout(block=None):
     block = working_block(block)
 
     _, dst_map = block.net_connections()
-    # Two-pass approach: Remember which nets will need to change, in case
-    # there are multiple arguments which will be changing along the way.
+    # Two-pass approach: Remember which nets will need to change, in case there are
+    # multiple arguments which will be changing along the way.
     nets_to_update = collections.defaultdict(list)
     for wire in block.wirevector_subset(exclude=(Output)):
         curr_fanout = fanout(wire)
@@ -1115,8 +1127,8 @@ def two_way_fanout(block=None):
 
         def get_arg(i, a, args=args):
             for orig, ix, from_tree in args:
-                # Checking index as well because the same wire could be
-                # used as multiple arguments to the same net.
+                # Checking index as well because the same wire could be used as multiple
+                # arguments to the same net.
                 if i == ix and a is orig:
                     return from_tree
             return a

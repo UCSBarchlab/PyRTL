@@ -2,12 +2,11 @@
 
 import pyrtl
 
-# The following example shows how PyRTL can be used to make some interesting
-# hardware structures using Python introspection.  In particular, this example
-# makes a N-stage pipeline structure.  Any specific pipeline is then a derived
-# class of SimplePipeline where methods with names starting with "stage" are
-# stages, and new members with names not starting with "_" are to be registered
-# for the next stage.
+# The following example shows how PyRTL can be used to make some interesting hardware
+# structures using Python introspection. In particular, this example makes a N-stage
+# pipeline structure. Any specific pipeline is then a derived class of SimplePipeline
+# where methods with names starting with "stage" are stages, and new members with names
+# not starting with "_" are to be registered for the next stage.
 
 
 class SimplePipeline:
@@ -38,8 +37,8 @@ class SimplePipeline:
             object.__setattr__(self, name, value)
         else:
             next_stage = self._current_stage_num + 1
-            pipereg_id = str(self._current_stage_num) + "to" + str(next_stage)
-            rname = "pipereg_" + pipereg_id + "_" + name
+            pipereg_id = f"{self._current_stage_num} to {next_stage}"
+            rname = f"pipereg_{pipereg_id}_name"
             new_pipereg = pyrtl.Register(bitwidth=len(value), name=rname)
             if next_stage not in self._pipeline_register_map:
                 self._pipeline_register_map[next_stage] = {}

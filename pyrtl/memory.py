@@ -1,15 +1,17 @@
 """
-Defines PyRTL memories.
-These blocks of memories can be read (potentially async) and written (sync)
+Defines PyRTL memories. These blocks of memories can be read (potentially async) and
+written (sync)
 
 MemBlocks supports any number of the following operations:
 
-* read: `d = mem[address]`
-* write: `mem[address] <<= d`
-* write with an enable: `mem[address] <<= MemBlock.EnabledWrite(d, enable=we)`
+- read: `d = mem[address]`
 
-Based on the number of reads and writes a memory will be inferred
-with the correct number of ports to support that
+- write: `mem[address] <<= d`
+
+- write with an enable: `mem[address] <<= MemBlock.EnabledWrite(d, enable=we)`
+
+Based on the number of reads and writes a memory will be inferred with the correct
+number of ports to support that
 """
 
 from __future__ import annotations
@@ -47,11 +49,11 @@ def _reset_memory_indexer():
 class _MemIndexed(WireVector):
     """Object used internally to route memory assigns correctly.
 
-    The normal PyRTL user should never need to be aware that this class exists,
-    hence the underscore in the name.  It presents a very similar interface to
-    WireVectors (all of the normal wirevector operations should still work),
-    but if you try to *set* the value with <<= or |= then it will generate a
-    _MemAssignment object rather than the normal wire assignment.
+    The normal PyRTL user should never need to be aware that this class exists, hence
+    the underscore in the name. It presents a very similar interface to WireVectors (all
+    of the normal wirevector operations should still work), but if you try to *set* the
+    value with <<= or |= then it will generate a _MemAssignment object rather than the
+    normal wire assignment.
     """
 
     def __init__(self, mem, index):
@@ -151,9 +153,9 @@ class MemBlock:
 
     .. _asynchronous_memories:
 
-    ---------------------
     Asynchronous Memories
     ---------------------
+
     It is best practice to have memory operations start on a rising clock edge if you
     want them to synthesize into efficient hardware, so ``MemBlocks`` are `synchronous`
     by default (``asynchronous=False``). ``MemBlocks`` will enforce this by checking
@@ -167,9 +169,9 @@ class MemBlock:
     by most design tools. They are not a realistic option for memories with more than a
     few hundred elements.
 
-    --------------------
     Read and Write Ports
     --------------------
+
     Each read or write to the memory will create a new `port` (either a read port or
     write port respectively). By default memories are limited to 2 read ports and 1
     write port, to keep designs efficient by default, but those values can be changed
@@ -177,16 +179,16 @@ class MemBlock:
     may not map to physical memories such as block RAMs or existing memory hardware
     macros.
 
-    --------------
     Default Values
     --------------
+
     In PyRTL :class:`Simulation`, all ``MemBlocks`` are zero-initialized by default.
     Initial data can be specified for each MemBlock in :meth:`Simulation.__init__`'s
     ``memory_value_map``.
 
-    ---------------------------
     Simultaneous Read and Write
     ---------------------------
+
     .. doctest only::
 
         >>> import pyrtl
@@ -213,9 +215,9 @@ class MemBlock:
         >>> sim.inspect("read_data")
         1
 
-    ---------------------------------
     Mapping ``MemBlocks`` to Hardware
     ---------------------------------
+
     Synchronous ``MemBlocks`` can generally be mapped to FPGA block RAMs and similar
     hardware, but there are many pitfalls:
 
@@ -223,9 +225,12 @@ class MemBlock:
        mapping a design to FPGA block RAMs. Block RAMs may have additional timing
        constraints, like requiring register outputs for each block RAM.
        ``asynchronous=False`` only requires register inputs.
+
     #. Block RAMs may offer more or less read and write ports than ``MemBlock``'s
        defaults.
+
     #. Block RAMs may not zero-initialize by default.
+
     #. Block RAMs may implement simultaneous reads and writes in different ways.
     """
 

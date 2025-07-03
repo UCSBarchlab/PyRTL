@@ -2,7 +2,9 @@
 Basic multiplexers are defined in PyRTL's core library, see:
 
 - :func:`.select` for a multiplexer that selects between two options.
+
 - :func:`.mux` for a multiplexer that selects between an arbitrary number of options.
+
 - :ref:`conditional_assignment` for a more readable alternative to :func:`.mux`.
 
 The functions below provide more complex alternatives.
@@ -88,12 +90,13 @@ def sparse_mux(sel: WireVector, vals: dict[int, WireVector]) -> WireVector:
 def _sparse_mux(sel, vals):
     """Mux that avoids instantiating unnecessary mux_2s when possible.
 
+    This mux supports not having a full specification. indices that are not specified
+    are treated as Don't Cares
+
     :param WireVector sel: Select wire, determines what is selected on a given cycle
     :param {int: WireVector} vals: dictionary to store the values that are
-    :return: WireVector that signifies the change
 
-    This mux supports not having a full specification. indices that are not
-    specified are treated as Don't Cares
+    :return: WireVector that signifies the change
     """
     items = list(vals.values())
     if len(vals) <= 1:
@@ -147,8 +150,7 @@ class MultiSelector:
 
     .. WARNING::
 
-        New uses of this class are discouraged. Use :ref:`conditional_assignment`
-        instead.
+        Use :ref:`conditional_assignment` instead.
     """
 
     def __init__(self, signal_wire, *dest_wires):
@@ -159,8 +161,8 @@ class MultiSelector:
         self.dest_instrs_info = {dest_w: [] for dest_w in dest_wires}
 
     def __enter__(self):
-        """For compatibility with `with` statements, which is the recommended
-        method of using a MultiSelector.
+        """For compatibility with `with` statements, which is the recommended method of
+        using a MultiSelector.
         """
         return self
 

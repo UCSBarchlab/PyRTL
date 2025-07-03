@@ -1596,9 +1596,8 @@ class TestVerilogNames(unittest.TestCase):
 class TestVerilogOutput(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        # To compare textual consistency, need to make
-        # sure we're starting at the same index for all
-        # automatically created names.
+        # To compare textual consistency, need to make sure we're starting at the same
+        # index for all automatically created names.
         pyrtl.wire._reset_wire_indexers()
         pyrtl.memory._reset_memory_indexer()
 
@@ -1628,14 +1627,12 @@ class TestVerilogOutput(unittest.TestCase):
         self.assertEqual(buffer.getvalue(), verilog_output_small)
 
     def test_textual_consistency_large(self):
-        # The following is a non-sensical program created to test
-        # that the Verilog that is created is deterministic
-        # in the order in which it presents the wire, register,
-        # and memory declarations and the combinational and
-        # sequential logic. Hence it creates many memories, and
-        # makes sure at least two lines of code are created in
-        # the always @ blocks associated with them (so we have
-        # many different wire names to deal with and test against).
+        # The following is a non-sensical program created to test that the Verilog that
+        # is created is deterministic in the order in which it presents the wire,
+        # register, and memory declarations and the combinational and sequential logic.
+        # Hence it creates many memories, and makes sure at least two lines of code are
+        # created in the always @ blocks associated with them (so we have many different
+        # wire names to deal with and test against).
         a = pyrtl.Input(4, "a")
         r = pyrtl.Register(4, name="r")
         s = pyrtl.Register(4, name="s", reset_value=13)
@@ -1938,9 +1935,8 @@ endmodule
 class TestOutputTestbench(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        # To compare textual consistency, need to make
-        # sure we're starting at the same index for all
-        # automatically created names.
+        # To compare textual consistency, need to make sure we're starting at the same
+        # index for all automatically created names.
         pyrtl.wire._reset_wire_indexers()
         pyrtl.memory._reset_memory_indexer()
 
@@ -1957,8 +1953,8 @@ class TestOutputTestbench(unittest.TestCase):
             pyrtl.output_verilog_testbench(tbfile, sim.tracer)
 
     def create_design(self):
-        # Various wire names so we can verify they are printed
-        # in deterministic order each time
+        # Various wire names so we can verify they are printed in deterministic order
+        # each time
         i1, i2, i3 = pyrtl.input_list("w1/4 w12/3 a100/2")
         r1, r2 = pyrtl.register_list("r1/3 r2/4")
         r3 = pyrtl.Register(8)
@@ -2630,8 +2626,8 @@ class TestInputISCASBench(unittest.TestCase):
 
         self.assertEqual(
             output.getvalue(),
-            "Found input and output wires with the same name. "
-            "Output 'G3' has now been renamed to 'tmp3'.\n",
+            "Found input and output wires with the same name. Output 'G3' has now been "
+            "renamed to 'tmp3'.\n",
         )
         pyrtl.working_block().sanity_check()
 

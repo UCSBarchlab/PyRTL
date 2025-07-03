@@ -195,8 +195,7 @@ def log2(integer_val: int) -> int:
 def truncate(
     wirevector_or_integer: WireVector | int, bitwidth: int
 ) -> WireVector | int:
-    """Returns a :class:`WireVector` or integer truncated to the specified
-    ``bitwidth``.
+    """Returns a :class:`WireVector` or integer truncated to the specified ``bitwidth``.
 
     Truncation removes the most significant bits of ``wirevector_or_integer``, leaving a
     result that is only :attr:`~WireVector.bitwidth` bits wide. For :class:`ints<int>`
@@ -278,14 +277,14 @@ def match_bitpattern(
     matches the ``bitpattern``, and a tuple containing the matched fields, if any.
     Compatible with the ``with`` statement.
 
-    This function will compare a multi-bit :class:`WireVector` to a specified pattern
-    of bits, where some of the pattern can be "wildcard" bits. If any of the ``1`` or
-    ``0`` values specified in the bitpattern fail to match the :class:`WireVector`
-    during execution, a ``0`` will be produced, otherwise the value carried on the wire
-    will be ``1``. The wildcard characters can be any other alphanumeric character, with
+    This function will compare a multi-bit :class:`WireVector` to a specified pattern of
+    bits, where some of the pattern can be "wildcard" bits. If any of the ``1`` or ``0``
+    values specified in the bitpattern fail to match the :class:`WireVector` during
+    execution, a ``0`` will be produced, otherwise the value carried on the wire will be
+    ``1``. The wildcard characters can be any other alphanumeric character, with
     characters other than ``?`` having special functionality (see below). The string
-    must have length equal to the :class:`WireVector` specified, although whitespace
-    and underscore characters will be ignored and can be used for pattern readability.
+    must have length equal to the :class:`WireVector` specified, although whitespace and
+    underscore characters will be ignored and can be used for pattern readability.
 
     For all other characters besides ``1``, ``0``, or ``?``, a tuple of
     :class:`WireVectors<WireVector>` will be returned as the second return value. Each
@@ -406,22 +405,21 @@ def match_bitpattern(
 
 
 def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
-    """Return an unsigned integer representation of field format filled with
-    the provided values.
+    """Return an unsigned integer representation of field format filled with the
+    provided values.
 
-    This function will compare a specified pattern of bits, where some of the
-    pattern can be "wildcard" bits.  The wildcard bits must all be named with a
-    single letter and, unlike the related function :func:`match_bitpattern`, no "?"
-    can be used.  The function will take the provided ``bitpattern`` and create an
-    integer that substitutes the provided fields in for the given wildcards at
-    the bit level.  This sort of bit substitution is useful when creating
-    values for testing when the resulting values will be "chopped" up by the
-    hardware later (e.g. instruction decode or other bitfield heavy functions).
+    This function will compare a specified pattern of bits, where some of the pattern
+    can be "wildcard" bits. The wildcard bits must all be named with a single letter
+    and, unlike the related function :func:`match_bitpattern`, no "?" can be used. The
+    function will take the provided ``bitpattern`` and create an integer that
+    substitutes the provided fields in for the given wildcards at the bit level. This
+    sort of bit substitution is useful when creating values for testing when the
+    resulting values will be "chopped" up by the hardware later (e.g. instruction decode
+    or other bitfield heavy functions).
 
-    If a special keyword argument, ``field_map``, is provided, then the named
-    fields provided can be longer, human-readable field names, which will
-    correspond to the field in the bitpattern according to the ``field_map``. See
-    the third example below.
+    If a special keyword argument, ``field_map``, is provided, then the named fields
+    provided can be longer, human-readable field names, which will correspond to the
+    field in the bitpattern according to the ``field_map``. See the third example below.
 
     Examples::
 
@@ -440,17 +438,17 @@ def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
         ...         field_map={'i': 'imm', 's': 'rs2', 'r': 'rs1'}))
         '0b10000011010000010100011'
 
-    :param bitpattern: A string holding the pattern (of bits and wildcards) to
-        match
-    :param ordered_fields: A list of parameters to be matched to the provided
-        bit pattern in the order provided.  If ``ordered_fields`` are provided then
-        no ``named_fields`` can be used.
-    :param named_fields: A list of parameters to be matched to the provided bit
-        pattern by the names provided.  If ``named_fields`` are provided then no
-        ``ordered_fields`` can be used.  A special keyword argument, ``field_map``,
-        can be provided, which will allow you to specify a correspondence
-        between the 1-letter field names in the bitpattern string and longer,
-        human readable field names. See the example above.
+    :param bitpattern: A string holding the pattern (of bits and wildcards) to match
+    :param ordered_fields: A list of parameters to be matched to the provided bit
+        pattern in the order provided. If ``ordered_fields`` are provided then no
+        ``named_fields`` can be used.
+    :param named_fields: A list of parameters to be matched to the provided bit pattern
+        by the names provided. If ``named_fields`` are provided then no
+        ``ordered_fields`` can be used. A special keyword argument, ``field_map``, can
+        be provided, which will allow you to specify a correspondence between the
+        1-letter field names in the bitpattern string and longer, human readable field
+        names. See the example above.
+
     :return: An unsigned integer carrying the result of the field substitution.
     """
 
@@ -534,8 +532,8 @@ def chop(w: WireVector, *segment_widths: int) -> list[WireVector]:
     As a check, ``chop`` will throw an error if the sum of the lengths of the fields
     given is not the same as the length of the :class:`WireVector` to ``chop``. Note
     also that ``chop`` assumes that the "rightmost" arguments are the least signficant
-    bits (just like :func:`concat`) which is normal for hardware functions but makes
-    the list order a little counter intuitive.
+    bits (just like :func:`concat`) which is normal for hardware functions but makes the
+    list order a little counter intuitive.
 
     .. note::
 
@@ -598,7 +596,7 @@ def input_list(
 
     .. WARNING::
 
-        Avoid using this function. Lists of ``Outputs`` can be created with list
+        Avoid using this function. Lists of ``Inputs`` can be created with list
         comprehensions, which are easier to understand because they compose familiar
         concepts, rather than introducing a new concept.
 
@@ -642,7 +640,7 @@ def register_list(
 
     .. WARNING::
 
-        Avoid using this function. Lists of ``Outputs`` can be created with list
+        Avoid using this function. Lists of ``Registers`` can be created with list
         comprehensions, which are easier to understand because they compose familiar
         concepts, rather than introducing a new concept.
 
@@ -804,8 +802,8 @@ def formatted_str_to_val(data: str, format: str, enum_set=None) -> int:
     :param data: A string holding the value to convert.
     :param format: A string holding a format which will be used to convert the data
         string.
-    :param enum_set: An iterable of :class:`~enum.IntEnum` which are used as part of
-        the conversion process.
+    :param enum_set: An iterable of :class:`~enum.IntEnum` which are used as part of the
+        conversion process.
 
     :return: ``data`` as a signed integer
     """
@@ -1093,8 +1091,8 @@ def get_stacks(*wires):
     call_stack = getattr(wires[0], "init_call_stack", None)
     if not call_stack:
         return (
-            "    No call info found for wires: use set_debug_mode() "
-            "to provide more information\n"
+            "    No call info found for wires: use set_debug_mode() to provide more "
+            "information\n"
         )
     return "\n".join(str(wire) + ":\n" + get_stack(wire) for wire in wires)
 
@@ -1109,8 +1107,8 @@ def get_stack(wire):
         frames = " ".join(frame for frame in call_stack[:-1])
         return "Wire Traceback, most recent call last \n" + frames + "\n"
     return (
-        "    No call info found for wire: use set_debug_mode()"
-        " to provide more information"
+        "    No call info found for wire: use set_debug_mode() to provide more "
+        "information"
     )
 
 
@@ -1216,8 +1214,8 @@ def print_loop(loop_data):
 def _currently_in_jupyter_notebook():
     """Return true if running under Jupyter notebook, otherwise return False.
 
-    We want to check for more than just the presence of __IPYTHON__ because
-    that is present in both Jupyter notebooks and IPython terminals.
+    We want to check for more than just the presence of __IPYTHON__ because that is
+    present in both Jupyter notebooks and IPython terminals.
     """
     try:
         # get_ipython() is in the global namespace when ipython is started
@@ -1253,17 +1251,16 @@ class _NetCount:
         self.prev_nets = len(self.block.logic) * 1000
 
     def shrank(self, block=None, percent_diff=0, abs_diff=1):
-        """
-        Returns whether a block has fewer nets than before
+        """Returns whether a block has fewer nets than before
+
+        This function checks whether the change in the number of nets is greater than
+        the percentage and absolute difference thresholds.
 
         :param Block block: block to check (if changed)
         :param Number percent_diff: percentage difference threshold
         :param int abs_diff: absolute difference threshold
-        :return: boolean
 
-        This function checks whether the change in the number of
-        nets is greater than the percentage and absolute difference
-        thresholds.
+        :return: boolean
         """
         if block is None:
             block = self.block
@@ -1276,9 +1273,8 @@ class _NetCount:
     shrinking = shrank
 
 
-# _ComponentMeta holds the component's name, bitwidth, and type. If the
-# _ComponentMeta's type is None, then the default component_type should be used
-# instead.
+# _ComponentMeta holds the component's name, bitwidth, and type. If the _ComponentMeta's
+# type is None, then the default component_type should be used instead.
 _ComponentMeta = collections.namedtuple("_ComponentMeta", ["name", "bitwidth", "type"])
 
 
@@ -1292,13 +1288,12 @@ def _make_component(
     """Determine the component's type, instantiate it, and set its value."""
     # Determine the component's actual type.
     #
-    # If the _ComponentMeta specifies a type, then the component is a
-    # wire_struct or a wire_matrix. The _ComponentMeta's type must be used as
-    # the component's primary type, and the default_component_type becomes the
-    # component's concatenated_type.
+    # If the _ComponentMeta specifies a type, then the component is a wire_struct or a
+    # wire_matrix. The _ComponentMeta's type must be used as the component's primary
+    # type, and the default_component_type becomes the component's concatenated_type.
     #
-    # If the _ComponentMeta does not specify a type, the component uses the
-    # default component_type.
+    # If the _ComponentMeta does not specify a type, the component uses the default
+    # component_type.
     if component_meta.type is None:
         actual_component_type = component_type
     else:
@@ -1315,15 +1310,15 @@ def _make_component(
             # with brackets, like `matrix[0]`.
             component_name = name + "[" + str(component_meta.name) + "]"
 
-    # The logic below always creates a new wire_struct, wire_matrix, or
-    # WireVector for each component. If the component_value already has the
-    # appropriate type and name, we could use the component_value directly and
-    # we don't need a new struct/matrix/Vector. Correctly detecting these
-    # opportunities is complicated, so we keep things simple for now.
+    # The logic below always creates a new wire_struct, wire_matrix, or WireVector for
+    # each component. If the component_value already has the appropriate type and name,
+    # we could use the component_value directly and we don't need a new
+    # struct/matrix/Vector. Correctly detecting these opportunities is complicated, so
+    # we keep things simple for now.
     #
-    # Components are always initialized with one concatenated component_value,
-    # which provides values for all its wires. This implies that component
-    # wire_structs and wire_matricies always call _split().
+    # Components are always initialized with one concatenated component_value, which
+    # provides values for all its wires. This implies that component wire_structs and
+    # wire_matricies always call _split().
     if hasattr(actual_component_type, "_is_wire_struct"):
         # Make a wire_struct component. component_value may be None.
         component_kwargs = {actual_component_type._class_name: component_value}
@@ -1378,10 +1373,9 @@ def _slice(
 ):
     """Slice ``concatenated`` into components.
 
-    ``concatenated_value`` is the driver for ``concatenated``. Some
-    optimizations are possible by inspecting ``concatenated_value``, for
-    example we immediately slice Consts rather than generating slicing logic.
-
+    ``concatenated_value`` is the driver for ``concatenated``. Some optimizations are
+    possible by inspecting ``concatenated_value``, for example we immediately slice
+    Consts rather than generating slicing logic.
     """
     if concatenated_value is not None and not isinstance(concatenated, Const):
         concatenated <<= concatenated_value
@@ -1443,12 +1437,12 @@ def wire_struct(wire_struct_spec):
     """Decorator that assigns names to :class:`WireVector` slices.
 
     ``@wire_struct`` assigns names to *non-overlapping* :class:`WireVector` slices.
-    Suppose we have an 8-bit wide :class:`WireVector` called ``byte``. We can refer
-    to all 8 bits with the name ``byte``, but ``@wire_struct`` lets us refer to
-    slices by name, for example we could name the high 4 bits ``byte.high`` and
-    the low 4 bits ``byte.low``. Without ``@wire_struct``, we would refer to
-    these slices as ``byte[4:8]`` and ``byte[0:4]``, which are prone to
-    off-by-one errors and harder to read.
+    Suppose we have an 8-bit wide :class:`WireVector` called ``byte``. We can refer to
+    all 8 bits with the name ``byte``, but ``@wire_struct`` lets us refer to slices by
+    name, for example we could name the high 4 bits ``byte.high`` and the low 4 bits
+    ``byte.low``. Without ``@wire_struct``, we would refer to these slices as
+    ``byte[4:8]`` and ``byte[0:4]``, which are prone to off-by-one errors and harder to
+    read.
 
     .. note::
 
@@ -1462,6 +1456,7 @@ def wire_struct(wire_struct_spec):
         >>> pyrtl.reset_working_block()
 
     The example ``Byte`` ``@wire_struct`` can be defined as::
+
         >>> @wire_struct
         ... class Byte:
         ...     high: 4
@@ -1470,37 +1465,36 @@ def wire_struct(wire_struct_spec):
     Construction
     ------------
 
-    Once a ``@wire_struct`` class is defined, it can be instantiated by
-    providing drivers for all of its wires. This can be done in two ways:
+    Once a ``@wire_struct`` class is defined, it can be instantiated by providing
+    drivers for all of its wires. This can be done in two ways:
 
     1. Provide a driver for *each* component wire, for example::
 
             >>> byte = Byte(high=0xA, low=0xB)
 
-       Note how the component names (``high``, ``low``) are used as keyword
-       args for the constructor. Drivers must be provided for *all* components.
+       Note how the component names (``high``, ``low``) are used as keyword args for the
+       constructor. Drivers must be provided for *all* components.
 
     2. Provide a driver for the entire ``@wire_struct``, for example::
 
             >>> byte = Byte(Byte=0xAB)
 
-       Note how the class name (``Byte``) is used as a keyword arg for the
-       constructor.
+       Note how the class name (``Byte``) is used as a keyword arg for the constructor.
 
     Accessing Slices
     ----------------
 
     After instantiating a ``@wire_struct``, the instance functions as a
-    :class:`WireVector` containing all the wires. For example, ``byte`` functions as
-    a :class:`WireVector` with bitwidth 8::
+    :class:`WireVector` containing all the wires. For example, ``byte`` functions as a
+    :class:`WireVector` with bitwidth 8::
 
         >>> byte = Byte(Byte=0xAB)
         >>> byte.bitwidth
         8
 
-    The named slice can be accessed through the ``.`` operator
-    (``__getattr__``), for example ``byte.high`` and ``byte.low``, which both
-    function as :class:`WireVector` with bitwidth 4::
+    The named slice can be accessed through the ``.`` operator (``__getattr__``), for
+    example ``byte.high`` and ``byte.low``, which both function as :class:`WireVector`
+    with bitwidth 4::
 
         >>> byte = Byte(Byte=0xAB)
         >>> byte.high.bitwidth
@@ -1508,8 +1502,8 @@ def wire_struct(wire_struct_spec):
         >>> byte.low.bitwidth
         4
 
-    Both the instance and the slices are first-class :class:`WireVector`, so they
-    can be manipulated with all the usual PyRTL operators.
+    Both the instance and the slices are first-class :class:`WireVector`, so they can be
+    manipulated with all the usual PyRTL operators.
 
     ``len()`` returns the number of components in the ``@wire_struct``::
 
@@ -1533,9 +1527,10 @@ def wire_struct(wire_struct_spec):
         'my_byte.low'
 
     .. WARNING::
-        All ``@wire_struct`` names are only set during construction. You can
-        later rename a ``@wire_struct`` or its components, but those changes
-        are local, and will not propagate to other ``@wire_struct`` components.
+
+        All ``@wire_struct`` names are only set during construction. You can later
+        rename a ``@wire_struct`` or its components, but those changes are local, and
+        will not propagate to other ``@wire_struct`` components.
 
     Composition
     -----------
@@ -1556,8 +1551,8 @@ def wire_struct(wire_struct_spec):
             green: Byte
             blue: Byte
 
-    Drivers must be specified for all components, but they can be specified at
-    any level. All these examples construct an equivalent ``@wire_struct``::
+    Drivers must be specified for all components, but they can be specified at any
+    level. All these examples construct an equivalent ``@wire_struct``::
 
         pixel = Pixel(Pixel=0xABCDEF)
         pixel = Pixel(red=0xAB, green=0xCD, blue=0xEF)
@@ -1566,8 +1561,7 @@ def wire_struct(wire_struct_spec):
                       green=Byte(high=0xC, low=0xD),
                       blue=0xEF)
 
-    Hierarchical ``@wire_struct`` components are accessed by composing ``.``
-    operators::
+    Hierarchical ``@wire_struct`` components are accessed by composing ``.`` operators::
 
         pixel
         pixel.red
@@ -1592,15 +1586,15 @@ def wire_struct(wire_struct_spec):
 
         cache_line = CacheLine(address=0x01234567, data=0x89ABCDEF, valid=1)
 
-    Leaf-level components can be accessed by combining the ``.`` and ``[]``
-    operators, for example ``cache_line.address[3]``.
+    Leaf-level components can be accessed by combining the ``.`` and ``[]`` operators,
+    for example ``cache_line.address[3]``.
 
     Types
     -----
 
-    You can change the type of a ``@wire_struct``'s components to a
-    :class:`WireVector` subclass like :class:`Input` or :class:`Output` with
-    the ``component_type`` constructor argument::
+    You can change the type of a ``@wire_struct``'s components to a :class:`WireVector`
+    subclass like :class:`Input` or :class:`Output` with the ``component_type``
+    constructor argument::
 
         # Generates Outputs named ``output_byte.low`` and ``output_byte.high``.
         >>> byte = Byte(name="output_byte", component_type=pyrtl.Output,
@@ -1618,9 +1612,9 @@ def wire_struct(wire_struct_spec):
         >>> input_byte = Byte(name="input_byte", concatenated_type=pyrtl.Input)
 
     .. NOTE::
-        No values are specified for ``input_byte`` because its value is not
-        known until simulation time.
 
+        No values are specified for ``input_byte`` because its value is not known until
+        simulation time.
     """
     # Convert the decorated class' annotations (dict of attr_name: attr_value)
     # to a list of _ComponentMetas.
@@ -1682,20 +1676,10 @@ def wire_struct(wire_struct_spec):
         ):
             """Concatenate or slice :class:`WireVector` components.
 
-            :param str name: The name of the concatenated wire. Must be unique.
-                If none is provided, one will be autogenerated. If a name is
-                provided, components will be assigned names of the form
-                "{name}.{component_name}".
-            :param Block block: The block containing the concatenated and
-                component wires. Defaults to the :ref:`working_block`.
-            :param type concatenated_type: Type for the concatenated
-                :class:`WireVector`.
-            :param type component_type: Type for each component.
+            The remaining keyword args specify values for all wires. If the concatenated
+            value is provided, its value must be provided with the keyword arg matching
+            the decorated class name. For example, if the decorated class is::
 
-            The remaining keyword args specify values for all wires. If the
-            concatenated value is provided, its value must be provided with the
-            keyword arg matching the decorated class name. For example, if the
-            decorated class is::
                 @wire_struct
                 class Byte:
                     high: 4  # high is the 4 most significant bits.
@@ -1705,16 +1689,23 @@ def wire_struct(wire_struct_spec):
 
                 byte = Byte(Byte=0xAB)
 
-            And if the component values are provided instead, their values are
-            set by keyword args matching the component names::
+            And if the component values are provided instead, their values are set by
+            keyword args matching the component names::
 
                 byte = Byte(low=0xA, high=0xB)
 
+            :param str name: The name of the concatenated wire. Must be unique. If none
+                is provided, one will be autogenerated. If a name is provided,
+                components will be assigned names of the form "{name}.{component_name}".
+            :param Block block: The block containing the concatenated and component
+                wires. Defaults to the :ref:`working_block`.
+            :param type concatenated_type: Type for the concatenated
+                :class:`WireVector`.
+            :param type component_type: Type for each component.
             """
             # The concatenated WireVector contains all the _WireStruct's wires.
-            # WrappedWireVector (base class) will forward all attribute and
-            # method accesses on this _WireStruct to the concatenated
-            # WireVector.
+            # WrappedWireVector (base class) will forward all attribute and method
+            # accesses on this _WireStruct to the concatenated WireVector.
             if (
                 class_name in kwargs
                 and isinstance(kwargs[class_name], int)
@@ -1733,8 +1724,7 @@ def wire_struct(wire_struct_spec):
                 )
             super().__init__(wire=concatenated)
 
-            # self._components maps from component name to each component's
-            # WireVector.
+            # self._components maps from component name to each component's WireVector.
             components = {}
             self.__dict__["_components"] = components
 
@@ -1801,11 +1791,10 @@ def wire_struct(wire_struct_spec):
         def __getattr__(self, component_name: str):
             """Retrieve a component by name.
 
-            Components are concatenated to form the concatenated
-            :class:`WireVector`, or sliced from the concatenated :class:`WireVector`.
+            Components are concatenated to form the concatenated :class:`WireVector`, or
+            sliced from the concatenated :class:`WireVector`.
 
             :param component_name: The name of the component wire.
-
             """
             components = self.__dict__["_components"]
             if component_name in components:
@@ -1822,10 +1811,9 @@ def wire_struct(wire_struct_spec):
 def wire_matrix(component_schema, size: int):
     """Returns a class that assigns numbered indices to :class:`WireVector` slices.
 
-    ``wire_matrix`` assigns numbered indices to *non-overlapping*
-    :class:`WireVector` slices. ``wire_matrix`` is very similar to
-    :func:`wire_struct`, so read :func:`wire_struct`'s documentation
-    first.
+    ``wire_matrix`` assigns numbered indices to *non-overlapping* :class:`WireVector`
+    slices. ``wire_matrix`` is very similar to :func:`wire_struct`, so read
+    :func:`wire_struct`'s documentation first.
 
     .. note::
 
@@ -1838,19 +1826,20 @@ def wire_matrix(component_schema, size: int):
         >>> import pyrtl
         >>> pyrtl.reset_working_block()
 
-    An example 32-bit ``Word`` ``wire_matrix``, which represents a group of
-    four bytes, can be defined as::
+    An example 32-bit ``Word`` ``wire_matrix``, which represents a group of four bytes,
+    can be defined as::
 
         >>> Word = wire_matrix(component_schema=8, size=4)
 
     .. NOTE::
+
         ``wire_matrix`` returns a class, like :func:`~collections.namedtuple`.
 
     Construction
     ------------
 
-    Once a ``wire_matrix`` class is defined, it can be instantiated by
-    providing drivers for all of its wires. This can be done in two ways::
+    Once a ``wire_matrix`` class is defined, it can be instantiated by providing drivers
+    for all of its wires. This can be done in two ways::
 
         # Provide a driver for each component, most significant bits first.
         >>> word = Word(values=[0x89, 0xAB, 0xCD, 0xEF])
@@ -1859,18 +1848,18 @@ def wire_matrix(component_schema, size: int):
         >>> word = Word(values=[0x89ABCDEF])
 
     .. NOTE::
-        When specifying drivers for each component, the most significant bits
-        are specified first.
 
-    After instantiating a ``wire_matrix``, regardless of how it was
-    constructed, the instance functions as a :class:`WireVector` containing all the
-    wires, so ``word`` functions as a :class:`WireVector` with bitwidth 32. The
-    named slice can be accessed with square brackets (``__getitem__``), for
-    example ``word[0]`` and ``word[3]``, which both function as :class:`WireVector`
-    with bitwidth 8. ``word[0]`` refers to the most significant byte, and
-    ``word[3]`` refers to the least significant byte. Both the instance and the
-    slices are first-class :class:`WireVector`, so they can be manipulated with all
-    the usual PyRTL operators.
+        When specifying drivers for each component, the most significant bits are
+        specified first.
+
+    After instantiating a ``wire_matrix``, regardless of how it was constructed, the
+    instance functions as a :class:`WireVector` containing all the wires, so ``word``
+    functions as a :class:`WireVector` with bitwidth 32. The named slice can be accessed
+    with square brackets (``__getitem__``), for example ``word[0]`` and ``word[3]``,
+    which both function as :class:`WireVector` with bitwidth 8. ``word[0]`` refers to
+    the most significant byte, and ``word[3]`` refers to the least significant byte.
+    Both the instance and the slices are first-class :class:`WireVector`, so they can be
+    manipulated with all the usual PyRTL operators.
 
     Naming
     ------
@@ -1893,14 +1882,14 @@ def wire_matrix(component_schema, size: int):
         of ``exec``. In the example below, the attribute will be "Byte" (``str``),
         instead of ``Byte`` (``class``), which breaks ``wire_struct``.
 
-    ``wire_matrix`` can be composed with itself and :func:`wire_struct`. For
-    example, we can define some multi-dimensional byte arrays::
+    ``wire_matrix`` can be composed with itself and :func:`wire_struct`. For example, we
+    can define some multi-dimensional byte arrays::
 
         Array1D = wire_matrix(component_schema=8, size=2)
         Array2D = wire_matrix(component_schema=Array1D, size=2)
 
-    Drivers must be specified for all components, but they can be specified at
-    any level. All these examples construct an equivalent ``wire_matrix``::
+    Drivers must be specified for all components, but they can be specified at any
+    level. All these examples construct an equivalent ``wire_matrix``::
 
         array_2d = Array2D(values=[0x89AB, 0xCDEF])
         array_2d = Array2D(values=[Array1D(values=[0x89, 0xAB]),
@@ -1911,8 +1900,7 @@ def wire_matrix(component_schema, size: int):
     Accessing Slices
     ----------------
 
-    Hierarchical components are accessed by composing ``[]`` operators, for
-    example::
+    Hierarchical components are accessed by composing ``[]`` operators, for example::
 
         print(array_2d[0][0].bitwidth)  # Prints 8.
         print(array_2d[0][1].bitwidth)  # Prints 8.
@@ -1949,16 +1937,16 @@ def wire_matrix(component_schema, size: int):
         >>> word[1].name
         'output_word[1]'
 
-    You can change the type of the ``wire_matrix`` itself with the
-    ``concatenated_type`` cnstructor argument::
+    You can change the type of the ``wire_matrix`` itself with the ``concatenated_type``
+    cnstructor argument::
 
         # Generates an Input named ``input_word``.
         >>> word = Word(name="input_word", concatenated_type=pyrtl.Input)
 
     .. NOTE::
-        No values are specified for ``input_word`` because its value is not
-        known until simulation time.
 
+        No values are specified for ``input_word`` because its value is not known until
+        simulation time.
     """
     # Determine each component's bitwidth.
     if hasattr(component_schema, "_is_wire_struct") or hasattr(
@@ -1986,9 +1974,8 @@ def wire_matrix(component_schema, size: int):
             values: list | None = None,
         ):
             # The concatenated WireVector contains all the _WireMatrix's wires.
-            # WrappedWireVector (base class) will forward all attribute and
-            # method accesses on this _WireMatrix to the concatenated
-            # WireVector.
+            # WrappedWireVector (base class) will forward all attribute and method
+            # accesses on this _WireMatrix to the concatenated WireVector.
             if values is None:
                 values = []
             if (
@@ -2016,28 +2003,26 @@ def wire_matrix(component_schema, size: int):
                     )
                 )
 
-            # By default, slice the concatenated value into components iff
-            # exactly one value is provided.
+            # By default, slice the concatenated value into components iff exactly one
+            # value is provided.
             slicing = len(values) == 1
 
             # Handle Input and Register special cases.
             if concatenated_type is Input or concatenated_type is Register:
-                # Slice the concatenated value. Override the default 'slicing'
-                # because 'values' is empty when slicing a concatenated Input
-                # or Register.
+                # Slice the concatenated value. Override the default 'slicing' because
+                # 'values' is empty when slicing a concatenated Input or Register.
                 #
-                # Note that we can't just check len(values) == 1 after we set
-                # values to [None] because that doesn't work when there is only
-                # one element in the wire_matrix. We must distinguish between:
+                # Note that we can't just check len(values) == 1 after we set values to
+                # [None] because that doesn't work when there is only one element in the
+                # wire_matrix. We must distinguish between:
                 #
                 # 1. Slicing values to produce values[0] (this case).
                 # 2. Concatenating values[0] to produce values (next case).
                 #
-                # But len(values) == 1 in both cases. The slice in (1) and
-                # concatenate in (2) are both no-ops, but we have to get the
-                # direction right. In the first case, values[0] is driven by
-                # values, and in the second case, values is driven by
-                # values[0].
+                # But len(values) == 1 in both cases. The slice in (1) and concatenate
+                # in (2) are both no-ops, but we have to get the direction right. In the
+                # first case, values[0] is driven by values, and in the second case,
+                # values is driven by values[0].
                 slicing = True
                 values = [None]
             elif component_type is Input or component_type is Register:
@@ -2060,8 +2045,8 @@ def wire_matrix(component_schema, size: int):
                 if len(values) != len(schema):
                     msg = (
                         "wire_matrix constructor expects 1 value to slice, or "
-                        f"{len(schema)} values to concatenate (received "
-                        f"{len(values)} values)"
+                        f"{len(schema)} values to concatenate (received {len(values)} "
+                        "values)"
                     )
                     raise PyrtlError(msg)
                 # Component values were provided; concatenate them.
@@ -2129,8 +2114,8 @@ def one_hot_to_binary(w: WireVectorLike) -> WireVector:
     :param w: A :class:`WireVector`, or any type that can be coerced to
               :class:`WireVector` by :func:`as_wires`.
 
-    :return: a :class:`WireVector` containing the smallest bit position of the high
-        bit, in binary.
+    :return: a :class:`WireVector` containing the smallest bit position of the high bit,
+             in binary.
     """
 
     w = as_wires(w)

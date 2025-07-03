@@ -10,7 +10,8 @@ def match_bitwidth(*args: pyrtl.WireVector):
         Use :func:`.match_bitwidth` instead.
 
     :param args: input arguments
-    :return: tuple of `args` in order with extended bits
+
+    :return: tuple of ``args`` in order with extended bits
     """
     return pyrtl.match_bitwidth(*args)
 
@@ -22,9 +23,9 @@ def partition_wire(
 
     The ``wire``'s bitwidth must be evenly divisible by ``partition_size``.
 
-    .. note::
+    .. WARNING::
 
-        Consider using :func:`.wire_matrix` or :func:`.chop` instead.
+        Use :func:`.wire_matrix` or :func:`.chop` instead.
 
     :param wire: Wire to partition.
     :param partition_size: Integer representing size of each partition.
@@ -43,14 +44,24 @@ def partition_wire(
 
 def str_to_int_array(string, base=16):
     """
-    Converts a string to an array of integer values according to the
-    base speciafied (int numbers must be whitespace delimited).
+    Converts a string to an array of integer values according to the base specified (int
+    numbers must be whitespace delimited).
 
     Example: ``"13 a3 3c" => [0x13, 0xa3, 0x3c]``
 
     .. WARNING::
 
-        Use a :class:`list` comprehension instead.
+        Use a :class:`list` comprehension instead::
+
+            >>> hex_string = "13 a3 3c"
+
+            >>> int_list = [int(s, base=16) for s in hex_string.split()]
+
+            >>> int_list
+            [19, 163, 60]
+            >>> [hex(i) for i in int_list]
+            ['0x13', '0xa3', '0x3c']
+
 
     :return: [int]
     """

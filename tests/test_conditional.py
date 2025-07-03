@@ -174,9 +174,6 @@ class TestConditional(unittest.TestCase):
                     pass
 
 
-# ---------------------------------------------------------------
-
-
 class TestMemConditionalBlock(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -221,8 +218,7 @@ class TestMemConditionalBlock(unittest.TestCase):
                 m[addr] |= i
             with pyrtl.otherwise:
                 with addr[0]:
-                    # this should happen every time because no
-                    # state is being updated!
+                    # this should happen every time because no state is being updated!
                     o <<= m[addr]
         self.check_trace("i 01234567\no 00000123\n")
 
@@ -239,13 +235,9 @@ class TestMemConditionalBlock(unittest.TestCase):
                 m[addr] |= (i + 1)[:3]
             with pyrtl.otherwise:
                 with addr[0]:
-                    # this should happen every time because no
-                    # state is being updated!
+                    # this should happen every time because no state is being updated!
                     o <<= m[addr]
         self.check_trace("i 01234567\no 00000130\n")
-
-
-# ---------------------------------------------------------------
 
 
 class TestWireConditionalBlock(unittest.TestCase):
@@ -359,9 +351,6 @@ class TestWireConditionalBlock(unittest.TestCase):
                     i |= o
 
 
-# ---------------------------------------------------------------
-
-
 class TestNonExclusiveBlocks(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -433,9 +422,6 @@ class TestNonExclusiveBlocks(unittest.TestCase):
                 with i != 0:
                     with self.assertRaises(pyrtl.PyrtlError):
                         r1.next |= r2 + 1
-
-
-# ---------------------------------------------------------------
 
 
 class TestSuperWireConditionalBlock(unittest.TestCase):

@@ -284,10 +284,9 @@ class TestNetGraph(unittest.TestCase):
         outwire <<= tempwire2 & inwire3
 
         g = pyrtl.net_graph()
-        # note for future: this might fail if we change
-        # the way that temp wires are inserted, but that
-        # should not matter for this test and so the number
-        # can be safely updated.
+        # note for future: this might fail if we change the way that temp wires are
+        # inserted, but that should not matter for this test and so the number can be
+        # safely updated.
         self.assertEqual(len(g), 10)
 
         self.assertEqual(len(g[inwire]), 1)

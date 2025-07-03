@@ -2,7 +2,9 @@
 Basic shifting is defined in PyRTL's core library, see:
 
 - :func:`.shift_left_logical`
+
 - :func:`.shift_right_logical`
+
 - :func:`.shift_right_arithmetic`
 
 :func:`barrel_shifter` should only be used when more complex shifting behavior is

@@ -2,6 +2,7 @@
 Basic integer multiplication is defined in PyRTL's core library, see:
 
 - :meth:`.WireVector.__mul__` for unsigned integer multiplication.
+
 - :func:`.signed_mult` for signed integer multiplication.
 
 The functions below provide more complex alternatives.
@@ -58,11 +59,11 @@ def simple_mult(
 
 def _trivial_mult(A, B):
     """
-    turns a multiplication into an And gate if one of the
-    wires is a bitwidth of 1
+    Turns a multiplication into an And gate if one of the wires is a bitwidth of 1.
 
     :param A:
     :param B:
+
     :return:
     """
     if len(B) == 1:
@@ -103,8 +104,8 @@ def complex_mult(
         )
         raise pyrtl.PyrtlError(msg)
 
-    # During multiplication, shift a right every cycle 'shift' times,
-    # shift b left every cycle 'shift' times
+    # During multiplication, shift a right every cycle 'shift' times, shift b left every
+    # cycle 'shift' times
     with pyrtl.conditional_assignment:
         with start:  # initialization
             areg.next |= A
@@ -121,8 +122,11 @@ def complex_mult(
 
 
 def _one_cycle_mult(areg, breg, rem_bits, sum_sf=0, curr_bit=0):
-    """returns a WireVector sum of rem_bits multiplies (in one clock cycle) note: this
-    method requires a lot of area because of the indexing in the else statement
+    """Returns a WireVector sum of ``rem_bits`` multiplies (in one clock cycle)
+
+    ..note::
+
+        this method requires a lot of area because of the indexing in the else statement
     """
     if rem_bits == 0:
         return sum_sf

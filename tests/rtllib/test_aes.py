@@ -143,10 +143,8 @@ class TestAESDecrypt(unittest.TestCase):
             self.assertEqual(
                 circuit_out,
                 true_vals[cycle],
-                "\nAssertion failed on cycle: "
-                + str(cycle)
-                + " Gotten value: "
-                + hex(circuit_out),
+                f"\nAssertion failed on cycle: {cycle} Gotten value: "
+                f"{hex(circuit_out)}",
             )
 
         for ready_signal in sim.tracer.trace["ready"][:11]:
@@ -295,10 +293,8 @@ class TestAESEncrypt(unittest.TestCase):
             self.assertEqual(
                 circuit_out,
                 true_vals[cycle],
-                "\nAssertion failed on cycle: "
-                + str(cycle)
-                + " Gotten value: "
-                + hex(circuit_out),
+                f"\nAssertion failed on cycle: {cycle} Gotten value: "
+                f"{hex(circuit_out)}",
             )
 
         for ready_signal in sim.tracer.trace["ready"][:11]:

@@ -1,8 +1,8 @@
 """
 Helper functions for viewing the block visually.
 
-Each of the functions in visualization take a block and a file descriptor.
-The functions provided write the block as a given visual format to the file.
+Each of the functions in visualization take a block and a file descriptor. The functions
+provided write the block as a given visual format to the file.
 """
 
 from __future__ import annotations
@@ -238,10 +238,10 @@ def _default_node_namer(
         if node.op == "x":
             return '[label="{}", shape=invtrapezium]'.format(label("mux"))
         if node.op == "s":
-            # node.op_param is a tuple of the selected bits to pull from the
-            # argument wire, so it could look something like (0,0,0,0,0,0,0),
-            # meaning dest wire is going to be a concatenation of the zero-th bit of
-            # the argument wire, 7 times.
+            # node.op_param is a tuple of the selected bits to pull from the argument
+            # wire, so it could look something like (0,0,0,0,0,0,0), meaning dest wire
+            # is going to be a concatenation of the zero-th bit of the argument wire, 7
+            # times.
             selLower = node.op_param[0]
             selUpper = node.op_param[-1]
             if len(node.op_param) == 1:
@@ -439,8 +439,8 @@ digraph g {
     from pyrtl.importexport import _natural_sort_key
 
     def _node_sort_key(node):
-        # If a LogicNet and a wire share the same name, we want the LogicNet
-        # to sort first, so we arbitrarily 'A' and 'B' suffixes to break ties.
+        # If a LogicNet and a wire share the same name, we want the LogicNet to sort
+        # first, so we arbitrarily 'A' and 'B' suffixes to break ties.
         if isinstance(node, LogicNet):
             if node.op == "@":
                 key = str(node.args[2]) + "A"
@@ -468,10 +468,9 @@ digraph g {
                 rstring += f"    n{from_index} -> n{to_index} {label};\n"
                 srcs[_to].append((_from, edge))
 
-    # Maintain left-to-right order of incoming wires for nets where order matters.
-    # This won't be visually perfect sometimes (especially for a wire used twice
-    # in a net's argument list), but for the majority of cases this will improve
-    # the visualization.
+    # Maintain left-to-right order of incoming wires for nets where order matters. This
+    # won't be visually perfect sometimes (especially for a wire used twice in a net's
+    # argument list), but for the majority of cases this will improve the visualization.
     def index_of(w, args):
         # Special helper so we compare id rather than using builtin operators
         for i, arg in enumerate(args):

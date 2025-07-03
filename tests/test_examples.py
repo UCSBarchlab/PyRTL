@@ -9,8 +9,8 @@ import pyrtl
 """
 Tests all of the files in the example folder
 
-Note that this file is structure dependent, so don't forget to change it if the
-relative location of the examples changes
+Note that this file is structure dependent, so don't forget to change it if the relative
+location of the examples changes
 """
 
 

@@ -1,8 +1,9 @@
-"""Introduction to Hardware Design
+"""
+Introduction to Hardware Design
 
-This code works through the hardware design process with the
-audience of software developers more in mind.  We start with the simple
-problem of designing a Fibonacci sequence calculator (http://oeis.org/A000045).
+This code works through the hardware design process with the audience of software
+developers more in mind. We start with the simple problem of designing a Fibonacci
+sequence calculator (http://oeis.org/A000045).
 """
 
 import pyrtl
@@ -16,15 +17,15 @@ def software_fibonacci(n):
     return a
 
 
-# Iterative implementation of Fibonacci, just iteratively adds a and b to
-# calculate the nth number in the sequence.
-# >> [software_fibonacci(x) for x in range(10)]
+# Iterative implementation of Fibonacci, just iteratively adds a and b to calculate the
+# nth number in the sequence.
+#
+# >>> [software_fibonacci(x) for x in range(10)]
 # [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
 
 
-# So let's convert this into some hardware that computes the same thing.
-# Our first go will be to just replace the 0 and 1 with WireVectors to see
-# what happens.
+# So let's convert this into some hardware that computes the same thing. Our first go
+# will be to just replace the 0 and 1 with WireVectors to see what happens.
 
 
 def attempt1_hardware_fibonacci(n):
@@ -115,9 +116,9 @@ def attempt2_hardware_fibonacci(bitwidth):
 # picture above.
 
 
-# Of course one problem is that we don't know when we are done.  How do we know we
-# reached the "Nth" number in the sequence?  Well, we need to add a register to
-# count up and see if we are done.
+# Of course one problem is that we don't know when we are done. How do we know we
+# reached the "Nth" number in the sequence? Well, we need to add a register to count up
+# and see if we are done.
 
 
 def attempt3_hardware_fibonacci(n, bitwidth):
@@ -133,16 +134,16 @@ def attempt3_hardware_fibonacci(n, bitwidth):
 
 
 # This is very similar to the example before, except that now we have a register "i"
-# which keeps track of the iteration that we are on (i.next <<= i + 1).  The function
-# now returns two values, a reference to the register "a" and a reference to a single
-# bit that tells us if we are done.  That bit is calculated by comparing "i" to the
-# to a wirevector "n" that is passed in to see if they are the same.
+# which keeps track of the iteration that we are on (i.next <<= i + 1). The function now
+# returns two values, a reference to the register "a" and a reference to a single bit
+# that tells us if we are done. That bit is calculated by comparing "i" to the to a
+# wirevector "n" that is passed in to see if they are the same.
 
 
-# Finally, we need a way to indicate that we want a new Fibonacci number.
-# We'll add another input, "req", which when high sets our "local_n" register and
-# resets the others. Now our ending condition occurs when the current iteration "i" is
-# equal to the locally stored "local_n".
+# Finally, we need a way to indicate that we want a new Fibonacci number. We'll add
+# another input, "req", which when high sets our "local_n" register and resets the
+# others. Now our ending condition occurs when the current iteration "i" is equal to the
+# locally stored "local_n".
 
 
 def attempt4_hardware_fibonacci(n, req, bitwidth):
@@ -166,13 +167,12 @@ def attempt4_hardware_fibonacci(n, req, bitwidth):
     return a, done
 
 
-# This is now far enough along that we can simulate the design and see what happens.
-# We begin by connecting our input and output wires to the implementation,
-# stepping once with the 'req' signal high to signify we're beginning a
-# a new request for a value, and then continuing to step until 'done' is emitted.
-# Note that although the Fibonacci implementation only uses the value of 'n'
-# when 'req' is high, we must still provide a value for 'n' (and all other inputs
-# tracked by the simulator) for each step.
+# This is now far enough along that we can simulate the design and see what happens. We
+# begin by connecting our input and output wires to the implementation, stepping once
+# with the 'req' signal high to signify we're beginning a a new request for a value, and
+# then continuing to step until 'done' is emitted. Note that although the Fibonacci
+# implementation only uses the value of 'n' when 'req' is high, we must still provide a
+# value for 'n' (and all other inputs tracked by the simulator) for each step.
 
 BITWIDTH = 8
 

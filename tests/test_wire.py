@@ -298,7 +298,6 @@ class TestRegister(unittest.TestCase):
             _ = pyrtl.Register(4, reset_value="hello")
 
 
-# -------------------------------------------------------------------
 class TestConst(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()

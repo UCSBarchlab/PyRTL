@@ -10,11 +10,11 @@ class MatrixTestBase(unittest.TestCase):
     def check_against_expected(self, result, expected_output, floored=False):
         """
         :param Matrix result: matrix that is the result of some operation we're testing
-        :param list[list] expected_output: a list of lists to compare against
-            the resulting matrix after simulation
-        :param bool floored: needed to indicate that we're checking the result of
-            a matrix subtraction, to ensure the matrix properly floored results to
-            zero when needed (defaults to False)
+        :param list[list] expected_output: a list of lists to compare against the
+            resulting matrix after simulation
+        :param bool floored: needed to indicate that we're checking the result of a
+            matrix subtraction, to ensure the matrix properly floored results to zero
+            when needed (defaults to False)
         """
         output = pyrtl.Output(name="output")
 

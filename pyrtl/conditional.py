@@ -1,5 +1,5 @@
-# Use the objects "conditional_assignment" and "otherwise" as described above. The
-# classes below are internal implementation details.
+# Most users should only interact with the objects "conditional_assignment" and
+# "otherwise". The classes defined below are internal implementation details.
 
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
 from pyrtl.wire import Const, Register, WireVector
@@ -42,8 +42,8 @@ class _ConditionalAssignment:
         try:
             _finalize(self.defaults)
         finally:
-            # even if the above finalization throws an error we need to
-            # reset the state to prevent errors from bleeding over
+            # even if the above finalization throws an error we need to reset the state
+            # to prevent errors from bleeding over
             _reset_conditional_state()  # sets _depth back to 0
 
 
@@ -81,11 +81,6 @@ conditional_assignment = _ConditionalAssignment()
 otherwise = _Otherwise()
 
 
-# -----------------------------------------------------------------------
-# The following functions should not be PyRTL programmer visible, but are called in
-# other places in the pyrtl module.
-
-
 def _push_condition(predicate):
     """As we enter new conditions, this pushes them on the predicate stack."""
     global _depth
@@ -117,10 +112,6 @@ def _build(lhs, rhs):
 def _build_read_port(mem, addr):
     # TODO: reduce number of ports through collapsing reads
     return mem._build_read_port(addr)
-
-
-# -----------------------------------------------------------------------
-# The following helper functions are used only internally
 
 
 def _check_no_nesting():
@@ -201,9 +192,8 @@ def _finalize(defaults):
 def _current_select():
     """Function to calculate the current "predicate" in the current context.
 
-    Returns a tuple of information: (predicate, pred_set).
-    The value pred_set is a set([ (predicate, bool), ... ]) as described in
-    the _reset_conditional_state
+    Returns a tuple of information: (predicate, pred_set). The value pred_set is a set([
+    (predicate, bool), ... ]) as described in the _reset_conditional_state
     """
 
     # helper to create the conjuction of predicates

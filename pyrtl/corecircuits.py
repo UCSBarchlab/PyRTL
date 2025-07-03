@@ -139,8 +139,8 @@ def select(
         >>> sim.inspect("min")
         6
 
-    :param sel: Multiplexer's selection input. Can be a :class:`WireVector`, or any
-        type that can be coerced to :class:`WireVector` by :func:`as_wires`.
+    :param sel: Multiplexer's selection input. Can be a :class:`WireVector`, or any type
+        that can be coerced to :class:`WireVector` by :func:`as_wires`.
     :param truecase: The WireVector selected if ``sel == 1``. Can be a
         :class:`WireVector`, or any type that can be coerced to :class:`WireVector` by
         :func:`as_wires`.
@@ -549,8 +549,8 @@ def signed_ge(a: WireVectorLike, b: WireVectorLike) -> WireVector:
     :param b: A :class:`WireVector`, or any type that can be coerced to
               :class:`WireVector` by :func:`as_wires`.
 
-    :return: A 1-bit :class:`WireVector` indicating if ``a`` is greater than or equal
-             to ``b``.
+    :return: A 1-bit :class:`WireVector` indicating if ``a`` is greater than or equal to
+             ``b``.
     """
     a, b = match_bitwidth(as_wires(a), as_wires(b), signed=True)
     r = b - a
@@ -699,14 +699,14 @@ def shift_right_logical(
 
 
 def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]:
-    """Matches multiple :class:`WireVector` :attr:`bitwidths<~WireVector.bitwidth>`
-    via zero- or sign-extension.
+    """Matches multiple :class:`WireVector` :attr:`bitwidths<~WireVector.bitwidth>` via
+    zero- or sign-extension.
 
     :class:`WireVectors<WireVector>` with shorter
     :attr:`bitwidths<~WireVector.bitwidth>` will be to match the longest
     :attr:`~WireVector.bitwidth` in ``args``. :class:`WireVectors<WireVector>` will be
-    :meth:`~WireVector.sign_extended` or :meth:`~WireVector.zero_extended`, depending
-    on ``signed``.
+    :meth:`~WireVector.sign_extended` or :meth:`~WireVector.zero_extended`, depending on
+    ``signed``.
 
     .. doctest only::
 
@@ -795,8 +795,8 @@ def as_wires(
     :param truncating: Determines whether bits will be dropped to achieve the desired
         :attr:`~WireVector.bitwidth` if ``val`` is too long (if ``True``, the
         most-significant bits will be dropped).
-    :param block: ``Block`` to use for the returned :class:`WireVector`. Defaults to
-        the :ref:`working_block`.
+    :param block: ``Block`` to use for the returned :class:`WireVector`. Defaults to the
+        :ref:`working_block`.
     """
     from pyrtl.memory import _MemIndexed
 
@@ -882,8 +882,8 @@ def bitfield_update(
         with consistently disassembling, naming, and reassembling fields.
 
     :param w: A :class:`WireVector`, or any type that can be coerced to
-              :class:`WireVector` by :func:`as_wires`, to use as the starting point
-              for the update
+              :class:`WireVector` by :func:`as_wires`, to use as the starting point for
+              the update
     :param range_start: The start of the range of bits to be updated.
     :param range_end: The end of the range of bits to be updated.
     :param newvalue: The value to be written in to the ``range_start:range_end`` range.
@@ -952,8 +952,8 @@ def bitfield_update_set(
         with consistently disassembling, naming, and reassembling fields.
 
     :param w: A :class:`WireVector`, or any type that can be coerced to
-              :class:`WireVector` by :func:`as_wires`, to use as the starting point
-              for the update
+              :class:`WireVector` by :func:`as_wires`, to use as the starting point for
+              the update
     :param update_set: A map from tuples of ``(range_start, range_end)`` integers to a
         new value for the range of bits.
     :param truncating: If ``True``, clip new values to the proper bitwidth if a new
@@ -1166,10 +1166,10 @@ def rtl_any(*vectorlist: WireVectorLike) -> WireVector:
     """Hardware equivalent of Python's :func:`any`.
 
     Given any number of :class:`WireVectors<WireVector>`, return a 1-bit
-    :class:`WireVector` which will hold a ``1`` if any of the inputs are ``1``. In
-    other words, this generates a large OR gate. If no inputs are provided, it will
-    return a :class:`Const` ``0`` (since there are no ``1s`` present) similar to
-    Python's :func:`any` called with an empty list.
+    :class:`WireVector` which will hold a ``1`` if any of the inputs are ``1``. In other
+    words, this generates a large OR gate. If no inputs are provided, it will return a
+    :class:`Const` ``0`` (since there are no ``1s`` present) similar to Python's
+    :func:`any` called with an empty list.
 
     .. note::
 

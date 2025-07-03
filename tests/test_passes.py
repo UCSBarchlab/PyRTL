@@ -378,9 +378,8 @@ class TestOptimization(NetWireNumTestCases):
         self.assert_num_wires(5, block)
 
     def test_multiple_double_invert_chains(self):
-        # _remove_double_inverts removes double inverts by chains,
-        # so it is useful to make sure it can remove
-        # double inverts from multiple chains
+        # _remove_double_inverts removes double inverts by chains, so it is useful to
+        # make sure it can remove double inverts from multiple chains
         inwire = pyrtl.Input(bitwidth=1)
         outwire = pyrtl.Output(bitwidth=1)
         outwire2 = pyrtl.Output(bitwidth=1)
@@ -450,12 +449,12 @@ class TestConstFolding(NetWireNumTestCases):
         outwire <<= reg
         pyrtl.synthesize()
         pyrtl.optimize()
-        # should remove the and block and replace it with a
-        # wire net (to separate the input from the output)
+        # should remove the and block and replace it with a wire net (to separate the
+        # input from the output)
         block = pyrtl.working_block(None)
 
-        # Note: the current implementation still sticks a wire net between
-        # a register 'nextsetter' wire and the output wire
+        # Note: the current implementation still sticks a wire net between a register
+        # 'nextsetter' wire and the output wire
         self.num_net_of_type("w", 1, block)
         self.assert_num_net(3, block)
         self.assert_num_wires(4, block)
@@ -470,8 +469,8 @@ class TestConstFolding(NetWireNumTestCases):
         outwire <<= inwire & constwire
         pyrtl.synthesize()
         pyrtl.optimize()
-        # should remove the and block and replace it with a
-        # wire net (to separate the const from the output)
+        # should remove the and block and replace it with a wire net (to separate the
+        # const from the output)
         block = pyrtl.working_block(None)
         self.num_net_of_type("&", 0, block)
         self.num_net_of_type("w", 1, block)
@@ -486,8 +485,8 @@ class TestConstFolding(NetWireNumTestCases):
 
         outwire <<= inwire | constwire
         pyrtl.optimize()
-        # should remove the or block and replace it with a
-        # wire net (to separate the const from the output)
+        # should remove the or block and replace it with a wire net (to separate the
+        # const from the output)
         block = pyrtl.working_block(None)
         self.num_net_of_type("|", 0, block)
         self.num_net_of_type("w", 1, block)
@@ -503,8 +502,8 @@ class TestConstFolding(NetWireNumTestCases):
         outwire <<= constwire ^ constwire
         pyrtl.synthesize()
         pyrtl.optimize()
-        # should remove the and block and replace it with a
-        # wirevector (to separate the input from the output)
+        # should remove the and block and replace it with a wirevector (to separate the
+        # input from the output)
         block = pyrtl.working_block(None)
         self.num_net_of_type("^", 0, block)
         self.num_net_of_type("w", 1, block)
@@ -521,8 +520,8 @@ class TestConstFolding(NetWireNumTestCases):
         outwire <<= constwire ^ inwire
         pyrtl.synthesize()
         pyrtl.optimize()
-        # should remove the and block and replace it with a
-        # wirevector (to separate the input from the output)
+        # should remove the and block and replace it with a wirevector (to separate the
+        # input from the output)
         block = pyrtl.working_block(None)
         self.num_net_of_type("~", 1, block)
         self.num_net_of_type("w", 1, block)
@@ -613,8 +612,8 @@ class TestSubexpElimination(NetWireNumTestCases):
         pyrtl.working_block().sanity_check()
 
     def test_concat(self):
-        # concat's args are order dependent, therefore we need to check
-        # that we aren't mangling them
+        # concat's args are order dependent, therefore we need to check that we aren't
+        # mangling them
         ins = [pyrtl.Input(5) for i in range(2)]
         outs = [pyrtl.Output(10) for i in range(2)]
         outs[0] <<= pyrtl.concat(ins[1], ins[0])
@@ -628,8 +627,8 @@ class TestSubexpElimination(NetWireNumTestCases):
         pyrtl.working_block().sanity_check()
 
     def test_order_dependent_ops(self):
-        # subtract, lt, gt simarlarly are order dependent.
-        # therefore we need to check that we aren't mangling them
+        # subtract, lt, gt simarlarly are order dependent. therefore we need to check
+        # that we aren't mangling them
         for op, opcode in ((operator.sub, "-"), (operator.gt, ">"), (operator.lt, "<")):
             pyrtl.reset_working_block()
             ins = [pyrtl.Input(5) for i in range(2)]
@@ -680,8 +679,8 @@ class TestSubexpElimination(NetWireNumTestCases):
         pyrtl.working_block().sanity_check()
 
     def test_no_elimination_of_different_const_bitwidths(self):
-        # trying to merge const wires with different bitwidths
-        # together will cause mismatches in bitwidths of certain wires
+        # trying to merge const wires with different bitwidths together will cause
+        # mismatches in bitwidths of certain wires
         const_1 = pyrtl.Const(3, 3)
         const_2 = pyrtl.Const(3, 5)
         out_1 = pyrtl.Output(5)
@@ -818,9 +817,8 @@ class TestSynthOptTiming(NetWireNumTestCases):
         pass
 
     def everything_t_procedure(self, timing_val=None, opt_timing_val=None):
-        # if there is a nondefault timing val supplied, then it will check
-        # to make sure that the timing matches
-        # this is a subprocess to do the synth and timing
+        # if there is a nondefault timing val supplied, then it will check to make sure
+        # that the timing matches. this is a subprocess to do the synth and timing
         block = pyrtl.working_block()
         timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()

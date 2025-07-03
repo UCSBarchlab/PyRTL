@@ -760,16 +760,16 @@ class TestNetConnections(unittest.TestCase):
             _s = src_nets[data]
         self.assertEqual(
             str(ex.exception),
-            "Cannot look up a _MemIndexed object's source or destination net. "
-            "Try using its '.wire' attribute as the lookup key instead.",
+            "Cannot look up a _MemIndexed object's source or destination net. Try "
+            "using its '.wire' attribute as the lookup key instead.",
         )
 
         with self.assertRaises(pyrtl.PyrtlError) as ex:
             _s = dst_nets[data]
         self.assertEqual(
             str(ex.exception),
-            "Cannot look up a _MemIndexed object's source or destination net. "
-            "Try using its '.wire' attribute as the lookup key instead.",
+            "Cannot look up a _MemIndexed object's source or destination net. Try "
+            "using its '.wire' attribute as the lookup key instead.",
         )
 
     def test_wire_not_in_net_connections(self):

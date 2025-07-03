@@ -71,6 +71,7 @@ class CompiledSimulation:
     with ``CompiledSimulation``.
 
     .. note::
+
         For very large circuits, :class:`FastSimulation` can sometimes be a better
         choice than ``CompiledSimulation`` because ``CompiledSimulation`` will generate
         an extremely large ``.c`` file, which can take prohibitively long to compile and
@@ -79,19 +80,24 @@ class CompiledSimulation:
         to process all the generated code at once.
 
     .. WARNING::
+
         This code is still experimental, but has been used on designs of significant
         scale to good effect.
 
     To use ``CompiledSimulation``, you'll need:
 
     - A 64-bit processor
+
     - GCC (tested on version 4.8.4)
+
     - A 64-bit build of Python
 
     If using the multiplication operand, only some architectures are supported:
 
     - ``x86-64`` / ``amd64``
+
     - ``arm64`` / ``aarch64``
+
     - ``mips64`` (untested)
 
     ``default_value`` is currently only implemented for :class:`Registers<Register>`,
@@ -409,8 +415,8 @@ class CompiledSimulation:
     def _makemask(self, dest, res, pos):
         """Create a bitmask.
 
-        The value being masked is of width `res`.
-        Limb number `pos` of `dest` is being assigned to.
+        The value being masked is of width `res`. Limb number `pos` of `dest` is being
+        assigned to.
         """
         if (res is None or dest.bitwidth < res) and 0 < (dest.bitwidth - 64 * pos) < 64:
             return f"&0x{(1 << (dest.bitwidth % 64)) - 1:X}"

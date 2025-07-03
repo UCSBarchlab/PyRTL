@@ -47,8 +47,8 @@ def kogge_stone(
                 prop_bits[i] = prop_old & prop_bits[i - prop_dist]
         prop_dist *= 2
 
-    # assembling the result of the addition
-    # preparing the cin (and conveniently shifting the gen bits)
+    # assembling the result of the addition. preparing the cin (and conveniently
+    # shifting the gen bits)
     gen_bits.insert(0, pyrtl.as_wires(cin))
     return pyrtl.concat_list(gen_bits) ^ prop_orig
 
@@ -146,9 +146,9 @@ def cla_adder(
 
 def _cla_adder_unit(a, b, cin):
     """
-    Carry generation and propogation signals will be calculated only using
-    the inputs; their values don't rely on the sum.  Every unit generates
-    a cout signal which is used as cin for the next unit.
+    Carry generation and propogation signals will be calculated only using the inputs;
+    their values don't rely on the sum. Every unit generates a cout signal which is used
+    as cin for the next unit.
     """
     gen = a & b
     prop = a ^ b

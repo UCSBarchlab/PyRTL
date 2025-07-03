@@ -1,6 +1,6 @@
 """
-Contains functions to estimate aspects of blocks (like area and delay)
-by either using internal models or by making calls out to external tool chains.
+Contains functions to estimate aspects of blocks (like area and delay) by either using
+internal models or by making calls out to external tool chains.
 """
 
 from __future__ import annotations
@@ -32,15 +32,14 @@ from pyrtl.wire import Const, Input, Output, Register, WireVector
 def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
     """Estimates the total area of the block.
 
-    :param tech_in_nm: the size of the circuit technology to be estimated
-        (for example, 65 is 65nm and 250 is 0.25um)
+    The estimations are based off of 130nm standard cell designs for the logic, and
+    custom memory blocks from the literature. The results are not fully validated and we
+    do not recommend that this function be used in carrying out science for publication.
+
+    :param tech_in_nm: the size of the circuit technology to be estimated (for example,
+        65 is 65nm and 250 is 0.25um)
+
     :return: tuple of estimated areas (logic, mem) in terms of mm^2
-
-    The estimations are based off of 130nm standard cell designs for the logic,
-    and custom memory blocks from the literature.  The results are not fully
-    validated and we do not recommend that this function be used in carrying
-    out science for publication.
-
     """
 
     def mem_area_estimate(tech_in_nm, bits, ports, is_rom):
@@ -92,15 +91,15 @@ def area_estimation(tech_in_nm: float = 130, block=None) -> tuple[float, float]:
 
     block = working_block(block)
 
-    # The functions above were gathered and calibrated by mapping
-    # reference designs to an openly available 130nm stdcell library.
+    # The functions above were gathered and calibrated by mapping reference designs to
+    # an openly available 130nm stdcell library.
     # http://www.vlsitechnology.org/html/vsc_description.html
     # http://www.vlsitechnology.org/html/cells/vsclib013/lib_gif_index.html
 
-    # In a standard cell design, each gate takes up a length of standard "track"
-    # in the chip.  The functions above return that length for each of the different
-    # types of functions in the units of "tracks".  In the 130nm process used,
-    # 1 lambda is 55nm, and 1 track is 8 lambda.
+    # In a standard cell design, each gate takes up a length of standard "track" in the
+    # chip. The functions above return that length for each of the different types of
+    # functions in the units of "tracks". In the 130nm process used, 1 lambda is 55nm,
+    # and 1 track is 8 lambda.
 
     # first, sum up the area of all of the logic elements (including registers)
     total_tracks = sum(stdcell_estimate(a_net) for a_net in block.logic)
@@ -166,10 +165,9 @@ class TimingAnalysis:
         self._generate_timing_map(gate_delay_funcs)
 
     def _generate_timing_map(self, gate_delay_funcs):
-        # The functions above were gathered and calibrated by mapping
-        # reference designs to an openly available 130nm stdcell library.
-        # Note that this is will compute the critical logic delay, but does
-        # not include setup/hold time.
+        # The functions above were gathered and calibrated by mapping reference designs
+        # to an openly available 130nm stdcell library. Note that this is will compute
+        # the critical logic delay, but does not include setup/hold time.
 
         if gate_delay_funcs is None:
             gate_delay_funcs = {
@@ -233,16 +231,15 @@ class TimingAnalysis:
     ) -> float:
         """Estimates the max frequency of a block in MHz.
 
-        :param tech_in_nm: the size of the circuit technology to be estimated
-            (for example, 65 is 65nm and 250 is 0.25um)
+        All params are optional and have reasonable default values. Estimation is based
+        on Dennard Scaling assumption and does not include wiring effect -- as a result
+        the estimates may be optimistic (especially below 65nm).
+
+        :param tech_in_nm: the size of the circuit technology to be estimated (for
+            example, 65 is 65nm and 250 is 0.25um)
         :param ffoverhead: setup and ff propagation delay in picoseconds
+
         :return: a number representing an estimate of the max frequency in Mhz
-
-        All params are optional and have reasonable default values.  Estimation
-        is based on Dennard Scaling assumption and does not include wiring
-        effect -- as a result the estimates may be optimistic (especially below
-        65nm).
-
         """
         cp_length = self.max_length()
         scale_factor = 130.0 / tech_in_nm
@@ -275,11 +272,11 @@ class TimingAnalysis:
     ) -> list[WireVector, list[LogicNet]]:
         """Takes a timing map and returns the critical paths of the system.
 
-        :param print_cp: Whether to print the critical path to the terminal
-            after calculation
-        :return: a list containing tuples with the 'first' wire as the
-            first value and the critical paths (which themselves are lists
-            of nets) as the second
+        :param print_cp: Whether to print the critical path to the terminal after
+            calculation
+
+        :return: a list containing tuples with the 'first' wire as the first value and
+                 the critical paths (which themselves are lists of nets) as the second
         """
         critical_paths = []  # storage of all completed critical paths
         wire_src_map, dst_map = self.block.net_connections()
@@ -316,8 +313,8 @@ class TimingAnalysis:
 
     @staticmethod
     def print_critical_paths(critical_paths):
-        """Prints the results of the critical path length analysis.
-        Done by default by the :meth:`critical_path` function.
+        """Prints the results of the critical path length analysis. Done by default by
+        the :meth:`critical_path` function.
         """
         line_indent = " " * 2
         #  print the critical path
@@ -429,6 +426,7 @@ class PathsResult(dict):
         """Pretty print the result of calling :func:`paths`
 
         :param f: the open file to print to (defaults to stdout)
+
         :return: None
         """
 
@@ -553,10 +551,10 @@ def paths(
                 paths = sorted(paths, key=lambda p: len(p), reverse=True)
                 keep = []
                 for i in range(len(paths)):
-                    # Check if there is a path in paths[i+1:] that is the suffix
-                    # of paths[i] (paths[i] is at least as large as each path in
-                    # paths[i+1:]). If so, paths[i] contains a loop since both start
-                    # at src_wire, so don't keep it.
+                    # Check if there is a path in paths[i+1:] that is the suffix of
+                    # paths[i] (paths[i] is at least as large as each path in
+                    # paths[i+1:]). If so, paths[i] contains a loop since both start at
+                    # src_wire, so don't keep it.
                     if not any(paths[i][-len(p) :] == p for p in paths[i + 1 :]):
                         keep.append(paths[i])
                 paths = keep

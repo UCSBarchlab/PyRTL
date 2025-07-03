@@ -773,6 +773,7 @@ class Matrix:
         multiplied by ``self``, ``power`` times.
 
         :param power: The power to raise the matrix to.
+
         :return: A ``Matrix`` containing the result.
         """
         new_value = self**power

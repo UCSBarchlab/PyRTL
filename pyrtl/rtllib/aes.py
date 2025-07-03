@@ -191,8 +191,7 @@ class AES:
             pyrtl.WireVector(len(ciphertext_in)) for i in range(2)
         )
 
-        # this is not part of the state machine as we need the keys in
-        # reverse order...
+        # this is not part of the state machine as we need the keys in reverse order...
         reversed_key_list = reversed(self._key_gen(key_exp_in))
 
         counter = pyrtl.Register(4, "counter")

@@ -210,7 +210,7 @@ class LogicNet(NamedTuple):
     def __eq__(self, other):
         # We can't be going and calling __eq__ recursively on the logic nets for all of
         # the args and dests because that will actually *create* new logic nets which is
-        # very much not what people would expect to happen.  Instead we define equality
+        # very much not what people would expect to happen. Instead we define equality
         # as the immutable fields being equal and the list of args and dests being
         # references to the same objects.
         return (
@@ -249,8 +249,8 @@ class Block:
     A ``Block`` in PyRTL is the class that stores a netlist and provides basic access
     and error checking members. Each ``Block`` has well defined :class:`Inputs<Input>`
     and :class:`Outputs<Output>`, and contains both the basic logic elements and
-    references to the :class:`WireVectors<WireVector>` and
-    :class:`MemBlocks<MemBlock>` that connect them together.
+    references to the :class:`WireVectors<WireVector>` and :class:`MemBlocks<MemBlock>`
+    that connect them together.
 
     The logic structure is primarily contained in :attr:`~Block.logic` which holds a
     :class:`set` of :class:`LogicNets <LogicNet>`. Each :class:`LogicNet` describes a
@@ -259,8 +259,8 @@ class Block:
     1. The :attr:`~LogicNet.op` (a single character describing the operation such as
        ``+`` or ``r``).
 
-    2. A set of static :attr:`~LogicNet.op_param` for the operation, such as the
-       bit slices to select for the ``s`` "selection" operation.
+    2. A set of static :attr:`~LogicNet.op_param` for the operation, such as the bit
+       slices to select for the ``s`` "selection" operation.
 
     3. A tuple :attr:`~LogicNet.args` containing the :class:`WireVectors<WireVector>`
        connected as inputs to the :class:`LogicNet`.
@@ -271,9 +271,9 @@ class Block:
     Below is a list of the basic operations. These properties (more formally specified)
     should all be checked by :meth:`sanity_check`.
 
-    * Most logical and arithmetic :class:`ops<LogicNet.op>` are pretty self
-      explanatory. Each takes exactly two :class:`~LogicNet.args`, and they should
-      perform the arithmetic or logical operation specified.
+    - Most logical and arithmetic :class:`ops<LogicNet.op>` are pretty self explanatory.
+      Each takes exactly two :class:`~LogicNet.args`, and they should perform the
+      arithmetic or logical operation specified.
 
       :class:`ops<LogicNet.op>`: ``&``, ``|``, ``^``, ``n``, ``~``, ``+``, ``-``,
       ``*``.
@@ -282,53 +282,52 @@ class Block:
       produce as many bits as are in the input, while ``+`` and ``-`` produce ``n + 1``
       bits, and ``*`` produces ``2 * n`` bits.
 
-    * In addition there are some operations for performing comparisons
-      that should perform the operation specified.  The ``=`` :class:`~LogicNet.op` is
-      checking to see if the bits of the :class:`~LogicNet.args` vectors are equal,
-      while ``<`` and ``>`` do *unsigned* arithmetic comparison.  All comparisons
-      generate a single bit :class:`dest<LogicNet.dests>` (``1`` for ``True``,
-      ``0`` for ``False``).
+    - In addition there are some operations for performing comparisons that should
+      perform the operation specified. The ``=`` :class:`~LogicNet.op` is checking to
+      see if the bits of the :class:`~LogicNet.args` vectors are equal, while ``<`` and
+      ``>`` do *unsigned* arithmetic comparison. All comparisons generate a single bit
+      :class:`dest<LogicNet.dests>` (``1`` for ``True``, ``0`` for ``False``).
 
-    * The ``w`` :class:`~LogicNet.op` is simply a directional wire that connects
+    - The ``w`` :class:`~LogicNet.op` is simply a directional wire that connects
       :class:`~LogicNet.args` to :class:`~LogicNet.dests`. It has no logic function.
 
-    * The ``x`` :class:`~LogicNet.op` is a multiplexer which takes a select bit and two
-      signals as :class:`~LogicNet.args`.  If the value of the select bit is ``0`` it
+    - The ``x`` :class:`~LogicNet.op` is a multiplexer which takes a select bit and two
+      signals as :class:`~LogicNet.args`. If the value of the select bit is ``0`` it
       selects the second :class:`arg<LogicNet.args>`; if it is ``1`` it selects the
-      third :class:`arg<LogicNet.args>`.  Select must be a single bit, while the other
+      third :class:`arg<LogicNet.args>`. Select must be a single bit, while the other
       two :class:`~LogicNet.args` must be the same length.
 
-    * The ``c`` :class:`~LogicNet.op` is the concatenation operator and combines any
+    - The ``c`` :class:`~LogicNet.op` is the concatenation operator and combines any
       number of :class:`WireVector` :class:`~LogicNet.args` (``a``, ``b``, ..., ``z``)
       into a single new :class:`WireVector` with ``a`` in the MSB and ``z`` (or whatever
       is last) in the LSB position.
 
-    * The ``s`` :class:`~LogicNet.op` is the selection operator and chooses, based on
+    - The ``s`` :class:`~LogicNet.op` is the selection operator and chooses, based on
       the :class:`~LogicNet.op_param` specified, a subset of the logic bits from a
-      :class:`WireVector` to select.  Repeats are accepted.
+      :class:`WireVector` to select. Repeats are accepted.
 
-    * The ``r`` :class:`~LogicNet.op` is a register and on posedge, simply copies the
+    - The ``r`` :class:`~LogicNet.op` is a register and on posedge, simply copies the
       value from :class:`arg<LogicNet.args>` to the register's
       :class:`dest<LogicNet.dests>`.
 
-    * The ``m`` :class:`~LogicNet.op` is a memory block read port, which supports async
-      reads (acting like combinational logic). Multiple read (and write) ports
-      are possible to the same memory but each ``m`` defines only one of
-      those. The :class:`~LogicNet.op_param` is a tuple containing two references: the
-      ``memid``, and a reference to the :class:`MemBlock` containing this port. The
+    - The ``m`` :class:`~LogicNet.op` is a memory block read port, which supports async
+      reads (acting like combinational logic). Multiple read (and write) ports are
+      possible to the same memory but each ``m`` defines only one of those. The
+      :class:`~LogicNet.op_param` is a tuple containing two references: the ``memid``,
+      and a reference to the :class:`MemBlock` containing this port. The
       :class:`MemBlock` should only be used for debug and sanity checks. Each read port
       has one ``addr`` (an :class:`arg<LogicNet.args>`) and one ``data`` (a
       :class:`dest<LogicNet.dests>`).
 
-    * The ``@`` (update) :class:`~LogicNet.op` is a memory block write port, which
-      supports synchronous writes (writes are "latched" at positive edge).  Multiple
-      write (and read) ports are possible to the same memory but each ``@``
-      defines only one of those. The :class:`~LogicNet.op_param` is a tuple containing
-      two references: the ``memid``, and a reference to the :class:`MemBlock`.  Writes
-      have three :class:`~LogicNet.args` (``addr``, ``data``, and write enable
-      ``we_en``).  The :class:`~LogicNet.dests` should be an empty tuple.  You will not
-      see a written value change until the following cycle.  If multiple writes happen
-      to the same address in the same cycle the behavior is currently undefined.
+    - The ``@`` (update) :class:`~LogicNet.op` is a memory block write port, which
+      supports synchronous writes (writes are "latched" at positive edge). Multiple
+      write (and read) ports are possible to the same memory but each ``@`` defines only
+      one of those. The :class:`~LogicNet.op_param` is a tuple containing two
+      references: the ``memid``, and a reference to the :class:`MemBlock`. Writes have
+      three :class:`~LogicNet.args` (``addr``, ``data``, and write enable ``we_en``).
+      The :class:`~LogicNet.dests` should be an empty tuple. You will not see a written
+      value change until the following cycle. If multiple writes happen to the same
+      address in the same cycle the behavior is currently undefined.
 
     The connecting elements (:class:`~LogicNet.args` and :class:`~LogicNet.dests`)
     should be :class:`WireVectors<WireVector>` or derived from :class:`WireVector`, and
@@ -405,10 +404,9 @@ class Block:
     def _add_memblock(self, mem):
         """Registers a memory to the block.
 
-        Note that this is done automatically when a memory block is
-        created and isn't intended for use by PyRTL end users.
-        This is so non-local memories can be accessed later on
-        (e.g. for instantiating during a simulation).
+        Note that this is done automatically when a memory block is created and isn't
+        intended for use by PyRTL end users. This is so non-local memories can be
+        accessed later on (e.g. for instantiating during a simulation).
         """
         self.sanity_check_memblock(mem)
         self.memblock_by_name[mem.name] = mem
@@ -554,8 +552,8 @@ class Block:
     class _NetConnectionsDict(dict):
         """Dictionary wrapper for returning the results of the enclosing function.
 
-        User doesn't need to know about this class; it's only for delivering a
-        nice error message when _MemIndexed is used as a lookup key.
+        User doesn't need to know about this class; it's only for delivering a nice
+        error message when _MemIndexed is used as a lookup key.
         """
 
         def __missing__(self, key):
@@ -644,13 +642,12 @@ class Block:
 
     def __iter__(self):
         """BlockIterator iterates over the block passed on init in topographic order.
-        The input is a Block, and when a LogicNet is returned it is always the case
-        that all of its "parents" have already been returned earlier in the iteration.
+        The input is a Block, and when a LogicNet is returned it is always the case that
+        all of its "parents" have already been returned earlier in the iteration.
 
-        Note: this method will throw an error if there are loops in the
-        logic that do not involve registers.
-        Also, the order of the nets is not guaranteed to be the same
-        over multiple iterations.
+        Note: this method will throw an error if there are loops in the logic that do
+        not involve registers. Also, the order of the nets is not guaranteed to be the
+        same over multiple iterations.
         """
         from pyrtl.wire import Const, Input, Register
 
@@ -1003,8 +1000,8 @@ class Block:
 
 
 class PostSynthBlock(Block):
-    """This is a block with extra metadata required to maintain the
-    pre-synthesis interface during post-synthesis.
+    """This is a block with extra metadata required to maintain the pre-synthesis
+    interface during post-synthesis.
     """
 
     io_map: dict[WireVector, list[WireVector]]
@@ -1038,15 +1035,13 @@ class PostSynthBlock(Block):
 #    |/\| \__/ |  \ |  \ | | \| \__>    |__) |___ \__/ \__, |  \
 #
 
-# Right now we use singleton_block to store the one global
-# block, but in the future we should support multiple Blocks.
-# The argument "singleton_block" should never be passed.
+# Right now we use singleton_block to store the one global block, but in the future we
+# should support multiple Blocks. The argument "singleton_block" should never be passed.
 _singleton_block = Block()
 
-# settings help tweak the behavior of pyrtl as needed, especially
-# when there is a trade off between speed and debugability.  These
-# are useful for developers to adjust behaviors in the different modes
-# but should not be set directly by users.
+# settings help tweak the behavior of pyrtl as needed, especially when there is a trade
+# off between speed and debugability. These are useful for developers to adjust
+# behaviors in the different modes but should not be set directly by users.
 debug_mode = False
 _setting_keep_wirevector_call_stack = False
 _setting_slower_but_more_descriptive_tmps = False
@@ -1059,14 +1054,14 @@ def _get_debug_mode():
 def _get_useful_callpoint_name():
     """Attempts to find the lowest user-level call into the PyRTL module.
 
-    :return (string, int) or None: the file name and line number respectively
+    This function walks back the current frame stack attempting to find the first frame
+    that is not part of the pyrtl module. The filename (stripped of path and .py
+    extension) and line number of that call are returned. This point should be the point
+    where the user-level code is making the call to some pyrtl intrisic (for example,
+    calling "mux"). If the attempt to find the callpoint fails for any reason, None is
+    returned.
 
-    This function walks back the current frame stack attempting to find the
-    first frame that is not part of the pyrtl module.  The filename (stripped
-    of path and .py extension) and line number of that call are returned.
-    This point should be the point where the user-level code is making the
-    call to some pyrtl intrisic (for example, calling "mux").   If the
-    attempt to find the callpoint fails for any reason, None is returned.
+    :return (string, int) or None: the file name and line number respectively
     """
     if not _setting_slower_but_more_descriptive_tmps:
         return None
@@ -1113,11 +1108,11 @@ def reset_working_block():
 
 
 class set_working_block:
-    """Set the working block to be the block passed as argument.
-    Compatible with the ``with`` statement.
+    """Set the working block to be the block passed as argument. Compatible with the
+    ``with`` statement.
 
-    Sanity checks will only be run if the new block is different
-    from the original block.
+    Sanity checks will only be run if the new block is different from the original
+    block.
     """
 
     @staticmethod
@@ -1145,8 +1140,8 @@ class set_working_block:
 def temp_working_block():
     """Set the working block to be new temporary block.
 
-    If used with the ``with`` statement the block will be reset to the
-    original value (at the time of call) at exit of the context.
+    If used with the ``with`` statement the block will be reset to the original value
+    (at the time of call) at exit of the context.
     """
     return set_working_block(Block())
 
@@ -1194,14 +1189,13 @@ class _NameIndexer:
 
 
 class _NameSanitizer(_NameIndexer):
-    """Sanitizes the names so that names can be used in places that don't allow
-    for arbitrary names while not mangling valid names.
+    """Sanitizes the names so that names can be used in places that don't allow for
+    arbitrary names while not mangling valid names.
 
-    Put the values you want to validate into make_valid_string the first time
-    you want to sanitize a particular string (or before the first time), and
-    retrieve from the _NameSanitizer through indexing directly thereafter
-    eg: sani["__&sfhs"] for retrieval after the first time
-
+    Put the values you want to validate into make_valid_string the first time you want
+    to sanitize a particular string (or before the first time), and retrieve from the
+    _NameSanitizer through indexing directly thereafter eg: sani["__&sfhs"] for
+    retrieval after the first time
     """
 
     def __init__(

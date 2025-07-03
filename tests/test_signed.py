@@ -7,9 +7,8 @@ import pyrtl
 class TestComparisonBasicOperationsMSB1(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        # test with '101' in binary, which should be
-        # 5 for an unsigned comparison and should be
-        # -3 for an signed comparison
+        # test with '101' in binary, which should be 5 for an unsigned comparison and
+        # should be -3 for an signed comparison
         self.c = pyrtl.Const(0b101, bitwidth=3)
         self.r = pyrtl.Register(bitwidth=3)
         self.o = pyrtl.Output(bitwidth=1, name="o")
@@ -67,9 +66,8 @@ class TestComparisonBasicOperationsMSB1(unittest.TestCase):
 class TestComparisonBasicOperations_MSB0(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        # test with '0101' in binary, which should be
-        # 5 for an unsigned comparison and should be
-        # 5 for an signed comparison
+        # test with '0101' in binary, which should be 5 for an unsigned comparison and
+        # should be 5 for an signed comparison
         self.c = pyrtl.Const(0b101, bitwidth=4)
         self.r = pyrtl.Register(bitwidth=4)
         self.o = pyrtl.Output(bitwidth=1, name="o")
@@ -127,9 +125,8 @@ class TestComparisonBasicOperations_MSB0(unittest.TestCase):
 class TestSignedArithBasicOperations(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-        # test with '101' in binary, which should be
-        # 5 for an unsigned operation and should be
-        # -3 for an signed operation
+        # test with '101' in binary, which should be 5 for an unsigned operation and
+        # should be -3 for an signed operation
         self.c = pyrtl.Const(0b101, bitwidth=3)
         self.r = pyrtl.Register(bitwidth=3)
         self.o = pyrtl.Output(bitwidth=4, name="o")
@@ -162,9 +159,9 @@ class TestSignedArithBasicOperations(unittest.TestCase):
         self.o <<= pyrtl.signed_mult(self.r, self.c)
         #                 0   1   2  3  -4  -3  -2  -1
         self.check_trace("0  -3  -6  7  -4  -7  6  3")
-        # the above numbers don't look like multiplication but when you sign
-        # extend the inputs, truncate to the last 4 digits and then sign extend,
-        # the output I assure that they are indeed correct. :)
+        # the above numbers don't look like multiplication but when you sign extend the
+        # inputs, truncate to the last 4 digits and then sign extend the output. I
+        # assure that they are indeed correct. :)
 
     def test_basic_signed_mult_const_with_bitwidth(self):
         self.o <<= pyrtl.signed_mult(self.r, pyrtl.Const(-2, bitwidth=3))

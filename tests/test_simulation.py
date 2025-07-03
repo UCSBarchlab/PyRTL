@@ -17,8 +17,7 @@ class TestDocTests(unittest.TestCase):
 
 
 def fastsim_only(sim):
-    # Mostly useful for allowing people to search for
-    # where there is not feature parity
+    # Mostly useful for allowing people to search for where there is not feature parity
 
     # other ways to figure out feature differences are by searching for Simulation
     # through this file
@@ -442,8 +441,8 @@ class SimWithSpecialWiresBase(unittest.TestCase):
 
     def test_weird_wire_names(self):
         """
-        Some simulations need to be careful when handling special names
-        (eg Fastsim June 2016)
+        Some simulations need to be careful when handling special names (eg Fastsim June
+        2016)
         """
         i = pyrtl.Input(8, '"182&!!!\n')
         o = pyrtl.Output(8, "*^*)#*$'*")
@@ -696,8 +695,8 @@ class SimStepMultipleBase(unittest.TestCase):
             sim.step_multiple(self.inputs, nsteps=6)
         self.assertEqual(
             str(error.exception),
-            "nsteps is specified but is greater than the "
-            "number of values supplied for each input",
+            "nsteps is specified but is greater than the number of values supplied for "
+            "each input",
         )
 
     def test_step_multiple_no_inputs(self):
@@ -1234,8 +1233,9 @@ class MemBlockLargeBase(unittest.TestCase):
         self.mem[self.write_addr] <<= self.write_data
 
     def test_mem_blocks_very_large(self):
-        """Tests support of very large memories (i.e. address width > 30 bits),
-        and that limbs are handled appropriately for bitwidths > 64"""
+        """Tests support of very large memories (i.e. address width > 30 bits), and that
+        limbs are handled appropriately for bitwidths > 64
+        """
         sim = self.sim()
 
         write_data = 0x20000000040000012  # 68 bits
@@ -1314,9 +1314,9 @@ class RomBlockSimBase(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def generate_expected_output(self, data_tuples, length):
-        """dataTuple is in a series of tuples in  (name, function) format
-         the function takes in a single argument, length
-        length is the number of steps in the length"""
+        """dataTuple is in a series of tuples in (name, function) format. the function
+        takes in a single argument, length. length is the number of steps in the length
+        """
 
         out_string = ""
         for tuple in data_tuples:
@@ -1485,7 +1485,6 @@ class MemBlockSimBase(unittest.TestCase):
         """Simultaneously read and write address 0.
 
         The read returns the stored value, not the newly written value.
-
         """
         mem = pyrtl.MemBlock(addrwidth=1, bitwidth=1)
         read_data = pyrtl.Output(name="read_data", bitwidth=mem.bitwidth)
@@ -1500,7 +1499,7 @@ class MemBlockSimBase(unittest.TestCase):
 
 class InspectBase(unittest.TestCase):
     """
-    Unittests for both sim.inspect and sim.inspectmem
+    Unittests for both sim.inspect and sim.inspect_mem
     """
 
     def setUp(self):
