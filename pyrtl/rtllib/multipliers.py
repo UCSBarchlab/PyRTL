@@ -23,6 +23,28 @@ def simple_mult(
     Requires very small area (it uses only a single adder), but has long delay (worst
     case is ``len(A)`` cycles).
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=4)
+        >>> b = pyrtl.Input(name="b", bitwidth=4)
+        >>> start = pyrtl.Input(name="start", bitwidth=1)
+
+        >>> output, done = pyrtl.rtllib.multipliers.simple_mult(a, b, start=start)
+        >>> output.name = "output"
+        >>> done.name = "done"
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"a": 2, "b": 3, "start": True})
+        >>> while not sim.inspect("done"):
+        ...     sim.step({"a": 0, "b": 0, "start": False})
+        >>> sim.inspect("output")
+        6
+
     :param A: Input wire for the multiplication.
     :param B: Input wire for the multiplication.
     :param start: A one-bit input that indicates when the inputs are ready.
@@ -38,7 +60,7 @@ def simple_mult(
     areg = pyrtl.Register(alen)
     breg = pyrtl.Register(blen + alen)
     accum = pyrtl.Register(blen + alen)
-    done = areg == 0  # Multiplication is finished when a becomes 0
+    done = pyrtl.WireVector(bitwidth=1)
 
     # During multiplication, shift a right every cycle, b left every cycle
     with pyrtl.conditional_assignment:
@@ -46,13 +68,15 @@ def simple_mult(
             areg.next |= A
             breg.next |= B
             accum.next |= 0
-        with ~done:  # don't run when there's no work to do
+        with areg != 0:  # don't run when there's no work to do
             areg.next |= areg[1:]  # right shift
             breg.next |= pyrtl.concat(breg, pyrtl.Const(0, 1))  # left shift
             a_0_val = areg[0].sign_extended(len(accum))
 
             # adds to accum only when LSB of areg is 1
             accum.next |= accum + (a_0_val & breg)
+        with pyrtl.otherwise:
+            done |= True
 
     return accum, done
 
@@ -82,6 +106,29 @@ def complex_mult(
     """Generate shift-and-add multiplier that can shift and add multiple bits per clock
     cycle. Uses substantially more space than :func:`simple_mult` but is much faster.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=4)
+        >>> b = pyrtl.Input(name="b", bitwidth=4)
+        >>> start = pyrtl.Input(name="start", bitwidth=1)
+
+        >>> output, done = pyrtl.rtllib.multipliers.complex_mult(
+        ...     a, b, shifts=2, start=start)
+        >>> output.name = "output"
+        >>> done.name = "done"
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"a": 2, "b": 3, "start": True})
+        >>> while not sim.inspect("done"):
+        ...     sim.step({"a": 0, "b": 0, "start": False})
+        >>> sim.inspect("output")
+        6
+
     :param A: Input wire for the multiplication.
     :param B: Input wire for the multiplication.
     :param shifts: Number of spaces :class:`.Register` is to be shifted per clock cycle.
@@ -96,7 +143,7 @@ def complex_mult(
     areg = pyrtl.Register(alen)
     breg = pyrtl.Register(alen + blen)
     accum = pyrtl.Register(alen + blen)
-    done = areg == 0  # Multiplication is finished when a becomes 0
+    done = pyrtl.WireVector(bitwidth=1)
     if (shifts > alen) or (shifts > blen):
         msg = (
             "shift is larger than one or both of the parameters A or B, please choose "
@@ -112,11 +159,14 @@ def complex_mult(
             breg.next |= B
             accum.next |= 0
 
-        with ~done:  # don't run when there's no work to do
+        with areg != 0:  # don't run when there's no work to do
             # "Multiply" shifted breg by LSB of areg by cond. adding
             areg.next |= pyrtl.shift_right_logical(areg, shifts)
             breg.next |= pyrtl.shift_left_logical(breg, shifts)
             accum.next |= accum + _one_cycle_mult(areg, breg, shifts)
+
+        with pyrtl.otherwise:
+            done |= True
 
     return accum, done
 
@@ -158,6 +208,24 @@ def tree_multiplier(
 
     Delay is `O(log(N))`, while area is `O(N^2)`.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=4)
+        >>> b = pyrtl.Input(name="b", bitwidth=4)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.multipliers.tree_multiplier(a, b)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"a": 2, "b": 3})
+        >>> sim.inspect("output")
+        6
+
     :param A: Input wire for the multiplication.
     :param B: Input wire for the multiplication.
     :param reducer: Reducing the tree with a :func:`~.adders.wallace_reducer` or a
@@ -190,7 +258,26 @@ def tree_multiplier(
 def signed_tree_multiplier(
     A, B, reducer=adders.wallace_reducer, adder_func=adders.kogge_stone
 ):
-    """Same as :func:`tree_multiplier`, but uses two's-complement signed integers."""
+    """Same as :func:`tree_multiplier`, but uses two's-complement signed integers.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=4)
+        >>> b = pyrtl.Input(name="b", bitwidth=4)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.multipliers.signed_tree_multiplier(a, b)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"a": -2, "b": 3})
+        >>> pyrtl.val_to_signed_integer(sim.inspect("output"), bitwidth=output.bitwidth)
+        -6
+    """
     if len(A) == 1 or len(B) == 1:
         msg = "sign bit required, one or both wires too small"
         raise pyrtl.PyrtlError(msg)
@@ -227,6 +314,27 @@ def fused_multiply_adder(
     these operations, rather than doing them separately, one reduces both the area and
     the timing delay of the circuit.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=4)
+        >>> b = pyrtl.Input(name="b", bitwidth=4)
+        >>> c = pyrtl.Input(name="c", bitwidth=4)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.multipliers.fused_multiply_adder(a, b, c)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"a": 2, "b": 3, "c": 4})
+        >>> pyrtl.val_to_signed_integer(sim.inspect("output"), bitwidth=output.bitwidth)
+        10
+        >>> 2 * 3 + 4
+        10
+
     :param mult_A: Input wire for the multiplication.
     :param mult_B: Input wire for the multiplication.
     :param add: Input wire for the addition.
@@ -251,13 +359,34 @@ def generalized_fma(
     signed: bool = False,  # noqa: ARG001
     reducer: Callable = adders.wallace_reducer,
     adder_func: Callable = adders.kogge_stone,
-):
+) -> pyrtl.WireVector:
     """Generated an optimized fused multiply adder.
 
     A generalized FMA unit that multiplies each pair of numbers in ``mult_pairs``, then
     adds up the resulting products and all the values of the ``add_wires``. This is
     faster than multiplying and adding separately because you avoid unnecessary adder
     structures for intermediate representations.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> mult_pairs = [(pyrtl.Const(2), pyrtl.Const(3)),
+        ...               (pyrtl.Const(4), pyrtl.Const(5))]
+        >>> add_wires = [pyrtl.Const(6), pyrtl.Const(7)]
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.multipliers.generalized_fma(mult_pairs, add_wires)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> sim.inspect("output")
+        39
+        >>> 2 * 3 + 4 * 5 + 6 + 7
+        39
 
     :param mult_pairs: Either ``None`` (if there are no pairs to multiply) or a list of
         pairs of wires to multiply together: ``[(mult1_1, mult1_2), ...]``

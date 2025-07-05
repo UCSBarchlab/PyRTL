@@ -1,9 +1,19 @@
+import doctest
 import random
 import unittest
 
 import pyrtl
 import pyrtl.rtllib.testingutils as utils
 from pyrtl.rtllib import adders, multipliers
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+
+    def test_doctests(self):
+        failures, tests = doctest.testmod(m=pyrtl.rtllib.multipliers)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 class TestSimpleMult(unittest.TestCase):
@@ -45,12 +55,11 @@ class TestSimpleMult(unittest.TestCase):
         for x_val, y_val in zip(xvals, yvals):
             sim = pyrtl.Simulation()
             sim.step({a: x_val, b: y_val, reset: 1})
-            for _cycle in range(len(a) + 1):
+            while not sim.inspect("done"):
                 sim.step({a: 0, b: 0, reset: 0})
 
             # Extracting the values and verifying correctness
             mult_results.append(sim.inspect("product"))
-            self.assertEqual(sim.inspect("done"), 1)
         self.assertEqual(mult_results, true_result)
 
 
@@ -100,16 +109,11 @@ class TestComplexMult(unittest.TestCase):
         for x_val, y_val in zip(xvals, yvals):
             sim = pyrtl.Simulation()
             sim.step({a: x_val, b: y_val, reset: 1})
-            if shifts <= len_a:
-                length = len_a // shifts + (1 if len_a % shifts == 0 else 2)
-            else:
-                length = len_a + 1
-            for _cycle in range(length):
+            while not sim.inspect("done"):
                 sim.step({a: 0, b: 0, reset: 0})
 
             # Extracting the values and verifying correctness
             mult_results.append(sim.inspect("product"))
-            self.assertEqual(sim.inspect("done"), 1)
         self.assertEqual(mult_results, true_result)
 
 
