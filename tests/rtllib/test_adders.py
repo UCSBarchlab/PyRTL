@@ -1,9 +1,19 @@
+import doctest
 import random
 import unittest
 
 import pyrtl
 import pyrtl.rtllib.testingutils as utils
 from pyrtl.rtllib import adders
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+
+    def test_doctests(self):
+        failures, tests = doctest.testmod(m=pyrtl.rtllib.adders)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 class TestAdders(unittest.TestCase):

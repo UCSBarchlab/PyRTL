@@ -24,6 +24,24 @@ def kogge_stone(
     useful for performance critical designs. However, it has `O(n log(n))` area usage,
     and large fan out.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=4)
+        >>> b = pyrtl.Input(name="b", bitwidth=4)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.adders.kogge_stone(a, b)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"a": 2, "b": 3})
+        >>> sim.inspect("output")
+        5
+
     :param a: A :class:`.WireVector` to add up. Bitwidths don't need to match.
     :param b: A :class:`.WireVector` to add up. Bitwidths don't need to match.
     :param cin: An optional 1-bit carry-in :class:`.WireVector`. Can be any type that
@@ -103,6 +121,25 @@ def carrysave_adder(
 ) -> pyrtl.WireVector:
     """Adds three :class:`WireVectors<.WireVector>` up in an efficient manner.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=4)
+        >>> b = pyrtl.Input(name="b", bitwidth=4)
+        >>> c = pyrtl.Input(name="c", bitwidth=4)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.adders.carrysave_adder(a, b, c)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"a": 2, "b": 3, "c": 4})
+        >>> sim.inspect("output")
+        9
+
     :param a: A :class:`.WireVector` to add up. Bitwidths don't need to match.
     :param b: A :class:`.WireVector` to add up. Bitwidths don't need to match.
     :param c: A :class:`.WireVector` to add up. Bitwidths don't need to match.
@@ -127,6 +164,24 @@ def cla_adder(
     A Carry Look-Ahead Adder is an adder that is faster than :func:`ripple_add`, as it
     calculates the carry bits faster. It is not as fast as :func:`kogge_stone`, but uses
     less area.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=4)
+        >>> b = pyrtl.Input(name="b", bitwidth=4)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.adders.cla_adder(a, b)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"a": 2, "b": 3})
+        >>> sim.inspect("output")
+        5
 
     :param a: A :class:`.WireVector` to add up. Bitwidths don't need to match.
     :param b: A :class:`.WireVector` to add up. Bitwidths don't need to match.
@@ -321,6 +376,26 @@ def fast_group_adder(
     The length of the result is::
 
         max(len(w) for w in wires_to_add) + ceil(len(wires_to_add))
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> wires_to_add = [pyrtl.Const(n) for n in range(10)]
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.adders.fast_group_adder(wires_to_add)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> sim.inspect("output")
+        45
+        >>> sum(range(10))
+        45
+
 
     :param wires_to_add: A :class:`list` of :class:`WireVectors<.WireVector>` to add.
     :param reducer: The tree reducer to use. See :func:`wallace_reducer` and
