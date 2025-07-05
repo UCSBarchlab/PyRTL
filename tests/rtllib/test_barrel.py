@@ -1,8 +1,18 @@
+import doctest
 import random
 import unittest
 
 import pyrtl
 from pyrtl.rtllib.barrel import Direction, barrel_shifter
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+
+    def test_doctests(self):
+        failures, tests = doctest.testmod(m=pyrtl.rtllib.barrel)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 class TestBarrel(unittest.TestCase):

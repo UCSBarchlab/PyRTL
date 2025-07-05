@@ -32,6 +32,28 @@ def barrel_shifter(
 ) -> WireVector:
     """Create a barrel shifter.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> bits_to_shift = pyrtl.Input(name="input", bitwidth=8)
+        >>> shift_dist = pyrtl.Input(name="shift_dist", bitwidth=3)
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.barrel.barrel_shifter(
+        ...     bits_to_shift,
+        ...     bit_in=1,
+        ...     direction=pyrtl.rtllib.barrel.Direction.RIGHT,
+        ...     shift_dist=shift_dist)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"input": 0x55, "shift_dist": 4})
+        >>> hex(sim.inspect("output"))
+        '0xf5'
+
     :param bits_to_shift: :class:`.WireVector` with the value to shift.
     :param bit_in: A 1-bit :class:`.WireVector` representing the value to shift in.
     :param direction: A one bit :class:`.WireVector` representing the shift direction
