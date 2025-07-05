@@ -48,8 +48,7 @@ def mux(
 
     .. doctest only::
 
-
-    >>> pyrtl.reset_working_block()
+        >>> pyrtl.reset_working_block()
 
     Example with ``default``::
 
@@ -406,7 +405,7 @@ def signed_mult(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 def signed_lt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
     """Return a 1-bit :class:`WireVector` for the result of a signed ``<`` comparison.
 
-    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to matching bitwidths before
     comparing.
 
     .. doctest only::
@@ -444,7 +443,7 @@ def signed_lt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 def signed_le(a: WireVectorLike, b: WireVectorLike) -> WireVector:
     """Return a 1-bit :class:`WireVector` for the result of a signed ``<=`` comparison.
 
-    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to matching bitwidths before
     comparing.
 
     .. doctest only::
@@ -483,7 +482,7 @@ def signed_le(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 def signed_gt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
     """Return a 1-bit :class:`WireVector` for the result of a signed ``>`` comparison.
 
-    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to matching bitwidths before
     comparing.
 
     .. doctest only::
@@ -521,7 +520,7 @@ def signed_gt(a: WireVectorLike, b: WireVectorLike) -> WireVector:
 def signed_ge(a: WireVectorLike, b: WireVectorLike) -> WireVector:
     """Return a 1-bit :class:`WireVector` for the result of a signed ``>=`` comparison.
 
-    The inputs are :meth:`~WireVector.sign_extended` to the result's bitwidth before
+    The inputs are :meth:`~WireVector.sign_extended` to matching bitwidths before
     comparing.
 
     .. doctest only::
