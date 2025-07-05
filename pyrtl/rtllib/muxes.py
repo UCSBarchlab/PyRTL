@@ -5,7 +5,8 @@ Basic multiplexers are defined in PyRTL's core library, see:
 
 - :func:`.mux` for a multiplexer that selects between an arbitrary number of options.
 
-- :ref:`conditional_assignment` for a more readable alternative to :func:`.mux`.
+- :ref:`conditional_assignment` for a more readable alternative to nested
+  :func:`selects<.select>` and :func:`muxes<.mux>`.
 
 The functions below provide more complex alternatives.
 """
@@ -20,6 +21,33 @@ def prioritized_mux(selects: list[WireVector], vals: list[WireVector]) -> WireVe
     """Returns the value in the first wire for which its ``select`` bit is ``1``
 
     If none of the ``selects`` are ``1``, the last ``val`` is returned.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> selects = [pyrtl.Input(name=f"select{i}", bitwidth=1)
+        ...            for i in range(3)]
+        >>> vals = [pyrtl.Const(n) for n in range(2, 5)]
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.muxes.prioritized_mux(selects, vals)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"select0": 1, "select1": 0, "select2": 0})
+        >>> sim.inspect("output")
+        2
+
+        >>> sim.step(provided_inputs={"select0": 0, "select1": 1, "select2": 0})
+        >>> sim.inspect("output")
+        3
+
+        >>> sim.step(provided_inputs={"select0": 0, "select1": 0, "select2": 0})
+        >>> sim.inspect("output")
+        4
 
     :param selects: A list of :class:`WireVectors<.WireVector>` signaling whether a wire
         should be chosen.
@@ -61,6 +89,34 @@ def sparse_mux(sel: WireVector, vals: dict[int, WireVector]) -> WireVector:
 
     ``sparse_mux`` supports not having a full specification. Indices that are not
     specified are treated as don't-cares.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> select = pyrtl.Input(name="select", bitwidth=3)
+        >>> vals = {2: pyrtl.Const(3),
+        ...         4: pyrtl.Const(5),
+        ...         pyrtl.rtllib.muxes.SparseDefault: pyrtl.Const(7)}
+        >>> output = pyrtl.Output(name="output")
+
+        >>> output <<= pyrtl.rtllib.muxes.sparse_mux(select, vals)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(provided_inputs={"select": 2})
+        >>> sim.inspect("output")
+        3
+
+        >>> sim.step(provided_inputs={"select": 4})
+        >>> sim.inspect("output")
+        5
+
+        >>> sim.step(provided_inputs={"select": 3})
+        >>> sim.inspect("output")
+        7
 
     :param sel: Select wire, which chooses one of the mux input ``vals`` to output.
     :param vals: :class:`dict` of mux input values. If the special key
@@ -217,8 +273,8 @@ class MultiSelector:
 def demux(select: WireVector) -> tuple[WireVector, ...]:
     """Demultiplexes a wire of arbitrary bitwidth.
 
-    This effectively converts an unsigned binary value into a unary value, returning
-    each bit of the unary value as a separate :class:`.WireVector`.
+    This effectively converts an unsigned binary value into a one-hot encoded value,
+    returning each bit of the one-hot encoded value as a separate :class:`.WireVector`.
 
     .. doctest only::
 
@@ -229,26 +285,26 @@ def demux(select: WireVector) -> tuple[WireVector, ...]:
 
         >>> input = pyrtl.Input(bitwidth=3)
 
-        >>> output = pyrtl.rtllib.muxes.demux(input)
-        >>> len(output)
+        >>> outputs = pyrtl.rtllib.muxes.demux(input)
+        >>> len(outputs)
         8
-        >>> len(output[0])
+        >>> len(outputs[0])
         1
-        >>> for i, wire in enumerate(output):
-        ...     wire.name = f"output[{i}]"
+        >>> for i, wire in enumerate(outputs):
+        ...     wire.name = f"outputs[{i}]"
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step(provided_inputs={input.name: 5})
 
-        >>> sim.inspect("output[4]")
+        >>> sim.inspect("outputs[4]")
         0
-        >>> sim.inspect("output[5]")
+        >>> sim.inspect("outputs[5]")
         1
-        >>> sim.inspect("output[6]")
+        >>> sim.inspect("outputs[6]")
         0
 
-    In the example above, ``len(output)`` is ``8`` because ``2 ** 3 == 8``, and
-    ``output[5]`` is ``1`` because the output index ``5`` matches the input value.
+    In the example above, ``len(outputs)`` is ``8`` because ``2 ** 3 == 8``, and
+    ``outputs[5]`` is ``1`` because the output index ``5`` matches the input value.
 
     See :func:`.binary_to_one_hot`, which performs a similar operation.
 
