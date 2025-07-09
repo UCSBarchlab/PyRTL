@@ -1,17 +1,15 @@
-"""Example 5: Making use of PyRTL and Introspection."""
-
+# # Example 5: Making use of PyRTL and Introspection.
 import pyrtl
+
 
 # The following example shows how PyRTL can be used to make some interesting hardware
 # structures using Python introspection. In particular, this example makes a N-stage
-# pipeline structure. Any specific pipeline is then a derived class of SimplePipeline
-# where methods with names starting with "stage" are stages, and new members with names
-# not starting with "_" are to be registered for the next stage.
-
-
+# pipeline structure. Any specific pipeline is then a derived class of `SimplePipeline`
+# where methods with names starting with `stage` are stages, and new members with names
+# not starting with `_` are to be registered for the next stage.
+#
+# ## Pipeline builder with auto generation of pipeline registers.
 class SimplePipeline:
-    """Pipeline builder with auto generation of pipeline registers."""
-
     def __init__(self):
         self._pipeline_register_map = {}
         self._current_stage_num = 0
@@ -46,9 +44,8 @@ class SimplePipeline:
             new_pipereg.next <<= value
 
 
+# ## A very simple pipeline to show how registers are inferred.
 class SimplePipelineExample(SimplePipeline):
-    """A very simple pipeline to show how registers are inferred."""
-
     def __init__(self):
         self._loopback = pyrtl.WireVector(1, "loopback")
         super().__init__()
@@ -71,7 +68,7 @@ class SimplePipelineExample(SimplePipeline):
 
 simplepipeline = SimplePipelineExample()
 print(pyrtl.working_block())
-# Simulation of the core
+# ## Simulation of the core
 sim = pyrtl.Simulation()
 sim.step_multiple({}, nsteps=15)
 sim.tracer.render_trace()

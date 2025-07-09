@@ -54,3 +54,7 @@ ipynb-examples/.ipynb_checkpoints
 
 # Python venv
 pyvenv.cfg
+
+# Jupyter
+.jupyterlite.doit.db
+_output

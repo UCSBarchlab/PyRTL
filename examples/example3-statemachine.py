@@ -1,19 +1,20 @@
-"""
-Example 3: A State Machine built with conditional_assignment
-
-In this example we describe how conditional_assignment works in the context of a vending
-machine that will dispense an item when it has received 4 tokens. If a refund is
-requested, it returns the tokens.
-"""
-
+# # Example 3: A State Machine built with `conditional_assignment`
+#
+# In this example we describe how `conditional_assignment` works in the context of a
+# vending machine that will dispense an item when it has received 4 tokens. If a refund
+# is requested, it returns the tokens.
 import enum
 
 import pyrtl
 
+# Define `Inputs`, `Outputs`, and a `Register` to keep track of the vending machine's
+# current state.
 token_in = pyrtl.Input(1, "token_in")
 req_refund = pyrtl.Input(1, "req_refund")
+
 dispense = pyrtl.Output(1, "dispense")
 refund = pyrtl.Output(1, "refund")
+
 state = pyrtl.Register(3, "state")
 
 
@@ -27,23 +28,25 @@ class State(enum.IntEnum):
     RFND = 5  # Issue refund.
 
 
-# Now we could build a state machine using just the registers and logic discussed in the
-# earlier examples, but doing operations *conditionally* on some input is a pretty
-# fundamental operation in hardware design. PyRTL provides an instance called
-# "conditional_assignment" to provide a predicated update to a registers, wires, and
-# memories.
+# Now we could build a state machine using just the `Registers` and logic discussed in
+# prior examples, but doing operations **conditionally** on some input is a pretty
+# fundamental operation in hardware design. PyRTL provides `conditional_assignment` to
+# provide a predicated update to `Registers`, `WireVectors`, and `MemBlocks`.
 #
-# Conditional assignments are specified with a "|=" instead of a "<<=" operator. The
-# conditional assignment is only valid in the context of a condition, and updates to
-# those values only happens when that condition is true. In hardware this is implemented
-# with a simple mux -- for people coming from software it is important to remember that
-# this is describing a big logic function, **NOT** an "if-then-else" clause. All of
-# these things will execute straight through when "build_everything" is called. More
-# comments after the code.
+# `conditional_assignments` are specified with the `|=` operator instead of the usual
+# `<<=` operator. The `conditional_assignment` is only valid in the context of a
+# condition, and updates to those values only happens when that condition is `True`. In
+# hardware this is implemented with a simple `mux()` -- for people coming from software
+# it is important to remember that this is describing a big logic function, **NOT** an
+# "if-then-else" clause. The `conditional_assignment` below just builds hardware
+# multiplexers. Nothing conditional actually happens until the `Simulation` is run.
 #
-# One more thing: conditional_assignment might not always be the best solution. If the
-# update is simple, a regular 'select(sel_wire, truecase=t_wire, falsecase=f_wire)' can
-# be sufficient.
+# One more thing: `conditional_assignment` might not always be the best solution. For
+# simple updates, a regular
+#
+#     select(sel_wire, truecase=t_wire, falsecase=f_wire)
+#
+# can be easier to read.
 with pyrtl.conditional_assignment:
     with req_refund:  # signal of highest precedence
         state.next |= State.RFND
@@ -70,61 +73,60 @@ refund <<= state == State.RFND
 
 # A few more notes:
 #
-# 1) A condition can be nested within another condition and the implied hardware is that
+# 1. A condition can be nested within another condition and the implied hardware is that
 #    the left-hand-side should only get that value if ALL of the encompassing conditions
 #    are satisfied.
-# 2) Only one conditional at each level can be true meaning that all conditions are
-#    implicitly also saying that none of the prior conditions at the same level also
-#    have been true. The highest priority condition is listed first, and in a sense you
-#    can think about each other condition as an "elif".
-# 3) If not every condition is enumerated, the default value for the register under
-#    those cases will be the same as it was the prior cycle ("state.next |= state" in
-#    this example). The default for a wirevector is 0.
-# 4) There is a way to specify something like an "else" instead of "elif" and that is
-#    with an "otherwise" (as seen on the line above "state.next <<= State.RFND"). This
-#    condition will be true if none of the other conditions at the same level were also
-#    true (for this example specifically, state.next will get RFND when req_refund==0,
-#    token_in==1, and state is not in TOK1, TOK2, TOK3, or DISP.
-# 5) Not shown here, but you can update multiple different registers, wires, and
-#    memories all under the same set of conditionals.
-
+# 2. Only one conditional at each level can be `True`, so all conditions imply that NONE
+#    of the prior conditions at the same level are `True`. The highest priority
+#    condition is listed first, and in a sense you can think about each other condition
+#    as an `elif`.
+# 3. If a `WireVector`'s value is not specified for some combination of conditions,
+#    `conditional_assignment` will supply a default value. By default,`Registers` will
+#    retain their value from the prior cycle ("state.next |= state" in this example).
+#    `WireVectors` default to `0`.
+# 4. There is a way to specify something like an `else` instead of `elif` and that is
+#    with an `otherwise` (as seen on the line above "state.next <<= State.RFND"). This
+#    condition will be `True` if none of the other conditions at the same level were
+#    also `True`. For this example specifically, `state.next` will get `RFND` when
+#    `req_refund==0`, and `token_in==1`, and state is not any of {`WAIT`, `TOK1`,
+#    `TOK2`, or `TOK3`}.
+# 5. Not shown here, but you can update multiple `Registers`, `WireVectors`, and
+#    `MemBlocks` within one `conditional_assignment`.
+#
 # A more artificial example might make it even more clear how these rules interact:
-# with a:
-#     r.next |= 1        <-- when a is true
-#     with d:
-#         r2.next |= 2   <-- when a and d are true
-#     with otherwise:
-#         r2.next |= 3   <-- when a is true and d is false
-# with b == c:
-#     r.next |= 0        <-- when a is not true and b==c is true
-
+#
+#     with a:
+#         r.next |= 1        # ← When `a` is `True`.
+#         with d:
+#             r2.next |= 2   # ← When `a` is `True` and `d` is `True`.
+#         with pyrtl.otherwise:
+#             r2.next |= 3   # ← When `a` is `True` and `d` is `False`.
+#     with b == c:
+#         r.next |= 0        # ← When `a` is `False` and `b == c`.
+#
 # Now let's build and test our state machine.
-
 sim = pyrtl.Simulation()
 
 # Rather than just give some random inputs, let's specify some specific 1-bit values. To
-# make it easier to simulate it over several steps, we'll use sim.step_multiple, which
-# takes in a dictionary mapping each input to its value on each step.
-
+# make it easier to `Simulate` over several steps, we'll use `step_multiple()`, which
+# takes in a `dict` mapping each `Input` to its value in each cycle.
 sim_inputs = {"token_in": "0010100111010000", "req_refund": "1100010000000000"}
-
 sim.step_multiple(sim_inputs)
 
 # Also, to make our input/output easy to reason about let's specify an order to the
-# traces. We also use `enum_name` to display the state names (WAIT, TOK1, ...) rather
-# than their numbers (0, 1, ...).
+# traces with `trace_list`. We also use `enum_name` to display the state names (`WAIT`,
+# `TOK1`, ...) rather than their numbers (0, 1, ...).
 sim.tracer.render_trace(
     trace_list=["token_in", "req_refund", "state", "dispense", "refund"],
     repr_per_name={"state": pyrtl.enum_name(State)},
 )
 
 # Finally, suppose you want to simulate your design and verify its output matches your
-# expectations. sim.step_multiple also accepts as a second argument a dictionary mapping
-# output wires to their expected value on each step. If during the simulation the actual
-# and expected values differ, it will be reported to you! This might be useful if you
-# have a working design which, after some tweaks, you'd like to test for functional
+# expectations. `step_multiple()` also accepts as a second argument a `dict` mapping
+# output wires to their expected value in each cycle. If during the `Simulation` the
+# actual and expected values differ, it will be reported to you! This might be useful if
+# you have a working design which, after some tweaks, you'd like to test for functional
 # equivalence, or as a basic sanity check.
-
-sim_outputs = {"dispense": "0000000000001000", "refund": "0111001000000000"}
+expected_sim_outputs = {"dispense": "0000000000001000", "refund": "0111001000000000"}
 sim = pyrtl.Simulation()
-sim.step_multiple(sim_inputs, sim_outputs)
+sim.step_multiple(sim_inputs, expected_sim_outputs)

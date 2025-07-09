@@ -1,12 +1,10 @@
+# # Render traces with various `WaveRenderer` options.
+
+# Run this demo to see which options work well in your terminal.
 import pyrtl
 
-"""Render traces with various WaveRenderer options.
 
-Run this demo to see which options work well in your terminal.
-
-"""
-
-
+# Make some clock dividers and counters.
 def make_clock(period: int):
     """Make a clock signal that inverts every `period` cycles."""
     assert period > 0
@@ -24,7 +22,7 @@ def make_clock(period: int):
     return last_reg
 
 
-def make_counter(period: int, bitwidth=2):
+def make_counter(period: int, bitwidth: int = 2):
     """Make a counter that increments every `period` cycles."""
     assert period > 0
 
