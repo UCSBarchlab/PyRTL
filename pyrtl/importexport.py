@@ -26,12 +26,15 @@ from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
 from pyrtl.wire import Const, Input, Output, Register, WireVector, next_tempvar_name
 
 if TYPE_CHECKING:
+    from pyrtl.core import LogicNet
     from pyrtl.simulation import SimulationTrace
 
 
-def _natural_sort_key(key):
+def _natural_sort_key(key: str) -> list:
     """Convert the key into a form such that it will be sorted naturally, e.g. such that
     "tmp4" appears before "tmp18".
+
+    For example, given "a1b2" as input, this will return ['a', 1, 'b', 2, ''].
     """
 
     def convert(text):
@@ -40,7 +43,7 @@ def _natural_sort_key(key):
     return [convert(c) for c in re.split(r"(\d+)", key)]
 
 
-def _net_sorted(logic, name_mapper=lambda w: w.name):
+def _net_sorted(logic: set[LogicNet], name_mapper=lambda w: w.name) -> list[LogicNet]:
     # Sort nets based on the name of the destination wire, unless it's a memory write
     # net.
     def natural_keys(n):
@@ -55,7 +58,9 @@ def _net_sorted(logic, name_mapper=lambda w: w.name):
     return sorted(logic, key=natural_keys)
 
 
-def _name_sorted(wires, name_mapper=lambda w: w.name):
+def _name_sorted(
+    wires: set[WireVector], name_mapper=lambda w: w.name
+) -> list[WireVector]:
     return sorted(wires, key=lambda w: _natural_sort_key(name_mapper(w)))
 
 
@@ -780,7 +785,7 @@ def output_to_verilog(
     for wire in block.wirevector_set:
         internal_names.make_valid_string(wire.name)
 
-    def varname(wire):
+    def varname(wire: WireVector) -> str:
         return internal_names[wire.name]
 
     _to_verilog_header(file, block, varname, add_reset, initialize_registers)
@@ -826,12 +831,8 @@ class _VerilogSanitizer(_NameSanitizer):
         )  # not too long to be a Verilog id
 
 
-def _verilog_vector_size_decl(n):
-    return "" if n == 1 else f"[{n - 1:d}:0]"
-
-
-def _verilog_vector_decl(w):
-    return _verilog_vector_size_decl(len(w))
+def _verilog_vector_size_decl(n: int) -> str:
+    return "" if n == 1 else f"[{n - 1}:0]"
 
 
 def _verilog_block_parts(block):
@@ -866,27 +867,28 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
         msg = 'input or output with name starting with "tmp" indicates unnamed IO'
         raise PyrtlError(msg)
     io_list_str = ", ".join(io_list)
-    print(f"module toplevel({io_list_str:s});", file=file)
+    print(f"module toplevel({io_list_str});", file=file)
 
     # inputs and outputs
     print("    input clk;", file=file)
     if add_reset:
         print("    input rst;", file=file)
     for w in name_sorted(inputs):
-        print(f"    input{_verilog_vector_decl(w):s} {varname(w):s};", file=file)
+        print(
+            f"    input{_verilog_vector_size_decl(w.bitwidth)} {varname(w)};", file=file
+        )
     for w in name_sorted(outputs):
         print(
-            f"    output{_verilog_vector_decl(w):s} {varname(w):s};",
+            f"    output{_verilog_vector_size_decl(w.bitwidth)} {varname(w)};",
             file=file,
         )
     print(file=file)
 
     # memories and registers
     for m in sorted(memories, key=lambda m: m.id):
-        memwidth_str = _verilog_vector_size_decl(m.bitwidth)
-        memsize_str = _verilog_vector_size_decl(1 << m.addrwidth)
         print(
-            f"    reg{memwidth_str:s} mem_{m.id}{memsize_str:s}; //{m.name}",
+            f"    reg{_verilog_vector_size_decl(m.bitwidth)} "
+            f"mem_{m.id}{_verilog_vector_size_decl(1 << m.addrwidth)}; //{m.name}",
             file=file,
         )
     for reg in name_sorted(registers):
@@ -897,7 +899,7 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
                 reset_value = reg.reset_value
             register_initialization = f" = {reg.bitwidth}'d{reset_value}"
         print(
-            f"    reg{_verilog_vector_decl(reg)} {varname(reg)}"
+            f"    reg{_verilog_vector_size_decl(reg.bitwidth)} {varname(reg)}"
             f"{register_initialization};",
             file=file,
         )
@@ -906,7 +908,9 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
 
     # wires
     for w in name_sorted(wires):
-        print(f"    wire{_verilog_vector_decl(w):s} {varname(w):s};", file=file)
+        print(
+            f"    wire{_verilog_vector_size_decl(w.bitwidth)} {varname(w)};", file=file
+        )
     print(file=file)
 
     # Write the initial values for read-only memories. If we ever add support outside of
@@ -915,9 +919,10 @@ def _to_verilog_header(file, block, varname, add_reset, initialize_registers):
     for m in sorted(roms, key=lambda m: m.id):
         print("    initial begin", file=file)
         for i in range(1 << m.addrwidth):
-            mem_elem_str = f"mem_{m.id}[{i:d}]"
-            mem_data_str = f"{m.bitwidth:d}'h{m._get_read_data(i):x}"
-            print(f"        {mem_elem_str:s}={mem_data_str:s};", file=file)
+            print(
+                f"        mem_{m.id}[{i}]={m.bitwidth}'h{m._get_read_data(i):x};",
+                file=file,
+            )
         print("    end", file=file)
         print(file=file)
 
@@ -932,39 +937,37 @@ def _to_verilog_combinational(file, block, varname):
 
     # assign constants (these could be folded for readability later)
     for const in name_sorted(block.wirevector_subset(Const)):
-        print(f"    assign {varname(const):s} = {const.val:d};", file=file)
+        print(f"    assign {varname(const)} = {const.val:d};", file=file)
 
     # walk the block and output combination logic
     for net in _net_sorted(block.logic, varname):
+        assign = None
+        if net.dests:
+            assign = f"    assign {varname(net.dests[0])}"
         if net.op in "w~":  # unary ops
             opstr = "" if net.op == "w" else net.op
-            t = (varname(net.dests[0]), opstr, varname(net.args[0]))
-            print("    assign {} = {}{};".format(*t), file=file)
+            print(f"{assign} = {opstr}{varname(net.args[0])};", file=file)
         elif net.op in "&|^+-*<>":  # binary ops
-            t = (
-                varname(net.dests[0]),
-                varname(net.args[0]),
-                net.op,
-                varname(net.args[1]),
+            print(
+                f"{assign} = {varname(net.args[0])} {net.op} {varname(net.args[1])};",
+                file=file,
             )
-            print("    assign {} = {} {} {};".format(*t), file=file)
         elif net.op == "=":
-            t = (varname(net.dests[0]), varname(net.args[0]), varname(net.args[1]))
-            print("    assign {} = {} == {};".format(*t), file=file)
+            print(
+                f"{assign} = {varname(net.args[0])} == {varname(net.args[1])};",
+                file=file,
+            )
         elif net.op == "x":
             # note that the argument order for 'x' is backwards from the ternary
             # operator
-            t = (
-                varname(net.dests[0]),
-                varname(net.args[0]),
-                varname(net.args[2]),
-                varname(net.args[1]),
+            print(
+                f"{assign} = {varname(net.args[0])} ? "
+                f"{varname(net.args[2])} : {varname(net.args[1])};",
+                file=file,
             )
-            print("    assign {} = {} ? {} : {};".format(*t), file=file)
         elif net.op == "c":
             catlist = ", ".join([varname(w) for w in net.args])
-            t = (varname(net.dests[0]), catlist)
-            print("    assign {} = {{{}}};".format(*t), file=file)
+            print(f"{assign} = {{{catlist}}};", file=file)
         elif net.op == "s":
             # someone please check if we need this special handling for scalars
             catlist = ", ".join(
@@ -975,8 +978,7 @@ def _to_verilog_combinational(file, block, varname):
                     for i in reversed(net.op_param)
                 ]
             )
-            t = (varname(net.dests[0]), catlist)
-            print("    assign {} = {{{}}};".format(*t), file=file)
+            print(f"{assign} = {{{catlist}}};", file=file)
         elif net.op in "rm@":
             pass  # do nothing for registers and memories
         else:
@@ -1000,11 +1002,10 @@ def _to_verilog_sequential(file, block, varname, add_reset):
         print("        if (rst) begin", file=file)
         for net in _net_sorted(block.logic, varname):
             if net.op == "r":
-                dest = varname(net.dests[0])
                 rval = net.dests[0].reset_value
                 if rval is None:
                     rval = 0
-                print(f"            {dest:s} <= {rval:d};", file=file)
+                print(f"            {varname(net.dests[0])} <= {rval:d};", file=file)
         print("        end", file=file)
         print("        else begin", file=file)
     else:
@@ -1012,8 +1013,10 @@ def _to_verilog_sequential(file, block, varname, add_reset):
 
     for net in _net_sorted(block.logic, varname):
         if net.op == "r":
-            dest, src = (varname(net.dests[0]), varname(net.args[0]))
-            print(f"            {dest:s} <= {src:s};", file=file)
+            print(
+                f"            {varname(net.dests[0])} <= {varname(net.args[0])};",
+                file=file,
+            )
     print("        end", file=file)
     print("    end", file=file)
     print(file=file)
@@ -1033,18 +1036,11 @@ def _to_verilog_memories(file, block, varname):
             print("    always @(posedge clk)", file=file)
             print("    begin", file=file)
             for net in writes:
-                t = (
-                    varname(net.args[2]),
-                    net.op_param[0],
-                    varname(net.args[0]),
-                    varname(net.args[1]),
-                )
                 print(
-                    (
-                        "        if ({}) begin\n"
-                        "            mem_{}[{}] <= {};\n"
-                        "        end"
-                    ).format(*t),
+                    f"        if ({varname(net.args[2])}) begin\n"
+                    f"            mem_{net.op_param[0]}[{varname(net.args[0])}] <= "
+                    f"{varname(net.args[1])};\n"
+                    "        end",
                     file=file,
                 )
             print("    end", file=file)
@@ -1054,10 +1050,11 @@ def _to_verilog_memories(file, block, varname):
             if net.op_param[1] == m
         ]
         for net in reads:
-            dest = varname(net.dests[0])
-            m_id = net.op_param[0]
-            index = varname(net.args[0])
-            print(f"    assign {dest:s} = mem_{m_id}[{index:s}];", file=file)
+            print(
+                f"    assign {varname(net.dests[0])} = "
+                f"mem_{net.op_param[0]}[{varname(net.args[0])}];",
+                file=file,
+            )
         print(file=file)
 
 
@@ -1186,7 +1183,7 @@ def output_verilog_testbench(
 
     # Output an include, if given
     if toplevel_include:
-        print(f'`include "{toplevel_include:s}"', file=dest_file)
+        print(f'`include "{toplevel_include}"', file=dest_file)
         print(file=dest_file)
 
     # Output header
@@ -1198,14 +1195,14 @@ def output_verilog_testbench(
         print("    reg rst;", file=dest_file)
     for w in name_sorted(inputs):
         print(
-            f"    reg{_verilog_vector_decl(w):s} {ver_name[w.name]:s};",
+            f"    reg{_verilog_vector_size_decl(w.bitwidth)} {ver_name[w.name]};",
             file=dest_file,
         )
 
     # Declare all block outputs as wires
     for w in name_sorted(outputs):
         print(
-            f"    wire{_verilog_vector_decl(w):s} {ver_name[w.name]:s};",
+            f"    wire{_verilog_vector_size_decl(w.bitwidth)} {ver_name[w.name]};",
             file=dest_file,
         )
     print(file=dest_file)
@@ -1260,11 +1257,8 @@ def output_verilog_testbench(
         for i in range(tracelen):
             for w in name_sorted(inputs):
                 print(
-                    "        {:s} = {:s}{:d};".format(
-                        ver_name[w.name],
-                        f"{len(w):d}'d",
-                        simulation_trace.trace[w.name][i],
-                    ),
+                    f"        {ver_name[w.name]} = "
+                    f"{w.bitwidth}'d{simulation_trace.trace[w.name][i]};",
                     file=dest_file,
                 )
             print("\n        #10", file=dest_file)
