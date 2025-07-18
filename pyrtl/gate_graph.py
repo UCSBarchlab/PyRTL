@@ -119,7 +119,7 @@ class Gate:
        :attr:`~Gate.dest_bitwidth` will be ``None``. PyRTL does not have
        :attr:`ops<.LogicNet.op>` with multiple :attr:`~.LogicNet.dests`.
 
-    3. The :class:`Gate` has is a new :attr:`~Gate.dest_fanout` attribute, which has no
+    3. The :class:`Gate` has a new :attr:`~Gate.dest_fanout` attribute, which has no
        equivalent in the :class:`.LogicNet`/:class:`.WireVector` representation.
        :attr:`~Gate.dest_fanout` is a list of the :class:`Gates<Gate>` that use this
        :class:`Gate`'s output.
@@ -168,7 +168,7 @@ class Gate:
        track of the current object's type as we follow arrows in the graph, like we did
        with :class:`LogicNet` and :class:`WireVector`. Everything is a :class:`Gate`.
 
-    See the documentation for :class:`GateGraph` for examples.
+    For usage examples, see :class:`GateGraph` and :class:`Gate`'s documentation below.
     """
 
     op: str
@@ -233,7 +233,8 @@ class Gate:
 
     .. note::
 
-        The same ``Gate`` may appear multiple times in ``args``.
+        The same ``Gate`` may appear multiple times in ``args``. A :class:`.Register`
+        ``Gate`` may be its own ``arg``, creating a self-loop.
 
     .. doctest only::
 
@@ -312,9 +313,11 @@ class Gate:
     For each :class:`Gate` ``dest`` in ``self.dest_fanout``, ``self`` is in
     ``dest.args``.
 
-    ..note::
+    .. note::
 
-        The same :class:`Gate` may appear multiple times in ``dest_fanout``.
+        The same :class:`Gate` may appear multiple times in ``dest_fanout``. A
+        :class:`.Register` ``Gate`` may appear in its own ``dest_fanout``, creating a
+        self-loop.
 
     .. doctest only::
 
@@ -379,7 +382,7 @@ class Gate:
             :class:`.WireVector`. In this first phase, the register ``Gate``'s ``op`` is
             temporarily set to ``R``, which is the :class:`.Register`'s ``_code``. This
             placeholder is needed to resolve other ``Gate``'s references to the register
-            in the second phase. In the second phase, the register gate's remaining
+            in the second phase. In the second phase, the register ``Gate``'s remaining
             fields are populated from the register's :class:`.LogicNet`. In the second
             phase, the register ``Gate``'s ``op`` is changed to ``r``, which is the
             :class:`.LogicNet`'s :attr:`~.LogicNet.op`.
@@ -391,8 +394,8 @@ class Gate:
             :class:`.Register`.
 
         :param args: A :class:`list` of ``Gates`` that are inputs to this ``Gate``. This
-            corresponds to :attr:`.LogicNet.args`, except that each of these ``args`` is
-            a ``Gate``.
+            corresponds to :attr:`.LogicNet.args`, except that each of a ``Gate``'s
+            ``args`` is a ``Gate``.
         """
         self.op_param = None
         if args is None:
@@ -484,8 +487,9 @@ class Gate:
         - :attr:`~Gate.args` is ``[<Gate that produces tmp12>]``.
 
         - :attr:`~Gate.op_param` is ``(0, 1, 2, 3, 4, 5, 6, 7)``, written as ``sel``
-          because a ``slice``'s ``op_param`` determines the selected bits. This improves
-          readability.
+          because a ``slice``'s :attr:`~Gate.op_param` determines the selected bits.
+          This improves readability by indicating what the :attr:`~Gate.op_param` means
+          for the :attr:`~Gate.op`.
         """
         if self.dest_name is None:
             dest = ""
@@ -638,8 +642,9 @@ class GateGraph:
         defines the register's :attr:`~.Register.next` value (which is the register
         :class:`Gate`'s :attr:`~Gate.args`) can depend on the register's current value
         (which is the register :class:`Gate`'s ``dest``). Watch out for infinite loops
-        when traversing a :class:`GateGraph` with registers, if you keep following
-        :attr:`~Gate.dest_fanout` references you may end up back where you started.
+        when traversing a :class:`GateGraph` with registers. For example, if you keep
+        following :attr:`~Gate.dest_fanout` references, you may end up back where you
+        started.
     """
 
     gates: list[Gate]

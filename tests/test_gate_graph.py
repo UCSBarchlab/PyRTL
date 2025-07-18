@@ -99,6 +99,7 @@ class TestGateGraph(unittest.TestCase):
 
         a_gate = gate_graph.get_gate("a")
         self.assertEqual(a_gate.op, "I")
+        self.assertEqual(a_gate.args, [])
 
         b_gate = gate_graph.get_gate("b")
         self.assertEqual(b_gate.op, "C")
@@ -198,6 +199,20 @@ class TestGateGraph(unittest.TestCase):
         self.assertEqual(len(plus_gate.args), 2)
 
         self.assertEqual(plus_gate.args[0], counter_gate)
+
+    def test_register_self_loop(self):
+        """Test a register that sets its next value directly from itself.
+
+        This is an unusual case that creates a self-loop in the ``GateGraph``.
+        """
+        r = pyrtl.Register(name="r", bitwidth=1)
+        r.next <<= r
+
+        gate_graph = pyrtl.GateGraph()
+        r_gate = gate_graph.get_gate("r")
+        self.assertEqual(r_gate.args[0], r_gate)
+        self.assertEqual(r_gate.dest_fanout[0], r_gate)
+        self.assertEqual(str(r_gate), "r/1 = reg(r/1) [reset_value=0]")
 
     def test_memblock(self):
         mem = pyrtl.MemBlock(name="mem", bitwidth=8, addrwidth=2)
