@@ -34,3 +34,17 @@ LogicNets
 .. autoclass:: pyrtl.LogicNet
     :members:
     :undoc-members:
+
+GateGraphs
+----------
+
+.. automodule:: pyrtl.gate_graph
+
+.. autoclass:: pyrtl.Gate
+    :members:
+    :special-members: __init__, __str__
+
+.. autoclass:: pyrtl.GateGraph
+    :members:
+    :special-members: __init__, __str__
+
