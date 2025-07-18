@@ -39,8 +39,6 @@ class TestGateGraph(unittest.TestCase):
 
         self.assertEqual(sorted([gate.dest_name for gate in gate_graph.sinks]), ["abc"])
 
-        self.assertEqual(gate_graph.get_gate("foo"), None)
-
         gate_ab = gate_graph.get_gate("ab")
         self.assertEqual(gate_ab.dest_name, "ab")
         self.assertEqual(gate_ab.op, "+")
@@ -48,6 +46,41 @@ class TestGateGraph(unittest.TestCase):
         gate_abc = gate_graph.get_gate("abc")
         self.assertEqual(gate_abc.dest_name, "abc")
         self.assertEqual(gate_abc.op, "-")
+
+    def test_get_gate(self):
+        _ = pyrtl.Input(name="a", bitwidth=4)
+
+        gate_graph = pyrtl.GateGraph()
+        a_gate = gate_graph.get_gate("a")
+        self.assertEqual(a_gate.dest_name, "a")
+
+        self.assertEqual(gate_graph.get_gate("q"), None)
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            gate_graph.get_gate("")
+        with self.assertRaises(pyrtl.PyrtlError):
+            gate_graph.get_gate(None)
+
+    def test_select_gate(self):
+        a = pyrtl.Input(name="a", bitwidth=4)
+        b = pyrtl.Input(name="b", bitwidth=4)
+        s = pyrtl.Input(name="s", bitwidth=1)
+
+        output = pyrtl.select(s, a, b)
+        output.name = "output"
+
+        gate_graph = pyrtl.GateGraph()
+        select_gate = gate_graph.get_gate("output")
+        self.assertEqual(select_gate.op, "x")
+        self.assertEqual(select_gate.op_param, None)
+        a_gate = gate_graph.get_gate("a")
+        b_gate = gate_graph.get_gate("b")
+        s_gate = gate_graph.get_gate("s")
+        self.assertEqual(select_gate.args, [s_gate, b_gate, a_gate])
+        self.assertEqual(select_gate.dest_name, "output")
+        self.assertEqual(select_gate.dest_bitwidth, 4)
+        self.assertEqual(select_gate.dest_fanout, [])
+        self.assertEqual(str(select_gate), "output/4 = s/1 ? a/4 : b/4")
 
     def test_gate_attrs(self):
         a = pyrtl.Input(name="a", bitwidth=4)
@@ -58,7 +91,9 @@ class TestGateGraph(unittest.TestCase):
         ab.name = "ab"
 
         output = pyrtl.Output(name="output", bitwidth=3)
-        output <<= b + b
+        bb = b + b
+        bb.name = "bb"
+        output <<= bb
 
         gate_graph = pyrtl.GateGraph()
 
@@ -69,6 +104,8 @@ class TestGateGraph(unittest.TestCase):
         self.assertEqual(b_gate.op, "C")
         self.assertEqual(b_gate.op_param, (1,))
 
+        self.assertEqual(str(b_gate), "b/2 = Const(1)")
+
         bit_slice_gate = gate_graph.get_gate("bit_slice")
         self.assertEqual(bit_slice_gate.op, "s")
 
@@ -78,6 +115,8 @@ class TestGateGraph(unittest.TestCase):
 
         self.assertEqual(bit_slice_gate.dest_name, "bit_slice")
         self.assertEqual(bit_slice_gate.dest_bitwidth, 2)
+
+        self.assertEqual(str(bit_slice_gate), "bit_slice/2 = slice(a/4) [sel=(2, 3)]")
 
         ab_gate = gate_graph.get_gate("ab")
         self.assertEqual(ab_gate.op, "+")
@@ -91,6 +130,7 @@ class TestGateGraph(unittest.TestCase):
         output_gate = gate_graph.get_gate("output")
         self.assertEqual(output_gate.op, "w")
         self.assertTrue(output_gate.dest_is_output)
+        self.assertEqual(str(output_gate), "output/3 [Output] = bb/3")
 
         self.assertEqual(len(output_gate.args), 1)
         output_add_gate = output_gate.args[0]
@@ -111,20 +151,24 @@ class TestGateGraph(unittest.TestCase):
     def test_register_gate_forward(self):
         counter = pyrtl.Register(name="counter", bitwidth=3)
         one = pyrtl.Const(name="one", bitwidth=3, val=1)
-        counter.next <<= counter + one
+        truncated = (counter + one).truncate(3)
+        truncated.name = "truncated"
+        counter.next <<= truncated
 
         gate_graph = pyrtl.GateGraph()
 
-        # Traverse the GateGraph forward, following ``dest_fanout`` references, from
+        # Traverse the ``GateGraph`` forward, following ``dest_fanout`` references, from
         # ``counter``. We should end up back at ``counter``.
         counter_gate = gate_graph.get_gate("counter")
         self.assertEqual(len(counter_gate.dest_fanout), 1)
+        self.assertEqual(
+            str(counter_gate), "counter/3 = reg(truncated/3) [reset_value=0]"
+        )
 
         plus_gate = counter_gate.dest_fanout[0]
         self.assertEqual(plus_gate.op, "+")
         self.assertEqual(len(plus_gate.dest_fanout), 1)
 
-        # Implicit truncation from 4-bit sum to 3-bit register input.
         slice_gate = plus_gate.dest_fanout[0]
         self.assertEqual(slice_gate.op, "s")
         self.assertEqual(len(slice_gate.dest_fanout), 1)
@@ -132,16 +176,17 @@ class TestGateGraph(unittest.TestCase):
         self.assertEqual(slice_gate.dest_fanout[0], counter_gate)
 
     def test_register_gate_backward(self):
-        counter = pyrtl.Register(name="counter", bitwidth=3)
+        counter = pyrtl.Register(name="counter", bitwidth=3, reset_value=2)
         one = pyrtl.Const(name="one", bitwidth=3, val=1)
         counter.next <<= counter + one
 
         gate_graph = pyrtl.GateGraph()
 
-        # Traverse the GateGraph backward, following ``args`` references, from
+        # Traverse the ``GateGraph`` backward, following ``args`` references, from
         # ``counter``. We should end up back at ``counter``.
         counter_gate = gate_graph.get_gate("counter")
         self.assertEqual(len(counter_gate.args), 1)
+        self.assertEqual(counter_gate.op_param, (2,))
 
         # Implicit truncation from 4-bit sum to 3-bit register input.
         slice_gate = counter_gate.args[0]
@@ -176,6 +221,10 @@ class TestGateGraph(unittest.TestCase):
         self.assertEqual(read_gate.args, [read_addr_gate])
         self.assertEqual(read_gate.op_param, (mem.id, mem))
         self.assertEqual(read_gate.dest_bitwidth, 8)
+        self.assertEqual(
+            str(read_gate),
+            f"read_data/8 = read(addr=read_addr/2) [memid={mem.id} mem=mem]",
+        )
 
         write_addr_gate = gate_graph.get_gate("write_addr")
         write_data_gate = gate_graph.get_gate("write_data")
@@ -189,6 +238,11 @@ class TestGateGraph(unittest.TestCase):
         self.assertEqual(write_gate.dest_name, None)
         self.assertEqual(write_gate.dest_bitwidth, None)
         self.assertEqual(write_gate.dest_fanout, [])
+        self.assertEqual(
+            str(write_gate),
+            "write(addr=write_addr/2, data=write_data/8, enable=write_enable/1) "
+            f"[memid={mem.id} mem=mem]",
+        )
 
 
 if __name__ == "__main__":
