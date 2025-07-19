@@ -52,5 +52,5 @@ GateGraphs
 
 .. autoclass:: pyrtl.GateGraph
     :members:
-    :special-members: __init__, __str__
+    :special-members: __init__, __iter__, __str__
 
