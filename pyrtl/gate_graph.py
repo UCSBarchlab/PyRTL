@@ -87,14 +87,11 @@ class Gate:
     :class:`WireVector`. So this :class:`.LogicNet` and :class:`.WireVector`::
 
         ┌──────────────────┐
-        │ LogicNet         │
-        │     op: o        │
-        │     args: [x, y] │
-        │                  │    ┌───────────────────┐
-        │     dests:───────┼───▶│ WireVector        │
-        └──────────────────┘    │     name: n       │
-                                │     bitwidth: b   │
-                                └───────────────────┘
+        │ LogicNet         │    ┌───────────────────┐
+        │     op: o        │    │ WireVector        │
+        │     args: [x, y] │    │     name: n       │
+        │     dests:───────┼───▶│     bitwidth: b   │
+        └──────────────────┘    └───────────────────┘
 
     Are equivalent to this :class:`Gate`::
 
