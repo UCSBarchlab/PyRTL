@@ -120,11 +120,11 @@ class Gate:
        :attr:`Gate.bitwidth`. If the :class:`.LogicNet` produces no output, like a
        :class:`.MemBlock` write, the :class:`Gate`'s :attr:`~Gate.name` and
        :attr:`~Gate.bitwidth` will be ``None``. PyRTL does not have an
-       :attr:`~.LogicNet.op` with multiple :attr:`~.LogicNet.dests`.
+       :attr:`~.LogicNet.op` with multiple :attr:`.LogicNet.dests`.
 
-    3. The :class:`Gate` has a new :attr:`~Gate.dests` attribute, which has no direct
+    3. The :class:`Gate` has a new :attr:`Gate.dests` attribute, which has no direct
        equivalent in the :class:`.LogicNet`/:class:`.WireVector` representation.
-       :attr:`~Gate.dests` is a list of the :class:`Gates<Gate>` that use this
+       :attr:`Gate.dests` is a list of the :class:`Gates<Gate>` that use this
        :class:`Gate`'s output as one of their :attr:`~Gate.args`.
 
     :attr:`.LogicNet.dests` and :attr:`Gate.dests` represent slightly different things,
@@ -132,9 +132,9 @@ class Gate:
 
     - :attr:`.LogicNet.dests` represents the :class:`LogicNet`'s output wire. It is a
       list of :class:`WireVectors<.WireVector>` which hold the :class:`.LogicNet`'s
-      output. There can be at most one :class:`WireVector` in :attr:`.LogicNet.dests`,
-      but that :class:`.WireVector` can be an :attr:`arg<.LogicNet.args>` to any number
-      of :class:`LogicNets<.LogicNet>`.
+      output. There can only be zero or one :class:`WireVectors<.WireVector>` in
+      :attr:`.LogicNet.dests`, but that :class:`.WireVector` can be an
+      :attr:`arg<.LogicNet.args>` to any number of :class:`LogicNets<.LogicNet>`.
 
     - :attr:`Gate.dests` represents the :class:`Gate`'s users. It is a list of
       :class:`Gates<Gate>` that use the :class:`Gate`'s output as one of their
