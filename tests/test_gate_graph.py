@@ -254,6 +254,61 @@ class TestGateGraph(unittest.TestCase):
             f"[memid={mem.id} mem=mem]",
         )
 
+    def test_gate_sets(self):
+        a = pyrtl.Input(name="a", bitwidth=1)
+        b = pyrtl.Input(name="b", bitwidth=1)
+
+        c = pyrtl.Const(name="c", bitwidth=1, val=0)
+        d = pyrtl.Const(name="d", bitwidth=1, val=1)
+
+        x = pyrtl.Output(name="x", bitwidth=1)
+        y = pyrtl.Output(name="y", bitwidth=1)
+
+        r = pyrtl.Register(name="r", bitwidth=1)
+        s = pyrtl.Register(name="s", bitwidth=1)
+
+        mem = pyrtl.MemBlock(name="mem", bitwidth=1, addrwidth=1)
+
+        x <<= a + c
+
+        r.next <<= r + c
+        s.next <<= r + d
+
+        mem[a] <<= pyrtl.MemBlock.EnabledWrite(data=c, enable=d)
+        read = mem[b]
+        read.name = "read"
+        y <<= read + d
+
+        gate_graph = pyrtl.GateGraph()
+
+        self.assertEqual(sorted(gate.name for gate in gate_graph.inputs), ["a", "b"])
+        self.assertEqual(sorted(gate.name for gate in gate_graph.consts), ["c", "d"])
+        self.assertEqual(sorted(gate.name for gate in gate_graph.outputs), ["x", "y"])
+        self.assertEqual(sorted(gate.name for gate in gate_graph.registers), ["r", "s"])
+        memories = gate_graph.memories
+        self.assertEqual(
+            sorted(str(gate.name) for gate in memories),
+            # MemBlock write has no name.
+            ["None", "read"],
+        )
+        # Check the MemBlock write.
+        write_gate = None
+        for mem_gate in memories:
+            if not mem_gate.name:
+                write_gate = mem_gate
+                break
+        self.assertTrue(write_gate is not None)
+        self.assertEqual(write_gate.op, "@")
+
+        self.assertEqual(
+            sorted(gate.name for gate in gate_graph.sources),
+            ["a", "b", "c", "d", "r", "s"],
+        )
+        sinks = set(gate_graph.sinks)
+        self.assertEqual(
+            sorted(str(gate.name) for gate in sinks), ["None", "r", "s", "x", "y"]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -266,7 +266,7 @@ class Gate:
         ['a', 'b', 'c']
     """
 
-    name: str
+    name: str | None
     """Name of the operation's output :class:`.WireVector`.
 
     Corresponds to :attr:`.WireVector.name`.
@@ -292,7 +292,7 @@ class Gate:
         'ab'
     """
 
-    bitwidth: int
+    bitwidth: int | None
     """Bitwidth of the operation's output :class:`.WireVector`.
 
     Corresponds to :attr:`.WireVector.bitwidth`.
@@ -588,6 +588,8 @@ class GateGraph:
     :class:`GateGraph`'s constructor creates :class:`Gates<Gate>` from a
     :class:`.Block`.
 
+    See :ref:`gate_motivation` for more background.
+
     Users should generally construct :class:`GateGraphs<GateGraph>`, rather than
     attempting to directly construct individual :class:`Gates<Gate>`. :class:`Gate`
     construction is complex because they are doubly-linked, and the :class:`Gate` graph
@@ -669,11 +671,156 @@ class GateGraph:
         you started.
     """
 
-    gates: list[Gate]
-    """A :class:`list` of all :class:`Gates<Gate>` in the ``GateGraph``."""
+    gates: set[Gate]
+    """A :class:`set` of all :class:`Gates<Gate>` in the ``GateGraph``.
 
-    sources: list[Gate]
-    """A :class:`list` of all ``source`` :class:`Gates<Gate>` in the ``GateGraph``.
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=1)
+        >>> b = pyrtl.Input(name="b", bitwidth=1)
+        >>> c = pyrtl.Input(name="c", bitwidth=1)
+        >>> x = a & b
+        >>> x.name = "x"
+        >>> y = x | c
+        >>> y.name = "y"
+
+        >>> gate_graph = pyrtl.GateGraph()
+
+        >>> sorted(gate.name for gate in gate_graph.gates)
+        ['a', 'b', 'c', 'x', 'y']
+    """
+
+    consts: set[Gate]
+    """A :class:`set` of :class:`.Const` :class:`Gates<Gate>` in the ``GateGraph``.
+
+    :class:`Gates<Gate>` that provide constant values, with :attr:`~Gate.op` ``C``.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> c = pyrtl.Const(name="c", val=0)
+        >>> d = pyrtl.Const(name="d", val=1)
+        >>> _ = c + d
+
+        >>> gate_graph = pyrtl.GateGraph()
+
+        >>> sorted(gate.name for gate in gate_graph.consts)
+        ['c', 'd']
+    """
+
+    inputs: set[Gate]
+    """A :class:`set` of :class:`.Input` :class:`Gates<Gate>` in the ``GateGraph``.
+
+    :class:`Gates<Gate>` that provide :class:`.Input` values, with :attr:`~Gate.op`
+    ``I``.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=1)
+        >>> b = pyrtl.Input(name="b", bitwidth=1)
+        >>> _ = a & b
+
+        >>> gate_graph = pyrtl.GateGraph()
+
+        >>> sorted(gate.name for gate in gate_graph.inputs)
+        ['a', 'b']
+    """
+
+    outputs: set[Gate]
+    """A :class:`set` of :class:`.Output` :class:`Gates<Gate>` in the ``GateGraph``.
+
+    :class:`Gates<Gate>` that set :class:`.Output` values, with :attr:`~Gate.is_output`
+    ``True``.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> x = pyrtl.Output(name="x")
+        >>> y = pyrtl.Output(name="y")
+        >>> x <<= 42
+        >>> y <<= 255
+
+        >>> gate_graph = pyrtl.GateGraph()
+
+        >>> sorted(gate.name for gate in gate_graph.outputs)
+        ['x', 'y']
+    """
+
+    registers: set[Gate]
+    """A :class:`set` of :class:`.Register` update :class:`Gates<Gate>` in the
+    ``GateGraph``.
+
+    :class:`Gates<Gate>` that set each :class:`.Register`'s value for the next cycle,
+    with :attr:`~Gate.op` ``r``.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> r = pyrtl.Register(name="r", bitwidth=1)
+        >>> s = pyrtl.Register(name="s", bitwidth=1)
+        >>> r.next <<= r + 1
+        >>> s.next <<= s + 2
+
+        >>> gate_graph = pyrtl.GateGraph()
+
+        >>> sorted(gate.name for gate in gate_graph.registers)
+        ['r', 's']
+    """
+
+    memories: set[Gate]
+    """A :class:`set` of :class:`.MemBlock` read or write :class:`Gates<Gate>` in the
+    ``GateGraph``.
+
+    :class:`Gates<Gate>` that read or write :class:`MemBlocks<.MemBlock`, with
+    :attr:`~Gate.op` ``m`` or ``@``.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> mem = pyrtl.MemBlock(name="mem", bitwidth=4, addrwidth=2)
+        >>> addr = pyrtl.Input(name="addr", bitwidth=2)
+        >>> mem[addr] <<= 7
+        >>> mem_read = mem[addr]
+        >>> mem_read.name = "mem_read"
+
+        >>> gate_graph = pyrtl.GateGraph()
+
+        >>> # MemBlock writes have no name.
+        >>> sorted(str(gate.name) for gate in gate_graph.memories)
+        ['None', 'mem_read']
+
+        >>> sorted(gate.op for gate in gate_graph.memories)
+        ['@', 'm']
+    """
+
+    sources: set[Gate]
+    """A :class:`set` of ``source`` :class:`Gates<Gate>` in the ``GateGraph``.
 
     A ``source`` :class:`Gate`'s output value is known at the beginning of each clock
     cycle. :class:`Consts<.Const>`, :class:`Inputs<.Input>`, and
@@ -684,10 +831,27 @@ class GateGraph:
         :class:`Registers<.Register>` are both ``sources`` and ``sinks``. As a
         ``source``, it provides the :class:`.Register`'s value for the current cycle. As
         a ``sink``, it determines the :class:`.Register`'s value for the next cycle.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=1)
+        >>> c = pyrtl.Const(name="c", bitwidth=1, val=0)
+        >>> r = pyrtl.Register(name="r", bitwidth=1)
+        >>> r.next <<= a + c
+
+        >>> gate_graph = pyrtl.GateGraph()
+
+        >>> sorted(gate.name for gate in gate_graph.sources)
+        ['a', 'c', 'r']
     """
 
-    sinks: list[Gate]
-    """A list of all ``sink`` :class:`Gates<Gate>` in the ``GateGraph``.
+    sinks: set[Gate]
+    """A :class:`set` of ``sink`` :class:`Gates<Gate>` in the ``GateGraph``.
 
     A ``sink`` :class:`Gate`'s output value is known only at the end of each clock
     cycle. :class:`Registers<.Register>`, :class:`Outputs<.Output>` and any
@@ -698,6 +862,26 @@ class GateGraph:
         :class:`Registers<.Register>` are both ``sources`` and ``sinks``. As a
         ``source``, it provides the :class:`.Register`'s value for the current cycle. As
         a ``sink``, it determines the :class:`.Register`'s value for the next cycle.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=1)
+        >>> r = pyrtl.Register(name="r", bitwidth=1)
+        >>> o = pyrtl.Output(name="o", bitwidth=1)
+        >>> r.next <<= a + 1
+        >>> o <<= 1
+        >>> sum = a + r
+        >>> sum.name = "sum"
+
+        >>> gate_graph = pyrtl.GateGraph()
+
+        >>> sorted(gate.name for gate in gate_graph.sinks)
+        ['o', 'r', 'sum']
     """
 
     def __init__(self, block: Block = None):
@@ -709,9 +893,14 @@ class GateGraph:
         :param block: :class:`.Block` to construct the :class:`GateGraph` from. Defaults
             to the :ref:`working_block`.
         """
-        self.gates = []
-        self.sources = []
-        self.sinks = []
+        self.gates = set()
+        self.consts = set()
+        self.inputs = set()
+        self.outputs = set()
+        self.registers = set()
+        self.memories = set()
+        self.sources = set()
+        self.sinks = set()
 
         block = working_block(block)
         block.sanity_check()
@@ -730,9 +919,16 @@ class GateGraph:
         wire_vector_map: dict[WireVector, Gate] = {}
         for wire_vector in block.wirevector_subset((Const, Input, Register)):
             gate = Gate(wire_vector=wire_vector)
-            self.gates.append(gate)
-            self.sources.append(gate)
+            self.gates.add(gate)
+            self.sources.add(gate)
             wire_vector_map[wire_vector] = gate
+
+            if gate.op == "C":
+                self.consts.add(gate)
+            elif gate.op == "I":
+                self.inputs.add(gate)
+            elif gate.op == "R":
+                self.registers.add(gate)
 
         # In the second phase, we construct all remaining ``Gates`` from ``LogicNets``.
         # ``Block``'s iterator returns ``LogicNets`` in topological order, so we can be
@@ -752,10 +948,10 @@ class GateGraph:
                 gate = wire_vector_map[logic_net.dests[0]]
                 gate.op = "r"
                 gate.args = gate_args
-                self.sinks.append(gate)
+                self.sinks.add(gate)
             else:
                 gate = Gate(logic_net=logic_net, args=gate_args)
-                self.gates.append(gate)
+                self.gates.add(gate)
 
             # Add the new ``Gate`` as a ``dest`` for its ``args``.
             for gate_arg in gate_args:
@@ -771,11 +967,16 @@ class GateGraph:
                 dest = logic_net.dests[0]
                 wire_vector_map[dest] = gate
 
+            if gate.is_output:
+                self.outputs.add(gate)
+            if gate.op in "m@":
+                self.memories.add(gate)
+
         for gate in self.gates:
             if len(gate.dests) == 0:
-                self.sinks.append(gate)
+                self.sinks.add(gate)
 
-    def get_gate(self, name: str) -> Gate:
+    def get_gate(self, name: str) -> Gate | None:
         """Return the :class:`Gate` whose :attr:`~Gate.name` is ``name``, or ``None`` if
         no such :class:`Gate` exists.
 
@@ -800,5 +1001,7 @@ class GateGraph:
         This returns a string representation of each :class:`Gate` in the ``GateGraph``,
         one :class:`Gate` per line. The :class:`Gates<Gate>` will be sorted by name.
         """
-        sorted_gates = sorted(self.gates, key=lambda gate: gate.name)
+        sorted_gates = sorted(
+            self.gates, key=lambda gate: gate.name if gate.name else "~~~"
+        )
         return "\n".join([str(gate) for gate in sorted_gates])
