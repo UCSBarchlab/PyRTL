@@ -285,20 +285,15 @@ class TestGateGraph(unittest.TestCase):
         self.assertEqual(sorted(gate.name for gate in gate_graph.consts), ["c", "d"])
         self.assertEqual(sorted(gate.name for gate in gate_graph.outputs), ["x", "y"])
         self.assertEqual(sorted(gate.name for gate in gate_graph.registers), ["r", "s"])
-        memories = gate_graph.memories
-        self.assertEqual(
-            sorted(str(gate.name) for gate in memories),
-            # MemBlock write has no name.
-            ["None", "read"],
-        )
+        self.assertEqual(sorted(gate.name for gate in gate_graph.mem_reads), ["read"])
+        mem_writes = gate_graph.mem_writes
         # Check the MemBlock write.
-        write_gate = None
-        for mem_gate in memories:
-            if not mem_gate.name:
-                write_gate = mem_gate
-                break
+        self.assertEqual(len(mem_writes), 1)
+        write_gate = next(iter(mem_writes))
         self.assertTrue(write_gate is not None)
         self.assertEqual(write_gate.op, "@")
+        # MemBlock write has no name.
+        self.assertEqual(write_gate.name, None)
 
         self.assertEqual(
             sorted(gate.name for gate in gate_graph.sources),

@@ -52,7 +52,7 @@ like this::
     │     dests:───┼───▶│ WireVector "y" │
     └──────────────┘    └────────────────┘
 
-This data structure is difficult to work with for two reasons:
+This data structure is difficult to work with for three reasons:
 
 1. The arrows do not consistently point from producer to consumer, or from consumer to
    producer. For example, there is no arrow from :class:`.WireVector` ``x`` (producer)
@@ -67,7 +67,13 @@ This data structure is difficult to work with for two reasons:
    we follow pointers from one class to another, we must keep track of the current
    object's class, and interact with it appropriately.
 
-:class:`GateGraph` is an alternative representation that addresses both of these issues.
+3. :class:`.WireVector` is part of PyRTL's user interface, but also a key part of
+   PyRTL's internal representation. This makes :class:`.WireVector` complex and
+   difficult to modify, because it must implement user-facing features like inferring
+   bitwidth from assignment, while also maintaining a consistent internal representation
+   for simulation, analysis, and optimization.
+
+:class:`GateGraph` is an alternative representation that addresses these issues.
 """
 
 from __future__ import annotations
@@ -110,11 +116,11 @@ class Gate:
        :class:`Gates<Gate>`.
 
     2. The :class:`.WireVector`'s :attr:`~WireVector.name` and
-       :attr:`~WireVector.bitwidth` are stored as corresponding :class:`Gate`
-       attributes. If a :class:`Gate` produces no output, like a :class:`.MemBlock`
-       write, the :class:`Gate`'s :attr:`~Gate.name` and :attr:`~Gate.bitwidth` will be
-       ``None``. PyRTL does not have an :attr:`~.LogicNet.op` that produces multiple
-       outputs.
+       :attr:`~WireVector.bitwidth` are stored as :attr:`Gate.name` and
+       :attr:`Gate.bitwidth`. If the :class:`.LogicNet` produces no output, like a
+       :class:`.MemBlock` write, the :class:`Gate`'s :attr:`~Gate.name` and
+       :attr:`~Gate.bitwidth` will be ``None``. PyRTL does not have an
+       :attr:`~.LogicNet.op` with multiple :attr:`~.LogicNet.dests`.
 
     3. The :class:`Gate` has a new :attr:`~Gate.dests` attribute, which has no direct
        equivalent in the :class:`.LogicNet`/:class:`.WireVector` representation.
@@ -134,15 +140,6 @@ class Gate:
       :class:`Gates<Gate>` that use the :class:`Gate`'s output as one of their
       :attr:`~Gate.args`. There can be any number of :class:`Gates<Gate>` in
       :attr:`Gate.dests`.
-
-    With a :class:`Gate` representation, it is easy to iteratively traverse the data
-    structure:
-
-    1. Forwards (from producer to consumer), by following :attr:`~Gate.dests`
-       references.
-
-    2. Backwards (from consumer to producer), by following :attr:`~Gate.args`
-       references.
 
     With :class:`Gates<Gate>`, the example from the :ref:`gate_motivation` section looks
     like::
@@ -169,15 +166,28 @@ class Gate:
         │     dests:──────┼──────┘
         └─────────────────┘
 
-    The :class:`Gate` representation addresses the two issues raised in the
+    With a :class:`Gate` representation, it is easy to iteratively traverse the data
+    structure:
+
+    1. Forwards, from producer to consumer, by following :attr:`~Gate.dests` references.
+
+    2. Backwards, from consumer to producer, by following :attr:`~Gate.args` references.
+
+    The :class:`Gate` representation addresses the issues raised in the
     :ref:`gate_motivation` section:
 
-    1. The :class:`Gate` representation is easy to explore iteratively by following
-       references, which are shown as arrows in the figure above.
+    1. The :class:`Gate` representation is easy to iteratively explore by following
+       :attr:`~Gate.args` and :attr:`~Gate.dests` references, which are shown as arrows
+       in the figure above.
 
     2. There is only one class in the :class:`Gate` graph, so we don't need to keep
        track of the current object's type as we follow arrows in the graph, like we did
        with :class:`LogicNet` and :class:`WireVector`. Everything is a :class:`Gate`.
+
+    3. By decoupling the :class:`Gate` representation from :class:`.WireVector` and
+       :class:`.LogicNet`, :class:`Gate` specializes in supporting analysis use cases,
+       without the burden of supporting all of :class:`.WireVector`'s other features.
+       This significantly simplifies :class:`Gate`'s design and implementation.
 
     For usage examples, see :class:`GateGraph` and :class:`Gate`'s documentation below.
     """
@@ -185,11 +195,11 @@ class Gate:
     op: str
     """Operation performed by this ``Gate``. Corresponds to :attr:`.LogicNet.op`.
 
-    For special ``Gates`` created for :class:`.Input`, ``op`` will instead be the
-    :class:`.Input`'s ``_code``, which is ``I``.
+    For special ``Gates`` created for :class:`Inputs<.Input>`, ``op`` will instead be
+    the :class:`.Input`'s ``_code``, which is ``I``.
 
-    For special ``Gates`` created for :class:`.Const`, ``op`` will instead be the
-    :class:`.Const`'s ``_code``, which is ``C``.
+    For special ``Gates`` created for :class:`Consts<.Const>`, ``op`` will instead be
+    the :class:`.Const`'s ``_code``, which is ``C``.
 
     .. doctest only::
 
@@ -239,13 +249,12 @@ class Gate:
     For each ``Gate`` ``arg`` in ``self.args``, ``self`` is in ``arg.dests``.
 
     Some special ``Gates`` represent operations without ``args``, like :class:`.Input`
-    and :class:`.Const` :class:`WireVectors<.WireVector>`. Such operations will have an
-    empty list of ``args``.
+    and :class:`.Const`. Such operations will have an empty list of ``args``.
 
     .. note::
 
-        The same ``Gate`` may appear multiple times in ``args``. A :class:`.Register`
-        ``Gate`` may be its own ``arg``, creating a self-loop.
+        The same ``Gate`` may appear multiple times in ``args``. A self-loop
+        :class:`.Register` ``Gate`` may be its own ``arg``.
 
     .. doctest only::
 
@@ -267,9 +276,7 @@ class Gate:
     """
 
     name: str | None
-    """Name of the operation's output :class:`.WireVector`.
-
-    Corresponds to :attr:`.WireVector.name`.
+    """Name of the operation's output. Corresponds to :attr:`.WireVector.name`.
 
     Some operations do not have outputs, like :class:`.MemBlock` writes. These
     operations will have a ``name`` of ``None``.
@@ -293,9 +300,7 @@ class Gate:
     """
 
     bitwidth: int | None
-    """Bitwidth of the operation's output :class:`.WireVector`.
-
-    Corresponds to :attr:`.WireVector.bitwidth`.
+    """Bitwidth of the operation's output. Corresponds to :attr:`.WireVector.bitwidth`.
 
     Some operations do not have outputs, like :class:`.MemBlock` writes. These
     operations will have a ``bitwidth`` of ``None``.
@@ -347,7 +352,7 @@ class Gate:
     """
 
     is_output: bool
-    """Indicates if the operation's output is an :class:`.Output` :class:`.WireVector`.
+    """Indicates if the operation's output is an :class:`.Output`.
 
     .. doctest only::
 
@@ -388,13 +393,13 @@ class Gate:
             ``logic_net`` must not be a register, where ``logic_net.op == 'r'``.
 
             Register ``Gates`` are created in two phases by :class:`GateGraph`. In the
-            first phase, a placeholder ``Gate`` is created from the :class:`.Register`
-            :class:`.WireVector`. In this first phase, the register ``Gate``'s ``op`` is
-            temporarily set to ``R``, which is the :class:`.Register`'s ``_code``. This
-            placeholder is needed to resolve other ``Gate``'s references to the register
-            in the second phase. In the second phase, the register ``Gate``'s remaining
-            fields are populated from the register's :class:`.LogicNet`. In the second
-            phase, the register ``Gate``'s ``op`` is changed to ``r``, which is the
+            first phase, a placeholder ``Gate`` is created from the :class:`.Register`.
+            In this first phase, the register ``Gate``'s ``op`` is temporarily set to
+            ``R``, which is the :class:`.Register`'s ``_code``. This placeholder is
+            needed to resolve other ``Gate``'s references to the register in the second
+            phase. In the second phase, the register ``Gate``'s remaining fields are
+            populated from the register's :class:`.LogicNet`. In the second phase, the
+            register ``Gate``'s ``op`` is changed to ``r``, which is the
             :class:`.LogicNet`'s :attr:`~.LogicNet.op`.
 
         :param wire_vector: :class:`.WireVector` to create this ``Gate`` from. If
@@ -614,6 +619,9 @@ class GateGraph:
         >>> y.name = "y"
 
         >>> gate_graph = pyrtl.GateGraph()
+
+    The :class:`GateGraph` can be printed, revealing five :class:`Gates<Gate>`:
+
         >>> print(gate_graph)
         a/1 = Input
         b/1 = Input
@@ -621,19 +629,42 @@ class GateGraph:
         x/1 = and(a/1, b/1)
         y/1 = or(x/1, c/1)
 
-    We can examine the input ``a``'s :attr:`~Gate.dests` to see that ``a`` is an
-    argument to a bitwise ``&`` operation::
+    We can retrieve the :attr:`Gate` for input ``a``::
 
         >>> a = gate_graph.get_gate("a")
-        >>> a.dests[0].op
+        >>> print(a)
+        a/1 = Input
+        >>> a.name
+        'a'
+        >>> a.op
+        'I'
+
+    We can check ``a``'s :attr:`~Gate.dests` to see that it is an argument to a bitwise
+    ``&`` operation, with output named ``x``::
+
+        >>> len(a.dests)
+        1
+        >>> x = a.dests[0]
+        >>> print(x)
+        x/1 = and(a/1, b/1)
+        >>> x.op
         '&'
+        >>> x.name
+        'x'
 
-    We can examine the bitwise ``&``'s other :attr:`~Gate.args`, to get a reference to
-    input :class:`Gate` ``b``::
+    We can examine the bitwise ``&``'s :attr:`~Gate.args`, to get references to input
+    :class:`Gates<Gate>` ``a`` and ``b``::
 
-        >>> b = a.dests[0].args[1]
+        >>> x.args[0] is a
+        True
+
+        >>> b = x.args[1]
+        >>> print(b)
+        b/1 = Input
         >>> b.name
         'b'
+        >>> b.op
+        'I'
 
     Special :class:`Gates<Gate>`
     ----------------------------
@@ -644,11 +675,12 @@ class GateGraph:
 
     - An :class:`.Input` :class:`.WireVector` is converted to a special input
       :class:`Gate`, with op ``I``. Input :class:`Gates<Gate>` have no
-      :attr:`~Gate.args`.
+      :attr:`~Gate.args`, and do not correspond to a :class:`.LogicNet`.
 
     - A :class:`.Const` :class:`.WireVector` is converted to a special const
       :class:`Gate`, with op ``C``. Const :class:`Gates<Gate>` have no
-      :attr:`~Gate.args`. The constant's value is stored in :attr:`Gate.op_param`.
+      :attr:`~Gate.args`, and do not correspond to a :class:`.LogicNet`. The constant's
+      value is stored in :attr:`Gate.op_param`.
 
     - An :class:`.Output` :class:`.WireVector` is handled normally, and will be the
       ``dest`` of the :class:`Gate` that defines the :class:`.Output`'s value. That
@@ -698,7 +730,7 @@ class GateGraph:
     consts: set[Gate]
     """A :class:`set` of :class:`.Const` :class:`Gates<Gate>` in the ``GateGraph``.
 
-    :class:`Gates<Gate>` that provide constant values, with :attr:`~Gate.op` ``C``.
+    These :class:`Gates<Gate>` provide constant values, with :attr:`~Gate.op` ``C``.
 
     .. doctest only::
 
@@ -720,7 +752,7 @@ class GateGraph:
     inputs: set[Gate]
     """A :class:`set` of :class:`.Input` :class:`Gates<Gate>` in the ``GateGraph``.
 
-    :class:`Gates<Gate>` that provide :class:`.Input` values, with :attr:`~Gate.op`
+    These :class:`Gates<Gate>` provide :class:`.Input` values, with :attr:`~Gate.op`
     ``I``.
 
     .. doctest only::
@@ -743,7 +775,7 @@ class GateGraph:
     outputs: set[Gate]
     """A :class:`set` of :class:`.Output` :class:`Gates<Gate>` in the ``GateGraph``.
 
-    :class:`Gates<Gate>` that set :class:`.Output` values, with :attr:`~Gate.is_output`
+    These :class:`Gates<Gate>` set :class:`.Output` values, with :attr:`~Gate.is_output`
     ``True``.
 
     .. doctest only::
@@ -768,8 +800,8 @@ class GateGraph:
     """A :class:`set` of :class:`.Register` update :class:`Gates<Gate>` in the
     ``GateGraph``.
 
-    :class:`Gates<Gate>` that set each :class:`.Register`'s value for the next cycle,
-    with :attr:`~Gate.op` ``r``.
+    These :class:`Gates<Gate>` set a :class:`.Register`'s value for the next cycle, with
+    :attr:`~Gate.op` ``r``.
 
     .. doctest only::
 
@@ -789,12 +821,39 @@ class GateGraph:
         ['r', 's']
     """
 
-    memories: set[Gate]
-    """A :class:`set` of :class:`.MemBlock` read or write :class:`Gates<Gate>` in the
+    mem_reads: set[Gate]
+    """A :class:`set` of :class:`.MemBlock` read :class:`Gates<Gate>` in the
     ``GateGraph``.
 
-    :class:`Gates<Gate>` that read or write :class:`MemBlocks<.MemBlock`, with
-    :attr:`~Gate.op` ``m`` or ``@``.
+    These :class:`Gates<Gate>` read :class:`MemBlocks<.MemBlock`, with
+    :attr:`~Gate.op` ``m``.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> mem = pyrtl.MemBlock(name="mem", bitwidth=4, addrwidth=2)
+        >>> addr = pyrtl.Input(name="addr", bitwidth=2)
+        >>> mem_read_1 = mem[addr]
+        >>> mem_read_1.name = "mem_read_1"
+        >>> mem_read_2 = mem[addr]
+        >>> mem_read_2.name = "mem_read_2"
+
+        >>> gate_graph = pyrtl.GateGraph()
+
+        >>> sorted(gate.name for gate in gate_graph.reads)
+        ['mem_read_1', 'mem_read_2']
+    """
+
+    mem_writes: set[Gate]
+    """A :class:`set` of :class:`.MemBlock` write :class:`Gates<Gate>` in the
+    ``GateGraph``.
+
+    These :class:`Gates<Gate>` write :class:`MemBlocks<.MemBlock`, with
+    :attr:`~Gate.op` ``@``.
 
     .. doctest only::
 
@@ -806,17 +865,15 @@ class GateGraph:
         >>> mem = pyrtl.MemBlock(name="mem", bitwidth=4, addrwidth=2)
         >>> addr = pyrtl.Input(name="addr", bitwidth=2)
         >>> mem[addr] <<= 7
-        >>> mem_read = mem[addr]
-        >>> mem_read.name = "mem_read"
 
         >>> gate_graph = pyrtl.GateGraph()
 
         >>> # MemBlock writes have no name.
-        >>> sorted(str(gate.name) for gate in gate_graph.memories)
-        ['None', 'mem_read']
+        >>> list(str(gate.name) for gate in gate_graph.mem_writes)
+        ['None']
 
-        >>> sorted(gate.op for gate in gate_graph.memories)
-        ['@', 'm']
+        >>> list(gate.op for gate in gate_graph.mem_writes)
+        ['@']
     """
 
     sources: set[Gate]
@@ -887,7 +944,7 @@ class GateGraph:
     def __init__(self, block: Block = None):
         """Create :class:`Gates<Gate>` from a :class:`.Block`.
 
-        Most users should use this constructor, rather than attempting to directly
+        Most users should call this constructor, rather than attempting to directly
         construct individual :class:`Gates<Gate>`.
 
         :param block: :class:`.Block` to construct the :class:`GateGraph` from. Defaults
@@ -898,7 +955,8 @@ class GateGraph:
         self.inputs = set()
         self.outputs = set()
         self.registers = set()
-        self.memories = set()
+        self.mem_reads = set()
+        self.mem_writes = set()
         self.sources = set()
         self.sinks = set()
 
@@ -969,8 +1027,10 @@ class GateGraph:
 
             if gate.is_output:
                 self.outputs.add(gate)
-            if gate.op in "m@":
-                self.memories.add(gate)
+            if gate.op == "m":
+                self.mem_reads.add(gate)
+            elif gate.op == "@":
+                self.mem_writes.add(gate)
 
         for gate in self.gates:
             if len(gate.dests) == 0:
