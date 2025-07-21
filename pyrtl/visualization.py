@@ -40,6 +40,10 @@ def net_graph(block: Block = None, split_state: bool = False):
     :class:`WireVectors<WireVector>` that are not connected to any nets are not returned
     as part of the graph.
 
+    .. note::
+
+        Consider using :ref:`gate_graphs` instead.
+
     :param block: :class:`Block` to use (defaults to current :ref:`working_block`).
     :param split_state: If ``True``, split connections to/from a register update net;
         this means that registers will be appear as source nodes of the network, and

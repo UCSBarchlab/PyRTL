@@ -35,6 +35,8 @@ LogicNets
     :members:
     :undoc-members:
 
+.. _gate_graphs:
+
 GateGraphs
 ----------
 

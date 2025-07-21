@@ -420,8 +420,7 @@ class Gate:
 
         if logic_net is not None:
             # Constructing a ``Gate`` from a ``logic_net``.
-            self.logic_net = logic_net
-
+            #
             # For ``LogicNets``, set the ``Gate``'s ``op``, ``op_param``, ``name``,
             # ``bitwidth``.
             if wire_vector is not None:
@@ -444,7 +443,6 @@ class Gate:
                     msg = "LogicNets with more than one dest are not supported"
                     raise PyrtlError(msg)
                 dest = logic_net.dests[0]
-                self.wire_vector = dest
                 self.name = dest.name
                 self.bitwidth = dest.bitwidth
                 if dest._code == "O":
@@ -466,8 +464,6 @@ class Gate:
                     "wire_vector."
                 )
                 raise PyrtlError(msg)
-
-            self.wire_vector = wire_vector
 
             self.op = wire_vector._code
             self.name = wire_vector.name
@@ -718,6 +714,7 @@ class GateGraph:
         self.sinks = []
 
         block = working_block(block)
+        block.sanity_check()
 
         # The ``Gate`` graph is doubly-linked, and may contain cycles, so construction
         # is done in two phases. In the first phase, we only construct ``Gates`` for
