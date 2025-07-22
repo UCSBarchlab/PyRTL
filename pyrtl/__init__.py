@@ -19,6 +19,8 @@ from .core import (
 # convenience classes for building hardware
 from .wire import WireVector, Input, Output, Const, Register
 
+from .gate_graph import GateGraph, Gate
+
 # helper functions
 from .helperfuncs import (
     input_list,
@@ -160,6 +162,9 @@ __all__ = [
     "Output",
     "Const",
     "Register",
+    # gate_graph
+    "GateGraph",
+    "Gate",
     # helperfuncs
     "input_list",
     "output_list",

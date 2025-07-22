@@ -581,6 +581,10 @@ class Block:
         This information helps when building a graph representation for the ``Block``.
         See :func:`net_graph` for an example.
 
+        .. note::
+
+            Consider using :ref:`gate_graphs` instead.
+
         :param include_virtual_nodes: If ``True``, external `sources` (such as an
             :class:`Inputs<Input>` and :class:`Consts<Const>`) will be represented as
             wires that set themselves, and external `sinks` (such as
