@@ -73,7 +73,9 @@ This data structure is difficult to work with for three reasons:
    bitwidth from assignment, while also maintaining a consistent internal representation
    for simulation, analysis, and optimization.
 
-:class:`GateGraph` is an alternative representation that addresses these issues.
+:class:`GateGraph` is an alternative representation that addresses these issues. A
+:class:`GateGraph` is just a collection of :class:`Gates<Gate>`, so we'll cover
+:class:`Gate` first.
 """
 
 from __future__ import annotations
@@ -200,6 +202,8 @@ class Gate:
 
     For special ``Gates`` created for :class:`Consts<.Const>`, ``op`` will instead be
     the :class:`.Const`'s ``_code``, which is ``C``.
+
+    See :class:`.LogicNet`'s documentation for a description of all other ``ops``.
 
     .. doctest only::
 
@@ -481,8 +485,8 @@ class Gate:
                 else:
                     self.op_param = (wire_vector.reset_value,)
 
-    def __str__(self):
-        """Return a string representation of this ``Gate``.
+    def __str__(self) -> str:
+        """:return: A string representation of this ``Gate``.
 
         .. doctest only::
 
@@ -533,7 +537,7 @@ class Gate:
             "|": "or",
             "^": "xor",
             "n": "nand",
-            "~": "not",
+            "~": "invert",
             "+": "add",
             "-": "sub",
             "*": "mul",
@@ -541,7 +545,7 @@ class Gate:
             "<": "lt",
             ">": "gt",
             "w": "",
-            "x": "",
+            "x": "",  # Multiplexers are printed as ternary operators.
             "c": "concat",
             "s": "slice",
             "r": "reg",
@@ -605,8 +609,10 @@ class GateGraph:
         >>> import pyrtl
         >>> pyrtl.reset_working_block()
 
-    For example, let's build a :class:`GateGraph` for the :ref:`gate_motivation`
-    example::
+    Example
+    -------
+
+    Let's build a :class:`GateGraph` for the :ref:`gate_motivation` example::
 
         >>> a = pyrtl.Input(name="a", bitwidth=1)
         >>> b = pyrtl.Input(name="b", bitwidth=1)
@@ -620,7 +626,7 @@ class GateGraph:
 
         >>> gate_graph = pyrtl.GateGraph()
 
-    The :class:`GateGraph` can be printed, revealing five :class:`Gates<Gate>`:
+    The :class:`GateGraph` can be printed, revealing five :class:`Gates<Gate>`::
 
         >>> print(gate_graph)
         a/1 = Input
@@ -825,7 +831,7 @@ class GateGraph:
     """A :class:`set` of :class:`.MemBlock` read :class:`Gates<Gate>` in the
     ``GateGraph``.
 
-    These :class:`Gates<Gate>` read :class:`MemBlocks<.MemBlock`, with
+    These :class:`Gates<Gate>` read :class:`MemBlocks<.MemBlock>`, with
     :attr:`~Gate.op` ``m``.
 
     .. doctest only::
@@ -852,7 +858,7 @@ class GateGraph:
     """A :class:`set` of :class:`.MemBlock` write :class:`Gates<Gate>` in the
     ``GateGraph``.
 
-    These :class:`Gates<Gate>` write :class:`MemBlocks<.MemBlock`, with
+    These :class:`Gates<Gate>` write :class:`MemBlocks<.MemBlock>`, with
     :attr:`~Gate.op` ``@``.
 
     .. doctest only::
@@ -869,10 +875,10 @@ class GateGraph:
         >>> gate_graph = pyrtl.GateGraph()
 
         >>> # MemBlock writes have no name.
-        >>> list(str(gate.name) for gate in gate_graph.mem_writes)
-        ['None']
+        >>> [gate.name for gate in gate_graph.mem_writes]
+        [None]
 
-        >>> list(gate.op for gate in gate_graph.mem_writes)
+        >>> [gate.op for gate in gate_graph.mem_writes]
         ['@']
     """
 
@@ -885,9 +891,10 @@ class GateGraph:
 
     .. note::
 
-        :class:`Registers<.Register>` are both ``sources`` and ``sinks``. As a
-        ``source``, it provides the :class:`.Register`'s value for the current cycle. As
-        a ``sink``, it determines the :class:`.Register`'s value for the next cycle.
+        :class:`Registers<.Register>` are both ``sources`` and :attr:`~GateGraph.sinks`.
+        As a ``source``, it provides the :class:`.Register`'s value for the current
+        cycle. As a :attr:`sink<GateGraph.sinks>`, it determines the
+        :class:`.Register`'s value for the next cycle.
 
     .. doctest only::
 
@@ -911,14 +918,16 @@ class GateGraph:
     """A :class:`set` of ``sink`` :class:`Gates<Gate>` in the ``GateGraph``.
 
     A ``sink`` :class:`Gate`'s output value is known only at the end of each clock
-    cycle. :class:`Registers<.Register>`, :class:`Outputs<.Output>` and any
-    :class:`Gate` without users (``len(dests) == 0``) are sink :class:`Gates<Gate>`.
+    cycle. :class:`Registers<.Register>`, :class:`Outputs<.Output>`, :class:`MemBlock`
+    writes, and any :class:`Gate` without users (``len(dests) == 0``) are sink
+    :class:`Gates<Gate>`.
 
     .. note::
 
-        :class:`Registers<.Register>` are both ``sources`` and ``sinks``. As a
-        ``source``, it provides the :class:`.Register`'s value for the current cycle. As
-        a ``sink``, it determines the :class:`.Register`'s value for the next cycle.
+        :class:`Registers<.Register>` are both :attr:`~GateGraph.sources` and ``sinks``.
+        As a :attr:`source<GateGraph.sources>`, it provides the :class:`.Register`'s
+        value for the current cycle. As a ``sink``, it determines the
+        :class:`.Register`'s value for the next cycle.
 
     .. doctest only::
 
@@ -1045,6 +1054,26 @@ class GateGraph:
             :class:`.MemBlock` writes do not produce an output, so they can not be
             retrieved with ``get_gate``.
 
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> a = pyrtl.Input(name="a", bitwidth=1)
+            >>> na = ~a
+            >>> na.name = "na"
+
+            >>> gate_graph = pyrtl.GateGraph()
+
+            >>> a_gate = gate_graph.get_gate("a")
+            >>> na_gate = gate_graph.get_gate("na")
+            >>> na_gate.op
+            '~'
+            >>> na_gate.args[0] is a_gate
+            True
+
         :param name: Name of the :class:`Gate` to find.
 
         :return: The named :class:`Gate`, or ``None`` if no such :class:`Gate` was
@@ -1058,8 +1087,28 @@ class GateGraph:
     def __str__(self) -> str:
         """Return a string representation of the ``GateGraph``.
 
-        This returns a string representation of each :class:`Gate` in the ``GateGraph``,
-        one :class:`Gate` per line. The :class:`Gates<Gate>` will be sorted by name.
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> a = pyrtl.Input(name="a", bitwidth=2)
+            >>> b = pyrtl.Input(name="b", bitwidth=2)
+            >>> sum = a + b
+            >>> sum.name = "sum"
+
+            >>> gate_graph = pyrtl.GateGraph()
+
+            >>> print(gate_graph)
+            a/2 = Input
+            b/2 = Input
+            sum/3 = add(a/2, b/2)
+
+        :return: A string representation of each :class:`Gate` in the ``GateGraph``, one
+                 :class:`Gate` per line. The :class:`Gates<Gate>` will be sorted by
+                 name.
         """
         sorted_gates = sorted(
             self.gates, key=lambda gate: gate.name if gate.name else "~~~"
