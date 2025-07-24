@@ -755,7 +755,7 @@ class _VerilogSanitizer(_NameSanitizer):
         unsigned use vectored wait wand weak0 weak1 while wire wor xnor xor
         """
 
-    def __init__(self, internal_prefix="_sani_temp"):
+    def __init__(self, internal_prefix):
         self._verilog_reserved_set = frozenset(self._verilog_reserved.split())
         super().__init__(self._ver_regex, internal_prefix, self._extra_checks)
 

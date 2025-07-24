@@ -785,5 +785,37 @@ class TestNetConnections(unittest.TestCase):
             dst_nets[w]
 
 
+class TestNameSanitizer(unittest.TestCase):
+    def test_name_collision(self):
+        # Test a sanitized name that collides with an unsanitized name.
+        sanitizer = pyrtl.core._NameSanitizer(
+            identifier_regex_str=pyrtl.core._py_regex,
+            internal_prefix="sanitized",
+        )
+        # This name should be sanitized by replacing the dot with an underscore.
+        sanitized_dot = sanitizer.make_valid_string("foo.bar")
+        self.assertEqual(sanitized_dot, "foo_bar")
+        self.assertEqual(sanitizer["foo.bar"], "foo_bar")
+
+        # This name collides with the sanitized name we just generated, so the first
+        # internal_index should be appended.
+        sanitized_underscore = sanitizer.make_valid_string("foo_bar")
+        self.assertEqual(sanitized_underscore, "foo_bar0")
+        self.assertEqual(sanitizer["foo_bar"], "foo_bar0")
+
+        # This name does not require sanitization, but it will collide with the next
+        # foo.bar variant.
+        sanitized_one = sanitizer.make_valid_string("foo_bar1")
+        self.assertEqual(sanitized_one, "foo_bar1")
+        self.assertEqual(sanitizer["foo_bar1"], "foo_bar1")
+
+        # Attempting to sanitize foo!bar by appending internal_index collides with the
+        # name we just registered. _NameSanitizer should give up and use
+        # internal_prefix.
+        sanitized_bang = sanitizer.make_valid_string("foo!bar")
+        self.assertEqual(sanitized_bang, "sanitized2")
+        self.assertEqual(sanitizer["foo!bar"], "sanitized2")
+
+
 if __name__ == "__main__":
     unittest.main()
