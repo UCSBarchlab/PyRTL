@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import math
 import numbers
 import os
@@ -174,13 +173,11 @@ class Simulation:
                 raise PyrtlError(msg)
             if isinstance(self.block, PostSynthBlock):
                 mem = self.block.mem_map[mem]
-            self.memvalue[mem.id] = mem_map
+            self.memvalue[mem.id] = mem_map.copy()
+
             max_addr_val = 2**mem.addrwidth
-            mem_map = {
-                addr: infer_val_and_bitwidth(val, bitwidth=mem.bitwidth).value
-                for addr, val in mem_map.items()
-            }
-            for addr, _val in mem_map.items():
+            for addr, val in mem_map.items():
+                val = infer_val_and_bitwidth(val, bitwidth=mem.bitwidth).value
                 if addr < 0 or addr >= max_addr_val:
                     msg = f"error, address {addr} in {mem.name} outside of bounds"
                     raise PyrtlError(msg)
@@ -196,7 +193,7 @@ class Simulation:
 
         if self.tracer is not None:
             self.tracer._set_initial_values(
-                self.default_value, self.regvalue.copy(), copy.deepcopy(self.memvalue)
+                self.default_value, register_value_map, memory_value_map
             )
 
     def step(self, provided_inputs: dict[str, int] | None = None):
@@ -673,7 +670,7 @@ class FastSimulation:
 
         if self.tracer is not None:
             self.tracer._set_initial_values(
-                self.default_value, self.regs.copy(), copy.deepcopy(self.mems)
+                self.default_value, register_value_map, memory_value_map
             )
 
         context = {}
@@ -687,7 +684,7 @@ class FastSimulation:
                 msg = "error, one or more of the memories in the map is a RomBlock"
                 raise PyrtlError(msg)
             name = self._mem_varname(mem)
-            self.mems[name] = mem_map
+            self.mems[name] = mem_map.copy()
 
         for net in self.block.logic_subset("m@"):
             mem = net.op_param[1]
@@ -1586,8 +1583,8 @@ class SimulationTrace:
         self._wires = {wv.name: wv for wv in wires_to_track}
         # remember for initializing during Verilog testbench output
         self.default_value = 0
-        self.init_regvalue = {}
-        self.init_memvalue = {}
+        self.register_value_map = {}
+        self.memory_value_map = {}
 
     def __len__(self):
         """Return the current length of the trace in cycles."""
@@ -1904,7 +1901,12 @@ class SimulationTrace:
         for trace_name in trace_list:
             print(formatted_trace_line(trace_name, self.trace[trace_name]), file=file)
 
-    def _set_initial_values(self, default_value, init_regvalue, init_memvalue):
+    def _set_initial_values(
+        self,
+        default_value: int,
+        register_value_map: dict[Register, int],
+        memory_value_map: dict[MemBlock, dict[int, int]],
+    ):
         """Remember the default values that were used when starting the trace.
 
         This is needed when using this trace for outputting a Verilog testbench, and is
@@ -1912,12 +1914,15 @@ class SimulationTrace:
 
         :param default_value: Default value to be used for all registers and memory
             locations if not found in the other passed in maps
-        :param init_regvalue: Default value for all the registers
-        :param init_memvvalue: Default value for memory locations of given maps
+        :param register_value_map: Default value for each ``Register``. Maps from
+            ``Register`` to the ``Register``'s initial value.
+        :param memory_value_map: Default value for each ``MemBlock``. Maps from
+            ``MemBlock`` to a ``{addr: data}`` ``dict`` with the ``MemBlock``'s initial
+            values.
         """
         self.default_value = default_value
-        self.init_regvalue = init_regvalue
-        self.init_memvalue = init_memvalue
+        self.register_value_map = register_value_map
+        self.memory_value_map = memory_value_map
 
     def print_perf_counters(self, *trace_names: str, file=sys.stdout):
         """Print performance counter statistics for ``trace_names``.

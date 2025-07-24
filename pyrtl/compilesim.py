@@ -141,10 +141,9 @@ class CompiledSimulation:
                 rval = self.default_value
             self._regmap[r] = rval
 
-        # Passing the dictionary objects themselves since they aren't updated anywhere.
-        # If that's ever not the case, will need to pass in deep copies of them like
-        # done for the normal Simulation so we retain the initial values that had.
-        self.tracer._set_initial_values(default_value, self._regmap, self._memmap)
+        self.tracer._set_initial_values(
+            default_value, register_value_map, memory_value_map
+        )
 
         self._create_dll()
         self._initialize_mems()

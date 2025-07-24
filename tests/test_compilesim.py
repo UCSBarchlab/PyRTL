@@ -225,9 +225,8 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         pass
 
     def test_weird_wire_names(self):
-        """
-        Some simulations need to be careful when handling special names (eg Fastsim June
-        2016)
+        """Some simulations need to be careful when handling special names (eg Fastsim
+        June 2016)
         """
         i = pyrtl.Input(8, '"182&!!!\n')
         o = pyrtl.Output(8, "*^*)#*$'*")
@@ -528,10 +527,9 @@ class TraceWithAdderBase(unittest.TestCase):
 
     def test_adder_simulation(self):
         sim_trace = pyrtl.SimulationTrace(wires_to_track=[self.o])
-        on_reset = {}  # signal states to be set when reset is asserted
 
         # build the actual simulation environment
-        sim = self.sim(register_value_map=on_reset, default_value=0, tracer=sim_trace)
+        sim = self.sim(tracer=sim_trace)
         sim.step_multiple(nsteps=15)
 
         output = io.StringIO()
@@ -609,10 +607,9 @@ b110 o
 
     def test_vcd_output(self):
         sim_trace = pyrtl.SimulationTrace(wires_to_track=[self.o])
-        on_reset = {}  # signal states to be set when reset is asserted
 
         # build the actual simulation environment
-        sim = self.sim(register_value_map=on_reset, default_value=0, tracer=sim_trace)
+        sim = self.sim(tracer=sim_trace)
         sim.step_multiple(nsteps=15)
 
         test_output = io.StringIO()
@@ -829,6 +826,7 @@ class MemBlockBase(unittest.TestCase):
         self.assertEqual(
             sim.inspect_mem(self.mem1), {0: 0, 1: 2, 2: 3, 3: 3, 4: 4, 5: 5}
         )
+        self.assertEqual(sim.tracer.memory_value_map, mem_val_map)
 
     def test_mem_val_map_defaults(self):
         read_addr3 = pyrtl.Input(self.addrwidth)
@@ -849,6 +847,7 @@ class MemBlockBase(unittest.TestCase):
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), "o1 000000\no2 000000\no3 000000\n")
+        self.assertEqual(sim.tracer.memory_value_map, mem_val_map)
 
     def test_mem_val_map_empty_mapping(self):
         read_addr3 = pyrtl.Input(self.addrwidth)
@@ -869,6 +868,7 @@ class MemBlockBase(unittest.TestCase):
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), "o1 000000\no2 000000\no3 000000\n")
+        self.assertEqual(sim.tracer.memory_value_map, mem_val_map)
 
 
 class MemBlockLargeBase(unittest.TestCase):
@@ -944,23 +944,32 @@ class RegisterDefaultsBase(unittest.TestCase):
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), correct_string)
+        return sim.tracer
 
     def test_reset_value(self):
         self.check_trace("o 70012345\n")
 
     def test_register_map_overrides_reset_value(self):
-        self.check_trace("o 36012345\n", register_value_map={self.r1: 6, self.r2: 3})
+        register_value_map = {self.r1: 6, self.r2: 3}
+        tracer = self.check_trace("o 36012345\n", register_value_map=register_value_map)
+        self.assertEqual(tracer.register_value_map, register_value_map)
 
     def test_partial_map(self):
-        self.check_trace("o 76012345\n", register_value_map={self.r1: 6})
+        register_value_map = {self.r1: 6}
+        tracer = self.check_trace("o 76012345\n", register_value_map=register_value_map)
+        self.assertEqual(tracer.register_value_map, register_value_map)
 
     def test_partial_map_overrides_default(self):
-        self.check_trace(
-            "o 76012345\n", default_value=5, register_value_map={self.r1: 6}
+        register_value_map = {self.r1: 6}
+        tracer = self.check_trace(
+            "o 76012345\n", default_value=5, register_value_map=register_value_map
         )
+        self.assertEqual(tracer.default_value, 5)
+        self.assertEqual(tracer.register_value_map, register_value_map)
 
     def test_default_used_for_non_reset_value(self):
-        self.check_trace("o 75012345\n", default_value=5)
+        tracer = self.check_trace("o 75012345\n", default_value=5)
+        self.assertEqual(tracer.default_value, 5)
 
 
 class RomBlockSimBase(unittest.TestCase):
@@ -1168,9 +1177,7 @@ class RomBlockSimBase(unittest.TestCase):
 
 
 class InspectBase(unittest.TestCase):
-    """
-    Unittests for sim.inspect_mem
-    """
+    """Unittests for sim.inspect_mem."""
 
     def setUp(self):
         pyrtl.reset_working_block()
@@ -1220,9 +1227,7 @@ class TraceErrorBase(unittest.TestCase):
 
 
 def make_unittests():
-    """
-    Generates separate unittests for each of the simulators
-    """
+    """Generates separate unittests for each of the simulators."""
     g = globals()
     unittests = {}
     base_tests = {

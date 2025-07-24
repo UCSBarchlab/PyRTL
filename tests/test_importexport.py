@@ -773,7 +773,7 @@ module toplevel(clk, o);
     output[12:0] o;
 
     // Constants
-    wire[5:0] k = 38;
+    wire[5:0] k = 6'd38;
 
     // Combinational logic
     assign o = {4'd12, 3'd3, k};
@@ -855,8 +855,8 @@ module toplevel(clk, rst, a, o);
     always @(posedge clk)
     begin
         if (rst) begin
-            r <= 0;
-            s <= 13;
+            r <= 4'd0;
+            s <= 4'd13;
         end
         else begin
             r <= (tmp66[3:0]);
@@ -1030,7 +1030,7 @@ module toplevel(clk, rst, o);
     always @(posedge clk)
     begin
         if (rst) begin
-            tmp0 <= 2;
+            tmp0 <= 4'd2;
         end
         else begin
             tmp0 <= (tmp3[3:0]);
@@ -1065,7 +1065,7 @@ module toplevel(clk, rst, o);
     always @(posedge clk or posedge rst)
     begin
         if (rst) begin
-            tmp0 <= 2;
+            tmp0 <= 4'd2;
         end
         else begin
             tmp0 <= (tmp3[3:0]);
@@ -1311,21 +1311,33 @@ class TestVerilogOutput(unittest.TestCase):
         """Verify that wires are always declared for bit-slice inputs, even Consts."""
         a = pyrtl.Input(name="a", bitwidth=1)
         b = pyrtl.Input(name="b", bitwidth=1)
+        c = pyrtl.Input(name="c", bitwidth=2)
+
         x = pyrtl.Output(name="x", bitwidth=1)
         y = pyrtl.Output(name="y", bitwidth=1)
+        z = pyrtl.Output(name="z", bitwidth=1)
 
         x <<= pyrtl.Const(42)[1]
+
         y <<= (a + b)[1]
+
+        t = pyrtl.WireVector()
+        t <<= c
+        z <<= t[1]
 
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer)
 
         # A constant should be declared for ``42``, even though it has no user-specified
         # name and only has one user, because that user is a bit-slice.
-        self.assertTrue("wire[5:0] const_0_42 = 42" in buffer.getvalue())
+        self.assertTrue("wire[5:0] const_0_42 = 6'd42" in buffer.getvalue())
         # A temporary wire should be declared for ``a + b``, even though it has no name
         # and only has one user, because that user is a bit-slice.
         self.assertTrue("assign tmp1 = (a + b)" in buffer.getvalue())
+        # A temporary wire should be declared for ``t``, even though it has no name and
+        # only has one user and just passes through ``c``, because that user is a
+        # bit-slice.
+        self.assertTrue("assign tmp3 = c" in buffer.getvalue())
 
 
 verilog_input_counter = """\
@@ -1434,14 +1446,14 @@ module tb();
         $dumpfile ("waveform.vcd");
         $dumpvars;
 
-        clk = 0;
-        rst = 0;
-        block.r1 = 2;
-        block.r2 = 3;
-        block.tmp0 = 0;
-        for (tb_addr = 0; tb_addr < 32; tb_addr++) begin block.mem_0[tb_addr] = 0; end
-        block.mem_0[2] = 9;
-        block.mem_0[9] = 12;
+        clk = 1'd0;
+        rst = 1'd0;
+        block.r1 = 3'd2;
+        block.r2 = 4'd3;
+        block.tmp0 = 8'd0;
+        for (tb_addr = 0; tb_addr < 32; tb_addr++) begin block.mem_0[tb_addr] = 4'd0; end
+        block.mem_0[2] = 4'd9;
+        block.mem_0[9] = 4'd12;
         a100 = 2'd0;
         w1 = 4'd0;
         w12 = 3'd0;
@@ -1486,13 +1498,13 @@ module tb();
         $dumpfile ("waveform.vcd");
         $dumpvars;
 
-        clk = 0;
-        block.r1 = 2;
-        block.r2 = 3;
-        block.tmp0 = 0;
-        for (tb_addr = 0; tb_addr < 32; tb_addr++) begin block.mem_0[tb_addr] = 0; end
-        block.mem_0[2] = 9;
-        block.mem_0[9] = 12;
+        clk = 1'd0;
+        block.r1 = 3'd2;
+        block.r2 = 4'd3;
+        block.tmp0 = 8'd0;
+        for (tb_addr = 0; tb_addr < 32; tb_addr++) begin block.mem_0[tb_addr] = 4'd0; end
+        block.mem_0[2] = 4'd9;
+        block.mem_0[9] = 4'd12;
         a100 = 2'd0;
         w1 = 4'd0;
         w12 = 3'd0;
@@ -1532,8 +1544,8 @@ module tb();
         $dumpfile ("waveform.vcd");
         $dumpvars;
 
-        clk = 0;
-        block.r = 0;
+        clk = 1'd0;
+        block.r = 4'd0;
         $finish;
     end
 endmodule
@@ -1566,8 +1578,8 @@ class TestOutputTestbench(unittest.TestCase):
         # each time
         i1, i2, i3 = pyrtl.input_list("w1/4 w12/3 a100/2")
         r1, r2 = pyrtl.register_list("r1/3 r2/4")
-        r3 = pyrtl.Register(8)
-        mem = pyrtl.MemBlock(4, 5)
+        r3 = pyrtl.Register(bitwidth=8)
+        mem = pyrtl.MemBlock(bitwidth=4, addrwidth=5)
         o1, o2 = pyrtl.output_list("out1/2 out10/9")
         r1.next <<= i1 + i2
         r2.next <<= r1 * i3

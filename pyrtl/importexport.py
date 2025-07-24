@@ -769,8 +769,8 @@ class _VerilogSanitizer(_NameSanitizer):
 
 class _VerilogOutput:
     def __init__(self, block: Block, add_reset: bool | str):
-        self.block = working_block(block)
-        self.gate_graph = GateGraph(self.block)
+        block = working_block(block)
+        self.gate_graph = GateGraph(block)
         self.add_reset = add_reset
 
         if not isinstance(self.add_reset, bool) and self.add_reset != "asynchronous":
@@ -999,7 +999,8 @@ class _VerilogOutput:
         for const_gate in const_gates:
             print(
                 f"    wire{self._verilog_size(const_gate.bitwidth)} "
-                f"{self._verilog_name(const_gate)} = {const_gate.op_param[0]};",
+                f"{self._verilog_name(const_gate)} = "
+                f"{const_gate.bitwidth}'d{const_gate.op_param[0]};",
                 file=file,
             )
         if const_gates:
@@ -1159,7 +1160,8 @@ class _VerilogOutput:
             for register in self._name_sorted(self.gate_graph.registers):
                 reset_value = register.op_param[0]
                 print(
-                    f"            {self._verilog_name(register)} <= {reset_value};",
+                    f"            {self._verilog_name(register)} <= "
+                    f"{register.bitwidth}'d{reset_value};",
                     file=file,
                 )
             print("        end", file=file)
@@ -1293,64 +1295,64 @@ class _VerilogOutput:
             print("        $dumpvars;\n", file=dest_file)
 
         # Initialize clk, and all the registers and memories.
-        print("        clk = 0;", file=dest_file)
+        print("        clk = 1'd0;", file=dest_file)
         if self.add_reset:
-            print("        rst = 0;", file=dest_file)
+            print("        rst = 1'd0;", file=dest_file)
 
-        def init_regvalue(reg_gate: Gate, block: Block) -> int:
-            if simulation_trace:
-                register = block.get_wirevector_by_name(reg_gate.name)
-                rval = simulation_trace.init_regvalue.get(register)
-                # Currently, the simulation stores the initial value for all registers
-                # in init_regvalue, so rval should not be None at this point. For the
-                # strange case where the trace was made by hand/other special use cases,
-                # check it against None anyway.
-                if rval is None:
-                    rval = register.reset_value
-                if rval is None:
-                    rval = simulation_trace.default_value
-                return rval
-            return 0
+        def default_value() -> int:
+            """Returns the Simulation's default value for Registers and MemBlocks."""
+            if not simulation_trace:
+                return 0
+            return simulation_trace.default_value
 
+        # simulation_trace.register_value_map maps from Register to initial value. Make
+        # a copy that maps from Register name to initial value.
+        register_value_map = {}
+        if simulation_trace:
+            register_value_map = {
+                register.name: value
+                for register, value in simulation_trace.register_value_map.items()
+            }
         for reg_gate in self.registers:
+            # Try using register_value_map first.
+            initial_value = register_value_map.get(reg_gate.name)
+            # If that didn't work, use the Register's reset_value.
+            if not initial_value:
+                initial_value = reg_gate.op_param[0]
+            # If there is no reset_value, use the default_value().
+            if not initial_value:
+                initial_value = default_value()
             print(
                 f"        block.{self._verilog_name(reg_gate)} = "
-                f"{init_regvalue(reg_gate, self.block)};",
+                f"{reg_gate.bitwidth}'d{initial_value};",
                 file=dest_file,
             )
-
-        def default_value():
-            return simulation_trace.default_value if simulation_trace else 0
-
-        def init_memvalue(memblock: MemBlock, addr: int) -> int:
-            # Return None if not present, or if already equal to default value, so we
-            # know not to emit any additional Verilog code to initialize this memory
-            # address.
-            if simulation_trace:
-                if memblock not in simulation_trace.init_memvalue:
-                    return None
-                value = simulation_trace.init_memvalue[memblock].get(
-                    addr, simulation_trace.default_value
-                )
-                return None if value == simulation_trace.default_value else value
-            return None
 
         # Initialize MemBlocks.
         for memblock in self.memblocks:
             max_addr = 1 << memblock.addrwidth
             print(
                 f"        for (tb_addr = 0; tb_addr < {max_addr}; tb_addr++) "
-                f"begin block.mem_{memblock.id}[tb_addr] = {default_value()}; end",
+                f"begin block.mem_{memblock.id}[tb_addr] = "
+                f"{memblock.bitwidth}'d{default_value()}; end",
                 file=dest_file,
             )
-            for addr in range(max_addr):
-                # Individually set any non-default memory values.
-                val = init_memvalue(memblock.id, addr)
-                if val is not None:
-                    print(
-                        f"        block.mem_{memblock.id}[{addr}] = {val};",
-                        file=dest_file,
-                    )
+            if not simulation_trace:
+                continue
+            memory_value_map = simulation_trace.memory_value_map.get(memblock)
+            if not memory_value_map:
+                continue
+            for addr, initial_data in memory_value_map.items():
+                # The generated Verilog ``for`` loop above just initialized every
+                # address in the ``MemBlock`` to ``default_value()``, so skip redundant
+                # initializations.
+                if initial_data == default_value():
+                    continue
+                print(
+                    f"        block.mem_{memblock.id}[{addr}] = "
+                    f"{memblock.bitwidth}'d{initial_data};",
+                    file=dest_file,
+                )
 
         # Set Input values for each cycle.
         if simulation_trace:

@@ -243,7 +243,6 @@ class RenderLongTraceBase(unittest.TestCase):
         """Check that long cycle names are truncated.
 
         The most significant digits should be omitted.
-
         """
         expected = (
             " |0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9\n"
@@ -440,9 +439,8 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         pass
 
     def test_weird_wire_names(self):
-        """
-        Some simulations need to be careful when handling special names (eg Fastsim June
-        2016)
+        """Some simulations need to be careful when handling special names (eg Fastsim
+        June 2016)
         """
         i = pyrtl.Input(8, '"182&!!!\n')
         o = pyrtl.Output(8, "*^*)#*$'*")
@@ -470,7 +468,7 @@ class SimWithSpecialWiresBase(unittest.TestCase):
 
     def test_fastsim_wire_names(self):
         """
-        Testing both Simulation classes' ability to use wire names instead of wires
+        Testing both Simulation classes' ability to use wire names instead of wires.
         """
         in1 = pyrtl.Input(8, "in1")
         in2 = pyrtl.Input(8, "in2")
@@ -559,11 +557,13 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         o = pyrtl.Output(4, "o")
         o <<= r
 
-        sim = self.sim(register_value_map={r: 1})
+        register_value_map = {r: 1}
+        sim = self.sim(register_value_map=register_value_map)
         sim.step_multiple(nsteps=7)
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), "o 1230123\n")
+        self.assertEqual(sim.tracer.register_value_map, register_value_map)
 
     def test_default_value_for_registers_without_reset_value(self):
         r = pyrtl.Register(2, name="r", reset_value=3)
@@ -579,6 +579,7 @@ class SimWithSpecialWiresBase(unittest.TestCase):
         output = io.StringIO()
         sim.tracer.print_trace(output, compact=True)
         self.assertEqual(output.getvalue(), "o 6222622\nr 3012301\ns 3210321\n")
+        self.assertEqual(sim.tracer.default_value, 3)
 
 
 class SimInputValidationBase(unittest.TestCase):
@@ -1192,6 +1193,7 @@ class MemBlockBase(unittest.TestCase):
         self.assertEqual(
             sim.inspect_mem(self.mem1), {0: 0, 1: 2, 2: 3, 3: 3, 4: 4, 5: 5}
         )
+        self.assertEqual(sim.tracer.memory_value_map, mem_val_map)
 
     def test_mem_val_map_defaults(self):
         read_addr3 = pyrtl.Input(self.addrwidth)
@@ -1498,9 +1500,7 @@ class MemBlockSimBase(unittest.TestCase):
 
 
 class InspectBase(unittest.TestCase):
-    """
-    Unittests for both sim.inspect and sim.inspect_mem
-    """
+    """Unittests for both sim.inspect and sim.inspect_mem."""
 
     def setUp(self):
         pyrtl.reset_working_block()
@@ -1580,9 +1580,7 @@ class NoTracerBase(unittest.TestCase):
 
 
 def make_unittests():
-    """
-    Generates separate unittests for each of the simulators
-    """
+    """Generates separate unittests for each of the simulators."""
     g = globals()
     unittests = {}
     base_tests = {
