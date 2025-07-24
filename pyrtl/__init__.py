@@ -103,7 +103,6 @@ from .visualization import (
 from .importexport import (
     input_from_verilog,
     output_to_verilog,
-    OutputToVerilog,
     output_verilog_testbench,
     input_from_blif,
     output_to_firrtl,
@@ -242,7 +241,6 @@ __all__ = [
     # importexport
     "input_from_verilog",
     "output_to_verilog",
-    "OutputToVerilog",
     "output_verilog_testbench",
     "input_from_blif",
     "output_to_firrtl",

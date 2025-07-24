@@ -978,6 +978,7 @@ module toplevel(clk, rst, in1, out1);
     // Temporaries
     wire[7:0] tmp2;
 
+    // Read-only memory data
     initial begin
         mem_0[0] = 8'ha;
         mem_0[1] = 8'h14;
@@ -1306,6 +1307,26 @@ class TestVerilogOutput(unittest.TestCase):
         self.assertTrue("reg[7:0] register0 = 8'd0" in buffer.getvalue())
         self.assertTrue("reg[3:0] register1 = 4'd1" in buffer.getvalue())
 
+    def test_bit_slice_inputs(self):
+        """Verify that wires are always declared for bit-slice inputs, even Consts."""
+        a = pyrtl.Input(name="a", bitwidth=1)
+        b = pyrtl.Input(name="b", bitwidth=1)
+        x = pyrtl.Output(name="x", bitwidth=1)
+        y = pyrtl.Output(name="y", bitwidth=1)
+
+        x <<= pyrtl.Const(42)[1]
+        y <<= (a + b)[1]
+
+        buffer = io.StringIO()
+        pyrtl.output_to_verilog(buffer)
+
+        # A constant should be declared for ``42``, even though it has no user-specified
+        # name and only has one user, because that user is a bit-slice.
+        self.assertTrue("wire[5:0] const_0_42 = 42" in buffer.getvalue())
+        # A temporary wire should be declared for ``a + b``, even though it has no name
+        # and only has one user, because that user is a bit-slice.
+        self.assertTrue("assign tmp1 = (a + b)" in buffer.getvalue())
+
 
 verilog_input_counter = """\
 module counter (clk, rst, en, count);
@@ -1601,12 +1622,36 @@ class TestOutputTestbench(unittest.TestCase):
             pyrtl.output_verilog_testbench(tbfile)
 
     def test_verilog_testbench_existing_reset_wire_without_add_reset(self):
-        buffer = io.StringIO()
         rst = pyrtl.Input(1, "rst")
         r = pyrtl.Register(4, "r")
         r.next <<= pyrtl.select(rst, 0, r + 1)
+
+        buffer = io.StringIO()
         pyrtl.output_verilog_testbench(buffer, add_reset=False)
         self.assertEqual(buffer.getvalue(), verilog_testbench_custom_reset)
+
+    def test_only_initialize_memblocks(self):
+        """Test that RomBlocks are not re-initialized by the testbench."""
+        romblock = pyrtl.RomBlock(
+            name="romblock", bitwidth=3, addrwidth=2, romdata=[1, 2, 3, 4]
+        )
+        addr = pyrtl.Input(name="addr", bitwidth=2)
+        data = pyrtl.Output(name="data", bitwidth=3)
+        data <<= romblock[addr]
+
+        buffer = io.StringIO()
+        pyrtl.output_to_verilog(buffer)
+        # The Verilog code should declare the RomBlock and define its values.
+        self.assertTrue("reg[2:0] mem_0[3:0];  // romblock" in buffer.getvalue())
+        self.assertTrue("mem_0[0] = 3'h1;" in buffer.getvalue())
+        self.assertTrue("mem_0[1] = 3'h2;" in buffer.getvalue())
+        self.assertTrue("mem_0[2] = 3'h3;" in buffer.getvalue())
+        self.assertTrue("mem_0[3] = 3'h4;" in buffer.getvalue())
+
+        buffer = io.StringIO()
+        pyrtl.output_verilog_testbench(buffer, add_reset=False)
+        # The testbench should not touch the RomBlock.
+        self.assertTrue("mem_0" not in buffer.getvalue())
 
 
 firrtl_output_concat_test = """\

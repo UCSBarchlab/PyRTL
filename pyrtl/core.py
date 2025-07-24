@@ -1206,23 +1206,17 @@ class _NameSanitizer(_NameIndexer):
         self,
         identifier_regex_str,
         internal_prefix="_sani_temp",
-        map_valid_vals=True,
         extra_checks=lambda _string: True,
-        allow_duplicates=False,
     ):
         if identifier_regex_str[-1] != "$":
             identifier_regex_str += "$"
         self.identifier = re.compile(identifier_regex_str)
         self.val_map = {}
-        self.map_valid = map_valid_vals
         self.extra_checks = extra_checks
-        self.allow_dups = allow_duplicates
         super().__init__(internal_prefix)
 
     def __getitem__(self, item):
         """Get a value from the sanitizer"""
-        if not self.map_valid and self.is_valid_str(item):
-            return item
         return self.val_map[item]
 
     def is_valid_str(self, string):
@@ -1230,16 +1224,25 @@ class _NameSanitizer(_NameIndexer):
 
     def make_valid_string(self, string=""):
         """Inputting a value for the first time."""
-        if not self.is_valid_str(string):
-            if string in self.val_map and not self.allow_dups:
-                msg = f"Value {string} has already been given to the sanitizer"
-                raise IndexError(msg)
-            internal_name = super().make_valid_string()
-            self.val_map[string] = internal_name
-            return internal_name
-        if self.map_valid:
+        if self.is_valid_str(string):
             self.val_map[string] = string
-        return string
+            return string
+
+        if string in self.val_map:
+            msg = f"Value {string} has already been given to the sanitizer"
+            raise IndexError(msg)
+        # Try replacing non-word characters with ``_``.
+        internal_name = re.sub(r"\W", "_", string)
+
+        if not self.is_valid_str(internal_name) or internal_name in self.val_map:
+            # If that didn't work, try prepending ``_``.
+            internal_name = f"_{internal_name}"
+            while not self.is_valid_str(internal_name) or internal_name in self.val_map:
+                # If that didn't work, generate names starting with ``internal_prefix``
+                # until we find something acceptable.
+                internal_name = super().make_valid_string()
+        self.val_map[string] = internal_name
+        return internal_name
 
 
 class _PythonSanitizer(_NameSanitizer):

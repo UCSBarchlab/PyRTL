@@ -16,7 +16,7 @@ import re
 import subprocess
 import sys
 import tempfile
-from typing import IO, TYPE_CHECKING, Callable
+from typing import IO, TYPE_CHECKING
 
 from pyrtl.core import Block, _NameSanitizer, working_block
 from pyrtl.corecircuits import concat_list, rtl_all, rtl_any, select
@@ -738,6 +738,641 @@ def input_from_verilog(
             os.remove(tmp_blif_path)
 
 
+class _VerilogSanitizer(_NameSanitizer):
+    _ver_regex = r"[_A-Za-z][_a-zA-Z0-9\$]*$"
+
+    _verilog_reserved = """always and assign automatic begin buf bufif0 bufif1 case
+        casex casez cell cmos config deassign default defparam design disable edge else
+        end endcase endconfig endfunction endgenerate endmodule endprimitive endspecify
+        endtable endtask event for force forever fork function generate genvar highz0
+        highz1 if ifnone incdir include initial inout input instance integer join large
+        liblist library localparam macromodule medium module nand negedge nmos nor
+        noshowcancelledno not notif0 notif1 or output parameter pmos posedge primitive
+        pull0 pull1 pulldown pullup pulsestyle_oneventglitch pulsestyle_ondetectglitch
+        remos real realtime reg release repeat rnmos rpmos rtran rtranif0 rtranif1
+        scalared showcancelled signed small specify specparam strong0 strong1 supply0
+        supply1 table task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg
+        unsigned use vectored wait wand weak0 weak1 while wire wor xnor xor
+        """
+
+    def __init__(self, internal_prefix="_sani_temp"):
+        self._verilog_reserved_set = frozenset(self._verilog_reserved.split())
+        super().__init__(self._ver_regex, internal_prefix, self._extra_checks)
+
+    def _extra_checks(self, str):
+        return (
+            str not in self._verilog_reserved_set  # is not a Verilog reserved keyword
+            and str != "clk"  # not the clock signal
+            and len(str) <= 1024  # not too long to be a Verilog id
+        )
+
+
+class _VerilogOutput:
+    def __init__(self, block: Block, add_reset: bool | str):
+        self.block = working_block(block)
+        self.gate_graph = GateGraph(self.block)
+        self.add_reset = add_reset
+
+        if not isinstance(self.add_reset, bool) and self.add_reset != "asynchronous":
+            msg = (
+                f"Invalid add_reset option {self.add_reset}. Acceptable options are "
+                "False, True, and 'asynchronous'"
+            )
+            raise PyrtlError(msg)
+
+        if self.add_reset and self.gate_graph.get_gate("rst") is not None:
+            msg = (
+                "Found a user-defined wire named 'rst'. Pass in 'add_reset=False' to "
+                "use your existing reset logic."
+            )
+            raise PyrtlError(msg)
+
+        self.internal_names = _VerilogSanitizer("_ver_out_tmp_")
+
+        def gate_key(gate: Gate) -> str:
+            """Sort Gates by name.
+
+            MemBlocks have no name, so use their ``wr_en`` name instead.
+            """
+            if gate.name:
+                return gate.name
+            return gate.args[2].name
+
+        for gate in sorted(self.gate_graph.gates, key=gate_key):
+            if gate.name:
+                self.internal_names.make_valid_string(gate.name)
+
+        self.inputs = self._name_sorted(self.gate_graph.inputs)
+        self.outputs = self._name_sorted(self.gate_graph.outputs)
+
+        self.io_list = [
+            "clk",
+            *[self._verilog_name(input) for input in self.inputs],
+            *[self._verilog_name(output) for output in self.outputs],
+        ]
+        if self.add_reset:
+            self.io_list.insert(1, "rst")
+        if any(io_name.startswith("tmp") for io_name in self.io_list):
+            msg = 'input or output with name starting with "tmp" indicates unnamed IO'
+            raise PyrtlError(msg)
+
+        self.registers = self._name_sorted(self.gate_graph.registers)
+
+        # List of all unique MemBlocks and RomBlocks, sorted by memid.
+        self.all_memblocks = sorted(
+            # Build a set of unique MemBlocks first, to avoid duplicates.
+            {
+                mem_gate.op_param[1]
+                for mem_gate in self.gate_graph.mem_reads | self.gate_graph.mem_writes
+            },
+            key=lambda memblock: memblock.id,
+        )
+
+        # List of unique MemBlocks (not RomBlocks!), sorted by memid.
+        self.memblocks = [
+            memblock for memblock in self.all_memblocks if type(memblock) is MemBlock
+        ]
+
+        # List of unique RomBlocks (not MemBlocks!), sorted by memid.
+        self.romblocks = [
+            romblock
+            for romblock in self.all_memblocks
+            if isinstance(romblock, RomBlock)
+        ]
+
+    def _verilog_name(self, gate: Gate) -> str:
+        """Return a ``Gate``'s Verilog name."""
+        return self.internal_names[gate.name]
+
+    def _name_sorted(self, gates: set[Gate]) -> list[Gate]:
+        def name_mapper(gate: Gate) -> str:
+            if gate.name is None:
+                # MemBlock writes have no name, so instead sort by the name of
+                # ``wr_en``, since this particular net is used within 'always begin ...
+                # end' blocks for memory update logic.
+                return gate.args[2].name
+            return self._verilog_name(gate)
+
+        return _name_sorted(gates, name_mapper=name_mapper)
+
+    def _verilog_size(self, bitwidth: int) -> str:
+        """Return a Verilog size declaration for ``bitwidth`` bits."""
+        return "" if bitwidth == 1 else f"[{bitwidth - 1}:0]"
+
+    def _is_sliced(self, gate: Gate) -> bool:
+        """Return True iff gate has bitwidth 2 or more, and is an arg to a bit-slice.
+
+        Such gates must be declared, because Verilog's bit-selection operator ``[]``
+        only works on wires and registers, not arbitrary expressions.
+        """
+        return (
+            gate.bitwidth
+            and gate.bitwidth > 1
+            and any(dest.op == "s" for dest in gate.dests)
+        )
+
+    def _should_declare_const(self, gate: Gate) -> bool:
+        """Determine if we should declare a constant Verilog wire for ``gate``.
+
+        This function determines which constant Gates will be declared in Verilog. Any
+        constant gate without a corresponding Verilog declaration will be inlined.
+
+        Constant Verilog gates are declared for:
+
+        1. Named constant ``Gates``.
+
+        2. ``Gates`` that are ``args`` for a ``s`` bit-selection ``Gate``, because
+           Verilog's bit-selection operator ``[]`` only works on wires and registers,
+           not arbitrary expressions.
+        """
+        is_const = gate.op == "C"
+        is_named = not gate.name.startswith("const_")
+        is_sliced = self._is_sliced(gate)
+        return is_const and (is_named or is_sliced)
+
+    def _should_declare_wire(self, gate: Gate) -> bool:
+        """Determine if we should declare a temporary Verilog wire for ``gate``.
+
+        This function determines which temporary Gates will be declared in Verilog. Any
+        temporary gate without a corresponding Verilog declaration will be inlined.
+
+        Temporary Verilog wires are never declared for Outputs, Inputs, Consts, or
+        Registers, because those declarations are handled separately by
+        ``_to_verilog_header``.
+
+        Temporary Verilog wires are never declared for memory writes, because writes
+        generate no output.
+
+        Otherwise, temporary Verilog wires are declared for:
+
+        1. Named ``Gates``.
+
+        2. ``Gates`` with multiple users.
+
+        3. ``MemBlock`` reads, because ``_to_verilog_memories`` expects a declaration.
+
+        4. ``Gates`` that are ``args`` for a ``s`` bit-selection ``Gate``, because
+           Verilog's bit-selection operator ``[]`` only works on wires and registers,
+           not arbitrary expressions.
+        """
+        excluded = gate.is_output or gate.op in "ICr@"
+        is_named = gate.name and not gate.name.startswith("tmp")
+        multiple_users = len(gate.dests) > 1
+        is_read = gate.op == "m"
+        is_sliced = self._is_sliced(gate)
+
+        return not excluded and (is_named or multiple_users or is_read or is_sliced)
+
+    def _to_verilog_header(self, file: IO, initialize_registers: bool):
+        """Print the header of the verilog implementation."""
+        print("// Generated automatically via PyRTL", file=file)
+        print("// As one initial test of synthesis, map to FPGA with:", file=file)
+        print('//   yosys -p "synth_xilinx -top toplevel" thisfile.v\n', file=file)
+
+        # ``declared_gates`` is the set of Gates with corresponding Verilog reg/wire
+        # declarations. Generated Verilog code can refer to these Gates by name.
+        self.declared_gates = self.gate_graph.inputs | self.gate_graph.outputs
+
+        # Module name.
+        print(f"module toplevel({', '.join(self.io_list)});", file=file)
+
+        # Declare Inputs and Outputs.
+        print("    input clk;", file=file)
+        if self.add_reset:
+            print("    input rst;", file=file)
+        for input_gate in self.inputs:
+            print(
+                f"    input{self._verilog_size(input_gate.bitwidth)} "
+                f"{self._verilog_name(input_gate)};",
+                file=file,
+            )
+        for output_gate in self.outputs:
+            print(
+                f"    output{self._verilog_size(output_gate.bitwidth)} "
+                f"{self._verilog_name(output_gate)};",
+                file=file,
+            )
+        print(file=file)
+
+        # Declare MemBlocks and RomBlocks.
+        if self.all_memblocks:
+            print("    // Memories", file=file)
+        for memblock in self.all_memblocks:
+            print(
+                f"    reg{self._verilog_size(memblock.bitwidth)} "
+                f"mem_{memblock.id}{self._verilog_size(1 << memblock.addrwidth)};"
+                f"  // {memblock.name}",
+                file=file,
+            )
+        if self.all_memblocks:
+            print(file=file)
+
+        # Declare Registers.
+        self.declared_gates |= self.gate_graph.registers
+        if self.registers:
+            print("    // Registers", file=file)
+        for reg_gate in self.registers:
+            register_initialization = ""
+            if initialize_registers:
+                reset_value = 0
+                if reg_gate.op_param[0] is not None:
+                    reset_value = reg_gate.op_param[0]
+                register_initialization = f" = {reg_gate.bitwidth}'d{reset_value}"
+            print(
+                f"    reg{self._verilog_size(reg_gate.bitwidth)} "
+                f"{self._verilog_name(reg_gate)}"
+                f"{register_initialization};",
+                file=file,
+            )
+        if self.registers:
+            print(file=file)
+
+        # Declare constants with user-specified names.
+        const_gates = []
+        for const_gate in self._name_sorted(self.gate_graph.consts):
+            if self._should_declare_const(const_gate):
+                const_gates.append(const_gate)
+        self.declared_gates |= set(const_gates)
+
+        if const_gates:
+            print("    // Constants", file=file)
+        for const_gate in const_gates:
+            print(
+                f"    wire{self._verilog_size(const_gate.bitwidth)} "
+                f"{self._verilog_name(const_gate)} = {const_gate.op_param[0]};",
+                file=file,
+            )
+        if const_gates:
+            print(file=file)
+
+        # Declare any needed temporary wires.
+        temp_gates = []
+        for gate in self.gate_graph:
+            if self._should_declare_wire(gate):
+                temp_gates.append(gate)
+        temp_gates = self._name_sorted(temp_gates)
+        self.declared_gates |= set(temp_gates)
+
+        if temp_gates:
+            print("    // Temporaries", file=file)
+        for temp_gate in temp_gates:
+            print(
+                f"    wire{self._verilog_size(temp_gate.bitwidth)} "
+                f"{self._verilog_name(temp_gate)};",
+                file=file,
+            )
+        if temp_gates:
+            print(file=file)
+
+        # Write the initial values for read-only memories. If we ever add support
+        # outside of simulation for initial values for MemBlocks, that would also go
+        # here.
+        if self.romblocks:
+            print("    // Read-only memory data", file=file)
+        for romblock in self.romblocks:
+            print("    initial begin", file=file)
+            for addr in range(1 << romblock.addrwidth):
+                print(
+                    f"        mem_{romblock.id}[{addr}] = "
+                    f"{romblock.bitwidth}'h{romblock._get_read_data(addr):x};",
+                    file=file,
+                )
+            print("    end", file=file)
+            print(file=file)
+
+        # combinational_gates is the set of Gates that must be assigned by
+        # ``_to_verilog_combinational``.
+        self.combinational_gates = (
+            self.gate_graph.outputs | set(temp_gates) - self.gate_graph.mem_reads
+        )
+
+    def _verilog_expr(self, gate: Gate, lhs: Gate | None = None) -> str:
+        """Returns a Verilog expression for ``gate`` and its arguments, recursively.
+
+        The returned expression will be used as the right hand side ("rhs") of
+        assignment statements, and inputs for registers and memories.
+
+        :param lhs: Left-hand side of the assignment statement. This determines when we
+            return the name of a declared gate, and when we return the expression that
+            specifies the declared gate's value.
+
+            For example, suppose we have a ``declared_gate`` that says ``x = a + b``. If
+            we are currently processing another Gate that says ``y = x - 2``, we could
+            emit ``y = x - 2`` or ``y = (a + b) - 2``. ``x`` is a ``declared_gate``, so
+            we must emit ``y = x - 2``. So when we generate the ``_verilog_expr`` for
+            ``x`` in this scenario, we know to just emit ``x`` because ``x`` is a
+            ``declared_gate``, and we are not currently defining ``x``, because the
+            assignment's ``lhs`` is not ``x``.
+
+            On the other hand, if we are currently processing the Gate ``x = a + b``, we
+            must emit ``x = a + b`` instead of the unhelpful ``x = x``. We emit the
+            former, rather than the latter, for the assignment's right-hand side because
+            the assignment's ``lhs`` is ``x``
+        """
+        if gate in self.declared_gates and lhs is not gate:
+            # If a Verilog wire/reg has been declared for the gate, and we are not
+            # currently defining the Gate's value, just return the wire's Verilog name.
+            return self._verilog_name(gate)
+        if gate.op == "C":
+            # Return the constant's Verilog value.
+            return f"{gate.bitwidth}'d{gate.op_param[0]}"
+
+        # Convert each of the Gate's args to a Verilog expression.
+        verilog_args = [self._verilog_expr(arg, lhs) for arg in gate.args]
+
+        # Return an expression that combines ``verilog_args`` with the appropriate
+        # Verilog operator for ``gate``.
+        if gate.op == "w":
+            return verilog_args[0]
+        if gate.op == "~":
+            return f"~({verilog_args[0]})"
+        if gate.op in "&|^+-*<>":
+            return f"({verilog_args[0]} {gate.op} {verilog_args[1]})"
+        if gate.op == "=":
+            return f"({verilog_args[0]} == {verilog_args[1]})"
+        if gate.op == "x":
+            return f"({verilog_args[0]} ? {verilog_args[2]} : {verilog_args[1]})"
+        if gate.op == "c":
+            if len(verilog_args) == 1:
+                return verilog_args[0]
+            return f"{{{', '.join(verilog_args)}}}"
+        if gate.op == "s":
+            selections = []
+            for sel in reversed(gate.op_param):
+                if gate.args[0].bitwidth == 1:
+                    selections.append(verilog_args[0])
+                else:
+                    selections.append(f"{verilog_args[0]}[{sel}]")
+            if len(gate.op_param) == 1:
+                return f"({selections[0]})"
+            # Special case: slicing multiple copies of the same gate.
+            if all(sel == gate.op_param[0] for sel in gate.op_param):
+                return f"{{{len(selections)} {{{selections[0]}}}}}"
+            # Special case: slicing a consecutive subset.
+            if tuple(range(gate.op_param[0], gate.op_param[-1] + 1)) == gate.op_param:
+                return f"({verilog_args[0]}[{gate.op_param[-1]}:{gate.op_param[0]}])"
+            return f"{{{', '.join(selections)}}}"
+
+        msg = f"Unimplemented op {gate.op} in Gate {gate}"
+        raise PyrtlError(msg)
+
+    def _to_verilog_combinational(self, file: IO):
+        """Generate Verilog combinational logic.
+
+        Emits combinational Verilog logic for ``combinational_gates``. This function
+        only generates assignments for Outputs and temporaries. The other wires and regs
+        declared by ``_to_verilog_header`` are handled elsewhere:
+
+        - Constant assignments are handled by ``_to_verilog_header``.
+
+        - Register assignments are handled by ``_to_verilog_sequential``.
+
+        - MemBlock reads are handled by ``_to_verilog_memories``.
+
+        :param declared_gates: Set of Gates with corresponding Verilog wire/reg
+            declarations. Generated Verilog code can refer to these Gates by name.
+        :param combinational_gates: Set of Gates that must be assigned by
+            ``_to_verilog_combinational``.
+        """
+        print("    // Combinational logic", file=file)
+        for assignment_gate in self._name_sorted(self.combinational_gates):
+            print(
+                f"    assign {self._verilog_name(assignment_gate)} = "
+                f"{self._verilog_expr(assignment_gate, lhs=assignment_gate)};",
+                file=file,
+            )
+        print(file=file)
+
+    def _to_verilog_sequential(self, file: IO):
+        """Print the sequential logic of the verilog implementation."""
+        if not self.gate_graph.registers:
+            return
+
+        print("    // Register logic", file=file)
+        if self.add_reset == "asynchronous":
+            print("    always @(posedge clk or posedge rst)", file=file)
+        else:
+            print("    always @(posedge clk)", file=file)
+        print("    begin", file=file)
+        if self.add_reset:
+            print("        if (rst) begin", file=file)
+            for register in self._name_sorted(self.gate_graph.registers):
+                reset_value = register.op_param[0]
+                print(
+                    f"            {self._verilog_name(register)} <= {reset_value};",
+                    file=file,
+                )
+            print("        end", file=file)
+            print("        else begin", file=file)
+        else:
+            print("        begin", file=file)
+
+        for register in self._name_sorted(self.gate_graph.registers):
+            print(
+                f"            {self._verilog_name(register)} <= "
+                f"{self._verilog_expr(register.args[0])};",
+                file=file,
+            )
+        print("        end", file=file)
+        print("    end", file=file)
+        print(file=file)
+
+    def _to_verilog_memories(self, file: IO):
+        """Generate Verilog logic for MemBlock and RomBlock reads and writes."""
+        for memblock in self.all_memblocks:
+            print(f"    // Memory mem_{memblock.id}: {memblock.name}", file=file)
+
+            # Find writes to ``memblock``.
+            write_gates = []
+            for write_gate in self._name_sorted(self.gate_graph.mem_writes):
+                if write_gate.op_param[1] is memblock:
+                    write_gates.append(write_gate)
+            if write_gates:
+                print("    always @(posedge clk)", file=file)
+                print("    begin", file=file)
+                for write_gate in write_gates:
+                    enable = write_gate.args[2]
+                    verilog_enable = self._verilog_expr(write_gate.args[2])
+                    verilog_addr = self._verilog_expr(write_gate.args[0])
+                    verilog_rhs = self._verilog_expr(write_gate.args[1])
+                    # Simplify the assignment if the enable bit is a constant ``1``.
+                    if enable.op == "C" and enable.op_param[0] == 1:
+                        print(
+                            f"        mem_{write_gate.op_param[0]}[{verilog_addr}] <= "
+                            f"{verilog_rhs};",
+                            file=file,
+                        )
+                    else:
+                        print(
+                            f"        if ({verilog_enable}) begin\n"
+                            f"            mem_{write_gate.op_param[0]}[{verilog_addr}] "
+                            f"<= {verilog_rhs};\n"
+                            "        end",
+                            file=file,
+                        )
+                print("    end", file=file)
+
+            # Find reads from ``memblock``. The ``read_gate`` should have been declared
+            # by ``_to_verilog_header``.
+            read_gates = []
+            for read_gate in self._name_sorted(self.gate_graph.mem_reads):
+                if read_gate.op_param[1] is memblock:
+                    read_gates.append(read_gate)
+            for read_gate in self._name_sorted(read_gates):
+                print(
+                    f"    assign {self._verilog_name(read_gate)} = "
+                    f"mem_{read_gate.op_param[0]}"
+                    f"[{self._verilog_expr(read_gate.args[0])}];",
+                    file=file,
+                )
+            print(file=file)
+
+    def _to_verilog_footer(self, file: IO):
+        print("endmodule", file=file)
+
+    def output_to_verilog(self, dest_file: IO, initialize_registers: bool):
+        self._to_verilog_header(dest_file, initialize_registers)
+        self._to_verilog_combinational(dest_file)
+        self._to_verilog_sequential(dest_file)
+        self._to_verilog_memories(dest_file)
+        self._to_verilog_footer(dest_file)
+
+    def output_verilog_testbench(
+        self,
+        dest_file: IO,
+        simulation_trace: SimulationTrace = None,
+        toplevel_include: str | None = None,
+        vcd: str = "waveform.vcd",
+        cmd: str | None = None,
+    ):
+        # Output an include, if given.
+        if toplevel_include:
+            print(f'`include "{toplevel_include}"', file=dest_file)
+            print(file=dest_file)
+
+        # Output header.
+        print("module tb();", file=dest_file)
+
+        # Declare all block inputs as reg.
+        print("    reg clk;", file=dest_file)
+        if self.add_reset:
+            print("    reg rst;", file=dest_file)
+        for input_gate in self.inputs:
+            print(
+                f"    reg{self._verilog_size(input_gate.bitwidth)} "
+                f"{self._verilog_name(input_gate)};",
+                file=dest_file,
+            )
+
+        # Declare all block outputs as wires.
+        for output_gate in self.outputs:
+            print(
+                f"    wire{self._verilog_size(output_gate.bitwidth)} "
+                f"{self._verilog_name(output_gate)};",
+                file=dest_file,
+            )
+        print(file=dest_file)
+
+        # Declare an integer for MemBlock initialization.
+        if len(self.memblocks) > 0:
+            print("    integer tb_addr;", file=dest_file)
+
+        io_list_str = [f".{io}({io})" for io in self.io_list]
+        print(f"    toplevel block({', '.join(io_list_str)});\n", file=dest_file)
+
+        # Generate the clock signal.
+        print("    always", file=dest_file)
+        print("        #5 clk = ~clk;\n", file=dest_file)
+
+        # Generate Input assignments for each cycle in the trace.
+        print("    initial begin", file=dest_file)
+
+        # If a VCD output is requested, set that up.
+        if vcd:
+            print(f'        $dumpfile ("{vcd}");', file=dest_file)
+            print("        $dumpvars;\n", file=dest_file)
+
+        # Initialize clk, and all the registers and memories.
+        print("        clk = 0;", file=dest_file)
+        if self.add_reset:
+            print("        rst = 0;", file=dest_file)
+
+        def init_regvalue(reg_gate: Gate, block: Block) -> int:
+            if simulation_trace:
+                register = block.get_wirevector_by_name(reg_gate.name)
+                rval = simulation_trace.init_regvalue.get(register)
+                # Currently, the simulation stores the initial value for all registers
+                # in init_regvalue, so rval should not be None at this point. For the
+                # strange case where the trace was made by hand/other special use cases,
+                # check it against None anyway.
+                if rval is None:
+                    rval = register.reset_value
+                if rval is None:
+                    rval = simulation_trace.default_value
+                return rval
+            return 0
+
+        for reg_gate in self.registers:
+            print(
+                f"        block.{self._verilog_name(reg_gate)} = "
+                f"{init_regvalue(reg_gate, self.block)};",
+                file=dest_file,
+            )
+
+        def default_value():
+            return simulation_trace.default_value if simulation_trace else 0
+
+        def init_memvalue(memblock: MemBlock, addr: int) -> int:
+            # Return None if not present, or if already equal to default value, so we
+            # know not to emit any additional Verilog code to initialize this memory
+            # address.
+            if simulation_trace:
+                if memblock not in simulation_trace.init_memvalue:
+                    return None
+                value = simulation_trace.init_memvalue[memblock].get(
+                    addr, simulation_trace.default_value
+                )
+                return None if value == simulation_trace.default_value else value
+            return None
+
+        # Initialize MemBlocks.
+        for memblock in self.memblocks:
+            max_addr = 1 << memblock.addrwidth
+            print(
+                f"        for (tb_addr = 0; tb_addr < {max_addr}; tb_addr++) "
+                f"begin block.mem_{memblock.id}[tb_addr] = {default_value()}; end",
+                file=dest_file,
+            )
+            for addr in range(max_addr):
+                # Individually set any non-default memory values.
+                val = init_memvalue(memblock.id, addr)
+                if val is not None:
+                    print(
+                        f"        block.mem_{memblock.id}[{addr}] = {val};",
+                        file=dest_file,
+                    )
+
+        # Set Input values for each cycle.
+        if simulation_trace:
+            tracelen = max(len(t) for t in simulation_trace.trace.values())
+            for i in range(tracelen):
+                for input_gate in self.inputs:
+                    input_value = simulation_trace.trace[input_gate.name][i]
+                    print(
+                        f"        {self._verilog_name(input_gate)} = "
+                        f"{input_gate.bitwidth}'d{input_value};",
+                        file=dest_file,
+                    )
+                print("\n        #10", file=dest_file)
+                if cmd:
+                    print(f"        {cmd}", file=dest_file)
+
+        # Footer.
+        print("        $finish;", file=dest_file)
+        print("    end", file=dest_file)
+        print("endmodule", file=dest_file)
+
+
 def output_to_verilog(
     dest_file: IO,
     add_reset: bool | str = True,
@@ -764,528 +1399,7 @@ def output_to_verilog(
         bitwidth=8, reset_value=4)`` generates Verilog like ``reg[7:0] foo = 8'd4;``.
     :param block: Block to be walked and exported. Defaults to the :ref:`working_block`.
     """
-
-    if not isinstance(add_reset, bool) and add_reset != "asynchronous":
-        msg = (
-            f"Invalid add_reset option {add_reset}. Acceptable options are False, "
-            "True, and 'asynchronous'"
-        )
-        raise PyrtlError(msg)
-
-    block = working_block(block)
-    gate_graph = GateGraph(block)
-
-    if add_reset and gate_graph.get_gate("rst") is not None:
-        msg = (
-            "Found a user-defined wire named 'rst'. Pass in 'add_reset=False' to use "
-            "your existing reset logic."
-        )
-        raise PyrtlError(msg)
-
-    internal_names = _VerilogSanitizer("_ver_out_tmp_")
-    for gate in gate_graph:
-        if gate.name:
-            internal_names.make_valid_string(gate.name)
-
-    def verilog_name(gate: Gate) -> str:
-        """Return a ``Gate``'s Verilog name."""
-        return internal_names[gate.name]
-
-    declared_gates, combinational_assignment_gates, memblocks = _to_verilog_header(
-        dest_file, gate_graph, verilog_name, add_reset, initialize_registers
-    )
-    _to_verilog_combinational(
-        dest_file, declared_gates, combinational_assignment_gates, verilog_name
-    )
-    _to_verilog_sequential(
-        dest_file, gate_graph, declared_gates, verilog_name, add_reset
-    )
-    _to_verilog_memories(dest_file, gate_graph, declared_gates, verilog_name, memblocks)
-    _to_verilog_footer(dest_file)
-
-
-def OutputToVerilog(dest_file: IO, block: Block = None):
-    """Deprecated. Use :func:`output_to_verilog` instead."""
-    return output_to_verilog(dest_file, block)
-
-
-class _VerilogSanitizer(_NameSanitizer):
-    _ver_regex = r"[_A-Za-z][_a-zA-Z0-9\$]*$"
-
-    _verilog_reserved = """always and assign automatic begin buf bufif0 bufif1 case
-        casex casez cell cmos config deassign default defparam design disable edge else
-        end endcase endconfig endfunction endgenerate endmodule endprimitive endspecify
-        endtable endtask event for force forever fork function generate genvar highz0
-        highz1 if ifnone incdir include initial inout input instance integer join large
-        liblist library localparam macromodule medium module nand negedge nmos nor
-        noshowcancelledno not notif0 notif1 or output parameter pmos posedge primitive
-        pull0 pull1 pulldown pullup pulsestyle_oneventglitch pulsestyle_ondetectglitch
-        remos real realtime reg release repeat rnmos rpmos rtran rtranif0 rtranif1
-        scalared showcancelled signed small specify specparam strong0 strong1 supply0
-        supply1 table task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg
-        unsigned use vectored wait wand weak0 weak1 while wire wor xnor xor
-        """
-
-    def __init__(self, internal_prefix="_sani_temp", map_valid_vals=True):
-        self._verilog_reserved_set = frozenset(self._verilog_reserved.split())
-        super().__init__(
-            self._ver_regex, internal_prefix, map_valid_vals, self._extra_checks
-        )
-
-    def _extra_checks(self, str):
-        return (
-            str not in self._verilog_reserved_set  # is not a Verilog reserved keyword
-            and str != "clk"  # not the clock signal
-            and len(str) <= 1024
-        )  # not too long to be a Verilog id
-
-
-def _verilog_size(bitwidth: int) -> str:
-    """Return a Verilog size declaration for ``bitwidth`` bits."""
-    return "" if bitwidth == 1 else f"[{bitwidth - 1}:0]"
-
-
-def _should_declare_wire(gate: Gate) -> bool:
-    """Determine if we should declare a temporary Verilog wire for ``gate``.
-
-    This function determines which temporary Gates will be declared in Verilog. Any
-    temporary gate without a corresponding Verilog declaration will be inlined.
-
-    Temporary Verilog wires are never declared for Outputs, Inputs, Consts, or
-    Registers, because those declarations are handled separately by
-    ``_to_verilog_header``.
-
-    Temporary Verilog wires are never declared for memory writes, because writes
-    generate no output.
-
-    Otherwise, temporary Verilog wires are declared for:
-
-    1. Named ``Gates``.
-
-    2. ``Gates`` with multiple users.
-
-    3. ``MemBlock`` reads, because ``_to_verilog_memories`` expects a declaration.
-
-    4. ``Gates`` that are ``args`` for a ``s`` bit-selection ``Gate``, because Verilog's
-       bit-selection operator ``[]`` only works on wires and registers, not arbitrary
-       expressions.
-    """
-    excluded = gate.is_output or gate.op in "ICr@"
-    is_named = gate.name and not gate.name.startswith("tmp")
-    is_read = gate.op == "m"
-    multiple_users = len(gate.dests) > 1
-    is_sliced = any(dest.op == "s" for dest in gate.dests)
-
-    return not excluded and (is_named or multiple_users or is_read or is_sliced)
-
-
-def _get_memblocks(gate_graph: GateGraph) -> list[MemBlock]:
-    """Return a list of the unique MemBlocks in the GateGraph, sorted by memid."""
-    return sorted(
-        # Build a set of unique MemBlocks first, to avoid duplicates.
-        {
-            mem_gate.op_param[1]
-            for mem_gate in gate_graph.mem_reads | gate_graph.mem_writes
-        },
-        key=lambda memblock: memblock.id,
-    )
-
-
-def _to_verilog_header(
-    file: IO,
-    gate_graph: GateGraph,
-    verilog_name: Callable[[Gate], str],
-    add_reset: bool | str,
-    initialize_registers: bool,
-):
-    """Print the header of the verilog implementation.
-
-    :return: ``(declared_gates, combinational_assignment_gates, memblocks)``.
-             ``declared_gates`` is a set of Gates with corresponding Verilog reg/wire
-             declarations. Generated Verilog code can refer to these Gates by name.
-             ``combinational_assignment_gates`` is the set of Gates whose values must be
-             assigned by ``_to_verilog_combinational``. ``memblocks`` is a list of
-             MemBlocks whose read and write logic must be generated by
-             ``to_verilog_memories``.
-    """
-    print("// Generated automatically via PyRTL", file=file)
-    print("// As one initial test of synthesis, map to FPGA with:", file=file)
-    print('//   yosys -p "synth_xilinx -top toplevel" thisfile.v\n', file=file)
-
-    def name_sorted(gates: set[Gate]) -> list[Gate]:
-        return _name_sorted(gates, name_mapper=verilog_name)
-
-    inputs = name_sorted(gate_graph.inputs)
-    outputs = name_sorted(gate_graph.outputs)
-
-    # ``declared_gates`` is the set of Gates with corresponding Verilog reg/wire
-    # declarations. Generated Verilog code can refer to these Gates by name.
-    declared_gates = gate_graph.inputs | gate_graph.outputs
-
-    # Module name.
-    io_list = [
-        "clk",
-        *[verilog_name(input) for input in inputs],
-        *[verilog_name(output) for output in outputs],
-    ]
-    if add_reset:
-        io_list.insert(1, "rst")
-    if any(w.startswith("tmp") for w in io_list):
-        msg = 'input or output with name starting with "tmp" indicates unnamed IO'
-        raise PyrtlError(msg)
-    print(f"module toplevel({', '.join(io_list)});", file=file)
-
-    # Declare Inputs and Outputs.
-    print("    input clk;", file=file)
-    if add_reset:
-        print("    input rst;", file=file)
-    for input_gate in inputs:
-        print(
-            f"    input{_verilog_size(input_gate.bitwidth)} "
-            f"{verilog_name(input_gate)};",
-            file=file,
-        )
-    for output_gate in outputs:
-        print(
-            f"    output{_verilog_size(output_gate.bitwidth)} "
-            f"{verilog_name(output_gate)};",
-            file=file,
-        )
-    print(file=file)
-
-    # Declare Memories.
-    memblocks = _get_memblocks(gate_graph)
-
-    if memblocks:
-        print("    // Memories", file=file)
-    for memblock in memblocks:
-        print(
-            f"    reg{_verilog_size(memblock.bitwidth)} "
-            f"mem_{memblock.id}{_verilog_size(1 << memblock.addrwidth)};"
-            f"  // {memblock.name}",
-            file=file,
-        )
-    if memblocks:
-        print(file=file)
-
-    # Declare Registers.
-    registers = name_sorted(gate_graph.registers)
-    declared_gates |= gate_graph.registers
-
-    if registers:
-        print("    // Registers", file=file)
-    for reg_gate in registers:
-        register_initialization = ""
-        if initialize_registers:
-            reset_value = 0
-            if reg_gate.op_param[0] is not None:
-                reset_value = reg_gate.op_param[0]
-            register_initialization = f" = {reg_gate.bitwidth}'d{reset_value}"
-        print(
-            f"    reg{_verilog_size(reg_gate.bitwidth)} {verilog_name(reg_gate)}"
-            f"{register_initialization};",
-            file=file,
-        )
-    if registers:
-        print(file=file)
-
-    # Declare constants with user-specified names.
-    const_gates = []
-    for const_gate in name_sorted(gate_graph.consts):
-        if not const_gate.name.startswith("const_"):
-            const_gates.append(const_gate)
-    declared_gates |= set(const_gates)
-
-    if const_gates:
-        print("    // Constants", file=file)
-    for const_gate in const_gates:
-        print(
-            f"    wire{_verilog_size(const_gate.bitwidth)} "
-            f"{verilog_name(const_gate)} = {const_gate.op_param[0]};",
-            file=file,
-        )
-    if const_gates:
-        print(file=file)
-
-    # Declare any needed temporary wires.
-    temp_gates = []
-    for gate in gate_graph:
-        if _should_declare_wire(gate):
-            temp_gates.append(gate)
-    declared_gates |= set(temp_gates)
-
-    if temp_gates:
-        print("    // Temporaries", file=file)
-    for temp_gate in name_sorted(temp_gates):
-        print(
-            f"    wire{_verilog_size(temp_gate.bitwidth)} {verilog_name(temp_gate)};",
-            file=file,
-        )
-    if temp_gates:
-        print(file=file)
-
-    # Write the initial values for read-only memories. If we ever add support outside of
-    # simulation for initial values for MemBlocks, that would also go here.
-    romblocks = {memblock for memblock in memblocks if isinstance(memblock, RomBlock)}
-    for romblock in sorted(romblocks, key=lambda romblock: romblock.id):
-        print("    initial begin", file=file)
-        for addr in range(1 << romblock.addrwidth):
-            print(
-                f"        mem_{romblock.id}[{addr}] = "
-                f"{romblock.bitwidth}'h{romblock._get_read_data(addr):x};",
-                file=file,
-            )
-        print("    end", file=file)
-        print(file=file)
-
-    # combinational_assignment_gates is the set of Gates that must be assigned by
-    # ``_to_verilog_combinational``.
-    combinational_assignment_gates = (
-        gate_graph.outputs | set(temp_gates) - gate_graph.mem_reads
-    )
-    return declared_gates, combinational_assignment_gates, memblocks
-
-
-def _verilog_expr(
-    gate: Gate,
-    declared_gates: set[Gate],
-    verilog_name: Callable[[Gate], str],
-    lhs: Gate | None = None,
-) -> str:
-    """Returns a Verilog expression for ``gate`` and its arguments, recursively.
-
-    The returned expression will be used as the right hand side ("rhs") of assignment
-    statements, and inputs for registers and memories.
-
-    :param declared_gates: Set of Gates with corresponding Verilog wire/reg
-        declarations. Generated Verilog code can refer to these Gates by name.
-    :param lhs: Left-hand side of the assignment statement. This determines when we
-        return the name of a declared gate, and when we return the expression that
-        specifies the declared gate's value.
-
-        For example, suppose we have a ``declared_gate`` that says ``x = a + b``. If we
-        are currently processing another Gate that says ``y = x - 2``, we could emit
-        ``y = x - 2`` or ``y = (a + b) - 2``. ``x`` is a ``declared_gate``, so we must
-        emit ``y = x - 2``. So when we generate the ``_verilog_expr`` for ``x`` in this
-        scenario, we know to just emit ``x`` because ``x`` is a ``declared_gate``, and
-        we are not currently defining ``x``, because the assignment's ``lhs`` is not
-        ``x``.
-
-        On the other hand, if we are currently processing the Gate ``x = a + b``, we
-        must emit ``x = a + b`` instead of the unhelpful ``x = x``. We emit the former,
-        rather than the latter, for the assignment's right-hand side because the
-        assignment's ``lhs`` is ``x``
-    """
-    if gate in declared_gates and lhs is not gate:
-        # If a Verilog wire/reg has been declared for the gate, and we are not currently
-        # defining the Gate's value, just return the wire's Verilog name.
-        return verilog_name(gate)
-    if gate.op == "C":
-        # Return the constant's Verilog value.
-        return f"{gate.bitwidth}'d{gate.op_param[0]}"
-
-    # Convert each of the Gate's args to a Verilog expression.
-    verilog_args = [
-        _verilog_expr(arg, declared_gates, verilog_name, lhs) for arg in gate.args
-    ]
-
-    # Return an expression that combines ``verilog_args`` with the appropriate Verilog
-    # operator for ``gate``.
-    if gate.op == "w":
-        return verilog_args[0]
-    if gate.op == "~":
-        return f"~({verilog_args[0]})"
-    if gate.op in "&|^+-*<>":
-        return f"({verilog_args[0]} {gate.op} {verilog_args[1]})"
-    if gate.op == "=":
-        return f"({verilog_args[0]} == {verilog_args[1]})"
-    if gate.op == "x":
-        return f"({verilog_args[0]} ? {verilog_args[2]} : {verilog_args[1]})"
-    if gate.op == "c":
-        if len(verilog_args) == 1:
-            return verilog_args[0]
-        return f"{{{', '.join(verilog_args)}}}"
-    if gate.op == "s":
-        selections = []
-        for sel in reversed(gate.op_param):
-            if gate.args[0].bitwidth == 1:
-                selections.append(verilog_args[0])
-            else:
-                selections.append(f"{verilog_args[0]}[{sel}]")
-        if len(gate.op_param) == 1:
-            return f"({selections[0]})"
-        # Special case: slicing multiple copies of the same gate.
-        if all(sel == gate.op_param[0] for sel in gate.op_param):
-            return f"{{{len(selections)} {{{selections[0]}}}}}"
-        # Special case: slicing a consecutive subset.
-        if tuple(range(gate.op_param[0], gate.op_param[-1] + 1)) == gate.op_param:
-            return f"({verilog_args[0]}[{gate.op_param[-1]}:{gate.op_param[0]}])"
-        return f"{{{', '.join(selections)}}}"
-
-    msg = f"Unimplemented op {gate.op} in Gate {gate}"
-    raise PyrtlError(msg)
-
-
-def _gate_sorted(gates: list[Gate]) -> list[Gate]:
-    """Return ``gates`` sorted by name."""
-
-    def natural_keys(gate):
-        if gate.op == "@":
-            # MemBlock writes have no name, so instead sort by the name of ``wr_en``,
-            # since this particular net is used within 'always begin ... end' blocks for
-            # memory update logic.
-            key = gate.args[2].name
-        else:
-            key = gate.name
-        return _natural_sort_key(key)
-
-    return sorted(gates, key=natural_keys)
-
-
-def _to_verilog_combinational(
-    file: IO,
-    declared_gates: set[Gate],
-    combinational_assignment_gates: set[Gate],
-    verilog_name: Callable[[Gate], str],
-):
-    """Generate Verilog combinational logic.
-
-    Emits combinational Verilog logic for ``combinational_assignment_gates``. This
-    function only generates assignments for Outputs and temporaries. The other wires and
-    regs declared by ``_to_verilog_header`` are handled elsewhere:
-
-    - Constant assignments are handled by ``_to_verilog_header``.
-
-    - Register assignments are handled by ``_to_verilog_sequential``.
-
-    - MemBlock reads are handled by ``_to_verilog_memories``.
-
-    :param declared_gates: Set of Gates with corresponding Verilog wire/reg
-        declarations. Generated Verilog code can refer to these Gates by name.
-    :param combinational_assignment_gates: Set of Gates that must be assigned by
-        ``_to_verilog_combinational``.
-    """
-    print("    // Combinational logic", file=file)
-    for assignment_gate in _gate_sorted(combinational_assignment_gates):
-        verilog_rhs = _verilog_expr(
-            assignment_gate, declared_gates, verilog_name, assignment_gate
-        )
-        print(
-            f"    assign {verilog_name(assignment_gate)} = {verilog_rhs};",
-            file=file,
-        )
-    print(file=file)
-
-
-def _to_verilog_sequential(
-    file: IO,
-    gate_graph: GateGraph,
-    declared_gates: set[Gate],
-    verilog_name: Callable[[Gate], str],
-    add_reset: bool | str,
-):
-    """Print the sequential logic of the verilog implementation.
-
-    :param declared_gates: Set of Gates with corresponding Verilog wire/reg
-        declarations. Generated Verilog code can refer to these Gates by name.
-    """
-    if not gate_graph.registers:
-        return
-
-    print("    // Register logic", file=file)
-    if add_reset == "asynchronous":
-        print("    always @(posedge clk or posedge rst)", file=file)
-    else:
-        print("    always @(posedge clk)", file=file)
-    print("    begin", file=file)
-    if add_reset:
-        print("        if (rst) begin", file=file)
-        for register in _gate_sorted(gate_graph.registers):
-            reset_value = register.op_param[0]
-            print(f"            {verilog_name(register)} <= {reset_value};", file=file)
-        print("        end", file=file)
-        print("        else begin", file=file)
-    else:
-        print("        begin", file=file)
-
-    for register in _gate_sorted(gate_graph.registers):
-        verilog_rhs = _verilog_expr(register.args[0], declared_gates, verilog_name)
-        print(
-            f"            {verilog_name(register)} <= {verilog_rhs};",
-            file=file,
-        )
-    print("        end", file=file)
-    print("    end", file=file)
-    print(file=file)
-
-
-def _to_verilog_memories(
-    file: IO,
-    gate_graph: GateGraph,
-    declared_gates: set[Gate],
-    verilog_name: Callable[[Gate], str],
-    memblocks: list[MemBlock],
-):
-    """Generate Verilog logic for MemBlock reads and writes."""
-    for memblock in memblocks:
-        print(f"    // Memory mem_{memblock.id}: {memblock.name}", file=file)
-
-        # Find writes to ``memblock``.
-        write_gates = []
-        for write_gate in _gate_sorted(gate_graph.mem_writes):
-            if write_gate.op_param[1] is memblock:
-                write_gates.append(write_gate)
-        if write_gates:
-            print("    always @(posedge clk)", file=file)
-            print("    begin", file=file)
-            for write_gate in write_gates:
-                enable = write_gate.args[2]
-                verilog_enable = _verilog_expr(
-                    write_gate.args[2], declared_gates, verilog_name
-                )
-                verilog_addr = _verilog_expr(
-                    write_gate.args[0], declared_gates, verilog_name
-                )
-                verilog_rhs = _verilog_expr(
-                    write_gate.args[1], declared_gates, verilog_name
-                )
-                # Simplify the assignment if the enable bit is a constant ``1``.
-                if enable.op == "C" and enable.op_param[0] == 1:
-                    print(
-                        f"        mem_{write_gate.op_param[0]}[{verilog_addr}] <= "
-                        f"{verilog_rhs};",
-                        file=file,
-                    )
-                else:
-                    print(
-                        f"        if ({verilog_enable}) begin\n"
-                        f"            mem_{write_gate.op_param[0]}[{verilog_addr}] <= "
-                        f"{verilog_rhs};\n"
-                        "        end",
-                        file=file,
-                    )
-            print("    end", file=file)
-
-        # Find reads from ``memblock``. The ``read_gate`` should have been declared by
-        # ``_to_verilog_header``.
-        read_gates = []
-        for read_gate in _gate_sorted(gate_graph.mem_reads):
-            if read_gate.op_param[1] is memblock:
-                read_gates.append(read_gate)
-        for read_gate in _gate_sorted(read_gates):
-            verilog_addr = _verilog_expr(
-                read_gate.args[0], declared_gates, verilog_name
-            )
-            print(
-                f"    assign {verilog_name(read_gate)} = mem_{read_gate.op_param[0]}"
-                f"[{verilog_addr}];",
-                file=file,
-            )
-        print(file=file)
-
-
-def _to_verilog_footer(file: IO):
-    print("endmodule", file=file)
+    _VerilogOutput(block, add_reset).output_to_verilog(dest_file, initialize_registers)
 
 
 def output_verilog_testbench(
@@ -1350,165 +1464,9 @@ def output_verilog_testbench(
         :func:`output_to_verilog`.
     :param block: Block containing design to test. Defaults to the :ref:`working_block`.
     """
-    if not isinstance(add_reset, bool) and add_reset != "asynchronous":
-        msg = (
-            f"Invalid add_reset option {add_reset}. Acceptable options are False, "
-            "True, and 'asynchronous'"
-        )
-        raise PyrtlError(msg)
-
-    block = working_block(block)
-    gate_graph = GateGraph(block)
-
-    if add_reset and gate_graph.get_gate("rst") is not None:
-        msg = (
-            "Found a user-defined wire named 'rst'. Pass in 'add_reset=False' to use "
-            "your existing reset logic."
-        )
-        raise PyrtlError(msg)
-
-    verilog_name = _VerilogSanitizer("_ver_out_tmp_")
-    for gate in gate_graph:
-        if gate.name:
-            verilog_name.make_valid_string(gate.name)
-
-    # Output an include, if given.
-    if toplevel_include:
-        print(f'`include "{toplevel_include}"', file=dest_file)
-        print(file=dest_file)
-
-    # Output header.
-    print("module tb();", file=dest_file)
-
-    def name_sorted(gates: set[Gate]) -> list[Gate]:
-        return _name_sorted(gates, name_mapper=lambda gate: verilog_name[gate.name])
-
-    # Declare all block inputs as reg.
-    print("    reg clk;", file=dest_file)
-    if add_reset:
-        print("    reg rst;", file=dest_file)
-    inputs = name_sorted(gate_graph.inputs)
-    for input_gate in inputs:
-        print(
-            f"    reg{_verilog_size(input_gate.bitwidth)} "
-            f"{verilog_name[input_gate.name]};",
-            file=dest_file,
-        )
-
-    # Declare all block outputs as wires.
-    outputs = name_sorted(gate_graph.outputs)
-    for output_gate in outputs:
-        print(
-            f"    wire{_verilog_size(output_gate.bitwidth)} "
-            f"{verilog_name[output_gate.name]};",
-            file=dest_file,
-        )
-    print(file=dest_file)
-
-    # Declare an integer for memory initialization.
-    memblocks = _get_memblocks(gate_graph)
-    if len(memblocks) > 0:
-        print("    integer tb_addr;", file=dest_file)
-
-    io_list = [
-        "clk",
-        *[verilog_name[input.name] for input in inputs],
-        *[verilog_name[output.name] for output in outputs],
-    ]
-    if add_reset:
-        io_list.insert(1, "rst")
-    io_list_str = [f".{io}({io})" for io in io_list]
-    print(f"    toplevel block({', '.join(io_list_str)});\n", file=dest_file)
-
-    # Generate the clock signal.
-    print("    always", file=dest_file)
-    print("        #5 clk = ~clk;\n", file=dest_file)
-
-    # Generate Input assignments for each cycle in the trace.
-    print("    initial begin", file=dest_file)
-
-    # If a VCD output is requested, set that up.
-    if vcd:
-        print(f'        $dumpfile ("{vcd}");', file=dest_file)
-        print("        $dumpvars;\n", file=dest_file)
-
-    # Initialize clk, and all the registers and memories.
-    print("        clk = 0;", file=dest_file)
-    if add_reset:
-        print("        rst = 0;", file=dest_file)
-
-    def init_regvalue(reg_gate: Gate, block: Block) -> int:
-        if simulation_trace:
-            register = block.get_wirevector_by_name(reg_gate.name)
-            rval = simulation_trace.init_regvalue.get(register)
-            # Currently, the simulation stores the initial value for all registers in
-            # init_regvalue, so rval should not be None at this point. For the strange
-            # case where the trace was made by hand/other special use cases, check it
-            # against None anyway.
-            if rval is None:
-                rval = register.reset_value
-            if rval is None:
-                rval = simulation_trace.default_value
-            return rval
-        return 0
-
-    registers = name_sorted(gate_graph.registers)
-    for reg_gate in registers:
-        print(
-            f"        block.{verilog_name[reg_gate.name]} = "
-            f"{init_regvalue(reg_gate, block)};",
-            file=dest_file,
-        )
-
-    def default_value():
-        return simulation_trace.default_value if simulation_trace else 0
-
-    def init_memvalue(memblock: MemBlock, addr: int) -> int:
-        # Return None if not present, or if already equal to default value, so we know
-        # not to emit any additional Verilog code to initialize this memory address.
-        if simulation_trace:
-            if memblock not in simulation_trace.init_memvalue:
-                return None
-            value = simulation_trace.init_memvalue[memblock].get(
-                addr, simulation_trace.default_value
-            )
-            return None if value == simulation_trace.default_value else value
-        return None
-
-    for memblock in memblocks:
-        max_addr = 1 << memblock.addrwidth
-        print(
-            f"        for (tb_addr = 0; tb_addr < {max_addr}; tb_addr++) "
-            f"begin block.mem_{memblock.id}[tb_addr] = {default_value()}; end",
-            file=dest_file,
-        )
-        for addr in range(max_addr):
-            # Individually set any non-default memory values.
-            val = init_memvalue(memblock.id, addr)
-            if val is not None:
-                print(
-                    f"        block.mem_{memblock.id}[{addr}] = {val};", file=dest_file
-                )
-
-    # Set Input values for each cycle.
-    if simulation_trace:
-        tracelen = max(len(t) for t in simulation_trace.trace.values())
-        for i in range(tracelen):
-            for input_gate in inputs:
-                input_value = simulation_trace.trace[input_gate.name][i]
-                print(
-                    f"        {verilog_name[input_gate.name]} = "
-                    f"{input_gate.bitwidth}'d{input_value};",
-                    file=dest_file,
-                )
-            print("\n        #10", file=dest_file)
-            if cmd:
-                print(f"        {cmd}", file=dest_file)
-
-    # Footer.
-    print("        $finish;", file=dest_file)
-    print("    end", file=dest_file)
-    print("endmodule", file=dest_file)
+    _VerilogOutput(block, add_reset).output_verilog_testbench(
+        dest_file, simulation_trace, toplevel_include, vcd, cmd
+    )
 
 
 # ----------------------------------------------------------------
@@ -1516,8 +1474,6 @@ def output_verilog_testbench(
 #   |___ | |__) |__)  |  |
 #   |    | |  \ |  \  |  |___
 #
-
-
 def output_to_firrtl(
     open_file, rom_blocks: list[RomBlock] | None = None, block: Block = None
 ):
