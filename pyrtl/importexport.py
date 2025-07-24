@@ -1184,10 +1184,9 @@ class _VerilogOutput:
 
         print("    // Register logic", file=file)
         if self.add_reset == "asynchronous":
-            print("    always @(posedge clk or posedge rst)", file=file)
+            print("    always @(posedge clk or posedge rst) begin", file=file)
         else:
-            print("    always @(posedge clk)", file=file)
-        print("    begin", file=file)
+            print("    always @(posedge clk) begin", file=file)
         if self.add_reset:
             print("        if (rst) begin", file=file)
             for register in self._name_sorted(self.gate_graph.registers):
@@ -1197,18 +1196,19 @@ class _VerilogOutput:
                     f"{register.bitwidth}'d{reset_value};",
                     file=file,
                 )
-            print("        end", file=file)
-            print("        else begin", file=file)
+            print("        end else begin", file=file)
+            indent = "    "
         else:
-            print("        begin", file=file)
+            indent = ""
 
         for register in self._name_sorted(self.gate_graph.registers):
             print(
-                f"            {self._verilog_name(register.name)} <= "
+                f"        {indent}{self._verilog_name(register.name)} <= "
                 f"{self._verilog_expr(register.args[0])};",
                 file=file,
             )
-        print("        end", file=file)
+        if self.add_reset:
+            print("        end", file=file)
         print("    end", file=file)
         print(file=file)
 
@@ -1218,7 +1218,7 @@ class _VerilogOutput:
             kind = "MemBlock"
             if isinstance(memblock, RomBlock):
                 kind = "RomBlock"
-            print(f"    // {kind} {memblock.name}", file=file)
+            print(f"    // {kind} {memblock.name} logic", file=file)
 
             # Find writes to ``memblock``.
             write_gates = []
@@ -1226,8 +1226,7 @@ class _VerilogOutput:
                 if write_gate.op_param[1] is memblock:
                     write_gates.append(write_gate)
             if write_gates:
-                print("    always @(posedge clk)", file=file)
-                print("    begin", file=file)
+                print("    always @(posedge clk) begin", file=file)
                 for write_gate in write_gates:
                     enable = write_gate.args[2]
                     verilog_enable = self._verilog_expr(write_gate.args[2])

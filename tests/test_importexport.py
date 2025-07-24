@@ -852,106 +852,91 @@ module toplevel(clk, rst, a, o);
     assign tmp79 = ((tmp60 + {(1'd0), tmp72}) + {{2 {1'd0}}, tmp76});
 
     // Register logic
-    always @(posedge clk)
-    begin
+    always @(posedge clk) begin
         if (rst) begin
             r <= 4'd0;
             s <= 4'd13;
-        end
-        else begin
+        end else begin
             r <= (tmp66[3:0]);
             s <= (tmp70[3:0]);
         end
     end
 
-    // MemBlock z
-    always @(posedge clk)
-    begin
+    // MemBlock z logic
+    always @(posedge clk) begin
         z[2'd0] <= 4'd9;
     end
 
-    // MemBlock tmp0
-    always @(posedge clk)
-    begin
+    // MemBlock tmp0 logic
+    always @(posedge clk) begin
         tmp0[2'd0] <= a;
         tmp0[2'd1] <= (tmp14[3:0]);
     end
     assign tmp72 = tmp0[2'd0];
 
-    // MemBlock tmp1
-    always @(posedge clk)
-    begin
+    // MemBlock tmp1 logic
+    always @(posedge clk) begin
         tmp1[2'd0] <= a;
         tmp1[2'd1] <= (tmp18[3:0]);
     end
     assign tmp76 = tmp1[2'd0];
 
-    // MemBlock tmp2
-    always @(posedge clk)
-    begin
+    // MemBlock tmp2 logic
+    always @(posedge clk) begin
         tmp2[2'd0] <= a;
         tmp2[2'd1] <= (tmp22[3:0]);
     end
 
-    // MemBlock tmp3
-    always @(posedge clk)
-    begin
+    // MemBlock tmp3 logic
+    always @(posedge clk) begin
         tmp3[2'd0] <= a;
         tmp3[2'd1] <= (tmp26[3:0]);
     end
 
-    // MemBlock tmp4
-    always @(posedge clk)
-    begin
+    // MemBlock tmp4 logic
+    always @(posedge clk) begin
         tmp4[2'd0] <= a;
         tmp4[2'd1] <= (tmp30[3:0]);
     end
 
-    // MemBlock tmp5
-    always @(posedge clk)
-    begin
+    // MemBlock tmp5 logic
+    always @(posedge clk) begin
         tmp5[2'd0] <= a;
         tmp5[2'd1] <= (tmp34[3:0]);
     end
 
-    // MemBlock tmp6
-    always @(posedge clk)
-    begin
+    // MemBlock tmp6 logic
+    always @(posedge clk) begin
         tmp6[2'd0] <= a;
         tmp6[2'd1] <= (tmp38[3:0]);
     end
 
-    // MemBlock tmp7
-    always @(posedge clk)
-    begin
+    // MemBlock tmp7 logic
+    always @(posedge clk) begin
         tmp7[2'd0] <= a;
         tmp7[2'd1] <= (tmp42[3:0]);
     end
 
-    // MemBlock tmp8
-    always @(posedge clk)
-    begin
+    // MemBlock tmp8 logic
+    always @(posedge clk) begin
         tmp8[2'd0] <= a;
         tmp8[2'd1] <= (tmp46[3:0]);
     end
 
-    // MemBlock tmp9
-    always @(posedge clk)
-    begin
+    // MemBlock tmp9 logic
+    always @(posedge clk) begin
         tmp9[2'd0] <= a;
         tmp9[2'd1] <= (tmp50[3:0]);
     end
 
-    // MemBlock tmp10
-    always @(posedge clk)
-    begin
+    // MemBlock tmp10 logic
+    always @(posedge clk) begin
         tmp10[2'd0] <= a;
         tmp10[2'd1] <= (tmp54[3:0]);
     end
 
-    // MemBlock tmp11
-    always @(posedge clk)
-    begin
+    // MemBlock tmp11 logic
+    always @(posedge clk) begin
         tmp11[2'd0] <= a;
         tmp11[2'd1] <= (tmp58[3:0]);
     end
@@ -993,12 +978,11 @@ module toplevel(clk, rst, in1, out1);
     // Combinational logic
     assign out1 = tmp0;
 
-    // RomBlock rom
+    // RomBlock rom logic
     assign tmp0 = rom[in1];
 
-    // MemBlock mem
-    always @(posedge clk)
-    begin
+    // MemBlock mem logic
+    always @(posedge clk) begin
         mem[tmp0] <= 8'd42;
     end
 
@@ -1027,12 +1011,10 @@ module toplevel(clk, rst, o);
     assign tmp3 = (tmp0 + {{3 {1'd0}}, 1'd1});
 
     // Register logic
-    always @(posedge clk)
-    begin
+    always @(posedge clk) begin
         if (rst) begin
             tmp0 <= 4'd2;
-        end
-        else begin
+        end else begin
             tmp0 <= (tmp3[3:0]);
         end
     end
@@ -1062,12 +1044,10 @@ module toplevel(clk, rst, o);
     assign tmp3 = (tmp0 + {{3 {1'd0}}, 1'd1});
 
     // Register logic
-    always @(posedge clk or posedge rst)
-    begin
+    always @(posedge clk or posedge rst) begin
         if (rst) begin
             tmp0 <= 4'd2;
-        end
-        else begin
+        end else begin
             tmp0 <= (tmp3[3:0]);
         end
     end
@@ -1096,11 +1076,8 @@ module toplevel(clk, o);
     assign tmp3 = (tmp0 + {{3 {1'd0}}, 1'd1});
 
     // Register logic
-    always @(posedge clk)
-    begin
-        begin
-            tmp0 <= (tmp3[3:0]);
-        end
+    always @(posedge clk) begin
+        tmp0 <= (tmp3[3:0]);
     end
 
 endmodule
@@ -1126,11 +1103,8 @@ module toplevel(clk, rst);
     assign tmp5 = (rst ? {{4 {1'd0}}, 1'd0} : (r + {{3 {1'd0}}, 1'd1}));
 
     // Register logic
-    always @(posedge clk)
-    begin
-        begin
-            r <= (tmp5[3:0]);
-        end
+    always @(posedge clk) begin
+        r <= (tmp5[3:0]);
     end
 
 endmodule
@@ -1370,8 +1344,7 @@ module top (clk, o);
     output [1:0] o;
     foo f1(a, b, o);
 
-    always @(posedge clk)
-    begin
+    always @(posedge clk) begin
         a <= ~a;
         b <= ~b;
     end
