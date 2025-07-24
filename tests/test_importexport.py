@@ -794,19 +794,19 @@ module toplevel(clk, rst, a, o);
     output[5:0] o;
 
     // Memories
-    reg[3:0] mem_0[3:0];  // z
-    reg[3:0] mem_1[3:0];  // tmp0
-    reg[3:0] mem_2[3:0];  // tmp1
-    reg[3:0] mem_3[3:0];  // tmp2
-    reg[3:0] mem_4[3:0];  // tmp3
-    reg[3:0] mem_5[3:0];  // tmp4
-    reg[3:0] mem_6[3:0];  // tmp5
-    reg[3:0] mem_7[3:0];  // tmp6
-    reg[3:0] mem_8[3:0];  // tmp7
-    reg[3:0] mem_9[3:0];  // tmp8
-    reg[3:0] mem_10[3:0];  // tmp9
-    reg[3:0] mem_11[3:0];  // tmp10
-    reg[3:0] mem_12[3:0];  // tmp11
+    reg[3:0] z[3:0];  // MemBlock
+    reg[3:0] tmp0[3:0];  // MemBlock
+    reg[3:0] tmp1[3:0];  // MemBlock
+    reg[3:0] tmp2[3:0];  // MemBlock
+    reg[3:0] tmp3[3:0];  // MemBlock
+    reg[3:0] tmp4[3:0];  // MemBlock
+    reg[3:0] tmp5[3:0];  // MemBlock
+    reg[3:0] tmp6[3:0];  // MemBlock
+    reg[3:0] tmp7[3:0];  // MemBlock
+    reg[3:0] tmp8[3:0];  // MemBlock
+    reg[3:0] tmp9[3:0];  // MemBlock
+    reg[3:0] tmp10[3:0];  // MemBlock
+    reg[3:0] tmp11[3:0];  // MemBlock
 
     // Registers
     reg[3:0] r;
@@ -864,96 +864,96 @@ module toplevel(clk, rst, a, o);
         end
     end
 
-    // Memory mem_0: z
+    // MemBlock z
     always @(posedge clk)
     begin
-        mem_0[2'd0] <= 4'd9;
+        z[2'd0] <= 4'd9;
     end
 
-    // Memory mem_1: tmp0
+    // MemBlock tmp0
     always @(posedge clk)
     begin
-        mem_1[2'd0] <= a;
-        mem_1[2'd1] <= (tmp14[3:0]);
+        tmp0[2'd0] <= a;
+        tmp0[2'd1] <= (tmp14[3:0]);
     end
-    assign tmp72 = mem_1[2'd0];
+    assign tmp72 = tmp0[2'd0];
 
-    // Memory mem_2: tmp1
+    // MemBlock tmp1
     always @(posedge clk)
     begin
-        mem_2[2'd0] <= a;
-        mem_2[2'd1] <= (tmp18[3:0]);
+        tmp1[2'd0] <= a;
+        tmp1[2'd1] <= (tmp18[3:0]);
     end
-    assign tmp76 = mem_2[2'd0];
+    assign tmp76 = tmp1[2'd0];
 
-    // Memory mem_3: tmp2
+    // MemBlock tmp2
     always @(posedge clk)
     begin
-        mem_3[2'd0] <= a;
-        mem_3[2'd1] <= (tmp22[3:0]);
-    end
-
-    // Memory mem_4: tmp3
-    always @(posedge clk)
-    begin
-        mem_4[2'd0] <= a;
-        mem_4[2'd1] <= (tmp26[3:0]);
+        tmp2[2'd0] <= a;
+        tmp2[2'd1] <= (tmp22[3:0]);
     end
 
-    // Memory mem_5: tmp4
+    // MemBlock tmp3
     always @(posedge clk)
     begin
-        mem_5[2'd0] <= a;
-        mem_5[2'd1] <= (tmp30[3:0]);
+        tmp3[2'd0] <= a;
+        tmp3[2'd1] <= (tmp26[3:0]);
     end
 
-    // Memory mem_6: tmp5
+    // MemBlock tmp4
     always @(posedge clk)
     begin
-        mem_6[2'd0] <= a;
-        mem_6[2'd1] <= (tmp34[3:0]);
+        tmp4[2'd0] <= a;
+        tmp4[2'd1] <= (tmp30[3:0]);
     end
 
-    // Memory mem_7: tmp6
+    // MemBlock tmp5
     always @(posedge clk)
     begin
-        mem_7[2'd0] <= a;
-        mem_7[2'd1] <= (tmp38[3:0]);
+        tmp5[2'd0] <= a;
+        tmp5[2'd1] <= (tmp34[3:0]);
     end
 
-    // Memory mem_8: tmp7
+    // MemBlock tmp6
     always @(posedge clk)
     begin
-        mem_8[2'd0] <= a;
-        mem_8[2'd1] <= (tmp42[3:0]);
+        tmp6[2'd0] <= a;
+        tmp6[2'd1] <= (tmp38[3:0]);
     end
 
-    // Memory mem_9: tmp8
+    // MemBlock tmp7
     always @(posedge clk)
     begin
-        mem_9[2'd0] <= a;
-        mem_9[2'd1] <= (tmp46[3:0]);
+        tmp7[2'd0] <= a;
+        tmp7[2'd1] <= (tmp42[3:0]);
     end
 
-    // Memory mem_10: tmp9
+    // MemBlock tmp8
     always @(posedge clk)
     begin
-        mem_10[2'd0] <= a;
-        mem_10[2'd1] <= (tmp50[3:0]);
+        tmp8[2'd0] <= a;
+        tmp8[2'd1] <= (tmp46[3:0]);
     end
 
-    // Memory mem_11: tmp10
+    // MemBlock tmp9
     always @(posedge clk)
     begin
-        mem_11[2'd0] <= a;
-        mem_11[2'd1] <= (tmp54[3:0]);
+        tmp9[2'd0] <= a;
+        tmp9[2'd1] <= (tmp50[3:0]);
     end
 
-    // Memory mem_12: tmp11
+    // MemBlock tmp10
     always @(posedge clk)
     begin
-        mem_12[2'd0] <= a;
-        mem_12[2'd1] <= (tmp58[3:0]);
+        tmp10[2'd0] <= a;
+        tmp10[2'd1] <= (tmp54[3:0]);
+    end
+
+    // MemBlock tmp11
+    always @(posedge clk)
+    begin
+        tmp11[2'd0] <= a;
+        tmp11[2'd1] <= (tmp58[3:0]);
     end
 
 endmodule
@@ -972,34 +972,34 @@ module toplevel(clk, rst, in1, out1);
     output[7:0] out1;
 
     // Memories
-    reg[7:0] mem_0[7:0];  // tmp0
-    reg[7:0] mem_1[255:0];  // tmp1
+    reg[7:0] rom[7:0];  // RomBlock
+    reg[7:0] mem[255:0];  // MemBlock
 
     // Temporaries
-    wire[7:0] tmp2;
+    wire[7:0] tmp0;
 
     // Read-only memory data
     initial begin
-        mem_0[0] = 8'ha;
-        mem_0[1] = 8'h14;
-        mem_0[2] = 8'h1e;
-        mem_0[3] = 8'h28;
-        mem_0[4] = 8'h32;
-        mem_0[5] = 8'h3c;
-        mem_0[6] = 8'h0;
-        mem_0[7] = 8'h0;
+        rom[0] = 8'ha;
+        rom[1] = 8'h14;
+        rom[2] = 8'h1e;
+        rom[3] = 8'h28;
+        rom[4] = 8'h32;
+        rom[5] = 8'h3c;
+        rom[6] = 8'h0;
+        rom[7] = 8'h0;
     end
 
     // Combinational logic
-    assign out1 = tmp2;
+    assign out1 = tmp0;
 
-    // Memory mem_0: tmp0
-    assign tmp2 = mem_0[in1];
+    // RomBlock rom
+    assign tmp0 = rom[in1];
 
-    // Memory mem_1: tmp1
+    // MemBlock mem
     always @(posedge clk)
     begin
-        mem_1[tmp2] <= 8'd42;
+        mem[tmp0] <= 8'd42;
     end
 
 endmodule
@@ -1241,9 +1241,9 @@ class TestVerilogOutput(unittest.TestCase):
     def test_mems_with_no_writes(self):
         rdata = {0: 10, 1: 20, 2: 30, 3: 40, 4: 50, 5: 60}
         rom = pyrtl.RomBlock(
-            bitwidth=8, addrwidth=3, romdata=rdata, pad_with_zeros=True
+            name="rom", bitwidth=8, addrwidth=3, romdata=rdata, pad_with_zeros=True
         )
-        mem = pyrtl.MemBlock(bitwidth=8, addrwidth=8)
+        mem = pyrtl.MemBlock(name="mem", bitwidth=8, addrwidth=8)
         in1 = pyrtl.Input(bitwidth=3, name="in1")
         out1 = pyrtl.Output(bitwidth=8, name="out1")
         w = rom[in1]
@@ -1430,9 +1430,13 @@ verilog_testbench = """\
 module tb();
     reg clk;
     reg rst;
+
+    // block Inputs
     reg[1:0] a100;
     reg[3:0] w1;
     reg[2:0] w12;
+
+    // block Outputs
     wire[1:0] out1;
     wire[8:0] out10;
 
@@ -1448,12 +1452,16 @@ module tb();
 
         clk = 1'd0;
         rst = 1'd0;
+
+        // Initialize Registers
         block.r1 = 3'd2;
         block.r2 = 4'd3;
         block.tmp0 = 8'd0;
-        for (tb_addr = 0; tb_addr < 32; tb_addr++) begin block.mem_0[tb_addr] = 4'd0; end
-        block.mem_0[2] = 4'd9;
-        block.mem_0[9] = 4'd12;
+
+        // Initialize MemBlocks
+        for (tb_addr = 0; tb_addr < 32; tb_addr++) begin block.mem[tb_addr] = 4'd0; end
+        block.mem[2] = 4'd9;
+        block.mem[9] = 4'd12;
         a100 = 2'd0;
         w1 = 4'd0;
         w12 = 3'd0;
@@ -1482,9 +1490,13 @@ endmodule
 verilog_testbench_no_reset = """\
 module tb();
     reg clk;
+
+    // block Inputs
     reg[1:0] a100;
     reg[3:0] w1;
     reg[2:0] w12;
+
+    // block Outputs
     wire[1:0] out1;
     wire[8:0] out10;
 
@@ -1499,12 +1511,16 @@ module tb();
         $dumpvars;
 
         clk = 1'd0;
+
+        // Initialize Registers
         block.r1 = 3'd2;
         block.r2 = 4'd3;
         block.tmp0 = 8'd0;
-        for (tb_addr = 0; tb_addr < 32; tb_addr++) begin block.mem_0[tb_addr] = 4'd0; end
-        block.mem_0[2] = 4'd9;
-        block.mem_0[9] = 4'd12;
+
+        // Initialize MemBlocks
+        for (tb_addr = 0; tb_addr < 32; tb_addr++) begin block.mem[tb_addr] = 4'd0; end
+        block.mem[2] = 4'd9;
+        block.mem[9] = 4'd12;
         a100 = 2'd0;
         w1 = 4'd0;
         w12 = 3'd0;
@@ -1533,6 +1549,8 @@ endmodule
 verilog_testbench_custom_reset = """\
 module tb();
     reg clk;
+
+    // block Inputs
     reg rst;
 
     toplevel block(.clk(clk), .rst(rst));
@@ -1545,6 +1563,8 @@ module tb();
         $dumpvars;
 
         clk = 1'd0;
+
+        // Initialize Registers
         block.r = 4'd0;
         $finish;
     end
@@ -1579,7 +1599,7 @@ class TestOutputTestbench(unittest.TestCase):
         i1, i2, i3 = pyrtl.input_list("w1/4 w12/3 a100/2")
         r1, r2 = pyrtl.register_list("r1/3 r2/4")
         r3 = pyrtl.Register(bitwidth=8)
-        mem = pyrtl.MemBlock(bitwidth=4, addrwidth=5)
+        mem = pyrtl.MemBlock(name="mem", bitwidth=4, addrwidth=5)
         o1, o2 = pyrtl.output_list("out1/2 out10/9")
         r1.next <<= i1 + i2
         r2.next <<= r1 * i3
@@ -1645,7 +1665,7 @@ class TestOutputTestbench(unittest.TestCase):
     def test_only_initialize_memblocks(self):
         """Test that RomBlocks are not re-initialized by the testbench."""
         romblock = pyrtl.RomBlock(
-            name="romblock", bitwidth=3, addrwidth=2, romdata=[1, 2, 3, 4]
+            name="my_rom", bitwidth=3, addrwidth=2, romdata=[1, 2, 3, 4]
         )
         addr = pyrtl.Input(name="addr", bitwidth=2)
         data = pyrtl.Output(name="data", bitwidth=3)
@@ -1654,16 +1674,16 @@ class TestOutputTestbench(unittest.TestCase):
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer)
         # The Verilog code should declare the RomBlock and define its values.
-        self.assertTrue("reg[2:0] mem_0[3:0];  // romblock" in buffer.getvalue())
-        self.assertTrue("mem_0[0] = 3'h1;" in buffer.getvalue())
-        self.assertTrue("mem_0[1] = 3'h2;" in buffer.getvalue())
-        self.assertTrue("mem_0[2] = 3'h3;" in buffer.getvalue())
-        self.assertTrue("mem_0[3] = 3'h4;" in buffer.getvalue())
+        self.assertTrue("reg[2:0] my_rom[3:0];  // RomBlock" in buffer.getvalue())
+        self.assertTrue("my_rom[0] = 3'h1;" in buffer.getvalue())
+        self.assertTrue("my_rom[1] = 3'h2;" in buffer.getvalue())
+        self.assertTrue("my_rom[2] = 3'h3;" in buffer.getvalue())
+        self.assertTrue("my_rom[3] = 3'h4;" in buffer.getvalue())
 
         buffer = io.StringIO()
         pyrtl.output_verilog_testbench(buffer, add_reset=False)
         # The testbench should not touch the RomBlock.
-        self.assertTrue("mem_0" not in buffer.getvalue())
+        self.assertTrue("my_rom" not in buffer.getvalue())
 
 
 firrtl_output_concat_test = """\

@@ -798,6 +798,7 @@ class _VerilogOutput:
                 return gate.name
             return gate.args[2].name
 
+        # Sanitize all Gate names.
         for gate in sorted(self.gate_graph.gates, key=gate_key):
             if gate.name:
                 self.internal_names.make_valid_string(gate.name)
@@ -807,8 +808,8 @@ class _VerilogOutput:
 
         self.io_list = [
             "clk",
-            *[self._verilog_name(input) for input in self.inputs],
-            *[self._verilog_name(output) for output in self.outputs],
+            *[self._verilog_name(input.name) for input in self.inputs],
+            *[self._verilog_name(output.name) for output in self.outputs],
         ]
         if self.add_reset:
             self.io_list.insert(1, "rst")
@@ -828,6 +829,10 @@ class _VerilogOutput:
             key=lambda memblock: memblock.id,
         )
 
+        # Sanitize all MemBlock names.
+        for memblock in self.all_memblocks:
+            self.internal_names.make_valid_string(memblock.name)
+
         # List of unique MemBlocks (not RomBlocks!), sorted by memid.
         self.memblocks = [
             memblock for memblock in self.all_memblocks if type(memblock) is MemBlock
@@ -840,9 +845,9 @@ class _VerilogOutput:
             if isinstance(romblock, RomBlock)
         ]
 
-    def _verilog_name(self, gate: Gate) -> str:
-        """Return a ``Gate``'s Verilog name."""
-        return self.internal_names[gate.name]
+    def _verilog_name(self, name: str) -> str:
+        """Return the sanitized Verilog identifier name for ``name``."""
+        return self.internal_names[name]
 
     def _name_sorted(self, gates: set[Gate]) -> list[Gate]:
         def name_mapper(gate: Gate) -> str:
@@ -851,7 +856,7 @@ class _VerilogOutput:
                 # ``wr_en``, since this particular net is used within 'always begin ...
                 # end' blocks for memory update logic.
                 return gate.args[2].name
-            return self._verilog_name(gate)
+            return self._verilog_name(gate.name)
 
         return _name_sorted(gates, name_mapper=name_mapper)
 
@@ -923,6 +928,25 @@ class _VerilogOutput:
 
         return not excluded and (is_named or multiple_users or is_read or is_sliced)
 
+    def _name_and_comment(self, name: str, kind="") -> tuple[str, str]:
+        """Return the sanitized version of ``name`` and a Verilog comment with the
+        un-sanitized name. If ``kind`` is provided, it will always be included in the
+        comment.
+        """
+        sanitized_name = self._verilog_name(name)
+        if kind:
+            if sanitized_name != name:
+                comment = f"  // {kind} {name}"
+            else:
+                comment = f"  // {kind}"
+        else:
+            if sanitized_name != name:
+                comment = f"  // {name}"
+            else:
+                comment = ""
+
+        return sanitized_name, comment
+
     def _to_verilog_header(self, file: IO, initialize_registers: bool):
         """Print the header of the verilog implementation."""
         print("// Generated automatically via PyRTL", file=file)
@@ -940,16 +964,19 @@ class _VerilogOutput:
         print("    input clk;", file=file)
         if self.add_reset:
             print("    input rst;", file=file)
+
         for input_gate in self.inputs:
+            sanitized_name, comment = self._name_and_comment(input_gate.name)
             print(
-                f"    input{self._verilog_size(input_gate.bitwidth)} "
-                f"{self._verilog_name(input_gate)};",
+                f"    input{self._verilog_size(input_gate.bitwidth)} {sanitized_name};"
+                f"{comment}",
                 file=file,
             )
         for output_gate in self.outputs:
+            sanitized_name, comment = self._name_and_comment(output_gate.name)
             print(
                 f"    output{self._verilog_size(output_gate.bitwidth)} "
-                f"{self._verilog_name(output_gate)};",
+                f"{sanitized_name};{comment}",
                 file=file,
             )
         print(file=file)
@@ -958,10 +985,14 @@ class _VerilogOutput:
         if self.all_memblocks:
             print("    // Memories", file=file)
         for memblock in self.all_memblocks:
+            kind = "MemBlock"
+            if isinstance(memblock, RomBlock):
+                kind = "RomBlock"
+            sanitized_name, comment = self._name_and_comment(memblock.name, kind)
             print(
                 f"    reg{self._verilog_size(memblock.bitwidth)} "
-                f"mem_{memblock.id}{self._verilog_size(1 << memblock.addrwidth)};"
-                f"  // {memblock.name}",
+                f"{sanitized_name}{self._verilog_size(1 << memblock.addrwidth)};"
+                f"{comment}",
                 file=file,
             )
         if self.all_memblocks:
@@ -978,16 +1009,16 @@ class _VerilogOutput:
                 if reg_gate.op_param[0] is not None:
                     reset_value = reg_gate.op_param[0]
                 register_initialization = f" = {reg_gate.bitwidth}'d{reset_value}"
+            sanitized_name, comment = self._name_and_comment(reg_gate.name)
             print(
                 f"    reg{self._verilog_size(reg_gate.bitwidth)} "
-                f"{self._verilog_name(reg_gate)}"
-                f"{register_initialization};",
+                f"{sanitized_name}{register_initialization};{comment}",
                 file=file,
             )
         if self.registers:
             print(file=file)
 
-        # Declare constants with user-specified names.
+        # Declare constants.
         const_gates = []
         for const_gate in self._name_sorted(self.gate_graph.consts):
             if self._should_declare_const(const_gate):
@@ -997,10 +1028,11 @@ class _VerilogOutput:
         if const_gates:
             print("    // Constants", file=file)
         for const_gate in const_gates:
+            sanitized_name, comment = self._name_and_comment(const_gate.name)
             print(
                 f"    wire{self._verilog_size(const_gate.bitwidth)} "
-                f"{self._verilog_name(const_gate)} = "
-                f"{const_gate.bitwidth}'d{const_gate.op_param[0]};",
+                f"{sanitized_name} = {const_gate.bitwidth}'d{const_gate.op_param[0]};"
+                f"{comment}",
                 file=file,
             )
         if const_gates:
@@ -1017,9 +1049,10 @@ class _VerilogOutput:
         if temp_gates:
             print("    // Temporaries", file=file)
         for temp_gate in temp_gates:
+            sanitized_name, comment = self._name_and_comment(temp_gate.name)
             print(
-                f"    wire{self._verilog_size(temp_gate.bitwidth)} "
-                f"{self._verilog_name(temp_gate)};",
+                f"    wire{self._verilog_size(temp_gate.bitwidth)} {sanitized_name};"
+                f"{comment}",
                 file=file,
             )
         if temp_gates:
@@ -1034,7 +1067,7 @@ class _VerilogOutput:
             print("    initial begin", file=file)
             for addr in range(1 << romblock.addrwidth):
                 print(
-                    f"        mem_{romblock.id}[{addr}] = "
+                    f"        {self._verilog_name(romblock.name)}[{addr}] = "
                     f"{romblock.bitwidth}'h{romblock._get_read_data(addr):x};",
                     file=file,
                 )
@@ -1073,7 +1106,7 @@ class _VerilogOutput:
         if gate in self.declared_gates and lhs is not gate:
             # If a Verilog wire/reg has been declared for the gate, and we are not
             # currently defining the Gate's value, just return the wire's Verilog name.
-            return self._verilog_name(gate)
+            return self._verilog_name(gate.name)
         if gate.op == "C":
             # Return the constant's Verilog value.
             return f"{gate.bitwidth}'d{gate.op_param[0]}"
@@ -1138,7 +1171,7 @@ class _VerilogOutput:
         print("    // Combinational logic", file=file)
         for assignment_gate in self._name_sorted(self.combinational_gates):
             print(
-                f"    assign {self._verilog_name(assignment_gate)} = "
+                f"    assign {self._verilog_name(assignment_gate.name)} = "
                 f"{self._verilog_expr(assignment_gate, lhs=assignment_gate)};",
                 file=file,
             )
@@ -1160,7 +1193,7 @@ class _VerilogOutput:
             for register in self._name_sorted(self.gate_graph.registers):
                 reset_value = register.op_param[0]
                 print(
-                    f"            {self._verilog_name(register)} <= "
+                    f"            {self._verilog_name(register.name)} <= "
                     f"{register.bitwidth}'d{reset_value};",
                     file=file,
                 )
@@ -1171,7 +1204,7 @@ class _VerilogOutput:
 
         for register in self._name_sorted(self.gate_graph.registers):
             print(
-                f"            {self._verilog_name(register)} <= "
+                f"            {self._verilog_name(register.name)} <= "
                 f"{self._verilog_expr(register.args[0])};",
                 file=file,
             )
@@ -1182,7 +1215,10 @@ class _VerilogOutput:
     def _to_verilog_memories(self, file: IO):
         """Generate Verilog logic for MemBlock and RomBlock reads and writes."""
         for memblock in self.all_memblocks:
-            print(f"    // Memory mem_{memblock.id}: {memblock.name}", file=file)
+            kind = "MemBlock"
+            if isinstance(memblock, RomBlock):
+                kind = "RomBlock"
+            print(f"    // {kind} {memblock.name}", file=file)
 
             # Find writes to ``memblock``.
             write_gates = []
@@ -1200,15 +1236,15 @@ class _VerilogOutput:
                     # Simplify the assignment if the enable bit is a constant ``1``.
                     if enable.op == "C" and enable.op_param[0] == 1:
                         print(
-                            f"        mem_{write_gate.op_param[0]}[{verilog_addr}] <= "
-                            f"{verilog_rhs};",
+                            f"        {self._verilog_name(memblock.name)}"
+                            f"[{verilog_addr}] <= {verilog_rhs};",
                             file=file,
                         )
                     else:
                         print(
                             f"        if ({verilog_enable}) begin\n"
-                            f"            mem_{write_gate.op_param[0]}[{verilog_addr}] "
-                            f"<= {verilog_rhs};\n"
+                            f"            {self._verilog_name(memblock.name)}"
+                            f"[{verilog_addr}] <= {verilog_rhs};\n"
                             "        end",
                             file=file,
                         )
@@ -1222,8 +1258,8 @@ class _VerilogOutput:
                     read_gates.append(read_gate)
             for read_gate in self._name_sorted(read_gates):
                 print(
-                    f"    assign {self._verilog_name(read_gate)} = "
-                    f"mem_{read_gate.op_param[0]}"
+                    f"    assign {self._verilog_name(read_gate.name)} = "
+                    f"{self._verilog_name(memblock.name)}"
                     f"[{self._verilog_expr(read_gate.args[0])}];",
                     file=file,
                 )
@@ -1259,18 +1295,24 @@ class _VerilogOutput:
         print("    reg clk;", file=dest_file)
         if self.add_reset:
             print("    reg rst;", file=dest_file)
+        if self.inputs:
+            print("\n    // block Inputs", file=dest_file)
         for input_gate in self.inputs:
+            sanitized_name, comment = self._name_and_comment(input_gate.name)
             print(
-                f"    reg{self._verilog_size(input_gate.bitwidth)} "
-                f"{self._verilog_name(input_gate)};",
+                f"    reg{self._verilog_size(input_gate.bitwidth)} {sanitized_name};"
+                f"{comment}",
                 file=dest_file,
             )
 
         # Declare all block outputs as wires.
+        if self.outputs:
+            print("\n    // block Outputs", file=dest_file)
         for output_gate in self.outputs:
+            sanitized_name, comment = self._name_and_comment(output_gate.name)
             print(
-                f"    wire{self._verilog_size(output_gate.bitwidth)} "
-                f"{self._verilog_name(output_gate)};",
+                f"    wire{self._verilog_size(output_gate.bitwidth)} {sanitized_name};"
+                f"{comment}",
                 file=dest_file,
             )
         print(file=dest_file)
@@ -1313,6 +1355,9 @@ class _VerilogOutput:
                 register.name: value
                 for register, value in simulation_trace.register_value_map.items()
             }
+
+        if self.registers:
+            print("\n        // Initialize Registers", file=dest_file)
         for reg_gate in self.registers:
             # Try using register_value_map first.
             initial_value = register_value_map.get(reg_gate.name)
@@ -1323,17 +1368,19 @@ class _VerilogOutput:
             if not initial_value:
                 initial_value = default_value()
             print(
-                f"        block.{self._verilog_name(reg_gate)} = "
+                f"        block.{self._verilog_name(reg_gate.name)} = "
                 f"{reg_gate.bitwidth}'d{initial_value};",
                 file=dest_file,
             )
 
         # Initialize MemBlocks.
+        if self.memblocks:
+            print("\n        // Initialize MemBlocks", file=dest_file)
         for memblock in self.memblocks:
             max_addr = 1 << memblock.addrwidth
             print(
                 f"        for (tb_addr = 0; tb_addr < {max_addr}; tb_addr++) "
-                f"begin block.mem_{memblock.id}[tb_addr] = "
+                f"begin block.{self._verilog_name(memblock.name)}[tb_addr] = "
                 f"{memblock.bitwidth}'d{default_value()}; end",
                 file=dest_file,
             )
@@ -1349,7 +1396,7 @@ class _VerilogOutput:
                 if initial_data == default_value():
                     continue
                 print(
-                    f"        block.mem_{memblock.id}[{addr}] = "
+                    f"        block.{self._verilog_name(memblock.name)}[{addr}] = "
                     f"{memblock.bitwidth}'d{initial_data};",
                     file=dest_file,
                 )
@@ -1361,7 +1408,7 @@ class _VerilogOutput:
                 for input_gate in self.inputs:
                     input_value = simulation_trace.trace[input_gate.name][i]
                     print(
-                        f"        {self._verilog_name(input_gate)} = "
+                        f"        {self._verilog_name(input_gate.name)} = "
                         f"{input_gate.bitwidth}'d{input_value};",
                         file=dest_file,
                     )
