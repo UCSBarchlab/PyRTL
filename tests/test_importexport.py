@@ -772,20 +772,12 @@ module toplevel(clk, o);
     input clk;
     output[12:0] o;
 
-    wire[3:0] const_0_12;
-    wire[2:0] const_1_3;
-    wire[5:0] k;
-    wire[12:0] tmp0;
+    // Constants
+    wire[5:0] k = 6'd38;
 
-    // Combinational
-    assign const_0_12 = 12;
-    assign const_1_3 = 3;
-    assign k = 38;
-    assign o = tmp0;
-    assign tmp0 = {const_0_12, const_1_3, k};
-
+    // Combinational logic
+    assign o = {4'd12, 3'd3, k};
 endmodule
-
 """
 
 
@@ -800,625 +792,154 @@ module toplevel(clk, rst, a, o);
     input[3:0] a;
     output[5:0] o;
 
-    reg[3:0] mem_0[3:0]; //z
-    reg[3:0] mem_1[3:0]; //tmp0
-    reg[3:0] mem_2[3:0]; //tmp1
-    reg[3:0] mem_3[3:0]; //tmp2
-    reg[3:0] mem_4[3:0]; //tmp3
-    reg[3:0] mem_5[3:0]; //tmp4
-    reg[3:0] mem_6[3:0]; //tmp5
-    reg[3:0] mem_7[3:0]; //tmp6
-    reg[3:0] mem_8[3:0]; //tmp7
-    reg[3:0] mem_9[3:0]; //tmp8
-    reg[3:0] mem_10[3:0]; //tmp9
-    reg[3:0] mem_11[3:0]; //tmp10
-    reg[3:0] mem_12[3:0]; //tmp11
+    // Memories
+    reg[3:0] z[3:0];  // MemBlock
+    reg[3:0] tmp0[3:0];  // MemBlock
+    reg[3:0] tmp1[3:0];  // MemBlock
+    reg[3:0] tmp2[3:0];  // MemBlock
+    reg[3:0] tmp3[3:0];  // MemBlock
+    reg[3:0] tmp4[3:0];  // MemBlock
+    reg[3:0] tmp5[3:0];  // MemBlock
+    reg[3:0] tmp6[3:0];  // MemBlock
+    reg[3:0] tmp7[3:0];  // MemBlock
+    reg[3:0] tmp8[3:0];  // MemBlock
+    reg[3:0] tmp9[3:0];  // MemBlock
+    reg[3:0] tmp10[3:0];  // MemBlock
+    reg[3:0] tmp11[3:0];  // MemBlock
+
+    // Registers
     reg[3:0] r;
     reg[3:0] s;
 
-    wire[1:0] const_0_0;
-    wire[1:0] const_1_0;
-    wire const_2_1;
-    wire[1:0] const_3_1;
-    wire const_4_1;
-    wire const_5_0;
-    wire[1:0] const_6_1;
-    wire const_7_1;
-    wire[1:0] const_8_0;
-    wire[1:0] const_9_0;
-    wire const_10_1;
-    wire[1:0] const_11_1;
-    wire const_12_1;
-    wire const_13_0;
-    wire[1:0] const_14_1;
-    wire const_15_1;
-    wire[1:0] const_16_0;
-    wire[1:0] const_17_0;
-    wire const_18_1;
-    wire[1:0] const_19_1;
-    wire const_20_1;
-    wire const_21_0;
-    wire[1:0] const_22_1;
-    wire const_23_1;
-    wire[1:0] const_24_0;
-    wire[1:0] const_25_0;
-    wire const_26_1;
-    wire[1:0] const_27_1;
-    wire const_28_1;
-    wire const_29_0;
-    wire[1:0] const_30_1;
-    wire const_31_1;
-    wire[1:0] const_32_0;
-    wire[1:0] const_33_0;
-    wire const_34_1;
-    wire[1:0] const_35_1;
-    wire const_36_1;
-    wire const_37_0;
-    wire[1:0] const_38_1;
-    wire const_39_1;
-    wire[1:0] const_40_0;
-    wire[1:0] const_41_0;
-    wire const_42_1;
-    wire[1:0] const_43_1;
-    wire const_44_1;
-    wire const_45_0;
-    wire[1:0] const_46_1;
-    wire const_47_1;
-    wire[1:0] const_48_0;
-    wire[1:0] const_49_0;
-    wire const_50_1;
-    wire[1:0] const_51_1;
-    wire const_52_1;
-    wire const_53_0;
-    wire[1:0] const_54_1;
-    wire const_55_1;
-    wire[1:0] const_56_0;
-    wire[1:0] const_57_0;
-    wire const_58_1;
-    wire[1:0] const_59_1;
-    wire const_60_1;
-    wire const_61_0;
-    wire[1:0] const_62_1;
-    wire const_63_1;
-    wire[1:0] const_64_0;
-    wire[1:0] const_65_0;
-    wire const_66_1;
-    wire[1:0] const_67_1;
-    wire const_68_1;
-    wire const_69_0;
-    wire[1:0] const_70_1;
-    wire const_71_1;
-    wire[1:0] const_72_0;
-    wire[1:0] const_73_0;
-    wire const_74_1;
-    wire[1:0] const_75_1;
-    wire const_76_1;
-    wire const_77_0;
-    wire[1:0] const_78_1;
-    wire const_79_1;
-    wire[1:0] const_80_0;
-    wire[1:0] const_81_0;
-    wire const_82_1;
-    wire[1:0] const_83_1;
-    wire const_84_1;
-    wire const_85_0;
-    wire[1:0] const_86_1;
-    wire const_87_1;
-    wire[1:0] const_88_0;
-    wire[1:0] const_89_0;
-    wire const_90_1;
-    wire[1:0] const_91_1;
-    wire const_92_1;
-    wire const_93_0;
-    wire[1:0] const_94_1;
-    wire const_95_1;
-    wire const_96_1;
-    wire const_97_0;
-    wire const_98_0;
-    wire const_99_1;
-    wire const_100_0;
-    wire[1:0] const_101_0;
-    wire[1:0] const_102_0;
-    wire const_103_1;
-    wire[3:0] const_104_9;
-    wire[1:0] const_105_0;
-    wire const_106_0;
-    wire[1:0] const_107_0;
-    wire const_108_0;
-    wire[2:0] tmp12;
-    wire[3:0] tmp13;
+    // Temporaries
     wire[4:0] tmp14;
-    wire[3:0] tmp15;
-    wire[2:0] tmp16;
-    wire[3:0] tmp17;
     wire[4:0] tmp18;
-    wire[3:0] tmp19;
-    wire[2:0] tmp20;
-    wire[3:0] tmp21;
     wire[4:0] tmp22;
-    wire[3:0] tmp23;
-    wire[2:0] tmp24;
-    wire[3:0] tmp25;
     wire[4:0] tmp26;
-    wire[3:0] tmp27;
-    wire[2:0] tmp28;
-    wire[3:0] tmp29;
     wire[4:0] tmp30;
-    wire[3:0] tmp31;
-    wire[2:0] tmp32;
-    wire[3:0] tmp33;
     wire[4:0] tmp34;
-    wire[3:0] tmp35;
-    wire[2:0] tmp36;
-    wire[3:0] tmp37;
     wire[4:0] tmp38;
-    wire[3:0] tmp39;
-    wire[2:0] tmp40;
-    wire[3:0] tmp41;
     wire[4:0] tmp42;
-    wire[3:0] tmp43;
-    wire[2:0] tmp44;
-    wire[3:0] tmp45;
     wire[4:0] tmp46;
-    wire[3:0] tmp47;
-    wire[2:0] tmp48;
-    wire[3:0] tmp49;
     wire[4:0] tmp50;
-    wire[3:0] tmp51;
-    wire[2:0] tmp52;
-    wire[3:0] tmp53;
     wire[4:0] tmp54;
-    wire[3:0] tmp55;
-    wire[2:0] tmp56;
-    wire[3:0] tmp57;
     wire[4:0] tmp58;
-    wire[3:0] tmp59;
     wire[4:0] tmp60;
-    wire[3:0] tmp61;
-    wire[4:0] tmp62;
-    wire[5:0] tmp63;
-    wire[1:0] tmp64;
-    wire[5:0] tmp65;
     wire[6:0] tmp66;
-    wire[3:0] tmp67;
-    wire[2:0] tmp68;
-    wire[3:0] tmp69;
     wire[4:0] tmp70;
-    wire[3:0] tmp71;
     wire[3:0] tmp72;
-    wire tmp73;
-    wire[4:0] tmp74;
-    wire[5:0] tmp75;
     wire[3:0] tmp76;
-    wire[1:0] tmp77;
-    wire[5:0] tmp78;
     wire[6:0] tmp79;
-    wire[5:0] tmp80;
 
-    // Combinational
-    assign const_0_0 = 0;
-    assign const_1_0 = 0;
-    assign const_2_1 = 1;
-    assign const_3_1 = 1;
-    assign const_4_1 = 1;
-    assign const_5_0 = 0;
-    assign const_6_1 = 1;
-    assign const_7_1 = 1;
-    assign const_8_0 = 0;
-    assign const_9_0 = 0;
-    assign const_10_1 = 1;
-    assign const_11_1 = 1;
-    assign const_12_1 = 1;
-    assign const_13_0 = 0;
-    assign const_14_1 = 1;
-    assign const_15_1 = 1;
-    assign const_16_0 = 0;
-    assign const_17_0 = 0;
-    assign const_18_1 = 1;
-    assign const_19_1 = 1;
-    assign const_20_1 = 1;
-    assign const_21_0 = 0;
-    assign const_22_1 = 1;
-    assign const_23_1 = 1;
-    assign const_24_0 = 0;
-    assign const_25_0 = 0;
-    assign const_26_1 = 1;
-    assign const_27_1 = 1;
-    assign const_28_1 = 1;
-    assign const_29_0 = 0;
-    assign const_30_1 = 1;
-    assign const_31_1 = 1;
-    assign const_32_0 = 0;
-    assign const_33_0 = 0;
-    assign const_34_1 = 1;
-    assign const_35_1 = 1;
-    assign const_36_1 = 1;
-    assign const_37_0 = 0;
-    assign const_38_1 = 1;
-    assign const_39_1 = 1;
-    assign const_40_0 = 0;
-    assign const_41_0 = 0;
-    assign const_42_1 = 1;
-    assign const_43_1 = 1;
-    assign const_44_1 = 1;
-    assign const_45_0 = 0;
-    assign const_46_1 = 1;
-    assign const_47_1 = 1;
-    assign const_48_0 = 0;
-    assign const_49_0 = 0;
-    assign const_50_1 = 1;
-    assign const_51_1 = 1;
-    assign const_52_1 = 1;
-    assign const_53_0 = 0;
-    assign const_54_1 = 1;
-    assign const_55_1 = 1;
-    assign const_56_0 = 0;
-    assign const_57_0 = 0;
-    assign const_58_1 = 1;
-    assign const_59_1 = 1;
-    assign const_60_1 = 1;
-    assign const_61_0 = 0;
-    assign const_62_1 = 1;
-    assign const_63_1 = 1;
-    assign const_64_0 = 0;
-    assign const_65_0 = 0;
-    assign const_66_1 = 1;
-    assign const_67_1 = 1;
-    assign const_68_1 = 1;
-    assign const_69_0 = 0;
-    assign const_70_1 = 1;
-    assign const_71_1 = 1;
-    assign const_72_0 = 0;
-    assign const_73_0 = 0;
-    assign const_74_1 = 1;
-    assign const_75_1 = 1;
-    assign const_76_1 = 1;
-    assign const_77_0 = 0;
-    assign const_78_1 = 1;
-    assign const_79_1 = 1;
-    assign const_80_0 = 0;
-    assign const_81_0 = 0;
-    assign const_82_1 = 1;
-    assign const_83_1 = 1;
-    assign const_84_1 = 1;
-    assign const_85_0 = 0;
-    assign const_86_1 = 1;
-    assign const_87_1 = 1;
-    assign const_88_0 = 0;
-    assign const_89_0 = 0;
-    assign const_90_1 = 1;
-    assign const_91_1 = 1;
-    assign const_92_1 = 1;
-    assign const_93_0 = 0;
-    assign const_94_1 = 1;
-    assign const_95_1 = 1;
-    assign const_96_1 = 1;
-    assign const_97_0 = 0;
-    assign const_98_0 = 0;
-    assign const_99_1 = 1;
-    assign const_100_0 = 0;
-    assign const_101_0 = 0;
-    assign const_102_0 = 0;
-    assign const_103_1 = 1;
-    assign const_104_9 = 9;
-    assign const_105_0 = 0;
-    assign const_106_0 = 0;
-    assign const_107_0 = 0;
-    assign const_108_0 = 0;
-    assign o = tmp80;
-    assign tmp12 = {const_5_0, const_5_0, const_5_0};
-    assign tmp13 = {tmp12, const_4_1};
-    assign tmp14 = r + tmp13;
-    assign tmp15 = {tmp14[3], tmp14[2], tmp14[1], tmp14[0]};
-    assign tmp16 = {const_13_0, const_13_0, const_13_0};
-    assign tmp17 = {tmp16, const_12_1};
-    assign tmp18 = r + tmp17;
-    assign tmp19 = {tmp18[3], tmp18[2], tmp18[1], tmp18[0]};
-    assign tmp20 = {const_21_0, const_21_0, const_21_0};
-    assign tmp21 = {tmp20, const_20_1};
-    assign tmp22 = r + tmp21;
-    assign tmp23 = {tmp22[3], tmp22[2], tmp22[1], tmp22[0]};
-    assign tmp24 = {const_29_0, const_29_0, const_29_0};
-    assign tmp25 = {tmp24, const_28_1};
-    assign tmp26 = r + tmp25;
-    assign tmp27 = {tmp26[3], tmp26[2], tmp26[1], tmp26[0]};
-    assign tmp28 = {const_37_0, const_37_0, const_37_0};
-    assign tmp29 = {tmp28, const_36_1};
-    assign tmp30 = r + tmp29;
-    assign tmp31 = {tmp30[3], tmp30[2], tmp30[1], tmp30[0]};
-    assign tmp32 = {const_45_0, const_45_0, const_45_0};
-    assign tmp33 = {tmp32, const_44_1};
-    assign tmp34 = r + tmp33;
-    assign tmp35 = {tmp34[3], tmp34[2], tmp34[1], tmp34[0]};
-    assign tmp36 = {const_53_0, const_53_0, const_53_0};
-    assign tmp37 = {tmp36, const_52_1};
-    assign tmp38 = r + tmp37;
-    assign tmp39 = {tmp38[3], tmp38[2], tmp38[1], tmp38[0]};
-    assign tmp40 = {const_61_0, const_61_0, const_61_0};
-    assign tmp41 = {tmp40, const_60_1};
-    assign tmp42 = r + tmp41;
-    assign tmp43 = {tmp42[3], tmp42[2], tmp42[1], tmp42[0]};
-    assign tmp44 = {const_69_0, const_69_0, const_69_0};
-    assign tmp45 = {tmp44, const_68_1};
-    assign tmp46 = r + tmp45;
-    assign tmp47 = {tmp46[3], tmp46[2], tmp46[1], tmp46[0]};
-    assign tmp48 = {const_77_0, const_77_0, const_77_0};
-    assign tmp49 = {tmp48, const_76_1};
-    assign tmp50 = r + tmp49;
-    assign tmp51 = {tmp50[3], tmp50[2], tmp50[1], tmp50[0]};
-    assign tmp52 = {const_85_0, const_85_0, const_85_0};
-    assign tmp53 = {tmp52, const_84_1};
-    assign tmp54 = r + tmp53;
-    assign tmp55 = {tmp54[3], tmp54[2], tmp54[1], tmp54[0]};
-    assign tmp56 = {const_93_0, const_93_0, const_93_0};
-    assign tmp57 = {tmp56, const_92_1};
-    assign tmp58 = r + tmp57;
-    assign tmp59 = {tmp58[3], tmp58[2], tmp58[1], tmp58[0]};
-    assign tmp60 = a + r;
-    assign tmp61 = {const_97_0, const_97_0, const_97_0, const_97_0};
-    assign tmp62 = {tmp61, const_96_1};
-    assign tmp63 = tmp60 + tmp62;
-    assign tmp64 = {const_98_0, const_98_0};
-    assign tmp65 = {tmp64, s};
-    assign tmp66 = tmp63 - tmp65;
-    assign tmp67 = {tmp66[3], tmp66[2], tmp66[1], tmp66[0]};
-    assign tmp68 = {const_100_0, const_100_0, const_100_0};
-    assign tmp69 = {tmp68, const_99_1};
-    assign tmp70 = a - tmp69;
-    assign tmp71 = {tmp70[3], tmp70[2], tmp70[1], tmp70[0]};
-    assign tmp73 = {const_106_0};
-    assign tmp74 = {tmp73, tmp72};
-    assign tmp75 = tmp60 + tmp74;
-    assign tmp77 = {const_108_0, const_108_0};
-    assign tmp78 = {tmp77, tmp76};
-    assign tmp79 = tmp75 + tmp78;
-    assign tmp80 = {tmp79[5], tmp79[4], tmp79[3], tmp79[2], tmp79[1], tmp79[0]};
+    // Combinational logic
+    assign o = (tmp79[5:0]);
+    assign tmp14 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp18 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp22 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp26 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp30 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp34 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp38 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp42 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp46 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp50 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp54 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp58 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp60 = (a + r);
+    assign tmp66 = ((tmp60 + {{4 {1'd0}}, 1'd1}) - {{2 {1'd0}}, s});
+    assign tmp70 = (a - {{3 {1'd0}}, 1'd1});
+    assign tmp79 = ((tmp60 + {(1'd0), tmp72}) + {{2 {1'd0}}, tmp76});
 
-    // Registers
-    always @(posedge clk)
-    begin
+    // Register logic
+    always @(posedge clk) begin
         if (rst) begin
-            r <= 0;
-            s <= 13;
-        end
-        else begin
-            r <= tmp67;
-            s <= tmp71;
-        end
-    end
-
-    // Memory mem_0: z
-    always @(posedge clk)
-    begin
-        if (const_103_1) begin
-            mem_0[const_102_0] <= const_104_9;
+            r <= 4'd0;
+            s <= 4'd13;
+        end else begin
+            r <= (tmp66[3:0]);
+            s <= (tmp70[3:0]);
         end
     end
 
-    // Memory mem_1: tmp0
-    always @(posedge clk)
-    begin
-        if (const_2_1) begin
-            mem_1[const_1_0] <= a;
-        end
-        if (const_7_1) begin
-            mem_1[const_6_1] <= tmp15;
-        end
-    end
-    assign tmp72 = mem_1[const_105_0];
-
-    // Memory mem_2: tmp1
-    always @(posedge clk)
-    begin
-        if (const_10_1) begin
-            mem_2[const_9_0] <= a;
-        end
-        if (const_15_1) begin
-            mem_2[const_14_1] <= tmp19;
-        end
-    end
-    assign tmp76 = mem_2[const_107_0];
-
-    // Memory mem_3: tmp2
-    always @(posedge clk)
-    begin
-        if (const_18_1) begin
-            mem_3[const_17_0] <= a;
-        end
-        if (const_23_1) begin
-            mem_3[const_22_1] <= tmp23;
-        end
+    // MemBlock z logic
+    always @(posedge clk) begin
+        z[2'd0] <= 4'd9;
     end
 
-    // Memory mem_4: tmp3
-    always @(posedge clk)
-    begin
-        if (const_26_1) begin
-            mem_4[const_25_0] <= a;
-        end
-        if (const_31_1) begin
-            mem_4[const_30_1] <= tmp27;
-        end
+    // MemBlock tmp0 logic
+    always @(posedge clk) begin
+        tmp0[2'd0] <= a;
+        tmp0[2'd1] <= (tmp14[3:0]);
+    end
+    assign tmp72 = tmp0[2'd0];
+
+    // MemBlock tmp1 logic
+    always @(posedge clk) begin
+        tmp1[2'd0] <= a;
+        tmp1[2'd1] <= (tmp18[3:0]);
+    end
+    assign tmp76 = tmp1[2'd0];
+
+    // MemBlock tmp2 logic
+    always @(posedge clk) begin
+        tmp2[2'd0] <= a;
+        tmp2[2'd1] <= (tmp22[3:0]);
     end
 
-    // Memory mem_5: tmp4
-    always @(posedge clk)
-    begin
-        if (const_34_1) begin
-            mem_5[const_33_0] <= a;
-        end
-        if (const_39_1) begin
-            mem_5[const_38_1] <= tmp31;
-        end
+    // MemBlock tmp3 logic
+    always @(posedge clk) begin
+        tmp3[2'd0] <= a;
+        tmp3[2'd1] <= (tmp26[3:0]);
     end
 
-    // Memory mem_6: tmp5
-    always @(posedge clk)
-    begin
-        if (const_42_1) begin
-            mem_6[const_41_0] <= a;
-        end
-        if (const_47_1) begin
-            mem_6[const_46_1] <= tmp35;
-        end
+    // MemBlock tmp4 logic
+    always @(posedge clk) begin
+        tmp4[2'd0] <= a;
+        tmp4[2'd1] <= (tmp30[3:0]);
     end
 
-    // Memory mem_7: tmp6
-    always @(posedge clk)
-    begin
-        if (const_50_1) begin
-            mem_7[const_49_0] <= a;
-        end
-        if (const_55_1) begin
-            mem_7[const_54_1] <= tmp39;
-        end
+    // MemBlock tmp5 logic
+    always @(posedge clk) begin
+        tmp5[2'd0] <= a;
+        tmp5[2'd1] <= (tmp34[3:0]);
     end
 
-    // Memory mem_8: tmp7
-    always @(posedge clk)
-    begin
-        if (const_58_1) begin
-            mem_8[const_57_0] <= a;
-        end
-        if (const_63_1) begin
-            mem_8[const_62_1] <= tmp43;
-        end
+    // MemBlock tmp6 logic
+    always @(posedge clk) begin
+        tmp6[2'd0] <= a;
+        tmp6[2'd1] <= (tmp38[3:0]);
     end
 
-    // Memory mem_9: tmp8
-    always @(posedge clk)
-    begin
-        if (const_66_1) begin
-            mem_9[const_65_0] <= a;
-        end
-        if (const_71_1) begin
-            mem_9[const_70_1] <= tmp47;
-        end
+    // MemBlock tmp7 logic
+    always @(posedge clk) begin
+        tmp7[2'd0] <= a;
+        tmp7[2'd1] <= (tmp42[3:0]);
     end
 
-    // Memory mem_10: tmp9
-    always @(posedge clk)
-    begin
-        if (const_74_1) begin
-            mem_10[const_73_0] <= a;
-        end
-        if (const_79_1) begin
-            mem_10[const_78_1] <= tmp51;
-        end
+    // MemBlock tmp8 logic
+    always @(posedge clk) begin
+        tmp8[2'd0] <= a;
+        tmp8[2'd1] <= (tmp46[3:0]);
     end
 
-    // Memory mem_11: tmp10
-    always @(posedge clk)
-    begin
-        if (const_82_1) begin
-            mem_11[const_81_0] <= a;
-        end
-        if (const_87_1) begin
-            mem_11[const_86_1] <= tmp55;
-        end
+    // MemBlock tmp9 logic
+    always @(posedge clk) begin
+        tmp9[2'd0] <= a;
+        tmp9[2'd1] <= (tmp50[3:0]);
     end
 
-    // Memory mem_12: tmp11
-    always @(posedge clk)
-    begin
-        if (const_90_1) begin
-            mem_12[const_89_0] <= a;
-        end
-        if (const_95_1) begin
-            mem_12[const_94_1] <= tmp59;
-        end
+    // MemBlock tmp10 logic
+    always @(posedge clk) begin
+        tmp10[2'd0] <= a;
+        tmp10[2'd1] <= (tmp54[3:0]);
     end
 
+    // MemBlock tmp11 logic
+    always @(posedge clk) begin
+        tmp11[2'd0] <= a;
+        tmp11[2'd1] <= (tmp58[3:0]);
+    end
 endmodule
-
-"""
-
-
-verilog_output_counter_sync_reset = """\
-// Generated automatically via PyRTL
-// As one initial test of synthesis, map to FPGA with:
-//   yosys -p "synth_xilinx -top toplevel" thisfile.v
-
-module toplevel(clk, rst, o);
-    input clk;
-    input rst;
-    output[3:0] o;
-
-    reg[3:0] tmp0;
-
-    wire const_0_1;
-    wire const_1_0;
-    wire[2:0] tmp1;
-    wire[3:0] tmp2;
-    wire[4:0] tmp3;
-    wire[3:0] tmp4;
-
-    // Combinational
-    assign const_0_1 = 1;
-    assign const_1_0 = 0;
-    assign o = tmp0;
-    assign tmp1 = {const_1_0, const_1_0, const_1_0};
-    assign tmp2 = {tmp1, const_0_1};
-    assign tmp3 = tmp0 + tmp2;
-    assign tmp4 = {tmp3[3], tmp3[2], tmp3[1], tmp3[0]};
-
-    // Registers
-    always @(posedge clk)
-    begin
-        if (rst) begin
-            tmp0 <= 2;
-        end
-        else begin
-            tmp0 <= tmp4;
-        end
-    end
-
-endmodule
-
-"""
-
-
-verilog_output_counter_async_reset = """\
-// Generated automatically via PyRTL
-// As one initial test of synthesis, map to FPGA with:
-//   yosys -p "synth_xilinx -top toplevel" thisfile.v
-
-module toplevel(clk, rst, o);
-    input clk;
-    input rst;
-    output[3:0] o;
-
-    reg[3:0] tmp0;
-
-    wire const_0_1;
-    wire const_1_0;
-    wire[2:0] tmp1;
-    wire[3:0] tmp2;
-    wire[4:0] tmp3;
-    wire[3:0] tmp4;
-
-    // Combinational
-    assign const_0_1 = 1;
-    assign const_1_0 = 0;
-    assign o = tmp0;
-    assign tmp1 = {const_1_0, const_1_0, const_1_0};
-    assign tmp2 = {tmp1, const_0_1};
-    assign tmp3 = tmp0 + tmp2;
-    assign tmp4 = {tmp3[3], tmp3[2], tmp3[1], tmp3[0]};
-
-    // Registers
-    always @(posedge clk or posedge rst)
-    begin
-        if (rst) begin
-            tmp0 <= 2;
-        end
-        else begin
-            tmp0 <= tmp4;
-        end
-    end
-
-endmodule
-
 """
 
 
@@ -1433,42 +954,100 @@ module toplevel(clk, rst, in1, out1);
     input[2:0] in1;
     output[7:0] out1;
 
-    reg[7:0] mem_0[7:0]; //tmp0
-    reg[7:0] mem_1[255:0]; //tmp1
+    // Memories
+    reg[7:0] rom[7:0];  // RomBlock
+    reg[7:0] mem[255:0];  // MemBlock
 
-    wire const_0_1;
-    wire[7:0] const_1_42;
-    wire[7:0] tmp2;
+    // Temporaries
+    wire[7:0] tmp0;
 
+    // Read-only memory data
     initial begin
-        mem_0[0]=8'ha;
-        mem_0[1]=8'h14;
-        mem_0[2]=8'h1e;
-        mem_0[3]=8'h28;
-        mem_0[4]=8'h32;
-        mem_0[5]=8'h3c;
-        mem_0[6]=8'h0;
-        mem_0[7]=8'h0;
+        rom[0] = 8'ha;
+        rom[1] = 8'h14;
+        rom[2] = 8'h1e;
+        rom[3] = 8'h28;
+        rom[4] = 8'h32;
+        rom[5] = 8'h3c;
+        rom[6] = 8'h0;
+        rom[7] = 8'h0;
     end
 
-    // Combinational
-    assign const_0_1 = 1;
-    assign const_1_42 = 42;
-    assign out1 = tmp2;
+    // Combinational logic
+    assign out1 = tmp0;
 
-    // Memory mem_0: tmp0
-    assign tmp2 = mem_0[in1];
+    // RomBlock rom logic
+    assign tmp0 = rom[in1];
 
-    // Memory mem_1: tmp1
-    always @(posedge clk)
-    begin
-        if (const_0_1) begin
-            mem_1[tmp2] <= const_1_42;
+    // MemBlock mem logic
+    always @(posedge clk) begin
+        mem[tmp0] <= 8'd42;
+    end
+endmodule
+"""
+
+
+verilog_output_counter_sync_reset = """\
+// Generated automatically via PyRTL
+// As one initial test of synthesis, map to FPGA with:
+//   yosys -p "synth_xilinx -top toplevel" thisfile.v
+
+module toplevel(clk, rst, o);
+    input clk;
+    input rst;
+    output[3:0] o;
+
+    // Registers
+    reg[3:0] tmp0;
+
+    // Temporaries
+    wire[4:0] tmp3;
+
+    // Combinational logic
+    assign o = tmp0;
+    assign tmp3 = (tmp0 + {{3 {1'd0}}, 1'd1});
+
+    // Register logic
+    always @(posedge clk) begin
+        if (rst) begin
+            tmp0 <= 4'd2;
+        end else begin
+            tmp0 <= (tmp3[3:0]);
         end
     end
-
 endmodule
+"""
 
+
+verilog_output_counter_async_reset = """\
+// Generated automatically via PyRTL
+// As one initial test of synthesis, map to FPGA with:
+//   yosys -p "synth_xilinx -top toplevel" thisfile.v
+
+module toplevel(clk, rst, o);
+    input clk;
+    input rst;
+    output[3:0] o;
+
+    // Registers
+    reg[3:0] tmp0;
+
+    // Temporaries
+    wire[4:0] tmp3;
+
+    // Combinational logic
+    assign o = tmp0;
+    assign tmp3 = (tmp0 + {{3 {1'd0}}, 1'd1});
+
+    // Register logic
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            tmp0 <= 4'd2;
+        end else begin
+            tmp0 <= (tmp3[3:0]);
+        end
+    end
+endmodule
 """
 
 
@@ -1481,34 +1060,21 @@ module toplevel(clk, o);
     input clk;
     output[3:0] o;
 
+    // Registers
     reg[3:0] tmp0;
 
-    wire const_0_1;
-    wire const_1_0;
-    wire[2:0] tmp1;
-    wire[3:0] tmp2;
+    // Temporaries
     wire[4:0] tmp3;
-    wire[3:0] tmp4;
 
-    // Combinational
-    assign const_0_1 = 1;
-    assign const_1_0 = 0;
+    // Combinational logic
     assign o = tmp0;
-    assign tmp1 = {const_1_0, const_1_0, const_1_0};
-    assign tmp2 = {tmp1, const_0_1};
-    assign tmp3 = tmp0 + tmp2;
-    assign tmp4 = {tmp3[3], tmp3[2], tmp3[1], tmp3[0]};
+    assign tmp3 = (tmp0 + {{3 {1'd0}}, 1'd1});
 
-    // Registers
-    always @(posedge clk)
-    begin
-        begin
-            tmp0 <= tmp4;
-        end
+    // Register logic
+    always @(posedge clk) begin
+        tmp0 <= (tmp3[3:0]);
     end
-
 endmodule
-
 """
 
 
@@ -1521,43 +1087,20 @@ module toplevel(clk, rst);
     input clk;
     input rst;
 
+    // Registers
     reg[3:0] r;
 
-    wire const_0_1;
-    wire const_1_0;
-    wire const_2_0;
-    wire const_3_0;
-    wire[2:0] tmp0;
-    wire[3:0] tmp1;
-    wire[4:0] tmp2;
-    wire[3:0] tmp3;
-    wire[4:0] tmp4;
+    // Temporaries
     wire[4:0] tmp5;
-    wire[3:0] tmp6;
 
-    // Combinational
-    assign const_0_1 = 1;
-    assign const_1_0 = 0;
-    assign const_2_0 = 0;
-    assign const_3_0 = 0;
-    assign tmp0 = {const_1_0, const_1_0, const_1_0};
-    assign tmp1 = {tmp0, const_0_1};
-    assign tmp2 = r + tmp1;
-    assign tmp3 = {const_3_0, const_3_0, const_3_0, const_3_0};
-    assign tmp4 = {tmp3, const_2_0};
-    assign tmp5 = rst ? tmp4 : tmp2;
-    assign tmp6 = {tmp5[3], tmp5[2], tmp5[1], tmp5[0]};
+    // Combinational logic
+    assign tmp5 = (rst ? {{4 {1'd0}}, 1'd0} : (r + {{3 {1'd0}}, 1'd1}));
 
-    // Registers
-    always @(posedge clk)
-    begin
-        begin
-            r <= tmp6;
-        end
+    // Register logic
+    always @(posedge clk) begin
+        r <= (tmp5[3:0]);
     end
-
 endmodule
-
 """
 
 
@@ -1601,24 +1144,29 @@ class TestVerilogOutput(unittest.TestCase):
         pyrtl.wire._reset_wire_indexers()
         pyrtl.memory._reset_memory_indexer()
 
+        self.maxDiff = 30000
+
     def test_romblock_does_not_throw_error(self):
         a = pyrtl.Input(bitwidth=3, name="a")
         b = pyrtl.Input(bitwidth=3, name="b")
         o = pyrtl.Output(bitwidth=3, name="o")
-        res = _basic_add(a, b)
-        rdat = {0: 1, 1: 2, 2: 5, 5: 0}
         mixtable = pyrtl.RomBlock(
-            addrwidth=3, bitwidth=3, pad_with_zeros=True, romdata=rdat
+            addrwidth=3,
+            bitwidth=3,
+            pad_with_zeros=True,
+            romdata={0: 1, 1: 2, 2: 5, 5: 0},
+            asynchronous=True,
         )
+        res = _basic_add(a, b)
         o <<= mixtable[res[:-1]]
         with io.StringIO() as testbuffer:
             pyrtl.output_to_verilog(testbuffer)
 
     def test_textual_consistency_small(self):
-        i = pyrtl.Const(0b1100)
-        j = pyrtl.Const(0b011, bitwidth=3)
-        k = pyrtl.Const(0b100110, name="k")
-        o = pyrtl.Output(13, "o")
+        i = pyrtl.Const(12)
+        j = pyrtl.Const(3, bitwidth=3)
+        k = pyrtl.Const(38, name="k")
+        o = pyrtl.Output(bitwidth=13, name="o")
         o <<= pyrtl.concat(i, j, k)
 
         buffer = io.StringIO()
@@ -1633,12 +1181,15 @@ class TestVerilogOutput(unittest.TestCase):
         # Hence it creates many memories, and makes sure at least two lines of code are
         # created in the always @ blocks associated with them (so we have many different
         # wire names to deal with and test against).
-        a = pyrtl.Input(4, "a")
-        r = pyrtl.Register(4, name="r")
-        s = pyrtl.Register(4, name="s", reset_value=13)
+        a = pyrtl.Input(bitwidth=4, name="a")
+        r = pyrtl.Register(bitwidth=4, name="r")
+        s = pyrtl.Register(bitwidth=4, name="s", reset_value=13)
         # This will have mem id 0, so prints first despite actual name
-        mt = pyrtl.MemBlock(4, 2, name="z")
-        m = [pyrtl.MemBlock(4, 2, max_write_ports=2) for _ in range(12)]
+        mt = pyrtl.MemBlock(bitwidth=4, addrwidth=2, name="z")
+        m = [
+            pyrtl.MemBlock(bitwidth=4, addrwidth=2, max_write_ports=2)
+            for _ in range(12)
+        ]
         for mem in m:
             mem[0] <<= a
             mem[1] <<= (r + 1).truncate(4)
@@ -1656,10 +1207,12 @@ class TestVerilogOutput(unittest.TestCase):
 
     def test_mems_with_no_writes(self):
         rdata = {0: 10, 1: 20, 2: 30, 3: 40, 4: 50, 5: 60}
-        rom = pyrtl.RomBlock(8, 3, rdata, pad_with_zeros=True)
-        mem = pyrtl.MemBlock(8, 8)
-        in1 = pyrtl.Input(3, "in1")
-        out1 = pyrtl.Output(8, "out1")
+        rom = pyrtl.RomBlock(
+            name="rom", bitwidth=8, addrwidth=3, romdata=rdata, pad_with_zeros=True
+        )
+        mem = pyrtl.MemBlock(name="mem", bitwidth=8, addrwidth=8)
+        in1 = pyrtl.Input(bitwidth=3, name="in1")
+        out1 = pyrtl.Output(bitwidth=8, name="out1")
         w = rom[in1]
         out1 <<= w
         mem[w] <<= 42
@@ -1670,9 +1223,9 @@ class TestVerilogOutput(unittest.TestCase):
         self.assertEqual(buffer.getvalue(), verilog_output_mems_with_no_writes)
 
     def check_counter_text(self, add_reset, expected):
-        r = pyrtl.Register(4, reset_value=2)
+        r = pyrtl.Register(bitwidth=4, reset_value=2)
         r.next <<= r + 1
-        o = pyrtl.Output(4, "o")
+        o = pyrtl.Output(bitwidth=4, name="o")
         o <<= r
 
         buffer = io.StringIO()
@@ -1695,7 +1248,7 @@ class TestVerilogOutput(unittest.TestCase):
 
     def test_error_existing_reset_wire(self):
         buffer = io.StringIO()
-        _rst = pyrtl.Input(1, "rst")
+        _rst = pyrtl.Input(bitwidth=1, name="rst")
         with self.assertRaisesRegex(
             pyrtl.PyrtlError, "Found a user-defined wire named 'rst'."
         ):
@@ -1703,21 +1256,55 @@ class TestVerilogOutput(unittest.TestCase):
 
     def test_existing_reset_wire_without_add_reset(self):
         buffer = io.StringIO()
-        rst = pyrtl.Input(1, "rst")
-        r = pyrtl.Register(4, "r")
+        rst = pyrtl.Input(bitwidth=1, name="rst")
+        r = pyrtl.Register(bitwidth=4, name="r")
         r.next <<= pyrtl.select(rst, 0, r + 1)
         pyrtl.output_to_verilog(buffer, add_reset=False)
         self.assertEqual(buffer.getvalue(), verilog_custom_reset)
 
     def test_register_reset_value(self):
-        _ = pyrtl.Register(name="register0", bitwidth=8, reset_value=0)
-        _ = pyrtl.Register(name="register1", bitwidth=4, reset_value=1)
+        register0 = pyrtl.Register(name="register0", bitwidth=8, reset_value=0)
+        register1 = pyrtl.Register(name="register1", bitwidth=4, reset_value=1)
+        register0.next <<= 0
+        register1.next <<= 1
 
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer, add_reset=False, initialize_registers=True)
 
         self.assertTrue("reg[7:0] register0 = 8'd0" in buffer.getvalue())
         self.assertTrue("reg[3:0] register1 = 4'd1" in buffer.getvalue())
+
+    def test_bit_slice_inputs(self):
+        """Verify that wires are always declared for bit-slice inputs, even Consts."""
+        a = pyrtl.Input(name="a", bitwidth=1)
+        b = pyrtl.Input(name="b", bitwidth=1)
+        c = pyrtl.Input(name="c", bitwidth=2)
+
+        x = pyrtl.Output(name="x", bitwidth=1)
+        y = pyrtl.Output(name="y", bitwidth=1)
+        z = pyrtl.Output(name="z", bitwidth=1)
+
+        x <<= pyrtl.Const(42)[1]
+
+        y <<= (a + b)[1]
+
+        t = pyrtl.WireVector()
+        t <<= c
+        z <<= t[1]
+
+        buffer = io.StringIO()
+        pyrtl.output_to_verilog(buffer)
+
+        # A constant should be declared for ``42``, even though it has no user-specified
+        # name and only has one user, because that user is a bit-slice.
+        self.assertTrue("wire[5:0] const_0_42 = 6'd42" in buffer.getvalue())
+        # A temporary wire should be declared for ``a + b``, even though it has no name
+        # and only has one user, because that user is a bit-slice.
+        self.assertTrue("assign tmp1 = (a + b)" in buffer.getvalue())
+        # A temporary wire should be declared for ``t``, even though it has no name and
+        # only has one user and just passes through ``c``, because that user is a
+        # bit-slice.
+        self.assertTrue("assign tmp3 = c" in buffer.getvalue())
 
 
 verilog_input_counter = """\
@@ -1750,8 +1337,7 @@ module top (clk, o);
     output [1:0] o;
     foo f1(a, b, o);
 
-    always @(posedge clk)
-    begin
+    always @(posedge clk) begin
         a <= ~a;
         b <= ~b;
     end
@@ -1810,13 +1396,17 @@ verilog_testbench = """\
 module tb();
     reg clk;
     reg rst;
+
+    // block Inputs
     reg[1:0] a100;
     reg[3:0] w1;
     reg[2:0] w12;
+
+    // block Outputs
     wire[1:0] out1;
     wire[8:0] out10;
 
-    integer tb_iter;
+    integer tb_addr;
     toplevel block(.clk(clk), .rst(rst), .a100(a100), .w1(w1), .w12(w12), .out1(out1), .out10(out10));
 
     always
@@ -1826,14 +1416,18 @@ module tb();
         $dumpfile ("waveform.vcd");
         $dumpvars;
 
-        clk = 0;
-        rst = 0;
-        block.r1 = 2;
-        block.r2 = 3;
-        block.tmp0 = 0;
-        for (tb_iter = 0; tb_iter < 32; tb_iter++) begin block.mem_0[tb_iter] = 0; end
-        block.mem_0[2] = 9;
-        block.mem_0[9] = 12;
+        clk = 1'd0;
+        rst = 1'd0;
+
+        // Initialize Registers
+        block.r1 = 3'd2;
+        block.r2 = 4'd3;
+        block.tmp0 = 8'd0;
+
+        // Initialize MemBlocks
+        for (tb_addr = 0; tb_addr < 32; tb_addr++) begin block.mem[tb_addr] = 4'd0; end
+        block.mem[2] = 4'd9;
+        block.mem[9] = 4'd12;
         a100 = 2'd0;
         w1 = 4'd0;
         w12 = 3'd0;
@@ -1862,13 +1456,17 @@ endmodule
 verilog_testbench_no_reset = """\
 module tb();
     reg clk;
+
+    // block Inputs
     reg[1:0] a100;
     reg[3:0] w1;
     reg[2:0] w12;
+
+    // block Outputs
     wire[1:0] out1;
     wire[8:0] out10;
 
-    integer tb_iter;
+    integer tb_addr;
     toplevel block(.clk(clk), .a100(a100), .w1(w1), .w12(w12), .out1(out1), .out10(out10));
 
     always
@@ -1878,13 +1476,17 @@ module tb();
         $dumpfile ("waveform.vcd");
         $dumpvars;
 
-        clk = 0;
-        block.r1 = 2;
-        block.r2 = 3;
-        block.tmp0 = 0;
-        for (tb_iter = 0; tb_iter < 32; tb_iter++) begin block.mem_0[tb_iter] = 0; end
-        block.mem_0[2] = 9;
-        block.mem_0[9] = 12;
+        clk = 1'd0;
+
+        // Initialize Registers
+        block.r1 = 3'd2;
+        block.r2 = 4'd3;
+        block.tmp0 = 8'd0;
+
+        // Initialize MemBlocks
+        for (tb_addr = 0; tb_addr < 32; tb_addr++) begin block.mem[tb_addr] = 4'd0; end
+        block.mem[2] = 4'd9;
+        block.mem[9] = 4'd12;
         a100 = 2'd0;
         w1 = 4'd0;
         w12 = 3'd0;
@@ -1913,6 +1515,8 @@ endmodule
 verilog_testbench_custom_reset = """\
 module tb();
     reg clk;
+
+    // block Inputs
     reg rst;
 
     toplevel block(.clk(clk), .rst(rst));
@@ -1924,8 +1528,10 @@ module tb();
         $dumpfile ("waveform.vcd");
         $dumpvars;
 
-        clk = 0;
-        block.r = 0;
+        clk = 1'd0;
+
+        // Initialize Registers
+        block.r = 4'd0;
         $finish;
     end
 endmodule
@@ -1939,6 +1545,7 @@ class TestOutputTestbench(unittest.TestCase):
         # index for all automatically created names.
         pyrtl.wire._reset_wire_indexers()
         pyrtl.memory._reset_memory_indexer()
+        self.maxDiff = 10000
 
     def test_verilog_testbench_does_not_throw_error(self):
         zero = pyrtl.Input(1, "zero")
@@ -1957,8 +1564,8 @@ class TestOutputTestbench(unittest.TestCase):
         # each time
         i1, i2, i3 = pyrtl.input_list("w1/4 w12/3 a100/2")
         r1, r2 = pyrtl.register_list("r1/3 r2/4")
-        r3 = pyrtl.Register(8)
-        mem = pyrtl.MemBlock(4, 5)
+        r3 = pyrtl.Register(bitwidth=8)
+        mem = pyrtl.MemBlock(name="mem", bitwidth=4, addrwidth=5)
         o1, o2 = pyrtl.output_list("out1/2 out10/9")
         r1.next <<= i1 + i2
         r2.next <<= r1 * i3
@@ -2013,12 +1620,36 @@ class TestOutputTestbench(unittest.TestCase):
             pyrtl.output_verilog_testbench(tbfile)
 
     def test_verilog_testbench_existing_reset_wire_without_add_reset(self):
-        buffer = io.StringIO()
         rst = pyrtl.Input(1, "rst")
         r = pyrtl.Register(4, "r")
         r.next <<= pyrtl.select(rst, 0, r + 1)
+
+        buffer = io.StringIO()
         pyrtl.output_verilog_testbench(buffer, add_reset=False)
         self.assertEqual(buffer.getvalue(), verilog_testbench_custom_reset)
+
+    def test_only_initialize_memblocks(self):
+        """Test that RomBlocks are not re-initialized by the testbench."""
+        romblock = pyrtl.RomBlock(
+            name="my_rom", bitwidth=3, addrwidth=2, romdata=[1, 2, 3, 4]
+        )
+        addr = pyrtl.Input(name="addr", bitwidth=2)
+        data = pyrtl.Output(name="data", bitwidth=3)
+        data <<= romblock[addr]
+
+        buffer = io.StringIO()
+        pyrtl.output_to_verilog(buffer)
+        # The Verilog code should declare the RomBlock and define its values.
+        self.assertTrue("reg[2:0] my_rom[3:0];  // RomBlock" in buffer.getvalue())
+        self.assertTrue("my_rom[0] = 3'h1;" in buffer.getvalue())
+        self.assertTrue("my_rom[1] = 3'h2;" in buffer.getvalue())
+        self.assertTrue("my_rom[2] = 3'h3;" in buffer.getvalue())
+        self.assertTrue("my_rom[3] = 3'h4;" in buffer.getvalue())
+
+        buffer = io.StringIO()
+        pyrtl.output_verilog_testbench(buffer, add_reset=False)
+        # The testbench should not touch the RomBlock.
+        self.assertTrue("my_rom" not in buffer.getvalue())
 
 
 firrtl_output_concat_test = """\

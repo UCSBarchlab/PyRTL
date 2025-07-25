@@ -29,6 +29,11 @@ class TestGateGraph(unittest.TestCase):
         gate_graph = pyrtl.GateGraph()
 
         self.assertEqual(
+            sorted(gate.name for gate in gate_graph),
+            ["a", "ab", "abc", "b", "c"],
+        )
+
+        self.assertEqual(
             sorted([gate.name for gate in gate_graph.gates]),
             ["a", "ab", "abc", "b", "c"],
         )

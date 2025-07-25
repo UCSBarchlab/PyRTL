@@ -712,6 +712,9 @@ class GateGraph:
     gates: set[Gate]
     """A :class:`set` of all :class:`Gates<Gate>` in the ``GateGraph``.
 
+    Similar to :attr:`~GateGraph.__iter__`, except that ``gates`` is a :class:`set`
+    rather than an :class:`~collections.abc.Iterable`.
+
     .. doctest only::
 
         >>> import pyrtl
@@ -1114,3 +1117,28 @@ class GateGraph:
             self.gates, key=lambda gate: gate.name if gate.name else "~~~"
         )
         return "\n".join([str(gate) for gate in sorted_gates])
+
+    def __iter__(self):
+        """Iterate over each gate in the :class:`GateGraph`.
+
+        Similar to :attr:`~GateGraph.gates`, except that ``__iter__`` returns an
+        :class:`~collections.abc.Iterable` rather than a :class:`set`.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> a = pyrtl.Input(name="a", bitwidth=2)
+            >>> b = pyrtl.Input(name="b", bitwidth=2)
+            >>> sum = a + b
+            >>> sum.name = "sum"
+
+            >>> gate_graph = pyrtl.GateGraph()
+
+            >>> sorted(gate.name for gate in gate_graph)
+            ['a', 'b', 'sum']
+        """
+        return iter(self.gates)

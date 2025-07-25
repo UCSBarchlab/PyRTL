@@ -65,24 +65,6 @@ class TestAESDecrypt(unittest.TestCase):
         )
         self.assertEqual(calculated_result, real_res)
 
-    @unittest.skip
-    def test_key_expansion(self):
-        # This is not at all correct. Needs to be completely rewritten
-        self.out_vector <<= pyrtl.concat_list(self.aes_decrypt._key_gen(self.in_vector))
-
-        in_vals = [
-            0xD1876C0F79C4300AB45594ADD66FF41F,
-            0xFA636A2825B339C940668A3157244D17,
-        ]
-        true_result = [
-            0x3E175076B61C04678DFC2295F6A8BFC0,
-            0x2DFB02343F6D12DD09337EC75B36E3F0,
-        ]
-        calculated_result = testingutils.sim_and_ret_out(
-            self.out_vector, (self.in_vector,), (in_vals,)
-        )
-        self.assertEqual(calculated_result, true_result)
-
     def test_aes_full(self):
         aes_key = pyrtl.Input(bitwidth=128, name="aes_key")
         self.out_vector <<= self.aes_decrypt.decryption(self.in_vector, aes_key)
@@ -213,24 +195,6 @@ class TestAESEncrypt(unittest.TestCase):
             self.out_vector, (self.in_vector,), (in_vals,)
         )
         self.assertEqual(calculated_result, real_res)
-
-    @unittest.skip
-    def test_key_expansion(self):
-        # This is not at all correct. Needs to be completely rewritten
-        self.out_vector <<= pyrtl.concat_list(self.aes_encrypt._key_gen(self.in_vector))
-
-        in_vals = [
-            0x4C9C1E66F771F0762C3F868E534DF256,
-            0xC57E1C159A9BD286F05F4BE098C63439,
-        ]
-        true_result = [
-            0x3BD92268FC74FB735767CBE0C0590E2D,
-            0xB458124C68B68A014B99F82E5F15554C,
-        ]
-        calculated_result = testingutils.sim_and_ret_out(
-            self.out_vector, (self.in_vector,), (in_vals,)
-        )
-        self.assertEqual(calculated_result, true_result)
 
     def test_aes_full(self):
         aes_key = pyrtl.Input(bitwidth=128, name="aes_key")
