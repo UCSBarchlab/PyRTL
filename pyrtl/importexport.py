@@ -979,11 +979,10 @@ class _VerilogOutput:
                 f"{sanitized_name};{comment}",
                 file=file,
             )
-        print(file=file)
 
         # Declare MemBlocks and RomBlocks.
         if self.all_memblocks:
-            print("    // Memories", file=file)
+            print("\n    // Memories", file=file)
         for memblock in self.all_memblocks:
             kind = "MemBlock"
             if isinstance(memblock, RomBlock):
@@ -995,13 +994,11 @@ class _VerilogOutput:
                 f"{comment}",
                 file=file,
             )
-        if self.all_memblocks:
-            print(file=file)
 
         # Declare Registers.
         self.declared_gates |= self.gate_graph.registers
         if self.registers:
-            print("    // Registers", file=file)
+            print("\n    // Registers", file=file)
         for reg_gate in self.registers:
             register_initialization = ""
             if initialize_registers:
@@ -1015,8 +1012,6 @@ class _VerilogOutput:
                 f"{sanitized_name}{register_initialization};{comment}",
                 file=file,
             )
-        if self.registers:
-            print(file=file)
 
         # Declare constants.
         const_gates = []
@@ -1026,7 +1021,7 @@ class _VerilogOutput:
         self.declared_gates |= set(const_gates)
 
         if const_gates:
-            print("    // Constants", file=file)
+            print("\n    // Constants", file=file)
         for const_gate in const_gates:
             sanitized_name, comment = self._name_and_comment(const_gate.name)
             print(
@@ -1035,8 +1030,6 @@ class _VerilogOutput:
                 f"{comment}",
                 file=file,
             )
-        if const_gates:
-            print(file=file)
 
         # Declare any needed temporary wires.
         temp_gates = []
@@ -1047,7 +1040,7 @@ class _VerilogOutput:
         self.declared_gates |= set(temp_gates)
 
         if temp_gates:
-            print("    // Temporaries", file=file)
+            print("\n    // Temporaries", file=file)
         for temp_gate in temp_gates:
             sanitized_name, comment = self._name_and_comment(temp_gate.name)
             print(
@@ -1055,14 +1048,12 @@ class _VerilogOutput:
                 f"{comment}",
                 file=file,
             )
-        if temp_gates:
-            print(file=file)
 
         # Write the initial values for read-only memories. If we ever add support
         # outside of simulation for initial values for MemBlocks, that would also go
         # here.
         if self.romblocks:
-            print("    // Read-only memory data", file=file)
+            print("\n    // Read-only memory data", file=file)
         for romblock in self.romblocks:
             print("    initial begin", file=file)
             for addr in range(1 << romblock.addrwidth):
@@ -1072,7 +1063,6 @@ class _VerilogOutput:
                     file=file,
                 )
             print("    end", file=file)
-            print(file=file)
 
         # combinational_gates is the set of Gates that must be assigned by
         # ``_to_verilog_combinational``.
@@ -1168,21 +1158,21 @@ class _VerilogOutput:
         :param combinational_gates: Set of Gates that must be assigned by
             ``_to_verilog_combinational``.
         """
-        print("    // Combinational logic", file=file)
+        if self.combinational_gates:
+            print("\n    // Combinational logic", file=file)
         for assignment_gate in self._name_sorted(self.combinational_gates):
             print(
                 f"    assign {self._verilog_name(assignment_gate.name)} = "
                 f"{self._verilog_expr(assignment_gate, lhs=assignment_gate)};",
                 file=file,
             )
-        print(file=file)
 
     def _to_verilog_sequential(self, file: IO):
         """Print the sequential logic of the verilog implementation."""
         if not self.gate_graph.registers:
             return
 
-        print("    // Register logic", file=file)
+        print("\n    // Register logic", file=file)
         if self.add_reset == "asynchronous":
             print("    always @(posedge clk or posedge rst) begin", file=file)
         else:
@@ -1210,7 +1200,6 @@ class _VerilogOutput:
         if self.add_reset:
             print("        end", file=file)
         print("    end", file=file)
-        print(file=file)
 
     def _to_verilog_memories(self, file: IO):
         """Generate Verilog logic for MemBlock and RomBlock reads and writes."""
@@ -1218,7 +1207,7 @@ class _VerilogOutput:
             kind = "MemBlock"
             if isinstance(memblock, RomBlock):
                 kind = "RomBlock"
-            print(f"    // {kind} {memblock.name} logic", file=file)
+            print(f"\n    // {kind} {memblock.name} logic", file=file)
 
             # Find writes to ``memblock``.
             write_gates = []
@@ -1262,7 +1251,6 @@ class _VerilogOutput:
                     f"[{self._verilog_expr(read_gate.args[0])}];",
                     file=file,
                 )
-            print(file=file)
 
     def _to_verilog_footer(self, file: IO):
         print("endmodule", file=file)

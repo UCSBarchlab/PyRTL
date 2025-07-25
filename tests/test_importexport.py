@@ -777,7 +777,6 @@ module toplevel(clk, o);
 
     // Combinational logic
     assign o = {4'd12, 3'd3, k};
-
 endmodule
 """
 
@@ -940,7 +939,6 @@ module toplevel(clk, rst, a, o);
         tmp11[2'd0] <= a;
         tmp11[2'd1] <= (tmp58[3:0]);
     end
-
 endmodule
 """
 
@@ -985,7 +983,6 @@ module toplevel(clk, rst, in1, out1);
     always @(posedge clk) begin
         mem[tmp0] <= 8'd42;
     end
-
 endmodule
 """
 
@@ -1018,7 +1015,6 @@ module toplevel(clk, rst, o);
             tmp0 <= (tmp3[3:0]);
         end
     end
-
 endmodule
 """
 
@@ -1051,7 +1047,6 @@ module toplevel(clk, rst, o);
             tmp0 <= (tmp3[3:0]);
         end
     end
-
 endmodule
 """
 
@@ -1079,7 +1074,6 @@ module toplevel(clk, o);
     always @(posedge clk) begin
         tmp0 <= (tmp3[3:0]);
     end
-
 endmodule
 """
 
@@ -1106,7 +1100,6 @@ module toplevel(clk, rst);
     always @(posedge clk) begin
         r <= (tmp5[3:0]);
     end
-
 endmodule
 """
 
