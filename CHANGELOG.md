@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed XOR implementation in `and_inverter_synth` pass ([@EdwinChang24](https://github.com/EdwinChang24))
 - `output_verilog_testbench` should not re-initialize RomBlocks.
-- `FastSimulation` was not updating `init_menvalues` correctly. 
+- `FastSimulation` was not setting `init_memvalue` correctly (renamed to `SimulationTrace.memory_value_map`).
 - Specify bitwidths for Verilog initial register and memory values. They were previously unsized constants, which are implicitly 32-bit signed, which could cause surprises.
 
 ## [0.11.3] - 2025-06-12
