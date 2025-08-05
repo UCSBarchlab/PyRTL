@@ -19,7 +19,8 @@ from __future__ import annotations
 import collections
 import numbers
 import types
-from typing import NamedTuple
+from collections.abc import Sequence
+from typing import Callable, NamedTuple
 
 from pyrtl.core import Block, LogicNet, _NameIndexer, working_block
 from pyrtl.corecircuits import as_wires
@@ -95,14 +96,14 @@ class _MemIndexed(WireVector):
 
 
 class MemBlock:
-    """``MemBlock`` is the object for specifying block memories.
+    """:class:`MemBlock` is the object for specifying block memories.
 
     .. doctest only::
 
         >>> import pyrtl
         >>> pyrtl.reset_working_block()
 
-    ``MemBlock`` can be indexed like an array for reads and writes. Example::
+    :class:`MemBlock` can be indexed like an array for reads and writes. Example::
 
         >>> mem = pyrtl.MemBlock(bitwidth=8, addrwidth=2)
 
@@ -110,13 +111,14 @@ class MemBlock:
         >>> write_addr = pyrtl.Register(name="write_addr", bitwidth=2, reset_value=1)
         >>> write_addr.next <<= write_addr + 1
 
+        >>> mem[write_addr] <<= write_addr + 10  # Creates a write port.
+
         >>> # Read from each address, starting from address 0.
         >>> read_addr = pyrtl.Register(name="read_addr", bitwidth=2)
         >>> read_addr.next <<= read_addr + 1
 
         >>> read_data = pyrtl.Output(name="read_data")
         >>> read_data <<= mem[read_addr]  # Creates a read port.
-        >>> mem[write_addr] <<= write_addr + 10  # Creates a write port.
 
         >>> sim = pyrtl.Simulation()
         >>> sim.step_multiple(nsteps=6)
@@ -132,9 +134,9 @@ class MemBlock:
         >>> pyrtl.reset_working_block()
 
     When the address of a memory is assigned to using an :class:`EnabledWrite` object,
-    data will only be written to the memory when the ``EnabledWrite``'s
-    :attr:`~EnabledWrite.enable` ``WireVector`` is set to high (``1``). In the following
-    example, the ``MemBlock`` is only written when ``write_addr`` is odd::
+    data will only be written to the memory when :attr:`EnabledWrite.enable` is high
+    (``1``). In the following example, the :class:`MemBlock` is only written when
+    ``write_addr`` is odd::
 
         >>> mem = pyrtl.MemBlock(bitwidth=8, addrwidth=2)
 
@@ -148,8 +150,8 @@ class MemBlock:
         >>> sorted(sim.inspect_mem(mem).items())
         [(1, 11), (3, 13)]
 
-    Writes under :ref:`conditional_assignment` are automatically converted to
-    :class:`EnabledWrites<EnabledWrite>`.
+    Writes under :ref:`conditional_assignment` with ``|=`` (:meth:`~WireVector.__ior__`)
+    are automatically converted to :class:`EnabledWrites<EnabledWrite>`.
 
     .. _asynchronous_memories:
 
@@ -157,17 +159,18 @@ class MemBlock:
     ---------------------
 
     It is best practice to have memory operations start on a rising clock edge if you
-    want them to synthesize into efficient hardware, so ``MemBlocks`` are `synchronous`
-    by default (``asynchronous=False``). ``MemBlocks`` will enforce this by checking
-    that all their inputs are ready at each rising clock edge. This implies that all
-    ``MemBlock`` inputs - the address to read/write, the data to write, and the
-    write-enable bit - must be registers, inputs, or constants, unless you explicitly
-    declare the memory as `asynchronous` with ``asynchronous=True``.
+    want them to synthesize into efficient hardware, so :class:`MemBlocks<MemBlock>` are
+    `synchronous` by default (``asynchronous=False``). :class:`MemBlocks<MemBlock>` will
+    enforce this by checking that all their inputs are ready at each rising clock edge.
+    This implies that `all` :class:`MemBlock` inputs - the address to read/write, the
+    data to write, and the write-enable bit - must be :class:`Registers<.Register>`,
+    :class:`Inputs<.Input>`, or :class:`Consts<.Const>`, unless you explicitly declare
+    the memory as `asynchronous` with ``asynchronous=True``.
 
-    Asynchronous memories can be convenient and tempting, but they are rarely a good
-    idea. They can't be mapped to block RAMs in FPGAs and will be converted to registers
-    by most design tools. They are not a realistic option for memories with more than a
-    few hundred elements.
+    Asynchronous memories are convenient, but they are rarely a good idea. They can't be
+    mapped to block RAMs in FPGAs and will be converted to registers by most design
+    tools. They are not a realistic option for memories with more than a few hundred
+    elements.
 
     Read and Write Ports
     --------------------
@@ -182,9 +185,9 @@ class MemBlock:
     Default Values
     --------------
 
-    In PyRTL :class:`Simulation`, all ``MemBlocks`` are zero-initialized by default.
-    Initial data can be specified for each MemBlock in :meth:`Simulation.__init__`'s
-    ``memory_value_map``.
+    In PyRTL :class:`Simulation`, all :class:`MemBlocks<MemBlock>` are zero-initialized
+    by default. Initial data can be specified for each MemBlock in
+    :meth:`Simulation.__init__`'s ``memory_value_map``.
 
     Simultaneous Read and Write
     ---------------------------
@@ -195,8 +198,8 @@ class MemBlock:
         >>> pyrtl.reset_working_block()
 
     In PyRTL :class:`Simulation`, if the same address is read and written in the same
-    cycle, the read will return the `last` value stored in the ``MemBlock``, not the
-    newly written value. Example::
+    cycle, the read will return the `last` value stored in the :class:`MemBlock`, not
+    the newly written value. Example::
 
         >>> mem = pyrtl.MemBlock(addrwidth=1, bitwidth=1)
         >>> mem[0] <<= 1
@@ -215,18 +218,18 @@ class MemBlock:
         >>> sim.inspect("read_data")
         1
 
-    Mapping ``MemBlocks`` to Hardware
-    ---------------------------------
+    Mapping :class:`MemBlocks<MemBlock>` to Hardware
+    ------------------------------------------------
 
-    Synchronous ``MemBlocks`` can generally be mapped to FPGA block RAMs and similar
-    hardware, but there are many pitfalls:
+    Synchronous :class:`MemBlocks<MemBlock>` can generally be mapped to FPGA block RAMs
+    and similar hardware, but there are many pitfalls:
 
     #. ``asynchronous=False`` is generally necessary, but may not be sufficient, for
        mapping a design to FPGA block RAMs. Block RAMs may have additional timing
        constraints, like requiring register outputs for each block RAM.
        ``asynchronous=False`` only requires register inputs.
 
-    #. Block RAMs may offer more or less read and write ports than ``MemBlock``'s
+    #. Block RAMs may offer more or less read and write ports than :class:`MemBlock`'s
        defaults.
 
     #. Block RAMs may not zero-initialize by default.
@@ -241,7 +244,7 @@ class MemBlock:
         data: WireVector
         """Data to write."""
         enable: WireVector
-        """Single-bit ``WireVector`` indicating if a write should occur."""
+        """Single-bit :class:`.WireVector` indicating if a write should occur."""
 
     def __init__(
         self,
@@ -298,13 +301,13 @@ class MemBlock:
         raise PyrtlError(msg)
 
     def __getitem__(self, addr: WireVectorLike) -> WireVector:
-        """Create a read port to read data from the ``MemBlock``.
+        """Create a read port to read data from the :class:`MemBlock`.
 
-        :param addr: ``MemBlock`` address to read. A ``WireVector``, or any type that
-            can be coerced to ``WireVector`` by :func:`as_wires`.
+        :param addr: :class:`MemBlock` address to read. A :class:`.WireVector`, or any
+            type that can be coerced to :class:`.WireVector` by :func:`as_wires`.
 
-        :return: A ``WireVector`` containing the data read from the ``MemBlock`` at
-                 address ``addr``.
+        :return: A :class:`.WireVector` containing the data read from the
+                 :class:`MemBlock` at address ``addr``.
         """
         addr = as_wires(addr, bitwidth=self.addrwidth, truncating=False)
         if len(addr) > self.addrwidth:
@@ -315,13 +318,13 @@ class MemBlock:
     def __setitem__(
         self, addr: WireVectorLike, data: MemBlock.EnabledWrite | WireVectorLike
     ):
-        """Create a write port to write data to the ``MemBlock``.
+        """Create a write port to write data to the :class:`MemBlock`.
 
-        :param addr: ``MemBlock`` address to write. A ``WireVector``, or any type that
-            can be coerced to ``WireVector`` by :func:`as_wires`.
-        :param data: ``MemBlock`` data to write. An :class:`EnabledWrite`,
-            ``WireVector``, or any type that can be coerced to ``WireVector`` by
-            :func:`as_wires`.
+        :param addr: :class:`MemBlock` address to write. A :class:`.WireVector`, or any
+            type that can be coerced to :class:`.WireVector` by :func:`as_wires`.
+        :param data: :class:`MemBlock` data to write. An :class:`EnabledWrite`,
+            :class:`.WireVector`, or any type that can be coerced to
+            :class:`.WireVector` by :func:`as_wires`.
         """
         if isinstance(data, _MemAssignment):
             self._assignment(addr, data.rhs, is_conditional=data.is_conditional)
@@ -403,9 +406,10 @@ class MemBlock:
 class RomBlock(MemBlock):
     """PyRTL Read Only Memory (ROM).
 
-    ``RomBlocks`` are PyRTL's read only memory block. They support the same read
-    interface as :class:`MemBlock`, but they cannot be written to (i.e. there are no
-    write ports). The ROM's contents are specified when the ROM is constructed.
+    :class:`RomBlocks<RomBlock>` are PyRTL's read only memory block. They support the
+    same read interface as :class:`MemBlock`, but they cannot be written to (i.e. there
+    are no write ports). The ROM's contents are specified when the ROM is constructed,
+    as ``romdata``.
 
     .. doctest only::
 
@@ -432,7 +436,7 @@ class RomBlock(MemBlock):
         self,
         bitwidth: int,
         addrwidth: int,
-        romdata,
+        romdata: Sequence | Callable[[int], int],
         name: str = "",
         max_read_ports: int = 2,
         build_new_roms: bool = False,
@@ -445,14 +449,15 @@ class RomBlock(MemBlock):
         :param bitwidth: The bitwidth of each element in the ROM.
         :param addrwidth: The number of bits used to address an element in the ROM. The
             ROM can store ``2 ** addrwidth`` elements.
-        :param romdata: Specifies the data stored in the ROM. This can either be a
-            function or an array (iterable) that maps from address to data.
+        :param romdata: Specifies the data stored in the ROM. This can be an array or a
+            function that maps from address to data.
         :param name: The identifier for the memory.
         :param max_read_ports: Limits the number of read ports each block can create;
             passing ``None`` indicates there is no limit.
         :param build_new_roms: Indicates whether :meth:`RomBlock.__getitem__` should
-            create copies of the ``RomBlock`` to avoid exceeding ``max_read_ports``.
-        :param asynchronous: If ``False``, ensure that all ``RomBlock`` inputs are
+            create copies of the :class:`RomBlock` to avoid exceeding
+            ``max_read_ports``.
+        :param asynchronous: If ``False``, ensure that all :class:`RomBlock` inputs are
             registers, inputs, or constants. See :ref:`asynchronous_memories`.
         :param pad_with_zeros: If ``True``, fill any missing ``romdata`` with zeros so
             all accesses to the ROM are well defined. Otherwise, :class:`Simulation`
@@ -479,19 +484,20 @@ class RomBlock(MemBlock):
         self.pad_with_zeros = pad_with_zeros
 
     def __getitem__(self, addr: WireVector) -> WireVector:
-        """Create a read port to read data from the ``RomBlock``.
+        """Create a read port to read data from the :class:`RomBlock`.
 
-        If ``build_new_roms`` was specified, create a new copy of the ``RomBlock`` if
-        the number of read ports exceeds ``max_read_ports``.
+        If ``build_new_roms`` was specified, create a new copy of the :class:`RomBlock`
+        if the number of read ports exceeds ``max_read_ports``.
 
-        :param addr: ``MemBlock`` address to read.
+        :param addr: :class:`MemBlock` address to read.
 
-        :raises PyrtlError: If ``addr`` is an ``int``. ``RomBlocks`` hold constant data,
-            so they don't need to be read when the read address is statically known.
-            Create a :class:`Const` with the data at the read address instead.
+        :raises PyrtlError: If ``addr`` is an :class:`int`. :class:`RomBlocks<RomBlock>`
+            hold constant data, so they don't need to be read when the read address is
+            statically known. Create a :class:`Const` with the data at the read address
+            instead.
 
-        :return: A ``WireVector`` containing the data read from the ``RomBlock`` at
-                 address ``addr``.
+        :return: A :class:`.WireVector` containing the data read from the
+                 :class:`RomBlock` at address ``addr``.
         """
         if isinstance(addr, numbers.Number):
             msg = (

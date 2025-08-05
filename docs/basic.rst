@@ -11,12 +11,12 @@ the output of that adder.  :class:`.Block` stores the description of the
 hardware as you build it.
 
 :class:`.Input`, :class:`.Output`, :class:`.Const`, and :class:`.Register` all
-derive from :class:`.WireVector`.  :class:`.Input` represents an input pin,
-serving as a placeholder for an external value provided during simulation.
-:class:`.Output` represents an output pin, which does not drive any wires in
-the design. :class:`.Const` is useful for specifying hard-wired values and
-:class:`.Register` is how sequential elements are created (they all have an
-implicit clock).
+derive from :class:`.WireVector`. :class:`.Input` represents an input pin,
+serving as a placeholder for an external value provided during
+:class:`.Simulation`. :class:`.Output` represents an output pin, which does not
+drive any wires in the design. :class:`.Const` is useful for specifying
+hard-wired values and :class:`.Register` is how sequential elements are created
+(they all have an implicit clock).
 
 .. inheritance-diagram:: pyrtl.WireVector
                          pyrtl.Input
@@ -32,7 +32,7 @@ WireVector
     :members:
     :special-members: __init__, __add__, __sub__, __mul__, __getitem__,
                       __len__, __ilshift__, __invert__, __and__, __or__, __xor__, __lt__,
-                      __le__, __eq__, __ne__, __gt__, __ge__, __len__
+                      __le__, __eq__, __ne__, __gt__, __ge__, __len__, __ior__
 
 Input Pins
 ----------
@@ -191,8 +191,9 @@ These default values can be changed by passing a ``defaults`` dict to
 The Conditional Assigment Operator (``|=``)
 -------------------------------------------
 
-Conditional assignments are written with the ``|=`` operator, and not the usual ``<<=``
-operator.
+Conditional assignments are written with the ``|=``
+(:meth:`~.WireVector.__ior__`) operator, and not the usual ``<<=``
+(:meth:`~.WireVector.__ilshift__`) operator.
 
 * The ``|=`` operator is a *conditional* assignment. Conditional assignments can only be
   written in a :data:`.conditional_assignment` block.

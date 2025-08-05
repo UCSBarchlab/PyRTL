@@ -4,19 +4,21 @@
 #
 #    pip-compile requirements.in
 #
+accessible-pygments==0.0.5
+    # via furo
 alabaster==1.0.0
     # via sphinx
 babel==2.17.0
     # via sphinx
 beautifulsoup4==4.13.4
     # via furo
-certifi==2025.6.15
+certifi==2025.8.3
     # via requests
 charset-normalizer==3.4.2
     # via requests
 docutils==0.21.2
     # via sphinx
-furo==2024.8.6
+furo==2025.7.19
     # via -r requirements.in
 idna==3.10
     # via requests
@@ -30,6 +32,7 @@ packaging==25.0
     # via sphinx
 pygments==2.19.2
     # via
+    #   accessible-pygments
     #   furo
     #   sphinx
 requests==2.32.4
@@ -65,7 +68,7 @@ sphinxcontrib-qthelp==2.0.0
     # via sphinx
 sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
-typing-extensions==4.14.0
+typing-extensions==4.14.1
     # via beautifulsoup4
 urllib3==2.5.0
     # via requests
