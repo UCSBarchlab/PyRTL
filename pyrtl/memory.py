@@ -246,6 +246,26 @@ class MemBlock:
         enable: WireVector
         """Single-bit :class:`.WireVector` indicating if a write should occur."""
 
+    id: int
+    """A unique integer assigned to each MemBlock.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+        >>> pyrtl.memory._memIndex.internal_index = 0
+
+    Example::
+
+        >>> mem_a = pyrtl.MemBlock(bitwidth=3, addrwidth=2)
+        >>> mem_a.id
+        0
+
+        >>> mem_b = pyrtl.MemBlock(bitwidth=4, addrwidth=5)
+        >>> mem_b.id
+        1
+    """
+
     def __init__(
         self,
         bitwidth: int,

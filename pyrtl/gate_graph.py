@@ -230,6 +230,11 @@ class Gate:
     generally do not appear as actual values on wires. For example, the bits to select
     for the ``s`` bit-slice operation are stored as ``op_params``.
 
+    .. note::
+
+        Consider using the aliases :attr:`const_value`, :attr:`reset_value`,
+        :attr:`sel`, :attr:`memid`, :attr:`mem` instead, which improve code readability.
+
     .. doctest only::
 
         >>> import pyrtl
@@ -377,6 +382,138 @@ class Gate:
         >>> b_gate.is_output
         True
     """
+
+    @property
+    def const_value(self) -> int:
+        """Readability alias for :attr:`op_param`, returning the value for a
+        :class:`.Const` (``C``) :attr:`op`.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> const = pyrtl.Const(name="const", val=33)
+
+            >>> gate_graph = pyrtl.GateGraph()
+            >>> const_gate = gate_graph.get_gate("const")
+            >>> const_gate.const_value
+            33
+        """
+        if self.op != "C":
+            msg = "const_value is only defined for Const ('C') ops."
+            raise PyrtlError(msg)
+        return self.op_param[0]
+
+    @property
+    def reset_value(self) -> int:
+        """Readability alias for :attr:`op_param`, returning the reset value for a
+        :class:`.Register` (``r``) :attr:`op`.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> counter = pyrtl.Register(name="counter", bitwidth=8, reset_value=42)
+            >>> counter.next <<= counter + 1
+
+            >>> gate_graph = pyrtl.GateGraph()
+            >>> counter_gate = gate_graph.get_gate("counter")
+            >>> counter_gate.reset_value
+            42
+        """
+        if self.op != "r":
+            msg = "reset_value is only defined for Register ('r') ops."
+            raise PyrtlError(msg)
+        return self.op_param[0]
+
+    @property
+    def sel(self) -> tuple[int]:
+        """Readability alias for :attr:`op_param`, returning the bits selected by a
+        bit-slice (``s``) :attr:`op`.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> a = pyrtl.Input(name="a", bitwidth=8)
+            >>> bit_slice = a[2:6]
+            >>> bit_slice.name = "bit_slice"
+
+            >>> gate_graph = pyrtl.GateGraph()
+            >>> bit_slice_gate = gate_graph.get_gate("bit_slice")
+            >>> bit_slice_gate.sel
+            (2, 3, 4, 5)
+        """
+        if self.op != "s":
+            msg = "sel is only defined for bit-select ('s') ops."
+            raise PyrtlError(msg)
+        return self.op_param
+
+    @property
+    def memid(self) -> int:
+        """Readability alias for :attr:`op_param`, returning the :attr:`MemBlock.id`
+        for a read (``m``) or write (``@``) :attr:`op`.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+            >>> pyrtl.memory._memIndex.internal_index = 0
+
+        Example::
+
+            >>> addr = pyrtl.Input(name="addr", bitwidth=4)
+            >>> mem = pyrtl.MemBlock(addrwidth=4, bitwidth=8)
+            >>> read = mem[addr]
+            >>> read.name = "read"
+
+            >>> gate_graph = pyrtl.GateGraph()
+            >>> read_gate = gate_graph.get_gate("read")
+            >>> read_gate.memid
+            0
+            >>> mem.id
+            0
+        """
+        if self.op not in "m@":
+            msg = "memid is only defined for read ('m') and write ('@') ops."
+            raise PyrtlError(msg)
+        return self.op_param[0]
+
+    @property
+    def mem(self) -> int:
+        """Readability alias for :attr:`op_param`, returning the :class:`.MemBlock` for
+        a read (``m``) or write (``@``) :attr:`op`.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> addr = pyrtl.Input(name="addr", bitwidth=4)
+            >>> mem = pyrtl.MemBlock(addrwidth=4, bitwidth=8)
+            >>> read = mem[addr]
+            >>> read.name = "read"
+
+            >>> gate_graph = pyrtl.GateGraph()
+            >>> read_gate = gate_graph.get_gate("read")
+            >>> read_gate.mem is mem
+            True
+        """
+        if self.op not in "m@":
+            msg = "mem is only defined for read ('m') and write ('@') ops."
+            raise PyrtlError(msg)
+        return self.op_param[1]
 
     def __init__(
         self,

@@ -61,6 +61,22 @@ class TestGateGraph(unittest.TestCase):
 
         self.assertEqual(gate_graph.get_gate("q"), None)
 
+    def test_gate_alias_errors(self):
+        _ = pyrtl.Input(name="a", bitwidth=4)
+
+        gate_graph = pyrtl.GateGraph()
+        a_gate = gate_graph.get_gate("a")
+        with self.assertRaises(pyrtl.PyrtlError):
+            _ = a_gate.const_value
+        with self.assertRaises(pyrtl.PyrtlError):
+            _ = a_gate.reset_value
+        with self.assertRaises(pyrtl.PyrtlError):
+            _ = a_gate.sel
+        with self.assertRaises(pyrtl.PyrtlError):
+            _ = a_gate.memid
+        with self.assertRaises(pyrtl.PyrtlError):
+            _ = a_gate.mem
+
     def test_select_gate(self):
         a = pyrtl.Input(name="a", bitwidth=4)
         b = pyrtl.Input(name="b", bitwidth=4)
@@ -104,6 +120,7 @@ class TestGateGraph(unittest.TestCase):
         b_gate = gate_graph.get_gate("b")
         self.assertEqual(b_gate.op, "C")
         self.assertEqual(b_gate.op_param, (1,))
+        self.assertEqual(b_gate.const_value, 1)
 
         self.assertEqual(str(b_gate), "b/2 = Const(1)")
 
@@ -111,6 +128,7 @@ class TestGateGraph(unittest.TestCase):
         self.assertEqual(bit_slice_gate.op, "s")
 
         self.assertEqual(bit_slice_gate.op_param, (2, 3))
+        self.assertEqual(bit_slice_gate.sel, (2, 3))
 
         self.assertEqual(bit_slice_gate.args, [a_gate])
 
@@ -188,6 +206,7 @@ class TestGateGraph(unittest.TestCase):
         counter_gate = gate_graph.get_gate("counter")
         self.assertEqual(len(counter_gate.args), 1)
         self.assertEqual(counter_gate.op_param, (2,))
+        self.assertEqual(counter_gate.reset_value, 2)
 
         # Implicit truncation from 4-bit sum to 3-bit register input.
         slice_gate = counter_gate.args[0]
@@ -235,6 +254,8 @@ class TestGateGraph(unittest.TestCase):
         self.assertEqual(read_gate.op, "m")
         self.assertEqual(read_gate.args, [read_addr_gate])
         self.assertEqual(read_gate.op_param, (mem.id, mem))
+        self.assertEqual(read_gate.memid, mem.id)
+        self.assertEqual(read_gate.mem, mem)
         self.assertEqual(read_gate.bitwidth, 8)
         self.assertEqual(
             str(read_gate),
@@ -246,7 +267,9 @@ class TestGateGraph(unittest.TestCase):
         write_enable_gate = gate_graph.get_gate("write_enable")
         write_gate = write_data_gate.dests[0]
         self.assertEqual(write_gate.op, "@")
-        self.assertEqual(read_gate.op_param, (mem.id, mem))
+        self.assertEqual(write_gate.op_param, (mem.id, mem))
+        self.assertEqual(write_gate.memid, mem.id)
+        self.assertEqual(write_gate.mem, mem)
         self.assertEqual(
             write_gate.args, [write_addr_gate, write_data_gate, write_enable_gate]
         )

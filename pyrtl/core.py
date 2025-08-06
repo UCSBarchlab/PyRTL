@@ -52,86 +52,77 @@ class LogicNet(NamedTuple):
                                          into ``out``
     ``n`` ``None``   ``a1, a2`` ``out``  NAND two wires together, put result
                                          into ``out``
-    ``~`` ``None``   ``a1``     ``out``  invert one wire, put result into
-                                         ``out``
-    ``+`` ``None``   ``a1, a2`` ``out``  add ``a1`` and ``a2``, put result into
-                                         ``out``
+    ``~`` ``None``   ``a1``     ``out``  Invert one wire, put result into
+                                         ``out``.
+    ``+`` ``None``   ``a1, a2`` ``out``  Add ``a1`` and ``a2``, put result into
+                                         ``out``.
 
                                          ``len(out) == max(len(a1), len(a2)) + 1``
 
                                          Performs *unsigned* addition. Use
                                          :func:`signed_add` for signed
                                          addition.
-    ``-`` ``None``   ``a1, a2`` ``out``  subtract ``a2`` from ``a1``, put
-                                         result into ``out``
+    ``-`` ``None``   ``a1, a2`` ``out``  Subtract ``a2`` from ``a1``, put
+                                         result into ``out``.
 
                                          ``len(out) == max(len(a1), len(a2)) + 1``
 
                                          Performs *unsigned* subtraction. Use
                                          :func:`signed_sub` for signed
                                          subtraction.
-    ``*`` ``None``   ``a1, a2`` ``out``  multiply ``a1`` & ``a2``, put result
-                                         into ``out``
+    ``*`` ``None``   ``a1, a2`` ``out``  Multiply ``a1`` and ``a2``, put result
+                                         into ``out``.
 
                                          ``len(out) == len(a1) + len(a2)``
 
                                          Performs *unsigned* multiplication.
                                          Use :func:`signed_mult` for signed
                                          multiplication.
-    ``=`` ``None``   ``a1, a2`` ``out``  check ``a1`` & ``a2`` equal, put
-                                         result into ``out`` (0 | 1)
-    ``<`` ``None``   ``a1, a2`` ``out``  check ``a1`` less than ``a2``, put
-                                         result into ``out``. ``out`` has
-                                         bitwidth 1.
+    ``=`` ``None``   ``a1, a2`` ``out``  Check if ``a1`` and ``a2`` are equal, put
+                                         result into ``out``. ``out`` has bitwidth 1.
+    ``<`` ``None``   ``a1, a2`` ``out``  Check if ``a1`` is less than ``a2``, put
+                                         result into ``out``. ``out`` has bitwidth 1.
 
                                          Performs *unsigned* comparison. Use
                                          :func:`signed_lt` for signed less
                                          than.
-    ``>`` ``None``   ``a1, a2`` ``out``  check ``a1`` greater than ``a2``, put
-                                         result into ``out`` ``out`` has
-                                         bitwidth 1.
+    ``>`` ``None``   ``a1, a2`` ``out``  Check if ``a1`` is greater than ``a2``, put
+                                         result into ``out`` ``out`` has bitwidth 1.
 
                                          Performs *unsigned* comparison. Use
                                          :func:`signed_gt` for signed greater
                                          than.
-    ``w`` ``None``   ``w1``     ``w2``   connects ``w1`` to ``w2``
-
-                                         directional wire with no logical
-                                         operation
-    ``x`` ``None``   ``x``,     ``out``  multiplexer:
-
-                                         when ``x`` == 0 connect ``a1`` to
-                                         ``out``
-
-                                         when ``x`` == 1 connect ``a2`` to
-                                         ``out``
-
-                                         ``x`` must be 1-bit and ``len(a1) == len(a2)``
+    ``w`` ``None``   ``w1``     ``w2``   Connects ``w1`` to ``w2``. This is a
+                                         directional wire with no logical function.
+    ``x`` ``None``   ``x``,     ``out``  Multiplexer:
                      ``a1, a2``
-    ``c`` ``None``   ``*args``  ``out``  concatenates ``*args`` (wires) into
-                                         single WireVector
+                                         When ``x == 0``, connect ``a1`` to ``out``.
 
-                                         puts first arg at MSB, last arg at LSB
-    ``s`` ``sel``    ``wire``   ``out``  selects bits from wire based on
-                                         ``sel`` (slicing syntax)
+                                         When ``x == 1``, connect ``a2`` to ``out``.
 
-                                         puts selected bits into ``out``
-    ``r`` ``None``   ``next``   ``r1``   on positive clock edge: copies
-                                         ``next`` to ``r1``
-    ``m`` ``memid``, ``addr``   ``data`` read address addr of mem (with id
-                                         ``memid``), put it into ``data``
+                                         ``x`` must be 1-bit and ``len(a1) == len(a2)``.
+    ``c`` ``None``   ``*args``  ``out``  Concatenates :attr:`args` into a single
+                                         :class:`.WireVector`.
 
-          ``mem``
-    ``@`` ``memid``, ``addr``            write data to mem (with id ``memid``)
-                                         at address ``addr``
+                                         The first :attr:`arg<args>` becomes the most
+                                         significant bits, and the last
+                                         :attr:`arg<args>` becomes the least significant
+                                         bits.
+    ``s`` ``sel``    ``wire``   ``out``  Selects bits from ``wire`` based on
+                                         ``sel`` (slicing syntax).
 
-                                         request write enable (``wr_en``)
+                                         Puts the selected bits into ``out``.
+    ``r`` ``None``   ``next``   ``r1``   On positive clock edge: copy ``next`` to
+                                         ``r1``.
+    ``m`` ``memid``, ``addr``   ``data`` Read address ``addr`` of :class:`MemBlock`
+          ``mem``                        ``mem`` (with :attr:`~MemBlock.id` ``memid``),
+                                         put the data read into ``data``.
 
-          ``mem``    ``data``,
-
-                     ``wr_en``
+    ``@`` ``memid``, ``addr``            Write ``data`` to :class:`MemBlock` ``mem``
+          ``mem``    ``data``,           (with :attr:`~MemBlock.id` ``memid``) at
+                     ``wr_en``           address ``addr``, if ``wr_en`` is ``1``. This
+                                         is the only :attr:`op` with no :attr:`dests`.
     ===== ========== ========== ======== ====
-
     """
 
     op: str
@@ -275,10 +266,9 @@ class Block:
       Each takes exactly two :class:`~LogicNet.args`, and they should perform the
       arithmetic or logical operation specified.
 
-      :class:`ops<LogicNet.op>`: ``&``, ``|``, ``^``, ``n``, ``~``, ``+``, ``-``,
-      ``*``.
+      :class:`ops<LogicNet.op>`: ``&``, ``|``, ``^``, ``n``, ``~``, ``+``, ``-``, ``*``.
 
-      All inputs must be the same :attr:`~WireVector.bitwidth`.  Logical operations
+      All inputs must be the same :attr:`~WireVector.bitwidth`. Logical operations
       produce as many bits as are in the input, while ``+`` and ``-`` produce ``n + 1``
       bits, and ``*`` produces ``2 * n`` bits.
 
@@ -313,21 +303,21 @@ class Block:
     - The ``m`` :class:`~LogicNet.op` is a memory block read port, which supports async
       reads (acting like combinational logic). Multiple read (and write) ports are
       possible to the same memory but each ``m`` defines only one of those. The
-      :class:`~LogicNet.op_param` is a tuple containing two references: the ``memid``,
-      and a reference to the :class:`MemBlock` containing this port. The
-      :class:`MemBlock` should only be used for debug and sanity checks. Each read port
-      has one ``addr`` (an :class:`arg<LogicNet.args>`) and one ``data`` (a
-      :class:`dest<LogicNet.dests>`).
+      :class:`~LogicNet.op_param` is a tuple containing two values: the
+      :attr:`MemBlock.id` (``memid``), and a reference to the :class:`MemBlock`
+      containing this port. The :class:`MemBlock` should only be used for debug and
+      sanity checks. Each read port has one ``addr`` (an :class:`arg<LogicNet.args>`)
+      and one ``data`` (a :class:`dest<LogicNet.dests>`).
 
     - The ``@`` (update) :class:`~LogicNet.op` is a memory block write port, which
       supports synchronous writes (writes are "latched" at positive edge). Multiple
       write (and read) ports are possible to the same memory but each ``@`` defines only
-      one of those. The :class:`~LogicNet.op_param` is a tuple containing two
-      references: the ``memid``, and a reference to the :class:`MemBlock`. Writes have
-      three :class:`~LogicNet.args` (``addr``, ``data``, and write enable ``we_en``).
-      The :class:`~LogicNet.dests` should be an empty tuple. You will not see a written
-      value change until the following cycle. If multiple writes happen to the same
-      address in the same cycle the behavior is currently undefined.
+      one of those. The :class:`~LogicNet.op_param` is a tuple containing two values:
+      the :attr:`MemBlock.id` (``memid``), and a reference to the :class:`MemBlock`.
+      Writes have three :class:`~LogicNet.args` (``addr``, ``data``, and write enable
+      ``we_en``). The :class:`~LogicNet.dests` should be an empty tuple. You will not
+      see a written value change until the following cycle. If multiple writes happen to
+      the same address in the same cycle the behavior is currently undefined.
 
     The connecting elements (:class:`~LogicNet.args` and :class:`~LogicNet.dests`)
     should be :class:`WireVectors<WireVector>` or derived from :class:`WireVector`, and

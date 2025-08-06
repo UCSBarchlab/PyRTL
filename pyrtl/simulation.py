@@ -67,7 +67,8 @@ class Simulation:
 
     - ``.regvalue``: a map from :class:`Register` to its value on the next cycle.
 
-    - ``.memvalue``: a map from ``memid`` to a dictionary of ``{address: value}``.
+    - ``.memvalue``: a map from :attr:`MemBlock.id` (``memid``) to a dictionary of
+      ``{address: value}``.
     """
 
     tracer: SimulationTrace

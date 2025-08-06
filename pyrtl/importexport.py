@@ -823,7 +823,7 @@ class _VerilogOutput:
         self.all_memblocks = sorted(
             # Build a set of unique MemBlocks first, to avoid duplicates.
             {
-                mem_gate.op_param[1]
+                mem_gate.mem
                 for mem_gate in self.gate_graph.mem_reads | self.gate_graph.mem_writes
             },
             key=lambda memblock: memblock.id,
@@ -1003,8 +1003,8 @@ class _VerilogOutput:
             register_initialization = ""
             if initialize_registers:
                 reset_value = 0
-                if reg_gate.op_param[0] is not None:
-                    reset_value = reg_gate.op_param[0]
+                if reg_gate.reset_value is not None:
+                    reset_value = reg_gate.reset_value
                 register_initialization = f" = {reg_gate.bitwidth}'d{reset_value}"
             sanitized_name, comment = self._name_and_comment(reg_gate.name)
             print(
@@ -1026,7 +1026,7 @@ class _VerilogOutput:
             sanitized_name, comment = self._name_and_comment(const_gate.name)
             print(
                 f"    wire{self._verilog_size(const_gate.bitwidth)} "
-                f"{sanitized_name} = {const_gate.bitwidth}'d{const_gate.op_param[0]};"
+                f"{sanitized_name} = {const_gate.bitwidth}'d{const_gate.const_value};"
                 f"{comment}",
                 file=file,
             )
@@ -1099,7 +1099,7 @@ class _VerilogOutput:
             return self._verilog_name(gate.name)
         if gate.op == "C":
             # Return the constant's Verilog value.
-            return f"{gate.bitwidth}'d{gate.op_param[0]}"
+            return f"{gate.bitwidth}'d{gate.const_value}"
 
         # Convert each of the Gate's args to a Verilog expression.
         verilog_args = [self._verilog_expr(arg, lhs) for arg in gate.args]
@@ -1122,19 +1122,19 @@ class _VerilogOutput:
             return f"{{{', '.join(verilog_args)}}}"
         if gate.op == "s":
             selections = []
-            for sel in reversed(gate.op_param):
+            for sel in reversed(gate.sel):
                 if gate.args[0].bitwidth == 1:
                     selections.append(verilog_args[0])
                 else:
                     selections.append(f"{verilog_args[0]}[{sel}]")
-            if len(gate.op_param) == 1:
+            if len(gate.sel) == 1:
                 return f"({selections[0]})"
             # Special case: slicing multiple copies of the same gate.
-            if all(sel == gate.op_param[0] for sel in gate.op_param):
+            if all(sel == gate.sel[0] for sel in gate.sel):
                 return f"{{{len(selections)} {{{selections[0]}}}}}"
             # Special case: slicing a consecutive subset.
-            if tuple(range(gate.op_param[0], gate.op_param[-1] + 1)) == gate.op_param:
-                return f"({verilog_args[0]}[{gate.op_param[-1]}:{gate.op_param[0]}])"
+            if tuple(range(gate.sel[0], gate.sel[-1] + 1)) == gate.sel:
+                return f"({verilog_args[0]}[{gate.sel[-1]}:{gate.sel[0]}])"
             return f"{{{', '.join(selections)}}}"
 
         msg = f"Unimplemented op {gate.op} in Gate {gate}"
@@ -1180,7 +1180,7 @@ class _VerilogOutput:
         if self.add_reset:
             print("        if (rst) begin", file=file)
             for register in self._name_sorted(self.gate_graph.registers):
-                reset_value = register.op_param[0]
+                reset_value = register.reset_value
                 print(
                     f"            {self._verilog_name(register.name)} <= "
                     f"{register.bitwidth}'d{reset_value};",
@@ -1212,7 +1212,7 @@ class _VerilogOutput:
             # Find writes to ``memblock``.
             write_gates = []
             for write_gate in self._name_sorted(self.gate_graph.mem_writes):
-                if write_gate.op_param[1] is memblock:
+                if write_gate.mem is memblock:
                     write_gates.append(write_gate)
             if write_gates:
                 print("    always @(posedge clk) begin", file=file)
@@ -1222,7 +1222,7 @@ class _VerilogOutput:
                     verilog_addr = self._verilog_expr(write_gate.args[0])
                     verilog_rhs = self._verilog_expr(write_gate.args[1])
                     # Simplify the assignment if the enable bit is a constant ``1``.
-                    if enable.op == "C" and enable.op_param[0] == 1:
+                    if enable.op == "C" and enable.const_value == 1:
                         print(
                             f"        {self._verilog_name(memblock.name)}"
                             f"[{verilog_addr}] <= {verilog_rhs};",
@@ -1242,7 +1242,7 @@ class _VerilogOutput:
             # by ``_to_verilog_header``.
             read_gates = []
             for read_gate in self._name_sorted(self.gate_graph.mem_reads):
-                if read_gate.op_param[1] is memblock:
+                if read_gate.mem is memblock:
                     read_gates.append(read_gate)
             for read_gate in self._name_sorted(read_gates):
                 print(
@@ -1350,7 +1350,7 @@ class _VerilogOutput:
             initial_value = register_value_map.get(reg_gate.name)
             # If that didn't work, use the Register's reset_value.
             if not initial_value:
-                initial_value = reg_gate.op_param[0]
+                initial_value = reg_gate.reset_value
             # If there is no reset_value, use the default_value().
             if not initial_value:
                 initial_value = default_value()
