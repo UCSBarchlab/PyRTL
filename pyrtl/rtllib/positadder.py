@@ -3,6 +3,15 @@ from pyrtl.corecircuits import shift_left_logical, shift_right_logical
 from pyrtl.positutils import decode_posit, get_upto_regime, frac_with_hidden_one, remove_first_one
 
 def posit_add(a, b, nbits, es):
+    """Adds two numbers in posit format and returns their sum.
+
+    :param a: A :class:`WireVector` to add. Bitwidths need to match.
+    :param b: A :class:`WireVector` to add. Bitwidths need to match.
+    :param nbits: A :class:`int` representing the total bitwidth of the posit.
+    :param es: A :class:`int` representing the exponent size of the posit.
+
+    :return: A :class:`WireVector` that represents the sum of the two posits. 
+    """
     # Decode input posits into regime (k), exponent, fraction, and fraction length
     _, k_a, exp_a, frac_a, frac_len_a = decode_posit(a, nbits, es)
     _, k_b, exp_b, frac_b, frac_len_b = decode_posit(b, nbits, es)

@@ -3,8 +3,20 @@
 import pyrtl
 from pyrtl.corecircuits import shift_right_logical, shift_left_logical
 
-#decode posit
 def decode_posit(x, nbits, es):
+    """Decode posit into its components and return them as a :class:`tuple`.
+
+    :param x: A :class:`WireVector` that represents the posit.
+    :param nbits: A :class:`int` that represents the bitwidth of the posit.
+    :param es: A :class:`int` that represents the exponent size of the posit.
+
+    :return: A :class:`tuple` consisting of:
+        - :class:`WireVector` for sign
+        - :class:`WireVector` for k
+        - :class:`WireVector` for exponent
+        - :class:`WireVector` for fractional bits
+        - :class:`WireVector` for length of fraction
+    """
     sign = x[nbits - 1]
     rest = [x[nbits - 2 - i] for i in range(nbits - 1)]
     regime_bit = rest[0]
@@ -48,6 +60,17 @@ def decode_posit(x, nbits, es):
     return sign, k, exp, frac_result, fraction_length
 
 def get_upto_regime(k, n_val, sign_final):
+    """Calculates the remaining bits and the regime bits.
+
+    :param k: A :class:`WireVector` that represents the k value.
+    :param n_val: A :class:`WireVector` that represents the bitwidth of
+        the posit.
+    :param sign_final: A :class:`WireVector` that represents the final sign.
+
+    :return: A :class:`tuple` consisting of:
+        - :class:`WireVector` representing the remaining bits.
+        - :class:`WireVector` representing the regime bits with sign bit.
+    """
     precomputed_val = (1 << (n_val - 1)) - 1
     n_c = pyrtl.Const(n_val, bitwidth=n_val)
     n_minus_1 = pyrtl.Const(n_val - 1, bitwidth=n_val)
@@ -111,6 +134,17 @@ def get_upto_regime(k, n_val, sign_final):
     return rem_bits, sign_w_regime_final
 
 def frac_with_hidden_one(frac, frac_length, nbits):
+    """Adds a hidden 1 to the fractional bits.
+
+    :param frac: A :class:`WireVector` that represents the fractional bits.
+    :param frac_length: A :class:`WireVector` that represents the length of
+        the fractional bits.
+    :param nbits: A :class:`WireVector` that represents the bitwidth of the
+        posit.
+
+    :return: A :class:`WireVector` that represents the fraction with the
+        hidden 1.
+    """
     one_table = [
         pyrtl.Const(1 << i, bitwidth=32)
         for i in range(nbits + 1)
@@ -131,6 +165,12 @@ def frac_with_hidden_one(frac, frac_length, nbits):
     return full
 
 def remove_first_one(val):
+    """Removes the leading hidden bit of 1.
+
+    :param val: A :class:`WireVector` that represents the fractional bits.
+
+    :return: A :class:`WireVector` with the hidden bit of 1 removed.
+    """
     found = pyrtl.Const(0, bitwidth=1)
     result_bits = []
 

@@ -5,6 +5,17 @@ from positadder import posit_add
 from positmul import posit_mul
 
 def posit_matmul(x, y, nbits, es):
+    """Performs matrix multiplication on posits.
+
+    :param x: A :class:`Matrix` to be multiplied.
+    :param y: A :class:`Matrix` to be multiplied.
+    :param nbits: A :class:`int` representing the bitwidth of each cell of
+    the matrix.
+    :param es: A :class:`int` representing the exponent size of the posit.
+
+    :return: A :class:`Matrix` that represents the product of two posit
+    matrices.
+    """
     if not isinstance(x, Matrix):
         msg = f"error: expecting a Matrix, got {type(x)} instead"
         raise PyrtlError(msg)
