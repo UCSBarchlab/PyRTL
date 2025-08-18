@@ -3,7 +3,16 @@
 import pyrtl
 from pyrtl.corecircuits import shift_right_logical, shift_left_logical
 
-def decode_posit(x, nbits, es):
+
+def decode_posit(
+    x: pyrtl.WireVector, nbits: int, es: int
+) -> tuple[
+    pyrtl.WireVector,
+    pyrtl.WireVector,
+    pyrtl.WireVector,
+    pyrtl.WireVector,
+    pyrtl.WireVector,
+]:
     """Decode posit into its components and return them as a :class:`tuple`.
 
     :param x: A :class:`WireVector` that represents the posit.
@@ -29,7 +38,7 @@ def decode_posit(x, nbits, es):
         run_len = run_len + pyrtl.select(
             active & is_same,
             pyrtl.Const(1),
-            pyrtl.Const(0)
+            pyrtl.Const(0),
         )
         active = active & is_same
 
@@ -59,7 +68,12 @@ def decode_posit(x, nbits, es):
 
     return sign, k, exp, frac_result, fraction_length
 
-def get_upto_regime(k, n_val, sign_final):
+
+def get_upto_regime(
+    k: pyrtl.WireVector,
+    n_val: pyrtl.WireVector,
+    sign_final: pyrtl.WireVector,
+) -> tuple[pyrtl.WireVector, pyrtl.WireVector]:
     """Calculates the remaining bits and the regime bits.
 
     :param k: A :class:`WireVector` that represents the k value.
@@ -133,7 +147,12 @@ def get_upto_regime(k, n_val, sign_final):
     sign_w_regime_final = pyrtl.concat(sign_final, sign_w_regime_trimmed)
     return rem_bits, sign_w_regime_final
 
-def frac_with_hidden_one(frac, frac_length, nbits):
+
+def frac_with_hidden_one(
+    frac: pyrtl.WireVector,
+    frac_length: pyrtl.WireVector,
+    nbits: int,
+) -> pyrtl.WireVector:
     """Adds a hidden 1 to the fractional bits.
 
     :param frac: A :class:`WireVector` that represents the fractional bits.
@@ -164,7 +183,8 @@ def frac_with_hidden_one(frac, frac_length, nbits):
     full = one_shifted + frac_32
     return full
 
-def remove_first_one(val):
+
+def remove_first_one(val: pyrtl.WireVector) -> pyrtl.WireVector:
     """Removes the leading hidden bit of 1.
 
     :param val: A :class:`WireVector` that represents the fractional bits.

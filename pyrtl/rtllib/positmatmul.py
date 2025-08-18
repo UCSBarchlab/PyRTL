@@ -4,39 +4,41 @@ from pyrtl.rtllib.matrix import Matrix
 from positadder import posit_add
 from positmul import posit_mul
 
-def posit_matmul(x, y, nbits, es):
+
+def posit_matmul(x: Matrix, y: Matrix, nbits: int, es: int) -> Matrix:
     """Performs matrix multiplication on posits.
 
     :param x: A :class:`Matrix` to be multiplied.
     :param y: A :class:`Matrix` to be multiplied.
     :param nbits: A :class:`int` representing the bitwidth of each cell of
-    the matrix.
+        the matrix.
     :param es: A :class:`int` representing the exponent size of the posit.
 
     :return: A :class:`Matrix` that represents the product of two posit
-    matrices.
+        matrices.
     """
     if not isinstance(x, Matrix):
         msg = f"error: expecting a Matrix, got {type(x)} instead"
         raise PyrtlError(msg)
+
     if not isinstance(y, Matrix):
         msg = f"error: expecting a Matrix, got {type(y)} instead"
         raise PyrtlError(msg)
-    
+
     if x.columns != y.rows:
         msg = (
-                f"error: rows and columns mismatch. Matrix a: {x.columns} columns, "
-                f"Matrix b: {y.rows} rows"
-            )
-        raise PyrtlError(msg)
-    
-    result = Matrix(
-            x.rows,
-            y.columns,
-            nbits,
-            max_bits=x.max_bits,
+            f"error: rows and columns mismatch. "
+            f"Matrix a: {x.columns} columns, Matrix b: {y.rows} rows"
         )
-    
+        raise PyrtlError(msg)
+
+    result = Matrix(
+        x.rows,
+        y.columns,
+        nbits,
+        max_bits=x.max_bits,
+    )
+
     for i in range(x.rows):
         for j in range(y.columns):
             acc = pyrtl.Const(0, bitwidth=nbits)
@@ -44,5 +46,5 @@ def posit_matmul(x, y, nbits, es):
                 prod = posit_mul(nbits, es, x[i, k], y[k, j])
                 acc = posit_add(acc, prod, nbits, es)
             result[i, j] = acc
-    
+
     return result

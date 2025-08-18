@@ -1,8 +1,16 @@
 import pyrtl
 from pyrtl.corecircuits import shift_left_logical, shift_right_logical
-from pyrtl.positutils import decode_posit, get_upto_regime, frac_with_hidden_one, remove_first_one
+from pyrtl.positutils import (
+    decode_posit,
+    get_upto_regime,
+    frac_with_hidden_one,
+    remove_first_one,
+)
 
-def posit_add(a, b, nbits, es):
+
+def posit_add(
+    a: pyrtl.WireVector, b: pyrtl.WireVector, nbits: int, es: int
+) -> pyrtl.WireVector:
     """Adds two numbers in posit format and returns their sum.
 
     :param a: A :class:`WireVector` to add. Bitwidths need to match.
@@ -10,16 +18,16 @@ def posit_add(a, b, nbits, es):
     :param nbits: A :class:`int` representing the total bitwidth of the posit.
     :param es: A :class:`int` representing the exponent size of the posit.
 
-    :return: A :class:`WireVector` that represents the sum of the two posits. 
+    :return: A :class:`WireVector` that represents the sum of the two posits.
     """
     # Decode input posits into regime (k), exponent, fraction, and fraction length
     _, k_a, exp_a, frac_a, frac_len_a = decode_posit(a, nbits, es)
     _, k_b, exp_b, frac_b, frac_len_b = decode_posit(b, nbits, es)
 
-    # match bitwidths of fractional part
+    # Match bitwidths of fractional part
     frac_a_aligned = pyrtl.WireVector(bitwidth=nbits)
     frac_b_aligned = pyrtl.WireVector(bitwidth=nbits)
-    
+
     frac_len_a_aligned = pyrtl.WireVector(bitwidth=nbits)
     frac_len_b_aligned = pyrtl.WireVector(bitwidth=nbits)
 
@@ -45,10 +53,8 @@ def posit_add(a, b, nbits, es):
             frac_len_b_aligned |= frac_len_b
 
     # Add hidden leading one to fractions
-    frac_a_full = frac_with_hidden_one(frac_a_aligned, frac_len_a_aligned,
-                                       nbits)
-    frac_b_full = frac_with_hidden_one(frac_b_aligned, frac_len_b_aligned,
-                                       nbits)
+    frac_a_full = frac_with_hidden_one(frac_a_aligned, frac_len_a_aligned, nbits)
+    frac_b_full = frac_with_hidden_one(frac_b_aligned, frac_len_b_aligned, nbits)
 
     # Compute scales (regime*k + exponent)
     scale_a = shift_left_logical(k_a, es) + exp_a
@@ -59,7 +65,7 @@ def posit_add(a, b, nbits, es):
     is_neg_offset = pyrtl.select(
         offset > pyrtl.Const(127, bitwidth=nbits),
         truecase=pyrtl.Const(1, bitwidth=nbits),
-        falsecase=pyrtl.Const(0, bitwidth=nbits)
+        falsecase=pyrtl.Const(0, bitwidth=nbits),
     )
 
     shifted_a = pyrtl.WireVector(bitwidth=frac_a_full.bitwidth)
@@ -86,14 +92,13 @@ def posit_add(a, b, nbits, es):
     # Add shifted fractions
     result_frac = shifted_a + shifted_b
 
-    # checking for overflow, if overflow, increase scale
+    # Checking for overflow, if overflow, increase scale
     result_scale = pyrtl.select(
         offset == pyrtl.Const(0, bitwidth=offset.bitwidth),
         result_scale + 1,
-        result_scale
+        result_scale,
     )
-    result_k = shift_right_logical(result_scale,
-                                   pyrtl.Const(es, bitwidth=nbits))
+    result_k = shift_right_logical(result_scale, pyrtl.Const(es, bitwidth=nbits))
 
     # Extract regime bits
     rem_bits, regime_bits = get_upto_regime(result_k, nbits, 0)
@@ -107,7 +112,7 @@ def posit_add(a, b, nbits, es):
     # Remaining fraction length
     frac_len = rem_bits - es
 
-    # handling rounding of fractional bits
+    # Handling rounding of fractional bits
     count = pyrtl.Const(0, bitwidth=nbits)
     rounded_frac = pyrtl.Const(0, bitwidth=nbits)
     found = pyrtl.Const(0, bitwidth=nbits)
@@ -116,8 +121,7 @@ def posit_add(a, b, nbits, es):
         bit = result_frac[nbits - 1 - i]
         cond = pyrtl.select(bit == pyrtl.Const(1), 1, found)
         found = found | cond
-        count = pyrtl.select(found == pyrtl.Const(1),
-                             count + 1, count)
+        count = pyrtl.select(found == pyrtl.Const(1), count + 1, count)
 
     # Exclude leading one
     count = count - 1
@@ -157,17 +161,17 @@ def posit_add(a, b, nbits, es):
 
     # Combine regime, exponent, and fraction
     added_posit = (
-        pyrtl.Const(0, bitwidth=nbits) +
-        regime_bits +
-        result_exp +
-        rounded_frac
+        pyrtl.Const(0, bitwidth=nbits)
+        + regime_bits
+        + result_exp
+        + rounded_frac
     )
     result_posit = pyrtl.WireVector(bitwidth=nbits)
 
     # Checking for special cases (NaR and 0)
     isNar = (
-        pyrtl.select(a == pyrtl.Const(1 << nbits - 1, bitwidth=nbits), 1, 0) |
-        pyrtl.select(b == pyrtl.Const(1 << nbits - 1, bitwidth=nbits), 1, 0)
+        pyrtl.select(a == pyrtl.Const(1 << nbits - 1, bitwidth=nbits), 1, 0)
+        | pyrtl.select(b == pyrtl.Const(1 << nbits - 1, bitwidth=nbits), 1, 0)
     )
 
     with pyrtl.conditional_assignment:
@@ -184,3 +188,19 @@ def posit_add(a, b, nbits, es):
             result_posit |= added_posit
 
     return result_posit
+
+# Simulation
+nbits = 8
+es = 1
+
+a = pyrtl.Input(bitwidth=nbits, name='const_a')
+b = pyrtl.Input(bitwidth=nbits, name='const_b')
+posit = pyrtl.Output(bitwidth=nbits, name='posit')
+
+added_posit = posit_add(a, b, nbits, es)
+
+posit <<= added_posit
+
+sim = pyrtl.Simulation()
+sim.step({'const_a': 0b01011100, 'const_b': 0b01100000}) # 3.5 + 4 = 7.5
+print("added posit =", format(sim.inspect('posit'), '08b'))
