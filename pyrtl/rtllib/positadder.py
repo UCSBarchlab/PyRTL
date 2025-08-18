@@ -13,10 +13,33 @@ def posit_add(
 ) -> pyrtl.WireVector:
     """Adds two numbers in posit format and returns their sum.
 
-    :param a: A :class:`WireVector` to add. Bitwidths need to match.
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> nbits = 8
+        >>> es = 1
+
+        >>> a = pyrtl.Input(bitwidth=nbits, name='a')
+        >>> b = pyrtl.Input(bitwidth=nbits, name='b')
+        >>> posit = pyrtl.Output(bitwidth=nbits, name='posit')
+
+        >>> added_posit = posit_add(a, b, nbits, es)
+
+        >>> posit <<= added_posit
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({'a': 0b01011100, 'b': 0b01100000}) # 3.5 + 4 = 7.5
+        >>> format(sim.inspect('posit'), '08b')
+        '01100111'
+
+    :param a: A :class:`.WireVector` to add. Bitwidths need to match.
     :param b: A :class:`WireVector` to add. Bitwidths need to match.
-    :param nbits: A :class:`int` representing the total bitwidth of the posit.
-    :param es: A :class:`int` representing the exponent size of the posit.
+    :param nbits: A :class:`.int` representing the total bitwidth of the posit.
+    :param es: A :class:`.int` representing the exponent size of the posit.
 
     :return: A :class:`WireVector` that represents the sum of the two posits.
     """
@@ -188,19 +211,3 @@ def posit_add(
             result_posit |= added_posit
 
     return result_posit
-
-# Simulation
-nbits = 8
-es = 1
-
-a = pyrtl.Input(bitwidth=nbits, name='const_a')
-b = pyrtl.Input(bitwidth=nbits, name='const_b')
-posit = pyrtl.Output(bitwidth=nbits, name='posit')
-
-added_posit = posit_add(a, b, nbits, es)
-
-posit <<= added_posit
-
-sim = pyrtl.Simulation()
-sim.step({'const_a': 0b01011100, 'const_b': 0b01100000}) # 3.5 + 4 = 7.5
-print("added posit =", format(sim.inspect('posit'), '08b'))
