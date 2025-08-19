@@ -46,9 +46,18 @@ def decode_posit(
     k_neg = (~run_len) + pyrtl.Const(1, bitwidth=nbits)
     k = pyrtl.select(regime_bit, k_pos, k_neg)
 
-    exp = pyrtl.Const(0, bitwidth=es)
-    for i in range(nbits - 2):
-        exp = pyrtl.select(run_len == pyrtl.Const(i), rest[i + 1], exp)
+    exp_bits = []
+    for j in range(es):
+        bit_val = pyrtl.Const(0, bitwidth=1)
+        for i in range(nbits - 2):
+            cond = run_len == pyrtl.Const(i, bitwidth=nbits)
+            # exponent bit is at rest[i + 1 + j]
+            target_idx = i + 1 + j
+            if target_idx < (nbits - 1):
+                bit_val = pyrtl.select(cond, rest[target_idx], bit_val)
+        exp_bits.append(bit_val)
+
+    exp = pyrtl.concat_list(exp_bits[::-1]) if es > 0 else pyrtl.Const(0)
 
     start_idx = run_len + pyrtl.Const(1 + es, bitwidth=nbits)
     fraction_bits = []
