@@ -1,4 +1,4 @@
-"""Implements utility functions for posit operations"""
+"""Implements utility functions for posit operations."""
 
 import pyrtl
 from pyrtl.corecircuits import shift_right_logical, shift_left_logical
@@ -13,18 +13,18 @@ def decode_posit(
     pyrtl.WireVector,
     pyrtl.WireVector,
 ]:
-    """Decode posit into its components and return them as a :class:`tuple`.
+    """Decode posit into its components and return them as a tuple.
 
-    :param x: A :class:`WireVector` that represents the posit.
-    :param nbits: A :class:`int` that represents the bitwidth of the posit.
-    :param es: A :class:`int` that represents the exponent size of the posit.
+    :param x: A WireVector that represents the posit.
+    :param nbits: An int that represents the bitwidth of the posit.
+    :param es: An int that represents the exponent size of the posit.
 
-    :return: A :class:`tuple` consisting of:
-        - :class:`WireVector` for sign
-        - :class:`WireVector` for k
-        - :class:`WireVector` for exponent
-        - :class:`WireVector` for fractional bits
-        - :class:`WireVector` for length of fraction
+    :return: A tuple consisting of:
+        - WireVector for sign
+        - WireVector for k
+        - WireVector for exponent
+        - WireVector for fractional bits
+        - WireVector for length of fraction
     """
     sign = x[nbits - 1]
     rest = [x[nbits - 2 - i] for i in range(nbits - 1)]
@@ -76,75 +76,64 @@ def get_upto_regime(
 ) -> tuple[pyrtl.WireVector, pyrtl.WireVector]:
     """Calculates the remaining bits and the regime bits.
 
-    :param k: A :class:`WireVector` that represents the k value.
-    :param n_val: A :class:`WireVector` that represents the bitwidth of
-        the posit.
-    :param sign_final: A :class:`WireVector` that represents the final sign.
+    :param k: A WireVector that represents the k value.
+    :param n_val: A WireVector that represents the bitwidth of the posit.
+    :param sign_final: A WireVector that represents the final sign.
 
-    :return: A :class:`tuple` consisting of:
-        - :class:`WireVector` representing the remaining bits.
-        - :class:`WireVector` representing the regime bits with sign bit.
+    :return: A tuple consisting of:
+        - WireVector representing the remaining bits.
+        - WireVector representing the regime bits with sign bit.
     """
     precomputed_val = (1 << (n_val - 1)) - 1
-    n_c = pyrtl.Const(n_val, bitwidth=n_val)
-    n_minus_1 = pyrtl.Const(n_val - 1, bitwidth=n_val)
-    n_minus_2 = pyrtl.Const(n_val - 2, bitwidth=n_val)
-    n_minus_3 = pyrtl.Const(n_val - 3, bitwidth=n_val)
 
-    k_thresh = pyrtl.Const(1 << (n_val - 1), bitwidth=k.bitwidth)
-    abs_k = pyrtl.select(
-        k >= k_thresh,
-        (
-            (~k + pyrtl.Const(1, bitwidth=k.bitwidth))
-            & pyrtl.Const((1 << n_val) - 1, bitwidth=k.bitwidth)
-        ),
+    n_c = pyrtl.Const(n_val)
+    n_minus_1 = pyrtl.Const(n_val - 1)
+    n_minus_2 = pyrtl.Const(n_val - 2)
+    n_minus_3 = pyrtl.Const(n_val - 3)
+
+    rem_bits = pyrtl.WireVector(bitwidth=n_val)
+    sign_w_regime = pyrtl.WireVector(bitwidth=n_val)
+
+    abs_k = pyrtl.WireVector(bitwidth=k.bitwidth)
+    abs_k <<= pyrtl.select(
+        k >= (1 << (n_val - 1)),
+        (~k + 1) & ((1 << n_val) - 1),
         k,
     )
 
     large_neg_regime = abs_k >= n_minus_1
     large_pos_regime = abs_k >= n_minus_2
 
-    temp_rem1 = (n_c + k) - pyrtl.Const(2, bitwidth=n_val)
-    sign_case1_inner = shift_right_logical(
-        pyrtl.Const(1 << (n_val - 2), bitwidth=n_val), abs_k
-    )
+    with pyrtl.conditional_assignment:
+        with k >= (1 << (n_val - 1)):
+            with large_neg_regime:
+                rem_bits |= 0
+                sign_w_regime |= 0
+            with ~large_neg_regime:
+                temp_rem = n_c + k - 2
+                rem_bits |= temp_rem
+                sign_w_regime |= shift_right_logical(
+                    pyrtl.Const(1 << (n_val - 2), bitwidth=n_val), abs_k
+                )
 
-    rem_bits_case1 = pyrtl.select(
-        large_neg_regime,
-        pyrtl.Const(0, bitwidth=n_val),
-        temp_rem1,
-    )
-    sign_case1 = pyrtl.select(
-        large_neg_regime,
-        pyrtl.Const(0, bitwidth=n_val),
-        sign_case1_inner,
-    )
+        with k < (1 << (n_val - 1)):
+            with large_pos_regime:
+                rem_bits |= 0
+                sign_w_regime |= pyrtl.Const(precomputed_val, bitwidth=n_val)
+            with ~large_pos_regime:
+                temp_rem = n_minus_3 - k
+                shift_amt = k + 2
+                rem_bits |= temp_rem
+                ones = shift_left_logical(
+                    pyrtl.Const(1, bitwidth=n_val), shift_amt
+                ) - pyrtl.Const(2, bitwidth=n_val)
+                shifted = shift_left_logical(ones, temp_rem)
+                sign_w_regime |= shifted
 
-    temp_rem2 = n_minus_3 - k
-    shift_amt = k + pyrtl.Const(2, bitwidth=n_val)
-    ones = (
-        shift_left_logical(pyrtl.Const(1, bitwidth=n_val), shift_amt)
-        - pyrtl.Const(2, bitwidth=n_val)
-    )
-    shifted_case2 = shift_left_logical(ones, temp_rem2)
-
-    rem_bits_case2 = pyrtl.select(
-        large_pos_regime,
-        pyrtl.Const(0, bitwidth=n_val),
-        temp_rem2,
-    )
-    sign_case2 = pyrtl.select(
-        large_pos_regime,
-        pyrtl.Const(precomputed_val, bitwidth=n_val),
-        shifted_case2,
-    )
-
-    cond_k_ge = k >= k_thresh
-    rem_bits = pyrtl.select(cond_k_ge, rem_bits_case1, rem_bits_case2)
-    sign_w_regime = pyrtl.select(cond_k_ge, sign_case1, sign_case2)
-
-    sign_w_regime_trimmed = sign_w_regime[: n_val - 1]
+    sign_w_regime_trimmed = pyrtl.WireVector(bitwidth=n_val - 1)
+    sign_w_regime_trimmed <<= sign_w_regime[: n_val - 1]
     sign_w_regime_final = pyrtl.concat(sign_final, sign_w_regime_trimmed)
+
     return rem_bits, sign_w_regime_final
 
 
@@ -155,19 +144,13 @@ def frac_with_hidden_one(
 ) -> pyrtl.WireVector:
     """Adds a hidden 1 to the fractional bits.
 
-    :param frac: A :class:`WireVector` that represents the fractional bits.
-    :param frac_length: A :class:`WireVector` that represents the length of
-        the fractional bits.
-    :param nbits: A :class:`WireVector` that represents the bitwidth of the
-        posit.
+    :param frac: A WireVector that represents the fractional bits.
+    :param frac_length: A WireVector that represents the length of the fractional bits.
+    :param nbits: An int that represents the bitwidth of the posit.
 
-    :return: A :class:`WireVector` that represents the fraction with the
-        hidden 1.
+    :return: A WireVector that represents the fraction with the hidden 1.
     """
-    one_table = [
-        pyrtl.Const(1 << i, bitwidth=32)
-        for i in range(nbits + 1)
-    ]
+    one_table = [pyrtl.Const(1 << i, bitwidth=32) for i in range(nbits + 1)]
     one_shifted = pyrtl.Const(0, bitwidth=32)
 
     for i in range(nbits + 1):
@@ -177,9 +160,7 @@ def frac_with_hidden_one(
             one_shifted,
         )
 
-    frac_32 = pyrtl.concat(
-        pyrtl.Const(0, bitwidth=32 - (nbits - 1)), frac
-    )
+    frac_32 = pyrtl.concat(pyrtl.Const(0, bitwidth=32 - (nbits - 1)), frac)
     full = one_shifted + frac_32
     return full
 
@@ -187,9 +168,9 @@ def frac_with_hidden_one(
 def remove_first_one(val: pyrtl.WireVector) -> pyrtl.WireVector:
     """Removes the leading hidden bit of 1.
 
-    :param val: A :class:`WireVector` that represents the fractional bits.
+    :param val: A WireVector that represents the fractional bits.
 
-    :return: A :class:`WireVector` with the hidden bit of 1 removed.
+    :return: A WireVector with the hidden bit of 1 removed.
     """
     found = pyrtl.Const(0, bitwidth=1)
     result_bits = []
