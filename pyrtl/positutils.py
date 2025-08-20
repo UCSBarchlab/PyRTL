@@ -15,6 +15,44 @@ def decode_posit(
 ]:
     """Decode posit into its components and return them as a tuple.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+        >>> nbits = 8
+        >>> es = 2
+
+        >>> a = pyrtl.Input(bitwidth=nbits, name='a')
+        >>> sign_out = pyrtl.Output(bitwidth=nbits, name='sign_out')
+        >>> k_out = pyrtl.Output(bitwidth=nbits, name='k_out')
+        >>> exp_out = pyrtl.Output(bitwidth=es, name='exp_out')
+        >>> frac_bits_out = pyrtl.Output(bitwidth=nbits, name='frac_bits_out')
+        >>> frac_len_out = pyrtl.Output(bitwidth=nbits, name='frac_len_out')
+
+        >>> sign, k, exp, frac_bits, frac_len = decode_posit(a, nbits, es)
+
+        >>> sign_out <<= sign
+        >>> k_out <<= k
+        >>> exp_out <<= exp
+        >>> frac_bits_out <<= frac_bits
+        >>> frac_len_out <<= frac_len
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({'a': 0b01011100})
+
+        >>> sim.inspect('sign_out')
+        '0'
+        >>> sim.inspect('k_out')
+        '0'
+        >>> sim.inspect('exp_out')
+        '3'
+        >>> format(sim.inspect('frac_bits_out'), '08b')
+        '00000100'
+        >>> sim.inspect('frac_len_out')
+        '3'
+
     :param x: A WireVector that represents the posit.
     :param nbits: An int that represents the bitwidth of the posit.
     :param es: An int that represents the exponent size of the posit.
@@ -80,13 +118,40 @@ def decode_posit(
 
 def get_upto_regime(
     k: pyrtl.WireVector,
-    n_val: pyrtl.WireVector,
+    n_val: int,
     sign_final: pyrtl.WireVector,
 ) -> tuple[pyrtl.WireVector, pyrtl.WireVector]:
     """Calculates the remaining bits and the regime bits.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> nbits = 8
+        >>> k_in = pyrtl.Input(bitwidth=nbits, name='k_in')
+        >>> sign_final = pyrtl.Input(bitwidth=1, name='sign_final')
+
+        >>> rem_bits_out = pyrtl.Output(bitwidth=nbits, name='rem_bits_out')
+        >>> sign_w_regime_out = pyrtl.Output(bitwidth=nbits, name='sign_w_regime_out')
+
+        >>> rem_bits, sign_w_regime = get_upto_regime(k_in, nbits, sign_final)
+
+        >>> rem_bits_out <<= rem_bits
+        >>> sign_w_regime_out <<= sign_w_regime
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({'k_in': 2, 'sign_final': 0})
+
+        >>> sim.inspect('rem_bits_out')
+        '3'
+        >>> format(sim.inspect('sign_w_regime_out'), '08b')
+        '01110000'
+
     :param k: A WireVector that represents the k value.
-    :param n_val: A WireVector that represents the bitwidth of the posit.
+    :param n_val: A int that represents the bitwidth of the posit.
     :param sign_final: A WireVector that represents the final sign.
 
     :return: A tuple consisting of:
@@ -153,6 +218,25 @@ def frac_with_hidden_one(
 ) -> pyrtl.WireVector:
     """Adds a hidden 1 to the fractional bits.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+        >>> nbits = 8
+        >>> frac_in = pyrtl.Input(bitwidth=nbits-1, name='frac_in')
+        >>> frac_len_in = pyrtl.Input(bitwidth=nbits, name='frac_len_in')
+        >>> frac_out = pyrtl.Output(bitwidth=32, name='frac_out')
+
+        >>> frac_out <<= frac_with_hidden_one(frac_in, frac_len_in, nbits)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({'frac_in': 0b0010101, 'frac_len_in': 5})
+
+        >>> format(sim.inspect('frac_out'), '08b')
+        '000110101'
+
     :param frac: A WireVector that represents the fractional bits.
     :param frac_length: A WireVector that represents the length of the fractional bits.
     :param nbits: An int that represents the bitwidth of the posit.
@@ -176,6 +260,24 @@ def frac_with_hidden_one(
 
 def remove_first_one(val: pyrtl.WireVector) -> pyrtl.WireVector:
     """Removes the leading hidden bit of 1.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+        >>> nbits = 8
+        >>> frac_with_one = pyrtl.Input(bitwidth=nbits, name='frac_with_one')
+        >>> frac_removed = pyrtl.Output(bitwidth=nbits, name='frac_removed')
+
+        >>> frac_removed <<= remove_first_one(frac_with_one)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({'frac_with_one': 0b10010110})
+
+        >>> format(sim.inspect('frac_removed'), '08b')
+        '00010110'
 
     :param val: A WireVector that represents the fractional bits.
 
