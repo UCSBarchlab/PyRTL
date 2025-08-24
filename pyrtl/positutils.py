@@ -1,5 +1,6 @@
 """Implements utility functions for posit operations."""
 
+import math
 import pyrtl
 from pyrtl.corecircuits import shift_right_logical, shift_left_logical
 
@@ -302,3 +303,68 @@ def remove_first_one(val: pyrtl.WireVector) -> pyrtl.WireVector:
         )
 
     return pyrtl.concat_list(result_bits[::-1])
+
+
+def decimal_to_posit(x: float, nbits: int, es: int) -> int:
+    """Convert a decimal float to Posit<nbits, es> representation.
+
+    .. doctest only::
+
+        >>> import math
+
+    Example::
+        >>> nbits, es = 16, 2
+        >>> format(decimal_to_posit(4992, nbits, es), '016b')
+        '0111100000111000'
+
+        >>> nbits, es = 8, 1
+        >>> format(decimal_to_posit(5000, nbits, es), '08b')
+        '01111111'
+
+    :param x: The decimal float to be converted.
+    :param nbits: Total number of bits in the posit representation.
+    :param es: Maximum number of exponent bits.
+    :return: The integer representation of the posit encoding.
+    """
+    if x == 0:
+        return 0
+
+    sign = 0
+    if x < 0:
+        sign = 1
+        x = -x
+
+    useed = 2 ** (2 ** es)
+    k = int(math.floor(math.log(x, useed)))
+    regime_value = useed ** k
+
+    remaining = x / regime_value
+    exponent = int(math.floor(math.log2(remaining)))
+    exponent = max(0, exponent)
+    remaining /= (2 ** exponent)
+
+    fraction = remaining - 1.0
+    frac_bits = []
+
+    for _ in range(nbits * 2):
+        fraction *= 2
+        if fraction >= 1:
+            frac_bits.append("1")
+            fraction -= 1
+        else:
+            frac_bits.append("0")
+
+    if k >= 0:
+        regime_bits = "1" * (k + 1) + "0"
+    else:
+        regime_bits = "0" * (-k) + "1"
+
+    bits = str(sign)
+    bits += regime_bits
+    exp_str = bin(exponent)[2:].zfill(es)
+    bits += exp_str
+    bits += "".join(frac_bits)
+
+    bits = bits[:nbits].ljust(nbits, "0")
+
+    return int(bits, 2)
