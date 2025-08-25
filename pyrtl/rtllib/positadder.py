@@ -80,8 +80,8 @@ def posit_add(
     frac_b_full = frac_with_hidden_one(frac_b_aligned, frac_len_b_aligned, nbits)
 
     # Compute scales (regime*k + exponent)
-    scale_a = shift_left_logical(k_a, es) + exp_a
-    scale_b = shift_left_logical(k_b, es) + exp_b
+    scale_a = (k_a if es == 0 else shift_left_logical(k_a, es)) + exp_a
+    scale_b = (k_b if es == 0 else shift_left_logical(k_b, es)) + exp_b
 
     offset = scale_a - scale_b
 
@@ -94,7 +94,10 @@ def posit_add(
     shifted_a = pyrtl.WireVector(bitwidth=frac_a_full.bitwidth)
     shifted_b = pyrtl.WireVector(bitwidth=frac_b_full.bitwidth)
     result_scale = pyrtl.WireVector(bitwidth=offset.bitwidth)
-    result_exp = pyrtl.WireVector(bitwidth=es)
+    if es == 0:
+        result_exp = pyrtl.WireVector(bitwidth=1)   # placeholder
+    else:
+        result_exp = pyrtl.WireVector(bitwidth=es)
 
     neg_offset = (~offset) + pyrtl.Const(1, bitwidth=offset.bitwidth)
 
@@ -121,15 +124,24 @@ def posit_add(
         result_scale + 1,
         result_scale,
     )
-    result_k = shift_right_logical(result_scale, pyrtl.Const(es, bitwidth=nbits))
+    result_k = (
+        result_scale
+        if es == 0
+        else shift_right_logical(result_scale, pyrtl.Const(es, bitwidth=nbits))
+    )
 
     # Extract regime bits
     rem_bits, regime_bits = get_upto_regime(result_k, nbits, 0)
 
     # Extract exponent from scale
-    result_exp = result_scale - shift_left_logical(result_k, es)
-    result_exp = shift_left_logical(
-        result_exp, rem_bits - pyrtl.Const(es, bitwidth=nbits)
+    result_exp = result_scale - (
+        result_k if es == 0 else shift_left_logical(result_k, es)
+    )
+    shift_amt = rem_bits - pyrtl.Const(es, bitwidth=nbits)
+    result_exp = pyrtl.select(
+        shift_amt == pyrtl.Const(0),
+        result_exp,
+        shift_left_logical(result_exp, shift_amt),
     )
 
     # Remaining fraction length
