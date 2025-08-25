@@ -244,7 +244,7 @@ def frac_with_hidden_one(
 
     :return: A WireVector that represents the fraction with the hidden 1.
     """
-    one_table = [pyrtl.Const(1 << i, bitwidth=32) for i in range(nbits + 1)]
+    one_table = [pyrtl.Const(1 << i, bitwidth=nbits + 1) for i in range(nbits + 1)]
     one_shifted = pyrtl.Const(0, bitwidth=32)
 
     for i in range(nbits + 1):
@@ -313,6 +313,7 @@ def decimal_to_posit(x: float, nbits: int, es: int) -> int:
         >>> import math
 
     Example::
+
         >>> nbits, es = 16, 2
         >>> format(decimal_to_posit(4992, nbits, es), '016b')
         '0111100000111000'
@@ -329,23 +330,25 @@ def decimal_to_posit(x: float, nbits: int, es: int) -> int:
     if x == 0:
         return 0
 
+    # Sign
     sign = 0
     if x < 0:
         sign = 1
         x = -x
 
     useed = 2 ** (2 ** es)
+
     k = int(math.floor(math.log(x, useed)))
     regime_value = useed ** k
-
     remaining = x / regime_value
-    exponent = int(math.floor(math.log2(remaining)))
-    exponent = max(0, exponent)
-    remaining /= (2 ** exponent)
 
+    exponent = int(math.floor(math.log2(remaining))) if es > 0 else 0
+    exponent = max(0, exponent)
+    remaining /= 2 ** exponent
+
+    # Fraction bits
     fraction = remaining - 1.0
     frac_bits = []
-
     for _ in range(nbits * 2):
         fraction *= 2
         if fraction >= 1:
@@ -354,17 +357,41 @@ def decimal_to_posit(x: float, nbits: int, es: int) -> int:
         else:
             frac_bits.append("0")
 
+    # Regime bits
     if k >= 0:
         regime_bits = "1" * (k + 1) + "0"
     else:
         regime_bits = "0" * (-k) + "1"
 
-    bits = str(sign)
-    bits += regime_bits
-    exp_str = bin(exponent)[2:].zfill(es)
-    bits += exp_str
+    bits = str(sign) + regime_bits
+
+    # Exponent bits
+    if es > 0:
+        exp_str = format(exponent & ((1 << es) - 1), f"0{es}b")
+        bits += exp_str
+
     bits += "".join(frac_bits)
 
-    bits = bits[:nbits].ljust(nbits, "0")
+    # Handle rounding if bits exceed nbits
+    if len(bits) > nbits:
+        main = bits[:nbits]
+        guard = bits[nbits]
+        roundb = bits[nbits + 1] if nbits + 1 < len(bits) else "0"
+        sticky = "1" if "1" in bits[nbits + 2:] else "0"
+
+        increment = (
+            (guard == "1")
+            and (roundb == "1" or sticky == "1" or main[-1] == "1")
+        )
+
+        if increment:
+            main_int = int(main, 2) + 1
+            if main_int >= (1 << (nbits - 1)):
+                main_int = (1 << (nbits - 1)) - 1
+            main = format(main_int, f"0{nbits}b")
+
+        bits = main
+    else:
+        bits = bits.ljust(nbits, "0")
 
     return int(bits, 2)
