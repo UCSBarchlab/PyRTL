@@ -37,7 +37,7 @@ def posit_mul(
     either_zero = (a == 0) | (b == 0)
     either_inf = (a == (1 << (nbits - 1))) | (b == (1 << (nbits - 1)))
 
-    final_value = pyrtl.WireVector(bitwidth=nbits, name='final_value')
+    final_value = pyrtl.WireVector(bitwidth=nbits)
     result_zero = pyrtl.Const(0, bitwidth=nbits)
     result_nar = pyrtl.Const(1 << (nbits - 1), bitwidth=nbits)
     normal_case = ~(either_zero | either_inf)
@@ -117,7 +117,7 @@ def posit_mul(
     frac_final = pyrtl.WireVector(bitwidth=nbits)
     frac_final <<= pyrtl.select(cond_round, frac_shifted, frac_shifted_else)
 
-    roundup_bit = pyrtl.WireVector(bitwidth=1, name='roundup_bit')
+    roundup_bit = pyrtl.WireVector(bitwidth=1)
     roundup_bit <<= pyrtl.select(cond_round, roundup_candidate, pyrtl.Const(0, bitwidth=1))
 
     exp_shifted_large = shift_left_logical(resultExponent, frac_bits)
