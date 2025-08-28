@@ -31,12 +31,18 @@ class PositMatrixTestBase(unittest.TestCase):
         sim = pyrtl.Simulation()
         sim.step({})
 
-        result_vals = matrix_wv_to_list(sim.inspect('result'), rows, cols, nbits)
-        expected_vals = matrix_wv_to_list(sim.inspect('expected'), rows, cols, nbits)
+        result_vals = matrix_wv_to_list(
+            sim.inspect('result'), rows, cols, nbits
+        )
+        expected_vals = matrix_wv_to_list(
+            sim.inspect('expected'), rows, cols, nbits
+        )
 
         for i in range(len(result_vals)):
             for j in range(len(result_vals[0])):
-                self.assertLessEqual(abs(result_vals[i][j] - expected_vals[i][j]), 2)
+                self.assertLessEqual(
+                    abs(result_vals[i][j] - expected_vals[i][j]), 2
+                )
 
     def generate_and_check(self, m, n, p, identity=False):
         nbits_list = [8, 16]
@@ -46,16 +52,30 @@ class PositMatrixTestBase(unittest.TestCase):
         useed = 2 ** (2 ** es)
         maxpos = useed ** (nbits - 2)
 
-        matrix_x_raw = [[random.randint(0, maxpos) for _ in range(n)] for _ in range(m)]
-        matrix_x = [[decimal_to_posit(val, nbits, es) for val in row] for row in matrix_x_raw]
+        matrix_x_raw = [
+            [random.randint(0, maxpos) for _ in range(n)] for _ in range(m)
+        ]
+        matrix_x = [
+            [decimal_to_posit(val, nbits, es) for val in row]
+            for row in matrix_x_raw
+        ]
         test_x = Matrix(m, n, bits=nbits, value=matrix_x)
 
         if identity:
-            matrix_y_raw = [[1 if i == j else 0 for j in range(n)] for i in range(n)]
+            matrix_y_raw = [
+                [1 if i == j else 0 for j in range(n)] for i in range(n)
+            ]
             p = n
         else:
-            matrix_y_raw = [[random.randint(0, maxpos) for _ in range(p)] for _ in range(n)]
-        matrix_y = [[decimal_to_posit(val, nbits, es) for val in row] for row in matrix_y_raw]
+            matrix_y_raw = [
+                [random.randint(0, maxpos) for _ in range(p)]
+                for _ in range(n)
+            ]
+
+        matrix_y = [
+            [decimal_to_posit(val, nbits, es) for val in row]
+            for row in matrix_y_raw
+        ]
         test_y = Matrix(n, p, bits=nbits, value=matrix_y)
 
         result = posit_matmul(test_x, test_y, nbits, es)
@@ -64,8 +84,14 @@ class PositMatrixTestBase(unittest.TestCase):
         for i in range(m):
             for j in range(p):
                 for k in range(n):
-                    expected_output_raw[i][j] += matrix_x_raw[i][k] * matrix_y_raw[k][j]
-        expected_output = [[decimal_to_posit(val, nbits, es) for val in row] for row in expected_output_raw]
+                    expected_output_raw[i][j] += (
+                        matrix_x_raw[i][k] * matrix_y_raw[k][j]
+                    )
+
+        expected_output = [
+            [decimal_to_posit(val, nbits, es) for val in row]
+            for row in expected_output_raw
+        ]
 
         self.check_against_expected(result, expected_output, m, p, nbits)
 
