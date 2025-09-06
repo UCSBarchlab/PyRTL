@@ -305,6 +305,42 @@ def remove_first_one(val: pyrtl.WireVector) -> pyrtl.WireVector:
     return pyrtl.concat_list(result_bits[::-1])
 
 
+def twos_comp(x: pyrtl.WireVector, n: int) -> pyrtl.WireVector:
+    """Compute the two's complement of an n-bit WireVector.
+
+    Two's complement is the standard way of representing signed integers 
+    in binary systems. The process is:
+        1. Invert all the bits (one's complement).
+        2. Add 1 to the result.
+    This function ensures the result is limited to 'n' bits.
+
+    Example::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+        >>> x = pyrtl.Const(5, bitwidth=4)   # 0101 (decimal 5)
+        >>> result = twos_comp(x, 4)
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({})
+        >>> format(sim.inspect(result), '04b')
+        '1011'   # -5 in two's complement
+
+    :param x: The input value as a PyRTL WireVector.
+    :param n: Bitwidth to operate on.
+    :return: The n-bit two's complement representation of x.
+    """
+
+    # Mask with n bits set to 1
+    mask = pyrtl.Const((1 << n) - 1, bitwidth=n)
+    # Invert the bits of x 
+    inverted = x ^ mask
+    # Add 1 to complete the two's complement process
+    added = inverted + 1
+    # Ensure the result fits into exactly n bits
+    return added & mask
+
+
+
 def decimal_to_posit(x: float, nbits: int, es: int) -> int:
     """Convert a decimal float to Posit<nbits, es> representation.
 
