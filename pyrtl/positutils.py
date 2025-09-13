@@ -488,8 +488,8 @@ def decimal_to_posit(x: float, nbits: int, es: int) -> int:
     """
     if x == 0:
         return 0
-
-    # Sign
+    
+    # handle sign at the end of twos comp
     sign = 0
     if x < 0:
         sign = 1
@@ -497,18 +497,35 @@ def decimal_to_posit(x: float, nbits: int, es: int) -> int:
 
     useed = 2 ** (2 ** es)
 
-    k = int(math.floor(math.log(x, useed)))
-    regime_value = useed ** k
-    remaining = x / regime_value
+    if x == float('inf'):
+        return (1 << (nbits - 1)) - 1  
+    if x == 0 or x < useed ** (-(nbits - 2)):
+        return 0
 
-    exponent = int(math.floor(math.log2(remaining))) if es > 0 else 0
-    exponent = max(0, exponent)
-    remaining /= 2 ** exponent
+    # regime bits
+    if x >= 1:
+        k = int(math.floor(math.log(x, useed)))
+    else:
+        k = int(math.floor(math.log(x, useed)))  
 
-    # Fraction bits
+    regime_scale = useed ** k
+    remaining = x / regime_scale
+
+    # Exponent bits
+    exponent = 0
+    if es > 0 and remaining > 0:
+        exponent = int(math.floor(math.log2(remaining)))
+        exponent = max(0, min(exponent, (1 << es) - 1))
+        remaining /= 2 ** exponent
+
+    # Frcation bits
     fraction = remaining - 1.0
     frac_bits = []
-    for _ in range(nbits * 2):
+    
+    #Remaning bits
+    max_frac_bits = nbits - 1  
+    
+    for _ in range(max_frac_bits):
         fraction *= 2
         if fraction >= 1:
             frac_bits.append("1")
@@ -516,41 +533,34 @@ def decimal_to_posit(x: float, nbits: int, es: int) -> int:
         else:
             frac_bits.append("0")
 
-    # Regime bits
+    # Build regime bits
     if k >= 0:
         regime_bits = "1" * (k + 1) + "0"
     else:
         regime_bits = "0" * (-k) + "1"
 
-    bits = str(sign) + regime_bits
-
-    # Exponent bits
+    bits = "0" + regime_bits  
+    
+    # Add exponent bits
     if es > 0:
-        exp_str = format(exponent & ((1 << es) - 1), f"0{es}b")
+        exp_str = format(exponent, f"0{es}b")
         bits += exp_str
-
+    
+    # Add fraction bits
     bits += "".join(frac_bits)
 
-    # Handle rounding if bits exceed nbits
+    # Trim to nbits with rounding
     if len(bits) > nbits:
-        main = bits[:nbits]
-        guard = bits[nbits]
-        roundb = bits[nbits + 1] if nbits + 1 < len(bits) else "0"
-        sticky = "1" if "1" in bits[nbits + 2:] else "0"
-
-        increment = (
-            (guard == "1")
-            and (roundb == "1" or sticky == "1" or main[-1] == "1")
-        )
-
-        if increment:
-            main_int = int(main, 2) + 1
-            if main_int >= (1 << (nbits - 1)):
-                main_int = (1 << (nbits - 1)) - 1
-            main = format(main_int, f"0{nbits}b")
-
-        bits = main
+        bits = bits[:nbits]
     else:
         bits = bits.ljust(nbits, "0")
 
-    return int(bits, 2)
+    # Convert to integer
+    result = int(bits, 2)
+    
+    # Apply twos complement for negative numbers
+    if sign:
+        mask = (1 << nbits) - 1
+        result = ((~result) + 1) & mask
+    
+    return result
