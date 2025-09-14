@@ -1,4 +1,5 @@
 import pyrtl
+import math
 from pyrtl.corecircuits import (
     shift_left_logical,
     shift_right_logical,
@@ -15,7 +16,7 @@ from pyrtl.positutils import (
     twos_comp,
     sign_ext,
 )
-from pyrtl.rtllib.positadd import posit_add
+from pyrtl.rtllib.positadder import posit_add
 
 def posit_sub(
     a: pyrtl.WireVector, b: pyrtl.WireVector, nbits: int, es: int
@@ -25,8 +26,8 @@ def posit_sub(
     .. doctest::
 
         >>> import pyrtl
-        >>> from positutils import decimal_to_posit
-        >>> from positsub import posit_sub
+        >>> from pyrtl.positutils import decimal_to_posit
+        >>> from pyrtl.rtllib.positsub import posit_sub
         >>> pyrtl.reset_working_block()
         >>> nbits, es = 8, 1
         >>> a = pyrtl.Input(bitwidth=nbits, name='a')
