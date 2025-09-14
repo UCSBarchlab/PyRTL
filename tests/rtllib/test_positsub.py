@@ -1,7 +1,6 @@
 import doctest
 import random
 import unittest
-import positsub
 import pyrtl
 import pyrtl.rtllib.testingutils as utils
 from pyrtl.rtllib.positsub import posit_sub
@@ -12,7 +11,7 @@ class TestDocTests(unittest.TestCase):
     """Test documentation examples."""
 
     def test_doctests(self):
-        failures, tests = doctest.testmod(m=positsub)
+        failures, tests = doctest.testmod(m=pyrtl.rtllib.positsub)
         self.assertGreater(tests, 0)
         self.assertEqual(failures, 0)
 
