@@ -87,19 +87,19 @@ class TestWireTransform(NetWireNumTestCases):
         o = pyrtl.Output(1, "o")
         o <<= w1
 
-        src_nets, dst_nets = pyrtl.working_block().net_connections()
-        self.assertEqual(src_nets[w1], pyrtl.LogicNet("&", None, (a, b), (w1,)))
-        self.assertIn(a, dst_nets)
-        self.assertIn(b, dst_nets)
+        wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections()
+        self.assertEqual(wire_src_dict[w1], pyrtl.LogicNet("&", None, (a, b), (w1,)))
+        self.assertIn(a, wire_dst_dict)
+        self.assertIn(b, wire_dst_dict)
 
         pyrtl.wire_transform(f, select_types=pyrtl.Input, exclude_types=())
 
         w2 = pyrtl.working_block().get_wirevector_by_name("w2")
         w3 = pyrtl.working_block().get_wirevector_by_name("w3")
-        src_nets, dst_nets = pyrtl.working_block().net_connections()
-        self.assertEqual(src_nets[w1], pyrtl.LogicNet("&", None, (w2, w3), (w1,)))
-        self.assertNotIn(a, dst_nets)
-        self.assertNotIn(b, dst_nets)
+        wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections()
+        self.assertEqual(wire_src_dict[w1], pyrtl.LogicNet("&", None, (w2, w3), (w1,)))
+        self.assertNotIn(a, wire_dst_dict)
+        self.assertNotIn(b, wire_dst_dict)
 
     def test_replace_output(self):
         def f(wire):
@@ -111,16 +111,16 @@ class TestWireTransform(NetWireNumTestCases):
         o = pyrtl.Output(1, "o")
         o <<= w1
 
-        src_nets, dst_nets = pyrtl.working_block().net_connections()
-        self.assertEqual(dst_nets[w1], [pyrtl.LogicNet("w", None, (w1,), (o,))])
-        self.assertIn(o, src_nets)
+        wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections()
+        self.assertEqual(wire_dst_dict[w1], [pyrtl.LogicNet("w", None, (w1,), (o,))])
+        self.assertIn(o, wire_src_dict)
 
         pyrtl.wire_transform(f, select_types=pyrtl.Output, exclude_types=())
 
         w2 = pyrtl.working_block().get_wirevector_by_name("w2")
-        src_nets, dst_nets = pyrtl.working_block().net_connections()
-        self.assertEqual(dst_nets[w1], [pyrtl.LogicNet("w", None, (w1,), (w2,))])
-        self.assertNotIn(o, src_nets)
+        wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections()
+        self.assertEqual(wire_dst_dict[w1], [pyrtl.LogicNet("w", None, (w1,), (w2,))])
+        self.assertNotIn(o, wire_src_dict)
 
 
 class TestCopyBlock(NetWireNumTestCases, WireMemoryNameTestCases):
@@ -198,12 +198,12 @@ class TestFastWireReplace(unittest.TestCase):
         h <<= o
         n <<= h
         block = pyrtl.working_block()
-        src_nets, dst_nets = block.net_connections()
-        pyrtl.replace_wire_fast(o, x, x, src_nets, dst_nets)
-        pyrtl.replace_wire_fast(h, y, y, src_nets, dst_nets)
+        wire_src_dict, wire_dst_dict = block.net_connections()
+        pyrtl.replace_wire_fast(o, x, x, wire_src_dict, wire_dst_dict)
+        pyrtl.replace_wire_fast(h, y, y, wire_src_dict, wire_dst_dict)
         for old_wire in (o, h):
-            self.assertNotIn(old_wire, src_nets)
-            self.assertNotIn(old_wire, dst_nets)
+            self.assertNotIn(old_wire, wire_src_dict)
+            self.assertNotIn(old_wire, wire_dst_dict)
             self.assertNotIn(old_wire, block.wirevector_set)
         block.sanity_check()
 
@@ -217,13 +217,13 @@ class TestFastWireReplace(unittest.TestCase):
         h = o & p
         n <<= h
         block = pyrtl.working_block()
-        src_nets, dst_nets = block.net_connections()
-        pyrtl.replace_wire_fast(o, x, x, src_nets, dst_nets)
-        pyrtl.replace_wire_fast(p, z, z, src_nets, dst_nets)
-        pyrtl.replace_wire_fast(h, y, y, src_nets, dst_nets)
+        wire_src_dict, wire_dst_dict = block.net_connections()
+        pyrtl.replace_wire_fast(o, x, x, wire_src_dict, wire_dst_dict)
+        pyrtl.replace_wire_fast(p, z, z, wire_src_dict, wire_dst_dict)
+        pyrtl.replace_wire_fast(h, y, y, wire_src_dict, wire_dst_dict)
         for old_wire in (o, h, p):
-            self.assertNotIn(old_wire, src_nets)
-            self.assertNotIn(old_wire, dst_nets)
+            self.assertNotIn(old_wire, wire_src_dict)
+            self.assertNotIn(old_wire, wire_dst_dict)
             self.assertNotIn(old_wire, block.wirevector_set)
         block.sanity_check()
 
@@ -237,12 +237,12 @@ class TestFastWireReplace(unittest.TestCase):
         o <<= r ^ k
 
         block = pyrtl.working_block()
-        src_nets, dst_nets = block.net_connections()
-        pyrtl.replace_wire_fast(r, x, x, src_nets, dst_nets)
+        wire_src_dict, wire_dst_dict = block.net_connections()
+        pyrtl.replace_wire_fast(r, x, x, wire_src_dict, wire_dst_dict)
 
         for old_wire in (r,):
-            self.assertNotIn(old_wire, src_nets)
-            self.assertNotIn(old_wire, dst_nets)
+            self.assertNotIn(old_wire, wire_src_dict)
+            self.assertNotIn(old_wire, wire_dst_dict)
             self.assertNotIn(old_wire, block.wirevector_set)
         block.sanity_check()
 
@@ -258,21 +258,21 @@ class TestFastWireReplace(unittest.TestCase):
         o <<= w3
 
         w4 = pyrtl.WireVector(1, "w4")
-        src_nets, dst_nets = pyrtl.working_block().net_connections()
+        wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections()
 
-        w1_src_net = src_nets[w1]
-        w1_dst_net = dst_nets[w1][0]
+        w1_src_net = wire_src_dict[w1]
+        w1_dst_net = wire_dst_dict[w1][0]
         self.assertEqual(w1_src_net.args, (a, b))
         self.assertEqual(w1_src_net.dests, (w1,))
         self.assertEqual(w1_dst_net.args, (w1, w2))
         self.assertEqual(w1_dst_net.dests, (w3,))
-        self.assertNotIn(w4, src_nets)
+        self.assertNotIn(w4, wire_src_dict)
 
-        pyrtl.replace_wire_fast(w1, w4, w1, src_nets, dst_nets)
+        pyrtl.replace_wire_fast(w1, w4, w1, wire_src_dict, wire_dst_dict)
 
-        self.assertNotIn(w1, src_nets)  # The maps have been updated...
-        self.assertEqual(dst_nets[w1], [w1_dst_net])
-        w4_src_net = src_nets[
+        self.assertNotIn(w1, wire_src_dict)  # The maps have been updated...
+        self.assertEqual(wire_dst_dict[w1], [w1_dst_net])
+        w4_src_net = wire_src_dict[
             w4
         ]  # ...but the net can't be, so new updated versions were created
         self.assertEqual(w4_src_net.args, w1_src_net.args)
@@ -290,21 +290,21 @@ class TestFastWireReplace(unittest.TestCase):
         o <<= w3
 
         w4 = pyrtl.WireVector(1, "w4")
-        src_nets, dst_nets = pyrtl.working_block().net_connections()
+        wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections()
 
-        w1_src_net = src_nets[w1]
-        w1_dst_net = dst_nets[w1][0]
+        w1_src_net = wire_src_dict[w1]
+        w1_dst_net = wire_dst_dict[w1][0]
         self.assertEqual(w1_src_net.args, (a, b))
         self.assertEqual(w1_src_net.dests, (w1,))
         self.assertEqual(w1_dst_net.args, (w1, w2))
         self.assertEqual(w1_dst_net.dests, (w3,))
-        self.assertNotIn(w4, src_nets)
+        self.assertNotIn(w4, wire_src_dict)
 
-        pyrtl.replace_wire_fast(w1, w1, w4, src_nets, dst_nets)
+        pyrtl.replace_wire_fast(w1, w1, w4, wire_src_dict, wire_dst_dict)
 
-        self.assertNotIn(w1, dst_nets)  # The maps have been updated...
-        self.assertEqual(src_nets[w1], w1_src_net)
-        w4_dst_net = dst_nets[w4][
+        self.assertNotIn(w1, wire_dst_dict)  # The maps have been updated...
+        self.assertEqual(wire_src_dict[w1], w1_src_net)
+        w4_dst_net = wire_dst_dict[w4][
             0
         ]  # ...but the net can't be, so new versions were created
         self.assertEqual(w4_dst_net.args, (w4, w2))

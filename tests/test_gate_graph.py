@@ -53,7 +53,7 @@ class TestGateGraph(unittest.TestCase):
         self.assertEqual(gate_abc.op, "-")
 
     def test_get_gate(self):
-        _ = pyrtl.Input(name="a", bitwidth=4)
+        pyrtl.Input(name="a", bitwidth=4)
 
         gate_graph = pyrtl.GateGraph()
         a_gate = gate_graph.get_gate("a")
@@ -62,7 +62,7 @@ class TestGateGraph(unittest.TestCase):
         self.assertEqual(gate_graph.get_gate("q"), None)
 
     def test_gate_alias_errors(self):
-        _ = pyrtl.Input(name="a", bitwidth=4)
+        pyrtl.Input(name="a", bitwidth=4)
 
         gate_graph = pyrtl.GateGraph()
         a_gate = gate_graph.get_gate("a")

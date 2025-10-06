@@ -317,7 +317,7 @@ class MemIndexedTests(unittest.TestCase):
         mem_value_map = {mem: {0: 7, 1: 5}}
         sim = pyrtl.Simulation(memory_value_map=mem_value_map)
         sim.step({mem_addr: 0})
-        binary = bin(mem_value_map[mem][0])[2:].zfill(8)
+        binary = f"{mem_value_map[mem][0]:b}".zfill(8)
         self.assertEqual(
             [sim.inspect(mem_out_array[j]) for j in range(8)],
             [int(binary[7 - j]) for j in range(8)],

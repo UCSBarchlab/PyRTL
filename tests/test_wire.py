@@ -115,15 +115,15 @@ class TestWireVectorFail(unittest.TestCase):
 
     def test_bad_bitwidth(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.WireVector(bitwidth="happy")
+            pyrtl.WireVector(bitwidth="happy")
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.WireVector(bitwidth=-1)
+            pyrtl.WireVector(bitwidth=-1)
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.WireVector(bitwidth=0)
+            pyrtl.WireVector(bitwidth=0)
 
         y = pyrtl.WireVector(1)
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.WireVector(y)
+            pyrtl.WireVector(y)
 
     def test_no_immed_operators(self):
         x = pyrtl.WireVector(bitwidth=3)
@@ -271,11 +271,11 @@ class TestRegister(unittest.TestCase):
 
     def test_invalid_reset_value_too_large(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.Register(4, reset_value=16)
+            pyrtl.Register(4, reset_value=16)
 
     def test_invalid_reset_value_too_large_as_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.Register(4, reset_value="5'd16")
+            pyrtl.Register(4, reset_value="5'd16")
 
     def test_negative_reset_value(self):
         r = pyrtl.Register(4, reset_value=-4)
@@ -287,7 +287,7 @@ class TestRegister(unittest.TestCase):
 
     def test_invalid_negative_reset_value_as_string(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.Register(2, reset_value="-4'd1")
+            pyrtl.Register(2, reset_value="-4'd1")
 
     def test_extending_negative_reset_value_as_string(self):
         r = pyrtl.Register(4, reset_value="-3'd3")
@@ -295,7 +295,7 @@ class TestRegister(unittest.TestCase):
 
     def test_invalid_reset_value_not_an_integer(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.Register(4, reset_value="hello")
+            pyrtl.Register(4, reset_value="hello")
 
 
 class TestConst(unittest.TestCase):
@@ -405,7 +405,7 @@ class TestConst(unittest.TestCase):
 
     def assert_bad_const(self, *args, **kwargs):
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.Const(*args, **kwargs)
+            pyrtl.Const(*args, **kwargs)
 
 
 class TestOutput(unittest.TestCase):

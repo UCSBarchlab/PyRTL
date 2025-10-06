@@ -1570,7 +1570,7 @@ def matrix_wv_to_list(
 
     :return: A Python list of lists.
     """
-    value = bin(matrix_wv)[2:].zfill(rows * columns * bits)
+    value = f"{matrix_wv:b}".zfill(rows * columns * bits)
 
     result = [[0 for _ in range(columns)] for _ in range(rows)]
 

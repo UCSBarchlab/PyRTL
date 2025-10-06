@@ -1446,7 +1446,7 @@ class RomBlockSimBase(unittest.TestCase):
         }
 
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = self.sim(memory_value_map=mem_val_map)
+            self.sim(memory_value_map=mem_val_map)
 
 
 class MemBlockSimBase(unittest.TestCase):
@@ -1546,7 +1546,7 @@ class TraceErrorBase(unittest.TestCase):
 
     def test_empty_trace(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.SimulationTrace()
+            pyrtl.SimulationTrace()
 
     def test_invalid_base(self):
         self.in1 = pyrtl.Input(8, "in1")

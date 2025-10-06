@@ -73,10 +73,12 @@ def wire_transform(
     :param block: The Block to replace wires on. Defaults to the :ref:`working_block`.
     """
     block = working_block(block)
-    src_nets, dst_nets = block.net_connections(include_virtual_nodes=False)
+    wire_src_dict, wire_dst_dict = block.net_connections(include_virtual_nodes=False)
     for orig_wire in block.wirevector_subset(select_types, exclude_types):
         new_src, new_dst = transform_func(orig_wire)
-        replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block)
+        replace_wire_fast(
+            orig_wire, new_src, new_dst, wire_src_dict, wire_dst_dict, block
+        )
 
 
 def all_wires(transform_func):
@@ -96,9 +98,9 @@ def replace_wires(wire_map, block=None):
     :param block: block to operate over (defaults to :ref:`working_block`)
     """
     block = working_block(block)
-    src_nets, dst_nets = block.net_connections(include_virtual_nodes=False)
+    wire_src_dict, wire_dst_dict = block.net_connections(include_virtual_nodes=False)
     for old_w, new_w in wire_map.items():
-        replace_wire_fast(old_w, new_w, new_w, src_nets, dst_nets, block)
+        replace_wire_fast(old_w, new_w, new_w, wire_src_dict, wire_dst_dict, block)
 
 
 def replace_wire_fast(orig_wire, new_src, new_dst, src_nets, dst_nets, block=None):

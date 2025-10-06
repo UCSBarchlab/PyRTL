@@ -24,19 +24,19 @@ class TestPrioritizedMuxTrivial(unittest.TestCase):
 
     def test_empty(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = muxes.prioritized_mux([], [])
+            muxes.prioritized_mux([], [])
 
     def test_different_sel_and_val_lengths(self):
         a = pyrtl.WireVector(1)
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = muxes.prioritized_mux([a], [a, a])
+            muxes.prioritized_mux([a], [a, a])
 
     def test_invalid_select_width(self):
         a = pyrtl.WireVector(2)
         b = pyrtl.WireVector(2)
         c = pyrtl.WireVector(10)
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = muxes.prioritized_mux([a, b], [c, c])
+            muxes.prioritized_mux([a, b], [c, c])
 
     def test_one_wire(self):
         a = pyrtl.WireVector(1)
@@ -192,9 +192,9 @@ class TestSmartMux(unittest.TestCase):
 
     def test_multiple_bitwidths(self):
         sel = pyrtl.Input(3)
-        a1, a1_vals = gen_in(3)
-        a2, a2_vals = gen_in(8)
-        a3, a3_vals = gen_in(5)
+        a1, _a1_vals = gen_in(3)
+        a2, _a2_vals = gen_in(8)
+        a3, _a3_vals = gen_in(5)
 
         m = muxes.sparse_mux(sel, {2: a1, 3: a2, 6: a3})
         self.assertEqual(len(m), 8)  # the biggest one
