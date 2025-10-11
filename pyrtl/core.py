@@ -565,8 +565,8 @@ class Block:
         A :class:`WireVector`'s `source` is the :class:`LogicNet` that sets the
         :class:`WireVector`'s value.
 
-        A :class:`WireVector`'s `sinks` are the :class:`LogicNets<LogicNet>` that use
-        the :class:`WireVector`'s value.
+        A :class:`WireVector`'s `destinations` are the :class:`LogicNets<LogicNet>` that
+        use the :class:`WireVector`'s value.
 
         This information helps when building a graph representation for the ``Block``.
         See :func:`net_graph` for an example.
@@ -577,7 +577,7 @@ class Block:
 
         :param include_virtual_nodes: If ``True``, external `sources` (such as an
             :class:`Inputs<Input>` and :class:`Consts<Const>`) will be represented as
-            wires that set themselves, and external `sinks` (such as
+            wires that set themselves, and external `destinations` (such as
             :class:`Outputs<Output>`) will be represented as wires that use themselves.
             If ``False``, these nodes will be excluded from the results.
 
@@ -585,7 +585,7 @@ class Block:
                  the :class:`LogicNet` that creates their signal (``wire_src_dict``).
                  The second maps :class:`WireVectors<WireVector>` to a list of
                  :class:`LogicNets<LogicNet>` that use their signal
-                 (``wire_sink_dict``).
+                 (``wire_dst_dict``).
         """
         src_list = {}
         dst_list = {}
@@ -645,7 +645,7 @@ class Block:
         """
         from pyrtl.wire import Const, Input, Register
 
-        src_dict, dest_dict = self.net_connections()
+        _wire_src_dict, wire_dst_dict = self.net_connections()
         to_clear = self.wirevector_subset((Input, Const, Register))
         cleared = set()
         remaining = self.logic.copy()
@@ -653,8 +653,8 @@ class Block:
             while len(to_clear):
                 wire_to_check = to_clear.pop()
                 cleared.add(wire_to_check)
-                if wire_to_check in dest_dict:
-                    for gate in dest_dict[
+                if wire_to_check in wire_dst_dict:
+                    for gate in wire_dst_dict[
                         wire_to_check
                     ]:  # loop over logicnets not yet returned
                         if all(
@@ -804,7 +804,7 @@ class Block:
             return  # nothing to check here
 
         if wire_src_dict is None:
-            wire_src_dict, wdd = self.net_connections()
+            wire_src_dict, _wire_dst_dict = self.net_connections()
 
         from pyrtl.wire import Const, Input
 

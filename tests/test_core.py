@@ -37,13 +37,13 @@ class TestBlock(unittest.TestCase):
         self.invalid_wire(42)
 
     def test_undriven_net(self):
-        _ = pyrtl.WireVector(name="testwire", bitwidth=3)
+        pyrtl.WireVector(name="testwire", bitwidth=3)
         self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
         pyrtl.reset_working_block()
-        _ = pyrtl.Register(3)
+        pyrtl.Register(3)
         self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
         pyrtl.reset_working_block()
-        _ = pyrtl.Output(3)
+        pyrtl.Output(3)
         self.assertRaises(pyrtl.PyrtlError, pyrtl.working_block().sanity_check)
 
     def test_no_logic_net_comparisons(self):
@@ -106,7 +106,7 @@ class TestBlock(unittest.TestCase):
     def test_bad_memblock_name_strict(self):
         block = pyrtl.working_block()
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = block.get_memblock_by_name("bad_mem", strict=True)
+            block.get_memblock_by_name("bad_mem", strict=True)
 
     def test_bad_memblock_name_none(self):
         block = pyrtl.working_block()
@@ -444,24 +444,24 @@ class TestAsGraph(unittest.TestCase):
         b = pyrtl.working_block()
         net = pyrtl.LogicNet("~", None, (i,), (o,))
         b.add_net(net)
-        src_g, dst_g = b.net_connections(False)
-        self.check_graph_correctness(src_g, dst_g)
-        self.assertEqual(src_g[o], net)
-        self.assertEqual(dst_g[i][0], net)
-        self.assertEqual(len(dst_g[i]), 1)
+        wire_src_dict, wire_dst_dict = b.net_connections(False)
+        self.check_graph_correctness(wire_src_dict, wire_dst_dict)
+        self.assertEqual(wire_src_dict[o], net)
+        self.assertEqual(wire_dst_dict[i][0], net)
+        self.assertEqual(len(wire_dst_dict[i]), 1)
 
-        self.assertNotIn(i, src_g)
-        self.assertNotIn(o, dst_g)
+        self.assertNotIn(i, wire_src_dict)
+        self.assertNotIn(o, wire_dst_dict)
 
-        src_g, dst_g = b.net_connections(True)
-        self.check_graph_correctness(src_g, dst_g, True)
-        self.assertEqual(src_g[o], net)
-        self.assertEqual(dst_g[i][0], net)
-        self.assertEqual(len(dst_g[i]), 1)
+        wire_src_dict, wire_dst_dict = b.net_connections(True)
+        self.check_graph_correctness(wire_src_dict, wire_dst_dict, True)
+        self.assertEqual(wire_src_dict[o], net)
+        self.assertEqual(wire_dst_dict[i][0], net)
+        self.assertEqual(len(wire_dst_dict[i]), 1)
 
-        self.assertIs(src_g[i], i)
-        self.assertIs(dst_g[o][0], o)
-        self.assertEqual(len(dst_g[o]), 1)
+        self.assertIs(wire_src_dict[i], i)
+        self.assertIs(wire_dst_dict[o][0], o)
+        self.assertEqual(len(wire_dst_dict[o]), 1)
 
     def test_as_graph_2(self):
         a = pyrtl.Input(2)
@@ -477,11 +477,11 @@ class TestAsGraph(unittest.TestCase):
         g <<= ~(d | b)
 
         b = pyrtl.working_block()
-        src_g, dst_g = b.net_connections(False)
-        self.check_graph_correctness(src_g, dst_g)
+        wire_src_dict, wire_dst_dict = b.net_connections(False)
+        self.check_graph_correctness(wire_src_dict, wire_dst_dict)
 
-        src_g, dst_g = b.net_connections(True)
-        self.check_graph_correctness(src_g, dst_g, True)
+        wire_src_dict, wire_dst_dict = b.net_connections(True)
+        self.check_graph_correctness(wire_src_dict, wire_dst_dict, True)
 
     def test_as_graph_memory(self):
         m = pyrtl.MemBlock(addrwidth=2, bitwidth=2, name="m", max_read_ports=None)
@@ -492,18 +492,18 @@ class TestAsGraph(unittest.TestCase):
         o <<= m[i]
 
         b = pyrtl.working_block()
-        src_g, dst_g = b.net_connections(False)
-        self.check_graph_correctness(src_g, dst_g)
+        wire_src_dict, wire_dst_dict = b.net_connections(False)
+        self.check_graph_correctness(wire_src_dict, wire_dst_dict)
 
-        src_g, dst_g = b.net_connections(True)
-        self.check_graph_correctness(src_g, dst_g, True)
+        wire_src_dict, wire_dst_dict = b.net_connections(True)
+        self.check_graph_correctness(wire_src_dict, wire_dst_dict, True)
 
     def test_as_graph_duplicate_args(self):
         a = pyrtl.Input(3)
         x = pyrtl.Input(1)
         d = pyrtl.Output()
         b = a & a
-        _ = pyrtl.concat(a, a)
+        pyrtl.concat(a, a)
         m = pyrtl.MemBlock(addrwidth=3, bitwidth=3, name="m")
         m2 = pyrtl.MemBlock(addrwidth=1, bitwidth=1, name="m")
         d <<= m[a]
@@ -511,11 +511,11 @@ class TestAsGraph(unittest.TestCase):
         m2[x] <<= pyrtl.MemBlock.EnabledWrite(x, x)
 
         b = pyrtl.working_block()
-        src_g, dst_g = b.net_connections(False)
-        self.check_graph_correctness(src_g, dst_g)
+        wire_src_dict, wire_dst_dict = b.net_connections(False)
+        self.check_graph_correctness(wire_src_dict, wire_dst_dict)
 
-        src_g, dst_g = b.net_connections(True)
-        self.check_graph_correctness(src_g, dst_g, True)
+        wire_src_dict, wire_dst_dict = b.net_connections(True)
+        self.check_graph_correctness(wire_src_dict, wire_dst_dict, True)
 
 
 class TestSanityCheck(unittest.TestCase):
@@ -527,7 +527,7 @@ class TestSanityCheck(unittest.TestCase):
             pyrtl.working_block().sanity_check()
 
     def test_missing_bitwidth(self):
-        _ = pyrtl.Input()
+        pyrtl.Input()
         self.sanity_error("missing bitwidth")
 
     def test_duplicate_names(self):
@@ -545,7 +545,7 @@ class TestSanityCheck(unittest.TestCase):
             self.sanity_error("Unknown wires")
 
     def test_not_connected(self):
-        _ = pyrtl.Output(8, "out")
+        pyrtl.Output(8, "out")
         self.sanity_error("declared but not connected")
 
     def test_not_driven(self):
@@ -711,9 +711,9 @@ class TestNetConnections(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_net_connections_should_be_empty_at_start(self):
-        src_nets, dst_nets = pyrtl.working_block().net_connections()
-        self.assertDictEqual(src_nets, {})
-        self.assertDictEqual(dst_nets, {})
+        wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections()
+        self.assertDictEqual(wire_src_dict, {})
+        self.assertDictEqual(wire_dst_dict, {})
 
     def test_net_connections_normal(self):
         i, j = pyrtl.input_list("i/3 j/4")
@@ -723,23 +723,23 @@ class TestNetConnections(unittest.TestCase):
         o <<= r - 1
 
         for include_virtual in (False, True):
-            src_nets, dst_nets = pyrtl.working_block().net_connections(
+            wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections(
                 include_virtual_nodes=include_virtual
             )
             if include_virtual:
-                self.assertIn(i, src_nets)
-                self.assertIn(j, src_nets)
-                self.assertIn(o, dst_nets)
+                self.assertIn(i, wire_src_dict)
+                self.assertIn(j, wire_src_dict)
+                self.assertIn(o, wire_dst_dict)
             else:
-                self.assertNotIn(i, src_nets)
-                self.assertNotIn(j, src_nets)
-                self.assertNotIn(o, dst_nets)
+                self.assertNotIn(i, wire_src_dict)
+                self.assertNotIn(j, wire_src_dict)
+                self.assertNotIn(o, wire_dst_dict)
 
-            self.assertIn(o, src_nets)
-            self.assertIn(r, src_nets)
-            self.assertIn(i, dst_nets)
-            self.assertIn(j, dst_nets)
-            self.assertIn(r, dst_nets)
+            self.assertIn(o, wire_src_dict)
+            self.assertIn(r, wire_src_dict)
+            self.assertIn(i, wire_dst_dict)
+            self.assertIn(j, wire_dst_dict)
+            self.assertIn(r, wire_dst_dict)
 
     def test_net_connections_with_memblock(self):
         waddr = pyrtl.Input(32, "waddr")
@@ -748,16 +748,16 @@ class TestNetConnections(unittest.TestCase):
         data = mem[raddr]
         mem[waddr] <<= (data + pyrtl.Const(1, 8)).truncate(8)
 
-        src_nets, dst_nets = pyrtl.working_block().net_connections()
-        self.assertNotIn(data, src_nets)
-        self.assertNotIn(data, dst_nets)
-        self.assertIn(data.wire, src_nets)
-        self.assertIn(data.wire, dst_nets)
-        self.assertEqual(src_nets[data.wire].op, "m")
-        self.assertEqual(dst_nets[data.wire][0].op, "+")
+        wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections()
+        self.assertNotIn(data, wire_src_dict)
+        self.assertNotIn(data, wire_dst_dict)
+        self.assertIn(data.wire, wire_src_dict)
+        self.assertIn(data.wire, wire_dst_dict)
+        self.assertEqual(wire_src_dict[data.wire].op, "m")
+        self.assertEqual(wire_dst_dict[data.wire][0].op, "+")
 
         with self.assertRaises(pyrtl.PyrtlError) as ex:
-            _s = src_nets[data]
+            _s = wire_src_dict[data]
         self.assertEqual(
             str(ex.exception),
             "Cannot look up a _MemIndexed object's source or destination net. Try "
@@ -765,7 +765,7 @@ class TestNetConnections(unittest.TestCase):
         )
 
         with self.assertRaises(pyrtl.PyrtlError) as ex:
-            _s = dst_nets[data]
+            _s = wire_dst_dict[data]
         self.assertEqual(
             str(ex.exception),
             "Cannot look up a _MemIndexed object's source or destination net. Try "
@@ -777,12 +777,12 @@ class TestNetConnections(unittest.TestCase):
         i = pyrtl.Input(4, "i")
         o = pyrtl.Output(name="o")
         o <<= i * 2
-        src_nets, dst_nets = pyrtl.working_block().net_connections()
+        wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections()
         with self.assertRaises(KeyError):
-            src_nets[w]
+            wire_src_dict[w]
 
         with self.assertRaises(KeyError):
-            dst_nets[w]
+            wire_dst_dict[w]
 
 
 class TestNameSanitizer(unittest.TestCase):

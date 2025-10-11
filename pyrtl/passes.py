@@ -79,7 +79,7 @@ def optimize(
     return block
 
 
-def _get_inverter_chains(wire_creator, wire_users):
+def _get_inverter_chains(wire_src_dict, wire_dst_dict):
     """Returns all inverter chains in the block.
 
     The function returns a list of inverter chains in the block. Each inverter chain is
@@ -98,7 +98,7 @@ def _get_inverter_chains(wire_creator, wire_users):
     # Build a list of inverter chains. Each inverter chain is a list of WireVectors,
     # from source to destination.
     inverter_chains = []
-    for current_dest, current_creator in wire_creator.items():
+    for current_dest, current_creator in wire_src_dict.items():
         if current_creator.op != "~":
             # Skip non-inverters.
             continue
@@ -107,7 +107,7 @@ def _get_inverter_chains(wire_creator, wire_users):
         # a WireVector).
         current_arg = current_creator.args[0]
         # current_users is the number of LogicNets that use current_dest.
-        current_users = len(wire_users[current_dest])
+        current_users = len(wire_dst_dict[current_dest])
 
         # Add the current inverter to the end of this inverter chain.
         append_to = None
@@ -117,7 +117,7 @@ def _get_inverter_chains(wire_creator, wire_users):
         for inverter_chain in inverter_chains:
             chain_arg = inverter_chain[0]
             chain_dest = inverter_chain[-1]
-            chain_users = len(wire_users[chain_dest])
+            chain_users = len(wire_dst_dict[chain_dest])
 
             if chain_dest is current_arg and chain_users == 1:
                 # This chain's only destination is the current inverter. Append the
@@ -168,9 +168,9 @@ def _optimize_inverter_chains(block, skip_sanity_check=False):
         B -w-> Y
     """
 
-    # wire_creator maps from WireVector to the LogicNet that defines its value.
-    # wire_users maps from WireVector to a list of LogicNets that use its value.
-    wire_creator, wire_users = block.net_connections()
+    # wire_src_dict maps from WireVector to the LogicNet that defines its value.
+    # wire_dst_dict maps from WireVector to a list of LogicNets that use its value.
+    wire_src_dict, wire_dst_dict = block.net_connections()
 
     new_logic = set()
     net_removal_set = set()
@@ -199,9 +199,9 @@ def _optimize_inverter_chains(block, skip_sanity_check=False):
     # will be mapped to A and E will be mapped to C. Hence, when finding the replacement
     # of E, we have to first query the dict to get C, and then query the dict again on C
     # to get A.
-    wire_src_dict = _ProducerList()
+    wire_producer = _ProducerList()
 
-    for inverter_chain in _get_inverter_chains(wire_creator, wire_users):
+    for inverter_chain in _get_inverter_chains(wire_src_dict, wire_dst_dict):
         # If len(inverter_chain) = n, there are n-1 inverters in the chain. We only
         # remove inverters if there are at least two inverters in a chain.
         if len(inverter_chain) > 2:
@@ -215,10 +215,10 @@ def _optimize_inverter_chains(block, skip_sanity_check=False):
             wires_to_remove = inverter_chain[start_idx:]
             wire_removal_set.update(wires_to_remove)
             # Remove inverters used in the chain.
-            inverters_to_remove = {wire_creator[wire] for wire in wires_to_remove}
+            inverters_to_remove = {wire_src_dict[wire] for wire in wires_to_remove}
             net_removal_set.update(inverters_to_remove)
             # Map the end wire of the inverter chain to the beginning wire.
-            wire_src_dict[inverter_chain[-1]] = inverter_chain[start_idx - 1]
+            wire_producer[inverter_chain[-1]] = inverter_chain[start_idx - 1]
 
     # This loop recreates the block with inverter chains removed. It adds each LogicNet
     # in the original block to the new block if it is not marked for removal, and
@@ -230,7 +230,7 @@ def _optimize_inverter_chains(block, skip_sanity_check=False):
                 LogicNet(
                     net.op,
                     net.op_param,
-                    args=tuple(wire_src_dict.find_producer(x) for x in net.args),
+                    args=tuple(wire_producer.find_producer(x) for x in net.args),
                     dests=net.dests,
                 )
             )
@@ -1042,7 +1042,7 @@ def direct_connect_outputs(block=None):
     # NOTE: would use transform.all_nets(), but it becomes tricky when we want to remove
     # more than just the current net on a single pass
     block = working_block(block)
-    _, dst_nets = block.net_connections()
+    _wire_src_dict, wire_dst_dict = block.net_connections()
 
     nets_to_remove = set()
     nets_to_add = set()
@@ -1053,10 +1053,10 @@ def direct_connect_outputs(block=None):
             continue
 
         dest_wire = net.dests[0]
-        if dest_wire not in dst_nets or len(dst_nets[dest_wire]) > 1:
+        if dest_wire not in wire_dst_dict or len(wire_dst_dict[dest_wire]) > 1:
             continue
 
-        dst_net = dst_nets[dest_wire][0]
+        dst_net = wire_dst_dict[dest_wire][0]
         if dst_net.op != "w" or not isinstance(dst_net.dests[0], Output):
             continue
 
@@ -1105,7 +1105,7 @@ def two_way_fanout(block=None):
 
     block = working_block(block)
 
-    _, dst_map = block.net_connections()
+    _wire_src_dict, wire_dst_dict = block.net_connections()
     # Two-pass approach: Remember which nets will need to change, in case there are
     # multiple arguments which will be changing along the way.
     nets_to_update = collections.defaultdict(list)
@@ -1114,7 +1114,7 @@ def two_way_fanout(block=None):
         if curr_fanout > 1:
             s = _make_tree(wire, block, curr_fanout)
             curr_ix = 0
-            for dst_net in dst_map[wire]:
+            for dst_net in wire_dst_dict[wire]:
                 for i, arg in enumerate(dst_net.args):
                     if arg is wire:
                         nets_to_update[dst_net].append((wire, i, s[curr_ix]))

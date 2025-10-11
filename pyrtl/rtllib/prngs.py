@@ -1,3 +1,4 @@
+import enum
 import random
 from math import ceil, log2
 
@@ -145,26 +146,30 @@ def prng_xoroshiro128(
     counter = pyrtl.Register(counter_bitwidth, "counter")
     gen_done = counter == gen_cycles - 1
     state = pyrtl.Register(1)
-    WAIT, GEN = (pyrtl.Const(x) for x in range(2))
+
+    class State(enum.IntEnum):
+        WAIT = 0
+        GEN = 1
+
     with pyrtl.conditional_assignment:
         with load:
             s0.next |= seed[:64]
             s1.next |= seed[64:]
-            state.next |= WAIT
+            state.next |= State.WAIT
         with req:
             counter.next |= 0
             s0.next |= s0_next
             s1.next |= s1_next
             rand.next |= pyrtl.concat(rand, output)
-            state.next |= GEN
-        with state == GEN:
+            state.next |= State.GEN
+        with state == State.GEN:
             with ~gen_done:
                 counter.next |= counter + 1
                 s0.next |= s0_next
                 s1.next |= s1_next
                 rand.next |= pyrtl.concat(rand, output)
 
-    ready = ~load & ~req & (state == GEN) & gen_done
+    ready = ~load & ~req & (state == State.GEN) & gen_done
     return ready, rand[-bitwidth:]  # return MSBs because LSBs are less random
 
 
@@ -263,28 +268,33 @@ def csprng_trivium(
     init_done = counter == init_cycles
     gen_done = counter == gen_cycles - 1
     state = pyrtl.Register(2)
-    WAIT, INIT, GEN = (pyrtl.Const(x) for x in range(3))
+
+    class State(enum.IntEnum):
+        WAIT = 0
+        INIT = 1
+        GEN = 2
+
     with pyrtl.conditional_assignment:
         with load:
             counter.next |= 0
             a.next |= key
             b.next |= iv
             c.next |= pyrtl.concat(pyrtl.Const("3'b111"), pyrtl.Const(0, 108))
-            state.next |= INIT
+            state.next |= State.INIT
         with req:
             counter.next |= 0
             a.next |= a_next
             b.next |= b_next
             c.next |= c_next
             rand.next |= pyrtl.concat(rand, *output)
-            state.next |= GEN
-        with state == INIT:
+            state.next |= State.GEN
+        with state == State.INIT:
             with ~init_done:
                 counter.next |= counter + 1
                 a.next |= a_next
                 b.next |= b_next
                 c.next |= c_next
-        with state == GEN:
+        with state == State.GEN:
             with ~gen_done:
                 counter.next |= counter + 1
                 a.next |= a_next
@@ -292,5 +302,9 @@ def csprng_trivium(
                 c.next |= c_next
                 rand.next |= pyrtl.concat(rand, *output)
 
-    ready = ~load & ~req & ((state == INIT) & init_done | (state == GEN) & gen_done)
+    ready = (
+        ~load
+        & ~req
+        & ((state == State.INIT) & init_done | (state == State.GEN) & gen_done)
+    )
     return ready, rand

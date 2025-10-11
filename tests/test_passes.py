@@ -824,7 +824,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         timing_max_length = timing.max_length()
         if timing_val is not None:
             self.assertEqual(timing_max_length, timing_val)
-        _ = timing.critical_path(print_cp=False)
+        timing.critical_path(print_cp=False)
 
         pyrtl.synthesize()
         pyrtl.optimize()
@@ -834,7 +834,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         timing_max_length = timing.max_length()
         if opt_timing_val is not None:
             self.assertEqual(timing_max_length, opt_timing_val)
-        _ = timing.critical_path(print_cp=False)
+        timing.critical_path(print_cp=False)
 
         pyrtl.and_inverter_synth()
         pyrtl.optimize()
@@ -842,7 +842,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         block = pyrtl.working_block()
         timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
-        _ = timing.critical_path(print_cp=False)
+        timing.critical_path(print_cp=False)
         block = pyrtl.working_block()
         self.num_net_of_type("|", 0, block)
         self.num_net_of_type("^", 0, block)
@@ -853,7 +853,7 @@ class TestSynthOptTiming(NetWireNumTestCases):
         block = pyrtl.working_block()
         timing = pyrtl.TimingAnalysis(block)
         timing_max_length = timing.max_length()
-        _ = timing.critical_path(print_cp=False)
+        timing.critical_path(print_cp=False)
         block.sanity_check()
         self.num_net_of_type("|", 0, block)
         self.num_net_of_type("^", 0, block)
@@ -1073,17 +1073,17 @@ class TestDirectlyConnectedOutputs(unittest.TestCase):
         p <<= w
         q <<= ~i
 
-        src_nets, _ = pyrtl.working_block().net_connections()
-        self.assertEqual(src_nets[o].op, "w")
-        self.assertEqual(src_nets[p].op, "w")
-        self.assertEqual(src_nets[q].op, "w")
+        wire_src_dict, _wire_dst_dict = pyrtl.working_block().net_connections()
+        self.assertEqual(wire_src_dict[o].op, "w")
+        self.assertEqual(wire_src_dict[p].op, "w")
+        self.assertEqual(wire_src_dict[q].op, "w")
         self.assertEqual(len(pyrtl.working_block().logic), 5)
 
         pyrtl.direct_connect_outputs()
-        src_nets, _ = pyrtl.working_block().net_connections()
-        self.assertEqual(src_nets[o].op, "w")
-        self.assertEqual(src_nets[p].op, "w")
-        self.assertEqual(src_nets[q].op, "~")
+        wire_src_dict, _wire_dst_dict = pyrtl.working_block().net_connections()
+        self.assertEqual(wire_src_dict[o].op, "w")
+        self.assertEqual(wire_src_dict[p].op, "w")
+        self.assertEqual(wire_src_dict[q].op, "~")
         self.assertEqual(len(pyrtl.working_block().logic), 4)
 
 

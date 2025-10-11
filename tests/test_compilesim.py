@@ -1143,7 +1143,7 @@ class RomBlockSimBase(unittest.TestCase):
         }
 
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = self.sim(memory_value_map=mem_val_map)
+            self.sim(memory_value_map=mem_val_map)
 
     def test_negative_memory_value_map(self):
         mem = pyrtl.MemBlock(addrwidth=3, bitwidth=3)
@@ -1199,7 +1199,7 @@ class TraceErrorBase(unittest.TestCase):
 
     def test_empty_trace(self):
         with self.assertRaises(pyrtl.PyrtlError):
-            _ = pyrtl.SimulationTrace()
+            pyrtl.SimulationTrace()
 
     def test_empty_trace_after_untraceable_removed(self):
         r = pyrtl.Register(2, "r")

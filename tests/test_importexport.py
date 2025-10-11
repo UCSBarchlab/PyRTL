@@ -1348,7 +1348,7 @@ endmodule
 class TestVerilogInput(unittest.TestCase):
     def setUp(self):
         try:
-            _ = subprocess.check_output(["yosys", "-V"])
+            subprocess.check_output(["yosys", "-V"])
         except OSError as exc:
             msg = "Testing Verilog input requires yosys"
             raise unittest.SkipTest(msg) from exc

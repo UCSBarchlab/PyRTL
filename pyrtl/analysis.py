@@ -222,7 +222,7 @@ class TimingAnalysis:
     def _memory_read_estimate(mem):
         # http://www.cs.ucsb.edu/~sherwood/pubs/ICCD-srammodel.pdf
         # ROM is assumed to be same delay as SRAM (perhaps optimistic?)
-        bits, ports, is_rom = _bits_ports_and_isrom_from_memory(mem)
+        bits, ports, _is_rom = _bits_ports_and_isrom_from_memory(mem)
         tech_in_um = 0.130
         return 270 * tech_in_um**1.38 * bits**0.25 * ports**1.30 + 1.05
 
@@ -279,7 +279,7 @@ class TimingAnalysis:
                  the critical paths (which themselves are lists of nets) as the second
         """
         critical_paths = []  # storage of all completed critical paths
-        wire_src_map, dst_map = self.block.net_connections()
+        wire_src_dict, _wire_dst_dict = self.block.net_connections()
 
         def critical_path_pass(old_critical_path, first_wire):
             if isinstance(first_wire, (Input, Const, Register)):
@@ -289,7 +289,7 @@ class TimingAnalysis:
             if len(critical_paths) >= cp_limit:
                 raise self._TooManyCPsError()
 
-            source = wire_src_map[first_wire]
+            source = wire_src_dict[first_wire]
             critical_path = [source]
             critical_path.extend(old_critical_path)
             arg_max_time = max(self.timing_map[arg_wire] for arg_wire in source.args)
@@ -500,7 +500,7 @@ def paths(
         # present as the destination "net" of Output wires in the dst_nets map. That
         # would overly complicate this algorithm: we will assume all values() in the
         # dst_nets map are logic nets only. We set this to False for explicitness...
-        _, dst_nets = block.net_connections(include_virtual_nodes=False)
+        _wire_src_dict, dst_nets = block.net_connections(include_virtual_nodes=False)
     else:
         # ... or make sure it's not present otherwise.
         for output in block.wirevector_subset(cls=Output):
@@ -594,9 +594,9 @@ def fanout(w: WireVector) -> int:
 
     :return: Integer fanout count.
     """
-    _, dst_nets = w._block.net_connections()
-    if w not in dst_nets:
+    _wire_src_dict, wire_dst_dict = w._block.net_connections()
+    if w not in wire_dst_dict:
         return 0
 
-    all_args = [arg for net in dst_nets[w] for arg in net.args]
+    all_args = [arg for net in wire_dst_dict[w] for arg in net.args]
     return len(list(filter(lambda arg: arg is w, all_args)))

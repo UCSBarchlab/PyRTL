@@ -20,6 +20,6 @@ location of the examples changes
 def test_all_examples(file):
     pyrtl.reset_working_block()
     try:
-        _ = subprocess.check_output(["python", file])
+        subprocess.check_output(["python", file])
     except subprocess.CalledProcessError as e:
         raise e

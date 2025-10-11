@@ -880,9 +880,9 @@ def val_to_formatted_str(val: int, format: str, enum_set=None) -> str:
     if type == "s":
         rval = str(val_to_signed_integer(val, bitwidth))
     elif type == "x":
-        rval = hex(val)[2:]  # cuts off '0x' at the start
+        rval = f"{val:x}"
     elif type == "b":
-        rval = bin(val)[2:]  # cuts off '0b' at the start
+        rval = f"{val:b}"
     elif type == "u":
         rval = str(int(val))  # nothing fancy
     elif type == "e":

@@ -212,7 +212,7 @@ class TestOutputGraphs(unittest.TestCase):
         d <<= c
 
         analysis = pyrtl.TimingAnalysis()
-        _, dst_map = pyrtl.working_block().net_connections()
+        _wire_src_dict, wire_dst_dict = pyrtl.working_block().net_connections()
 
         def get_fanout(n):
             if isinstance(n, pyrtl.LogicNet):
@@ -224,7 +224,7 @@ class TestOutputGraphs(unittest.TestCase):
 
             if isinstance(w, pyrtl.Output):
                 return 0
-            return len(dst_map[w])
+            return len(wire_dst_dict[w])
 
         node_fanout = {
             n: f"Fanout: {get_fanout(n)}" for n in pyrtl.working_block().logic
@@ -297,11 +297,11 @@ class TestNetGraph(unittest.TestCase):
         self.assertIs(edges[0], inwire)
 
     def test_netgraph_unused_wires(self):
-        _ = pyrtl.WireVector(8, "genwire")
-        _ = pyrtl.Input(8, "inwire")
-        _ = pyrtl.Output(8, "outwire")
-        _ = pyrtl.Const(8, 8)
-        _ = pyrtl.Register(8, "reg")
+        pyrtl.WireVector(8, "genwire")
+        pyrtl.Input(8, "inwire")
+        pyrtl.Output(8, "outwire")
+        pyrtl.Const(8, 8)
+        pyrtl.Register(8, "reg")
 
         g = pyrtl.net_graph()
         self.assertEqual(len(g), 0)
@@ -348,7 +348,7 @@ class TestOutputIPynb(unittest.TestCase):
                 }
             )
 
-        _ = pyrtl.trace_to_html(sim.tracer)  # tests if it compiles or not
+        pyrtl.trace_to_html(sim.tracer)  # tests if it compiles or not
 
     def test_trace_to_html(self):
         i = pyrtl.Input(1, "i")

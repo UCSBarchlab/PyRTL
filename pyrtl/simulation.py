@@ -1594,7 +1594,7 @@ class SimulationTrace:
             raise PyrtlError(msg)
         # return the length of the list of some element in the dictionary (all should be
         # the same)
-        wire, value_list = next(x for x in self.trace.items())
+        _wire, value_list = next(x for x in self.trace.items())
         return len(value_list)
 
     def add_step(self, value_map):
