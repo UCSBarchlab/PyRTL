@@ -947,7 +947,7 @@ class _VerilogOutput:
 
         return sanitized_name, comment
 
-    def _to_verilog_header(self, file: IO, initialize_registers: bool):
+    def _to_verilog_header(self, file: IO, initialize_registers: bool, module_name="toplevel"):
         """Print the header of the verilog implementation."""
         print("// Generated automatically via PyRTL", file=file)
         print("// As one initial test of synthesis, map to FPGA with:", file=file)
@@ -958,7 +958,7 @@ class _VerilogOutput:
         self.declared_gates = self.gate_graph.inputs | self.gate_graph.outputs
 
         # Module name.
-        print(f"module toplevel({', '.join(self.io_list)});", file=file)
+        print(f"module {module_name} ({', '.join(self.io_list)});", file=file)
 
         # Declare Inputs and Outputs.
         print("    input clk;", file=file)
@@ -1255,8 +1255,8 @@ class _VerilogOutput:
     def _to_verilog_footer(self, file: IO):
         print("endmodule", file=file)
 
-    def output_to_verilog(self, dest_file: IO, initialize_registers: bool):
-        self._to_verilog_header(dest_file, initialize_registers)
+    def output_to_verilog(self, dest_file: IO, initialize_registers: bool, module_name="toplevel"):
+        self._to_verilog_header(dest_file, initialize_registers, module_name=module_name)
         self._to_verilog_combinational(dest_file)
         self._to_verilog_sequential(dest_file)
         self._to_verilog_memories(dest_file)
@@ -1414,6 +1414,7 @@ def output_to_verilog(
     add_reset: bool | str = True,
     block: Block = None,
     initialize_registers: bool = False,
+    module_name: str = "toplevel",
 ):
     """A function to walk the ``block`` and output it in Verilog format to the open
     file.
@@ -1435,7 +1436,7 @@ def output_to_verilog(
         bitwidth=8, reset_value=4)`` generates Verilog like ``reg[7:0] foo = 8'd4;``.
     :param block: Block to be walked and exported. Defaults to the :ref:`working_block`.
     """
-    _VerilogOutput(block, add_reset).output_to_verilog(dest_file, initialize_registers)
+    _VerilogOutput(block, add_reset).output_to_verilog(dest_file, initialize_registers, module_name=module_name)
 
 
 def output_verilog_testbench(
