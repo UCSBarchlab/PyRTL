@@ -716,13 +716,13 @@ class Gate:
         if self.op_param is None:
             op_param = ""
         elif self.op == "C":
-            op_param = f"({self.op_param[0]})"
+            op_param = f"({self.const_value})"
         elif self.op == "s":
-            op_param = f" [sel={self.op_param}]"
+            op_param = f" [sel={self.sel}]"
         elif self.op == "m" or self.op == "@":
-            op_param = f" [memid={self.op_param[0]} mem={self.op_param[1].name}]"
+            op_param = f" [memid={self.memid} mem={self.mem.name}]"
         elif self.op == "r":
-            op_param = f" [reset_value={self.op_param[0]}]"
+            op_param = f" [reset_value={self.reset_value}]"
         else:
             op_param = f" [op_param={self.op_param}]"
 
