@@ -958,7 +958,7 @@ class _VerilogOutput:
         self.declared_gates = self.gate_graph.inputs | self.gate_graph.outputs
 
         # Module name.
-        print(f"module {module_name} ({', '.join(self.io_list)});", file=file)
+        print(f"module {module_name}({', '.join(self.io_list)});", file=file)
 
         # Declare Inputs and Outputs.
         print("    input clk;", file=file)
@@ -1447,7 +1447,10 @@ def output_verilog_testbench(
     cmd: str | None = None,
     add_reset: bool | str = True,
     block: Block = None,
+    module_name: str | None = None,  
 ):
+    if module_name is None:
+        module_name = "toplevel"
     """Output a Verilog testbench for the block/inputs used in the simulation trace.
 
     If ``add_reset`` is ``True``, a ``rst`` input wire is added to the instantiated
