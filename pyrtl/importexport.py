@@ -1461,7 +1461,6 @@ def output_verilog_testbench(
     cmd: str | None = None,
     add_reset: bool | str = True,
     block: Block = None,
-    module_name: str | None = None,
 ):
     if module_name is None:
         module_name = "toplevel"
