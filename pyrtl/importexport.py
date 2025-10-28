@@ -768,10 +768,11 @@ class _VerilogSanitizer(_NameSanitizer):
 
 
 class _VerilogOutput:
-    def __init__(self, block: Block, add_reset: bool | str):
+    def __init__(self, block: Block, add_reset: bool | str, module_name="toplevel"):
         block = working_block(block)
         self.gate_graph = GateGraph(block)
         self.add_reset = add_reset
+        self.module_name = module_name
 
         if not isinstance(self.add_reset, bool) and self.add_reset != "asynchronous":
             msg = (
@@ -947,18 +948,22 @@ class _VerilogOutput:
 
         return sanitized_name, comment
 
-    def _to_verilog_header(self, file: IO, initialize_registers: bool, module_name="toplevel"):
+    def _to_verilog_header(
+        self, file: IO, initialize_registers: bool, module_name="toplevel"
+    ):
         """Print the header of the verilog implementation."""
         print("// Generated automatically via PyRTL", file=file)
         print("// As one initial test of synthesis, map to FPGA with:", file=file)
-        print('//   yosys -p "synth_xilinx -top toplevel" thisfile.v\n', file=file)
+        print(
+            f'//   yosys -p "synth_xilinx -top {module_name}" thisfile.v\n', file=file
+        )
 
         # ``declared_gates`` is the set of Gates with corresponding Verilog reg/wire
         # declarations. Generated Verilog code can refer to these Gates by name.
         self.declared_gates = self.gate_graph.inputs | self.gate_graph.outputs
 
         # Module name.
-        print(f"module {module_name} ({', '.join(self.io_list)});", file=file)
+        print(f"module {self.module_name}({', '.join(self.io_list)});", file=file)
 
         # Declare Inputs and Outputs.
         print("    input clk;", file=file)
@@ -1255,8 +1260,12 @@ class _VerilogOutput:
     def _to_verilog_footer(self, file: IO):
         print("endmodule", file=file)
 
-    def output_to_verilog(self, dest_file: IO, initialize_registers: bool, module_name="toplevel"):
-        self._to_verilog_header(dest_file, initialize_registers, module_name=module_name)
+    def output_to_verilog(
+        self, dest_file: IO, initialize_registers: bool, module_name="toplevel"
+    ):
+        self._to_verilog_header(
+            dest_file, initialize_registers, module_name=module_name
+        )
         self._to_verilog_combinational(dest_file)
         self._to_verilog_sequential(dest_file)
         self._to_verilog_memories(dest_file)
@@ -1269,6 +1278,7 @@ class _VerilogOutput:
         toplevel_include: str | None = None,
         vcd: str = "waveform.vcd",
         cmd: str | None = None,
+        module_name: str = "toplevel",
     ):
         # Output an include, if given.
         if toplevel_include:
@@ -1309,7 +1319,7 @@ class _VerilogOutput:
             print("    integer tb_addr;", file=dest_file)
 
         io_list_str = [f".{io}({io})" for io in self.io_list]
-        print(f"    toplevel block({', '.join(io_list_str)});\n", file=dest_file)
+        print(f"    {module_name} block({', '.join(io_list_str)});\n", file=dest_file)
 
         # Generate the clock signal.
         print("    always", file=dest_file)
@@ -1435,8 +1445,12 @@ def output_to_verilog(
         When this argument is ``True``, a register like ``Register(name='foo',
         bitwidth=8, reset_value=4)`` generates Verilog like ``reg[7:0] foo = 8'd4;``.
     :param block: Block to be walked and exported. Defaults to the :ref:`working_block`.
+    :param module_name: Name of the generated Verilog module. Defaults to "toplevel"
+        if no name is generated.
     """
-    _VerilogOutput(block, add_reset).output_to_verilog(dest_file, initialize_registers, module_name=module_name)
+    _VerilogOutput(block, add_reset).output_to_verilog(
+        dest_file, initialize_registers, module_name=module_name
+    )
 
 
 def output_verilog_testbench(
@@ -1447,7 +1461,10 @@ def output_verilog_testbench(
     cmd: str | None = None,
     add_reset: bool | str = True,
     block: Block = None,
+    module_name: str | None = None,
 ):
+    if module_name is None:
+        module_name = "toplevel"
     """Output a Verilog testbench for the block/inputs used in the simulation trace.
 
     If ``add_reset`` is ``True``, a ``rst`` input wire is added to the instantiated
@@ -1500,9 +1517,11 @@ def output_verilog_testbench(
         value passed in here should match the argument passed to
         :func:`output_to_verilog`.
     :param block: Block containing design to test. Defaults to the :ref:`working_block`.
+    :param module_name: Name of the generated Verilog module. Defaults to "toplevel"
+        if no name is generated.
     """
     _VerilogOutput(block, add_reset).output_verilog_testbench(
-        dest_file, simulation_trace, toplevel_include, vcd, cmd
+        dest_file, simulation_trace, toplevel_include, vcd, cmd, module_name=module_name
     )
 
 
