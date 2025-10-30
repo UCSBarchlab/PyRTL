@@ -1,6 +1,11 @@
 from ._types import FloatingPointType, FPTypeProperties, PyrtlFloatConfig, RoundingMode
-from .floatoperations import FloatOperations
-from .floatwirevector import Float16WireVector
+from .floatoperations import (
+    BFloat16Operations,
+    Float16Operations,
+    Float32Operations,
+    Float64Operations,
+    FloatOperations,
+)
 
 __all__ = [
     "FloatingPointType",
@@ -8,5 +13,8 @@ __all__ = [
     "PyrtlFloatConfig",
     "RoundingMode",
     "FloatOperations",
-    "Float16WireVector",
+    "BFloat16Operations",
+    "Float16Operations",
+    "Float32Operations",
+    "Float64Operations",
 ]
