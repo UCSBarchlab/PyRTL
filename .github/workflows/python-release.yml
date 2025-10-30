@@ -18,14 +18,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - uses: astral-sh/setup-uv@v6
       with:
-        python-version: "3.x"
-    - name: Install pypa/build
-      run: python3 -m pip install build
+        enable-cache: true
     - name: Build distribution archives
-      run: python3 -m build
+      run: uv build
     - name: Upload distribution archives
       uses: actions/upload-artifact@v4
       with:

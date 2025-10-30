@@ -1,6 +1,0 @@
-pyparsing
-pytest
-pytest-cov
-pytest-xdist
-ruff
-tox
