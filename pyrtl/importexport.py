@@ -1420,6 +1420,7 @@ def output_to_verilog(
     add_reset: bool | str = True,
     block: Block = None,
     initialize_registers: bool = False,
+    module_name: str = "toplevel",
 ):
     """A function to walk the ``block`` and output it in Verilog format to the open
     file.
@@ -1440,8 +1441,12 @@ def output_to_verilog(
         When this argument is ``True``, a register like ``Register(name='foo',
         bitwidth=8, reset_value=4)`` generates Verilog like ``reg[7:0] foo = 8'd4;``.
     :param block: Block to be walked and exported. Defaults to the :ref:`working_block`.
+    :param module_name: name of the module. Defaults to toplevel
+        if the user puts nothing.
     """
-    _VerilogOutput(block, add_reset).output_to_verilog(dest_file, initialize_registers)
+    _VerilogOutput(block, add_reset, module_name=module_name).output_to_verilog(
+        dest_file, initialize_registers
+    )
 
 
 def output_verilog_testbench(
@@ -1452,6 +1457,7 @@ def output_verilog_testbench(
     cmd: str | None = None,
     add_reset: bool | str = True,
     block: Block = None,
+    module_name: str = "toplevel",
 ):
     """Output a Verilog testbench for the block/inputs used in the simulation trace.
 
@@ -1505,8 +1511,10 @@ def output_verilog_testbench(
         value passed in here should match the argument passed to
         :func:`output_to_verilog`.
     :param block: Block containing design to test. Defaults to the :ref:`working_block`.
+    :param module_name: Name of the module the user chooses. Defaults to toplevel
+        if nothing is inputted.
     """
-    _VerilogOutput(block, add_reset).output_verilog_testbench(
+    _VerilogOutput(block, add_reset, module_name=module_name).output_verilog_testbench(
         dest_file, simulation_trace, toplevel_include, vcd, cmd
     )
 
