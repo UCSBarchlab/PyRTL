@@ -158,6 +158,7 @@ Reference Guide
    analysis
    export
    rtllib
+   PyRTL on GitHub <https://github.com/UCSBarchlab/pyrtl>
 
 Index
 =====
