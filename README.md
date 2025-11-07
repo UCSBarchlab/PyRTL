@@ -139,6 +139,14 @@ needed. `uv` caches installed software so future `uv` invocations will be fast.
 * When pushing a fix to a bug or enhancement please reference issue number in
   commit message, e.g. [Fix to Issue
   #56](https://github.com/UCSBarchlab/PyRTL/commit/1d5730db168a9e4490c580cb930075715468047a)
+* Before sending a pull request, please run:
+
+   ```shell
+   $ uv run just presubmit
+   ```
+
+   to verify that all tests pass and that documentation can be generated with
+   your changes.
 
 *Documentation*
 

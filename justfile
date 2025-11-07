@@ -1,6 +1,8 @@
 # PyRTL uses `just` instead of `make` because:
 # * `make` is not installed by default on Windows.
 # * `uv` can install `just` on all supported platforms from PyPI.
+presubmit: tests docs
+
 tests:
         # Run `pytest` with the latest version of Python supported by PyRTL,
         # which is the default for `uv`. The default is set with `uv python
