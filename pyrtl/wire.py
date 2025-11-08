@@ -19,7 +19,6 @@ from __future__ import annotations
 import numbers
 import re
 import traceback
-from typing import Union
 
 from pyrtl import core  # needed for _setting_keep_wirevector_call_stack
 from pyrtl.core import Block, LogicNet, _NameIndexer, working_block
@@ -1456,7 +1455,7 @@ class WireVector:
         return concat(extvector, self)
 
 
-WireVectorLike = Union[WireVector, int, str, bool]
+WireVectorLike = WireVector | int | str | bool
 """Alias for types that can be coerced to :class:`WireVector` by :func:`as_wires`."""
 
 

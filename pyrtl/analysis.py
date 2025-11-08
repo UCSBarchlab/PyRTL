@@ -12,8 +12,7 @@ import re
 import subprocess
 import sys
 import tempfile
-from collections.abc import Iterable
-from typing import Callable
+from collections.abc import Callable, Iterable
 
 from pyrtl.core import Block, LogicNet, working_block
 from pyrtl.helperfuncs import _currently_in_jupyter_notebook, _print_netlist_latex

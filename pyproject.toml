@@ -23,7 +23,7 @@ authors = [
 description = "RTL-level Hardware Design and Simulation Toolkit"
 readme = "README.md"
 license = {file = "LICENSE.md"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",

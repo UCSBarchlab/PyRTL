@@ -23,14 +23,14 @@ class TestPartitionWire(unittest.TestCase):
         wires, vals = utils.make_inputs_and_values(exact_bitwidth=32, num_wires=1)
         out_wires = [pyrtl.Output(8, "o" + str(i)) for i in range(4)]
         partitioned_w = libutils.partition_wire(wires[0], 8)
-        for p_wire, o_wire in zip(partitioned_w, out_wires):
+        for p_wire, o_wire in zip(partitioned_w, out_wires, strict=True):
             o_wire <<= p_wire
 
         out_vals = utils.sim_and_ret_outws(wires, vals)
         partitioned_vals = [
             [(val >> i) & 0xFF for i in (0, 8, 16, 24)] for val in vals[0]
         ]
-        true_vals = tuple(zip(*partitioned_vals))
+        true_vals = tuple(zip(*partitioned_vals, strict=True))
         for index, wire in enumerate(out_wires):
             self.assertEqual(tuple(out_vals[wire.name]), true_vals[index])
 

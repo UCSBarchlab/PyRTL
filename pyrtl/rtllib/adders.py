@@ -10,7 +10,7 @@ The functions below provide more complex alternatives.
 
 import itertools
 import math
-from typing import Callable
+from collections.abc import Callable
 
 import pyrtl
 

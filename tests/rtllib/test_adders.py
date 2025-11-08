@@ -38,7 +38,7 @@ class TestAdders(unittest.TestCase):
         outwire <<= adder_func(*wires)
 
         out_vals = utils.sim_and_ret_out(outwire, wires, vals)
-        true_result = [sum(cycle_vals) for cycle_vals in zip(*vals)]
+        true_result = [sum(cycle_vals) for cycle_vals in zip(*vals, strict=True)]
         self.assertEqual(out_vals, true_result)
 
     def test_kogge_stone_1(self):
@@ -61,7 +61,7 @@ class TestAdders(unittest.TestCase):
         outwire <<= adders.fast_group_adder(wires)
 
         out_vals = utils.sim_and_ret_out(outwire, wires, vals)
-        true_result = [sum(cycle_vals) for cycle_vals in zip(*vals)]
+        true_result = [sum(cycle_vals) for cycle_vals in zip(*vals, strict=True)]
         self.assertEqual(out_vals, true_result)
 
 

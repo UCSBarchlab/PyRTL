@@ -8,7 +8,8 @@ provided write the block as a given visual format to the file.
 from __future__ import annotations
 
 import collections
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from pyrtl.core import Block, LogicNet, working_block
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
