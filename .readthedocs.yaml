@@ -13,6 +13,15 @@ build:
     python: "3"
   apt_packages:
     - graphviz
+  jobs:
+    pre_create_environment:
+      - asdf plugin add uv
+      - asdf install uv latest
+      - asdf global uv latest
+    create_environment:
+      - uv venv "${READTHEDOCS_VIRTUALENV_PATH}"
+    install:
+      - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --frozen
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
@@ -21,8 +30,3 @@ sphinx:
 # Optionally build your docs in additional formats such as PDF
 formats:
    - pdf
-
-# Optionally set the requirements required to build your docs
-python:
-   install:
-     - requirements: docs/requirements.txt
