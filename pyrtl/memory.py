@@ -19,8 +19,8 @@ from __future__ import annotations
 import collections
 import numbers
 import types
-from collections.abc import Sequence
-from typing import Callable, NamedTuple
+from collections.abc import Callable, Sequence
+from typing import NamedTuple
 
 from pyrtl.core import Block, LogicNet, _NameIndexer, working_block
 from pyrtl.corecircuits import as_wires

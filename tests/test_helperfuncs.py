@@ -557,7 +557,8 @@ class TestBitField_Update(unittest.TestCase):
         self.assertEqual(len(out), len(bfu_out))  # output should have width of input
         out <<= bfu_out
         true_result = [
-            ref(i, range_start, range_end, u) for i, u in zip(inp_vals, upd_vals)
+            ref(i, range_start, range_end, u)
+            for i, u in zip(inp_vals, upd_vals, strict=True)
         ]
         upd_result = utils.sim_and_ret_out(out, [inp, upd], [inp_vals, upd_vals])
         self.assertEqual(upd_result, true_result)
@@ -749,7 +750,9 @@ class TestTreeReduce(unittest.TestCase):
         outwire <<= pyrtl.tree_reduce(operator.xor, wires)
 
         out_vals = utils.sim_and_ret_out(outwire, wires, vals)
-        true_result = [functools.reduce(operator.xor, v) for v in zip(*vals)]
+        true_result = [
+            functools.reduce(operator.xor, v) for v in zip(*vals, strict=True)
+        ]
         self.assertEqual(out_vals, true_result)
 
     def test_empty(self):
@@ -786,7 +789,7 @@ class TestXorAllBits(unittest.TestCase):
         in_wires, vals = utils.make_inputs_and_values(4, exact_bitwidth=13)
         out = pyrtl.Output(name="o")
         out <<= pyrtl.xor_all_bits(in_wires)
-        expected = [v1 ^ v2 ^ v3 ^ v4 for v1, v2, v3, v4 in zip(*vals)]
+        expected = [v1 ^ v2 ^ v3 ^ v4 for v1, v2, v3, v4 in zip(*vals, strict=True)]
         self.assertEqual(expected, utils.sim_and_ret_out(out, in_wires, vals))
 
 
@@ -978,7 +981,7 @@ class TestShiftSimulation(unittest.TestCase):
         shf_out = shift_func(inp, shf)
         self.assertEqual(len(out), len(shf_out))  # output should have width of input
         out <<= shf_out
-        true_result = [ref_func(i, s) for i, s in zip(inp_vals, shf_vals)]
+        true_result = [ref_func(i, s) for i, s in zip(inp_vals, shf_vals, strict=True)]
         shift_result = utils.sim_and_ret_out(out, inputs, all_inp_vals)
         self.assertEqual(shift_result, true_result)
 
@@ -1101,7 +1104,7 @@ class TestBasicMult(unittest.TestCase):
         # creating the testing values and the correct results
         xvals = [int(random.uniform(0, 2**len_a - 1)) for i in range(20)]
         yvals = [int(random.uniform(0, 2**len_b - 1)) for i in range(20)]
-        true_result = [i * j for i, j in zip(xvals, yvals)]
+        true_result = [i * j for i, j in zip(xvals, yvals, strict=True)]
 
         # Setting up and running the tests
         sim = pyrtl.Simulation()
