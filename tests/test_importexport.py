@@ -1305,6 +1305,17 @@ class TestVerilogOutput(unittest.TestCase):
         # only has one user and just passes through ``c``, because that user is a
         # bit-slice.
         self.assertTrue("assign tmp3 = c" in buffer.getvalue())
+    def test_custom_module_name(self):
+        a, b = pyrtl.Input(1, 'a'), pyrtl.Input(1, 'b')
+        out = pyrtl.Output(name='out')
+        out <<= a & b
+
+        buf = io.StringIO()
+        pyrtl.output_to_verilog(buf, module_name='custom_top')
+        text = buf.getvalue()
+
+        self.assertIn('module custom_top', text)
+        self.assertNotIn('module toplevel', text)
 
 
 verilog_input_counter = """\
@@ -1650,6 +1661,21 @@ class TestOutputTestbench(unittest.TestCase):
         pyrtl.output_verilog_testbench(buffer, add_reset=False)
         # The testbench should not touch the RomBlock.
         self.assertTrue("my_rom" not in buffer.getvalue())
+    def test_custom_module_name_testbench(self):
+        # Minimal design
+        a, b = pyrtl.Input(1, "a"), pyrtl.Input(1, "b")
+        out = pyrtl.Output(1, "out")
+        out <<= a & b
+
+        buf = io.StringIO()
+        # Generate a testbench with a custom module name
+        pyrtl.output_verilog_testbench(buf, module_name="custom_tb")
+        text = buf.getvalue()
+
+        # Verify the custom module name is used
+        self.assertIn("custom_tb block(", text)
+        self.assertNotIn("toplevel block(", text)
+
 
 
 firrtl_output_concat_test = """\
@@ -2265,20 +2291,7 @@ class TestInputISCASBench(unittest.TestCase):
         self.check_io(pyrtl.Input, ["G1", "G2", "G3"])
         self.check_io(pyrtl.Output, ["tmp3", "G4"])
 
-class TestOutputVerilog(unittest.TestCase):
-    def test_custom_module_name(self):
-        import io, pyrtl
-        pyrtl.reset_working_block()
-        a, b = pyrtl.Input(1, 'a'), pyrtl.Input(1, 'b')
-        out = pyrtl.Output(name='out')
-        out <<= a & b
 
-        buf = io.StringIO()
-        pyrtl.output_to_verilog(buf, module_name='custom_top')
-        text = buf.getvalue()
-
-        self.assertIn('module custom_top', text)
-        self.assertNotIn('module toplevel', text)
 
 if __name__ == "__main__":
     unittest.main()
