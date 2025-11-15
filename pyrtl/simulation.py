@@ -8,8 +8,7 @@ import os
 import re
 import sys
 import warnings
-from collections.abc import Mapping
-from typing import Callable
+from collections.abc import Callable, Mapping
 
 from pyrtl.core import Block, PostSynthBlock, _PythonSanitizer, working_block
 from pyrtl.helperfuncs import (

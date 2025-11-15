@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import Callable
+from collections.abc import Callable
 
 import pyrtl
 
@@ -62,7 +62,8 @@ def make_inputs_and_values(
                     random_dist=dist,
                 )
                 for i in range(num_wires)
-            )
+            ),
+            strict=True,
         )
     )
     return wires, vals
@@ -165,7 +166,7 @@ def sim_and_ret_outws(
              :class:`list` of its values in each cycle.
     """
     sim = pyrtl.Simulation()
-    sim.step_multiple(provided_inputs=dict(zip(inwires, invals)))
+    sim.step_multiple(provided_inputs=dict(zip(inwires, invals, strict=True)))
     return sim.tracer.trace
 
 

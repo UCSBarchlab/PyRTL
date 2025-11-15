@@ -508,13 +508,16 @@ class TestInputFromBlif(unittest.TestCase):
         res = utils.sim_and_ret_outws([a, b, cin], [avals, bvals, cinvals])
         self.assertEqual(
             res[s.name],
-            [(av + bv + cinv) & 0xF for av, bv, cinv in zip(avals, bvals, cinvals)],
+            [
+                (av + bv + cinv) & 0xF
+                for av, bv, cinv in zip(avals, bvals, cinvals, strict=True)
+            ],
         )
         self.assertEqual(
             res[cout.name],
             [
                 ((av + bv + cinv) & 0x10) >> 4
-                for av, bv, cinv in zip(avals, bvals, cinvals)
+                for av, bv, cinv in zip(avals, bvals, cinvals, strict=True)
             ],
         )
 
