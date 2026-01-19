@@ -264,6 +264,11 @@ class RenderTraceCustomBase(unittest.TestCase):
             FOO = 0
             BAR = 1
 
+        state_name = pyrtl.enum_name(State)
+        self.assertEqual(state_name(0), "FOO")
+        self.assertEqual(state_name(1), "BAR")
+        self.assertEqual(state_name(2), "0x2")
+
         state = pyrtl.Input(name="state", bitwidth=1)
         sim = pyrtl.Simulation()
         sim.step_multiple({state.name: [State.FOO, State.BAR]})
@@ -271,9 +276,33 @@ class RenderTraceCustomBase(unittest.TestCase):
         sim.tracer.render_trace(
             file=buff,
             renderer=self.renderer,
-            repr_per_name={state.name: pyrtl.enum_name(State)},
+            repr_per_name={state.name: state_name},
         )
-        expected = "     |0  |1  \n      \nstate FOO|BAR\n"
+        expected = (
+            "     |0  |1  \n"
+            "      \n"
+            "state FOO|BAR\n"
+        )  # fmt: skip
+        self.assertEqual(buff.getvalue(), expected)
+
+    def test_state_register(self):
+        class State(enum.IntEnum):
+            A = 0
+            B = 1
+            C = 2
+            D = 3
+
+        state = pyrtl.StateRegister(name="state", States=State, reset_value=State.B)
+        state.next <<= state + 1
+        sim = pyrtl.Simulation()
+        sim.step_multiple(nsteps=4)
+        buff = io.StringIO()
+        sim.tracer.render_trace(file=buff, renderer=self.renderer)
+        expected = (
+            "     |0|1|2|3\n"
+            "      \n"
+            "state B|C|D|A\n"
+        )  # fmt: skip
         self.assertEqual(buff.getvalue(), expected)
 
     def test_val_to_signed_integer(self):
@@ -286,7 +315,11 @@ class RenderTraceCustomBase(unittest.TestCase):
         sim.tracer.render_trace(
             file=buff, renderer=self.renderer, repr_func=pyrtl.val_to_signed_integer
         )
-        expected = "       |0 |1 |2 |3 \n        \ncounter --|1 |-2|-1\n"
+        expected = (
+            "       |0 |1 |2 |3 \n"
+            "        \n"
+            "counter --|1 |-2|-1\n"
+        )  # fmt: skip
         self.assertEqual(buff.getvalue(), expected)
 
     def test_custom_repr_per_wire(self):

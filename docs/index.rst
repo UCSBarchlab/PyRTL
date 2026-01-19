@@ -92,6 +92,7 @@ this is all a user needs to create a functional hardware design.
                          pyrtl.Output
                          pyrtl.Const
                          pyrtl.Register
+                         pyrtl.StateRegister
     :parts: 1
 
 After specifying a hardware design, there are then options to simulate your

@@ -9,6 +9,11 @@ Registers
     :show-inheritance:
     :special-members: __init__
 
+.. autoclass:: pyrtl.StateRegister
+    :members:
+    :show-inheritance:
+    :special-members: __init__
+
 Memories
 --------
 
