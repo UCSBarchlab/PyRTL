@@ -1,3 +1,6 @@
+.. meta::
+   :google-site-verification: GwI57TNdOrpPLp4ZORJicRtCIkUzt9lS472n3MRTMfs
+
 =====
 PYRTL
 =====
