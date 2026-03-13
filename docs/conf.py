@@ -73,6 +73,7 @@ typehints_document_rtype_none = False
 # a list of builtin themes.
 #
 html_baseurl = "https://pyrtl.readthedocs.io/en/latest"
+html_extra_path = ["html_root"]
 html_theme = "furo"
 html_theme_options = {
     "sidebar_hide_name": True,
