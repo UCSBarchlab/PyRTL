@@ -3,7 +3,7 @@ import operator
 import os
 import sys
 import unittest
-from typing import Callable
+from collections.abc import Callable
 
 import pyrtl
 from pyrtl.rtllib import testingutils as utils
@@ -1022,7 +1022,7 @@ class TestDirectlyConnectedOutputs(unittest.TestCase):
         o <<= i * j
 
         pyrtl.direct_connect_outputs()
-        true_result = [x * y for x, y in zip(ivals, jvals)]
+        true_result = [x * y for x, y in zip(ivals, jvals, strict=True)]
         sim_result = utils.sim_and_ret_out(o, [i, j], [ivals, jvals])
         self.assertEqual(true_result, sim_result)
 

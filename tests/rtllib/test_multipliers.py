@@ -49,10 +49,10 @@ class TestSimpleMult(unittest.TestCase):
 
         xvals = [int(random.uniform(0, 2**len_a - 1)) for i in range(20)]
         yvals = [int(random.uniform(0, 2**len_b - 1)) for i in range(20)]
-        true_result = [i * j for i, j in zip(xvals, yvals)]
+        true_result = [i * j for i, j in zip(xvals, yvals, strict=True)]
         mult_results = []
 
-        for x_val, y_val in zip(xvals, yvals):
+        for x_val, y_val in zip(xvals, yvals, strict=True):
             sim = pyrtl.Simulation()
             sim.step({a: x_val, b: y_val, reset: 1})
             while not sim.inspect("done"):
@@ -103,10 +103,10 @@ class TestComplexMult(unittest.TestCase):
 
         xvals = [int(random.uniform(0, 2**len_a - 1)) for i in range(20)]
         yvals = [int(random.uniform(0, 2**len_b - 1)) for i in range(20)]
-        true_result = [i * j for i, j in zip(xvals, yvals)]
+        true_result = [i * j for i, j in zip(xvals, yvals, strict=True)]
         mult_results = []
 
-        for x_val, y_val in zip(xvals, yvals):
+        for x_val, y_val in zip(xvals, yvals, strict=True):
             sim = pyrtl.Simulation()
             sim.step({a: x_val, b: y_val, reset: 1})
             while not sim.inspect("done"):
@@ -137,7 +137,7 @@ class TestWallace(unittest.TestCase):
         # creating the testing values and the correct results
         xvals = [int(random.uniform(0, 2**len_a - 1)) for i in range(20)]
         yvals = [int(random.uniform(0, 2**len_b - 1)) for i in range(20)]
-        true_result = [i * j for i, j in zip(xvals, yvals)]
+        true_result = [i * j for i, j in zip(xvals, yvals, strict=True)]
 
         # Setting up and running the tests
         sim = pyrtl.Simulation()
@@ -234,7 +234,7 @@ class TestSignedTreeMult(unittest.TestCase):
         bound_b = 2 ** (len_b - 1) - 1
         xvals = [int(random.uniform(-bound_a, bound_a)) for i in range(20)]
         yvals = [int(random.uniform(-bound_b, bound_b)) for i in range(20)]
-        true_result = [i * j for i, j in zip(xvals, yvals)]
+        true_result = [i * j for i, j in zip(xvals, yvals, strict=True)]
 
         # Setting up and running the tests
         sim = pyrtl.Simulation()

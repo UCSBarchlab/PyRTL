@@ -67,7 +67,10 @@ class TestPrioritizedMuxSim(unittest.TestCase):
         out <<= muxes.prioritized_mux(sels, mux_ins)
         actual = utils.sim_and_ret_out(out, sels + mux_ins, sel_vals + vals)
         expected = [
-            pri_mux_actual(sel, val) for sel, val in zip(zip(*sel_vals), zip(*vals))
+            pri_mux_actual(sel, val)
+            for sel, val in zip(
+                zip(*sel_vals, strict=True), zip(*vals, strict=True), strict=True
+            )
         ]
         self.assertEqual(actual, expected)
 
@@ -82,7 +85,10 @@ class TestPrioritizedMuxSim(unittest.TestCase):
         out <<= muxes.prioritized_mux(sels, mux_ins)
         actual = utils.sim_and_ret_out(out, sels + mux_ins, sel_vals + vals)
         expected = [
-            pri_mux_actual(sel, val) for sel, val in zip(zip(*sel_vals), zip(*vals))
+            pri_mux_actual(sel, val)
+            for sel, val in zip(
+                zip(*sel_vals, strict=True), zip(*vals, strict=True), strict=True
+            )
         ]
         self.assertEqual(actual, expected)
 
@@ -169,7 +175,7 @@ class TestSmartMux(unittest.TestCase):
         in_vals = [sel_vals, a1_vals, a2_vals]
         out_res = utils.sim_and_ret_out(res, [sel, a1, a2], in_vals)
 
-        expected_out = [e2 if sel else e1 for sel, e1, e2 in zip(*in_vals)]
+        expected_out = [e2 if sel else e1 for sel, e1, e2 in zip(*in_vals, strict=True)]
         self.assertEqual(out_res, expected_out)
 
     def test_two_vals_big(self):
@@ -186,7 +192,8 @@ class TestSmartMux(unittest.TestCase):
         )
 
         expected_out = [
-            e2 if sel else e1 for sel, e1, e2 in zip(sel_vals, a1_vals, a2_vals)
+            e2 if sel else e1
+            for sel, e1, e2 in zip(sel_vals, a1_vals, a2_vals, strict=True)
         ]
         self.assertEqual(out_res, expected_out)
 
@@ -213,7 +220,8 @@ class TestSmartMux(unittest.TestCase):
         )
 
         expected_out = [
-            e2 if sel else e1 for sel, e1, e2 in zip(sel_vals, a1_vals, a2_vals)
+            e2 if sel else e1
+            for sel, e1, e2 in zip(sel_vals, a1_vals, a2_vals, strict=True)
         ]
         self.assertEqual(out_res, expected_out)
 
@@ -236,7 +244,9 @@ class TestSmartMuxDefault(unittest.TestCase):
 
         expected_out = [
             e2 if sel == 6 else e1 if sel == 5 else d
-            for sel, e1, e2, d in zip(sel_vals, a1_vals, a2_vals, default_vals)
+            for sel, e1, e2, d in zip(
+                sel_vals, a1_vals, a2_vals, default_vals, strict=True
+            )
         ]
         self.assertEqual(out_res, expected_out)
 
@@ -300,10 +310,12 @@ class TestMultiSelectorSim(unittest.TestCase):
             [sel_vals, i1_0_vals, i1_1_vals, i2_0_vals, i2_1_vals],
         )
         expected_i1_out = [
-            v1 if s else v0 for s, v0, v1 in zip(sel_vals, i1_0_vals, i1_1_vals)
+            v1 if s else v0
+            for s, v0, v1 in zip(sel_vals, i1_0_vals, i1_1_vals, strict=True)
         ]
         expected_i2_out = [
-            v1 if s else v0 for s, v0, v1 in zip(sel_vals, i2_0_vals, i2_1_vals)
+            v1 if s else v0
+            for s, v0, v1 in zip(sel_vals, i2_0_vals, i2_1_vals, strict=True)
         ]
 
         self.assertEqual(actual_outputs[i1_out.name], expected_i1_out)
@@ -312,9 +324,15 @@ class TestMultiSelectorSim(unittest.TestCase):
     def test_simple(self):
         sel, sel_vals = gen_in(2)
 
-        x1s, x1_vals = (list(x) for x in zip(*(gen_in(8) for i in range(4))))
-        x2s, x2_vals = (list(x) for x in zip(*(gen_in(8) for i in range(4))))
-        x3s, x3_vals = (list(x) for x in zip(*(gen_in(8) for i in range(4))))
+        x1s, x1_vals = (
+            list(x) for x in zip(*(gen_in(8) for i in range(4)), strict=True)
+        )
+        x2s, x2_vals = (
+            list(x) for x in zip(*(gen_in(8) for i in range(4)), strict=True)
+        )
+        x3s, x3_vals = (
+            list(x) for x in zip(*(gen_in(8) for i in range(4)), strict=True)
+        )
 
         i1_out = pyrtl.Output(name="i1_out")
         i2_out = pyrtl.Output(name="i2_out")
@@ -328,9 +346,15 @@ class TestMultiSelectorSim(unittest.TestCase):
         vals = [sel_vals, *x1_vals, *x2_vals, *x3_vals]
         actual_outputs = utils.sim_and_ret_outws(wires, vals)
 
-        expected_i1_out = [v[s] for s, v in zip(sel_vals, zip(*x1_vals))]
-        expected_i2_out = [v[s] for s, v in zip(sel_vals, zip(*x2_vals))]
-        expected_i3_out = [v[s] for s, v in zip(sel_vals, zip(*x3_vals))]
+        expected_i1_out = [
+            v[s] for s, v in zip(sel_vals, zip(*x1_vals, strict=True), strict=True)
+        ]
+        expected_i2_out = [
+            v[s] for s, v in zip(sel_vals, zip(*x2_vals, strict=True), strict=True)
+        ]
+        expected_i3_out = [
+            v[s] for s, v in zip(sel_vals, zip(*x3_vals, strict=True), strict=True)
+        ]
 
         self.assertEqual(actual_outputs[i1_out.name], expected_i1_out)
         self.assertEqual(actual_outputs[i2_out.name], expected_i2_out)
@@ -345,7 +369,7 @@ class TestDemux(unittest.TestCase):
         in_w, in_vals = utils.an_input_and_vals(2)
         outs = (pyrtl.Output(name="output_" + str(i)) for i in range(4))
         demux_outs = pyrtl.rtllib.muxes.demux(in_w)
-        for out_w, demux_out in zip(outs, demux_outs):
+        for out_w, demux_out in zip(outs, demux_outs, strict=True):
             out_w <<= demux_out
         traces = utils.sim_and_ret_outws((in_w,), (in_vals,))
 
@@ -357,7 +381,7 @@ class TestDemux(unittest.TestCase):
         in_w, in_vals = utils.an_input_and_vals(1)
         outs = (pyrtl.Output(name="output_" + str(i)) for i in range(2))
         demux_outs = pyrtl.rtllib.muxes._demux_2(in_w)
-        for out_w, demux_out in zip(outs, demux_outs):
+        for out_w, demux_out in zip(outs, demux_outs, strict=True):
             out_w <<= demux_out
         traces = utils.sim_and_ret_outws((in_w,), (in_vals,))
 
@@ -369,7 +393,7 @@ class TestDemux(unittest.TestCase):
         in_w, in_vals = utils.an_input_and_vals(5)
         outs = (pyrtl.Output(name="output_" + str(i)) for i in range(32))
         demux_outs = pyrtl.rtllib.muxes.demux(in_w)
-        for out_w, demux_out in zip(outs, demux_outs):
+        for out_w, demux_out in zip(outs, demux_outs, strict=True):
             self.assertEqual(len(demux_out), 1)
             out_w <<= demux_out
         traces = utils.sim_and_ret_outws((in_w,), (in_vals,))

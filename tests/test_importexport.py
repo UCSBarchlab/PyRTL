@@ -508,13 +508,16 @@ class TestInputFromBlif(unittest.TestCase):
         res = utils.sim_and_ret_outws([a, b, cin], [avals, bvals, cinvals])
         self.assertEqual(
             res[s.name],
-            [(av + bv + cinv) & 0xF for av, bv, cinv in zip(avals, bvals, cinvals)],
+            [
+                (av + bv + cinv) & 0xF
+                for av, bv, cinv in zip(avals, bvals, cinvals, strict=True)
+            ],
         )
         self.assertEqual(
             res[cout.name],
             [
                 ((av + bv + cinv) & 0x10) >> 4
-                for av, bv, cinv in zip(avals, bvals, cinvals)
+                for av, bv, cinv in zip(avals, bvals, cinvals, strict=True)
             ],
         )
 
@@ -1306,6 +1309,18 @@ class TestVerilogOutput(unittest.TestCase):
         # bit-slice.
         self.assertTrue("assign tmp3 = c" in buffer.getvalue())
 
+    def test_custom_module_name(self):
+        a, b = pyrtl.Input(1, "a"), pyrtl.Input(1, "b")
+        out = pyrtl.Output(name="out")
+        out <<= a & b
+
+        buf = io.StringIO()
+        pyrtl.output_to_verilog(buf, module_name="custom_top")
+        text = buf.getvalue()
+
+        self.assertIn("module custom_top", text)
+        self.assertNotIn("module toplevel", text)
+
 
 verilog_input_counter = """\
 module counter (clk, rst, en, count);
@@ -1650,6 +1665,21 @@ class TestOutputTestbench(unittest.TestCase):
         pyrtl.output_verilog_testbench(buffer, add_reset=False)
         # The testbench should not touch the RomBlock.
         self.assertTrue("my_rom" not in buffer.getvalue())
+
+    def test_custom_module_name_testbench(self):
+        # Minimal design
+        a, b = pyrtl.Input(1, "a"), pyrtl.Input(1, "b")
+        out = pyrtl.Output(1, "out")
+        out <<= a & b
+
+        buf = io.StringIO()
+        # Generate a testbench with a custom module name
+        pyrtl.output_verilog_testbench(buf, module_name="custom_tb")
+        text = buf.getvalue()
+
+        # Verify the custom module name is used
+        self.assertIn("custom_tb block(", text)
+        self.assertNotIn("toplevel block(", text)
 
 
 firrtl_output_concat_test = """\

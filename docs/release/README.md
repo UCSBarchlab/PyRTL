@@ -124,15 +124,13 @@ commands.
 
 ### Manual build
 
-1. Update build tools:
-   ```shell
-   $ pip install  --upgrade -r release/requirements.txt
-   ```
-2. Build distribution archive:
-   ```shell
-   $ python3 -m build
-   ```
-   This produces two files in `dist/`: a `.whl` file and a `.tar.gz` file.
+Build distribution archive:
+
+```shell
+$ uv build
+```
+
+This produces two files in `dist/`: a `.whl` file and a `.tar.gz` file.
 
 ### Manual publish on TestPyPI
 
@@ -140,7 +138,7 @@ commands.
    https://test.pypi.org/manage/account/ and clicking 'Add API token'.
 2. Upload distribution archive to TestPyPI:
    ```shell
-   $ twine upload --repository testpypi dist/*
+   $ uv run --with twine twine upload --repository testpypi dist/*
    ```
 3. Enter your API token when prompted.
 4. Check the new release's status at https://test.pypi.org/project/pyrtl/#history
@@ -156,7 +154,7 @@ commands.
    https://pypi.org/manage/account/ and clicking 'Add API token'.
 2. Upload distribution archive to PyPI:
    ```shell
-   $ twine upload dist/*
+   $ uv run --with twine twine upload dist/*
    ```
 3. Enter your API token when prompted.
 4. Check the new release's status at https://pypi.org/project/pyrtl/#history

@@ -258,7 +258,7 @@ class MultiSelector:
             )
             raise pyrtl.PyrtlError(msg)
 
-        for dw, sig in zip(self.dest_wires, data_signals):
+        for dw, sig in zip(self.dest_wires, data_signals, strict=True):
             data_signal = pyrtl.as_wires(sig, dw.bitwidth)
             self.dest_instrs_info[dw].append(data_signal)
 
@@ -268,7 +268,7 @@ class MultiSelector:
         self._final = True
 
         for dest_w, values in self.dest_instrs_info.items():
-            mux_vals = dict(zip(self.instructions, values))
+            mux_vals = dict(zip(self.instructions, values, strict=False))
             dest_w <<= sparse_mux(self.signal_wire, mux_vals)
 
 

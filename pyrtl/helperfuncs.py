@@ -493,7 +493,7 @@ def bitpattern_to_val(bitpattern: str, *ordered_fields, **named_fields) -> int:
             msg = f"bitpattern field {exc.args[0]} was not provided in named_field list"
             raise PyrtlError(msg) from exc
 
-    fmap = dict(zip(lifo, intfields))
+    fmap = dict(zip(lifo, intfields, strict=True))
     for c in bitpattern[::-1]:
         if c == "0" or c == "1":
             bitlist.append(c)
@@ -582,7 +582,7 @@ def chop(w: WireVector, *segment_widths: int) -> list[WireVector]:
     n_segments = len(segment_widths)
     starts = [sum(segment_widths[i + 1 :]) for i in range(n_segments)]
     ends = [sum(segment_widths[i:]) for i in range(n_segments)]
-    return [w[s:e] for s, e in zip(starts, ends)]
+    return [w[s:e] for s, e in zip(starts, ends, strict=True)]
 
 
 def input_list(
@@ -706,7 +706,7 @@ def wirevector_list(
         )
 
     wirelist = []
-    for fullname, bw in zip(names, bitwidth):
+    for fullname, bw in zip(names, bitwidth, strict=True):
         try:
             name, bw = fullname.split("/")
         except ValueError:

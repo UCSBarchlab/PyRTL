@@ -68,19 +68,35 @@ The package contains the following files and directories:
 * [`docs`](https://github.com/UCSBarchlab/PyRTL/tree/development/docs)
   Location of the Sphinx documentation.
 
-Testing requires the Python packages `tox` and `pytest`, which are installed by
-`requirements.txt`. Once installed, a complete test of the system can be run with:
+### The PyRTL Development Environment
+
+All PyRTL developers should use the exact same tools to avoid confusing
+situations where a test fails only on one person's computer, or the generated
+documentation looks weird on another person's computer.
+
+PyRTL uses [`uv`](https://docs.astral.sh/uv/) to ensure everyone's development
+environments are consistent. `uv` manages the installation and versioning for
+all other PyRTL developer tools, like `pytest` and `ruff`.
+
+So to set up a PyRTL development environment, you only need to install `uv`, by
+following the
+[`uv` installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
+
+After installing [`uv`](https://docs.astral.sh/uv/), you can run all the tests
+with:
 
 ```shell
-$ tox
+$ uv run just tests
 ```
 
-PyRTL's code is automatically formatted with `ruff`, also installed by
-`requirements.txt`. Reformat any changed code with:
+And you can generate the Sphinx documentation with:
 
 ```shell
-$ ruff format
+$ uv run just docs
 ```
+
+`uv` will download and install Python and any required `pip` packages as
+needed. `uv` caches installed software so future `uv` invocations will be fast.
 
 ### Contributing to PyRTL
 
@@ -123,6 +139,14 @@ $ ruff format
 * When pushing a fix to a bug or enhancement please reference issue number in
   commit message, e.g. [Fix to Issue
   #56](https://github.com/UCSBarchlab/PyRTL/commit/1d5730db168a9e4490c580cb930075715468047a)
+* Before sending a pull request, please run:
+
+   ```shell
+   $ uv run just presubmit
+   ```
+
+   to verify that all tests pass and that documentation can be generated with
+   your changes.
 
 *Documentation*
 

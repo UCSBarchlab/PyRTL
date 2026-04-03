@@ -1,3 +1,6 @@
+.. meta::
+   :google-site-verification: sO_rsKD1QKb6nFywsuLnRDiz8Ekep-jVNpBDMm65wQc
+
 =====
 PYRTL
 =====
@@ -158,6 +161,7 @@ Reference Guide
    analysis
    export
    rtllib
+   PyRTL on GitHub <https://github.com/UCSBarchlab/pyrtl>
 
 Index
 =====
