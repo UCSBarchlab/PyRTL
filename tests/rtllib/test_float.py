@@ -1,7 +1,7 @@
 import unittest
 
 import pyrtl
-from pyrtl.rtllib.pyrtlfloat import Float16Operations, FloatOperations, RoundingMode
+import pyrtl.rtllib.float as rtlfloat
 
 # IEEE 754 Float16 special values
 FLOAT16_POS_ZERO = 0x0000
@@ -63,14 +63,14 @@ class TestAddition(unittest.TestCase):
 
     def setUp(self):
         pyrtl.reset_working_block()
-        self.a = pyrtl.Input(bitwidth=16, name="a")
-        self.b = pyrtl.Input(bitwidth=16, name="b")
-        FloatOperations.default_rounding_mode = RoundingMode.RNE
+        self.a = rtlfloat.Float16(name="a", concatenated_type=pyrtl.Input)
+        self.b = rtlfloat.Float16(name="b", concatenated_type=pyrtl.Input)
+        rtlfloat.set_default_rounding_mode(rtlfloat.RoundingMode.RNE)
         result_rne = pyrtl.Output(name="result_rne")
-        result_rne <<= Float16Operations.add(self.a, self.b)
-        FloatOperations.default_rounding_mode = RoundingMode.RTZ
+        result_rne <<= rtlfloat.add(self.a, self.b)
+        rtlfloat.set_default_rounding_mode(rtlfloat.RoundingMode.RTZ)
         result_rtz = pyrtl.Output(name="result_rtz")
-        result_rtz <<= Float16Operations.add(self.a, self.b)
+        result_rtz <<= rtlfloat.add(self.a, self.b)
         self.sim = pyrtl.Simulation()
 
     def assertFloat16Equal(self, output_name, expected):
@@ -114,6 +114,16 @@ class TestAddition(unittest.TestCase):
         self.sim.step({"a": FLOAT16_ONE, "b": FLOAT16_NEG_ONE})
         self.assertFloat16Equal("result_rne", FLOAT16_POS_ZERO)
         self.assertFloat16Equal("result_rtz", FLOAT16_POS_ZERO)
+
+    ############################
+    # Error handling.
+
+    def test_mismatched_types(self):
+        pyrtl.reset_working_block()
+        a = rtlfloat.Float16(name="a", concatenated_type=pyrtl.Input)
+        b = rtlfloat.Float32(name="b", concatenated_type=pyrtl.Input)
+        with self.assertRaises(pyrtl.PyrtlError):
+            rtlfloat.add(a, b)
 
     ############################
     # Rounding tests.
@@ -303,14 +313,14 @@ class TestSubtraction(unittest.TestCase):
 
     def setUp(self):
         pyrtl.reset_working_block()
-        self.a = pyrtl.Input(bitwidth=16, name="a")
-        self.b = pyrtl.Input(bitwidth=16, name="b")
-        FloatOperations.default_rounding_mode = RoundingMode.RNE
+        self.a = rtlfloat.Float16(name="a", concatenated_type=pyrtl.Input)
+        self.b = rtlfloat.Float16(name="b", concatenated_type=pyrtl.Input)
+        rtlfloat.set_default_rounding_mode(rtlfloat.RoundingMode.RNE)
         result_rne = pyrtl.Output(name="result_rne")
-        result_rne <<= Float16Operations.sub(self.a, self.b)
-        FloatOperations.default_rounding_mode = RoundingMode.RTZ
+        result_rne <<= rtlfloat.sub(self.a, self.b)
+        rtlfloat.set_default_rounding_mode(rtlfloat.RoundingMode.RTZ)
         result_rtz = pyrtl.Output(name="result_rtz")
-        result_rtz <<= Float16Operations.sub(self.a, self.b)
+        result_rtz <<= rtlfloat.sub(self.a, self.b)
         self.sim = pyrtl.Simulation()
 
     def assertFloat16Equal(self, output_name, expected):
@@ -459,14 +469,14 @@ class TestMultiplication(unittest.TestCase):
 
     def setUp(self):
         pyrtl.reset_working_block()
-        self.a = pyrtl.Input(bitwidth=16, name="a")
-        self.b = pyrtl.Input(bitwidth=16, name="b")
-        FloatOperations.default_rounding_mode = RoundingMode.RNE
+        self.a = rtlfloat.Float16(name="a", concatenated_type=pyrtl.Input)
+        self.b = rtlfloat.Float16(name="b", concatenated_type=pyrtl.Input)
+        rtlfloat.set_default_rounding_mode(rtlfloat.RoundingMode.RNE)
         result_rne = pyrtl.Output(name="result_rne")
-        result_rne <<= Float16Operations.mul(self.a, self.b)
-        FloatOperations.default_rounding_mode = RoundingMode.RTZ
+        result_rne <<= rtlfloat.mult(self.a, self.b)
+        rtlfloat.set_default_rounding_mode(rtlfloat.RoundingMode.RTZ)
         result_rtz = pyrtl.Output(name="result_rtz")
-        result_rtz <<= Float16Operations.mul(self.a, self.b)
+        result_rtz <<= rtlfloat.mult(self.a, self.b)
         self.sim = pyrtl.Simulation()
 
     def assertFloat16Equal(self, output_name, expected):
@@ -505,6 +515,16 @@ class TestMultiplication(unittest.TestCase):
         expected = 0x4080  # 2.25 in float16
         self.assertFloat16Equal("result_rne", expected)
         self.assertFloat16Equal("result_rtz", expected)
+
+    ############################
+    # Error handling.
+
+    def test_mismatched_types(self):
+        pyrtl.reset_working_block()
+        a = rtlfloat.Float16(name="a", concatenated_type=pyrtl.Input)
+        b = rtlfloat.Float32(name="b", concatenated_type=pyrtl.Input)
+        with self.assertRaises(pyrtl.PyrtlError):
+            rtlfloat.mult(a, b)
 
     ############################
     # Rounding tests.
