@@ -1,68 +1,69 @@
 import pyrtl
-
-from ._float_utils import (
-    _fp_wire_struct,
+from pyrtl.rtllib.float.types import FloatType, RoundingMode
+from pyrtl.rtllib.float.utils import (
     _RawResult,
     _round_rne,
     check_kinds,
+    get_default_rounding_mode,
     make_denormals_zero,
-    make_inf,
-    make_largest_finite_number,
-    make_nan,
-    make_zero,
+    make_inf_like,
+    make_largest_finite_number_like,
+    make_nan_like,
 )
-from ._types import FPTypeProperties, PyrtlFloatConfig, RoundingMode
 
 
-def mul(
-    config: PyrtlFloatConfig,
-    operand_a: pyrtl.WireVector,
-    operand_b: pyrtl.WireVector,
-) -> pyrtl.WireVector:
+def mult(
+    operand_a: FloatType, operand_b: FloatType, rounding_mode: RoundingMode = None
+) -> FloatType:
+    """Performs floating point multiplication.
+
+    The two operands must share the same ``Float`` type. Multiplying different floating
+    point types is not supported.
+
+    Denormalized numbers are not supported. Denormalized numbers will be flushed to
+    zero.
+
+    The return value's ``Float`` type will match the operand ``Float`` type. For
+    example, if you ``mult`` two :class:`~.Float16`, the result will be a
+    :class:`~.Float16`.
+
+    :param operand_a:
+    :param operand_b:
+    :param rounding_mode: Rounding mode, defaults to :attr:`~.RoundingMode.RNE`. The
+        default can be changed with :func:`.set_default_rounding_mode`.
+
+    :return: The product, as an instance of the operand ``Float`` type.
     """
-    Performs floating point multiplication of two WireVectors.
+    if rounding_mode is None:
+        rounding_mode = get_default_rounding_mode()
 
-    :param config: Configuration for the floating point type and rounding mode.
-    :param operand_a: The first floating point operand as a WireVector.
-    :param operand_b: The second floating point operand as a WireVector.
-    :return: The result of the multiplication as a WireVector.
-    """
-    fp_type_props = config.fp_type_properties
-    rounding_mode = config.rounding_mode
-    num_exp_bits = fp_type_props.num_exponent_bits
-    num_mant_bits = fp_type_props.num_mantissa_bits
+    if type(operand_a) is not type(operand_b):
+        msg = (
+            f"Different operand types ({type(operand_a)}, {type(operand_b)}) are not "
+            "supported."
+        )
+        raise pyrtl.PyrtlError(msg)
 
     # Denormalized numbers are not supported, so we flush them to zero.
-    operands = tuple(
-        make_denormals_zero(fp_type_props, op) for op in (operand_a, operand_b)
-    )
+    operands = tuple(make_denormals_zero(op) for op in (operand_a, operand_b))
 
-    # Extract the sign, exponent, and mantissa of both operands.
-    FP = _fp_wire_struct(num_exp_bits, num_mant_bits)
-    fps = tuple(FP(FP=op) for op in operands)
-    del operands
-
-    result_sign = fps[0].sign ^ fps[1].sign
+    result_sign = operands[0].sign ^ operands[1].sign
 
     # Compute the product exponent and mantissa.
-    operand_exponent_sums, product_exponent, product_mantissa = _multiply(
-        fps,
-        num_exp_bits,
-    )
+    operand_exponent_sums, product_exponent, product_mantissa = _multiply(operands)
 
     # Normalize the product and perform rounding.
     raw_result, need_to_normalize, exponent_incremented = _normalize_and_round(
         product_exponent,
         product_mantissa,
-        fp_type_props,
+        operand_a.exponent.bitwidth,
+        operand_a.mantissa.bitwidth,
         rounding_mode,
     )
     del product_mantissa, product_exponent
 
     return _handle_special_cases(
-        FP,
-        fp_type_props,
-        fps,
+        operands,
         result_sign,
         raw_result,
         operand_exponent_sums,
@@ -73,17 +74,14 @@ def mul(
 
 
 def _multiply(
-    fps: tuple,
-    num_exp_bits: int,
+    operands: tuple,
 ) -> tuple[pyrtl.WireVector, pyrtl.WireVector, pyrtl.WireVector]:
-    """
-    Computes the sum of operand exponents, the product exponent, and the raw
-    product mantissa.
+    """Computes the sum of operand exponents, the product exponent, and the raw product
+    mantissa.
 
-    :param fps: Tuple of FP wire_struct instances for the two operands.
-    :param num_exp_bits: Number of exponent bits.
-    :return: Tuple of (operand_exponent_sums, product_exponent,
-        product_mantissa).
+    :param operands: Tuple of ``Floats`` for the two operands.
+
+    :return: Tuple of ``(operand_exponent_sums, product_exponent, product_mantissa)``.
     """
     # IEEE-754 floating point numbers have a bias:
     # https://en.wikipedia.org/wiki/Exponent_bias
@@ -91,12 +89,14 @@ def _multiply(
     # The sum of the stored exponents of the operands is (real0 + bias) + (real1 + bias)
     # = real0 + real1 + 2*bias.
     # Subtracting bias gives the stored exponent of the product: real0 + real1 + bias.
-    operand_exponent_sums = fps[0].exponent + fps[1].exponent
-    exponent_bias = 2 ** (num_exp_bits - 1) - 1
+    operand_exponent_sums = operands[0].exponent + operands[1].exponent
+    exponent_bias = 2 ** (operands[0].exponent.bitwidth - 1) - 1
     product_exponent = operand_exponent_sums - pyrtl.Const(exponent_bias)
 
     # Extract the mantissa of both operands and add the implicit leading 1.
-    mantissas = tuple(pyrtl.concat(pyrtl.Const(1), fp.mantissa) for fp in fps)
+    mantissas = tuple(
+        pyrtl.concat(pyrtl.Const(1), operand.mantissa) for operand in operands
+    )
     product_mantissa = mantissas[0] * mantissas[1]
 
     return operand_exponent_sums, product_exponent, product_mantissa
@@ -105,22 +105,19 @@ def _multiply(
 def _normalize_and_round(
     product_exponent: pyrtl.WireVector,
     product_mantissa: pyrtl.WireVector,
-    fp_type_props: FPTypeProperties,
+    num_exp_bits: int,
+    num_mant_bits: int,
     rounding_mode: RoundingMode,
 ) -> tuple:
-    """
-    Normalizes the product mantissa and applies rounding if configured.
+    """Normalizes the product mantissa and applies rounding if configured.
 
-    :param product_exponent: The product exponent (sum of operand exponents
-        minus bias).
+    :param product_exponent: The product exponent (sum of operand exponents minus bias).
     :param product_mantissa: Raw product of the two mantissas (with implicit 1s).
-    :param fp_type_props: Floating point type properties.
     :param rounding_mode: The rounding mode to apply.
-    :return: Tuple of (_RawResult, need_to_normalize, exponent_incremented).
-        exponent_incremented is None for RTZ rounding mode.
+
+    :return: Tuple of ``(_RawResult, need_to_normalize, exponent_incremented)``.
+             ``exponent_incremented`` is ``None`` for ``RTZ`` rounding mode.
     """
-    num_exp_bits = fp_type_props.num_exponent_bits
-    num_mant_bits = fp_type_props.num_mantissa_bits
     # We're multiplying two numbers that both have the form 1.<something> in
     # binary. The product's binary point sits just after its second-most
     # significant bit, giving the form ab.cdef... where each letter is one bit.
@@ -185,9 +182,7 @@ def _normalize_and_round(
 
 
 def _handle_special_cases(
-    FP,
-    fp_type_props: FPTypeProperties,
-    fps: tuple,
+    operands: tuple,
     result_sign: pyrtl.WireVector,
     raw_result: _RawResult,
     operand_exponent_sums: pyrtl.WireVector,
@@ -195,34 +190,31 @@ def _handle_special_cases(
     exponent_incremented,
     rounding_mode: RoundingMode,
 ):
-    """
-    Handles special cases: NaN, infinity, zero, overflow, and underflow.
+    """Handles special cases: NaN, infinity, zero, overflow, and underflow.
 
-    :param FP: The FP wire_struct class for the current floating point type.
-    :param fp_type_props: Floating point type properties.
-    :param fps: Tuple of FP wire_struct instances for the two operands.
+    :param operands: Tuple of ``Floats`` for the two operands.
     :param result_sign: Sign bit of the result.
-    :param raw_result: Normalized (and possibly rounded) result as a _RawResult.
+    :param raw_result: Normalized (and possibly rounded) result as a ``_RawResult``.
     :param operand_exponent_sums: Sum of the two operand exponents.
     :param need_to_normalize: Whether the product mantissa required normalization.
-    :param exponent_incremented: Whether rounding incremented the exponent
-        (None for RTZ mode).
+    :param exponent_incremented: Whether rounding incremented the exponent (``None`` for
+        ``RTZ`` mode).
     :param rounding_mode: The rounding mode being used.
-    :return: The final FP wire_struct result.
+
+    :return: The final product, as an instance of the operand ``Float`` type.
     """
-    num_exp_bits = fp_type_props.num_exponent_bits
+    num_exp_bits = operands[0].exponent.bitwidth
     exponent_bias = 2 ** (num_exp_bits - 1) - 1
 
     # Check whether operands are special: NaN, infinity, zero, or denormalized.
-    operand_kinds = tuple(check_kinds(fp) for fp in fps)
+    operand_kinds = tuple(check_kinds(operand) for operand in operands)
 
     # Pre-compute special value constants for use inside conditional_assignment.
-    result = FP(sign=None, exponent=None, mantissa=None)
+    result = type(operands[0])(sign=None, exponent=None, mantissa=None)
     result.sign <<= result_sign
-    nan_exp, nan_mant = make_nan(fp_type_props)
-    inf_exp, inf_mant = make_inf(fp_type_props)
-    zero_exp, zero_mant = make_zero(fp_type_props)
-    largest_exp, largest_mant = make_largest_finite_number(fp_type_props)
+    nan_exp, nan_mant = make_nan_like(operands[0])
+    inf_exp, inf_mant = make_inf_like(operands[0])
+    largest_exp, largest_mant = make_largest_finite_number_like(operands[0])
 
     # We check for overflow and underflow by computing max and min exponent
     # values of the sum of operands' exponent before rounding and normalization.
@@ -293,8 +285,8 @@ def _handle_special_cases(
             | operand_kinds[0].is_denormalized
             | operand_kinds[1].is_denormalized
         ):
-            result.exponent |= zero_exp
-            result.mantissa |= zero_mant
+            result.exponent |= 0
+            result.mantissa |= 0
         # Otherwise no special cases apply: this is the common case.
         with pyrtl.otherwise:
             result.exponent |= raw_result.exponent

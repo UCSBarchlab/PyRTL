@@ -23,6 +23,12 @@ Multipliers
 .. automodule:: pyrtl.rtllib.multipliers
    :members:
 
+Floating Point
+--------------
+
+.. automodule:: pyrtl.rtllib.float
+   :members:
+
 Barrel Shifter
 --------------
 
