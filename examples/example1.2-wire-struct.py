@@ -154,7 +154,7 @@ pyrtl.reset_working_block()
 # `PixelPair` is a pair of two `Pixels`. This also shows how `wire_matrix()` and
 # `wire_struct` work together - `PixelPair` is a `wire_struct` nested in a
 # `wire_matrix()`.
-PixelPair = pyrtl.wire_matrix(component_schema=Pixel, size=2)
+PixelPair = pyrtl.wire_matrix(component_schema=Pixel, size=2, class_name="PixelPair")
 
 # `wire_matrix()` returns a class!
 assert inspect.isclass(PixelPair)

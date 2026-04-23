@@ -1,4 +1,4 @@
-PYTHON=python
+PYTHON=uv run python3
 PY_FILES=$(wildcard *.py)
 IPYNB_FILES=$(addprefix ../ipynb-examples/, $(PY_FILES:.py=.ipynb))
 

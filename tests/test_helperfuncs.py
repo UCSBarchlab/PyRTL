@@ -1350,6 +1350,8 @@ class TestWireStruct(unittest.TestCase):
         """Drive high and low, observe concatenated high+low."""
         # Concatenates to 'byte'.
         byte = Byte(name="byte", high=0xA, low=0xB)
+        self.assertTrue(isinstance(byte, Byte))
+        self.assertEqual(Byte.__name__, "Byte")
         self.assertEqual(len(byte), 2)
         self.assertEqual(byte.bitwidth, 8)
         self.assertEqual(len(pyrtl.as_wires(byte)), 8)
@@ -1385,6 +1387,21 @@ class TestWireStruct(unittest.TestCase):
         """Drive concatenated high+low, observe high and low."""
         # Slices to 'byte.high' and 'byte.low'.
         byte = Byte(name="byte", Byte=0xCD)
+
+        # Constants are sliced immediately.
+        self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Const))
+        self.assertEqual(byte.val, 0xCD)
+        self.assertTrue(isinstance(byte.high, pyrtl.Const))
+        self.assertEqual(byte.high.val, 0xC)
+        self.assertTrue(isinstance(byte.low, pyrtl.Const))
+        self.assertEqual(byte.low.val, 0xD)
+
+    def test_underscore_value_slice(self):
+        """Drive concatenated high+low by setting the special _value name, observe high
+        and low.
+        """
+        # Slices to 'byte.high' and 'byte.low'.
+        byte = Byte(name="byte", _value=0xCD)
 
         # Constants are sliced immediately.
         self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Const))
@@ -1588,21 +1605,21 @@ class TestWireStruct(unittest.TestCase):
 
 
 # BitPair is an array of two single wires.
-BitPair = pyrtl.wire_matrix(component_schema=1, size=2)
+BitPair = pyrtl.wire_matrix(component_schema=1, size=2, class_name="BitPair")
 
 
 # Word is an array of two Bytes. This checks that a @wire_struct (Byte) can be a
 # component of a wire_matrix (Word).
-Word = pyrtl.wire_matrix(component_schema=Byte, size=2)
+Word = pyrtl.wire_matrix(component_schema=Byte, size=2, class_name="Word")
 
 
 # ByteMatrix tests the corner case of a single-element wire_matrix.
-ByteMatrix = pyrtl.wire_matrix(component_schema=Byte, size=1)
+ByteMatrix = pyrtl.wire_matrix(component_schema=Byte, size=1, class_name="ByteMatrix")
 
 
 # DWord is an array of two Words, or effectively a 2x2 array of Bytes. This checks that
 # a wire_matrix (Word) can be a component of a wire_matrix (DWord).
-DWord = pyrtl.wire_matrix(component_schema=Word, size=2)
+DWord = pyrtl.wire_matrix(component_schema=Word, size=2, class_name="DWord")
 
 
 # CachedData is valid bit paired with some data. This checks that a wire_matrix (Word)
@@ -1619,6 +1636,8 @@ class TestWireMatrix(unittest.TestCase):
 
     def test_wire_matrix_slice(self):
         bitpair = BitPair(name="bitpair", values=[2])
+        self.assertTrue(isinstance(bitpair, BitPair))
+        self.assertEqual(BitPair.__name__, "BitPair")
         self.assertEqual(len(bitpair), 2)
         self.assertEqual(bitpair.bitwidth, 2)
         self.assertEqual(len(pyrtl.as_wires(bitpair)), 2)
