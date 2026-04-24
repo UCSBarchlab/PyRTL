@@ -24,8 +24,59 @@ def add(
     Denormalized numbers are not supported. Denormalized numbers will be flushed to
     zero.
 
-    The return value's ``Float``type will match the operand ``Float`` type. For example,
-    if you ``add`` two :class:`~.Float16`, the result will be a :class:`~.Float16`.
+    The return value's ``Float`` type will match the operand ``Float`` type. For
+    example, if you ``add`` two :class:`~.Float16`, the result will be a
+    :class:`~.Float16`.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    The following example computes ``1.0 + 2.0``. This is a bare-metal example, directly
+    manipulating the raw ``sign``, ``exponent``, and ``mantissa`` in IEEE 754 16-bit
+    floating point representation. See `IEEE 754 Internal Representation
+    <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Internal_representation>`_
+    for more details::
+
+        >>> import pyrtl.rtllib.float as rtlfloat
+
+        >>> a = rtlfloat.Float16(name="a", component_type=pyrtl.Input)
+        >>> b = rtlfloat.Float16(name="b", component_type=pyrtl.Input)
+
+        >>> sum = rtlfloat.Float16(name="sum", Float16=None)
+        >>> sum <<= rtlfloat.add(a, b)
+
+        >>> # IEEE 754 numbers are stored as a sign bit, mantissa, and exponent. The
+        >>> # represented number's absolute value is 1.{mantissa} * 2 ** {exponent}
+        >>> #
+        >>> # All mantissas have this implied `1` before the binary point. {mantissa}
+        >>> # only stores the bits after this implied `1` and binary point.
+        >>> #
+        >>> # IEEE 754 exponents are stored with a bias to simplify comparisons. An
+        >>> # exponent {x} is stored as {x + exponent_bias}.
+        >>> exponent_bias = 2 ** (sum.exponent.bitwidth - 1) - 1
+
+        >>> # Create a=1.0, represented as 1.0 * 2 ** 0.
+        >>> a_one = {"a.sign": 0, "a.exponent": 0 + exponent_bias, "a.mantissa": 0}
+
+        >>> # Create b=2.0, represented as 1.0 * 2 ** 1.
+        >>> b_two = {"b.sign": 0, "b.exponent": 1 + exponent_bias, "b.mantissa": 0}
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(a_one | b_two)
+
+        >>> # The sum should be 3.0, represented as 0b1.1 * 2 ** 1.
+        >>> # Note that this 0b1.1 is in binary! Multiplying by 2 is equivalent to
+        >>> # left-shifting by 1, and 0b1.1 << 1 == 0b11, which is 3 in decimal.
+        >>> sim.inspect("sum.sign")
+        0
+        >>> sim.inspect("sum.exponent") - exponent_bias
+        1
+        >>> bin(sim.inspect("sum.mantissa"))
+        '0b1000000000'
+        >>> bin(1 << (sum.mantissa.bitwidth - 1))
+        '0b1000000000'
 
     :param operand_a:
     :param operand_b:
@@ -99,6 +150,46 @@ def sub(
     The return value's ``Float`` type will match the operand ``Float`` type. For
     example, if you ``sub`` two :class:`~.Float16`, the result will be a
     :class:`~.Float16`.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    The following example computes ``1.0 - 2.0``. This is a bare-metal example, directly
+    manipulating the raw ``sign``, ``exponent``, and ``mantissa`` in IEEE 754 16-bit
+    floating point representation. See the documentation for :func:`add` and `IEEE 754
+    Internal Representation
+    <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Internal_representation>`_
+    for more details::
+
+        >>> import pyrtl.rtllib.float as rtlfloat
+
+        >>> a = rtlfloat.Float16(name="a", component_type=pyrtl.Input)
+        >>> b = rtlfloat.Float16(name="b", component_type=pyrtl.Input)
+
+        >>> difference = rtlfloat.Float16(name="difference", Float16=None)
+        >>> difference <<= rtlfloat.sub(a, b)
+
+        >>> # See the `add` example for IEEE 754 representation background.
+        >>> exponent_bias = 2 ** (difference.exponent.bitwidth - 1) - 1
+
+        >>> # Create a=1.0, represented as 1.0 * 2 ** 0.
+        >>> a_one = {"a.sign": 0, "a.exponent": 0 + exponent_bias, "a.mantissa": 0}
+
+        >>> # Create b=2.0, represented as 1.0 * 2 ** 1.
+        >>> b_two = {"b.sign": 0, "b.exponent": 1 + exponent_bias, "b.mantissa": 0}
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(a_one | b_two)
+
+        >>> # The difference should be -1.0, represented as -1.0 * 2 ** 0.
+        >>> sim.inspect("difference.sign")
+        1
+        >>> sim.inspect("difference.exponent") - exponent_bias
+        0
+        >>> sim.inspect("difference.mantissa")
+        0
 
     :param operand_a:
     :param operand_b:

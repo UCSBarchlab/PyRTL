@@ -11,7 +11,7 @@ its inputs.
 """
 
 from .add_sub import add, sub
-from .mult import mult
+from .multiplication import mult
 from .types import BFloat16, Float16, Float32, Float64, RoundingMode
 from .utils import get_default_rounding_mode, set_default_rounding_mode
 
