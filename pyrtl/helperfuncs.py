@@ -1462,6 +1462,8 @@ def wire_struct(wire_struct_spec):
         ...     high: 4
         ...     low: 4
 
+    .. _wire_struct_construction:
+
     Construction
     ------------
 
@@ -1470,21 +1472,16 @@ def wire_struct(wire_struct_spec):
 
     1. Provide a driver for *each* component wire, for example::
 
-            >>> byte = Byte(high=0xA, low=0xB)
+           >>> byte = Byte(high=0xA, low=0xB)
 
        Note how the component names (``high``, ``low``) are used as keyword args for the
        constructor. Drivers must be provided for *all* components.
 
     2. Provide a driver for the entire ``@wire_struct``, for example::
 
-            >>> byte = Byte(Byte=0xAB)
+           >>> byte = Byte(Byte=0xAB)
 
        Note how the class name (``Byte``) is used as a keyword arg for the constructor.
-
-       If the class name is not known, the special name ``_value`` can be used instead::
-
-            >>> UnknownDynamicType = Byte
-            >>> unknown_dynamic_type = UnknownDynamicType(_value=0xAB)
 
     Accessing Slices
     ----------------
@@ -1620,6 +1617,99 @@ def wire_struct(wire_struct_spec):
 
         No values are specified for ``input_byte`` because its value is not known until
         simulation time.
+
+    Delayed Assignment
+    ------------------
+
+    A ``@wire_struct``'s drivers can be specified later, after construction::
+
+        >>> conditional_concat = Byte(name="conditional_concat", high=0xa, low=None)
+        >>> with pyrtl.conditional_assignment:
+        ...     with input_byte == 0:
+        ...         conditional_concat.low |= 0xb
+        ...     with pyrtl.otherwise:
+        ...         conditional_concat.low |= 0xc
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"input_byte": 0})
+        >>> hex(sim.inspect("conditional_concat"))
+        '0xab'
+
+        >>> sim.step({"input_byte": 1})
+        >>> hex(sim.inspect("conditional_concat"))
+        '0xac'
+
+    In the example above, ``conditional_concat``'s ``low`` component is initially set to
+    ``None`` when constructed, and ``conditional_concat.low`` is later driven by a
+    :ref:`conditional_assignment`.
+
+    Similarly, a ``@wire_struct``'s concatenated value can be specified later::
+
+        >>> conditional_chop = Byte(name="conditional_chop", Byte=None)
+        >>> with pyrtl.conditional_assignment:
+        ...     with input_byte == 0:
+        ...         conditional_chop |= 0xde
+        ...     with pyrtl.otherwise:
+        ...         conditional_chop |= 0xdf
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"input_byte": 0})
+        >>> hex(sim.inspect("conditional_chop.low"))
+        '0xe'
+
+        >>> sim.step({"input_byte": 1})
+        >>> hex(sim.inspect("conditional_chop.low"))
+        '0xf'
+
+    .. NOTE::
+
+        All delay-assigned values must be explicitly set to ``None`` when constructing
+        the ``@wire_struct``. Omitting a delay-assigned value's ``kwarg`` entirely will
+        raise a :class:`.PyrtlError`.
+
+        ``@wire_struct`` operates in one of two modes, as described in
+        :ref:`wire_struct_construction`. The instance will either :func:`.concat`
+        several component values together, or :func:`chop` one concatenated value apart.
+        This mode is set during construction, so ``@wire_struct``'s constructor must
+        know whether the instance is expecting several component values, or one
+        concatenated value.
+
+    Generic Usage
+    -------------
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Functions can work with ``@wire_struct`` instances generically. For example, we can
+    define a function that accepts any ``@wire_struct`` and returns the same type of
+    ``@wire_struct``, with all of the argument's components bitwise-inverted::
+
+        >>> def invert_all_components(output_name, any_wire_struct):
+        ...     # Retrieve the argument wire_struct's class.
+        ...     OutputClass = type(any_wire_struct)
+        ...     # Instantiate that class, specifying its full value.
+        ...     return OutputClass(name=output_name, _value=~any_wire_struct)
+
+        >>> input_byte = Byte(name="input_byte", concatenated_type=pyrtl.Input)
+        >>> output_byte = invert_all_components("output_byte", input_byte)
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"input_byte": 0})
+        >>> hex(sim.inspect("output_byte"))
+        '0xff'
+        >>> hex(sim.inspect("output_byte.low"))
+        '0xf'
+
+    ``invert_all_components`` uses ``type(any_wire_struct)`` to retrieve the argument
+    ``@wire_struct``'s class, and instantiates that class for the function's return
+    value.
+
+    This uses the special constructor ``kwarg`` ``_value``, rather than the name of the
+    class, to specify the full value for the returned ``@wire_struct`` object. In this
+    example, we must use ``_value`` instead of the name of the class (``Byte``) because
+    ``any_wire_struct`` might not be a ``Byte``.
     """
     # Convert the decorated class' annotations (dict of attr_name: attr_value)
     # to a list of _ComponentMetas.
