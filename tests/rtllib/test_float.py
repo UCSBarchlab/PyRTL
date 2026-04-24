@@ -1,3 +1,4 @@
+import doctest
 import unittest
 
 import pyrtl
@@ -22,6 +23,20 @@ FLOAT16_ONE_POINT_FIVE = 0x3E00  # 1.5
 FLOAT16_ONE_POINT_TWOFIVE = 0x3D00  # 1.25
 FLOAT16_LARGEST_NORMAL = 0x7BFF  # Largest normal number (~65504)
 FLOAT16_DENORMALIZED = 0x0001  # Smallest denormalized number
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+
+    def test_add_sub_doctests(self):
+        failures, tests = doctest.testmod(m=rtlfloat.add_sub)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
+
+    def test_mult_doctests(self):
+        failures, tests = doctest.testmod(m=rtlfloat.multiplication)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 def float16_parts(sign, exp, mant):

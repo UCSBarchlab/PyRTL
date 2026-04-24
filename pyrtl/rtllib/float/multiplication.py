@@ -1,3 +1,11 @@
+# This file should be named `mult.py` for symmetry with `add_sub.py`, but is instead
+# named `multiplication.py` so the module has a name.
+
+# `__init__.py` creates `pyrtl.rtllib.float.mult`, collides with this module's name, if
+# this file were named `mult.py`.
+#
+# This module currently needs to be named to run its `doctest`s.
+
 import pyrtl
 from pyrtl.rtllib.float.types import FloatType, RoundingMode
 from pyrtl.rtllib.float.utils import (
@@ -26,6 +34,46 @@ def mult(
     The return value's ``Float`` type will match the operand ``Float`` type. For
     example, if you ``mult`` two :class:`~.Float16`, the result will be a
     :class:`~.Float16`.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    The following example computes ``2.0 * 4.0``. This is a bare-metal example, directly
+    manipulating the raw ``sign``, ``exponent``, and ``mantissa`` in IEEE 754 16-bit
+    floating point representation. See the documentation for :func:`add` and `IEEE 754
+    Internal Representation
+    <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Internal_representation>`_
+    for more details::
+
+        >>> import pyrtl.rtllib.float as rtlfloat
+
+        >>> a = rtlfloat.Float16(name="a", component_type=pyrtl.Input)
+        >>> b = rtlfloat.Float16(name="b", component_type=pyrtl.Input)
+
+        >>> product = rtlfloat.Float16(name="product", Float16=None)
+        >>> product <<= rtlfloat.mult(a, b)
+
+        >>> # See the `add` example for IEEE 754 representation background.
+        >>> exponent_bias = 2 ** (product.exponent.bitwidth - 1) - 1
+
+        >>> # Create a=2.0, represented as 1.0 * 2 ** 1.
+        >>> a_two = {"a.sign": 0, "a.exponent": 1 + exponent_bias, "a.mantissa": 0}
+
+        >>> # Create b=4.0, represented as 1.0 * 2 ** 2.
+        >>> b_four = {"b.sign": 0, "b.exponent": 2 + exponent_bias, "b.mantissa": 0}
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step(a_two | b_four)
+
+        >>> # The product should be 8.0, represented as 1.0 * 2 ** 3.
+        >>> sim.inspect("product.sign")
+        0
+        >>> sim.inspect("product.exponent") - exponent_bias
+        3
+        >>> sim.inspect("product.mantissa")
+        0
 
     :param operand_a:
     :param operand_b:
