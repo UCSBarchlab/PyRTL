@@ -19,6 +19,7 @@ from __future__ import annotations
 import collections
 import numbers
 import types
+from abc import ABCMeta
 from collections.abc import Callable, Sequence
 from typing import NamedTuple
 
@@ -47,7 +48,7 @@ def _reset_memory_indexer():
     _memIndex = _NameIndexer()
 
 
-class _MemIndexed(WireVector):
+class _MemIndexed(WireVector, metaclass=ABCMeta):
     """Object used internally to route memory assigns correctly.
 
     The normal PyRTL user should never need to be aware that this class exists, hence

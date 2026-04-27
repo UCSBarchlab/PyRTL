@@ -1351,12 +1351,15 @@ class TestWireStruct(unittest.TestCase):
         # Concatenates to 'byte'.
         byte = Byte(name="byte", high=0xA, low=0xB)
         self.assertTrue(isinstance(byte, Byte))
+        self.assertTrue(isinstance(byte, pyrtl.WireVector))
         self.assertEqual(Byte.__name__, "Byte")
         self.assertEqual(len(byte), 2)
         self.assertEqual(byte.bitwidth, 8)
         self.assertEqual(len(pyrtl.as_wires(byte)), 8)
         self.assertEqual(len(byte.high), 4)
+        self.assertTrue(isinstance(byte.high, pyrtl.WireVector))
         self.assertEqual(len(byte.low), 4)
+        self.assertTrue(isinstance(byte.low, pyrtl.WireVector))
 
         sim = pyrtl.Simulation()
         sim.step()
@@ -1389,7 +1392,7 @@ class TestWireStruct(unittest.TestCase):
         byte = Byte(name="byte", Byte=0xCD)
 
         # Constants are sliced immediately.
-        self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Const))
+        self.assertTrue(isinstance(byte, pyrtl.Const))
         self.assertEqual(byte.val, 0xCD)
         self.assertTrue(isinstance(byte.high, pyrtl.Const))
         self.assertEqual(byte.high.val, 0xC)
@@ -1404,7 +1407,7 @@ class TestWireStruct(unittest.TestCase):
         byte = Byte(name="byte", _value=0xCD)
 
         # Constants are sliced immediately.
-        self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Const))
+        self.assertTrue(isinstance(byte, pyrtl.Const))
         self.assertEqual(byte.val, 0xCD)
         self.assertTrue(isinstance(byte.high, pyrtl.Const))
         self.assertEqual(byte.high.val, 0xC)
@@ -1415,7 +1418,7 @@ class TestWireStruct(unittest.TestCase):
         """Given Input concatenated high+low, observe high and low."""
         byte = Byte(name="byte", concatenated_type=pyrtl.Input)
 
-        self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Input))
+        self.assertTrue(isinstance(byte, pyrtl.Input))
 
         sim = pyrtl.Simulation()
         sim.step(provided_inputs={"byte": 0xAB})
@@ -1453,7 +1456,7 @@ class TestWireStruct(unittest.TestCase):
         """Drive high and low, observe concatenated high+low as Output."""
         byte = Byte(name="byte", concatenated_type=pyrtl.Output, high=0xA, low=0xB)
 
-        self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Output))
+        self.assertTrue(isinstance(byte, pyrtl.Output))
 
         sim = pyrtl.Simulation()
         sim.step()
@@ -1467,7 +1470,7 @@ class TestWireStruct(unittest.TestCase):
         next_value = pyrtl.Input(name="next_value", bitwidth=8)
         byte.next <<= next_value
 
-        self.assertTrue(isinstance(pyrtl.as_wires(byte), pyrtl.Register))
+        self.assertTrue(isinstance(byte, pyrtl.Register))
 
         sim = pyrtl.Simulation()
         # On the first cycle, set the register's value to 0xAB, but it will take one
@@ -1521,24 +1524,24 @@ class TestWireStruct(unittest.TestCase):
         self.assertEqual(len(pyrtl.as_wires(pixel)), 24)
 
         # Constants are sliced immediately.
-        self.assertTrue(isinstance(pyrtl.as_wires(pixel), pyrtl.Const))
+        self.assertTrue(isinstance(pixel, pyrtl.Const))
         self.assertEqual(pixel.val, 0xABCDEF)
 
-        self.assertTrue(isinstance(pyrtl.as_wires(pixel.red), pyrtl.Const))
+        self.assertTrue(isinstance(pixel.red, pyrtl.Const))
         self.assertEqual(pixel.red.val, 0xAB)
         self.assertTrue(isinstance(pixel.red.high, pyrtl.Const))
         self.assertEqual(pixel.red.high.val, 0xA)
         self.assertTrue(isinstance(pixel.red.low, pyrtl.Const))
         self.assertEqual(pixel.red.low.val, 0xB)
 
-        self.assertTrue(isinstance(pyrtl.as_wires(pixel.green), pyrtl.Const))
+        self.assertTrue(isinstance(pixel.green, pyrtl.Const))
         self.assertEqual(pixel.green.val, 0xCD)
         self.assertTrue(isinstance(pixel.green.high, pyrtl.Const))
         self.assertEqual(pixel.green.high.val, 0xC)
         self.assertTrue(isinstance(pixel.green.low, pyrtl.Const))
         self.assertEqual(pixel.green.low.val, 0xD)
 
-        self.assertTrue(isinstance(pyrtl.as_wires(pixel.blue), pyrtl.Const))
+        self.assertTrue(isinstance(pixel.blue, pyrtl.Const))
         self.assertEqual(pixel.blue.val, 0xEF)
         self.assertTrue(isinstance(pixel.blue.high, pyrtl.Const))
         self.assertEqual(pixel.blue.high.val, 0xE)
@@ -1603,6 +1606,59 @@ class TestWireStruct(unittest.TestCase):
         # The other wires are not named, so 'out' should be the only traced wire.
         self.assertEqual(list(sim.tracer.trace.keys()), ["out"])
 
+    def test_delayed_concatenate(self):
+        byte = Byte(name="byte", high=0xA, low=None)
+        byte.low <<= 0xB
+
+        sim = pyrtl.Simulation()
+        sim.step()
+        self.assertEqual(sim.inspect("byte"), 0xAB)
+
+    def test_delayed_conditional_concatenate(self):
+        byte = Byte(name="byte", high=None, low=0xE)
+
+        flag = pyrtl.Input(name="flag", bitwidth=1)
+        with pyrtl.conditional_assignment:
+            with flag:
+                byte.high |= 0xC
+            with pyrtl.otherwise:
+                byte.high |= 0xD
+
+        sim = pyrtl.Simulation()
+        sim.step({"flag": True})
+        self.assertEqual(sim.inspect("byte"), 0xCE)
+
+        sim.step({"flag": False})
+        self.assertEqual(sim.inspect("byte"), 0xDE)
+
+    def test_delayed_slice(self):
+        byte = Byte(name="byte", Byte=None)
+        byte <<= 0xCD
+
+        sim = pyrtl.Simulation()
+        sim.step()
+        self.assertEqual(sim.inspect("byte.high"), 0xC)
+        self.assertEqual(sim.inspect("byte.low"), 0xD)
+
+    def test_delayed_conditional_slice(self):
+        byte = Byte(name="byte", Byte=None)
+
+        flag = pyrtl.Input(name="flag", bitwidth=1)
+        with pyrtl.conditional_assignment:
+            with flag:
+                byte |= 0xAB
+            with pyrtl.otherwise:
+                byte |= 0xCD
+
+        sim = pyrtl.Simulation()
+        sim.step({"flag": True})
+        self.assertEqual(sim.inspect("byte.high"), 0xA)
+        self.assertEqual(sim.inspect("byte.low"), 0xB)
+
+        sim.step({"flag": False})
+        self.assertEqual(sim.inspect("byte.high"), 0xC)
+        self.assertEqual(sim.inspect("byte.low"), 0xD)
+
 
 # BitPair is an array of two single wires.
 BitPair = pyrtl.wire_matrix(component_schema=1, size=2, class_name="BitPair")
@@ -1637,11 +1693,14 @@ class TestWireMatrix(unittest.TestCase):
     def test_wire_matrix_slice(self):
         bitpair = BitPair(name="bitpair", values=[2])
         self.assertTrue(isinstance(bitpair, BitPair))
+        self.assertTrue(isinstance(bitpair, pyrtl.WireVector))
         self.assertEqual(BitPair.__name__, "BitPair")
         self.assertEqual(len(bitpair), 2)
         self.assertEqual(bitpair.bitwidth, 2)
         self.assertEqual(len(pyrtl.as_wires(bitpair)), 2)
+        self.assertTrue(isinstance(bitpair[0], pyrtl.WireVector))
         self.assertEqual(len(bitpair[0]), 1)
+        self.assertTrue(isinstance(bitpair[1], pyrtl.WireVector))
         self.assertEqual(len(bitpair[1]), 1)
 
         # Constants are sliced immediately.
@@ -1728,8 +1787,8 @@ class TestWireMatrix(unittest.TestCase):
     def test_wire_matrix_input(self):
         word = Word(name="word", component_type=pyrtl.Input)
 
-        self.assertTrue(isinstance(pyrtl.as_wires(word[0]), pyrtl.Input))
-        self.assertTrue(isinstance(pyrtl.as_wires(word[1]), pyrtl.Input))
+        self.assertTrue(isinstance(word[0], pyrtl.Input))
+        self.assertTrue(isinstance(word[1], pyrtl.Input))
 
         sim = pyrtl.Simulation()
         sim.step(provided_inputs={"word[0]": 0xAB, "word[1]": 0xCD})
@@ -1745,7 +1804,7 @@ class TestWireMatrix(unittest.TestCase):
         word = Word(name="word", concatenated_type=pyrtl.Register)
         word.next <<= 0xABCD
 
-        self.assertTrue(isinstance(pyrtl.as_wires(word), pyrtl.Register))
+        self.assertTrue(isinstance(word, pyrtl.Register))
 
         sim = pyrtl.Simulation()
         sim.step()
@@ -1759,6 +1818,7 @@ class TestWireMatrix(unittest.TestCase):
         dword = DWord(name="dword", values=[0x89ABCDEF])
 
         # Constants are sliced immediately.
+        self.assertTrue(isinstance(dword, pyrtl.Const))
         self.assertEqual(dword.val, 0x89ABCDEF)
         self.assertEqual(dword[0].val, 0x89AB)
         self.assertEqual(dword[0][0].val, 0x89)
@@ -1798,6 +1858,7 @@ class TestWireMatrix(unittest.TestCase):
         self.assertEqual(len(pyrtl.as_wires(byte_matrix)), 8)
 
         # Constants are sliced immediately.
+        self.assertTrue(isinstance(byte_matrix, pyrtl.Const))
         self.assertEqual(byte_matrix.val, 0xAB)
         self.assertEqual(byte_matrix[0].val, 0xAB)
         self.assertEqual(byte_matrix[0].high.val, 0xA)
@@ -1806,7 +1867,7 @@ class TestWireMatrix(unittest.TestCase):
     def test_byte_matrix_input_slice(self):
         byte_matrix = ByteMatrix(name="byte_matrix", component_type=pyrtl.Input)
 
-        self.assertTrue(isinstance(pyrtl.as_wires(byte_matrix[0]), pyrtl.Input))
+        self.assertTrue(isinstance(byte_matrix[0], pyrtl.Input))
 
         sim = pyrtl.Simulation()
         sim.step(provided_inputs={"byte_matrix[0]": 0xAB})
@@ -1818,7 +1879,7 @@ class TestWireMatrix(unittest.TestCase):
     def test_byte_matrix_input_concatenate(self):
         byte_matrix = ByteMatrix(name="byte_matrix", concatenated_type=pyrtl.Input)
 
-        self.assertTrue(isinstance(pyrtl.as_wires(byte_matrix), pyrtl.Input))
+        self.assertTrue(isinstance(byte_matrix, pyrtl.Input))
 
         sim = pyrtl.Simulation()
         sim.step(provided_inputs={"byte_matrix": 0xAB})
@@ -1826,6 +1887,58 @@ class TestWireMatrix(unittest.TestCase):
         self.assertEqual(sim.inspect("byte_matrix[0]"), 0xAB)
         self.assertEqual(sim.inspect("byte_matrix[0].high"), 0xA)
         self.assertEqual(sim.inspect("byte_matrix[0].low"), 0xB)
+
+    def test_delayed_concatenate(self):
+        bit_pair = BitPair(name="bit_pair", values=[None, 1])
+        bit_pair[0] <<= 1
+
+        sim = pyrtl.Simulation()
+        sim.step()
+        self.assertEqual(sim.inspect("bit_pair"), 0b11)
+
+    def test_delayed_conditional_concatenate(self):
+        bit_pair = BitPair(name="bit_pair", values=[1, None])
+
+        flag = pyrtl.Input(name="flag", bitwidth=1)
+        with pyrtl.conditional_assignment:
+            with flag:
+                bit_pair[1] |= 1
+            with pyrtl.otherwise:
+                bit_pair[1] |= 0
+
+        sim = pyrtl.Simulation()
+        sim.step({"flag": True})
+        self.assertEqual(sim.inspect("bit_pair"), 0b11)
+
+        sim.step({"flag": False})
+        self.assertEqual(sim.inspect("bit_pair"), 0b10)
+
+    def test_delayed_slice(self):
+        bit_pair = BitPair(name="bit_pair", values=[None])
+        bit_pair <<= 0b10
+
+        sim = pyrtl.Simulation()
+        sim.step()
+        self.assertEqual(sim.inspect("bit_pair"), 0b10)
+
+    def test_delayed_conditional_slice(self):
+        bit_pair = BitPair(name="bit_pair", values=[None])
+
+        flag = pyrtl.Input(name="flag", bitwidth=1)
+        with pyrtl.conditional_assignment:
+            with flag:
+                bit_pair |= 0
+            with pyrtl.otherwise:
+                bit_pair |= 1
+
+        sim = pyrtl.Simulation()
+        sim.step({"flag": True})
+        self.assertEqual(sim.inspect("bit_pair[0]"), 0)
+        self.assertEqual(sim.inspect("bit_pair[1]"), 0)
+
+        sim.step({"flag": False})
+        self.assertEqual(sim.inspect("bit_pair[0]"), 0)
+        self.assertEqual(sim.inspect("bit_pair[1]"), 1)
 
 
 class TestOneHotToBinary(unittest.TestCase):

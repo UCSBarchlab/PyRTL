@@ -1505,7 +1505,14 @@ def wire_struct(wire_struct_spec):
         4
 
     Both the instance and the slices are first-class :class:`WireVector`, so they can be
-    manipulated with all the usual PyRTL operators.
+    manipulated with all the usual PyRTL operators::
+
+        >>> isinstance(byte, pyrtl.WireVector)
+        True
+        >>> isinstance(byte.low, pyrtl.WireVector)
+        True
+        >>> isinstance(byte.high, pyrtl.WireVector)
+        True
 
     ``len()`` returns the number of components in the ``@wire_struct``::
 
@@ -1612,11 +1619,17 @@ def wire_struct(wire_struct_spec):
 
         # Generates an Input named ``input_byte``.
         >>> input_byte = Byte(name="input_byte", concatenated_type=pyrtl.Input)
+        >>> isinstance(input_byte, pyrtl.Input)
+        True
+        >>> isinstance(input_byte, Byte)
+        True
 
     .. NOTE::
 
         No values are specified for ``input_byte`` because its value is not known until
         simulation time.
+
+    .. _wire_struct_delayed_assignment:
 
     Delayed Assignment
     ------------------
@@ -1798,7 +1811,8 @@ def wire_struct(wire_struct_spec):
             and concatenated_type is WireVector
         ):
             # Special case: simplify the concatenated type to Const.
-            concatenated = Const(
+            concatenated_type = Const
+            concatenated = concatenated_type(
                 bitwidth=self._bitwidth,
                 name=name,
                 block=block,
@@ -1808,6 +1822,11 @@ def wire_struct(wire_struct_spec):
             concatenated = concatenated_type(
                 bitwidth=self._bitwidth, name=name, block=block
             )
+
+        # Register our type as a subclass of `concatenated_type` so
+        #     isinstance(wire_struct_instance, concatenated_type)
+        # returns `True`. See the documentation for `abc.ABCMeta.register()`.
+        concatenated_type.register(type(self))
         WrappedWireVector.__init__(self, wire=concatenated)
 
         # self._components maps from component name to each component's WireVector.
@@ -1957,7 +1976,26 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
     which both function as :class:`WireVector` with bitwidth 8. ``word[0]`` refers to
     the most significant byte, and ``word[3]`` refers to the least significant byte.
     Both the instance and the slices are first-class :class:`WireVector`, so they can be
-    manipulated with all the usual PyRTL operators.
+    manipulated with all the usual PyRTL operators::
+
+        >>> isinstance(word, pyrtl.WireVector)
+        True
+        >>> word.bitwidth
+        32
+        >>> isinstance(word[0], pyrtl.WireVector)
+        True
+        >>> word[0].bitwidth
+        8
+
+    ``wire_matrix`` supports :ref:`wire_struct_delayed_assignment`::
+
+        >>> delayed_word = Word(name="delayed_word", values=[0x12, None ,0x56, 0x78])
+        >>> delayed_word[1] <<= 0x34
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> hex(sim.inspect("delayed_word"))
+        '0x12345678'
 
     Naming
     ------
@@ -2040,6 +2078,10 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
 
         # Generates an Input named ``input_word``.
         >>> word = Word(name="input_word", concatenated_type=pyrtl.Input)
+        >>> isinstance(word, pyrtl.Input)
+        True
+        >>> isinstance(word, Word)
+        True
 
     .. NOTE::
 
@@ -2078,13 +2120,19 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
             and concatenated_type is WireVector
         ):
             # Special case: simplify the concatenated type to Const.
-            concatenated = Const(
+            concatenated_type = Const
+            concatenated = concatenated_type(
                 bitwidth=self._bitwidth, name=name, block=block, val=values[0]
             )
         else:
             concatenated = concatenated_type(
                 bitwidth=self._bitwidth, name=name, block=block
             )
+
+        # Register our type as a subclass of `concatenated_type` so
+        #     isinstance(wire_matrix_instance, concatenated_type)
+        # returns `True`. See the documentation for `abc.ABCMeta.register()`.
+        concatenated_type.register(type(self))
         WrappedWireVector.__init__(self, wire=concatenated)
 
         schema = []
@@ -2157,6 +2205,16 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
     def _getitem(self, key):
         return self._components[key]
 
+    def _setitem(self, key, value):
+        # This is necessary for delayed assignment, because
+        #     wire_matrix[0] <<= 1
+        # is equivalent to
+        #     wire_matrix[0] = wire_matrix[0].__ilshift__(1)
+        #
+        # TODO: Check that `value` is the result of calling `__ilshift__` or `__ior__`.
+        # This would guard against common errors like `wire_matrix[0] = 1`.
+        pass
+
     def _len(self):
         return len(self._components)
 
@@ -2171,6 +2229,7 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
             "_is_wire_matrix": True,
             "__init__": _init,
             "__getitem__": _getitem,
+            "__setitem__": _setitem,
             "__len__": _len,
         },
     )
