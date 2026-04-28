@@ -19,6 +19,7 @@ from __future__ import annotations
 import numbers
 import re
 import traceback
+from abc import ABCMeta
 
 from pyrtl import core  # needed for _setting_keep_wirevector_call_stack
 from pyrtl.core import Block, LogicNet, _NameIndexer, working_block
@@ -56,7 +57,7 @@ def next_tempvar_name(name=""):
     return name
 
 
-class WireVector:
+class WireVector(metaclass=ABCMeta):
     """The main class for describing the connections between operators.
 
     :class:`WireVectors<WireVector>` act much like a list of wires, except that there is
@@ -1464,7 +1465,7 @@ WireVectorLike = WireVector | int | str | bool
 # |__  \_/  |  |__  |\ | |  \ |__  |  \    \  / |__  /  `  |  /  \ |__) /__`
 # |___ / \  |  |___ | \| |__/ |___ |__/     \/  |___ \__,  |  \__/ |  \ .__/
 #
-class Input(WireVector):
+class Input(WireVector, metaclass=ABCMeta):
     """A :class:`WireVector` placeholder for inputs to a :class:`Block`.
 
     .. doctest only::
@@ -1526,7 +1527,7 @@ class Input(WireVector):
         raise PyrtlError(msg)
 
 
-class Output(WireVector):
+class Output(WireVector, metaclass=ABCMeta):
     """A :class:`WireVector` type denoting outputs of a :class:`Block`.
 
     .. doctest only::
@@ -1554,7 +1555,7 @@ class Output(WireVector):
         super().__init__(bitwidth, name, block)
 
 
-class Const(WireVector):
+class Const(WireVector, metaclass=ABCMeta):
     """A :class:`WireVector` representation of a constant value.
 
     Converts from :class:`bool`, :class:`int`, or Verilog-style :class:`str` to a
@@ -1660,7 +1661,7 @@ class Const(WireVector):
         raise PyrtlError(msg)
 
 
-class Register(WireVector):
+class Register(WireVector, metaclass=ABCMeta):
     """A WireVector with an embedded register state element.
 
     Registers only update their outputs on the rising edges of an implicit clock signal.
@@ -1872,15 +1873,15 @@ class Register(WireVector):
 
 
 class WrappedWireVector:
-    """Wraps a WireVector. Forwards all method calls and attribute accesses.
+    """Wraps a ``WireVector``. Forwards all method calls and attribute accesses.
 
-    WrappedWireVector is useful for dynamically choosing a WireVector base class at
-    runtime. If the base class is statically known, do not use WrappedWireVector, and
-    just inherit from the base class normally.
+    ``WrappedWireVector`` is useful for dynamically choosing a ``WireVector`` base class
+    at runtime. If the base class is statically known, do not use ``WrappedWireVector``,
+    and just inherit from the base class normally.
 
-    @wire_struct and wire_matrix use WrappedWireVector to implement the
-    ``concatenated_type`` option, so an instance can dynamically choose its desired base
-    class.
+    :func:`.wire_struct` and :func:`.wire_matrix` use ``WrappedWireVector`` to implement
+    the ``concatenated_type`` option, so an instance can dynamically choose its desired
+    base class during construction.
     """
 
     wire = None
