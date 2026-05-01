@@ -1507,12 +1507,18 @@ def wire_struct(wire_struct_spec):
     Both the instance and the slices are first-class :class:`WireVector`, so they can be
     manipulated with all the usual PyRTL operators::
 
-        >>> isinstance(byte, pyrtl.WireVector)
+        >>> isinstance(pyrtl.as_wires(byte), pyrtl.WireVector)
         True
-        >>> isinstance(byte.low, pyrtl.WireVector)
+        >>> isinstance(pyrtl.as_wires(byte.low), pyrtl.WireVector)
         True
-        >>> isinstance(byte.high, pyrtl.WireVector)
+        >>> isinstance(pyrtl.as_wires(byte.high), pyrtl.WireVector)
         True
+
+    .. NOTE::
+
+        The instance and slices may be proxies with the same interface as
+        :class:`WireVector`, so you must call :func:`as_wires` before inspecting their
+        types.
 
     ``len()`` returns the number of components in the ``@wire_struct``::
 
@@ -1609,7 +1615,7 @@ def wire_struct(wire_struct_spec):
         >>> byte = Byte(name="output_byte", component_type=pyrtl.Output,
         ...             Byte=0xCD)
 
-        >>> isinstance(byte.high, pyrtl.Output)
+        >>> isinstance(pyrtl.as_wires(byte.high), pyrtl.Output)
         True
         >>> byte.high.name
         'output_byte.high'
@@ -1619,7 +1625,7 @@ def wire_struct(wire_struct_spec):
 
         # Generates an Input named ``input_byte``.
         >>> input_byte = Byte(name="input_byte", concatenated_type=pyrtl.Input)
-        >>> isinstance(input_byte, pyrtl.Input)
+        >>> isinstance(pyrtl.as_wires(input_byte), pyrtl.Input)
         True
         >>> isinstance(input_byte, Byte)
         True
@@ -1823,10 +1829,6 @@ def wire_struct(wire_struct_spec):
                 bitwidth=self._bitwidth, name=name, block=block
             )
 
-        # Register our type as a subclass of `concatenated_type` so
-        #     isinstance(wire_struct_instance, concatenated_type)
-        # returns `True`. See the documentation for `abc.ABCMeta.register()`.
-        concatenated_type.register(type(self))
         WrappedWireVector.__init__(self, wire=concatenated)
 
         # self._components maps from component name to each component's WireVector.
@@ -1978,11 +1980,11 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
     Both the instance and the slices are first-class :class:`WireVector`, so they can be
     manipulated with all the usual PyRTL operators::
 
-        >>> isinstance(word, pyrtl.WireVector)
+        >>> isinstance(pyrtl.as_wires(word), pyrtl.WireVector)
         True
         >>> word.bitwidth
         32
-        >>> isinstance(word[0], pyrtl.WireVector)
+        >>> isinstance(pyrtl.as_wires(word[0]), pyrtl.WireVector)
         True
         >>> word[0].bitwidth
         8
@@ -2068,7 +2070,7 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
         ...             component_type=pyrtl.Output,
         ...             values=[0x89ABCDEF])
 
-        >>> isinstance(word[1], pyrtl.Output)
+        >>> isinstance(pyrtl.as_wires(word[1]), pyrtl.Output)
         True
         >>> word[1].name
         'output_word[1]'
@@ -2078,7 +2080,7 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
 
         # Generates an Input named ``input_word``.
         >>> word = Word(name="input_word", concatenated_type=pyrtl.Input)
-        >>> isinstance(word, pyrtl.Input)
+        >>> isinstance(pyrtl.as_wires(word), pyrtl.Input)
         True
         >>> isinstance(word, Word)
         True
@@ -2129,10 +2131,6 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
                 bitwidth=self._bitwidth, name=name, block=block
             )
 
-        # Register our type as a subclass of `concatenated_type` so
-        #     isinstance(wire_matrix_instance, concatenated_type)
-        # returns `True`. See the documentation for `abc.ABCMeta.register()`.
-        concatenated_type.register(type(self))
         WrappedWireVector.__init__(self, wire=concatenated)
 
         schema = []

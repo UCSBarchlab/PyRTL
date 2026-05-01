@@ -19,7 +19,6 @@ from __future__ import annotations
 import numbers
 import re
 import traceback
-from abc import ABCMeta
 
 from pyrtl import core  # needed for _setting_keep_wirevector_call_stack
 from pyrtl.core import Block, LogicNet, _NameIndexer, working_block
@@ -57,7 +56,7 @@ def next_tempvar_name(name=""):
     return name
 
 
-class WireVector(metaclass=ABCMeta):
+class WireVector:
     """The main class for describing the connections between operators.
 
     :class:`WireVectors<WireVector>` act much like a list of wires, except that there is
@@ -1465,7 +1464,7 @@ WireVectorLike = WireVector | int | str | bool
 # |__  \_/  |  |__  |\ | |  \ |__  |  \    \  / |__  /  `  |  /  \ |__) /__`
 # |___ / \  |  |___ | \| |__/ |___ |__/     \/  |___ \__,  |  \__/ |  \ .__/
 #
-class Input(WireVector, metaclass=ABCMeta):
+class Input(WireVector):
     """A :class:`WireVector` placeholder for inputs to a :class:`Block`.
 
     .. doctest only::
@@ -1527,7 +1526,7 @@ class Input(WireVector, metaclass=ABCMeta):
         raise PyrtlError(msg)
 
 
-class Output(WireVector, metaclass=ABCMeta):
+class Output(WireVector):
     """A :class:`WireVector` type denoting outputs of a :class:`Block`.
 
     .. doctest only::
@@ -1555,7 +1554,7 @@ class Output(WireVector, metaclass=ABCMeta):
         super().__init__(bitwidth, name, block)
 
 
-class Const(WireVector, metaclass=ABCMeta):
+class Const(WireVector):
     """A :class:`WireVector` representation of a constant value.
 
     Converts from :class:`bool`, :class:`int`, or Verilog-style :class:`str` to a
@@ -1661,7 +1660,7 @@ class Const(WireVector, metaclass=ABCMeta):
         raise PyrtlError(msg)
 
 
-class Register(WireVector, metaclass=ABCMeta):
+class Register(WireVector):
     """A WireVector with an embedded register state element.
 
     Registers only update their outputs on the rising edges of an implicit clock signal.
