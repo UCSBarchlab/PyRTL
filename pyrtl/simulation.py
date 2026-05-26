@@ -1755,6 +1755,9 @@ class SimulationTrace:
             is not found in the map, the argument ``repr_func`` will be used instead.
         :param segment_size: Traces are broken in the segments of this number of cycles.
         """
+        if len(self) == 0:
+            msg = "You need to step the simulation at least once to render a trace."
+            raise PyrtlError(msg)
         if repr_per_name is None:
             repr_per_name = {}
         if _currently_in_jupyter_notebook():
