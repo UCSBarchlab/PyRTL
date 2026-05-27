@@ -260,7 +260,7 @@ def _default_node_namer(
             else:
                 bits = "bits" + str(tuple(reversed(node.op_param)))
             return f'[label="{label(bits)}", fillcolor=azure1, height=.25, width=.25]'
-        if node.op in "c":
+        if node.op == "c":
             return '[label="{}", height=.1, width=.1]'.format(label("concat"))
         if node.op == "r":
             name = node.dests[0].name or ""

@@ -151,11 +151,11 @@ class LogicNet(NamedTuple):
                 return f"{lhs} & \\leftarrow \\{self.op} \\, - & {rhs} {options} \\\\"
             if self.op in "wn+-*<>xcsr":
                 return f"{lhs} & \\leftarrow {self.op} \\, - & {rhs} {options} \\\\"
-            if self.op in "=":
+            if self.op == "=":
                 return f"{lhs} & \\leftarrow \\, {self.op} \\, - & {rhs} {options} \\\\"
-            if self.op in "^":
+            if self.op == "^":
                 return f"{lhs} & \\leftarrow \\oplus \\, - & {rhs} {options} \\\\"
-            if self.op in "~":
+            if self.op == "~":
                 return f"{lhs} & \\leftarrow \\sim \\, - & {rhs} {options} \\\\"
 
             if self.op in "m@":

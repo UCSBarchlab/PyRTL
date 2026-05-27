@@ -808,7 +808,7 @@ def formatted_str_to_val(data: str, format: str, enum_set=None) -> int:
     :return: ``data`` as a signed integer
     """
     type = format[0]
-    bitwidth = int(format[1:].split("/")[0])
+    bitwidth = int(format[1:].split("/", maxsplit=1)[0])
     bitmask = (1 << bitwidth) - 1
     if type == "s":
         rval = int(data) & bitmask
@@ -876,7 +876,7 @@ def val_to_formatted_str(val: int, format: str, enum_set=None) -> str:
     :return: a human-readable string representing `val`.
     """
     type = format[0]
-    bitwidth = int(format[1:].split("/")[0])
+    bitwidth = int(format[1:].split("/", maxsplit=1)[0])
     if type == "s":
         rval = str(val_to_signed_integer(val, bitwidth))
     elif type == "x":

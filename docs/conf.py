@@ -212,7 +212,7 @@ def get_link_info(
         source, lineno = inspect.getsourcelines(parent_obj)
         found_in_source = False
         for idx, line in enumerate(source):
-            if line.lstrip().startswith(fullname.split(".")[-1]):
+            if line.lstrip().startswith(fullname.rsplit(".", maxsplit=1)[-1]):
                 linestart = lineno + idx
                 if conditional_assignment:
                     linestart = linestart + 1

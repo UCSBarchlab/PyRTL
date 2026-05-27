@@ -1635,7 +1635,7 @@ class Const(WireVector):
             )
             raise PyrtlInternalError(msg)
 
-        name = name if name else _constIndexer.make_valid_string() + "_" + str(val)
+        name = name or _constIndexer.make_valid_string() + "_" + str(val)
 
         super().__init__(bitwidth=bitwidth, name=name, block=block)
         # add the member "val" to track the value of the constant

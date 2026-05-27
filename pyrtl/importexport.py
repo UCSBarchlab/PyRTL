@@ -287,7 +287,7 @@ def input_from_blif(
     parser = model_list.ignore(pyparsing.pythonStyleComment)
 
     # Begin actually reading and parsing the BLIF file
-    result = parser.parse_string(blif_string, parseAll=True)
+    result = parser.parse_string(blif_string, parse_all=True)
     ff_clk_set = set()
     models = {}  # model name -> model, for subckt instantiation
 
@@ -1808,7 +1808,7 @@ def input_from_iscas_bench(bench, block: Block = None):
     parser = commands.ignore(pyparsing.pythonStyleComment)
 
     # Begin actually reading and parsing the BENCH file
-    result = parser.parseString(bench_string, parseAll=True)
+    result = parser.parse_string(bench_string, parse_all=True)
 
     output_to_internal = {}  # dict: name -> wire
 

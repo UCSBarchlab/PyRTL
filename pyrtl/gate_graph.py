@@ -1250,9 +1250,7 @@ class GateGraph:
                  :class:`Gate` per line. The :class:`Gates<Gate>` will be sorted by
                  name.
         """
-        sorted_gates = sorted(
-            self.gates, key=lambda gate: gate.name if gate.name else "~~~"
-        )
+        sorted_gates = sorted(self.gates, key=lambda gate: gate.name or "~~~")
         return "\n".join([str(gate) for gate in sorted_gates])
 
     def __iter__(self):

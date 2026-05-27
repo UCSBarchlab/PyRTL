@@ -268,7 +268,7 @@ class TestPaths(unittest.TestCase):
         r.next <<= r & ~r
         paths = pyrtl.paths(r, r)
         self.assertEqual(len(paths[r][r]), 2)
-        p1, p2 = sorted(paths[r][r], key=lambda p: len(p), reverse=True)
+        p1, p2 = sorted(paths[r][r], key=len, reverse=True)
         self.assertEqual(len(p1), 3)
         self.assertEqual(p1[0].op, "~")
         self.assertEqual(p1[1].op, "&")

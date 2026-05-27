@@ -547,7 +547,7 @@ def paths(
             paths = list(filter(lambda x: len(x) > 0, paths))
             # ...and those that are supersets of others (resulting from an inner loop).
             if src_wire is not dst_wire:
-                paths = sorted(paths, key=lambda p: len(p), reverse=True)
+                paths = sorted(paths, key=len, reverse=True)
                 keep = []
                 for i in range(len(paths)):
                     # Check if there is a path in paths[i+1:] that is the suffix of

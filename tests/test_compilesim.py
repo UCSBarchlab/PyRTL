@@ -1025,7 +1025,7 @@ class RomBlockSimBase(unittest.TestCase):
 
         exp_out = self.generate_expected_output(
             (
-                ("o1", lambda x: rom_data_function(x)),
+                ("o1", rom_data_function),
                 ("o2", lambda x: rom_data_function(2 * x)),
             ),
             6,
@@ -1078,7 +1078,7 @@ class RomBlockSimBase(unittest.TestCase):
 
         exp_out = self.generate_expected_output(
             (
-                ("o1", lambda x: rom_data_function(x)),
+                ("o1", rom_data_function),
                 ("o2", lambda x: rom_data_function(2 * x)),
             ),
             6,
