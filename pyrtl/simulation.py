@@ -1763,7 +1763,6 @@ class SimulationTrace:
         if _currently_in_jupyter_notebook():
             from IPython.display import (
                 HTML,
-                Javascript,
                 display,
             )
 
