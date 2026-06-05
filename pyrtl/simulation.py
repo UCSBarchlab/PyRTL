@@ -1775,16 +1775,12 @@ class SimulationTrace:
             html_elem = HTML(htmlstring)
             display(html_elem)
             # print(htmlstring)
-            js_stuff = """
-            $.when(
-            $.getScript("https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/skins/default.js"),
-            $.getScript("https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/wavedrom.min.js"),
-            $.Deferred(function( deferred ){
-                $( deferred.resolve );
-            })).done(function(){
-                WaveDrom.ProcessAll();
-            });"""
-            display(Javascript(js_stuff))
+            html_stuff = """
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/skins/default.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/wavedrom.min.js"></script>
+            <style onload="WaveDrom.ProcessAll();"></style>
+            """
+            display(HTML(html_stuff))
         else:
             self.render_trace_to_text(
                 trace_list=trace_list,
