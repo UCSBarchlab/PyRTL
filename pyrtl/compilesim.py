@@ -366,7 +366,7 @@ class CompiledSimulation:
         subprocess.check_call(
             [
                 "gcc",
-                "-O0",
+                "-O1",
                 march,
                 "-std=c99",
                 "-m64",
