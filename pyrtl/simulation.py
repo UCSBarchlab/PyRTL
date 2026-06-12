@@ -20,7 +20,7 @@ from pyrtl.helperfuncs import (
 from pyrtl.importexport import _VerilogSanitizer
 from pyrtl.memory import MemBlock, RomBlock
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.wire import Const, Input, Output, Register, StateRegister, WireVector
+from pyrtl.wire import Const, Input, Output, Register, WireVector
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -1106,7 +1106,7 @@ class WaveRenderer:
 
         if f is not None:
             return invoke_f(f, value)
-        if isinstance(wire, StateRegister):
+        if isinstance(wire, Register) and wire.States is not None:
             return invoke_f(enum_name(wire.States), value)
         return invoke_f(repr_func, value)
 
@@ -1143,7 +1143,8 @@ class WaveRenderer:
             _prev_line* fields in RendererConstants.
         :param is_last: If True, current_val is in the last cycle.
         """
-        if len(w) > 1 or w.name in repr_per_name or isinstance(w, StateRegister):
+        is_state_register = isinstance(w, Register) and w.States is not None
+        if len(w) > 1 or w.name in repr_per_name or is_state_register:
             # Render values in boxes for multi-bit wires ("bus"), or single-bit wires
             # with a specific representation.
             #
@@ -1153,7 +1154,7 @@ class WaveRenderer:
             numeric_formats = [hex, oct, int, str, bin, val_to_signed_integer]
             flat_zero = (
                 w.name not in repr_per_name
-                and not isinstance(w, StateRegister)
+                and not is_state_register
                 and repr_func in numeric_formats
             )
             if prev_line:
@@ -1988,8 +1989,8 @@ def enum_name(EnumClass: type) -> Callable[[int], str]:
 
     .. note::
 
-        When using ``enum_name`` with a :class:`.Register`, consider using
-        :class:`.StateRegister` instead.
+        When using ``enum_name`` with a :class:`.Register`, consider constructing
+        :class:`.Register` with a ``State`` instead. See :meth:`.Register.__init__`.
 
     :param EnumClass: ``enum`` to convert. This is the enum class, like ``Option``, not
         an enum value, like ``Option.FOO`` or ``1``.

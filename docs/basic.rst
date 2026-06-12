@@ -23,7 +23,6 @@ hard-wired values and :class:`.Register` is how sequential elements are created
                          pyrtl.Output
                          pyrtl.Const
                          pyrtl.Register
-                         pyrtl.StateRegister
     :parts: 1
 
 WireVector

@@ -1690,10 +1690,6 @@ class Register(WireVector):
     This builds a zero-initialized 2-bit counter. The second line sets the counter's
     value in the next cycle (``counter.next``) to the counter's value in the current
     cycle (``counter``), plus one.
-
-    .. note::
-
-        Consider using :class:`StateRegister` for state machine ``Registers``.
     """
 
     _code = "R"
@@ -1811,15 +1807,44 @@ class Register(WireVector):
 
     def __init__(
         self,
-        bitwidth: int,
+        bitwidth: int | None = None,
         name: str = "",
         reset_value: int | None = None,
-        block: Block = None,
+        block: Block | None = None,
+        States: type[enum.IntEnum] | None = None,
     ):
         """Construct a ``Register``.
 
-        It is an error if the ``reset_value`` cannot fit into the specified ``bitwidth``
-        for this register.
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example with ``States``::
+
+            >>> import enum
+            >>> class MyStates(enum.IntEnum):
+            ...     ZERO = 0
+            ...     ONE = 1
+            ...     TWO = 2
+            ...     THREE = 3
+
+            >>> state = pyrtl.Register(
+            ...     name="state", States=MyStates, reset_value=MyStates.ONE
+            ... )
+            >>> state.bitwidth
+            2
+
+            >>> state.next <<= state + 1
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step_multiple(nsteps=4)
+            >>> sim.tracer.render_trace()
+
+        Which prints::
+
+                 │0    │1    │2    │3
+            state ONE  │TWO  │THREE│ZERO
 
         :param bitwidth: Number of bits to represent this ``Register``.
         :param name: The name of the ``Register``'s current value (``reg``, not
@@ -1830,8 +1855,32 @@ class Register(WireVector):
             overridden at simulation time.
         :param block: The :class:`Block` under which the wire should be placed. Defaults
             to the :ref:`working_block`.
+        :param States: An :class:`~enum.IntEnum` defining all possible states for the
+            ``Register``. This should be an :class:`~enum.IntEnum` class, like
+            ``MyStates`` in the example above. If ``bitwidth`` is ``None``, the largest
+            value in the :class:`~enum.IntEnum` determines the ``Register``'s
+            ``bitwidth``. When ``States`` is not ``None``,
+            :meth:`~.SimulationTrace.render_trace` defaults to displaying enumeration
+            names rather than hex values.
+
+        :raises PyrtlError: If the ``reset_value`` or ``States`` cannot fit into the
+            specified ``bitwidth`` for this register.
         """
         from pyrtl.helperfuncs import infer_val_and_bitwidth
+
+        self.States = States
+        if States is not None:
+            largest_state = max(States)
+            inferred_bitwidth = infer_val_and_bitwidth(largest_state).bitwidth
+            if bitwidth is None:
+                bitwidth = inferred_bitwidth
+
+            if bitwidth < inferred_bitwidth:
+                msg = (
+                    f"The largest State {largest_state.name} ({largest_state}) cannot "
+                    f"fit in the specified {bitwidth} bits for this register"
+                )
+                raise PyrtlError(msg)
 
         super().__init__(bitwidth=bitwidth, name=name, block=block)
         self.reg_in = None  # wire vector setting self.next
@@ -1874,75 +1923,6 @@ class Register(WireVector):
         self.reg_in = next
         net = LogicNet("r", None, args=(self.reg_in,), dests=(self,))
         working_block().add_net(net)
-
-
-class StateRegister(Register):
-    """A :class:`Register` containing an :class:`~enum.IntEnum` state.
-
-    ``StateRegister`` functions identically to :class:`Register`, except that the
-    :class:`Register`'s bitwidth is calculated from the :class:`~enum.IntEnum`'s largest
-    value, and :meth:`~.SimulationTrace.render_trace` displays state names by default.
-
-    .. doctest only::
-
-        >>> import pyrtl
-        >>> pyrtl.reset_working_block()
-
-    Example::
-
-        >>> import enum
-        >>> class MyStates(enum.IntEnum):
-        ...     ZERO = 0
-        ...     ONE = 1
-        ...     TWO = 2
-        ...     THREE = 3
-
-        >>> state = pyrtl.StateRegister(
-        ...     name="state", States=MyStates, reset_value=MyStates.ONE
-        ... )
-        >>> state.bitwidth
-        2
-
-        >>> state.next <<= state + 1
-
-        >>> sim = pyrtl.Simulation()
-        >>> sim.step_multiple(nsteps=4)
-        >>> sim.tracer.render_trace()
-
-    Which prints::
-
-             │0    │1    │2    │3
-        state ONE  │TWO  │THREE│ZERO
-    """
-
-    def __init__(
-        self,
-        States: enum.IntEnum,
-        name: str = "",
-        reset_value: enum.IntEnum | int | None = None,
-        block: Block = None,
-    ):
-        """Constructs a :class:`Register` containing an :class:`~enum.IntEnum` value.
-
-        :param States: An :class:`~enum.IntEnum` containing all possible states for the
-            ``StateRegister``. The largest value in the :class:`~enum.IntEnum`
-            determines the :class:`Register`'s :attr:`~WireVector.bitwidth`.
-        :param name: The name of the ``StateRegister``'s current value (``state``, not
-            ``state.next``). Must be unique. If none is provided, one will be
-            autogenerated.
-        :param reset_value: Value to initialize this ``StateRegister`` to during
-            simulation and in any code (e.g. Verilog) that is exported. Defaults to 0.
-            Can be overridden at simulation time.
-        :param block: The :class:`Block` under which the wire should be placed. Defaults
-            to the :ref:`working_block`.
-        """
-        from pyrtl.helperfuncs import infer_val_and_bitwidth
-
-        self.States = States
-        bitwidth = infer_val_and_bitwidth(max(States)).bitwidth
-        super().__init__(
-            bitwidth=bitwidth, name=name, reset_value=reset_value, block=block
-        )
 
 
 class WrappedWireVector:
