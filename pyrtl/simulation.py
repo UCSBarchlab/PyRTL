@@ -1769,22 +1769,25 @@ class SimulationTrace:
 
             from pyrtl.visualization import trace_to_html
 
-            htmlstring = trace_to_html(
-                self, trace_list=trace_list, sortkey=_trace_sort_key
+            display(
+                HTML(
+                    trace_to_html(self, trace_list=trace_list, sortkey=_trace_sort_key)
+                ),
+                HTML("""
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/skins/default.js"></script>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/wavedrom.min.js"></script>
+                """),
+                # Wait for WaveDrom to load, polling every 100ms.
+                Javascript("""
+                var interval = setInterval(function() {
+                    if (typeof WaveDrom !== 'undefined' &&
+                        typeof WaveDrom.ProcessAll === 'function') {
+                        clearInterval(interval);
+                        WaveDrom.ProcessAll();
+                    }
+                }, 100);
+                """),
             )
-            html_elem = HTML(htmlstring)
-            display(html_elem)
-            # print(htmlstring)
-            js_stuff = """
-            $.when(
-            $.getScript("https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/skins/default.js"),
-            $.getScript("https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/wavedrom.min.js"),
-            $.Deferred(function( deferred ){
-                $( deferred.resolve );
-            })).done(function(){
-                WaveDrom.ProcessAll();
-            });"""
-            display(Javascript(js_stuff))
         else:
             self.render_trace_to_text(
                 trace_list=trace_list,
