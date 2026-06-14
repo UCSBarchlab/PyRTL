@@ -8,6 +8,7 @@ provided write the block as a given visual format to the file.
 from __future__ import annotations
 
 import collections
+import json
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -560,17 +561,42 @@ def block_to_svg(
 #    |  |  |  |  | |___
 
 
-def trace_to_html(
+def trace_to_json(
     simtrace: SimulationTrace,
     trace_list: list[str] | None = None,
     sortkey=None,
     repr_func: Callable[[int], str] = hex,
     repr_per_name: dict[str, Callable[[int], str]] | None = None,
 ) -> str:
-    """Return a HTML block showing the trace.
+    """Return a `WaveJSON <https://github.com/wavedrom/schema/blob/master/WaveJSON.md>`_
+    representation of a :class:`.SimulationTrace`.
 
-    :param simtrace: A trace to render in HTML.
-    :param trace_list: (optional) A list of wires to display.
+    The returned WaveJSON is compatible with `WaveDrom
+    <https://github.com/wavedrom/wavedrom/>`_; see the `WaveDrom README
+    <https://github.com/wavedrom/wavedrom/blob/trunk/README.md#html-pages>`_ for various
+    ways to visualize WaveJSON.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> counter = pyrtl.Register(name="counter", bitwidth=2)
+        >>> counter.next <<= counter + 1
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step_multiple(nsteps=4)
+
+        >>> print(pyrtl.trace_to_json(sim.tracer, repr_func=str))
+        {"signal": [{"name": "counter", "wave": "====", "data": ["0", "1", "2", "3"]}], "config": {"hscale": 1}, "head": {"tick": 0}}
+
+    Try pasting the WaveJSON output from the example above in the `WaveDrom editor
+    <https://wavedrom.com/editor.html>`_.
+
+    :param simtrace: A trace to convert to WaveJSON.
+    :param trace_list: (optional) A list of wires to include in the WaveJSON.
     :param sortkey: (optional) The key with which to sort the ``trace_list``.
     :param repr_func: Function to use for representing each value in the trace. Examples
         include :func:`hex`, :func:`oct`, :func:`bin`, and :class:`str` (for decimal),
@@ -580,16 +606,12 @@ def trace_to_html(
         value and returns a user-defined representation. If a signal name is not found
         in the map, the argument ``repr_func`` will be used instead.
 
-    :return: An HTML block showing the trace.
-    """
-
-    from pyrtl.simulation import SimulationTrace, _trace_sort_key
+    :return: WaveJSON representing ``simtrace``.
+    """  # noqa: E501
+    from pyrtl.simulation import _trace_sort_key, val_to_str
 
     if repr_per_name is None:
         repr_per_name = {}
-    if not isinstance(simtrace, SimulationTrace):
-        msg = "first arguement must be of type SimulationTrace"
-        raise PyrtlError(msg)
 
     trace = simtrace.trace
     if sortkey is None:
@@ -598,54 +620,41 @@ def trace_to_html(
     if trace_list is None:
         trace_list = sorted(trace, key=sortkey)
 
-    wave_template = """\
-<script type="WaveDrom">
-{
-  signal : [
-%s
-  ],
-  config: { hscale: %d }
-}
-</script>
-"""
+    signals = []
+    wave_json = {"signal": signals, "config": {"hscale": 1}, "head": {"tick": 0}}
+    # Length of the longest value string, in characters.
+    max_value_length = 1
+    for signal_name in trace_list:
+        # Make a WaveDrom WaveLane for ``signal_name``.
+        wave_list = []
+        data_list = []
+        last_value = None
 
-    vallens = []  # For determining longest value length
+        wire = simtrace._wires[signal_name]
+        for value in trace[signal_name]:
+            if last_value == value:
+                wave_list.append(".")
+                continue
 
-    def extract(w):
-        wavelist = []
-        datalist = []
-        last = None
-
-        for value in trace[w]:
-            if last == value:
-                wavelist.append(".")
+            if len(wire) == 1:
+                # int() to convert True/False to 0/1.
+                wave_list.append(str(int(value)))
             else:
-                f = repr_per_name.get(w)
-                if f is not None:
-                    wavelist.append("=")
-                    datalist.append(str(f(value)))
-                elif len(simtrace._wires[w]) == 1:
-                    # int() to convert True/False to 0/1
-                    wavelist.append(str(int(value)))
-                else:
-                    wavelist.append("=")
-                    datalist.append(str(repr_func(value)))
+                wave_list.append("=")
+                data = val_to_str(value, wire, repr_func, repr_per_name)
+                data_list.append(data)
+                max_value_length = max(max_value_length, len(data))
 
-                last = value
+            last_value = value
 
-        wavestring = "".join(wavelist)
-        datastring = ", ".join([f'"{data}"' for data in datalist])
-        if repr_per_name.get(w) is None and len(simtrace._wires[w]) == 1:
-            vallens.append(1)  # all are the same length
-            return bool_signal_template % (w, wavestring)
-        vallens.extend([len(data) for data in datalist])
-        return int_signal_template % (w, wavestring, datastring)
+        signal = {"name": signal_name, "wave": "".join(wave_list)}
+        if len(data_list) > 0:
+            signal["data"] = data_list
+        signals.append(signal)
 
-    bool_signal_template = '    { name: "%s",  wave: "%s" },'
-    int_signal_template = '    { name: "%s",  wave: "%s", data: [%s] },'
-    signals = [extract(w) for w in trace_list]
-    all_signals = "\n".join(signals)
-    maxvallen = max(vallens)
-    scale = (maxvallen // 5) + 1
-    return wave_template % (all_signals, scale)
-    # print(wave)
+    # WaveDrom doesn't automatically scale cycle width to fit `data`, so we use `hscale`
+    # to manually adjust cycle width. `hscale: 1` fits about three characters of `data`
+    # in a cycle. `hscale` must be an integer.
+    wave_json["config"]["hscale"] = max_value_length // 4 + 1
+
+    return json.dumps(wave_json)

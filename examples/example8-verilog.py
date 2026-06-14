@@ -67,9 +67,7 @@ for _cycle in range(15):
         {"x": random.randrange(2), "y": random.randrange(2), "cin": random.randrange(2)}
     )
 # Only display the `Input` and `Output` `WireVectors` for clarity.
-input_vectors = pyrtl.working_block().wirevector_subset(pyrtl.Input)
-output_vectors = pyrtl.working_block().wirevector_subset(pyrtl.Output)
-sim.tracer.render_trace(trace_list=[*input_vectors, *output_vectors], symbol_len=2)
+sim.tracer.render_trace(trace_list=["x", "y", "cin", "sum", "cout"], symbol_len=2)
 
 # ## Exporting to Verilog
 #

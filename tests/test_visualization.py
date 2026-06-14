@@ -1,9 +1,20 @@
+import doctest
 import enum
 import io
 import random
 import unittest
 
 import pyrtl
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+
+    def test_doctests(self):
+        failures, tests = doctest.testmod(m=pyrtl.visualization)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
+
 
 graphviz_string_detailed = """\
 digraph g {
@@ -348,51 +359,43 @@ class TestOutputIPynb(unittest.TestCase):
                 }
             )
 
-        pyrtl.trace_to_html(sim.tracer)  # tests if it compiles or not
+        pyrtl.trace_to_json(sim.tracer)  # tests if it compiles or not
 
-    def test_trace_to_html(self):
+    def test_trace_to_json(self):
         i = pyrtl.Input(1, "i")
         o = pyrtl.Output(2, "o")
         o <<= i + 1
 
         sim = pyrtl.Simulation()
         sim.step_multiple({"i": "0100110"})
-        htmlstring = pyrtl.trace_to_html(sim.tracer)
+        htmlstring = pyrtl.trace_to_json(sim.tracer)
         expected = (
-            '<script type="WaveDrom">\n'
-            "{\n"
-            "  signal : [\n"
-            '    { name: "i",  wave: "010.1.0" },\n'
-            '    { name: "o",  wave: "===.=.=", data: ["0x1", "0x2", "0x1", "0x2", "0x1"] },\n'  # noqa: E501
-            "  ],\n"
-            "  config: { hscale: 1 }\n"
-            "}\n"
-            "</script>\n"
+            '{"signal": ['
+            '{"name": "i", "wave": "010.1.0"}, '
+            '{"name": "o", "wave": "===.=.=", "data": '
+            '["0x1", "0x2", "0x1", "0x2", "0x1"]}], '
+            '"config": {"hscale": 1}, "head": {"tick": 0}}'
         )
         self.assertEqual(htmlstring, expected)
 
-    def test_trace_to_html_repr_func(self):
+    def test_trace_to_json_repr_func(self):
         i = pyrtl.Input(1, "i")
         o = pyrtl.Output(2, "o")
         o <<= i + 1
 
         sim = pyrtl.Simulation()
         sim.step_multiple({"i": "0100110"})
-        htmlstring = pyrtl.trace_to_html(sim.tracer, repr_func=bin)
+        htmlstring = pyrtl.trace_to_json(sim.tracer, repr_func=bin)
         expected = (
-            '<script type="WaveDrom">\n'
-            "{\n"
-            "  signal : [\n"
-            '    { name: "i",  wave: "010.1.0" },\n'
-            '    { name: "o",  wave: "===.=.=", data: ["0b1", "0b10", "0b1", "0b10", "0b1"] },\n'  # noqa: E501
-            "  ],\n"
-            "  config: { hscale: 1 }\n"
-            "}\n"
-            "</script>\n"
+            '{"signal": ['
+            '{"name": "i", "wave": "010.1.0"}, '
+            '{"name": "o", "wave": "===.=.=", "data": '
+            '["0b1", "0b10", "0b1", "0b10", "0b1"]}], '
+            '"config": {"hscale": 2}, "head": {"tick": 0}}'
         )
         self.assertEqual(htmlstring, expected)
 
-    def test_trace_to_html_repr_per_name(self):
+    def test_trace_to_json_repr_per_name(self):
         class Foo(enum.IntEnum):
             A = 0
             B = 1
@@ -400,7 +403,7 @@ class TestOutputIPynb(unittest.TestCase):
             D = 3
 
         i = pyrtl.Input(4, "i")
-        state = pyrtl.Register(max(Foo).bit_length(), name="state")
+        state = pyrtl.Register(name="state", State=Foo)
         o = pyrtl.Output(name="o")
         o <<= state
 
@@ -417,30 +420,26 @@ class TestOutputIPynb(unittest.TestCase):
         sim = pyrtl.Simulation()
         sim.step_multiple({"i": [1, 2, 4, 8, 0]})
 
-        htmlstring = pyrtl.trace_to_html(
-            sim.tracer, repr_per_name={"state": pyrtl.enum_name(Foo)}
-        )
+        htmlstring = pyrtl.trace_to_json(sim.tracer)
         expected = (
-            '<script type="WaveDrom">\n'
-            "{\n"
-            "  signal : [\n"
-            '    { name: "i",  wave: "=====", data: ["0x1", "0x2", "0x4", "0x8", "0x0"] },\n'  # noqa: E501
-            '    { name: "o",  wave: "=.===", data: ["0x0", "0x1", "0x2", "0x3"] },\n'
-            '    { name: "state",  wave: "=.===", data: ["A", "B", "C", "D"] },\n'
-            "  ],\n"
-            "  config: { hscale: 1 }\n"
-            "}\n"
-            "</script>\n"
+            '{"signal": ['
+            '{"name": "i", "wave": "=====", "data": '
+            '["0x1", "0x2", "0x4", "0x8", "0x0"]}, '
+            '{"name": "o", "wave": "=.===", "data": '
+            '["0x0", "0x1", "0x2", "0x3"]}, '
+            '{"name": "state", "wave": "=.===", "data": '
+            '["A", "B", "C", "D"]}], '
+            '"config": {"hscale": 1}, "head": {"tick": 0}}'
         )
         self.assertEqual(htmlstring, expected)
 
-    def test_trace_to_html_repr_per_name_enum_is_bool(self):
+    def test_trace_to_json_repr_per_name_enum_is_bool(self):
         class Foo(enum.IntEnum):
             A = 0
             B = 1
 
         i = pyrtl.Input(2, "i")
-        state = pyrtl.Register(max(Foo).bit_length(), name="state")
+        state = pyrtl.Register(name="state", State=Foo)
         o = pyrtl.Output(name="o")
         o <<= state
 
@@ -453,20 +452,13 @@ class TestOutputIPynb(unittest.TestCase):
         sim = pyrtl.Simulation()
         sim.step_multiple({"i": [1, 2, 1, 2, 2]})
 
-        htmlstring = pyrtl.trace_to_html(
-            sim.tracer, repr_per_name={"state": pyrtl.enum_name(Foo)}
-        )
+        htmlstring = pyrtl.trace_to_json(sim.tracer)
         expected = (
-            '<script type="WaveDrom">\n'
-            "{\n"
-            "  signal : [\n"
-            '    { name: "i",  wave: "====.", data: ["0x1", "0x2", "0x1", "0x2"] },\n'
-            '    { name: "o",  wave: "0.101" },\n'
-            '    { name: "state",  wave: "=.===", data: ["A", "B", "A", "B"] },\n'
-            "  ],\n"
-            "  config: { hscale: 1 }\n"
-            "}\n"
-            "</script>\n"
+            '{"signal": ['
+            '{"name": "i", "wave": "====.", "data": ["0x1", "0x2", "0x1", "0x2"]}, '
+            '{"name": "o", "wave": "0.101"}, '
+            '{"name": "state", "wave": "0.101"}], '
+            '"config": {"hscale": 1}, "head": {"tick": 0}}'
         )
         self.assertEqual(htmlstring, expected)
 

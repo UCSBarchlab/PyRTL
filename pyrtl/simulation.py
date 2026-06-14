@@ -1030,6 +1030,37 @@ class FastSimulation:
 #
 
 
+def val_to_str(
+    value: int,
+    wire: WireVector,
+    repr_func: Callable[[int], str],
+    repr_per_name: dict[str, Callable[[int], str]],
+) -> str:
+    """Return a string representing 'value'.
+
+    :param value: The value to convert to string.
+    :param wire: Wire that produced this value.
+    :param repr_func: function to use for representing the current_val; examples are
+        'hex', 'oct', 'bin', 'str' (for decimal), or the function returned by
+        :func:`enum_name`. Defaults to 'hex'.
+    :param repr_per_name: Map from signal name to a function that takes in the signal's
+        value and returns a user-defined representation. If a signal name is not found
+        in the map, the argument `repr_func` will be used instead.
+
+    :return: a string representing 'value'.
+    """
+    func = repr_per_name.get(wire.name)
+    if func is None:
+        if isinstance(wire, Register) and wire.State is not None:
+            func = enum_name(wire.State)
+        else:
+            func = repr_func
+
+    if func is val_to_signed_integer:
+        return str(val_to_signed_integer(value=value, bitwidth=wire.bitwidth))
+    return str(func(value))
+
+
 class WaveRenderer:
     """Render a SimulationTrace to the terminal.
 
@@ -1076,39 +1107,6 @@ class WaveRenderer:
             segment_size = maxtracelen - n
         # Pad major_tick out to segment_size.
         return major_tick.ljust(cycle_len * segment_size)
-
-    def val_to_str(
-        self,
-        value: int,
-        wire: WireVector,
-        repr_func: Callable[[int], str],
-        repr_per_name: dict[str, Callable[[int], str]],
-    ) -> str:
-        """Return a string representing 'value'.
-
-        :param value: The value to convert to string.
-        :param wire: Wire that produced this value.
-        :param repr_func: function to use for representing the current_val; examples are
-            'hex', 'oct', 'bin', 'str' (for decimal), or the function returned by
-            :func:`enum_name`. Defaults to 'hex'.
-        :param repr_per_name: Map from signal name to a function that takes in the
-            signal's value and returns a user-defined representation. If a signal name
-            is not found in the map, the argument `repr_func` will be used instead.
-
-        :return: a string representing 'value'.
-        """
-        f = repr_per_name.get(wire.name)
-
-        def invoke_f(f, value):
-            if f is val_to_signed_integer:
-                return str(val_to_signed_integer(value=value, bitwidth=wire.bitwidth))
-            return str(f(value))
-
-        if f is not None:
-            return invoke_f(f, value)
-        if isinstance(wire, Register) and wire.State is not None:
-            return invoke_f(enum_name(wire.State), value)
-        return invoke_f(repr_func, value)
 
     def render_val(
         self,
@@ -1181,7 +1179,7 @@ class WaveRenderer:
                         out += self.constants._bus_start
                     # Display the current non-zero value.
                     out += (
-                        self.val_to_str(current_val, w, repr_func, repr_per_name)
+                        val_to_str(current_val, w, repr_func, repr_per_name)
                         .rstrip("L")
                         .ljust(symbol_len)[:symbol_len]
                     )
@@ -1768,15 +1766,23 @@ class SimulationTrace:
                 display,
             )
 
-            from pyrtl.visualization import trace_to_html
+            from pyrtl.visualization import trace_to_json
 
             display(
                 HTML(
-                    trace_to_html(self, trace_list=trace_list, sortkey=_trace_sort_key)
+                    '<script type="WaveDrom">'
+                    + trace_to_json(
+                        self,
+                        trace_list=trace_list,
+                        sortkey=_trace_sort_key,
+                        repr_func=repr_func,
+                        repr_per_name=repr_per_name,
+                    )
+                    + "</script>\n"
                 ),
                 HTML("""
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/skins/default.js"></script>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/1.6.2/wavedrom.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/wavedrom@3/skins/default.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/wavedrom@3/wavedrom.min.js"></script>
                 """),
                 # Wait for WaveDrom to load, polling every 100ms.
                 Javascript("""
@@ -1881,9 +1887,7 @@ class SimulationTrace:
                 trace = self.trace[trace_name]
                 current_symbol_len = max(
                     len(
-                        renderer.val_to_str(
-                            v, self._wires[trace_name], repr_func, repr_per_name
-                        )
+                        val_to_str(v, self._wires[trace_name], repr_func, repr_per_name)
                     )
                     for v in trace
                 )

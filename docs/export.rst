@@ -28,5 +28,5 @@ Outputting for Visualization
 .. autofunction:: pyrtl.output_to_svg
 .. autofunction:: pyrtl.block_to_graphviz_string
 .. autofunction:: pyrtl.block_to_svg
-.. autofunction:: pyrtl.trace_to_html
+.. autofunction:: pyrtl.trace_to_json
 .. autofunction:: pyrtl.net_graph
