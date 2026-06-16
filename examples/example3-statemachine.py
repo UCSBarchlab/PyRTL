@@ -15,10 +15,8 @@ req_refund = pyrtl.Input(1, "req_refund")
 dispense = pyrtl.Output(1, "dispense")
 refund = pyrtl.Output(1, "refund")
 
-state = pyrtl.Register(3, "state")
 
-
-# First new step, let's enumerate a set of constants to serve as our states
+# First new step, let's enumerate a set of constants for all possible states.
 class State(enum.IntEnum):
     WAIT = 0  # Waiting for first token.
     TOK1 = 1  # Received first token, waiting for second token.
@@ -27,6 +25,12 @@ class State(enum.IntEnum):
     DISP = 4  # Received fourth token, dispense item.
     RFND = 5  # Issue refund.
 
+
+# Define a `Register`, that calculates its bitwidth from the largest possible `State`.
+# By default, `State` names like `WAIT` will display in traces, instead of state numbers
+# like `0`.
+state = pyrtl.Register(name="state", State=State)
+assert state.bitwidth == 3
 
 # Now we could build a state machine using just the `Registers` and logic discussed in
 # prior examples, but doing operations **conditionally** on some input is a pretty
@@ -114,11 +118,9 @@ sim_inputs = {"token_in": "0010100111010000", "req_refund": "1100010000000000"}
 sim.step_multiple(sim_inputs)
 
 # Also, to make our input/output easy to reason about let's specify an order to the
-# traces with `trace_list`. We also use `enum_name` to display the state names (`WAIT`,
-# `TOK1`, ...) rather than their numbers (0, 1, ...).
+# traces with `trace_list`.
 sim.tracer.render_trace(
-    trace_list=["token_in", "req_refund", "state", "dispense", "refund"],
-    repr_per_name={"state": pyrtl.enum_name(State)},
+    trace_list=["token_in", "req_refund", "state", "dispense", "refund"]
 )
 
 # Finally, suppose you want to simulate your design and verify its output matches your

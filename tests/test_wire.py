@@ -1,4 +1,5 @@
 import doctest
+import enum
 import unittest
 
 import pyrtl
@@ -296,6 +297,35 @@ class TestRegister(unittest.TestCase):
     def test_invalid_reset_value_not_an_integer(self):
         with self.assertRaises(pyrtl.PyrtlError):
             pyrtl.Register(4, reset_value="hello")
+
+
+class TestStateRegister(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_bitwidth(self):
+        class PowerOfTwoState(enum.IntEnum):
+            ZERO = 0
+            ONE = 1
+            TWO = 2
+            THREE = 3
+
+        state = pyrtl.Register(State=PowerOfTwoState)
+        self.assertEqual(state.bitwidth, 2)
+
+        class NotPowerOfTwoState(enum.IntEnum):
+            ZERO = 0
+            ONE = 1
+            TWO = 2
+            FOUR = 4
+            THREE = 3
+
+        state = pyrtl.Register(State=NotPowerOfTwoState)
+        self.assertEqual(state.bitwidth, 3)
+
+        with self.assertRaises(pyrtl.PyrtlError):
+            # Bitwidth 1 is too small to fit PowerOfTwoState.THREE.
+            state = pyrtl.Register(bitwidth=1, State=PowerOfTwoState)
 
 
 class TestConst(unittest.TestCase):

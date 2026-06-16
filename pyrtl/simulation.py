@@ -1106,6 +1106,8 @@ class WaveRenderer:
 
         if f is not None:
             return invoke_f(f, value)
+        if isinstance(wire, Register) and wire.State is not None:
+            return invoke_f(enum_name(wire.State), value)
         return invoke_f(repr_func, value)
 
     def render_val(
@@ -1141,20 +1143,19 @@ class WaveRenderer:
             _prev_line* fields in RendererConstants.
         :param is_last: If True, current_val is in the last cycle.
         """
-        if len(w) > 1 or w.name in repr_per_name:
+        is_state_register = isinstance(w, Register) and w.State is not None
+        if len(w) > 1 or w.name in repr_per_name or is_state_register:
             # Render values in boxes for multi-bit wires ("bus"), or single-bit wires
             # with a specific representation.
             #
             # We display multi-wire zero values as a centered horizontal line when a
             # specific `repr_per_name` is not requested for this trace, and a standard
             # numeric format is requested.
-            flat_zero = w.name not in repr_per_name and (
-                repr_func is hex
-                or repr_func is oct
-                or repr_func is int
-                or repr_func is str
-                or repr_func is bin
-                or repr_func is val_to_signed_integer
+            numeric_formats = [hex, oct, int, str, bin, val_to_signed_integer]
+            flat_zero = (
+                w.name not in repr_per_name
+                and not is_state_register
+                and repr_func in numeric_formats
             )
             if prev_line:
                 # Bus wires are currently never rendered across multiple lines.
@@ -1959,7 +1960,7 @@ class SimulationTrace:
 
 
 def enum_name(EnumClass: type) -> Callable[[int], str]:
-    """Returns a function that returns the name of an :class:`enum.IntEnum` value.
+    """Returns a function that returns the name of an :class:`~enum.IntEnum` value.
 
     .. doctest only::
 
@@ -1968,32 +1969,44 @@ def enum_name(EnumClass: type) -> Callable[[int], str]:
         >>> pyrtl.reset_working_block()
 
     Use ``enum_name`` as a ``repr_func`` or ``repr_per_name`` for
-    :meth:`SimulationTrace.render_trace` to display :class:`enum.IntEnum` names in
+    :meth:`~SimulationTrace.render_trace` to display :class:`~enum.IntEnum` names in
     traces, instead of their numeric value. Example::
 
-        >>> class State(enum.IntEnum):
+        >>> class Option(enum.IntEnum):
         ...     FOO = 0
         ...     BAR = 1
-        >>> state = pyrtl.Input(name="state", bitwidth=1)
+        >>> pyrtl.enum_name(Option)(1)
+        'BAR'
+
+        >>> option = pyrtl.Input(name="option", bitwidth=1)
 
         >>> sim = pyrtl.Simulation()
-        >>> sim.step_multiple({"state": [State.FOO, State.BAR]})
-        >>> sim.tracer.render_trace(repr_per_name={"state": pyrtl.enum_name(State)})
+        >>> sim.step_multiple({"option": [Option.FOO, Option.BAR]})
+        >>> sim.tracer.render_trace(repr_per_name={"option": pyrtl.enum_name(Option)})
 
     Which prints::
 
-             │0  │1
+              │0  │1
 
-        state FOO│BAR
+        option FOO│BAR
 
-    :param EnumClass: ``enum`` to convert. This is the enum class, like ``State``, not
-        an enum value, like ``State.FOO`` or ``1``.
+    .. note::
 
-    :return: A function that accepts an enum value, like ``State.FOO`` or ``1``, and
-             returns the value's name as a string, like ``"FOO"``.
+        When using ``enum_name`` with a :class:`.Register`, consider constructing
+        :class:`.Register` with ``State`` instead. See :meth:`.Register.__init__`.
+
+    :param EnumClass: ``enum`` to convert. This is the enum class, like ``Option``, not
+        an enum value, like ``Option.FOO`` or ``1``.
+
+    :return: A function that accepts an enum value, like ``Option.FOO`` or ``1``, and
+             returns the value's name as a string, like ``"FOO"``. Unknown values will
+             be converted to string with :class:`hex`.
     """
 
     def value_to_name(value: int) -> str:
-        return EnumClass(value).name
+        try:
+            return EnumClass(value).name
+        except ValueError:
+            return hex(value)
 
     return value_to_name
