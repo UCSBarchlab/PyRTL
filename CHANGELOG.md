@@ -6,6 +6,26 @@ releases published to PyPI are tracked here. No release candidates!
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-06-17
+
+### Added
+
+- [PyRTL Floating point library](https://pyrtl.readthedocs.io/en/latest/rtllib.html#module-pyrtl.rtllib.float) ([@gaborszita](https://github.com/gaborszita))
+- `Register`s can be constructed with a [`State` `IntEnum`](https://pyrtl.readthedocs.io/en/latest/regmem.html#pyrtl.Register.__init__) to simplify construction of state machines.
+
+### Changed
+
+- Improved `CompiledSimulation`'s performance.
+- [`output_to_verilog`](https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.output_to_verilog) now supports custom `module_name`s. ([@devmam999](https://github.com/devmam999))
+- Minor improvements to [`wire_struct`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.wire_struct) and [`wire_matrix`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.wire_matrix).
+- Minor improvements to [WaveDrom output](https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.trace_to_json).
+- Many documentation improvements.
+
+### Fixed
+
+- Fix WaveDrom trace output in Jupyter Notebooks. ([@ryoon](https://github.com/ryoon)
+- [`render_trace`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.SimulationTrace.render_trace) raises `PyrtlError` when called with an empty `SimulationTrace`. ([@gaborszita](https://github.com/gaborszita))
+
 ## [0.12] - 2025-07-28
 
 ### Added
