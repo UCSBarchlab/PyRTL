@@ -22,7 +22,6 @@ __pycache__
 
 # Unit test / coverage reports
 .coverage
-.tox
 
 # Translations
 *.mo
@@ -46,9 +45,6 @@ docs/_build
 # There must be a very good reason for someone to add a verilog file to the repo
 .v
 
-# ipynb
-ipynb-examples/.ipynb_checkpoints
-
 # VS Code
 .vscode
 
@@ -56,5 +52,6 @@ ipynb-examples/.ipynb_checkpoints
 pyvenv.cfg
 
 # Jupyter
+.ipynb_checkpoints
 .jupyterlite.doit.db
 _output

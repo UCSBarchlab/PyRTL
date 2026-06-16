@@ -1,5 +1,5 @@
 PYTHON=uv run
-PY_FILES=$(wildcard *.py)
+PY_FILES=$(wildcard example*.py) introduction-to-hardware.py
 IPYNB_FILES=$(addprefix ../ipynb-examples/, $(PY_FILES:.py=.ipynb))
 
 all: $(IPYNB_FILES)

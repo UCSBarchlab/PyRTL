@@ -95,7 +95,7 @@ from .visualization import (
     output_to_svg,
     block_to_graphviz_string,
     block_to_svg,
-    trace_to_html,
+    trace_to_json,
     net_graph,
 )
 
@@ -236,7 +236,7 @@ __all__ = [
     "output_to_svg",
     "block_to_graphviz_string",
     "block_to_svg",
-    "trace_to_html",
+    "trace_to_json",
     "net_graph",
     # importexport
     "input_from_verilog",

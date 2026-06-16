@@ -330,7 +330,7 @@ class RenderTraceCustomBase(unittest.TestCase):
             D = 3
 
         i = pyrtl.Input(4, "i")
-        state = pyrtl.Register(max(Foo).bit_length(), name="state")
+        state = pyrtl.Register(name="state", State=Foo)
         o = pyrtl.Output(name="o")
         o <<= state
 
@@ -350,7 +350,6 @@ class RenderTraceCustomBase(unittest.TestCase):
         sim.tracer.render_trace(
             file=buff,
             renderer=self.renderer,
-            repr_per_name={"state": pyrtl.enum_name(Foo)},
         )
         expected = (
             "     |0  |1  |2  |3  |4  \n"
