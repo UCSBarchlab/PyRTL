@@ -621,7 +621,6 @@ def trace_to_json(
         trace_list = sorted(trace, key=sortkey)
 
     signals = []
-    wave_json = {"signal": signals, "config": {"hscale": 1}, "head": {"tick": 0}}
     # Length of the longest value string, in characters.
     max_value_length = 1
     for signal_name in trace_list:
@@ -655,6 +654,7 @@ def trace_to_json(
     # WaveDrom doesn't automatically scale cycle width to fit `data`, so we use `hscale`
     # to manually adjust cycle width. `hscale: 1` fits about three characters of `data`
     # in a cycle. `hscale` must be an integer.
-    wave_json["config"]["hscale"] = max_value_length // 4 + 1
+    hscale = max_value_length // 4 + 1
 
+    wave_json = {"signal": signals, "config": {"hscale": hscale}, "head": {"tick": 0}}
     return json.dumps(wave_json)

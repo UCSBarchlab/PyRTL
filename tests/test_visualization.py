@@ -368,15 +368,14 @@ class TestOutputIPynb(unittest.TestCase):
 
         sim = pyrtl.Simulation()
         sim.step_multiple({"i": "0100110"})
-        htmlstring = pyrtl.trace_to_json(sim.tracer)
+        json_string = pyrtl.trace_to_json(sim.tracer)
         expected = (
             '{"signal": ['
             '{"name": "i", "wave": "010.1.0"}, '
-            '{"name": "o", "wave": "===.=.=", "data": '
-            '["0x1", "0x2", "0x1", "0x2", "0x1"]}], '
+            '{"name": "o", "wave": "===.=.=", "data": ["0x1", "0x2", "0x1", "0x2", "0x1"]}], '  # noqa: E501
             '"config": {"hscale": 1}, "head": {"tick": 0}}'
         )
-        self.assertEqual(htmlstring, expected)
+        self.assertEqual(json_string, expected)
 
     def test_trace_to_json_repr_func(self):
         i = pyrtl.Input(1, "i")
@@ -385,15 +384,14 @@ class TestOutputIPynb(unittest.TestCase):
 
         sim = pyrtl.Simulation()
         sim.step_multiple({"i": "0100110"})
-        htmlstring = pyrtl.trace_to_json(sim.tracer, repr_func=bin)
+        json_string = pyrtl.trace_to_json(sim.tracer, repr_func=bin)
         expected = (
             '{"signal": ['
             '{"name": "i", "wave": "010.1.0"}, '
-            '{"name": "o", "wave": "===.=.=", "data": '
-            '["0b1", "0b10", "0b1", "0b10", "0b1"]}], '
+            '{"name": "o", "wave": "===.=.=", "data": ["0b1", "0b10", "0b1", "0b10", "0b1"]}], '  # noqa: E501
             '"config": {"hscale": 2}, "head": {"tick": 0}}'
         )
-        self.assertEqual(htmlstring, expected)
+        self.assertEqual(json_string, expected)
 
     def test_trace_to_json_repr_per_name(self):
         class Foo(enum.IntEnum):
@@ -420,18 +418,15 @@ class TestOutputIPynb(unittest.TestCase):
         sim = pyrtl.Simulation()
         sim.step_multiple({"i": [1, 2, 4, 8, 0]})
 
-        htmlstring = pyrtl.trace_to_json(sim.tracer)
+        json_string = pyrtl.trace_to_json(sim.tracer)
         expected = (
             '{"signal": ['
-            '{"name": "i", "wave": "=====", "data": '
-            '["0x1", "0x2", "0x4", "0x8", "0x0"]}, '
-            '{"name": "o", "wave": "=.===", "data": '
-            '["0x0", "0x1", "0x2", "0x3"]}, '
-            '{"name": "state", "wave": "=.===", "data": '
-            '["A", "B", "C", "D"]}], '
+            '{"name": "i", "wave": "=====", "data": ["0x1", "0x2", "0x4", "0x8", "0x0"]}, '  # noqa: E501
+            '{"name": "o", "wave": "=.===", "data": ["0x0", "0x1", "0x2", "0x3"]}, '
+            '{"name": "state", "wave": "=.===", "data": ["A", "B", "C", "D"]}], '
             '"config": {"hscale": 1}, "head": {"tick": 0}}'
         )
-        self.assertEqual(htmlstring, expected)
+        self.assertEqual(json_string, expected)
 
     def test_trace_to_json_repr_per_name_enum_is_bool(self):
         class Foo(enum.IntEnum):
@@ -452,7 +447,7 @@ class TestOutputIPynb(unittest.TestCase):
         sim = pyrtl.Simulation()
         sim.step_multiple({"i": [1, 2, 1, 2, 2]})
 
-        htmlstring = pyrtl.trace_to_json(sim.tracer)
+        json_string = pyrtl.trace_to_json(sim.tracer)
         expected = (
             '{"signal": ['
             '{"name": "i", "wave": "====.", "data": ["0x1", "0x2", "0x1", "0x2"]}, '
@@ -460,7 +455,7 @@ class TestOutputIPynb(unittest.TestCase):
             '{"name": "state", "wave": "0.101"}], '
             '"config": {"hscale": 1}, "head": {"tick": 0}}'
         )
-        self.assertEqual(htmlstring, expected)
+        self.assertEqual(json_string, expected)
 
 
 if __name__ == "__main__":
