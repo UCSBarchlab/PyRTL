@@ -1106,8 +1106,8 @@ class WaveRenderer:
 
         if f is not None:
             return invoke_f(f, value)
-        if isinstance(wire, Register) and wire.States is not None:
-            return invoke_f(enum_name(wire.States), value)
+        if isinstance(wire, Register) and wire.State is not None:
+            return invoke_f(enum_name(wire.State), value)
         return invoke_f(repr_func, value)
 
     def render_val(
@@ -1143,7 +1143,7 @@ class WaveRenderer:
             _prev_line* fields in RendererConstants.
         :param is_last: If True, current_val is in the last cycle.
         """
-        is_state_register = isinstance(w, Register) and w.States is not None
+        is_state_register = isinstance(w, Register) and w.State is not None
         if len(w) > 1 or w.name in repr_per_name or is_state_register:
             # Render values in boxes for multi-bit wires ("bus"), or single-bit wires
             # with a specific representation.
@@ -1990,7 +1990,7 @@ def enum_name(EnumClass: type) -> Callable[[int], str]:
     .. note::
 
         When using ``enum_name`` with a :class:`.Register`, consider constructing
-        :class:`.Register` with a ``State`` instead. See :meth:`.Register.__init__`.
+        :class:`.Register` with ``State`` instead. See :meth:`.Register.__init__`.
 
     :param EnumClass: ``enum`` to convert. This is the enum class, like ``Option``, not
         an enum value, like ``Option.FOO`` or ``1``.

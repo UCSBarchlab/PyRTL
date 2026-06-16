@@ -1811,7 +1811,7 @@ class Register(WireVector):
         name: str = "",
         reset_value: int | None = None,
         block: Block | None = None,
-        States: type[enum.IntEnum] | None = None,
+        State: type[enum.IntEnum] | None = None,
     ):
         """Construct a ``Register``.
 
@@ -1820,17 +1820,17 @@ class Register(WireVector):
             >>> import pyrtl
             >>> pyrtl.reset_working_block()
 
-        Example with ``States``::
+        Example with ``State``::
 
             >>> import enum
-            >>> class MyStates(enum.IntEnum):
+            >>> class MyState(enum.IntEnum):
             ...     ZERO = 0
             ...     ONE = 1
             ...     TWO = 2
             ...     THREE = 3
 
             >>> state = pyrtl.Register(
-            ...     name="state", States=MyStates, reset_value=MyStates.ONE
+            ...     name="state", State=MyState, reset_value=MyState.ONE
             ... )
             >>> state.bitwidth
             2
@@ -1855,22 +1855,22 @@ class Register(WireVector):
             overridden at simulation time.
         :param block: The :class:`Block` under which the wire should be placed. Defaults
             to the :ref:`working_block`.
-        :param States: An :class:`~enum.IntEnum` defining all possible states for the
+        :param State: An :class:`~enum.IntEnum` defining all possible states for the
             ``Register``. This should be an :class:`~enum.IntEnum` class, like
-            ``MyStates`` in the example above. If ``bitwidth`` is ``None``, the largest
+            ``MyState`` in the example above. If ``bitwidth`` is ``None``, the largest
             value in the :class:`~enum.IntEnum` determines the ``Register``'s
-            ``bitwidth``. When ``States`` is not ``None``,
+            ``bitwidth``. When ``State`` is not ``None``,
             :meth:`~.SimulationTrace.render_trace` defaults to displaying enumeration
             names rather than hex values.
 
-        :raises PyrtlError: If the ``reset_value`` or ``States`` cannot fit into the
+        :raises PyrtlError: If the ``reset_value`` or ``State`` cannot fit into the
             specified ``bitwidth`` for this register.
         """
         from pyrtl.helperfuncs import infer_val_and_bitwidth
 
-        self.States = States
-        if States is not None:
-            largest_state = max(States)
+        self.State = State
+        if State is not None:
+            largest_state = max(State)
             inferred_bitwidth = infer_val_and_bitwidth(largest_state).bitwidth
             if bitwidth is None:
                 bitwidth = inferred_bitwidth

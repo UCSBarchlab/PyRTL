@@ -29,7 +29,8 @@ class State(enum.IntEnum):
 # Define a `Register`, that calculates its bitwidth from the largest possible `State`.
 # By default, `State` names like `WAIT` will display in traces, instead of state numbers
 # like `0`.
-state = pyrtl.Register(name="state", States=State)
+state = pyrtl.Register(name="state", State=State)
+assert state.bitwidth == 3
 
 # Now we could build a state machine using just the `Registers` and logic discussed in
 # prior examples, but doing operations **conditionally** on some input is a pretty

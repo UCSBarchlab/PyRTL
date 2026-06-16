@@ -292,7 +292,7 @@ class RenderTraceCustomBase(unittest.TestCase):
             C = 2
             D = 3
 
-        state = pyrtl.Register(name="state", States=State, reset_value=State.B)
+        state = pyrtl.Register(name="state", State=State, reset_value=State.B)
         state.next <<= state + 1
         sim = pyrtl.Simulation()
         sim.step_multiple(nsteps=4)

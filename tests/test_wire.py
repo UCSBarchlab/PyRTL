@@ -304,28 +304,28 @@ class TestStateRegister(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_bitwidth(self):
-        class PowerOfTwoStates(enum.IntEnum):
+        class PowerOfTwoState(enum.IntEnum):
             ZERO = 0
             ONE = 1
             TWO = 2
             THREE = 3
 
-        state = pyrtl.Register(States=PowerOfTwoStates)
+        state = pyrtl.Register(State=PowerOfTwoState)
         self.assertEqual(state.bitwidth, 2)
 
-        class NotPowerOfTwoStates(enum.IntEnum):
+        class NotPowerOfTwoState(enum.IntEnum):
             ZERO = 0
             ONE = 1
             TWO = 2
             FOUR = 4
             THREE = 3
 
-        state = pyrtl.Register(States=NotPowerOfTwoStates)
+        state = pyrtl.Register(State=NotPowerOfTwoState)
         self.assertEqual(state.bitwidth, 3)
 
         with self.assertRaises(pyrtl.PyrtlError):
-            # Bitwidth 1 is too small to fit PowerOfTwoStates.THREE.
-            state = pyrtl.Register(bitwidth=1, States=PowerOfTwoStates)
+            # Bitwidth 1 is too small to fit PowerOfTwoState.THREE.
+            state = pyrtl.Register(bitwidth=1, State=PowerOfTwoState)
 
 
 class TestConst(unittest.TestCase):
