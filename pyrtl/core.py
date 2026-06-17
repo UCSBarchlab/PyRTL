@@ -569,7 +569,6 @@ class Block:
         use the :class:`WireVector`'s value.
 
         This information helps when building a graph representation for the ``Block``.
-        See :func:`net_graph` for an example.
 
         .. note::
 

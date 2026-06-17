@@ -195,7 +195,7 @@ pyrtl.working_block().remove_wirevector(dummy_wv)
 # options under the "hierarchical" rendering to draw something that looks quite like a
 # circuit.
 #
-# Also see `output_to_svg()`.
+# Also see `block_to_svg()`.
 pyrtl.working_block().sanity_check()
 
 # So that `output_to_trivial_graph()` will work.

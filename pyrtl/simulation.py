@@ -9,6 +9,7 @@ import re
 import sys
 import warnings
 from collections.abc import Callable, Mapping
+from typing import TextIO
 
 from pyrtl.core import Block, PostSynthBlock, _PythonSanitizer, working_block
 from pyrtl.helperfuncs import (
@@ -335,6 +336,7 @@ class Simulation:
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step_multiple(nsteps=3)
+
             >>> sim.inspect("counter")
             2
 
@@ -483,6 +485,7 @@ class Simulation:
 
             >>> sim = pyrtl.Simulation()
             >>> sim.step_multiple(nsteps=4)
+
             >>> sorted(sim.inspect_mem(mem).items())
             [(0, 10), (1, 11), (2, 12), (3, 13)]
 
@@ -1538,13 +1541,29 @@ class SimulationTrace:
     """
     A :class:`dict` mapping from a :class:`WireVector`'s name to a :class:`list` of its
     values in each cycle.
+
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> counter = pyrtl.Register(name="counter", bitwidth=2)
+        >>> counter.next <<= counter + 1
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step_multiple(nsteps=4)
+
+        >>> sim.tracer.trace["counter"]
+        [0, 1, 2, 3]
     """
 
     def __init__(
         self, wires_to_track: list[WireVector] | None = None, block: Block = None
     ):
-        """Creates a new Simulation Trace
-
+        """
         :param wires_to_track: The wires that the tracer should track. If unspecified,
             will track all explicitly-named wires. If set to ``'all'``, will track all
             wires, including internal wires.
@@ -1620,7 +1639,22 @@ class SimulationTrace:
             self.trace[wire_name].append(fastsim.context[wire_name])
 
     def print_trace(self, file=sys.stdout, base: int = 10, compact: bool = False):
-        """Prints a list of wires and their current values.
+        """Prints a list of wires and their values in each cycle.
+
+        Example::
+
+            counter = pyrtl.Register(name="counter", bitwidth=2)
+            counter.next <<= counter + 1
+
+            sim = pyrtl.Simulation()
+            sim.step_multiple(nsteps=4)
+
+            sim.tracer.print_trace()
+
+        Which prints::
+
+                --- Values in base 10 ---
+            counter 0 1 2 3
 
         :param base: The base the values are to be printed in.
         :param compact: Whether to omit spaces in output lines.
@@ -1654,16 +1688,28 @@ class SimulationTrace:
 
         file.flush()
 
-    def print_vcd(self, file=sys.stdout, include_clock=False):
-        """Print the trace out as a VCD File for use in other tools.
+    def print_vcd(self, file: TextIO = sys.stdout, include_clock: bool = False):
+        """Convert the trace to a `VCD
+        <https://en.wikipedia.org/wiki/Value_change_dump>`_ file, for use with tools
+        like `GTKWave <https://gtkwave.github.io/gtkwave/>`_.
 
         Dumps the current trace to file as a `value change dump
-        <https://en.wikipedia.org/wiki/Value_change_dump>`_ file. Examples::
+        <https://en.wikipedia.org/wiki/Value_change_dump>`_ file. Example::
 
-            sim_trace.print_vcd()
-            sim_trace.print_vcd("my_waveform.vcd", include_clock=True)
+            counter = pyrtl.Register(name="counter", bitwidth=2)
+            counter.next <<= counter + 1
 
-        :param file: File to open and output vcd dump to. Defaults to ``stdout``.
+            sim = pyrtl.Simulation()
+            sim.step_multiple(nsteps=4)
+
+            sim.tracer.print_vcd(file=open("trace.vcd", "w"))
+
+        This creates ``trace.vcd``, which can be opened in `GTKWave
+        <https://gtkwave.github.io/gtkwave/>`_:
+
+        .. image:: ../docs/screenshots/gtkwave.png
+
+        :param file: File to output VCD data to. Defaults to ``stdout``.
         :param include_clock: Boolean specifying if the implicit ``clk`` should be
             included. Defaults to ``False``.
         """
@@ -1732,11 +1778,30 @@ class SimulationTrace:
         repr_per_name: dict[str, Callable[[int], str]] | None = None,
         segment_size: int = 1,
     ):
-        """Render the trace to a file using unicode and ASCII escape sequences.
+        """Render the trace with Unicode and ASCII escape sequences.
 
-        The resulting output can be viewed directly on the terminal or viewed with
-        :program:`less -R` which should handle the ASCII escape sequences used in
-        rendering.
+        The resulting output can be viewed directly in a terminal. Example::
+
+            counter = pyrtl.Register(name="counter", bitwidth=2)
+            counter.next <<= counter + 1
+
+            sim = pyrtl.Simulation() sim.step_multiple(nsteps=4)
+
+            sim.tracer.render_trace()
+
+        Which displays:
+
+        .. image:: ../docs/screenshots/render_trace.png
+            :scale: 66%
+
+        Many trace formats are available, and can be configured with the
+        ``PYRTL_RENDERER`` environment variable. See :class:`.WaveRenderer`'s
+        documentation for examples and screenshots.
+
+        .. note::
+
+            For large traces, use a program like :program:`less -RS` to scroll the
+            output.
 
         :param trace_list: A list of signal names to be output in the specified order.
         :param file: The place to write output, default to stdout.
@@ -1935,12 +2000,34 @@ class SimulationTrace:
         self.register_value_map = register_value_map
         self.memory_value_map = memory_value_map
 
-    def print_perf_counters(self, *trace_names: str, file=sys.stdout):
+    def print_perf_counters(self, *trace_names: str, file=None):
         """Print performance counter statistics for ``trace_names``.
 
         This function prints the number of cycles where each trace's value is one. This
         is useful for counting the number of times important events occur in a
         simulation, such as cache misses and branch mispredictions.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> counter = pyrtl.Register(name="counter", bitwidth=2)
+            >>> counter.next <<= counter + 1
+
+            >>> is_odd = counter[0]
+            >>> is_odd.name = "is_odd"
+            >>> is_even = ~is_odd
+            >>> is_even.name = "is_even"
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step_multiple(nsteps=7)
+
+            >>> sim.tracer.print_perf_counters("is_even", "is_odd")
+            is_even 4
+             is_odd 3
 
         :param trace_names: List of trace names. Each trace must be a single-bit wire.
         :param file: The place to write output, defaults to stdout.

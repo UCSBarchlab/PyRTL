@@ -59,7 +59,7 @@ _link_map = {
     "kogge_stone()": "https://pyrtl.readthedocs.io/en/latest/rtllib.html#pyrtl.rtllib.adders.kogge_stone",
     "mux()": "https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.mux",
     "otherwise": "https://pyrtl.readthedocs.io/en/latest/basic.html#pyrtl.otherwise",
-    "output_to_svg()": "https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.block_to_svg",
+    "block_to_svg()": "https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.block_to_svg",
     "output_to_trivialgraph()": "https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.output_to_trivialgraph",
     "output_verilog_testbench()": "https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.output_verilog_testbench",
     "probe()": "https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.probe",

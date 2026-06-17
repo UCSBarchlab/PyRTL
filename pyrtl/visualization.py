@@ -10,7 +10,7 @@ from __future__ import annotations
 import collections
 import json
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TextIO
 
 from pyrtl.core import Block, LogicNet, working_block
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from pyrtl.simulation import SimulationTrace
 
 
-def net_graph(block: Block = None, split_state: bool = False):
+def net_graph(block: Block | None = None, split_state: bool = False) -> dict:
     """Return a graph representation of the given :class:`Block`.
 
     The graph has the following form::
@@ -116,13 +116,26 @@ def _trivialgraph_default_namer(thing, is_edge=True):
 
 
 def output_to_trivialgraph(
-    file,
+    file: TextIO,
     namer: Callable[[WireVector | LogicNet, bool], str] = _trivialgraph_default_namer,
-    block: Block = None,
+    block: Block | None = None,
     split_state: bool = False,
 ):
-    """Walk the block and output it in `trivial graph format
-    <https://en.wikipedia.org/wiki/Trivial_Graph_Format>`_ to the open file.
+    """Save ``block`` to ``file`` in `trivial graph format
+    <https://en.wikipedia.org/wiki/Trivial_Graph_Format>`_.
+
+    Example::
+
+        a = pyrtl.WireVector(name="a", bitwidth=3)
+        b = pyrtl.WireVector(name="b", bitwidth=3)
+        sum = a + b
+        sum.name = "sum"
+        pyrtl.output_to_trivialgraph(open("block.tgf", "w"))
+
+    This creates ``block.tgf`` which can be opened with tools like `yEd live
+    <https://www.yworks.com/yed-live/>`_, which produces this ``.svg`` file:
+
+    .. image:: ../docs/images/output_to_trivialgraph.svg
 
     :param file: Open file to write to.
     :param namer: A function that takes in an object (a :class:`WireVector` or
@@ -164,7 +177,7 @@ def _default_edge_namer(
     edge: WireVector,
     is_to_splitmerge: bool = False,
     extra_edge_info: dict[WireVector, str] | None = None,
-):
+) -> str:
     """
     A function for naming an edge for use in the ``graphviz`` graph.
 
@@ -197,7 +210,7 @@ def _default_node_namer(
     node: WireVector,
     split_state: bool = False,
     extra_node_info: dict[WireVector, str] | None = None,
-):
+) -> str:
     """
     A function for naming a node for use in the ``graphviz`` graph.
 
@@ -289,7 +302,7 @@ def _graphviz_default_namer(
     split_state: bool,
     node_namer=_default_node_namer,
     edge_namer=_default_edge_namer,
-):
+) -> str:
     """Returns a "good" Graphviz label for thing.
 
     :param thing: The edge (:class:`WireVector`) or node (:class:`LogicNet` or
@@ -305,7 +318,7 @@ def _graphviz_default_namer(
         dict mapping nodes to nodes to additional user-supplied information.
 
     :return: A function that knows how to label each element in the graph, which can be
-             passed to :func:`output_to_graphviz` or :func:`block_to_graphviz_string`
+             passed to :func:`block_to_graphviz_string`
     """
     if is_edge:
         return edge_namer(thing, is_to_splitmerge=is_to_splitmerge)
@@ -313,23 +326,68 @@ def _graphviz_default_namer(
 
 
 def graphviz_detailed_namer(
-    extra_node_info: dict | None = None, extra_edge_info: dict | None = None
-):
-    """Returns a detailed Graphviz namer that prints extra information about nodes/edges
-    in the given maps.
+    extra_node_info: dict[WireVector | LogicNet, str] | None = None,
+    extra_edge_info: dict[WireVector, str] | None = None,
+) -> Callable:
+    """Returns a detailed Graphviz namer for :func:`block_to_graphviz_string` that
+    displays extra information about nodes/edges.
 
     If both :class:`dict` arguments are ``None``, the returned namer behaves identically
-    to the default Graphviz namer.
+    to PyRTL's default Graphviz namer. PyRTL's default namer labels user-named
+    :class:`WireVector` edges with their names and bitwidths, and labels nodes
+    (:class:`LogicNets<LogicNet>` or :class:`Input`/:class:`Output`/:class:`Const`
+    terminals) with their :class:`operator symbol<.LogicNet>` or name/value,
+    respectively.
 
-    :param extra_node_info: A :class:`dict` from node to additional data about that
-        node. The additional data will be converted to :class:`str` and printed next to
-        the node's label.
-    :param extra_edge_info: A :class:`dict` from edge to additional data about that
-        edge. The additional data will be converted to :class:`str` and printed next to
-        the edge's label.
+    ``graphviz_detailed_namer`` creates a custom namer function that retrieves
+    additional node/edge information from ``extra_node_info`` and ``extra_edge_info``.
+    Any additional information in these ``dicts`` will be displayed in parentheses in
+    the Graphviz graph.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.WireVector(name="a", bitwidth=3)
+        >>> b = pyrtl.WireVector(name="b", bitwidth=3)
+        >>> sum = a + b
+        >>> sum.name = "sum"
+
+        >>> add_logicnets = pyrtl.working_block().logic_subset("+")
+        >>> len(add_logicnets)
+        1
+        >>> add_logicnet = add_logicnets.pop()
+
+        >>> namer = pyrtl.graphviz_detailed_namer(
+        ...     extra_node_info={add_logicnet: "ADD NODE"},
+        ...     extra_edge_info={a: "EDGE A", b: "EDGE B"}
+        ... )
+
+        >>> svg_data = pyrtl.block_to_svg(namer=namer)
+
+    ``svg_data`` is a :class:`str` containing the SVG data. This data can be written to
+    a file::
+
+        with open("block_to_custom_svg.svg", "w") as file:
+            file.write(svg_data)
+
+    This creates ``block_to_custom_svg.svg``, which can be opened by most web browsers:
+
+    .. image:: ../docs/images/block_to_custom_svg.svg
+
+    :param extra_node_info: A :class:`dict` mapping from (:class:`LogicNet` or
+        :class:`WireVector`) node to additional data about that node. The additional
+        data will be converted to :class:`str` and printed next to the node's label, in
+        parentheses.
+    :param extra_edge_info: A :class:`dict` mapping from :class:`WireVector` edge to
+        additional data about that edge. The additional data will be converted to
+        :class:`str` and printed next to the edge's label, in parentheses.
 
     :return: A function to label each element in the graph, which can be used as
-             :func:`output_to_graphviz` or :func:`block_to_graphviz_string`'s ``namer``.
+             :func:`block_to_graphviz_string`'s ``namer``.
     """
 
     def node_namer(node, split_state):
@@ -351,77 +409,73 @@ def graphviz_detailed_namer(
     return namer
 
 
-def output_to_graphviz(
-    file,
-    block: Block = None,
-    namer=_graphviz_default_namer,
-    split_state: bool = True,
-    maintain_arg_order: bool = False,
-):
-    """Walk the :class:`Block` and output it in `Graphviz <https://graphviz.org/>`_
-    format to the open file.
+def output_to_graphviz(file: TextIO, *args, **kwargs):
+    """Walk the :class:`Block` and output it in `Graphviz dot
+    <https://graphviz.org/doc/info/lang.html>`_ format to the open ``file``.
 
-    ``output_to_graphviz`` writes a file containing a directed graph in the format
-    expected by `Graphviz <https://graphviz.org/>`_, specifically in the :command:`dot`
-    format. Once Graphviz is installed, the resulting graph file can be rendered to a
-    ``.pdf`` file with::
+    ``output_to_graphviz`` writes a file containing a directed graph in `Graphviz dot
+    <https://graphviz.org/doc/info/lang.html>`_ format. When Graphviz is installed, the
+    resulting graph file can be rendered to a ``.pdf`` file with::
 
-        dot -Tpdf output.dot > output.pdf
+        $ dot -Tpdf output.dot > output.pdf
+
+    .. note::
+
+        Directly call :func:`block_to_graphviz_string` instead.
 
     :param file: Open file to write to.
-    :param block: :class:`Block` to use (defaults to current :ref:`working_block`)
-    :param namer: Function used to label each edge and node; see
-        :func:`block_to_graphviz_string` for more information.
-    :param split_state: If ``True``, visually split the connections to/from a
-        :class:`Register` update net.
-    :param maintain_arg_order: If ``True``, add ordering constraints so incoming edges
-        are ordered left-to-right for nets where argument order matters (e.g. ``<``).
-        Keeping this as ``False`` results in a cleaner, though less visually precise,
-        graphical output.
+    :param args: Any ``args`` are passed to :func:`block_to_graphviz_string`.
+    :param kwargs: Any ``kwargs`` are passed to :func:`block_to_graphviz_string`.
     """
-    print(
-        block_to_graphviz_string(block, namer, split_state, maintain_arg_order),
-        file=file,
-    )
+    print(block_to_graphviz_string(*args, **kwargs), file=file)
 
 
 def block_to_graphviz_string(
-    block: Block = None,
-    namer=_graphviz_default_namer,
+    block: Block | None = None,
+    namer: Callable = _graphviz_default_namer,
     split_state: bool = True,
     maintain_arg_order: bool = False,
-):
-    """Return a Graphviz string for the ``block``.
+) -> str:
+    """Return a `Graphviz dot <https://graphviz.org/doc/info/lang.html>`_ string
+    representing the ``block``.
 
-    The normal namer function will label user-named wires with their names and label the
-    nodes (:class:`LogicNets<LogicNet>` or :class:`Input`/:class:`Output`/:class:`Const`
-    terminals) with their operator symbol or name/value, respectively. If custom
-    information about each node in the graph is desired, you can pass in a custom namer
-    function which must have the same signature as the default namer,
-    :func:`_graphviz_default_namer`.
+    .. doctest only::
 
-    However, we recommend you instead pass in a call to :func:`graphviz_detailed_namer`,
-    supplying it with your own :class:`dicts<dict>` mapping wires and nodes to labels.
-    For any wire/node found in these maps, that additional information will be printed
-    in parentheses alongside the node in the ``graphviz`` graph.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
 
-    For example, if you wanted to print the delay of each wire and the fanout of each
-    gate, you could pass in two maps to the :func:`graphviz_detailed_namer` call, which
-    returns a namer function that can subsequently be passed to
-    :func:`output_to_graphviz` or :func:`block_to_graphviz_string`::
+    Example::
 
-        node_fanout = {n: f"Fanout: {my_fanout_func(n)}"
-                       for n in working_block().logic}
-        wire_delay = {w: f"Delay: {my_delay_func(w):.2f}"
-                      for w in working_block().wirevector_set}
+        >>> a = pyrtl.WireVector(name="a", bitwidth=3)
+        >>> b = pyrtl.WireVector(name="b", bitwidth=3)
+        >>> sum = a + b
+        >>> sum.name = "sum"
 
-        with open("out.gv", "w") as f:
-            output_to_graphviz(
-                f, namer=graphviz_detailed_namer(node_fanout, wire_delay))
+        >>> graphviz_data = pyrtl.block_to_graphviz_string()
 
-    :param namer: A function mapping graph objects (wires/logic nets) to labels. If you
-        want a more detailed namer, pass in a call to :func:`graphviz_detailed_namer`.
+    ``graphviz_data`` is a :class:`str` containing the Graphviz data. This data can be
+    written to a file::
+
+        with open("block_to_graphviz_string.dot", "w") as file:
+            file.write(graphviz_data)
+
+    And rendered with `Graphviz <https://graphviz.org/doc/info/command.html>`_'s
+    :command:`dot` tool::
+
+        $ dot -Tsvg block_to_graphviz_string.dot > block_to_graphviz_string.svg
+
+    This creates ``block_to_graphviz_string.svg``, which can be opened by most web
+    browsers:
+
+    .. image:: ../docs/images/block_to_graphviz_string.svg
+
+    .. note::
+
+        See :func:`block_to_svg` which automates the call to :command:`dot`.
+
     :param block: :class:`Block` to use (defaults to current :ref:`working_block`)
+    :param namer: A function mapping graph objects (:class:`.WireVector` or
+        :class:`.LogicNet`) to :class:`str` labels. See :func:`graphviz_detailed_namer`.
     :param bool split_state: If ``True``, split connections to/from a :class:`Register`
         update net; this means that registers will be appear as source nodes of the
         network, and ``r`` nets (i.e. the logic for setting :attr:`Register.next`) will
@@ -430,6 +484,8 @@ def block_to_graphviz_string(
         incoming edges are ordered left-to-right for nets where argument order matters
         (e.g. ``<``). Keeping this as ``False`` results in a cleaner, though less
         visually precise, graphical output.
+
+    :return: A Graphviz representation of the ``block``.
     """
     graph = net_graph(block, split_state)
     node_index_map = {}  # map node -> index
@@ -508,40 +564,59 @@ digraph g {
 #    .__/  \/  \__>
 
 
-def output_to_svg(file, block: Block = None, split_state: bool = True):
+def output_to_svg(file: TextIO, *args, **kwargs):
     """Output the block as an SVG to the open file.
 
+    .. note::
+
+        Directly call :func:`block_to_svg` instead.
+
     :param file: Open file to write to.
-    :param block: :class:`Block` to use (defaults to current :ref:`working_block`).
-    :param split_state: If ``True``, visually split the connections to/from a register
-        update net.
+    :param args: Any ``args`` are passed to :func:`block_to_graphviz_string`.
+    :param kwargs: Any ``kwargs`` are passed to :func:`block_to_graphviz_string`.
     """
-    print(block_to_svg(block, split_state), file=file)
+    print(block_to_svg(*args, **kwargs), file=file)
 
 
-def block_to_svg(
-    block: Block = None, split_state: bool = True, maintain_arg_order: bool = False
-):
-    """Return an SVG for the block.
+def block_to_svg(*args, **kwargs) -> str:
+    """Return a SVG rendering of a ``block``. Requires the `graphviz
+    <https://pypi.org/project/graphviz/>`_ ``pip`` package.
 
-    :param block: :class:`Block` to use (defaults to current :ref:`working_block`).
-    :param split_state: If ``True``, visually split the connections to/from a register
-        update net.
-    :param maintain_arg_order: If ``True``, will add ordering constraints so incoming
-        edges are ordered left-to-right for nets where argument order matters (e.g.
-        ``<``). Keeping this as ``False`` results in a cleaner, though less visually
-        precise, graphical output.
+    .. doctest only::
 
-    :return: The SVG representation of the :class:`Block`.
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    This just calls :func:`block_to_graphviz_string` and renders the Graphviz string as
+    SVG, using the `graphviz <https://pypi.org/project/graphviz/>`_ ``pip`` package.
+    Example::
+
+        >>> a = pyrtl.WireVector(name="a", bitwidth=3)
+        >>> b = pyrtl.WireVector(name="b", bitwidth=3)
+        >>> sum = a + b
+        >>> sum.name = "sum"
+
+        >>> svg_data = pyrtl.block_to_svg()
+
+    ``svg_data`` is a :class:`str` containing the SVG data. This data can be written to
+    a file::
+
+        with open("block_to_svg.svg", "w") as file:
+            file.write(svg_data)
+
+    This creates ``block_to_svg.svg``, which can be opened by most web browsers:
+
+    .. image:: ../docs/images/block_to_svg.svg
+
+    :param args: Any ``args`` are passed to :func:`block_to_graphviz_string`.
+    :param kwargs: Any ``kwargs`` are passed to :func:`block_to_graphviz_string`.
+
+    :return: A SVG representation of the ``block``.
     """
     try:
         from graphviz import Source
 
-        src = Source(
-            block_to_graphviz_string(
-                block, split_state=split_state, maintain_arg_order=maintain_arg_order
-            )
-        )
+        src = Source(block_to_graphviz_string(*args, **kwargs))
         try:
             svg = src._repr_image_svg_xml()
         except AttributeError:
@@ -592,8 +667,15 @@ def trace_to_json(
         >>> print(pyrtl.trace_to_json(sim.tracer, repr_func=str))
         {"signal": [{"name": "counter", "wave": "====", "data": ["0", "1", "2", "3"]}], "config": {"hscale": 1}, "head": {"tick": 0}}
 
-    Try pasting the WaveJSON output from the example above in the `WaveDrom editor
-    <https://wavedrom.com/editor.html>`_.
+    Pasting the WaveJSON output from the example above in the `WaveDrom editor
+    <https://wavedrom.com/editor.html>`_ produces this SVG:
+
+    .. image:: ../docs/images/wavedrom.svg
+
+    .. note::
+
+        Consider using :meth:`~.SimulationTrace.render_trace` or
+        :meth:`~.SimulationTrace.print_vcd` instead.
 
     :param simtrace: A trace to convert to WaveJSON.
     :param trace_list: (optional) A list of wires to include in the WaveJSON.
