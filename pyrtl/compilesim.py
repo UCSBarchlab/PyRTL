@@ -5,11 +5,11 @@ import ctypes
 import platform
 import shutil
 import subprocess
-import sys
 import tempfile
 import warnings
 from collections.abc import Mapping
 from os import path
+from typing import TextIO
 
 from pyrtl.core import Block, working_block
 from pyrtl.helperfuncs import infer_val_and_bitwidth
@@ -183,7 +183,7 @@ class CompiledSimulation:
         provided_inputs: dict[str, list[int]] | None = None,
         expected_outputs: dict[str, int] | None = None,
         nsteps: int | None = None,
-        file=sys.stdout,
+        file: TextIO | None = None,
         stop_after_first_error: bool = False,
     ):
         if expected_outputs is None:
@@ -247,12 +247,8 @@ class CompiledSimulation:
                 s = "(stopped after step with first error):"
             else:
                 s = "on one or more steps:"
-            file.write("Unexpected output " + s + "\n")
-            file.write(
-                "{:>5} {:>10} {:>8} {:>8}\n".format(
-                    "step", "name", "expected", "actual"
-                )
-            )
+            print("Unexpected output " + s, file=file)
+            print(f"{'step':>5} {'name':>10} {'expected':>8} {'actual':>8}", file=file)
 
             def _sort_tuple(t):
                 # Sort by step and then wire name
@@ -260,8 +256,7 @@ class CompiledSimulation:
 
             failed_sorted = sorted(failed, key=_sort_tuple)
             for step, name, expected, actual in failed_sorted:
-                file.write(f"{step:>5} {name:>10} {expected:>8} {actual:>8}\n")
-            file.flush()
+                print(f"{step:>5} {name:>10} {expected:>8} {actual:>8}", file=file)
 
     def run(self, inputs: list[dict[str, int]]):
         """Run many steps of the ``CompiledSimulation``.

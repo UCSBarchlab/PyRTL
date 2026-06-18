@@ -96,6 +96,28 @@ def rtl_assert(w: WireVector, exp: Exception, block: Block = None) -> Output:
     If at any time during execution the wire ``w`` is not ``True`` (i.e. when it is
     asserted low) then :class:`Simulation` will raise ``exp``.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> counter = pyrtl.Register(name="counter", bitwidth=2)
+        >>> counter.next <<= counter + 1
+
+        >>> counter_is_not_3 = counter != 3
+        >>> _ = pyrtl.rtl_assert(counter_is_not_3, AssertionError("counter is 3!"))
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step()
+        >>> sim.step()
+        >>> sim.step()
+        >>> sim.step()
+        Traceback (most recent call last):
+          ...
+        AssertionError: counter is 3!
+
     :param w: A 1-bit :class:`WireVector` to assert.
     :param exp: :class:`Exception` to throw when the assertion fails during
         :class:`Simulation`.

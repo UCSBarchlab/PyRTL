@@ -505,11 +505,27 @@ class Block:
 
         Filters :class:`LogicNets<LogicNet>` by their :attr:`~LogicNet.op`.
 
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
         If :class:`~LogicNet.op` is ``None``, returns all the
         :class:`LogicNets<LogicNet>` associated with the ``Block``. Otherwise, returns a
         set of the :class:`LogicNets<LogicNet>` with one of the specified
-        :class:`ops<LogicNet.op>`. This is helpful for getting all memories of a block
-        for example.
+        :class:`ops<LogicNet.op>`. This is helpful for getting all registers in a block,
+        for example::
+
+            >>> counter = pyrtl.Register(name="counter", bitwidth=2)
+
+            >>> # Manually truncate the Register's input so we can give it a name.
+            >>> next = (counter + 1).truncate(2)
+            >>> next.name = "next"
+
+            >>> counter.next <<= next
+
+            >>> pyrtl.working_block().logic_subset("r")
+            {LogicNet(op='r', op_param=None, args=(next/2W,), dests=(counter/2R,))}
 
         :param op: :attr:`LogicNet.op` to filter on. Defaults to ``None``.
 
@@ -1084,6 +1100,21 @@ def working_block(block: Block = None) -> Block:
     return the "current working block". However, if a ``block`` is passed in it will
     simply return ``block`` instead. This feature is useful in allowing functions to
     "override" the current working block.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=3)
+        >>> b = pyrtl.Input(name="b", bitwidth=3)
+        >>> sum = a + b
+        >>> sum.name = "sum"
+
+        >>> print(pyrtl.working_block())
+        sum/4W <-- + -- a/3I, b/3I
     """
 
     if block is None:

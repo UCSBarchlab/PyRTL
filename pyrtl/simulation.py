@@ -6,7 +6,6 @@ import math
 import numbers
 import os
 import re
-import sys
 import warnings
 from collections.abc import Callable, Mapping
 from typing import TextIO
@@ -288,7 +287,7 @@ class Simulation:
         provided_inputs: dict[str, list[int]] | None = None,
         expected_outputs: dict[str, list[int]] | None = None,
         nsteps: int | None = None,
-        file=sys.stdout,
+        file: TextIO | None = None,
         stop_after_first_error: bool = False,
     ):
         """Take the simulation forward ``N`` cycles, based on ``provided_inputs`` for
@@ -414,12 +413,8 @@ class Simulation:
                 s = "(stopped after step with first error):"
             else:
                 s = "on one or more steps:"
-            file.write("Unexpected output " + s + "\n")
-            file.write(
-                "{:>5} {:>10} {:>8} {:>8}\n".format(
-                    "step", "name", "expected", "actual"
-                )
-            )
+            print("Unexpected output " + s, file=file)
+            print(f"{'step':>5} {'name':>10} {'expected':>8} {'actual':>8}", file=file)
 
             def _sort_tuple(t):
                 # Sort by step and then wire name
@@ -427,8 +422,7 @@ class Simulation:
 
             failed_sorted = sorted(failed, key=_sort_tuple)
             for step, name, expected, actual in failed_sorted:
-                file.write(f"{step:>5} {name:>10} {expected:>8} {actual:>8}\n")
-            file.flush()
+                print(f"{step:>5} {name:>10} {expected:>8} {actual:>8}", file=file)
 
     def inspect(self, w: str) -> int:
         """Get the value of a :class:`WireVector` in the current ``Simulation`` cycle.
@@ -734,7 +728,7 @@ class FastSimulation:
         provided_inputs: dict[str, list[int]] | None = None,
         expected_outputs: dict[str, list[int]] | None = None,
         nsteps: int | None = None,
-        file=sys.stdout,
+        file: TextIO | None = None,
         stop_after_first_error: bool = False,
     ):
         if expected_outputs is None:
@@ -807,12 +801,8 @@ class FastSimulation:
                 s = "(stopped after step with first error):"
             else:
                 s = "on one or more steps:"
-            file.write("Unexpected output " + s + "\n")
-            file.write(
-                "{:>5} {:>10} {:>8} {:>8}\n".format(
-                    "step", "name", "expected", "actual"
-                )
-            )
+            print("Unexpected output " + s, file=file)
+            print(f"{'step':>5} {'name':>10} {'expected':>8} {'actual':>8}", file=file)
 
             def _sort_tuple(t):
                 # Sort by step and then wire name
@@ -820,8 +810,7 @@ class FastSimulation:
 
             failed_sorted = sorted(failed, key=_sort_tuple)
             for step, name, expected, actual in failed_sorted:
-                file.write(f"{step:>5} {name:>10} {expected:>8} {actual:>8}\n")
-            file.flush()
+                print(f"{step:>5} {name:>10} {expected:>8} {actual:>8}", file=file)
 
     def inspect(self, w: str) -> int:
         try:
@@ -1638,21 +1627,25 @@ class SimulationTrace:
         for wire_name in self.trace:
             self.trace[wire_name].append(fastsim.context[wire_name])
 
-    def print_trace(self, file=sys.stdout, base: int = 10, compact: bool = False):
+    def print_trace(
+        self, file: TextIO | None = None, base: int = 10, compact: bool = False
+    ):
         """Prints a list of wires and their values in each cycle.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
 
         Example::
 
-            counter = pyrtl.Register(name="counter", bitwidth=2)
-            counter.next <<= counter + 1
+            >>> counter = pyrtl.Register(name="counter", bitwidth=2)
+            >>> counter.next <<= counter + 1
 
-            sim = pyrtl.Simulation()
-            sim.step_multiple(nsteps=4)
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step_multiple(nsteps=4)
 
-            sim.tracer.print_trace()
-
-        Which prints::
-
+            >>> sim.tracer.print_trace()
                 --- Values in base 10 ---
             counter 0 1 2 3
 
@@ -1672,23 +1665,21 @@ class SimulationTrace:
         if compact:
             for w in sorted(self.trace, key=_trace_sort_key):
                 vals = "".join("{0:{1}}".format(x, basekey) for x in self.trace[w])
-                file.write(w.rjust(ident_len) + " " + vals + "\n")
+                print(w.rjust(ident_len) + " " + vals, file=file)
         else:
             maxlenval = max(
                 len("{0:{1}}".format(x, basekey))
                 for w in self.trace
                 for x in self.trace[w]
             )
-            file.write(" " * (ident_len - 3) + f"--- Values in base {base} ---\n")
+            print(" " * (ident_len - 3) + f"--- Values in base {base} ---", file=file)
             for w in sorted(self.trace, key=_trace_sort_key):
                 vals = " ".join(
                     "{0:>{1}{2}}".format(x, maxlenval, basekey) for x in self.trace[w]
                 )
-                file.write(w.ljust(ident_len + 1) + vals + "\n")
+                print(w.ljust(ident_len + 1) + vals, file=file)
 
-        file.flush()
-
-    def print_vcd(self, file: TextIO = sys.stdout, include_clock: bool = False):
+    def print_vcd(self, file: TextIO | None = None, include_clock: bool = False):
         """Convert the trace to a `VCD
         <https://en.wikipedia.org/wiki/Value_change_dump>`_ file, for use with tools
         like `GTKWave <https://gtkwave.github.io/gtkwave/>`_.
@@ -1767,12 +1758,11 @@ class SimulationTrace:
                 print("b0 clk", file=file)
             print(file=file)
         print("".join(["#", str(endtime * 10)]), file=file)
-        file.flush()
 
     def render_trace(
         self,
         trace_list: list[str] | None = None,
-        file=sys.stdout,
+        file: TextIO | None = None,
         renderer: WaveRenderer = _default_renderer,
         symbol_len: int | None = None,
         repr_func: Callable[[int], str] = hex,
@@ -1786,7 +1776,8 @@ class SimulationTrace:
             counter = pyrtl.Register(name="counter", bitwidth=2)
             counter.next <<= counter + 1
 
-            sim = pyrtl.Simulation() sim.step_multiple(nsteps=4)
+            sim = pyrtl.Simulation()
+            sim.step_multiple(nsteps=4)
 
             sim.tracer.render_trace()
 
@@ -2001,7 +1992,7 @@ class SimulationTrace:
         self.register_value_map = register_value_map
         self.memory_value_map = memory_value_map
 
-    def print_perf_counters(self, *trace_names: str, file=None):
+    def print_perf_counters(self, *trace_names: str, file: TextIO | None = None):
         """Print performance counter statistics for ``trace_names``.
 
         This function prints the number of cycles where each trace's value is one. This
@@ -2070,11 +2061,13 @@ def enum_name(EnumClass: type) -> Callable[[int], str]:
         >>> pyrtl.enum_name(Option)(1)
         'BAR'
 
-        >>> option = pyrtl.Input(name="option", bitwidth=1)
+    :meth:`~SimulationTrace.render_trace` example::
 
-        >>> sim = pyrtl.Simulation()
-        >>> sim.step_multiple({"option": [Option.FOO, Option.BAR]})
-        >>> sim.tracer.render_trace(repr_per_name={"option": pyrtl.enum_name(Option)})
+        option = pyrtl.Input(name="option", bitwidth=1)
+
+        sim = pyrtl.Simulation()
+        sim.step_multiple({"option": [Option.FOO, Option.BAR]})
+        sim.tracer.render_trace(repr_per_name={"option": pyrtl.enum_name(Option)})
 
     Which prints::
 

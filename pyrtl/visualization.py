@@ -116,7 +116,7 @@ def _trivialgraph_default_namer(thing, is_edge=True):
 
 
 def output_to_trivialgraph(
-    file: TextIO,
+    file: TextIO | None = None,
     namer: Callable[[WireVector | LogicNet, bool], str] = _trivialgraph_default_namer,
     block: Block | None = None,
     split_state: bool = False,
@@ -139,7 +139,7 @@ def output_to_trivialgraph(
 
     .. image:: ../docs/images/output_to_trivialgraph.svg
 
-    :param file: Open file to write to.
+    :param file: Open file to write to. Defaults to stdout.
     :param namer: A function that takes in an object (a :class:`WireVector` or
         :class:`LogicNet`) as the first argument and a boolean ``is_edge`` as the second
         that is set ``True`` if the object is a :class:`WireVector`, and returns a

@@ -1820,7 +1820,9 @@ class Register(WireVector):
             >>> import pyrtl
             >>> pyrtl.reset_working_block()
 
-        Example with ``State``::
+        See :class:`Register`'s documentation above for a basic example. The example
+        below demonstrates the ``State`` option, which is useful for state machine
+        registers::
 
             >>> import enum
             >>> class MyState(enum.IntEnum):
@@ -1832,14 +1834,20 @@ class Register(WireVector):
             >>> state = pyrtl.Register(
             ...     name="state", State=MyState, reset_value=MyState.ONE
             ... )
+            >>> # The Register infers its bitwidth from the largest MyState.
             >>> state.bitwidth
             2
+            >>> state.reset_value
+            1
 
             >>> state.next <<= state + 1
 
-            >>> sim = pyrtl.Simulation()
-            >>> sim.step_multiple(nsteps=4)
-            >>> sim.tracer.render_trace()
+        When a ``Register`` is constructed with ``State``,
+        :meth:`~.SimulationTrace.render_trace` displays ``State`` names by default::
+
+            sim = pyrtl.Simulation()
+            sim.step_multiple(nsteps=4)
+            sim.tracer.render_trace()
 
         Which prints::
 
