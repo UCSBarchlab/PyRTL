@@ -1702,7 +1702,8 @@ class SimulationTrace:
             sim = pyrtl.Simulation()
             sim.step_multiple(nsteps=4)
 
-            sim.tracer.print_vcd(file=open("trace.vcd", "w"))
+            with open("trace.vcd", "w") as file:
+                sim.tracer.print_vcd(file)
 
         This creates ``trace.vcd``, which can be opened in `GTKWave
         <https://gtkwave.github.io/gtkwave/>`_:

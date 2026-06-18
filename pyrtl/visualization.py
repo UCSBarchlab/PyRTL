@@ -130,7 +130,9 @@ def output_to_trivialgraph(
         b = pyrtl.WireVector(name="b", bitwidth=3)
         sum = a + b
         sum.name = "sum"
-        pyrtl.output_to_trivialgraph(open("block.tgf", "w"))
+
+        with open("block.tgf", "w") as file:
+            pyrtl.output_to_trivialgraph(file)
 
     This creates ``block.tgf`` which can be opened with tools like `yEd live
     <https://www.yworks.com/yed-live/>`_, which produces this ``.svg`` file:
