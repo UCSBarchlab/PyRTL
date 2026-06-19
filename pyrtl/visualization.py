@@ -650,7 +650,7 @@ def trace_to_json(
 
     The returned WaveJSON is compatible with `WaveDrom
     <https://github.com/wavedrom/wavedrom/>`_; see the `WaveDrom README
-    <https://github.com/wavedrom/wavedrom/blob/trunk/README.md#html-pages>`_ for various
+    <https://github.com/wavedrom/wavedrom/blob/trunk/README.md#cli>`_ for various
     ways to visualize WaveJSON.
 
     .. doctest only::

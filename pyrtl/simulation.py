@@ -1684,19 +1684,44 @@ class SimulationTrace:
         <https://en.wikipedia.org/wiki/Value_change_dump>`_ file, for use with tools
         like `GTKWave <https://gtkwave.github.io/gtkwave/>`_.
 
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
         Dumps the current trace to file as a `value change dump
         <https://en.wikipedia.org/wiki/Value_change_dump>`_ file. Example::
 
-            counter = pyrtl.Register(name="counter", bitwidth=2)
-            counter.next <<= counter + 1
+            >>> counter = pyrtl.Register(name="counter", bitwidth=2)
+            >>> counter.next <<= counter + 1
 
-            sim = pyrtl.Simulation()
-            sim.step_multiple(nsteps=4)
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step_multiple(nsteps=4)
 
-            with open("trace.vcd", "w") as file:
-                sim.tracer.print_vcd(file)
+            >>> sim.tracer.print_vcd()
+            $timescale 1ns $end
+            $scope module logic $end
+            $var wire 2 counter counter $end
+            $upscope $end
+            $enddefinitions $end
+            $dumpvars
+            b0 counter
+            $end
+            #0
+            b0 counter
+            <BLANKLINE>
+            #10
+            b1 counter
+            <BLANKLINE>
+            #20
+            b10 counter
+            <BLANKLINE>
+            #30
+            b11 counter
+            <BLANKLINE>
+            #40
 
-        This creates ``trace.vcd``, which can be opened in `GTKWave
+        This VCD output can be saved to a ``file`` and opened in `GTKWave
         <https://gtkwave.github.io/gtkwave/>`_:
 
         .. image:: ../docs/screenshots/gtkwave.png

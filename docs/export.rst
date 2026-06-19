@@ -15,8 +15,8 @@ Exporting Testbenches
 Importing Verilog
 -----------------
 
-.. autofunction:: pyrtl.input_from_blif
 .. autofunction:: pyrtl.input_from_verilog
+.. autofunction:: pyrtl.input_from_blif
 
 Visualizing Blocks
 ------------------

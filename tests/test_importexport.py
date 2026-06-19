@@ -1,3 +1,4 @@
+import doctest
 import io
 import random
 import subprocess
@@ -311,6 +312,15 @@ clock_passing_blif = r"""
 .subckt my_4bit_dff din[0]=a[0] din[1]=a[1] din[2]=a[2] din[3]=a[3] en=$true mclk=pclk q[0]=c[0] q[1]=c[1] q[2]=c[2] q[3]=c[3]
 .end
 """  # noqa
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+
+    def test_doctests(self):
+        failures, tests = doctest.testmod(m=pyrtl.importexport)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 class TestInputFromBlif(unittest.TestCase):
