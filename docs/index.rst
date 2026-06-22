@@ -2,23 +2,23 @@
    :google-site-verification: sO_rsKD1QKb6nFywsuLnRDiz8Ekep-jVNpBDMm65wQc
 
 =====
-PYRTL
+PyRTL
 =====
 
-A collection of classes providing simple `RTL
+PyRTL is a collection of classes that provide simple `RTL
 <https://en.wikipedia.org/wiki/Register-transfer_level>`_ specification,
-simulation, tracing, and testing suitable for teaching and research.
-Simplicity, usability, clarity, and extensibility rather than performance or
-optimization is the overarching goal. With PyRTL you can use the full power of
+simulation, tracing, and testing, suitable for teaching and research.
+Simplicity, usability, clarity, and extensibility are overarching goals, rather
+than performance or optimization. With PyRTL you can use the full power of
 Python to describe complex synthesizable digital designs, simulate and test
 them, and export them to `Verilog <https://en.wikipedia.org/wiki/Verilog>`_.
 
 Quick links
 ===========
 * Get an overview from the `PyRTL Project Webpage <http://ucsbarchlab.github.io/PyRTL/>`_
-* Read through `Example PyRTL Code <https://github.com/UCSBarchlab/PyRTL/tree/development/examples>`_
-* File a `Bug or Issue Report <https://github.com/UCSBarchlab/PyRTL/issues>`_
-* Contribute to project on `GitHub <https://github.com/UCSBarchlab/PyRTL>`_
+* See some `PyRTL Examples <https://github.com/UCSBarchlab/PyRTL/tree/development/examples>`_
+* File a `Bug Report or Issue <https://github.com/UCSBarchlab/PyRTL/issues>`_
+* Contribute to the project on `GitHub <https://github.com/UCSBarchlab/PyRTL>`_
 
 Installation
 ============
@@ -28,7 +28,7 @@ Installation
     pip install pyrtl
 
 PyRTL is listed in `PyPI <http://pypi.python.org/pypi/pyrtl>`_ and can be
-installed with :program:`pip` or :program:`pip3`.
+installed with :program:`pip`.
 
 Design, Simulate, and Inspect in 15 lines
 =========================================
@@ -38,31 +38,43 @@ Design, Simulate, and Inspect in 15 lines
 
     import pyrtl
 
-    a = pyrtl.Input(8,'a')  # input "pins"
-    b = pyrtl.Input(8,'b')
-    q = pyrtl.Output(8,'q')  # output "pins"
-    gt5 = pyrtl.Output(1,'gt5')
+    a = pyrtl.Input(name="a", bitwidth=8)  # Input "pins".
+    b = pyrtl.Input(name="b", bitwidth=8)
+    q = pyrtl.Output(name="q", bitwidth=8)  # Output "pins".
+    gt5 = pyrtl.Output(name="gt5", bitwidth=1)
 
-    result = a + b  # makes an 8-bit adder
-    q <<= result  # assigns output of adder to out pin
-    gt5 <<= result > 5  # does a comparison, assigns that to different pin
+    result = a + b  # Makes an 8-bit adder.
+    q <<= result  # Assigns output of adder to output pin.
+    gt5 <<= result > 5  # Compare and assign result to output pin.
 
-    # simulate and output the resulting waveform to the terminal
+    # Simulate and display waveforms in the terminal.
     sim = pyrtl.Simulation()
-    sim.step_multiple({'a':[0,1,2,3,4], 'b':[2,2,3,3,4]})
+    sim.step_multiple({"a": [0, 1, 2, 3, 4], "b": [2, 2, 3, 3, 4]})
     sim.tracer.render_trace()
 
-After you have PyRTL installed, you should be able to cut and paste the above
-into a file and run it with Python. The result you should see, drawn right into
-the terminal, is the output of the simulation. While a great deal of work has
-gone into making hardware design in PyRTL as friendly as possible, please don't
-mistake that for a lack of depth. You can just as easily export to Verilog or
-other hardware formats, view results with your favorite waveform viewer, build
-hardware transformation passes, run JIT-accelerated simulations, design, test,
-verify hugely complex digital systems, and much more. Most critically of all it
-is easy to extend with your own approaches to digital hardware development as
-you find necessary.
+After installing PyRTL, you can copy and paste the code above into a Python
+interpreter. You should see simulation waveforms drawn right in your terminal:
 
+.. image:: ../docs/screenshots/index-demo.png
+
+Line 14's call to :meth:`.Simulation.step_multiple` runs the simulation for
+five cycles, providing input values for ``a`` and ``b`` for each cycle. For
+example, in the second cycle, ``a`` will be ``1`` and ``b`` will be ``2``. The
+five cycles are numbered ``0`` to ``4`` in the first line displayed by
+:meth:`~.SimulationTrace.render_trace`.
+
+:meth:`~.SimulationTrace.render_trace`'s last line shows that ``q`` is ``0x3``
+in the second cycle, which is the result of computing ``a + b``. And the
+second-to-last line shows that ``gt5`` is low in the second cycle, which is the
+result of computing ``a + b > 5``.
+
+While a great deal of work has gone into making hardware design in PyRTL as
+friendly as possible, please don't mistake that for a lack of depth. You can
+just as easily export to Verilog or other hardware formats, view results with
+your favorite waveform viewer, build hardware transformation passes, run
+JIT-accelerated simulations, design, test, verify hugely complex digital
+systems, and much more. Most critically of all it is easy to extend with your
+own approaches to digital hardware development as you find necessary.
 
 Overview of PyRTL
 =================
