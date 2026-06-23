@@ -43,7 +43,7 @@
 
       .. grid-item::
 
-         .. button-link:: https://mybinder.org/v2/gh/UCSBarchlab/PyRTL/development?filepath=%2Fipynb-examples%2F
+         .. button-link:: lite/index.html
             :color: secondary
             :expand:
             :shadow:
@@ -59,6 +59,8 @@ simulation. Get started with:
 .. code-block:: shell
 
     $ pip install pyrtl
+
+or `try our examples in your browser <lite/index.html>`_.
 
 Features
 ========
@@ -113,6 +115,10 @@ differences between the approaches.
             The code below provides everything needed to instantiate, simulate, and
             visualize the resulting design.
 
+            .. jupyterlite:: ipynb-examples/example-gcd.ipynb
+               :new_tab: True
+               :new_tab_button_text: Try this example in your browser
+
             .. literalinclude:: examples/example-gcd.py
 
             .. image:: ../docs/screenshots/gcd.png
@@ -127,6 +133,10 @@ differences between the approaches.
             ``zs`` is the registers required to implement the delay. ``fir`` returns
             an output ``y`` which is the resulting sum of products and is valid every
             cycle (since the design is naturally fully pipelined).
+
+            .. jupyterlite:: ipynb-examples/example-fir.ipynb
+               :new_tab: True
+               :new_tab_button_text: Try this example in your browser
 
             .. literalinclude:: examples/example-fir.py
 
@@ -144,12 +154,17 @@ differences between the approaches.
             like :func:`~functools.reduce`, which is used to chain together multiple
             ``max_2`` elements into a bigger ``max_n``.
 
+            .. jupyterlite:: ipynb-examples/example-maxn.ipynb
+               :new_tab: True
+               :new_tab_button_text: Try this example in your browser
+
             .. literalinclude:: examples/example-maxn.py
 
             .. image:: ../docs/screenshots/maxn.png
                :width: 15em
 
          .. tab-item:: Mul
+
 
             ``mul`` generates a small 4 x 4 multiplier with a simple `ROM
             <https://en.wikipedia.org/wiki/Read-only_memory>`_ lookup. The first two
@@ -160,6 +175,10 @@ differences between the approaches.
             hardware simply :func:`concats <pyrtl.concat>` the two 4-bit inputs into
             an 8-bit ROM address and returns the value stored in the ROM at that
             address.
+
+            .. jupyterlite:: ipynb-examples/example-mul.ipynb
+               :new_tab: True
+               :new_tab_button_text: Try this example in your browser
 
             .. literalinclude:: examples/example-mul.py
 
@@ -177,6 +196,10 @@ differences between the approaches.
             :class:`list` that keeps track of the wires carrying the sum bits. The
             final ``full_sum`` is produced by concatenating the wires in ``sum`` with
             :func:`~pyrtl.concat_list`.
+
+            .. jupyterlite:: ipynb-examples/example-adder.ipynb
+               :new_tab: True
+               :new_tab_button_text: Try this example in your browser
 
             .. literalinclude:: examples/example-adder.py
 
@@ -218,9 +241,8 @@ by 2 and sum them into a :class:`~pyrtl.WireVector` ``y``::
     y = sum([elem * 2 for elem in x])
 
 Hardware comprehensions are surprisingly useful. We'll cover an example in more
-detail below, but if you just want to play around with PyRTL `try Jupyter
-Notebooks on any of our examples on MyBinder
-<https://mybinder.org/v2/gh/UCSBarchlab/PyRTL/development?filepath=%2Fipynb-examples%2F>`_.
+detail below, but if you just want to play around with PyRTL, `try our examples
+in your browser <lite/index.html>`_.
 
 Hello N-bit Ripple-Carry Adder!
 ===============================
@@ -232,6 +254,10 @@ see how you might express one in PyRTL. Rather than the typical `Verilog
 introduction to fixed 4-bit adders
 <https://www.youtube.com/watch?v=bL3ihMA8_Gs>`_, let's go ahead and build an
 `arbitrary` bitwidth adder.
+
+.. jupyterlite:: ipynb-examples/example-ripple-carry.ipynb
+   :new_tab: True
+   :new_tab_button_text: Try this example in your browser
 
 .. literalinclude:: examples/example-ripple-carry.py
 
@@ -245,4 +271,3 @@ running from 0 to 7 and repeating:
 
 .. image:: ../docs/screenshots/ripple-carry.png
    :width: 34em
-

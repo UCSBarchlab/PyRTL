@@ -41,7 +41,7 @@ docs:
         uv run sphinx-build -M html docs/ docs/_build
 
 www:
-        # Run `sphinx-build` to generate github.io webpage.
+        # Run `sphinx-build` to generate PyRTL's webpage.
         #
         # Output: www/_build/html/index.html
         uv run sphinx-build -M html www/ www/_build

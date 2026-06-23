@@ -1,5 +1,7 @@
 import pyrtl
 
+# # ROM-based multiplier example.
+
 
 def mul(x: pyrtl.WireVector, y: pyrtl.WireVector) -> pyrtl.WireVector:
     assert x.bitwidth == 4
@@ -18,6 +20,7 @@ product = pyrtl.Output(name="product", bitwidth=8)
 
 product <<= mul(a, b)
 
+# Simulate the design.
 sim = pyrtl.Simulation()
 sim.step_multiple({"a": [1, 2, 3], "b": [2, 3, 4]})
 sim.tracer.render_trace()

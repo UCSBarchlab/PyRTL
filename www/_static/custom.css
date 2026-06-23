@@ -64,6 +64,22 @@ a code {
     --sd-color-secondary-highlight: #7a8e9c;
     --sd-color-tabs-underline: rgba(222, 222, 222, 0);
 }
+/* "Try this example in your browser" buttons. */
+.try_examples_button {
+    font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1rem;
+    color: white;
+    background-color: #6a7e8c;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    box-shadow: 0 2px 5px rgba(108,108,108,0.2);
+}
+.try_examples_button:hover {
+    background-color: #7a8e9c;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
 
 /* Hero banner. */
 div.document {
