@@ -1,57 +1,27 @@
 *.py[cod]
-
-# coverage
-.coverage/
-coverage.xml
-
-# C extensions
-*.so
+__pycache__
 
 # Packages
-*.egg-info
-dist
-build
-parts
-bin
-var
-sdist
-.installed.cfg
-lib
-lib64
-__pycache__
+dist/
 
 # Unit test / coverage reports
 .coverage
+coverage.xml
 
-# Translations
-*.mo
-
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
-
-# pycharm
-.idea
-
-# Apple crap
+# Apple and Windows crap
 .DS_Store
+Thumbs.db
 
-# Stuff specifically for PyRTL
-spice.net
-_build
-
-# Verilog files
-# There must be a very good reason for someone to add a verilog file to the repo
-.v
-
-# VS Code
-.vscode
-
-# Python venv
-pyvenv.cfg
+# Sphinx
+_build/
 
 # Jupyter
 .ipynb_checkpoints
 .jupyterlite.doit.db
-_output
+_output/
+
+# pycharm
+.idea
+
+# VS Code
+.vscode

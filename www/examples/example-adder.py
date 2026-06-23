@@ -1,5 +1,7 @@
 import pyrtl
 
+# # Ripple-carry adder example.
+
 
 def fa(
     x: pyrtl.WireVector, y: pyrtl.WireVector, cin: pyrtl.WireVector
@@ -32,6 +34,7 @@ sum = pyrtl.Output(name="sum", bitwidth=8)
 sum_, cout_ = adder(a, b, pyrtl.Const(0))
 sum <<= sum_
 
+# Simulate the design.
 sim = pyrtl.Simulation()
 sim.step_multiple({"a": [1, 2, 3], "b": [2, 3, 4]})
 sim.tracer.render_trace()

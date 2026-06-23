@@ -1,5 +1,7 @@
 import pyrtl
 
+# # Greatest common denominator example.
+
 
 def gcd(
     a: pyrtl.WireVector, b: pyrtl.WireVector, begin: pyrtl.WireVector
@@ -32,6 +34,7 @@ x_, done_ = gcd(a, b, begin)
 x <<= x_
 done <<= done_
 
+# Simulate the design.
 sim = pyrtl.Simulation()
 sim.step({"a": 12, "b": 9, "begin": True})
 while not sim.inspect("done"):

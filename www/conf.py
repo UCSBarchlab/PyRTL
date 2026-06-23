@@ -15,7 +15,12 @@ master_doc = "index"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.intersphinx", "sphinx_copybutton", "sphinx_design"]
+extensions = [
+    "jupyterlite_sphinx",
+    "sphinx.ext.intersphinx",
+    "sphinx_copybutton",
+    "sphinx_design",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -23,13 +28,15 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["examples", "ipynb-examples", "_build", "Thumbs.db", ".DS_Store"]
 
 # Enable links to Python standard library classes (str, list, dict, etc).
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "pyrtl": ("https://pyrtl.readthedocs.io/en/latest/", None),
 }
+
+jupyterlite_contents = "../ipynb-examples"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -49,3 +56,4 @@ html_show_sphinx = False
 html_show_copyright = False
 html_show_sourcelink = False
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]

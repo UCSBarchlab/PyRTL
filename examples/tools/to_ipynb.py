@@ -2,7 +2,7 @@
 
 Usage::
 
-    python to_ipynb.py example1-combologic.py example1-combologic.ipynb
+    $ uv run to_ipynb.py example1-combologic.py example1-combologic.ipynb
 
 This converts comment blocks to Markdown cells, and code blocks to code cells, with some
 PyRTL-specific transformations:
@@ -168,24 +168,27 @@ def to_ipynb(source_name: str, target_name: str):
             while current_code_source[-1].rstrip() == "":
                 current_code_source = current_code_source[:-1]
 
-                for code_line in current_code_source:
-                    if not found_imports and (
-                        code_line.startswith("import pyrtl")
-                        or code_line.startswith("from pyrtl")
-                    ):
-                        found_imports = True
-                        pip_packages = "pyrtl"
-                        if "verilog" in source_name:
-                            pip_packages = "pyrtl pyparsing"
+            for code_line in current_code_source:
+                if not found_imports and (
+                    code_line.startswith("import pyrtl")
+                    or code_line.startswith("from pyrtl")
+                ):
+                    found_imports = True
+                    pip_packages = "pyrtl"
+                    if "verilog" in source_name:
+                        pip_packages = "pyrtl[blif]"
 
-                        current_code_source = [
-                            f"%pip install {pip_packages}\n",
-                            "\n",
-                            *current_code_source,
-                            "\n",
-                            "pyrtl.reset_working_block()\n",
-                        ]
-                        break
+                    current_code_source = [
+                        f"%pip install {pip_packages}\n",
+                        "\n",
+                        *current_code_source,
+                        "\n",
+                        "pyrtl.reset_working_block()",
+                    ]
+                    break
+
+            # Remove any trailing whitespace from the code block's last line.
+            current_code_source[-1] = current_code_source[-1].rstrip()
 
             cells.append(_code_template | {"source": current_code_source})
             current_code_source = []

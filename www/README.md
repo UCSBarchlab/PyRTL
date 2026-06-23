@@ -32,6 +32,18 @@ $ uv run just www
 This builds a local copy of PyRTL's webpage in `www/_build/html`.
 `www/_build/html/index.html` is the home page.
 
+## Running JupyterLite Examples
+
+The generated page in `www/_build/html/index.html` can be viewed in any web
+browser, but the JupyterLite examples won't work unless you run a web server:
+
+```shell
+$ cd www/_build/html/
+$ uv run python3 -m http.server
+```
+
+Then open the URL displayed in your terminal.
+
 ## GitHub Actions Workflow
 
 When a commit is pushed that changes `www/`, the

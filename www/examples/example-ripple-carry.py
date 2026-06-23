@@ -1,5 +1,7 @@
 import pyrtl
 
+# # Ripple-carry adder example.
+
 
 def one_bit_add(
     a: pyrtl.WireVector, b: pyrtl.WireVector, carry_in: pyrtl.WireVector | int

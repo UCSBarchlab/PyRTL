@@ -8,7 +8,7 @@ PyRTL
 [![Build Status](https://github.com/UCSBarchlab/PyRTL/actions/workflows/python-test.yml/badge.svg)](https://github.com/UCSBarchlab/PyRTL/actions/workflows/python-test.yml)
 [![Code Coverage](https://codecov.io/github/UCSBarchlab/PyRTL/coverage.svg?branch=development)](https://codecov.io/github/UCSBarchlab/PyRTL?branch=development)
 [![Documentation Status](https://readthedocs.org/projects/pyrtl/badge/?version=latest)](http://pyrtl.readthedocs.org/en/latest/?badge=latest)
-[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/UCSBarchlab/PyRTL/development?filepath=%2Fipynb-examples%2F)
+[![JupyterLite](https://jupyterlite.readthedocs.io/en/latest/_static/badge.svg)](http://ucsbarchlab.github.io/PyRTL/lite/index.html)
 
 PyRTL provides a collection of classes for Pythonic [register-transfer
 level](https://en.wikipedia.org/wiki/Register-transfer_level) design,
@@ -41,8 +41,8 @@ written in PyRTL.
   page](http://ucsbarchlab.github.io/PyRTL/).
 * Try the examples in the
   [`examples`](https://github.com/UCSBarchlab/PyRTL/tree/development/examples)
-  directory. You can also [try the examples on
-  MyBinder](https://mybinder.org/v2/gh/UCSBarchlab/PyRTL/development?filepath=%2Fipynb-examples%2F).
+  directory. You can also [try the examples in your
+  browser](http://ucsbarchlab.github.io/PyRTL/lite/index.html).
 * [Full reference documentation](https://pyrtl.readthedocs.io/) is available.
 
 ### Package Contents
@@ -182,10 +182,12 @@ needed. `uv` caches installed software so future `uv` invocations will be fast.
   information into annotations instead of docstrings.
 * The Sphinx-generated documentation is published to
   https://pyrtl.readthedocs.io/ .
-* PyRTL's Sphinx build process is documented in
+* PyRTL's documentation build process is documented in
   [`docs/README.md`](https://github.com/UCSBarchlab/PyRTL/blob/development/docs/README.md).
 * PyRTL's release process is documented in
   [`docs/release/README.md`](https://github.com/UCSBarchlab/PyRTL/blob/development/docs/release/README.md).
+* PyRTL's webpage build process is documented in
+  [`www/README.md`](https://github.com/UCSBarchlab/PyRTL/blob/development/www/README.md).
 
 ### Using PyRTL
 
