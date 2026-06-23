@@ -1374,7 +1374,7 @@ class Utf8RendererConstants(RendererConstants):
     vertical rising and falling edges. Multi-bit :class:`WireVector` values are rendered
     in reverse-video rectangles.
 
-    This is the default renderer on non-Windows platforms.
+    This is the default renderer.
 
     Enable this renderer by default by setting the ``PYRTL_RENDERER`` environment
     variable to ``utf-8``::
@@ -1382,6 +1382,7 @@ class Utf8RendererConstants(RendererConstants):
         export PYRTL_RENDERER=utf-8
 
     .. image:: ../docs/screenshots/pyrtl-renderer-demo-utf-8.png
+       :width: 35em
     """
 
     # Start reverse-video, reset all attributes
@@ -1422,6 +1423,7 @@ class Utf8AltRendererConstants(RendererConstants):
         export PYRTL_RENDERER=utf-8-alt
 
     .. image:: ../docs/screenshots/pyrtl-renderer-demo-utf-8-alt.png
+       :width: 25em
     """
 
     # Start reverse-video, reset all attributes
@@ -1452,7 +1454,7 @@ class PowerlineRendererConstants(Utf8RendererConstants):
     in reverse-video hexagons.
 
     This renderer requires a `terminal font that supports Powerline glyphs
-    <https://github.com/powerline/fonts>`_
+    <https://github.com/powerline/fonts>`_.
 
     Enable this renderer by default by setting the ``PYRTL_RENDERER`` environment
     variable to ``powerline``::
@@ -1460,6 +1462,7 @@ class PowerlineRendererConstants(Utf8RendererConstants):
         export PYRTL_RENDERER=powerline
 
     .. image:: ../docs/screenshots/pyrtl-renderer-demo-powerline.png
+       :width: 35em
     """
 
     # Start reverse-video, reset all attributes
@@ -1490,6 +1493,7 @@ class Utf8BasicRendererConstants(RendererConstants):
         export PYRTL_RENDERER=utf-8-basic
 
     .. image:: ../docs/screenshots/pyrtl-renderer-demo-utf-8-basic.png
+       :width: 25em
     """
 
     _tick = "│"
@@ -1521,6 +1525,7 @@ class AsciiRendererConstants(RendererConstants):
         export PYRTL_RENDERER=ascii
 
     .. image:: ../docs/screenshots/pyrtl-renderer-demo-ascii.png
+       :width: 25em
     """
 
     _tick = "|"
@@ -1823,7 +1828,7 @@ class SimulationTrace:
         This VCD output can be saved to a ``file`` and opened in `GTKWave
         <https://gtkwave.github.io/gtkwave/>`_:
 
-        .. image:: ../docs/screenshots/gtkwave.png
+        .. image:: ../docs/images/gtkwave.png
 
         :param file: File to output VCD data to. Defaults to ``stdout``.
         :param include_clock: Boolean specifying if the implicit ``clk`` should be
