@@ -130,7 +130,7 @@ sim.tracer.print_trace()
 print("\n--- Probe w/ debugging: ---")
 pyrtl.set_debug_mode()
 pyrtl.probe(multout - 16, "debugsubtr_probe")
-pyrtl.set_debug_mode(debug=False)
+pyrtl.set_debug_mode(False)
 
 
 # ## `WireVector` Stack Trace
@@ -196,11 +196,6 @@ pyrtl.working_block().remove_wirevector(dummy_wv)
 # circuit.
 #
 # Also see `block_to_svg()`.
-pyrtl.working_block().sanity_check()
-
-# So that `output_to_trivial_graph()` will work.
-pyrtl.passes._remove_unused_wires(pyrtl.working_block())
-
 print("\n--- Trivial Graph Format (first 10 lines) ---")
 with io.StringIO() as tgf:
     pyrtl.output_to_trivialgraph(tgf)
