@@ -581,8 +581,14 @@ def output_to_svg(file: TextIO, *args, **kwargs):
 
 
 def block_to_svg(*args, **kwargs) -> str:
-    """Return a SVG rendering of a ``block``. Requires the `graphviz
-    <https://pypi.org/project/graphviz/>`_ ``pip`` package.
+    """Return a SVG rendering of a ``block``.
+
+    .. warning::
+
+        ``block_to_svg`` requires the `graphviz <https://pypi.org/project/graphviz/>`_
+        ``pip`` package, which is an optional PyRTL dependency. Install with::
+
+            $ pip install pyrtl[svg]
 
     .. doctest only::
 
@@ -628,7 +634,7 @@ def block_to_svg(*args, **kwargs) -> str:
             # py-graphviz 0.19 or later
             return svg
     except ImportError as exc:
-        msg = 'need graphviz installed (try "pip install graphviz")'
+        msg = 'need graphviz installed (try "pip install pyrtl[svg]")'
         raise PyrtlError(msg) from exc
 
 

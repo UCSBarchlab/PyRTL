@@ -123,6 +123,14 @@ def input_from_blif(
     <https://people.eecs.berkeley.edu/~alanmi/publications/other/blif.pdf>`_ file or
     string as input, updating the block appropriately.
 
+    .. warning::
+
+        ``input_from_blif`` requires the `pyparsing
+        <https://pypi.org/project/pyparsing/>`_ ``pip`` package, which is an optional
+        PyRTL dependency. Install with::
+
+            $ pip install pyrtl[blif]
+
     If ``merge_io_vectors`` is ``True``, then given 1-bit :class:`Input` wires ``a[0]``
     and ``a[1]``, these wires will be combined into a single 2-bit :class:`Input` wire
     ``a`` that can be accessed by name ``a`` in the block. Otherwise if
@@ -649,8 +657,19 @@ def input_from_verilog(
     block: Block = None,
 ):
     """Read an open Verilog file or string as input via `Yosys
-    <https://yosyshq.net/yosys/>`_ conversion, updating the block. Yosys must be
-    installed.
+    <https://yosyshq.net/yosys/>`_ conversion, updating the block.
+
+    .. warning::
+
+        ``input_from_verilog`` requires:
+
+        1. ``yosys``, which must be `separately installed
+           <https://yosyshq.readthedocs.io/projects/yosys/en/latest/getting_started/installation.html>`_.
+
+        2. The `pyparsing <https://pypi.org/project/pyparsing/>`_ ``pip`` package, which
+           is an optional PyRTL dependency. Install with::
+
+               $ pip install pyrtl[blif]
 
     This function runs Yosys with a script to convert Verilog to BLIF, then calls
     :func:`input_from_blif` on the converted BLIF file.
@@ -1921,6 +1940,14 @@ def output_to_firrtl(
 
 def input_from_iscas_bench(bench, block: Block = None):
     """Import an ISCAS .bench file
+
+    .. warning::
+
+        ``input_from_iscas_bench`` requires the `pyparsing
+        <https://pypi.org/project/pyparsing/>`_ ``pip`` package, which is an optional
+        PyRTL dependency. Install with::
+
+            $ pip install pyrtl[blif]
 
     :param bench: an open ISCAS .bench file to read
     :param block: block to add the imported logic (defaults to current

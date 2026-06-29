@@ -344,6 +344,11 @@ def yosys_area_delay(
     """Synthesize with `Yosys <https://yosyshq.net/yosys/>`_ and return estimate of area
     and delay.
 
+    .. warning::
+
+        ``yosys_area_delay`` requires ``yosys``, which must be `separately installed
+        <https://yosyshq.readthedocs.io/projects/yosys/en/latest/getting_started/installation.html>`_.
+
     If ``leave_in_dir`` is specified, that directory will be used to create any
     temporary files, and the resulting files will be left behind there (which can be
     useful for manual exploration or debugging)
