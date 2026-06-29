@@ -23,12 +23,10 @@ Quick links
 Installation
 ============
 
-**Automatic installation**::
+PyRTL is availble in `PyPI <http://pypi.python.org/pypi/pyrtl>`_ and can be
+installed with :program:`pip`::
 
-    pip install pyrtl
-
-PyRTL is listed in `PyPI <http://pypi.python.org/pypi/pyrtl>`_ and can be
-installed with :program:`pip`.
+    $ pip install pyrtl
 
 Design, Simulate, and Inspect in 15 lines
 =========================================
