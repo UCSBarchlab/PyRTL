@@ -1,5 +1,7 @@
 import doctest
+import io
 import random
+import sys
 import unittest
 
 import pyrtl
@@ -37,6 +39,15 @@ class TestAdders(unittest.TestCase):
         outwire = pyrtl.Output(name="test")
         outwire <<= adder_func(*wires)
 
+        # Check that there are no sanity_check errors or warnings in debug_mode.
+        pyrtl.set_debug_mode()
+        output = io.StringIO()
+        sys.stdout = output
+        pyrtl.working_block().sanity_check()
+        sys.stdout = sys.__stdout__
+        pyrtl.set_debug_mode(False)
+
+        self.assertEqual("", output.getvalue())
         out_vals = utils.sim_and_ret_out(outwire, wires, vals)
         true_result = [sum(cycle_vals) for cycle_vals in zip(*vals, strict=True)]
         self.assertEqual(out_vals, true_result)

@@ -52,7 +52,7 @@ def kogge_stone(
     a, b = pyrtl.match_bitwidth(a, b)
 
     prop_orig = a ^ b
-    prop_bits = list(prop_orig)
+    prop_bits = [prop_orig[i] if i > 0 else None for i in range(prop_orig.bitwidth)]
     gen_bits = list(a & b)
     prop_dist = 1
 
@@ -205,11 +205,13 @@ def _cla_adder_unit(a, b, cin):
     their values don't rely on the sum. Every unit generates a cout signal which is used
     as cin for the next unit.
     """
-    gen = a & b
-    prop = a ^ b
+    gen = list(a & b)
+    prop = list(a ^ b)
     assert len(prop) == len(gen)
 
-    carry = [gen[0] | prop[0] & cin]
+    carry = None
+    if len(prop) > 1:
+        carry = [gen[0] | prop[0] & cin]
     sum_bit = prop[0] ^ cin
 
     cur_gen = gen[0]
@@ -218,7 +220,8 @@ def _cla_adder_unit(a, b, cin):
         cur_gen = gen[i] | (prop[i] & cur_gen)
         cur_prop = cur_prop & prop[i]
         sum_bit = pyrtl.concat(prop[i] ^ carry[i - 1], sum_bit)
-        carry.append(gen[i] | (prop[i] & carry[i - 1]))
+        if i < len(prop) - 1:
+            carry.append(gen[i] | (prop[i] & carry[i - 1]))
     cout = cur_gen | (cur_prop & cin)
     return sum_bit, cout
 

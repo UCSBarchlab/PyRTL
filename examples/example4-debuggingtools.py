@@ -4,7 +4,6 @@
 # PyRTL provides some additional challenges when it comes to debugging, as a problem may
 # surface long after the error was made. Fortunately, PyRTL comes with various features
 # to help you find mistakes.
-import io
 import random
 
 import pyrtl
@@ -130,7 +129,7 @@ sim.tracer.print_trace()
 print("\n--- Probe w/ debugging: ---")
 pyrtl.set_debug_mode()
 pyrtl.probe(multout - 16, "debugsubtr_probe")
-pyrtl.set_debug_mode(debug=False)
+pyrtl.set_debug_mode(False)
 
 
 # ## `WireVector` Stack Trace
@@ -183,30 +182,17 @@ dummy_wv.name = "argh"
 dummy_wv.my_custom_property_name = "John Clow is great"
 dummy_wv.custom_value_028493 = 13
 
-# Remove the `WireVector` from the `Block` to prevent problems with the rest of this
-# example.
-pyrtl.working_block().remove_wirevector(dummy_wv)
-
-# ## Trivial Graph Format
+# ## Graphviz
 #
-# Finally, there is a handy way to view your hardware creations as a graph. The function
-# `output_to_trivialgraph()` will render your hardware in a format that you can then
-# open with the free software "yEd" (http://en.wikipedia.org/wiki/YEd). There are
-# options under the "hierarchical" rendering to draw something that looks quite like a
-# circuit.
+# Finally, there is a handy way to view your hardware creations.
+# `block_to_graphviz_string()` produces a description of your hardware in the `graphviz`
+# language, which can be converted to an image with the `dot` graph drawing tool
+# (https://graphviz.org/docs/layouts/dot/).
 #
-# Also see `block_to_svg()`.
-pyrtl.working_block().sanity_check()
+# Also see `block_to_svg()`, which automates running `dot`.
+print("\n--- Graphviz Format (first 10 lines) ---")
+graphviz_string = pyrtl.block_to_graphviz_string()
 
-# So that `output_to_trivial_graph()` will work.
-pyrtl.passes._remove_unused_wires(pyrtl.working_block())
-
-print("\n--- Trivial Graph Format (first 10 lines) ---")
-with io.StringIO() as tgf:
-    pyrtl.output_to_trivialgraph(tgf)
-    for i, line in enumerate(tgf.getvalue().split("\n")):
-        if i == 10:
-            break
-        print(line)
-
-    print("...")
+for line in graphviz_string.split("\n")[:10]:
+    print(line)
+print("...")
