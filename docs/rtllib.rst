@@ -16,6 +16,7 @@ Adders
 .. automodule:: pyrtl.rtllib.adders
    :members:
    :undoc-members:
+   :exclude-members: half_adder, one_bit_add, ripple_add, ripple_half_add
 
 Multipliers
 -----------
@@ -55,10 +56,3 @@ AES-128
 
 .. autoclass:: pyrtl.rtllib.aes.AES
    :members:
-
-Testing Utilities
------------------
-
-.. automodule:: pyrtl.rtllib.testingutils
-   :members:
-   :exclude-members: generate_in_wire_and_values, sim_and_ret_out, sim_and_ret_outws, sim_multicycle, multi_sim_multicycle

@@ -659,23 +659,29 @@ def input_from_verilog(
     to try and produce BLIF yourself. Then you can import BLIF directly via
     :func:`input_from_blif`.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
     Example::
 
-        verilog = '''
-        module toplevel(clk, a, b, sum);
-            input clk;
-            input[2:0] a;
-            input[2:0] b;
-            output[3:0] sum;
-            assign sum = (a + b);
-        endmodule
-        '''
+        >>> verilog = '''
+        ... module toplevel(clk, a, b, sum);
+        ...     input clk;
+        ...     input[2:0] a;
+        ...     input[2:0] b;
+        ...     output[3:0] sum;
+        ...     assign sum = (a + b);
+        ... endmodule
+        ... '''
 
-        pyrtl.input_from_verilog(verilog)
+        >>> pyrtl.input_from_verilog(verilog)
 
-        sim = pyrtl.Simulation()
-        sim.step({"a": 1, "b": 2})
-        sim.inspect("sum")
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"a": 1, "b": 2})
+        >>> sim.inspect("sum")
+        3
 
     :param verilog: An open Verilog file to read, or a string containing Verilog data.
     :param clock_name: The name of the clock (defaults to ``"clk"``).
@@ -1488,7 +1494,7 @@ def output_to_verilog(
         :attr:`~.Register.reset_value`. When this argument is ``True``, this
         :class:`Register`::
 
-            Register(name="foo", bitwidth=8, reset_value=4)
+            pyrtl.Register(name="foo", bitwidth=8, reset_value=4)
 
         generates this Verilog:
 
