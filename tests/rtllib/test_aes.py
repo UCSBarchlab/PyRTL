@@ -1,8 +1,18 @@
+import doctest
 import unittest
 
 import pyrtl
 import pyrtl.corecircuits
 from pyrtl.rtllib import aes, testingutils
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+
+    def test_aes_doctests(self):
+        failures, tests = doctest.testmod(m=aes)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 class TestAESDecrypt(unittest.TestCase):

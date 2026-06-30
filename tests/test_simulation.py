@@ -173,9 +173,9 @@ class RenderTraceBase(unittest.TestCase):
 
     def test_hex_trace(self):
         expected = (
-            " |0   |1   |2   |3   |4   \n"
+            " |0   |1   |2   |3   |4\n"
             "  \n"
-            "a 0x1 |0x4 |0x9 |0xb |0xc \n"
+            "a 0x1 |0x4 |0x9 |0xb |0xc\n"
             "  \n"
             "b 0x2 |0x17|0x2b|0x78|----\n"
             "  \n"
@@ -185,9 +185,9 @@ class RenderTraceBase(unittest.TestCase):
 
     def test_oct_trace(self):
         expected = (
-            " |0    |1    |2    |3    |4    \n"
+            " |0    |1    |2    |3    |4\n"
             "  \n"
-            "a 0o1  |0o4  |0o11 |0o13 |0o14 \n"
+            "a 0o1  |0o4  |0o11 |0o13 |0o14\n"
             "  \n"
             "b 0o2  |0o27 |0o53 |0o170|-----\n"
             "  \n"
@@ -198,9 +198,9 @@ class RenderTraceBase(unittest.TestCase):
 
     def test_bin_trace(self):
         expected = (
-            " |0        |1        |2        |3        |4        \n"
+            " |0        |1        |2        |3        |4\n"
             "  \n"
-            "a 0b1      |0b100    |0b1001   |0b1011   |0b1100   \n"
+            "a 0b1      |0b100    |0b1001   |0b1011   |0b1100\n"
             "  \n"
             "b 0b10     |0b10111  |0b101011 |0b1111000|---------\n"
             "  \n"
@@ -211,9 +211,9 @@ class RenderTraceBase(unittest.TestCase):
 
     def test_decimal_trace(self):
         expected = (
-            " |0  |1  |2  |3  |4  \n"
+            " |0  |1  |2  |3  |4\n"
             "  \n"
-            "a 1  |4  |9  |11 |12 \n"
+            "a 1  |4  |9  |11 |12\n"
             "  \n"
             "b 2  |23 |43 |120|---\n"
             "  \n"
@@ -279,7 +279,7 @@ class RenderTraceCustomBase(unittest.TestCase):
             repr_per_name={state.name: state_name},
         )
         expected = (
-            "     |0  |1  \n"
+            "     |0  |1\n"
             "      \n"
             "state FOO|BAR\n"
         )  # fmt: skip
@@ -316,7 +316,7 @@ class RenderTraceCustomBase(unittest.TestCase):
             file=buff, renderer=self.renderer, repr_func=pyrtl.val_to_signed_integer
         )
         expected = (
-            "       |0 |1 |2 |3 \n"
+            "       |0 |1 |2 |3\n"
             "        \n"
             "counter --|1 |-2|-1\n"
         )  # fmt: skip
@@ -352,13 +352,13 @@ class RenderTraceCustomBase(unittest.TestCase):
             renderer=self.renderer,
         )
         expected = (
-            "     |0  |1  |2  |3  |4  \n"
+            "     |0  |1  |2  |3  |4\n"
             "      \n"
             "    i 0x1|0x2|0x4|0x8|---\n"
             "      \n"
             "    o -------|0x1|0x2|0x3\n"
             "      \n"
-            "state A      |B  |C  |D  \n"
+            "state A      |B  |C  |D\n"
         )
         self.assertEqual(buff.getvalue(), expected)
 

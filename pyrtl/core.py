@@ -1182,6 +1182,12 @@ def set_debug_mode(debug: bool = True):
     These call stacks can be inspected as :attr:`WireVector.init_call_stack`, and they
     will appear in :meth:`Block.sanity_check` error messages.
 
+    .. note::
+
+        See `example4-debuggingtools
+        <https://github.com/UCSBarchlab/PyRTL/blob/development/examples/example4-debuggingtools.py>`_
+        for ``debug_mode`` examples.
+
     :param debug: Optional boolean parameter to which the debug mode will be set.
     """
     global debug_mode

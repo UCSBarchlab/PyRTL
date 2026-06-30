@@ -717,7 +717,7 @@ def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]
         >>> a = pyrtl.Const(-1, name="a_short", signed=True, bitwidth=2)
         >>> b = pyrtl.Const(-3, name="b", signed=True, bitwidth=4)
 
-        >>> a, b = match_bitwidth(a, b, signed=True)
+        >>> a, b = pyrtl.match_bitwidth(a, b, signed=True)
         >>> a.name = "a_long"
         >>> a.bitwidth, b.bitwidth
         (4, 4)
@@ -768,8 +768,8 @@ def as_wires(
     :class:`Const` :class:`WireVector`). See :ref:`wirevector_coercion`. An example::
 
         >>> def make_my_hardware(a, b):
-        ...     a = as_wires(a)
-        ...     b = as_wires(b)
+        ...     a = pyrtl.as_wires(a)
+        ...     b = pyrtl.as_wires(b)
         ...     return (a + b) & 0xf
 
         >>> input = pyrtl.Input(name="input", bitwidth=8)

@@ -13,49 +13,49 @@ from pyrtl.rtllib import libutils
 
 
 class AES:
-    """A class for building a PyRTL AES circuit.
+    """Builds `AES <https://en.wikipedia.org/wiki/Advanced_Encryption_Standard>`_
+    encryption and decryption circuits.
 
-    Currently this class only supports 128 bit AES encryption/decryption.
-
-    Example::
-
-        import pyrtl
-        from pyrtl.rtllib.aes import AES
-
-        aes = AES()
-        plaintext = pyrtl.Input(bitwidth=128, name='aes_plaintext')
-        key = pyrtl.Input(bitwidth=128, name='aes_key')
-        aes_ciphertext = pyrtl.Output(bitwidth=128, name='aes_ciphertext')
-        reset = pyrtl.Input(1, name='reset')
-        ready = pyrtl.Output(1, name='ready')
-
-        ready_out, aes_cipher = aes.encrypt_state_m(plaintext, key, reset)
-        ready <<= ready_out
-        aes_ciphertext <<= aes_cipher
-
-        sim = pyrtl.Simulation()
-        sim.step ({
-            'aes_plaintext': 0x00112233445566778899aabbccddeeff,
-            'aes_key': 0x000102030405060708090a0b0c0d0e0f,
-            'reset': 1
-        })
-        for cycle in range(1,10):
-            sim.step ({
-                'aes_plaintext': 0x00112233445566778899aabbccddeeff,
-                'aes_key': 0x000102030405060708090a0b0c0d0e0f,
-                'reset': 0
-            })
-        sim.tracer.render_trace(symbol_len=40, segment_size=1)
+    Currently this class only supports 128-bit AES encryption and decryption, with
+    single-cycle and multi-cycle implementations.
     """
 
     def __init__(self):
         self.memories_built = False
         self._key_len = 128
 
-    def encryption(
+    def single_cycle_encrypt(
         self, plaintext: pyrtl.WireVector, key: pyrtl.WireVector
     ) -> pyrtl.WireVector:
-        """Builds a single cycle AES Encryption circuit.
+        """Build a single-cycle AES encryption circuit.
+
+        See also :meth:`~AES.multi_cycle_encrypt`, which builds a multi-cycle AES
+        encryption circuit.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> plaintext = pyrtl.Input(name="plaintext", bitwidth=128)
+            >>> key = pyrtl.Input(name="key", bitwidth=128)
+            >>> ciphertext = pyrtl.Output(name="ciphertext", bitwidth=128)
+
+            >>> aes = pyrtl.rtllib.aes.AES()
+            >>> ciphertext <<= aes.single_cycle_encrypt(plaintext, key)
+
+            >>> plaintext_value = 0x112233445566778899aabbccddeeff
+            >>> key_value = 0x102030405060708090a0b0c0d0e0f
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step({"plaintext": plaintext_value, "key": key_value})
+            >>> sim.inspect("ciphertext")
+            140591190147677442632770771134392354138
+
+        The ``ciphertext`` produced by this example should match the ``ciphertext``
+        produced by the :meth:`~AES.multi_cycle_encrypt` example.
 
         :param plaintext: Text to encrypt.
         :param key: AES key to use to encrypt.
@@ -80,13 +80,51 @@ class AES:
             t = self._add_round_key(t, key_list[round])
         return t
 
-    def encrypt_state_m(
+    def multi_cycle_encrypt(
         self,
         plaintext_in: pyrtl.WireVector,
         key_in: pyrtl.WireVector,
         reset: pyrtl.WireVector,
     ) -> tuple[pyrtl.WireVector, pyrtl.WireVector]:
-        """Builds a multiple cycle AES Encryption state machine circuit.
+        """Build a multi-cycle AES encryption circuit.
+
+        See also :meth:`~AES.single_cycle_encrypt`, which builds a single-cycle AES
+        encryption circuit.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example::
+
+            >>> plaintext = pyrtl.Input(name="plaintext", bitwidth=128)
+            >>> key = pyrtl.Input(name="key", bitwidth=128)
+            >>> reset = pyrtl.Input(name="reset", bitwidth=1)
+            >>> ready = pyrtl.Output(name="ready", bitwidth=1)
+            >>> ciphertext = pyrtl.Output(name="ciphertext", bitwidth=128)
+
+            >>> aes = pyrtl.rtllib.aes.AES()
+            >>> ready_, ciphertext_ = aes.multi_cycle_encrypt(plaintext, key, reset)
+            >>> ready <<= ready_
+            >>> ciphertext <<= ciphertext_
+
+            >>> plaintext_value = 0x112233445566778899aabbccddeeff
+            >>> key_value = 0x102030405060708090a0b0c0d0e0f
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step({
+            ...     "plaintext": plaintext_value,
+            ...     "key": key_value,
+            ...     "reset": True
+            ... })
+            >>> while not sim.inspect("ready"):
+            ...     sim.step({"plaintext": 0, "key": 0, "reset": False})
+            >>> sim.inspect("ciphertext")
+            140591190147677442632770771134392354138
+
+        The ``ciphertext`` produced by this example should match the ``ciphertext``
+        produced by the :meth:`~AES.single_cycle_encrypt` example.
 
         :param plaintext: Text to encrypt.
         :param key: AES key to use to encrypt.
@@ -138,10 +176,36 @@ class AES:
         ready = counter == 10
         return ready, plain_text
 
-    def decryption(
+    def single_cycle_decrypt(
         self, ciphertext: pyrtl.WireVector, key: pyrtl.WireVector
     ) -> pyrtl.WireVector:
-        """Builds a single cycle AES Decryption circuit.
+        """Build a single-cycle AES decryption circuit.
+
+        See also :meth:`~AES.multi_cycle_decrypt`, which builds a multi-cycle AES
+        decryption circuit.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example that decrypts the ciphertext from the :meth:`~AES.single_cycle_encrypt`
+        example::
+
+            >>> ciphertext = pyrtl.Input(name="ciphertext", bitwidth=128)
+            >>> key = pyrtl.Input(name="key", bitwidth=128)
+            >>> plaintext = pyrtl.Output(name="plaintext", bitwidth=128)
+
+            >>> aes = pyrtl.rtllib.aes.AES()
+            >>> plaintext <<= aes.single_cycle_decrypt(ciphertext, key)
+
+            >>> ciphertext_value = 140591190147677442632770771134392354138
+            >>> key_value = 0x102030405060708090a0b0c0d0e0f
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step({"ciphertext": ciphertext_value, "key": key_value})
+            >>> print(hex(sim.inspect("plaintext")))
+            0x112233445566778899aabbccddeeff
 
         :param ciphertext: Data to decrypt.
         :param key: AES key to use to encrypt (AES is symmetric).
@@ -166,13 +230,49 @@ class AES:
 
         return t
 
-    def decryption_statem(
+    def multi_cycle_decrypt(
         self,
         ciphertext_in: pyrtl.WireVector,
         key_in: pyrtl.WireVector,
         reset: pyrtl.WireVector,
     ) -> tuple[pyrtl.WireVector, pyrtl.WireVector]:
-        """Builds a multiple cycle AES Decryption state machine circuit.
+        """Build a multi-cycle AES decryption circuit.
+
+        See also :meth:`~AES.single_cycle_decrypt`, which builds a single-cycle AES
+        decryption circuit.
+
+        .. doctest only::
+
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
+
+        Example that decrypts the ciphertext from the :meth:`~AES.single_cycle_encrypt`
+        example::
+
+            >>> ciphertext = pyrtl.Input(name="ciphertext", bitwidth=128)
+            >>> key = pyrtl.Input(name="key", bitwidth=128)
+            >>> reset = pyrtl.Input(name="reset", bitwidth=1)
+            >>> ready = pyrtl.Output(name="ready", bitwidth=1)
+            >>> plaintext = pyrtl.Output(name="plaintext", bitwidth=128)
+
+            >>> aes = pyrtl.rtllib.aes.AES()
+            >>> ready_, plaintext_ = aes.multi_cycle_decrypt(ciphertext, key, reset)
+            >>> ready <<= ready_
+            >>> plaintext <<= plaintext_
+
+            >>> ciphertext_value = 140591190147677442632770771134392354138
+            >>> key_value = 0x102030405060708090a0b0c0d0e0f
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step({
+            ...     "ciphertext": ciphertext_value,
+            ...     "key": key_value,
+            ...     "reset": True
+            ... })
+            >>> while not sim.inspect("ready"):
+            ...     sim.step({"ciphertext": 0, "key": 0, "reset": False})
+            >>> print(hex(sim.inspect("plaintext")))
+            0x112233445566778899aabbccddeeff
 
         :param ciphertext: Data to decrypt.
         :param key: AES key to use to encrypt (AES is symmetric).
@@ -229,6 +329,19 @@ class AES:
 
         ready = counter == 10
         return ready, cipher_text
+
+    # Aliases for deprecated method names.
+    def encryption(self, *args, **kwargs):
+        return self.single_cycle_encrypt(*args, **kwargs)
+
+    def encrypt_state_m(self, *args, **kwargs):
+        return self.multi_cycle_encrypt(*args, **kwargs)
+
+    def decryption(self, *args, **kwargs):
+        return self.single_cycle_decrypt(*args, **kwargs)
+
+    def decryption_statem(self, *args, **kwargs):
+        return self.multi_cycle_decrypt(*args, **kwargs)
 
     def _key_gen(self, key):
         keys = [key]

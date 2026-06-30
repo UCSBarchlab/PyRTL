@@ -685,7 +685,7 @@ def synthesize(
     which is identical in function but uses only single bit gates and excludes many of
     the more complicated :class:`LogicNet` primitives. The new block should consist
     *almost* exclusively of ``w``, ``&``, ``\\|``, ``^``, and ``~``
-    :attr:`ops<LogicNet.op>`, and sequential elements of :class`Registers<Register>`,
+    :attr:`ops<LogicNet.op>`, and sequential elements of :class:`Registers<Register>`,
     which are one bit as well.
 
     The two exceptions are for :class:`Inputs<Input>` and :class:`Outputs<Output>`, to

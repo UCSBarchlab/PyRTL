@@ -13,41 +13,50 @@ def prng_lfsr(
     req: pyrtl.WireVector,
     seed: pyrtl.WireVector = None,
 ) -> pyrtl.Register:
-    """Builds a single-cycle PRNG using a 127 bits Fibonacci LFSR.
+    """Builds a single-cycle PRNG using a 127 bits Fibonacci `LFSR
+    <https://en.wikipedia.org/wiki/Linear-feedback_shift_register>`_.
 
     A very fast and compact PRNG that generates a random number using only one clock
     cycle. Has a period of ``2**127 - 1``. Its linearity makes it a bit statistically
     weak, but it should be good enough for any noncryptographic purpose like test
     pattern generation.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
     Example::
 
-        load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
-        rand = pyrtl.Output(64, 'rand')
+        >>> load = pyrtl.Input(1, "load")
+        >>> req = pyrtl.Input(1, "req")
+        >>> seed = pyrtl.Input(127, "seed")
+        >>> rand = pyrtl.Output(32, "rand")
 
-        rand <<= prngs.prng_lfsr(64, load, req)
+        >>> rand <<= pyrtl.rtllib.prngs.prng_lfsr(
+        ...     bitwidth=32,
+        ...     load=load,
+        ...     req=req,
+        ...     seed=seed
+        ... )
 
-        sim = pyrtl.Simulation()
-        sim.step({'load': 1, 'req': 0}) # seed once at the beginning
-        sim.step({'load': 0, 'req': 1})
-        sim.step({'load': 0, 'req': 0})
-        print(sim.inspect(rand))
-        sim.tracer.render_trace(symbol_len=40, segment_size=1)
+        >>> seed_value = 0x70123456789012345678901234567890
+        >>> seed_value.bit_length()
+        127
 
-    Example with explicit seeding::
+        >>> # Start `Simulation` and load `seed`.
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"load": True, "req": False, "seed": seed_value})
 
-        seed =  pyrtl.Input(127, 'seed')
-        load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
-        rand = pyrtl.Output(32, 'rand')
+        >>> # Generate a random number.
+        >>> sim.step({"load": False, "req": True, "seed": 0})
+        >>> sim.inspect("rand")
+        878082192
 
-        rand <<= prngs.prng_lfsr(32, load, req, seed)
-
-        sim = pyrtl.Simulation()
-        sim.step({'load': 1, 'req': 0, 'seed': 0x102030405060708090a0b0c0d0e0f010})
-        sim.step({'load': 0, 'req': 1, 'seed': 0x102030405060708090a0b0c0d0e0f010})
-        sim.step({'load': 0, 'req': 0, 'seed': 0x102030405060708090a0b0c0d0e0f010})
-        print(sim.inspect(rand))
-        sim.tracer.render_trace(symbol_len=40, segment_size=1)
+        >>> # Generate a random number.
+        >>> sim.step({"load": False, "req": True, "seed": 0})
+        >>> sim.inspect("rand")
+        543996405
 
     :param bitwidth: The desired bitwidth of the random number.
     :param load: One bit signal to load the seed into the PRNG.
@@ -95,23 +104,49 @@ def prng_xoroshiro128(
 
     See also http://xoroshiro.di.unimi.it/
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
     Example::
 
-        load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
-        ready, rand = pyrtl.Output(1, 'ready'), pyrtl.Output(128, 'rand')
+        >>> load = pyrtl.Input(1, "load")
+        >>> req = pyrtl.Input(1, "req")
+        >>> seed = pyrtl.Input(128, "seed")
+        >>> ready = pyrtl.Output(1, "ready")
+        >>> rand = pyrtl.Output(128, "rand")
 
-        ready_out, rand_out = prngs.prng_xoroshiro128(128, load, req)
-        ready <<= ready_out
-        rand <<= rand_out
+        >>> ready_, rand_ = pyrtl.rtllib.prngs.prng_xoroshiro128(
+        ...     bitwidth=128,
+        ...     load=load,
+        ...     req=req,
+        ...     seed=seed
+        ... )
+        >>> ready <<= ready_
+        >>> rand <<= rand_
 
-        sim = pyrtl.Simulation()
-        sim.step({'load': 1, 'req': 0})  # seed once at the beginning
-        sim.step({'load': 0, 'req': 1})
-        while sim.value[ready] == 0:  # or loop 2 cycles
-            sim.step({'load': 0, 'req': 0})
+        >>> seed_value = 0x90123456789012345678901234567890
+        >>> seed_value.bit_length()
+        128
 
-        print(sim.inspect(rand))
-        sim.tracer.render_trace(symbol_len=40, segment_size=1)
+        >>> # Start `Simulation` and load `seed`.
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"load": True, "req": False, "seed": seed_value})
+
+        >>> # Generate a random number.
+        >>> sim.step({"load": False, "req": True, "seed": 0})
+        >>> while not sim.inspect("ready"):
+        ...     sim.step({"load": False, "req": False, "seed": 0})
+        >>> sim.inspect("rand")
+        306442959642529804138987790876643657180
+
+        >>> # Generate a random number.
+        >>> sim.step({"load": False, "req": True, "seed": 0})
+        >>> while not sim.inspect("ready"):
+        ...     sim.step({"load": False, "req": False, "seed": 0})
+        >>> sim.inspect("rand")
+        102902340102369319506108813713726960781
 
     :param bitwidth: The desired bitwidth of the random number.
     :param load: One bit signal to load the seed into the PRNG.
@@ -145,11 +180,12 @@ def prng_xoroshiro128(
     rand = pyrtl.Register(gen_cycles * 64)
     counter = pyrtl.Register(counter_bitwidth, "counter")
     gen_done = counter == gen_cycles - 1
-    state = pyrtl.Register(1)
 
     class State(enum.IntEnum):
         WAIT = 0
         GEN = 1
+
+    state = pyrtl.Register(State=State)
 
     with pyrtl.conditional_assignment:
         with load:
@@ -196,27 +232,51 @@ def csprng_trivium(
 
     See also the eSTREAM portfolio page: http://www.ecrypt.eu.org/stream/e2-trivium.html
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
     Example::
 
-        load, req = pyrtl.Input(1, 'load'), pyrtl.Input(1, 'req')
-        ready, rand = pyrtl.Output(1, 'ready'), pyrtl.Output(128, 'rand')
+        >>> load = pyrtl.Input(1, "load")
+        >>> req = pyrtl.Input(1, "req")
+        >>> seed = pyrtl.Input(160, "seed")
+        >>> ready = pyrtl.Output(1, "ready")
+        >>> rand = pyrtl.Output(128, "rand")
 
-        ready_out, rand_out = prngs.csprng_trivium(128, load, req)
-        ready <<= ready_out
-        rand <<= rand_out
+        >>> ready_, rand_ = pyrtl.rtllib.prngs.csprng_trivium(
+        ...     bitwidth=128,
+        ...     load=load,
+        ...     req=req,
+        ...     seed=seed
+        ... )
+        >>> ready <<= ready_
+        >>> rand <<= rand_
 
-        sim = pyrtl.Simulation()
-        # Seed only in the first cycle.
-        sim.step({'load': 1, 'req': 0})
-        while sim.value[ready] == 0:  # or loop 19 cycles
-            sim.step({'load': 0, 'req': 0})
+        >>> seed_value = 0x8234567890123456789012345678901234567890
+        >>> seed_value.bit_length()
+        160
 
-        sim.step({'load': 0, 'req': 1})
-        while sim.value[ready] == 0:  # or loop 2 cycles
-            sim.step({'load': 0, 'req': 0})
+        >>> # Start `Simulation` and load `seed`.
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"load": True, "req": False, "seed": seed_value})
+        >>> while not sim.inspect("ready"):
+        ...     sim.step({"load": False, "req": False, "seed": 0})
 
-        print(sim.inspect(rand))
-        sim.tracer.render_trace(symbol_len=45, segment_size=5)
+        >>> # Generate a random number.
+        >>> sim.step({"load": False, "req": True, "seed": 0})
+        >>> while not sim.inspect("ready"):
+        ...     sim.step({"load": False, "req": False, "seed": 0})
+        >>> sim.inspect("rand")
+        204619253771835913275124539130029978896
+
+        >>> # Generate a random number.
+        >>> sim.step({"load": False, "req": True, "seed": 0})
+        >>> while not sim.inspect("ready"):
+        ...     sim.step({"load": False, "req": False, "seed": 0})
+        >>> sim.inspect("rand")
+        98933539811155255006597373162055402029
 
     :param bitwidth: The desired bitwidth of the random number.
     :param load: One bit signal to load the seed into the PRNG
@@ -267,12 +327,13 @@ def csprng_trivium(
     counter = pyrtl.Register(counter_bitwidth, "counter")
     init_done = counter == init_cycles
     gen_done = counter == gen_cycles - 1
-    state = pyrtl.Register(2)
 
     class State(enum.IntEnum):
         WAIT = 0
         INIT = 1
         GEN = 2
+
+    state = pyrtl.Register(State=State)
 
     with pyrtl.conditional_assignment:
         with load:

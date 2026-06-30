@@ -74,12 +74,26 @@ class Simulation:
     """
     Stores the simulation results for each cycle.
 
+    .. doctest only::
+
+        >>> import os
+        >>> import pyrtl
+        >>> os.environ["PYRTL_RENDERER"] = "cp437"
+        >>> pyrtl.reset_working_block()
+
     ``tracer`` is typically used to render simulation waveforms with
     :meth:`~SimulationTrace.render_trace`, for example::
 
-        sim = pyrtl.Simulation()
-        sim.step_multiple(nsteps=10)
-        sim.tracer.render_trace()
+        >>> counter = pyrtl.Register(name="counter", bitwidth=2)
+        >>> counter.next <<= counter + 1
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step_multiple(nsteps=8)
+
+        >>> sim.tracer.render_trace()
+               │0  │1  │2  │3  │4  │5  │6  │7
+        <BLANKLINE>
+        counter ───┤0x1│0x2│0x3├───┤0x1│0x2│0x3
 
     See :class:`SimulationTrace` for more display options.
     """
@@ -1514,9 +1528,6 @@ class TraceStorage(Mapping):
         return self.__data[key]
 
 
-_default_renderer = default_renderer()
-
-
 class SimulationTrace:
     """Storage and presentation of simulation waveforms.
 
@@ -1788,7 +1799,7 @@ class SimulationTrace:
         self,
         trace_list: list[str] | None = None,
         file: TextIO | None = None,
-        renderer: WaveRenderer = _default_renderer,
+        renderer: WaveRenderer | None = None,
         symbol_len: int | None = None,
         repr_func: Callable[[int], str] = hex,
         repr_per_name: dict[str, Callable[[int], str]] | None = None,
@@ -1796,20 +1807,25 @@ class SimulationTrace:
     ):
         """Render the trace with Unicode and ASCII escape sequences.
 
+        .. doctest only::
+
+            >>> import os
+            >>> import pyrtl
+            >>> os.environ["PYRTL_RENDERER"] = "cp437"
+            >>> pyrtl.reset_working_block()
+
         The resulting output can be viewed directly in a terminal. Example::
 
-            counter = pyrtl.Register(name="counter", bitwidth=2)
-            counter.next <<= counter + 1
+            >>> counter = pyrtl.Register(name="counter", bitwidth=2)
+            >>> counter.next <<= counter + 1
 
-            sim = pyrtl.Simulation()
-            sim.step_multiple(nsteps=4)
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step_multiple(nsteps=8)
 
-            sim.tracer.render_trace()
-
-        Which displays:
-
-        .. image:: ../docs/screenshots/render_trace.png
-            :scale: 66%
+            >>> sim.tracer.render_trace()
+                   │0  │1  │2  │3  │4  │5  │6  │7
+            <BLANKLINE>
+            counter ───┤0x1│0x2│0x3├───┤0x1│0x2│0x3
 
         Many trace formats are available, and can be configured with the
         ``PYRTL_RENDERER`` environment variable. See :class:`.WaveRenderer`'s
@@ -1839,6 +1855,8 @@ class SimulationTrace:
         if len(self) == 0:
             msg = "You need to step the simulation at least once to render a trace."
             raise PyrtlError(msg)
+        if renderer is None:
+            renderer = default_renderer()
         if repr_per_name is None:
             repr_per_name = {}
         if _currently_in_jupyter_notebook():
@@ -1983,16 +2001,19 @@ class SimulationTrace:
         maxtracelen = max(len(self.trace[trace_name]) for trace_name in trace_list)
         if segment_size is None:
             segment_size = maxtracelen
-        spaces = " " * (maxnamelen)
         ticks = [
             renderer.render_ruler_segment(n, cycle_len, segment_size, maxtracelen)
             for n in range(0, maxtracelen, segment_size)
         ]
-        print(spaces + "".join(ticks), file=file)
+        ruler_line = " " * (maxnamelen) + "".join(ticks)
+        print(ruler_line.rstrip(), file=file)
 
         # now all the traces
         for trace_name in trace_list:
-            print(formatted_trace_line(trace_name, self.trace[trace_name]), file=file)
+            print(
+                formatted_trace_line(trace_name, self.trace[trace_name]).rstrip(),
+                file=file,
+            )
 
     def _set_initial_values(
         self,
@@ -2072,8 +2093,10 @@ def enum_name(EnumClass: type) -> Callable[[int], str]:
 
     .. doctest only::
 
+        >>> import os
         >>> import pyrtl
         >>> import enum
+        >>> os.environ["PYRTL_RENDERER"] = "cp437"
         >>> pyrtl.reset_working_block()
 
     Use ``enum_name`` as a ``repr_func`` or ``repr_per_name`` for
@@ -2088,16 +2111,13 @@ def enum_name(EnumClass: type) -> Callable[[int], str]:
 
     :meth:`~SimulationTrace.render_trace` example::
 
-        option = pyrtl.Input(name="option", bitwidth=1)
+        >>> option = pyrtl.Input(name="option", bitwidth=1)
 
-        sim = pyrtl.Simulation()
-        sim.step_multiple({"option": [Option.FOO, Option.BAR]})
-        sim.tracer.render_trace(repr_per_name={"option": pyrtl.enum_name(Option)})
-
-    Which prints::
-
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step_multiple({"option": [Option.FOO, Option.BAR]})
+        >>> sim.tracer.render_trace(repr_per_name={"option": pyrtl.enum_name(Option)})
               │0  │1
-
+        <BLANKLINE>
         option FOO│BAR
 
     .. note::

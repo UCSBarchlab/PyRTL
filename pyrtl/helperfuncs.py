@@ -50,22 +50,28 @@ def probe(w: WireVector, name: str | None = None) -> WireVector:
 
     could be rewritten as::
 
-        y <<= probe(x)[0:3] + 4
+        y <<= pyrtl.probe(x)[0:3] + 4
 
     to give visibility into both the origin of ``x`` (including the line that
     :class:`WireVector` was originally created) and the run-time values of ``x`` (which
     will be named and thus show up by default in a trace). Likewise::
 
-        y <<= probe(x[0:3]) + 4
-        y <<= probe(x[0:3] + 4)
-        probe(y) <<= x[0:3] + 4
+        y <<= pyrtl.probe(x[0:3]) + 4
+        y <<= pyrtl.probe(x[0:3] + 4)
+        pyrtl.probe(y) <<= x[0:3] + 4
 
     are all valid uses of ``probe``.
 
     .. note::
 
-        ``probe`` actually adds an :class:`Output` wire to the :ref:`working_block` of
-        ``w``, which can confuse various post-processing transforms such as
+        See `example4-debuggingtools
+        <https://github.com/UCSBarchlab/PyRTL/blob/development/examples/example4-debuggingtools.py>`_
+        for more ``probe`` examples.
+
+    .. note::
+
+        ``probe`` actually adds an :class:`Output` wire to the :ref:`working_block`,
+        which can confuse various post-processing transforms such as
         :func:`output_to_verilog`.
 
     :param w: :class:`WireVector` from which to get info
@@ -184,13 +190,18 @@ def log2(integer_val: int) -> int:
 
     Useful when checking that powers of 2 are provided as function inputs.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
     Examples::
 
-        >>> log2(2)
+        >>> pyrtl.log2(2)
         1
-        >>> log2(256)
+        >>> pyrtl.log2(256)
         8
-        >>> log2(100)
+        >>> pyrtl.log2(100)
         Traceback (most recent call last):
           ...
         pyrtl.pyrtlexceptions.PyrtlError: this function can only take even powers of 2
@@ -233,20 +244,20 @@ def truncate(
 
     Examples::
 
-        >>> truncate(0b101_001, bitwidth=3)
+        >>> pyrtl.truncate(0b101_001, bitwidth=3)
         1
 
-        >>> bin(truncate(0b111_101, bitwidth=3))
+        >>> bin(pyrtl.truncate(0b111_101, bitwidth=3))
         '0b101'
 
         >>> # -1 is 0b1111111... with the number of 1-bits equal to the bitwidth. Python
         >>> # ints are arbitrary-precision, so this can produce any number of 1-bits.
-        >>> bin(truncate(-1, bitwidth=3))
+        >>> bin(pyrtl.truncate(-1, bitwidth=3))
         '0b111'
 
         >>> input = pyrtl.Input(name="input", bitwidth=8)
 
-        >>> output = truncate(input, bitwidth=4)
+        >>> output = pyrtl.truncate(input, bitwidth=4)
         >>> output.name = "output"
         >>> output.bitwidth
         4
@@ -740,31 +751,37 @@ def wirevector_list(
 def val_to_signed_integer(value: int, bitwidth: int) -> int:
     """Return ``value`` interpreted as a two's complement signed integer.
 
+    .. doctest only::
+
+        >>> import os
+        >>> import pyrtl
+        >>> os.environ["PYRTL_RENDERER"] = "cp437"
+        >>> pyrtl.reset_working_block()
+
     Reinterpret an unsigned integer (not a :class:`WireVector`!) as a signed integer.
     This is useful for printing and interpreting two's complement values::
 
-        >>> val_to_signed_integer(0xff, bitwidth=8)
+        >>> pyrtl.val_to_signed_integer(0xff, bitwidth=8)
         -1
 
     ``val_to_signed_integer`` can also be used as an ``repr_func`` for
-    :meth:`SimulationTrace.render_trace`, to display signed integers in traces::
+    :meth:`~SimulationTrace.render_trace`, to display signed integers in traces::
 
-        bitwidth = 3
-        counter = Register(name='counter', bitwidth=bitwidth)
-        counter.next <<= counter + 1
-        sim = Simulation()
-        sim.step_multiple(nsteps=2 ** bitwidth)
+        >>> bitwidth = 3
+        >>> counter = pyrtl.Register(name="counter", bitwidth=bitwidth)
+        >>> counter.next <<= counter + 1
 
-        # Generates a trace like:
-        #        │0 │1 │2 │3 │4 │5 │6 │7
-        #
-        # counter ──┤1 │2 │3 │-4│-3│-2│-1
-        sim.tracer.render_trace(repr_func=val_to_signed_integer)
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step_multiple(nsteps=2 ** bitwidth)
+        >>> sim.tracer.render_trace(repr_func=val_to_signed_integer)
+               │0 │1 │2 │3 │4 │5 │6 │7
+        <BLANKLINE>
+        counter ──┤1 │2 │3 │-4│-3│-2│-1
 
     :func:`infer_val_and_bitwidth` performs the opposite conversion::
 
-        >>> integer = val_to_signed_integer(0xff, bitwidth=8)
-        >>> hex(infer_val_and_bitwidth(integer, bitwidth=8).value)
+        >>> integer = pyrtl.val_to_signed_integer(0xff, bitwidth=8)
+        >>> hex(pyrtl.infer_val_and_bitwidth(integer, bitwidth=8).value)
         '0xff'
 
     :param value: A Python integer holding the value to convert.
@@ -791,32 +808,37 @@ def val_to_signed_integer(value: int, bitwidth: int) -> int:
 def formatted_str_to_val(data: str, format: str, enum_set=None) -> int:
     """Return an unsigned integer representation of ``data`` in a specified ``format``.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
     Given a string (not a :class:`WireVector`!) convert that to an unsigned integer
     ready for input to the simulation environment. This helps deal with signed/unsigned
     numbers (simulation assumes the values have been converted via two's complement
     already), but it also takes hex, binary, and enum types as inputs. It is easiest to
     see how it works with some examples::
 
-        >>> formatted_str_to_val('2', 's3')
+        >>> pyrtl.formatted_str_to_val('2', 's3')
         2
-        >>> bin(formatted_str_to_val('-1', 's3'))
+        >>> bin(pyrtl.formatted_str_to_val('-1', 's3'))
         '0b111'
-        >>> bin(formatted_str_to_val('101', 'b3'))
+        >>> bin(pyrtl.formatted_str_to_val('101', 'b3'))
         '0b101'
-        >>> formatted_str_to_val('5', 'u3')
+        >>> pyrtl.formatted_str_to_val('5', 'u3')
         5
-        >>> bin(formatted_str_to_val('-3', 's3'))
+        >>> bin(pyrtl.formatted_str_to_val('-3', 's3'))
         '0b101'
-        >>> formatted_str_to_val('a', 'x3')
+        >>> pyrtl.formatted_str_to_val('a', 'x3')
         10
 
         >>> from enum import IntEnum
         >>> class Ctl(IntEnum):
         ...     ADD = 5
         ...     SUB = 12
-        >>> formatted_str_to_val('ADD', 'e3/Ctl', [Ctl])
+        >>> pyrtl.formatted_str_to_val('ADD', 'e3/Ctl', [Ctl])
         5
-        >>> formatted_str_to_val('SUB', 'e3/Ctl', [Ctl])
+        >>> pyrtl.formatted_str_to_val('SUB', 'e3/Ctl', [Ctl])
         12
 
     :func:`val_to_formatted_str` performs the opposite conversion.
@@ -859,32 +881,37 @@ def formatted_str_to_val(data: str, format: str, enum_set=None) -> int:
 def val_to_formatted_str(val: int, format: str, enum_set=None) -> str:
     """Return a string representation of the value given format specified.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
     Given an unsigned integer (not a :class:`WireVector`!) convert that to a
     human-readable string. This helps deal with signed/unsigned numbers (simulation
     operates on values that have been converted via two's complement), but it also
     generates hex, binary, and enum types as outputs. It is easiest to see how it works
     with some examples::
 
-        >>> val_to_formatted_str(2, 's3')
+        >>> pyrtl.val_to_formatted_str(2, 's3')
         '2'
-        >>> val_to_formatted_str(7, 's3')
+        >>> pyrtl.val_to_formatted_str(7, 's3')
         '-1'
-        >>> val_to_formatted_str(5, 'b3')
+        >>> pyrtl.val_to_formatted_str(5, 'b3')
         '101'
-        >>> val_to_formatted_str(5, 'u3')
+        >>> pyrtl.val_to_formatted_str(5, 'u3')
         '5'
-        >>> val_to_formatted_str(5, 's3')
+        >>> pyrtl.val_to_formatted_str(5, 's3')
         '-3'
-        >>> val_to_formatted_str(10, 'x3')
+        >>> pyrtl.val_to_formatted_str(10, 'x3')
         'a'
 
         >>> from enum import IntEnum
         >>> class Ctl(IntEnum):
         ...     ADD = 5
         ...     SUB = 12
-        >>> val_to_formatted_str(5, 'e3/Ctl', [Ctl])
+        >>> pyrtl.val_to_formatted_str(5, 'e3/Ctl', [Ctl])
         'ADD'
-        >>> val_to_formatted_str(12, 'e3/Ctl', [Ctl])
+        >>> pyrtl.val_to_formatted_str(12, 'e3/Ctl', [Ctl])
         'SUB'
 
     :func:`formatted_str_to_val` performs the opposite conversion.
@@ -934,6 +961,11 @@ def infer_val_and_bitwidth(
 ) -> ValueBitwidthTuple:
     """Return a ``(value, bitwidth)`` :class:`tuple` inferred from the specified input.
 
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
     Given a boolean, integer, or Verilog-style string constant, this function returns a
     :class:`ValueBitwidthTuple` ``(value, bitwidth)`` which are inferred from the
     specified ``rawinput``. If ``signed`` is ``True``, bits will be included to ensure a
@@ -941,30 +973,30 @@ def infer_val_and_bitwidth(
     unsigned representation. Error checks are performed that determine if the bitwidths
     specified are sufficient and appropriate for the values specified. Examples::
 
-        >>> infer_val_and_bitwidth(2, bitwidth=5)
+        >>> pyrtl.infer_val_and_bitwidth(2, bitwidth=5)
         ValueBitwidthTuple(value=2, bitwidth=5)
 
         >>> # Infer bitwidth from value.
-        >>> infer_val_and_bitwidth(3)
+        >>> pyrtl.infer_val_and_bitwidth(3)
         ValueBitwidthTuple(value=3, bitwidth=2)
-        >>> infer_val_and_bitwidth(3).bitwidth
+        >>> pyrtl.infer_val_and_bitwidth(3).bitwidth
         2
 
         >>> # Signed values need an additional sign bit.
-        >>> infer_val_and_bitwidth(3, signed=True)
+        >>> pyrtl.infer_val_and_bitwidth(3, signed=True)
         ValueBitwidthTuple(value=3, bitwidth=3)
 
-        >>> val, bitwidth = infer_val_and_bitwidth(-1, bitwidth=3)
+        >>> val, bitwidth = pyrtl.infer_val_and_bitwidth(-1, bitwidth=3)
         >>> (bin(val), bitwidth)
         ('0b111', 3)
 
-        >>> infer_val_and_bitwidth("5'd12")
+        >>> pyrtl.infer_val_and_bitwidth("5'd12")
         ValueBitwidthTuple(value=12, bitwidth=5)
 
     :func:`val_to_signed_integer` performs the opposite conversion::
 
-        >>> val, bitwidth = infer_val_and_bitwidth(-1, bitwidth=3)
-        >>> val_to_signed_integer(val, bitwidth)
+        >>> val, bitwidth = pyrtl.infer_val_and_bitwidth(-1, bitwidth=3)
+        >>> pyrtl.val_to_signed_integer(val, bitwidth)
         -1
 
     :param rawinput: a bool, int, or Verilog-style string constant
@@ -1479,7 +1511,7 @@ def wire_struct(wire_struct_spec):
 
     The example ``Byte`` ``@wire_struct`` can be defined as::
 
-        >>> @wire_struct
+        >>> @pyrtl.wire_struct
         ... class Byte:
         ...     high: 4
         ...     low: 4
@@ -1970,7 +2002,7 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
     An example 32-bit ``Word`` ``wire_matrix``, which represents a group of four bytes,
     can be defined as::
 
-        >>> Word = wire_matrix(component_schema=8, size=4, class_name="Word")
+        >>> Word = pyrtl.wire_matrix(component_schema=8, size=4, class_name="Word")
 
     .. NOTE::
 
@@ -2045,8 +2077,10 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
     ``wire_matrix`` can be composed with itself and :func:`wire_struct`. For example, we
     can define some multi-dimensional byte arrays::
 
-        Array1D = wire_matrix(component_schema=8, size=2, class_name="Array1D")
-        Array2D = wire_matrix(component_schema=Array1D, size=2, class_name="Array2D")
+        Array1D = pyrtl.wire_matrix(component_schema=8, size=2, class_name="Array1D")
+        Array2D = pyrtl.wire_matrix(component_schema=Array1D,
+                                    size=2,
+                                    class_name="Array2D")
 
     Drivers must be specified for all components, but they can be specified at any
     level. All these examples construct an equivalent ``wire_matrix``::
@@ -2068,7 +2102,7 @@ def wire_matrix(component_schema, size: int, class_name: str | None = None):
     When ``wire_matrix`` is composed with :func:`wire_struct`, components can be
     accessed by combining the ``[]`` and ``.`` operators::
 
-        @wire_struct
+        @pyrtl.wire_struct
         class Byte:
             high: 4
             low: 4

@@ -1,9 +1,19 @@
+import doctest
 import random
 import unittest
 from itertools import islice
 
 import pyrtl
 from pyrtl.rtllib import prngs
+
+
+class TestDocTests(unittest.TestCase):
+    """Test documentation examples."""
+
+    def test_prngs_doctests(self):
+        failures, tests = doctest.testmod(m=prngs)
+        self.assertGreater(tests, 0)
+        self.assertEqual(failures, 0)
 
 
 class TestPrngs(unittest.TestCase):

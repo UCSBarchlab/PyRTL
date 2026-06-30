@@ -122,9 +122,11 @@ maps from :class:`.WireVector` to its default value for the
 :data:`.conditional_assignment` block. ``defaults`` are not supported for
 :class:`.MemBlock`. See :ref:`conditional_assignment_defaults` for more details.
 
-See `the state machine example
-<https://github.com/UCSBarchlab/PyRTL/blob/development/examples/example3-statemachine.py>`_
-for more examples of :data:`.conditional_assignment`.
+.. note::
+
+   See `example3-statemachine
+   <https://github.com/UCSBarchlab/PyRTL/blob/development/examples/example3-statemachine.py>`_
+   for more :data:`.conditional_assignment` examples.
 
 .. autodata:: pyrtl.otherwise
 
