@@ -1,6 +1,8 @@
 # Only crawl the latest English documentation.
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /_/
+Disallow: /en/
 Allow: /en/latest/
 
 Sitemap: https://pyrtl.readthedocs.io/sitemap.xml
