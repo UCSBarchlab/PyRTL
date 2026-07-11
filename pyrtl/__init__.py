@@ -17,7 +17,15 @@ from .core import (
 )
 
 # convenience classes for building hardware
-from .wire import WireVector, Input, Output, Const, Register
+from .wire import (
+    WireVector,
+    Input,
+    Output,
+    Const,
+    Register,
+    name_scope,
+    current_name_prefix,
+)
 
 from .gate_graph import GateGraph, Gate
 
@@ -161,6 +169,8 @@ __all__ = [
     "Output",
     "Const",
     "Register",
+    "name_scope",
+    "current_name_prefix",
     # gate_graph
     "GateGraph",
     "Gate",

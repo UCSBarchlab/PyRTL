@@ -26,7 +26,13 @@ from pyrtl.core import Block, LogicNet, _NameIndexer, working_block
 from pyrtl.corecircuits import as_wires
 from pyrtl.helperfuncs import infer_val_and_bitwidth
 from pyrtl.pyrtlexceptions import PyrtlError
-from pyrtl.wire import Const, WireVector, WireVectorLike, next_tempvar_name
+from pyrtl.wire import (
+    Const,
+    WireVector,
+    WireVectorLike,
+    current_name_prefix,
+    next_tempvar_name,
+)
 
 # ------------------------------------------------------------------------
 #
@@ -247,13 +253,13 @@ class MemBlock:
         """Single-bit :class:`.WireVector` indicating if a write should occur."""
 
     id: int
-    """A unique integer assigned to each MemBlock.
+    """A unique integer assigned to the ``MemBlock``.
 
     .. doctest only::
 
         >>> import pyrtl
         >>> pyrtl.reset_working_block()
-        >>> pyrtl.memory._memIndex.internal_index = 0
+        >>> pyrtl.memory._reset_memory_indexer()
 
     Example::
 
@@ -264,6 +270,16 @@ class MemBlock:
         >>> mem_b = pyrtl.MemBlock(bitwidth=4, addrwidth=5)
         >>> mem_b.id
         1
+    """
+
+    name: str
+    """A unique name for the ``MemBlock``.
+
+    .. note::
+
+        All :class:`MemBlocks<MemBlock>` in a :class:`Block` must have unique names. The
+        :class:`.name_scope` context manager helps avoid name collisions, and the
+        :ref:`naming` section covers best practices for choosing names in PyRTL.
     """
 
     def __init__(
@@ -294,7 +310,7 @@ class MemBlock:
         self.max_read_ports = max_read_ports
         self.num_read_ports = 0
         self.block = working_block(block)
-        name = next_tempvar_name(name)
+        name = current_name_prefix(next_tempvar_name(name))
 
         if bitwidth <= 0:
             msg = "bitwidth must be >= 1"
