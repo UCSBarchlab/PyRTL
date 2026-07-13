@@ -8,7 +8,7 @@ import os
 import re
 import warnings
 from collections.abc import Callable, Mapping
-from typing import TextIO
+from typing import TYPE_CHECKING, ClassVar, TextIO
 
 from pyrtl.core import Block, PostSynthBlock, _PythonSanitizer, working_block
 from pyrtl.helperfuncs import (
@@ -21,6 +21,10 @@ from pyrtl.importexport import _VerilogSanitizer
 from pyrtl.memory import MemBlock, RomBlock
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
 from pyrtl.wire import Const, Input, Output, Register, WireVector
+
+if TYPE_CHECKING:
+    from pyrtl.core import LogicNet
+
 
 # ----------------------------------------------------------------
 #    __                         ___    __
@@ -512,45 +516,49 @@ class Simulation:
         """
         return val & wirevector.bitmask
 
-    def _execute(self, net):
-        """Handle the combinational logic update rules for the given net.
+    # Map from LogicNet.op to a Python function that executes that op. This map only
+    # handles the "simple" ops; complex ops are handled directly by _execute.
+    _execute_simple_func: ClassVar = {
+        "w": lambda x: x,
+        "~": lambda x: ~int(x),
+        "n": lambda left, right: ~(left & right),
+        "x": lambda sel, f, t: f if (sel == 0) else t,
+        "&": lambda left, right: left & right,
+        "|": lambda left, right: left | right,
+        "^": lambda left, right: left ^ right,
+        "+": lambda left, right: left + right,
+        "-": lambda left, right: left - right,
+        "*": lambda left, right: left * right,
+        "<": lambda left, right: int(left < right),
+        ">": lambda left, right: int(left > right),
+        "=": lambda left, right: int(left == right),
+    }
 
-        This function, along with edge_update, defined the semantics of the primitive
-        ops. Function updates self.value accordingly.
+    def _execute(self, net: LogicNet):
+        """Handle the combinational logic update rules for a given ``net``.
+
+        This function defines the semantics of the primitive ops. Performs a
+        :class:`LogicNet`'s function and updates ``self.value`` accordingly.
         """
-        simple_func = {  # OPS
-            "w": lambda x: x,
-            "~": lambda x: ~int(x),
-            "&": lambda left, right: left & right,
-            "|": lambda left, right: left | right,
-            "^": lambda left, right: left ^ right,
-            "n": lambda left, right: ~(left & right),
-            "+": lambda left, right: left + right,
-            "-": lambda left, right: left - right,
-            "*": lambda left, right: left * right,
-            "<": lambda left, right: int(left < right),
-            ">": lambda left, right: int(left > right),
-            "=": lambda left, right: int(left == right),
-            "x": lambda sel, f, t: f if (sel == 0) else t,
-        }
-
+        # Registers and memory write ports have no logic function.
         if net.op in "r@":
-            return  # registers and memory write ports have no logic function
-        if net.op in simple_func:
-            argvals = (self.value[arg] for arg in net.args)
-            result = simple_func[net.op](*argvals)
+            return
+
+        if net.op == "s":
+            result = 0
+            source = self.value[net.args[0]]
+            for b in net.op_param[::-1]:
+                result = (result << 1) | (0x1 & (source >> b))
         elif net.op == "c":
             result = 0
             for arg in net.args:
                 result = result << len(arg)
                 result = result | self.value[arg]
-        elif net.op == "s":
-            result = 0
-            source = self.value[net.args[0]]
-            for b in net.op_param[::-1]:
-                result = (result << 1) | (0x1 & (source >> b))
+        elif net.op in self._execute_simple_func:
+            argvals = (self.value[arg] for arg in net.args)
+            result = self._execute_simple_func[net.op](*argvals)
         elif net.op == "m":
-            # memories act async for reads
+            # MemBlock reads are asynchronous.
             memid = net.op_param[0]
             mem = net.op_param[1]
             read_addr = self.value[net.args[0]]
