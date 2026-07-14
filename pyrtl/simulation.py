@@ -8,6 +8,7 @@ import os
 import re
 import warnings
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, TextIO
 
 from pyrtl.core import Block, PostSynthBlock, _PythonSanitizer, working_block
@@ -431,7 +432,7 @@ class Simulation:
                 s = "(stopped after step with first error):"
             else:
                 s = "on one or more steps:"
-            print("Unexpected output " + s, file=file)
+            print(f"Unexpected output {s}", file=file)
             print(f"{'step':>5} {'name':>10} {'expected':>8} {'actual':>8}", file=file)
 
             def _sort_tuple(t):
@@ -546,9 +547,9 @@ class Simulation:
 
         if net.op == "s":
             result = 0
-            source = self.value[net.args[0]]
-            for b in net.op_param[::-1]:
-                result = (result << 1) | (0x1 & (source >> b))
+            arg = self.value[net.args[0]]
+            for arg_index in net.op_param[::-1]:
+                result = (result << 1) | (0x1 & (arg >> arg_index))
         elif net.op == "c":
             result = 0
             for arg in net.args:
@@ -595,6 +596,65 @@ class Simulation:
 #   |__   /\  /__`  |     /__` |  |\/|
 #   |    /~~\ .__/  |     .__/ |  |  |
 #
+
+
+@dataclass
+class ContiguousSlice:
+    """Represents a contiguous range of bits mapped from a slice :class:`LogicNet`'s
+    input to output.
+    """
+
+    length: int
+    """Length of this contiguous bit slice, in bits."""
+    arg_start: int
+    """Bit index of the start (least-significant) bit in the slice's input.
+
+    The bit slice's input bits are in the range [arg_start, arg_start + length).
+    """
+    dest_start: int
+    """Bit index of the start (least-significant) bit in the slice's output.
+
+    The bit slice's output bits are in the range [dest_start, dest_start + length).
+    """
+
+
+def make_contiguous_slices(net: LogicNet) -> list[ContiguousSlice]:
+    """Given a slice :class:`LogicNet`, return a run-length compressed version of its
+    :attr:`LogicNet.op_param`.
+
+    Slice :class:`LogicNets<LogicNet>` are very frequently used to extract a contiguous
+    range of bits from a :class:`WireVector`, for example ``wire[2:7]``. But the
+    :attr:`LogicNet.op_param` are difficult to process efficiently because they specify
+    the input-to-output mapping one bit at a time.
+
+    To process these common :class:`LogicNets<LogicNet>` more efficiently, this function
+    compresses contiguous ranges of bits in the input-to-output mapping into
+    :class:`ContiguousSlices<ContiguousSlice>`.
+    """
+    if net.op != "s":
+        msg = f"Invalid LogicNet op ({net.op})"
+        raise PyrtlInternalError(msg)
+    if len(net.op_param) == 0:
+        return []
+
+    contiguous_slices = []
+
+    length = 1
+    arg_start = net.op_param[0]
+    dest_start = 0
+    for dest_index, arg_index in enumerate(net.op_param[1:], start=1):
+        if arg_index == arg_start + length:
+            # `arg_index` continues the current slice.
+            length += 1
+        else:
+            # `arg_index` ends the current slice because it is discontiguous.
+            contiguous_slices.append(ContiguousSlice(length, arg_start, dest_start))
+            length = 1
+            arg_start = arg_index
+            dest_start = dest_index
+
+    contiguous_slices.append(ContiguousSlice(length, arg_start, dest_start))
+    return contiguous_slices
 
 
 class FastSimulation:
@@ -823,7 +883,7 @@ class FastSimulation:
                 s = "(stopped after step with first error):"
             else:
                 s = "on one or more steps:"
-            print("Unexpected output " + s, file=file)
+            print(f"Unexpected output {s}", file=file)
             print(f"{'step':>5} {'name':>10} {'expected':>8} {'actual':>8}", file=file)
 
             def _sort_tuple(t):
@@ -850,48 +910,46 @@ class FastSimulation:
             raise PyrtlError(msg)
         return self.mems[self._mem_varname(mem)]
 
-    def _to_name(self, name):
+    def _to_name(self, name: WireVector | str) -> str:
         """Converts Wires to strings, keeps strings as is"""
         if isinstance(name, WireVector):
             return name.name
         return name
 
-    def _varname(self, val):
+    def _varname(self, val: WireVector) -> str:
         """Converts WireVectors to internal names"""
         return self.internal_names[val.name]
 
-    def _mem_varname(self, val):
-        return "fs_mem" + str(val.id)
+    def _mem_varname(self, val: MemBlock) -> str:
+        return f"fs_mem{val.id}"
 
-    def _arg_varname(self, wire):
+    def _arg_varname(self, wire: WireVector) -> str:
         """
         Input, Const, and Registers have special input values
         """
         if isinstance(wire, (Input, Register)):
-            return "d[" + repr(wire.name) + "]"  # passed in
+            return f"d[{wire.name!r}]"  # passed in
         if isinstance(wire, Const):
             return str(int(wire.val))  # hardcoded
         return self._varname(wire)
 
-    def _dest_varname(self, wire):
+    def _dest_varname(self, wire: WireVector) -> str:
         if isinstance(wire, Output):
-            return "outs[" + repr(wire.name) + "]"
+            return f"outs[{wire.name!r}]"
         if isinstance(wire, Register):
-            return "regs[" + repr(wire.name) + "]"
+            return f"regs[{wire.name!r}]"
         return self._varname(wire)
 
-    # Yeah, triple quotes don't respect indentation (aka the 4 spaces on the start of
-    # each line is part of the string)
-    _prog_start = """def sim_func(d):
-    regs = {}
-    outs = {}
-    mem_ws = []"""
+    def _compiled(self) -> str:
+        """Return the definition of a `sim_func` Python function that simulates one
+        cycle of `self.block`'s execution.
 
-    def _compiled(self):
-        """Return a string of the self.block compiled to a block of code that can be
-        executed to get a function to execute
+        The returned function is a string, which can be compile()'d and exec()'d to
+        actually define the function.
         """
-        # bitwidth that the dest has to have in order to not need masking.
+        # Map from LogicNet.op to a function returning the computed result's bitwidth.
+        # If this matches the `dest` WireVector's bitwidth, the result does not need to
+        # be truncated with a bitmask.
         no_mask_bitwidth = {
             "w": lambda net: len(net.args[0]),
             "r": lambda net: len(net.args[0]),
@@ -912,27 +970,30 @@ class FastSimulation:
             "m": lambda _net: -1,  # just not going to optimize this right now
         }
 
-        # Dev Notes:
-        #
-        # Because of fast locals in functions in both CPython and PyPy, getting a
-        # function to execute makes the code a few times faster than just executing it
-        # in the global exec scope.
-        prog = [self._prog_start]
+        # Dev Note: Because of fast locals in functions in both CPython and PyPy,
+        # getting a function to execute makes the code a few times faster than just
+        # executing it in the global exec scope.
+        prog = [
+            "def sim_func(d):",
+            "    regs = {}",
+            "    outs = {}",
+            "    mem_ws = []",
+        ]
 
-        simple_func = {  # OPS
+        simple_func = {
             "w": lambda x: x,
             "r": lambda x: x,
-            "~": lambda x: "(~" + x + ")",
-            "&": lambda left, right: "(" + left + "&" + right + ")",
-            "|": lambda left, right: "(" + left + "|" + right + ")",
-            "^": lambda left, right: "(" + left + "^" + right + ")",
-            "n": lambda left, right: "(~(" + left + "&" + right + "))",
-            "+": lambda left, right: "(" + left + "+" + right + ")",
-            "-": lambda left, right: "(" + left + "-" + right + ")",
-            "*": lambda left, right: "(" + left + "*" + right + ")",
-            "<": lambda left, right: "int(" + left + "<" + right + ")",
-            ">": lambda left, right: "int(" + left + ">" + right + ")",
-            "=": lambda left, right: "int(" + left + "==" + right + ")",
+            "~": lambda x: f"(~{x})",
+            "&": lambda left, right: f"({left}&{right})",
+            "|": lambda left, right: f"({left}|{right})",
+            "^": lambda left, right: f"({left}^{right})",
+            "n": lambda left, right: f"(~({left}&{right}))",
+            "+": lambda left, right: f"({left}+{right})",
+            "-": lambda left, right: f"({left}-{right})",
+            "*": lambda left, right: f"({left}*{right})",
+            "<": lambda left, right: f"int({left}<{right})",
+            ">": lambda left, right: f"int({left}>{right})",
+            "=": lambda left, right: f"int({left}=={right})",
             "x": lambda sel, f, t: f"({f}) if ({sel}==0) else ({t})",
         }
 
@@ -941,54 +1002,32 @@ class FastSimulation:
                 return value
             return f"({value} {direction} {shift_amt})"
 
-        def make_split(source, split_length, split_start_bit, split_res_start_bit):
-            if split_start_bit == 0:
-                bit = f"({(1 << split_length) - 1} & {source})"
-            elif len(net.args[0]) - split_start_bit == split_length:
-                bit = f"({source} >> {split_start_bit})"
-            else:
-                bit = f"({(1 << split_length) - 1} & ({source} >> {split_start_bit}))"
-            return shift(bit, "<<", split_res_start_bit)
-
         for net in self.block:
             if net.op in simple_func:
                 argvals = (self._arg_varname(arg) for arg in net.args)
                 expr = simple_func[net.op](*argvals)
             elif net.op == "c":
-                expr = ""
+                expr_parts = []
                 for i in range(len(net.args)):
-                    if expr != "":
-                        expr += " | "
                     shiftby = sum(len(j) for j in net.args[i + 1 :])
-                    expr += shift(self._arg_varname(net.args[i]), "<<", shiftby)
+                    expr_parts.append(
+                        shift(self._arg_varname(net.args[i]), "<<", shiftby)
+                    )
+                expr = " | ".join(expr_parts)
             elif net.op == "s":
-                source = self._arg_varname(net.args[0])
-                expr = ""
-                split_length = 0
-                split_start_bit = -2
-                split_res_start_bit = -1
+                arg = self._arg_varname(net.args[0])
+                contiguous_slices = make_contiguous_slices(net)
 
-                for i, b in enumerate(net.op_param):
-                    if b != split_start_bit + split_length:
-                        if split_start_bit >= 0:
-                            # create a wire
-                            expr += (
-                                make_split(
-                                    source,
-                                    split_length,
-                                    split_start_bit,
-                                    split_res_start_bit,
-                                )
-                                + "|"
-                            )
-                        split_length = 1
-                        split_start_bit = b
-                        split_res_start_bit = i
-                    else:
-                        split_length += 1
-                expr += make_split(
-                    source, split_length, split_start_bit, split_res_start_bit
-                )
+                expr_parts = []
+                for contiguous_slice in contiguous_slices:
+                    expr = shift(arg, ">>", contiguous_slice.arg_start)
+                    arg_end = contiguous_slice.arg_start + contiguous_slice.length
+                    if net.args[0].bitwidth > arg_end:
+                        expr = f"({expr} & {(1 << contiguous_slice.length) - 1})"
+
+                    expr_parts.append(shift(expr, "<<", contiguous_slice.dest_start))
+
+                expr = "|".join(expr_parts)
             elif net.op == "m":
                 read_addr = self._arg_varname(net.args[0])
                 mem = net.op_param[1]
@@ -1013,15 +1052,11 @@ class FastSimulation:
                 msg = f'FastSimulation cannot handle primitive "{net.op}"'
                 raise PyrtlError(msg)
 
-            # prog.append('    #  ' + str(net))
-            result = self._dest_varname(net.dests[0])
-            if len(net.dests[0]) == no_mask_bitwidth[net.op](net):
-                prog.append(f"    {result} = {expr}")
-            else:
-                mask = str(net.dests[0].bitmask)
-                prog.append(f"    {result} = {mask} & {expr}")
+            if len(net.dests[0]) != no_mask_bitwidth[net.op](net):
+                expr = f"{expr} & {net.dests[0].bitmask}"
+            prog.append(f"    {self._dest_varname(net.dests[0])} = {expr}")
 
-        # add traced wires to dict
+        # Add all traced wires to `outs`.
         if self.tracer is not None:
             for wire_name in self.tracer.trace:
                 wire = self.block.wirevector_by_name[wire_name]
