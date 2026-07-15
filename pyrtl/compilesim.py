@@ -15,7 +15,13 @@ from pyrtl.core import Block, working_block
 from pyrtl.helperfuncs import infer_val_and_bitwidth
 from pyrtl.memory import MemBlock, RomBlock
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
-from pyrtl.simulation import SimulationTrace, _trace_sort_key
+from pyrtl.simulation import (
+    ContiguousSlice,
+    SimulationTrace,
+    _trace_sort_key,
+    make_contiguous_slices,
+    shift,
+)
 from pyrtl.wire import Const, Input, Output, Register, WireVector
 
 __all__ = ["CompiledSimulation"]
@@ -673,17 +679,84 @@ class CompiledSimulation:
                 )
             )
 
-    def _build_select(self, write, _op, param, args, dest):
-        for n in range(self._limbs(dest)):
-            bits = [
-                f"((1&({self.varname[args[0]]}[{b // 64}]>>{b % 64}))<<{en})"
-                for en, b in enumerate(param[64 * n : min(dest.bitwidth, 64 * (n + 1))])
-            ]
-            write(
-                "{dest}[{n}] = {bits};".format(
-                    dest=self.varname[dest], n=n, bits="|".join(bits)
+    def _next_limb_start(self, bit_position: int) -> int:
+        """Given a bit position, return the bit position of the first bit in the next
+        64-bit limb.
+
+        For example, all integers in the range [0, 63] return 64, and all integers in
+        the range [64, 127] return 128.
+        """
+        bit_position = bit_position + 1
+        # Round bit_position up to the next even multiple of 64.
+        return bit_position + (-bit_position % 64)
+
+    def _split_contiguous_slices(
+        self, dest: WireVector, op_param: list[int], n: int
+    ) -> list[ContiguousSlice]:
+        """Make ContiguousSlices for the ``n``th dest limb.
+
+        To simplify processing, split ContiguousSlices that fetch bits from multiple arg
+        limbs into ContiguousSlices that don't fetch bits from multiple arg limbs.
+        """
+        # Get op_params for the `n`th dest limb.
+        current_param = op_param[64 * n : min(dest.bitwidth, 64 * (n + 1))]
+
+        split_slices = []
+        for contiguous_slice in make_contiguous_slices(current_param):
+            next_limb_arg_start = self._next_limb_start(contiguous_slice.arg_start)
+            arg_end = contiguous_slice.arg_start + contiguous_slice.length
+
+            if next_limb_arg_start >= arg_end:
+                # contiguous_slice fetches bits from one arg limb.
+                split_slices.append(contiguous_slice)
+            else:
+                # contiguous_slice fetches bits from two arg limbs. Split it into two
+                # ContiguousSlices that each fetch bits from one arg limb.
+                first_limb_length = next_limb_arg_start - contiguous_slice.arg_start
+                split_slices.append(
+                    ContiguousSlice(
+                        length=first_limb_length,
+                        arg_start=contiguous_slice.arg_start,
+                        dest_start=contiguous_slice.dest_start,
+                    )
                 )
-            )
+                split_slices.append(
+                    ContiguousSlice(
+                        length=contiguous_slice.length - first_limb_length,
+                        arg_start=next_limb_arg_start,
+                        dest_start=contiguous_slice.dest_start + first_limb_length,
+                    )
+                )
+
+        return split_slices
+
+    def _build_slice(self, write, _op, param, args, dest):
+        # Iterate over the slice's dest limbs.
+        for n in range(self._limbs(dest)):
+            split_slices = self._split_contiguous_slices(dest, param, n)
+
+            expr_parts = []
+            for split_slice in split_slices:
+                # We only need to fetch bits from one arg limb because
+                # _split_contiguous_slices split up any slices that fetch bits from
+                # multiple arg limbs.
+                expr = f"{self.varname[args[0]]}[{split_slice.arg_start // 64}]"
+                expr = shift(expr, ">>", split_slice.arg_start % 64)
+
+                slice_arg_end = split_slice.arg_start + split_slice.length
+                actual_arg_end = min(
+                    args[0].bitwidth, self._next_limb_start(split_slice.arg_start)
+                )
+                # If this split_slice does not fetch all of the arg limb's remaining
+                # bits, we must mask the arg limb.
+                if slice_arg_end < actual_arg_end:
+                    expr = f"({expr} & 0x{(1 << split_slice.length) - 1:X})"
+
+                expr_parts.append(shift(expr, "<<", split_slice.dest_start))
+
+            expr = "|".join(expr_parts)
+
+            write(f"{self.varname[dest]}[{n}] = {expr};")
 
     def _declare_mem_helpers(self, write):
         helpers = """
@@ -851,7 +924,7 @@ class CompiledSimulation:
             "-": self._build_sub,
             "*": self._build_mul,
             "c": self._build_concat,
-            "s": self._build_select,
+            "s": self._build_slice,
         }
         for net in self.block:  # topological order
             if net.op in "r@":
