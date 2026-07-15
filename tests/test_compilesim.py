@@ -123,6 +123,20 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.r.next <<= pyrtl.concat(left, right)
         self.check_trace("o 01377777\n")
 
+    def test_multiple_limb_bitslice_simulation(self):
+        pyrtl.reset_working_block()
+
+        # `big_input`'s storage spans two 64-bit limbs.
+        big_input = pyrtl.Input(name="big_input", bitwidth=128)
+
+        out = pyrtl.Output(name="out", bitwidth=32)
+        # This slice must fetch and combine bits from both of `big_input`'s limbs.
+        out <<= big_input[48:80]
+
+        sim = self.sim()
+        sim.step({"big_input": 0xFFFF_EEEE_DDDD_1234_5678_CCCC_BBBB_AAAA})
+        self.assertEqual(sim.inspect("out"), 0x1234_5678)
+
     def test_reg_to_reg_simulation(self):
         self.r2 = pyrtl.Register(bitwidth=self.bitwidth, name="r2")
         self.r.next <<= self.r2
