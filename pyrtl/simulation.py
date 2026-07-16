@@ -606,13 +606,13 @@ def shift(value: str, direction: str, amount: int) -> str:
 
 
 @dataclass
-class ContiguousSlice:
-    """Represents a contiguous range of bits mapped from a slice :class:`LogicNet`'s
+class ConsecutiveSlice:
+    """Represents a consecutive range of bits mapped from a slice :class:`LogicNet`'s
     ``arg`` to ``dest``.
     """
 
     length: int
-    """Length of this contiguous bit slice, in bits."""
+    """Length of this consecutive bit slice, in bits."""
 
     arg_start: int
     """Bit index of the start (least-significant) bit in the slice's input.
@@ -627,19 +627,19 @@ class ContiguousSlice:
     """
 
 
-def make_contiguous_slices(op_param: list[int]) -> list[ContiguousSlice]:
+def make_consecutive_slices(op_param: list[int]) -> list[ConsecutiveSlice]:
     """Return a run-length compressed version of a slice :attr:`LogicNet.op_param`.
 
     Slice :class:`LogicNets<LogicNet>` (:attr:`~LogicNet.op` ``s``) are very frequently
-    used to extract a contiguous range of bits from a :class:`WireVector`, for example
+    used to extract a consecutive range of bits from a :class:`WireVector`, for example
     ``wire_vector[2:7]``. But the :attr:`LogicNet.op_param` are difficult to process
     efficiently because they specify the ``arg``-to-``dest`` mapping one bit at a time.
 
     To process these common :class:`LogicNets<LogicNet>` more efficiently, this function
-    compresses contiguous ranges of bits in the ``arg``-to-``dest`` mapping into
-    :class:`ContiguousSlices<ContiguousSlice>`.
+    compresses consecutive ranges of bits in the ``arg``-to-``dest`` mapping into
+    :class:`ConsecutiveSlices<ConsecutiveSlice>`.
     """
-    contiguous_slices = []
+    consecutive_slices = []
 
     length = 1
     arg_start = op_param[0]
@@ -649,14 +649,14 @@ def make_contiguous_slices(op_param: list[int]) -> list[ContiguousSlice]:
             # `arg_index` continues the current slice.
             length += 1
         else:
-            # `arg_index` ends the current slice because it is discontiguous.
-            contiguous_slices.append(ContiguousSlice(length, arg_start, dest_start))
+            # `arg_index` ends the current slice because it is not consecutive.
+            consecutive_slices.append(ConsecutiveSlice(length, arg_start, dest_start))
             length = 1
             arg_start = arg_index
             dest_start = dest_index
 
-    contiguous_slices.append(ContiguousSlice(length, arg_start, dest_start))
-    return contiguous_slices
+    consecutive_slices.append(ConsecutiveSlice(length, arg_start, dest_start))
+    return consecutive_slices
 
 
 class FastSimulation:
@@ -1013,17 +1013,17 @@ class FastSimulation:
                 expr = " | ".join(expr_parts)
             elif net.op == "s":
                 arg = self._arg_varname(net.args[0])
-                contiguous_slices = make_contiguous_slices(net.op_param)
+                consecutive_slices = make_consecutive_slices(net.op_param)
 
                 expr_parts = []
-                for contiguous_slice in contiguous_slices:
-                    expr = shift(arg, ">>", contiguous_slice.arg_start)
-                    arg_end = contiguous_slice.arg_start + contiguous_slice.length
+                for consecutive_slice in consecutive_slices:
+                    expr = shift(arg, ">>", consecutive_slice.arg_start)
+                    arg_end = consecutive_slice.arg_start + consecutive_slice.length
                     if net.args[0].bitwidth > arg_end:
                         # Mask if we're not taking all the arg's remaining bits.
-                        expr = f"({expr} & 0x{(1 << contiguous_slice.length) - 1:X})"
+                        expr = f"({expr} & 0x{(1 << consecutive_slice.length) - 1:X})"
 
-                    expr_parts.append(shift(expr, "<<", contiguous_slice.dest_start))
+                    expr_parts.append(shift(expr, "<<", consecutive_slice.dest_start))
 
                 expr = "|".join(expr_parts)
             elif net.op == "m":

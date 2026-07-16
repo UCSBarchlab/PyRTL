@@ -16,10 +16,10 @@ from pyrtl.helperfuncs import infer_val_and_bitwidth
 from pyrtl.memory import MemBlock, RomBlock
 from pyrtl.pyrtlexceptions import PyrtlError, PyrtlInternalError
 from pyrtl.simulation import (
-    ContiguousSlice,
+    ConsecutiveSlice,
     SimulationTrace,
     _trace_sort_key,
-    make_contiguous_slices,
+    make_consecutive_slices,
     shift,
 )
 from pyrtl.wire import Const, Input, Output, Register, WireVector
@@ -690,41 +690,41 @@ class CompiledSimulation:
         # Round bit_position up to the next even multiple of 64.
         return bit_position + (-bit_position % 64)
 
-    def _split_contiguous_slices(
+    def _split_consecutive_slices(
         self, dest: WireVector, op_param: list[int], n: int
-    ) -> list[ContiguousSlice]:
-        """Make ContiguousSlices for the ``n``th dest limb.
+    ) -> list[ConsecutiveSlice]:
+        """Make ConsecutiveSlices for the ``n``th dest limb.
 
-        To simplify processing, split ContiguousSlices that fetch bits from multiple arg
-        limbs into ContiguousSlices that don't fetch bits from multiple arg limbs.
+        To simplify processing, split ConsecutiveSlices that fetch bits from multiple
+        arg limbs into ConsecutiveSlices that don't fetch bits from multiple arg limbs.
         """
         # Get op_params for the `n`th dest limb.
         current_param = op_param[64 * n : min(dest.bitwidth, 64 * (n + 1))]
 
         split_slices = []
-        for contiguous_slice in make_contiguous_slices(current_param):
-            next_limb_arg_start = self._next_limb_start(contiguous_slice.arg_start)
-            arg_end = contiguous_slice.arg_start + contiguous_slice.length
+        for consecutive_slice in make_consecutive_slices(current_param):
+            next_limb_arg_start = self._next_limb_start(consecutive_slice.arg_start)
+            arg_end = consecutive_slice.arg_start + consecutive_slice.length
 
             if next_limb_arg_start >= arg_end:
-                # contiguous_slice fetches bits from one arg limb.
-                split_slices.append(contiguous_slice)
+                # consecutive_slice fetches bits from one arg limb.
+                split_slices.append(consecutive_slice)
             else:
-                # contiguous_slice fetches bits from two arg limbs. Split it into two
-                # ContiguousSlices that each fetch bits from one arg limb.
-                first_limb_length = next_limb_arg_start - contiguous_slice.arg_start
+                # consecutive_slice fetches bits from two arg limbs. Split it into two
+                # ConsecutiveSlices that each fetch bits from one arg limb.
+                first_limb_length = next_limb_arg_start - consecutive_slice.arg_start
                 split_slices.append(
-                    ContiguousSlice(
+                    ConsecutiveSlice(
                         length=first_limb_length,
-                        arg_start=contiguous_slice.arg_start,
-                        dest_start=contiguous_slice.dest_start,
+                        arg_start=consecutive_slice.arg_start,
+                        dest_start=consecutive_slice.dest_start,
                     )
                 )
                 split_slices.append(
-                    ContiguousSlice(
-                        length=contiguous_slice.length - first_limb_length,
+                    ConsecutiveSlice(
+                        length=consecutive_slice.length - first_limb_length,
                         arg_start=next_limb_arg_start,
-                        dest_start=contiguous_slice.dest_start + first_limb_length,
+                        dest_start=consecutive_slice.dest_start + first_limb_length,
                     )
                 )
 
@@ -733,12 +733,12 @@ class CompiledSimulation:
     def _build_slice(self, write, _op, param, args, dest):
         # Iterate over the slice's dest limbs.
         for n in range(self._limbs(dest)):
-            split_slices = self._split_contiguous_slices(dest, param, n)
+            split_slices = self._split_consecutive_slices(dest, param, n)
 
             expr_parts = []
             for split_slice in split_slices:
                 # We only need to fetch bits from one arg limb because
-                # _split_contiguous_slices split up any slices that fetch bits from
+                # _split_consecutive_slices split up any slices that fetch bits from
                 # multiple arg limbs.
                 expr = f"{self.varname[args[0]]}[{split_slice.arg_start // 64}]"
                 expr = shift(expr, ">>", split_slice.arg_start % 64)
