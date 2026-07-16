@@ -43,15 +43,6 @@ class TestWireVector(unittest.TestCase):
         with self.assertRaises(TypeError):
             y <<= x
 
-    def test_zero_extend(self):
-        pass
-
-    def test_sign_extend(self):
-        pass
-
-    def test_truncating(self):
-        pass
-
     def test_rename(self):
         block = pyrtl.working_block()
         w = pyrtl.WireVector(1, "test1")
@@ -143,6 +134,8 @@ class TestWireVectorFail(unittest.TestCase):
         x = pyrtl.WireVector(bitwidth=3)
         with self.assertRaises(pyrtl.PyrtlError):
             x.zero_extended(2)
+        with self.assertRaises(pyrtl.PyrtlError):
+            x.sign_extended(2)
 
     def test_truncate_only_reduces_bitwidth(self):
         x = pyrtl.WireVector(bitwidth=3)

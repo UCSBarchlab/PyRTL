@@ -28,9 +28,6 @@ class TestDocTests(unittest.TestCase):
 
 
 class TestWireVectorList(unittest.TestCase):
-    def setUp(self):
-        pass
-
     def test_input_list_type(self):
         inputs = pyrtl.input_list("one, two, three")
         self.assertTrue(all(isinstance(inp, pyrtl.Input) for inp in inputs))
@@ -80,9 +77,6 @@ class TestWireVectorList(unittest.TestCase):
 
 
 class TestNonCoreHelpers(unittest.TestCase):
-    def setUp(self):
-        pass
-
     def test_log2(self):
         self.assertEqual(pyrtl.log2(1), 0)
         self.assertEqual(pyrtl.log2(2), 1)

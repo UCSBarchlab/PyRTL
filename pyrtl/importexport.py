@@ -1191,7 +1191,25 @@ class _VerilogOutput:
         if gate.op == "c":
             if len(verilog_args) == 1:
                 return verilog_args[0]
-            return f"{{{', '.join(verilog_args)}}}"
+
+            concat_args = []
+            replicas = 1
+            for index in range(1, len(verilog_args) + 1):
+                if (
+                    index < len(verilog_args)
+                    and gate.args[index] is gate.args[index - 1]
+                ):
+                    replicas += 1
+                else:
+                    if replicas == 1:
+                        concat_args.append(verilog_args[index - 1])
+                    else:
+                        concat_args.append(
+                            f"{{{replicas} {{{verilog_args[index - 1]}}}}}"
+                        )
+                    replicas = 1
+
+            return f"{{{', '.join(concat_args)}}}"
         if gate.op == "s":
             selections = []
             for sel in reversed(gate.sel):
@@ -1201,9 +1219,6 @@ class _VerilogOutput:
                     selections.append(f"{verilog_args[0]}[{sel}]")
             if len(gate.sel) == 1:
                 return f"({selections[0]})"
-            # Special case: slicing multiple copies of the same gate.
-            if all(sel == gate.sel[0] for sel in gate.sel):
-                return f"{{{len(selections)} {{{selections[0]}}}}}"
             # Special case: slicing a consecutive subset.
             if tuple(range(gate.sel[0], gate.sel[-1] + 1)) == gate.sel:
                 return f"({verilog_args[0]}[{gate.sel[-1]}:{gate.sel[0]}])"

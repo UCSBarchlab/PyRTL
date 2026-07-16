@@ -691,8 +691,8 @@ class TestSubexpElimination(NetWireNumTestCases):
 
         self.num_net_of_type("|", 2)
         self.num_net_of_type("w", 2)
-        self.assert_num_net(6)
-        self.assert_num_wires(9)
+        self.assert_num_net(5)
+        self.assert_num_wires(8)
         pyrtl.working_block().sanity_check()
 
     def test_multiple_elimination(self):
@@ -812,9 +812,6 @@ class TestSynthPasses(unittest.TestCase):
 class TestSynthOptTiming(NetWireNumTestCases):
     def setUp(self):
         pyrtl.reset_working_block()
-
-    def test_sanity_check(self):
-        pass
 
     def everything_t_procedure(self, timing_val=None, opt_timing_val=None):
         # if there is a nondefault timing val supplied, then it will check to make sure

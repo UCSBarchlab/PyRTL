@@ -156,25 +156,25 @@ paths_print_output = """\
 From i
   To o
     Path 0
-      tmp5/3W <-- - -- i/2I, tmp4/2W
-      tmp6/3W <-- | -- tmp2/3W, tmp5/3W
-      o/3O <-- w -- tmp6/3W
+      tmp3/3W <-- - -- i/2I, tmp2/2W
+      tmp4/3W <-- | -- tmp1/3W, tmp3/3W
+      o/3O <-- w -- tmp4/3W
     Path 1
-      tmp1/3W <-- c -- tmp0/1W, i/2I
-      tmp2/3W <-- & -- tmp1/3W, j/3I
-      tmp6/3W <-- | -- tmp2/3W, tmp5/3W
-      o/3O <-- w -- tmp6/3W
+      tmp0/3W <-- c -- const_0_0/1C, i/2I
+      tmp1/3W <-- & -- tmp0/3W, j/3I
+      tmp4/3W <-- | -- tmp1/3W, tmp3/3W
+      o/3O <-- w -- tmp4/3W
   To p
     Path 0
-      tmp8/4W <-- c -- tmp7/2W, i/2I
-      tmp9/5W <-- - -- k/4I, tmp8/4W
-      p/5O <-- w -- tmp9/5W
+      tmp5/4W <-- c -- const_3_0/2C, i/2I
+      tmp6/5W <-- - -- k/4I, tmp5/4W
+      p/5O <-- w -- tmp6/5W
 From j
   To o
     Path 0
-      tmp2/3W <-- & -- tmp1/3W, j/3I
-      tmp6/3W <-- | -- tmp2/3W, tmp5/3W
-      o/3O <-- w -- tmp6/3W
+      tmp1/3W <-- & -- tmp0/3W, j/3I
+      tmp4/3W <-- | -- tmp1/3W, tmp3/3W
+      o/3O <-- w -- tmp4/3W
   To p
     (No paths)
 From k
@@ -182,8 +182,8 @@ From k
     (No paths)
   To p
     Path 0
-      tmp9/5W <-- - -- k/4I, tmp8/4W
-      p/5O <-- w -- tmp9/5W
+      tmp6/5W <-- - -- k/4I, tmp5/4W
+      p/5O <-- w -- tmp6/5W
 """
 
 
@@ -381,6 +381,7 @@ class TestPaths(unittest.TestCase):
         paths = pyrtl.paths()
         output = io.StringIO()
         paths.print(file=output)
+        self.maxDiff = 30000
         self.assertEqual(output.getvalue(), paths_print_output)
 
 
