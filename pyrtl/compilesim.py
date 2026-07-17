@@ -683,12 +683,11 @@ class CompiledSimulation:
         """Given a bit position, return the bit position of the first bit in the next
         64-bit limb.
 
-        For example, all integers in the range [0, 63] return 64, and all integers in
-        the range [64, 127] return 128.
+        This rounds bit_position up to the next even multiple of 64. For example, all
+        integers in the range [0, 63] return 64, and all integers in the range [64, 127]
+        return 128.
         """
-        bit_position = bit_position + 1
-        # Round bit_position up to the next even multiple of 64.
-        return bit_position + (-bit_position % 64)
+        return bit_position + (64 - bit_position % 64)
 
     def _split_consecutive_slices(
         self, dest: WireVector, op_param: list[int], n: int
@@ -744,14 +743,16 @@ class CompiledSimulation:
                 expr = shift(expr, ">>", split_slice.arg_start % 64)
 
                 slice_arg_end = split_slice.arg_start + split_slice.length
-                actual_arg_end = min(
-                    args[0].bitwidth, self._next_limb_start(split_slice.arg_start)
-                )
+                next_limb_arg_start = self._next_limb_start(split_slice.arg_start)
+                assert slice_arg_end <= next_limb_arg_start
+                actual_arg_end = min(args[0].bitwidth, next_limb_arg_start)
                 # If this split_slice does not fetch all of the arg limb's remaining
                 # bits, we must mask the arg limb.
                 if slice_arg_end < actual_arg_end:
                     expr = f"({expr} & 0x{(1 << split_slice.length) - 1:X})"
 
+                assert split_slice.dest_start < 64
+                assert split_slice.length <= 64 - split_slice.dest_start
                 expr_parts.append(shift(expr, "<<", split_slice.dest_start))
 
             expr = "|".join(expr_parts)
