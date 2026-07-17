@@ -598,19 +598,28 @@ class Simulation:
 #
 
 
+def shift(value: str, direction: str, amount: int) -> str:
+    """Return an expression that shifts ``value`` by ``amount``, in ``direction``."""
+    if amount == 0:
+        return value
+    return f"({value} {direction} {amount})"
+
+
 @dataclass
-class ContiguousSlice:
-    """Represents a contiguous range of bits mapped from a slice :class:`LogicNet`'s
-    input to output.
+class ConsecutiveSlice:
+    """Represents a consecutive range of bits mapped from a slice :class:`LogicNet`'s
+    ``arg`` to ``dest``.
     """
 
     length: int
-    """Length of this contiguous bit slice, in bits."""
+    """Length of this consecutive bit slice, in bits."""
+
     arg_start: int
     """Bit index of the start (least-significant) bit in the slice's input.
 
     The bit slice's input bits are in the range [arg_start, arg_start + length).
     """
+
     dest_start: int
     """Bit index of the start (least-significant) bit in the slice's output.
 
@@ -618,43 +627,36 @@ class ContiguousSlice:
     """
 
 
-def make_contiguous_slices(net: LogicNet) -> list[ContiguousSlice]:
-    """Given a slice :class:`LogicNet`, return a run-length compressed version of its
-    :attr:`LogicNet.op_param`.
+def make_consecutive_slices(op_param: list[int]) -> list[ConsecutiveSlice]:
+    """Return a run-length compressed version of a slice :attr:`LogicNet.op_param`.
 
-    Slice :class:`LogicNets<LogicNet>` are very frequently used to extract a contiguous
-    range of bits from a :class:`WireVector`, for example ``wire[2:7]``. But the
-    :attr:`LogicNet.op_param` are difficult to process efficiently because they specify
-    the input-to-output mapping one bit at a time.
+    Slice :class:`LogicNets<LogicNet>` (:attr:`~LogicNet.op` ``s``) are very frequently
+    used to extract a consecutive range of bits from a :class:`WireVector`, for example
+    ``wire_vector[2:7]``. But the :attr:`LogicNet.op_param` are difficult to process
+    efficiently because they specify the ``arg``-to-``dest`` mapping one bit at a time.
 
     To process these common :class:`LogicNets<LogicNet>` more efficiently, this function
-    compresses contiguous ranges of bits in the input-to-output mapping into
-    :class:`ContiguousSlices<ContiguousSlice>`.
+    compresses consecutive ranges of bits in the ``arg``-to-``dest`` mapping into
+    :class:`ConsecutiveSlices<ConsecutiveSlice>`.
     """
-    if net.op != "s":
-        msg = f"Invalid LogicNet op ({net.op})"
-        raise PyrtlInternalError(msg)
-    if len(net.op_param) == 0:
-        return []
-
-    contiguous_slices = []
+    consecutive_slices = []
 
     length = 1
-    arg_start = net.op_param[0]
+    arg_start = op_param[0]
     dest_start = 0
-    for dest_index, arg_index in enumerate(net.op_param[1:], start=1):
+    for dest_index, arg_index in enumerate(op_param[1:], start=1):
         if arg_index == arg_start + length:
             # `arg_index` continues the current slice.
             length += 1
         else:
-            # `arg_index` ends the current slice because it is discontiguous.
-            contiguous_slices.append(ContiguousSlice(length, arg_start, dest_start))
+            # `arg_index` ends the current slice because it is not consecutive.
+            consecutive_slices.append(ConsecutiveSlice(length, arg_start, dest_start))
             length = 1
             arg_start = arg_index
             dest_start = dest_index
 
-    contiguous_slices.append(ContiguousSlice(length, arg_start, dest_start))
-    return contiguous_slices
+    consecutive_slices.append(ConsecutiveSlice(length, arg_start, dest_start))
+    return consecutive_slices
 
 
 class FastSimulation:
@@ -997,11 +999,6 @@ class FastSimulation:
             "x": lambda sel, f, t: f"({f}) if ({sel}==0) else ({t})",
         }
 
-        def shift(value, direction, shift_amt):
-            if shift_amt == 0:
-                return value
-            return f"({value} {direction} {shift_amt})"
-
         for net in self.block:
             if net.op in simple_func:
                 argvals = (self._arg_varname(arg) for arg in net.args)
@@ -1016,16 +1013,17 @@ class FastSimulation:
                 expr = " | ".join(expr_parts)
             elif net.op == "s":
                 arg = self._arg_varname(net.args[0])
-                contiguous_slices = make_contiguous_slices(net)
+                consecutive_slices = make_consecutive_slices(net.op_param)
 
                 expr_parts = []
-                for contiguous_slice in contiguous_slices:
-                    expr = shift(arg, ">>", contiguous_slice.arg_start)
-                    arg_end = contiguous_slice.arg_start + contiguous_slice.length
+                for consecutive_slice in consecutive_slices:
+                    expr = shift(arg, ">>", consecutive_slice.arg_start)
+                    arg_end = consecutive_slice.arg_start + consecutive_slice.length
                     if net.args[0].bitwidth > arg_end:
-                        expr = f"({expr} & {(1 << contiguous_slice.length) - 1})"
+                        # Mask if we're not taking all the arg's remaining bits.
+                        expr = f"({expr} & 0x{(1 << consecutive_slice.length) - 1:X})"
 
-                    expr_parts.append(shift(expr, "<<", contiguous_slice.dest_start))
+                    expr_parts.append(shift(expr, "<<", consecutive_slice.dest_start))
 
                 expr = "|".join(expr_parts)
             elif net.op == "m":

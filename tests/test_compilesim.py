@@ -123,6 +123,42 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.r.next <<= pyrtl.concat(left, right)
         self.check_trace("o 01377777\n")
 
+    def test_multiple_limb_bitslice_simulation(self):
+        pyrtl.reset_working_block()
+
+        # `big_input`'s storage spans two 64-bit limbs.
+        big_input = pyrtl.Input(name="big_input", bitwidth=128)
+
+        out = pyrtl.Output(name="out", bitwidth=32)
+        # This slice must fetch and combine bits from both of `big_input`'s limbs.
+        out <<= big_input[48:80]
+
+        sim = self.sim()
+        sim.step({"big_input": 0xFFFF_EEEE_DDDD_1234_5678_CCCC_BBBB_AAAA})
+        self.assertEqual(sim.inspect("out"), 0x1234_5678)
+
+    def test_sparse_bitslice_simulation(self):
+        pyrtl.reset_working_block()
+
+        # `bigger_input`'s storage spans three 64-bit limbs.
+        bigger_input = pyrtl.Input(name="bigger_input", bitwidth=160)
+
+        even_bits = pyrtl.Output(name="even_bits", bitwidth=80)
+        even_bits <<= bigger_input[::2]
+
+        odd_bits = pyrtl.Output(name="odd_bits", bitwidth=80)
+        odd_bits <<= bigger_input[1::2]
+
+        sim = self.sim()
+        # 0xA == 0b1010
+        sim.step({"bigger_input": 0xAAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA})
+        self.assertEqual(sim.inspect("even_bits"), 0)
+        self.assertEqual(sim.inspect("odd_bits"), 0xFFFF_FFFF_FFFF_FFFF_FFFF)
+        # 0x5 == 0b0101
+        sim.step({"bigger_input": 0x5555_5555_5555_5555_5555_5555_5555_5555_5555_5555})
+        self.assertEqual(sim.inspect("even_bits"), 0xFFFF_FFFF_FFFF_FFFF_FFFF)
+        self.assertEqual(sim.inspect("odd_bits"), 0)
+
     def test_reg_to_reg_simulation(self):
         self.r2 = pyrtl.Register(bitwidth=self.bitwidth, name="r2")
         self.r.next <<= self.r2
