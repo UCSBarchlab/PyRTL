@@ -1005,11 +1005,10 @@ class FastSimulation:
                 expr = simple_func[net.op](*argvals)
             elif net.op == "c":
                 expr_parts = []
-                for i in range(len(net.args)):
-                    shiftby = sum(len(j) for j in net.args[i + 1 :])
-                    expr_parts.append(
-                        shift(self._arg_varname(net.args[i]), "<<", shiftby)
-                    )
+                shift_by = 0
+                for arg in reversed(net.args):
+                    expr_parts.append(shift(self._arg_varname(arg), "<<", shift_by))
+                    shift_by += arg.bitwidth
                 expr = " | ".join(expr_parts)
             elif net.op == "s":
                 arg = self._arg_varname(net.args[0])
