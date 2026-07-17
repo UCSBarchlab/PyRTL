@@ -123,28 +123,6 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.r.next <<= pyrtl.concat(left, right)
         self.check_trace("o 01377777\n")
 
-    def test_sparse_bitslice_simulation(self):
-        pyrtl.reset_working_block()
-
-        # `bigger_input`'s storage spans three 64-bit limbs.
-        bigger_input = pyrtl.Input(name="bigger_input", bitwidth=160)
-
-        even_bits = pyrtl.Output(name="even_bits", bitwidth=80)
-        even_bits <<= bigger_input[::2]
-
-        odd_bits = pyrtl.Output(name="odd_bits", bitwidth=80)
-        odd_bits <<= bigger_input[1::2]
-
-        sim = self.sim()
-        # 0xA == 0b1010
-        sim.step({"bigger_input": 0xAAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA})
-        self.assertEqual(sim.inspect("even_bits"), 0)
-        self.assertEqual(sim.inspect("odd_bits"), 0xFFFF_FFFF_FFFF_FFFF_FFFF)
-        # 0x5 == 0b0101
-        sim.step({"bigger_input": 0x5555_5555_5555_5555_5555_5555_5555_5555_5555_5555})
-        self.assertEqual(sim.inspect("even_bits"), 0xFFFF_FFFF_FFFF_FFFF_FFFF)
-        self.assertEqual(sim.inspect("odd_bits"), 0)
-
     def test_reg_to_reg_simulation(self):
         self.r2 = pyrtl.Register(bitwidth=self.bitwidth, name="r2")
         self.r.next <<= self.r2
@@ -172,17 +150,106 @@ class MultiLimbTestsBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_multiple_limb_bitslice(self):
-        # `big_input`'s storage spans two 64-bit limbs.
-        big_input = pyrtl.Input(name="big_input", bitwidth=128)
+    def test_comparisons(self):
+        """Test cross-limb comparisons."""
+        a = pyrtl.Input(name="a", bitwidth=80)
+        b = pyrtl.Input(name="b", bitwidth=80)
 
-        out = pyrtl.Output(name="out", bitwidth=32)
-        # This slice must fetch and combine bits from both of `big_input`'s limbs.
-        out <<= big_input[48:80]
+        lt = pyrtl.Output(name="lt", bitwidth=1)
+        gt = pyrtl.Output(name="gt", bitwidth=1)
+        eq = pyrtl.Output(name="eq", bitwidth=1)
+        lt <<= a < b
+        gt <<= a > b
+        eq <<= a == b
 
         sim = self.sim()
-        sim.step({"big_input": 0xFFFF_EEEE_DDDD_1234_5678_CCCC_BBBB_AAAA})
-        self.assertEqual(sim.inspect("out"), 0x1234_5678)
+        # Comparisons where the high limbs determine the output.
+        sim.step({"a": 0x0000_AAAA_BBBB_CCCC_DDDD, "b": 0x0001_AAAA_BBBB_CCCC_DDDD})
+        self.assertEqual(sim.inspect("lt"), 1)
+        self.assertEqual(sim.inspect("gt"), 0)
+        self.assertEqual(sim.inspect("eq"), 0)
+
+        sim.step({"a": 0x0001_AAAA_BBBB_CCCC_DDDD, "b": 0x0000_AAAA_BBBB_CCCC_DDDD})
+        self.assertEqual(sim.inspect("lt"), 0)
+        self.assertEqual(sim.inspect("gt"), 1)
+        self.assertEqual(sim.inspect("eq"), 0)
+
+        # Comparisons where the high limbs match, so the low limbs must tiebreak.
+        sim.step({"a": 0xFFFF_0001_AAAA_BBBB_CCCC, "b": 0xFFFF_0000_AAAA_BBBB_CCCC})
+        self.assertEqual(sim.inspect("lt"), 0)
+        self.assertEqual(sim.inspect("gt"), 1)
+        self.assertEqual(sim.inspect("eq"), 0)
+
+        sim.step({"a": 0xFFFF_0000_AAAA_BBBB_CCCC, "b": 0xFFFF_0001_AAAA_BBBB_CCCC})
+        self.assertEqual(sim.inspect("lt"), 1)
+        self.assertEqual(sim.inspect("gt"), 0)
+        self.assertEqual(sim.inspect("eq"), 0)
+
+        sim.step({"a": 0xFFFF_0000_AAAA_BBBB_CCCC, "b": 0xFFFF_0000_AAAA_BBBB_CCCC})
+        self.assertEqual(sim.inspect("lt"), 0)
+        self.assertEqual(sim.inspect("gt"), 0)
+        self.assertEqual(sim.inspect("eq"), 1)
+
+    def test_add_carry(self):
+        """Test addition that carries into the next limb."""
+        a = pyrtl.Input(name="a", bitwidth=128)
+        b = pyrtl.Input(name="b", bitwidth=128)
+
+        sum = pyrtl.Output(name="sum", bitwidth=129)
+        sum <<= a + b
+
+        sim = self.sim()
+        sim.step({"a": 0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF, "b": 1})
+        self.assertEqual(
+            sim.inspect("sum"), 0x1_0000_0000_0000_0000_0000_0000_0000_0000
+        )
+
+        sim.step({"a": 1, "b": 0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF})
+        self.assertEqual(
+            sim.inspect("sum"), 0x1_0000_0000_0000_0000_0000_0000_0000_0000
+        )
+
+    def test_sub_carry(self):
+        """Test subtraction that carries into the next limb."""
+        a = pyrtl.Input(name="a", bitwidth=128)
+        b = pyrtl.Input(name="b", bitwidth=128)
+
+        difference = pyrtl.Output(name="difference", bitwidth=129)
+        difference <<= a - b
+
+        sim = self.sim()
+        sim.step({"a": 0, "b": 1})
+        self.assertEqual(
+            sim.inspect("difference"), 0x1_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF
+        )
+
+    def test_multiply(self):
+        """Test two-limb multiplication."""
+        a = pyrtl.Input(name="a", bitwidth=80)
+        b = pyrtl.Input(name="b", bitwidth=80)
+
+        product = pyrtl.Output(name="product", bitwidth=160)
+        product <<= a * b
+
+        sim = self.sim()
+        sim.step({"a": 0xAAAA_BBBB_CCCC_DDDD_EEEE, "b": 2**4})
+        self.assertEqual(sim.inspect("product"), 0xAAAA_BBBB_CCCC_DDDD_EEEE_0)
+
+        sim.step({"a": 2**4, "b": 0xAAAA_BBBB_CCCC_DDDD_EEEE})
+        self.assertEqual(sim.inspect("product"), 0xAAAA_BBBB_CCCC_DDDD_EEEE_0)
+
+    def test_multiply_carry(self):
+        """Test multiplication with multiple carries."""
+        a = pyrtl.Input(name="a", bitwidth=144)
+        b = pyrtl.Input(name="b", bitwidth=144)
+
+        product = pyrtl.Output(name="product", bitwidth=288)
+        product <<= a * b
+
+        sim = self.sim()
+        value = 0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF
+        sim.step({"a": value, "b": value})
+        self.assertEqual(sim.inspect("product"), value * value)
 
     def test_concat_fully_aligned(self):
         """Test concat where 64-bit args align with the dest limbs."""
@@ -245,6 +312,40 @@ class MultiLimbTestsBase(unittest.TestCase):
         sim = self.sim()
         sim.step({"a": 0xAAAA_BBBB_CCCC, "b": 0xDDDD, "c": 0xEEEE})
         self.assertEqual(sim.inspect("concat"), 0xAAAA_BBBB_CCCC_DDDD_EEEE)
+
+    def test_multiple_limb_bitslice(self):
+        """Test slices that span multiple limbs."""
+        # `big_input`'s storage spans two 64-bit limbs.
+        big_input = pyrtl.Input(name="big_input", bitwidth=128)
+
+        out = pyrtl.Output(name="out", bitwidth=32)
+        # This slice must fetch and combine bits from both of `big_input`'s limbs.
+        out <<= big_input[48:80]
+
+        sim = self.sim()
+        sim.step({"big_input": 0xFFFF_EEEE_DDDD_1234_5678_CCCC_BBBB_AAAA})
+        self.assertEqual(sim.inspect("out"), 0x1234_5678)
+
+    def test_sparse_bitslice(self):
+        """Test bitslices that skip bits across multiple limbs."""
+        # `bigger_input`'s storage spans three 64-bit limbs.
+        bigger_input = pyrtl.Input(name="bigger_input", bitwidth=160)
+
+        even_bits = pyrtl.Output(name="even_bits", bitwidth=80)
+        even_bits <<= bigger_input[::2]
+
+        odd_bits = pyrtl.Output(name="odd_bits", bitwidth=80)
+        odd_bits <<= bigger_input[1::2]
+
+        sim = self.sim()
+        # 0xA == 0b1010
+        sim.step({"bigger_input": 0xAAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA})
+        self.assertEqual(sim.inspect("even_bits"), 0)
+        self.assertEqual(sim.inspect("odd_bits"), 0xFFFF_FFFF_FFFF_FFFF_FFFF)
+        # 0x5 == 0b0101
+        sim.step({"bigger_input": 0x5555_5555_5555_5555_5555_5555_5555_5555_5555_5555})
+        self.assertEqual(sim.inspect("even_bits"), 0xFFFF_FFFF_FFFF_FFFF_FFFF)
+        self.assertEqual(sim.inspect("odd_bits"), 0)
 
 
 class PrintTraceBase(unittest.TestCase):
