@@ -123,20 +123,6 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.r.next <<= pyrtl.concat(left, right)
         self.check_trace("o 01377777\n")
 
-    def test_multiple_limb_bitslice_simulation(self):
-        pyrtl.reset_working_block()
-
-        # `big_input`'s storage spans two 64-bit limbs.
-        big_input = pyrtl.Input(name="big_input", bitwidth=128)
-
-        out = pyrtl.Output(name="out", bitwidth=32)
-        # This slice must fetch and combine bits from both of `big_input`'s limbs.
-        out <<= big_input[48:80]
-
-        sim = self.sim()
-        sim.step({"big_input": 0xFFFF_EEEE_DDDD_1234_5678_CCCC_BBBB_AAAA})
-        self.assertEqual(sim.inspect("out"), 0x1234_5678)
-
     def test_sparse_bitslice_simulation(self):
         pyrtl.reset_working_block()
 
@@ -178,6 +164,87 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         right = pyrtl.Const(0, bitwidth=1)
         self.r.next <<= left == right
         self.check_trace("o 01010101\n")
+
+
+class MultiLimbTestsBase(unittest.TestCase):
+    """Test operations that read multiple arg limbs, and write multiple dest limbs."""
+
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_multiple_limb_bitslice(self):
+        # `big_input`'s storage spans two 64-bit limbs.
+        big_input = pyrtl.Input(name="big_input", bitwidth=128)
+
+        out = pyrtl.Output(name="out", bitwidth=32)
+        # This slice must fetch and combine bits from both of `big_input`'s limbs.
+        out <<= big_input[48:80]
+
+        sim = self.sim()
+        sim.step({"big_input": 0xFFFF_EEEE_DDDD_1234_5678_CCCC_BBBB_AAAA})
+        self.assertEqual(sim.inspect("out"), 0x1234_5678)
+
+    def test_concat_fully_aligned(self):
+        """Test concat where 64-bit args align with the dest limbs."""
+        a = pyrtl.Input(name="a", bitwidth=64)
+        b = pyrtl.Input(name="b", bitwidth=64)
+
+        concat = pyrtl.Output(name="concat", bitwidth=128)
+        concat <<= pyrtl.concat(a, b)
+
+        sim = self.sim()
+        sim.step({"a": 0x8888_9999_AAAA_BBBB, "b": 0xCCCC_DDDD_EEEE_FFFF})
+        self.assertEqual(
+            sim.inspect("concat"), 0x8888_9999_AAAA_BBBB_CCCC_DDDD_EEEE_FFFF
+        )
+
+    def test_concat_incrementally_aligned(self):
+        """Test concat where 32-bit args align with the 64-bit dest limbs."""
+        a = pyrtl.Input(name="a", bitwidth=32)
+        b = pyrtl.Input(name="b", bitwidth=32)
+        c = pyrtl.Input(name="c", bitwidth=32)
+        d = pyrtl.Input(name="d", bitwidth=32)
+
+        concat = pyrtl.Output(name="concat", bitwidth=128)
+        concat <<= pyrtl.concat(a, b, c, d)
+
+        sim = self.sim()
+        sim.step(
+            {"a": 0x8888_9999, "b": 0xAAAA_BBBB, "c": 0xCCCC_DDDD, "d": 0xEEEE_FFFF}
+        )
+        self.assertEqual(
+            sim.inspect("concat"), 0x8888_9999_AAAA_BBBB_CCCC_DDDD_EEEE_FFFF
+        )
+
+    def test_concat_split_aligned_start(self):
+        """Test concat where the last arg must be split across two dest limbs, and the
+        low dest limb's bits all come from the last arg.
+        """
+        a = pyrtl.Input(name="a", bitwidth=16)
+        b = pyrtl.Input(name="b", bitwidth=16)
+        c = pyrtl.Input(name="c", bitwidth=80)
+
+        concat = pyrtl.Output(name="concat", bitwidth=112)
+        concat <<= pyrtl.concat(a, b, c)
+
+        sim = self.sim()
+        sim.step({"a": 0xAAAA, "b": 0xBBBB, "c": 0xCCCC_DDDD_EEEE_FFFF_0000})
+        self.assertEqual(sim.inspect("concat"), 0xAAAA_BBBB_CCCC_DDDD_EEEE_FFFF_0000)
+
+    def test_concat_split_offset_start(self):
+        """Test concat where the first arg must be split across two dest limbs, and the
+        low dest limb's bits are merged from multiple args.
+        """
+        a = pyrtl.Input(name="a", bitwidth=48)
+        b = pyrtl.Input(name="b", bitwidth=16)
+        c = pyrtl.Input(name="c", bitwidth=16)
+
+        concat = pyrtl.Output(name="concat", bitwidth=80)
+        concat <<= pyrtl.concat(a, b, c)
+
+        sim = self.sim()
+        sim.step({"a": 0xAAAA_BBBB_CCCC, "b": 0xDDDD, "c": 0xEEEE})
+        self.assertEqual(sim.inspect("concat"), 0xAAAA_BBBB_CCCC_DDDD_EEEE)
 
 
 class PrintTraceBase(unittest.TestCase):
