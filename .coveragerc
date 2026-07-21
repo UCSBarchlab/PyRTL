@@ -5,32 +5,32 @@ source = pyrtl
 [report]
 # Regexes for lines to exclude from consideration
 exclude_lines =
-    # Have to re-enable the standard pragma
+    # The standard pragma.
     pragma: no cover
 
-    # ignore pass statements that are not run:
-    # sometimes you need them to make a block (especially for unittests)
-    # need to be really careful with this one because 'pass' shows up in other places as well
+    # ignore pass statements that are not run: sometimes you need them to make
+    # a block (especially for unittests). Need to be really careful with these
+    # regexes because 'pass' shows up in other places as well
     \spass\s
     \spass$
 
-    # Don't complain about missing debug-only code:
+    # Ignore debug-only code.
     def __repr__
     if self\.debug
 
-    # Don't complain if tests don't hit defensive assertion code:
+    # Ignore assertion code.
     raise AssertionError
     raise NotImplementedError
+    raise PyrtlInternalError
 
-    # Don't complain if non-runnable code isn't run:
+    # Ignore exception error messages.
+    \smsg =
+
+    # Ignore unreachable code.
     if 0:
     if __name__ == .__main__.:
 
 ignore_errors = True
 
 omit =
-    .tox/*
     */tests/*
-    */ctypes/*
-    six.py
-    pyparsing.py
