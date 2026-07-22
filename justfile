@@ -7,11 +7,11 @@ tests:
         # Run `pytest` with the latest version of Python supported by PyRTL,
         # which is the default for `uv`. The default is set with `uv python
         # pin` and written to `.python_version`.
-        uv run pytest -n auto --cov=pyrtl --cov-report=xml
+        uv run pytest -rsx -n auto --cov=pyrtl --cov-report=xml
 
         # Run `pytest` in an isolated virtual environment, with the earliest
         # version of Python supported by PyRTL.
-        uv run --python=3.10 --isolated pytest -n auto
+        uv run --python=3.10 --isolated pytest -rsx -n auto
 
         # Run `ruff format` to check that code is formatted properly.
         #

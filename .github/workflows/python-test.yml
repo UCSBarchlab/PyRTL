@@ -5,19 +5,30 @@ on:
   - pull_request
 
 jobs:
-  tests:
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v7
     - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         enable-cache: true
-    - name: Install apt dependencies
-      run: sudo apt install -y yosys
+    - name: Install dependencies
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          sudo apt install -y yosys
+        elif [ "$RUNNER_OS" = "macOS" ]; then
+          brew install -y yosys
+        fi
     - name: Run tests
       run: uv run just tests
     - name: Upload coverage to Codecov
+      if: ${{ matrix.os == 'ubuntu-latest' }}
       uses: codecov/codecov-action@v7
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
