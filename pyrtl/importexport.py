@@ -1474,6 +1474,13 @@ def output_to_verilog(
     satisfy Verilog's naming requirements, and wires that conflict with Verilog
     keywords, are given new temporary names in the Verilog output.
 
+    .. WARNING::
+
+        ``output_to_verilog`` does not use Verilog's ``signed`` keyword. In the
+        generated Verilog code, all Verilog values will be `unsigned`, and any signed
+        PyRTL operations like :meth:`~WireVector.sign_extended` will be implemented in
+        Verilog by directly manipulating these unsigned Verilog values.
+
     .. doctest only::
 
         >>> import pyrtl
