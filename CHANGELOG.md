@@ -1,10 +1,27 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. Only
-releases published to PyPI are tracked here. No release candidates!
+All notable PyRTL changes will be documented in this file. Only changes for published PyPI releases are tracked (no release candidates).
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.1] - 2026-07-22
+
+### Changed
+
+- Significant `Simulation` performance speedups (tested with [`pyrtlnet`](https://github.com/UCSBarchlab/pyrtlnet)):
+  class | method | speedup
+  ---: | :--- | ---:
+  `Simulation` | `step()` | 40%
+  `FastSimulation` | `__init__()` | 10%
+  `FastSimulation` | `step()` | 15%
+  `CompiledSimulation` | `__init__()` | 65%
+  `CompiledSimulation` | `step()` | 30%
+- Documentation improvements.
+
+### Fixed
+
+- Fixed a `CompiledSimulation` bug when the first arg to `concat` crosses a 64-bit boundary in the `concat`'s output.
 
 ## [1.0.0] - 2026-06-17
 
@@ -23,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fix WaveDrom trace output in Jupyter Notebooks. ([@ryoon](https://github.com/ryoon)
+- Fix WaveDrom trace output in Jupyter Notebooks. ([@ryoon](https://github.com/ryoon))
 - [`render_trace`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.SimulationTrace.render_trace) raises `PyrtlError` when called with an empty `SimulationTrace`. ([@gaborszita](https://github.com/gaborszita))
 
 ## [0.12] - 2025-07-28
