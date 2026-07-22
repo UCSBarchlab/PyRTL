@@ -1122,12 +1122,12 @@ class CompiledSimulation:
             "x86_64": '"mulq %q3":"=a"(pl),"=d"(ph):"%0"(t0),"r"(t1):"cc"',
             "arm64": (
                 '"mul %0, %2, %3\\n\\t" \\\n'
-                '"umulh %1, %2, %3":"=&r"(pl),"=r"(ph):"r"(t0),"r"(t1):"cc"',
+                '"umulh %1, %2, %3":"=&r"(pl),"=r"(ph):"r"(t0),"r"(t1):"cc"'
             ),
             "mips64": (
                 '"dmultu %2, %3\\n\\t" \\\n'
                 '"tmflo %0\\n\\t" \\\n'
-                '"mfhi %1":"=r"(pl),"=r"(ph):"r"(t0),"r"(t1)',
+                '"mfhi %1":"=r"(pl),"=r"(ph):"r"(t0),"r"(t1)'
             ),
         }
         if machine in mul_asm:

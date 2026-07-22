@@ -346,29 +346,29 @@ def graphviz_detailed_namer(
     Any additional information in these ``dicts`` will be displayed in parentheses in
     the Graphviz graph.
 
-    .. doctest only::
+    .. doctest comment::
 
-        >>> import pyrtl
-        >>> pyrtl.reset_working_block()
+        This example is not a `doctest` because it depends on `graphviz`, which might
+        not be installed.
 
     Example::
 
-        >>> a = pyrtl.WireVector(name="a", bitwidth=3)
-        >>> b = pyrtl.WireVector(name="b", bitwidth=3)
-        >>> sum = a + b
-        >>> sum.name = "sum"
+        a = pyrtl.WireVector(name="a", bitwidth=3)
+        b = pyrtl.WireVector(name="b", bitwidth=3)
+        sum = a + b
+        sum.name = "sum"
 
-        >>> add_logicnets = pyrtl.working_block().logic_subset("+")
-        >>> len(add_logicnets)
-        1
-        >>> add_logicnet = add_logicnets.pop()
+        add_logicnets = pyrtl.working_block().logic_subset("+")
+        len(add_logicnets)
 
-        >>> namer = pyrtl.graphviz_detailed_namer(
-        ...     extra_node_info={add_logicnet: "ADD NODE"},
-        ...     extra_edge_info={a: "EDGE A", b: "EDGE B"}
-        ... )
+        add_logicnet = add_logicnets.pop()
 
-        >>> svg_data = pyrtl.block_to_svg(namer=namer)
+        namer = pyrtl.graphviz_detailed_namer(
+            extra_node_info={add_logicnet: "ADD NODE"},
+            extra_edge_info={a: "EDGE A", b: "EDGE B"}
+        )
+
+        svg_data = pyrtl.block_to_svg(namer=namer)
 
     ``svg_data`` is a :class:`str` containing the SVG data. This data can be written to
     a file::
@@ -590,21 +590,21 @@ def block_to_svg(*args, **kwargs) -> str:
 
             $ pip install pyrtl[svg]
 
-    .. doctest only::
+    .. doctest comment::
 
-        >>> import pyrtl
-        >>> pyrtl.reset_working_block()
+        This example is not a `doctest` because it depends on ``graphviz``, which might
+        not be installed.
 
     This just calls :func:`block_to_graphviz_string` and renders the Graphviz string as
     SVG, using the `graphviz <https://pypi.org/project/graphviz/>`_ ``pip`` package.
     Example::
 
-        >>> a = pyrtl.WireVector(name="a", bitwidth=3)
-        >>> b = pyrtl.WireVector(name="b", bitwidth=3)
-        >>> sum = a + b
-        >>> sum.name = "sum"
+        a = pyrtl.WireVector(name="a", bitwidth=3)
+        b = pyrtl.WireVector(name="b", bitwidth=3)
+        sum = a + b
+        sum.name = "sum"
 
-        >>> svg_data = pyrtl.block_to_svg()
+        svg_data = pyrtl.block_to_svg()
 
     ``svg_data`` is a :class:`str` containing the SVG data. This data can be written to
     a file::
