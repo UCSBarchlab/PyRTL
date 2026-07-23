@@ -46,7 +46,7 @@ Wave Renderer
     :show-inheritance:
 .. autoclass:: pyrtl.simulation.Utf8AltRendererConstants
     :show-inheritance:
-.. autoclass:: pyrtl.simulation.Cp437RendererConstants
+.. autoclass:: pyrtl.simulation.Utf8BasicRendererConstants
     :show-inheritance:
 .. autoclass:: pyrtl.simulation.AsciiRendererConstants
     :show-inheritance:

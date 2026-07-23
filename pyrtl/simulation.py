@@ -6,6 +6,7 @@ import math
 import numbers
 import os
 import re
+import sys
 import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -73,6 +74,32 @@ class Simulation:
 
     - ``.memvalue``: a map from :attr:`MemBlock.id` (``memid``) to a dictionary of
       ``{address: value}``.
+
+    .. doctest only::
+
+        >>> import os
+        >>> import pyrtl
+        >>> os.environ["PYRTL_RENDERER"] = "utf-8-basic"
+        >>> pyrtl.reset_working_block()
+
+    Example::
+
+        >>> a = pyrtl.Input(name="a", bitwidth=8)
+        >>> b = pyrtl.Input(name="b", bitwidth=8)
+        >>> sum = pyrtl.Output(name="sum", bitwidth=9)
+        >>> sum <<= a + b
+
+        >>> sim = pyrtl.Simulation()
+        >>> sim.step({"a": 1, "b": 2})
+        >>> sim.step({"a": 3, "b": 4})
+        >>> sim.tracer.render_trace()
+           │0  │1
+        <BLANKLINE>
+          a 0x1│0x3
+        <BLANKLINE>
+          b 0x2│0x4
+        <BLANKLINE>
+        sum 0x3│0x7
     """
 
     tracer: SimulationTrace
@@ -83,7 +110,7 @@ class Simulation:
 
         >>> import os
         >>> import pyrtl
-        >>> os.environ["PYRTL_RENDERER"] = "cp437"
+        >>> os.environ["PYRTL_RENDERER"] = "utf-8-basic"
         >>> pyrtl.reset_working_block()
 
     ``tracer`` is typically used to render simulation waveforms with
@@ -233,11 +260,26 @@ class Simulation:
 
         All :class:`Input` wires must be in the ``provided_inputs``.
 
-        Example: if we have :class:`Inputs<Input>` named ``a`` and ``x``, we can call::
+        .. doctest only::
 
-            sim.step({'a': 1, 'x': 23})
+            >>> import pyrtl
+            >>> pyrtl.reset_working_block()
 
-        to simulate a cycle where ``a == 1`` and ``x == 23`` respectively.
+        Example::
+
+            >>> a = pyrtl.Input(name="a", bitwidth=8)
+            >>> b = pyrtl.Input(name="b", bitwidth=8)
+            >>> sum = pyrtl.Output(name="sum", bitwidth=9)
+            >>> sum <<= a + b
+
+            >>> sim = pyrtl.Simulation()
+            >>> sim.step({"a": 1, "b": 2})
+            >>> sim.inspect("sum")
+            3
+
+            >>> sim.step({"a": 3, "b": 4})
+            >>> sim.inspect("sum")
+            7
 
         :param provided_inputs: A dictionary mapping :class:`Input`
             :class:`WireVectors<WireVector>` to their values for this step.
@@ -1272,8 +1314,8 @@ class RendererConstants:
 
     .. inheritance-diagram:: pyrtl.simulation.Utf8RendererConstants
                              pyrtl.simulation.Utf8AltRendererConstants
+                             pyrtl.simulation.Utf8BasicRendererConstants
                              pyrtl.simulation.PowerlineRendererConstants
-                             pyrtl.simulation.Cp437RendererConstants
                              pyrtl.simulation.AsciiRendererConstants
         :parts: 1
 
@@ -1429,26 +1471,25 @@ class PowerlineRendererConstants(Utf8RendererConstants):
     _zero = "─"
 
 
-class Cp437RendererConstants(RendererConstants):
-    """Code page 437 renderer constants (for windows ``cmd`` compatibility).
+class Utf8BasicRendererConstants(RendererConstants):
+    """Basic Unicode renderer constants that does not use ANSI escape codes.
 
     Single-bit :class:`WireVectors<WireVector>` are rendered as square waveforms, with
     vertical rising and falling edges. Multi-bit :class:`WireVector` values are rendered
     between vertical bars.
 
-    `Code page 437 <https://en.wikipedia.org/wiki/Code_page_437>`_ is also known as
-    8-bit ASCII. This is the default renderer on Windows platforms.
-
     Compared to :class:`Utf8RendererConstants`, this renderer is more compact because it
     uses one character between cycles instead of two, but the wire names are vertically
-    aligned at the bottom of each waveform.
+    aligned at the bottom of each waveform. This renderer does not use any `ANSI escape
+    codes <https://en.wikipedia.org/wiki/ANSI_escape_code>`_, which makes its output
+    suitable for inclusion in text files.
 
     Enable this renderer by default by setting the ``PYRTL_RENDERER`` environment
-    variable to ``cp437``::
+    variable to ``utf-8-basic``::
 
-        export PYRTL_RENDERER=cp437
+        export PYRTL_RENDERER=utf-8-basic
 
-    .. image:: ../docs/screenshots/pyrtl-renderer-demo-cp437.png
+    .. image:: ../docs/screenshots/pyrtl-renderer-demo-utf-8-basic.png
     """
 
     _tick = "│"
@@ -1501,18 +1542,23 @@ def default_renderer() -> WaveRenderer:
     if "PYRTL_RENDERER" in os.environ:
         # Use user-specified renderer constants.
         renderer = os.environ["PYRTL_RENDERER"]
-    elif "PROMPT" in os.environ:
-        # Windows Command Prompt, use code page 437 renderer constants.
-        renderer = "cp437"
-    else:
+    elif sys.stdout.encoding == "utf-8":
         # Use UTF-8 renderer constants by default.
         renderer = "utf-8"
+    else:
+        warnings.warn(
+            "Terminal does not support UTF-8! Detected encoding: "
+            f"{sys.stdout.encoding}. Defaulting to ASCII renderer.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        renderer = "ascii"
 
     renderer_map = {
         "powerline": PowerlineRendererConstants(),
         "utf-8": Utf8RendererConstants(),
         "utf-8-alt": Utf8AltRendererConstants(),
-        "cp437": Cp437RendererConstants(),
+        "utf-8-basic": Utf8BasicRendererConstants(),
         "ascii": AsciiRendererConstants(),
     }
 
@@ -1851,7 +1897,7 @@ class SimulationTrace:
 
             >>> import os
             >>> import pyrtl
-            >>> os.environ["PYRTL_RENDERER"] = "cp437"
+            >>> os.environ["PYRTL_RENDERER"] = "utf-8-basic"
             >>> pyrtl.reset_working_block()
 
         The resulting output can be viewed directly in a terminal. Example::
@@ -2136,7 +2182,7 @@ def enum_name(EnumClass: type) -> Callable[[int], str]:
         >>> import os
         >>> import pyrtl
         >>> import enum
-        >>> os.environ["PYRTL_RENDERER"] = "cp437"
+        >>> os.environ["PYRTL_RENDERER"] = "utf-8-basic"
         >>> pyrtl.reset_working_block()
 
     Use ``enum_name`` as a ``repr_func`` or ``repr_per_name`` for

@@ -1817,9 +1817,7 @@ class Register(WireVector):
 
         .. doctest only::
 
-            >>> import os
             >>> import pyrtl
-            >>> os.environ["PYRTL_RENDERER"] = "cp437"
             >>> pyrtl.reset_working_block()
 
         See :class:`Register`'s documentation above for a basic example. The example
@@ -1845,13 +1843,17 @@ class Register(WireVector):
             >>> state.next <<= state + 1
 
         When a ``Register`` is constructed with ``State``,
-        :meth:`~.SimulationTrace.render_trace` displays ``State`` names by default::
+        :meth:`~.SimulationTrace.render_trace` displays ``State`` names by default, for
+        example::
 
-            >>> sim = pyrtl.Simulation()
-            >>> sim.step_multiple(nsteps=4)
-            >>> sim.tracer.render_trace()
+            sim = pyrtl.Simulation()
+            sim.step_multiple(nsteps=4)
+            sim.tracer.render_trace()
+
+        will display::
+
                  │0    │1    │2    │3
-            <BLANKLINE>
+
             state ONE  │TWO  │THREE│ZERO
 
         :param bitwidth: Number of bits to represent this ``Register``.

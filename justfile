@@ -1,6 +1,9 @@
 # PyRTL uses `just` instead of `make` because:
 # * `make` is not installed by default on Windows.
 # * `uv` can install `just` on all supported platforms from PyPI.
+
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+
 presubmit: tests docs
 
 tests:

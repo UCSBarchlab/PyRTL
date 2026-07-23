@@ -1,6 +1,8 @@
 # # Render traces with various `WaveRenderer` options.
 
 # Run this demo to see which options work well in your terminal.
+import sys
+
 import pyrtl
 
 
@@ -50,24 +52,37 @@ sim.step_multiple(nsteps=20)
 
 # Render the trace with a variety of rendering options.
 renderers = {
-    "powerline": (
-        pyrtl.simulation.PowerlineRendererConstants(),
-        "Requires a font with powerline glyphs",
+    "ascii": (
+        pyrtl.simulation.AsciiRendererConstants(),
+        "Basic 7-bit ASCII renderer",
     ),
+}
+unicode_renderers = {
     "utf-8": (
         pyrtl.simulation.Utf8RendererConstants(),
-        "Unicode, default non-Windows renderer",
+        "Unicode (default)",
     ),
     "utf-8-alt": (
         pyrtl.simulation.Utf8AltRendererConstants(),
         "Unicode, alternate display option",
     ),
-    "cp437": (
-        pyrtl.simulation.Cp437RendererConstants(),
-        "Code page 437 (8-bit ASCII), default Windows renderer",
+    "utf-8-basic": (
+        pyrtl.simulation.Utf8BasicRendererConstants(),
+        "Unicode, basic display option",
     ),
-    "ascii": (pyrtl.simulation.AsciiRendererConstants(), "Basic 7-bit ASCII renderer"),
+    "powerline": (
+        pyrtl.simulation.PowerlineRendererConstants(),
+        "Requires a font with powerline glyphs",
+    ),
 }
+
+if sys.stdout.encoding == "utf-8":
+    renderers = renderers | unicode_renderers
+else:
+    print(
+        "Terminal does not support UTF-8! Detected encoding: "
+        f"{sys.stdout.encoding}. Disabling UTF-8 renderers."
+    )
 
 for name, (constants, notes) in renderers.items():
     print(f"# {notes}")
