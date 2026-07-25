@@ -1554,11 +1554,13 @@ def default_renderer() -> WaveRenderer:
         )
         renderer = "ascii"
 
+    utf_8_basic = Utf8BasicRendererConstants()
     renderer_map = {
         "powerline": PowerlineRendererConstants(),
         "utf-8": Utf8RendererConstants(),
         "utf-8-alt": Utf8AltRendererConstants(),
-        "utf-8-basic": Utf8BasicRendererConstants(),
+        "utf-8-basic": utf_8_basic,
+        "cp437": utf_8_basic,  # For backwards compatibility.
         "ascii": AsciiRendererConstants(),
     }
 
