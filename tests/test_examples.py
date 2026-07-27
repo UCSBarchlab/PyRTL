@@ -1,6 +1,6 @@
-import glob
 import os
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -15,11 +15,15 @@ location of the examples changes
 
 
 @pytest.mark.parametrize(
-    "file", glob.iglob(os.path.dirname(__file__) + "/../examples/*.py")
+    "file",
+    (Path(os.path.dirname(__file__)) / ".." / "examples").glob("*.py"),
+    ids=lambda path: path.name,
 )
 def test_all_examples(file):
+    # Always use the ASCII renderer for deterministic example output.
+    os.environ["PYRTL_RENDERER"] = "ascii"
     pyrtl.reset_working_block()
     try:
-        subprocess.check_output(["python", file])
+        subprocess.check_output(["uv", "run", file])
     except subprocess.CalledProcessError as e:
         raise e

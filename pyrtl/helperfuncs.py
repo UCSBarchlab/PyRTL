@@ -753,9 +753,7 @@ def val_to_signed_integer(value: int, bitwidth: int) -> int:
 
     .. doctest only::
 
-        >>> import os
         >>> import pyrtl
-        >>> os.environ["PYRTL_RENDERER"] = "cp437"
         >>> pyrtl.reset_working_block()
 
     Reinterpret an unsigned integer (not a :class:`WireVector`!) as a signed integer.
@@ -767,16 +765,18 @@ def val_to_signed_integer(value: int, bitwidth: int) -> int:
     ``val_to_signed_integer`` can also be used as an ``repr_func`` for
     :meth:`~SimulationTrace.render_trace`, to display signed integers in traces::
 
-        >>> bitwidth = 3
-        >>> counter = pyrtl.Register(name="counter", bitwidth=bitwidth)
-        >>> counter.next <<= counter + 1
+        counter = pyrtl.Register(name="counter", bitwidth=3, reset_value=-4)
+        counter.next <<= pyrtl.signed_add(counter, 1)
 
-        >>> sim = pyrtl.Simulation()
-        >>> sim.step_multiple(nsteps=2 ** bitwidth)
-        >>> sim.tracer.render_trace(repr_func=val_to_signed_integer)
+        sim = pyrtl.Simulation()
+        sim.step_multiple(nsteps=2 ** counter.bitwidth)
+        sim.tracer.render_trace(repr_func=val_to_signed_integer)
+
+    will display::
+
                │0 │1 │2 │3 │4 │5 │6 │7
-        <BLANKLINE>
-        counter ──┤1 │2 │3 │-4│-3│-2│-1
+
+        counter -4│-3│-2│-1├──┤1 │2 │3
 
     :func:`infer_val_and_bitwidth` performs the opposite conversion::
 

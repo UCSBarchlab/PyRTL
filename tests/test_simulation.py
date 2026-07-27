@@ -1,6 +1,7 @@
 import doctest
 import enum
 import io
+import sys
 import unittest
 
 import pyrtl
@@ -11,6 +12,10 @@ class TestDocTests(unittest.TestCase):
     """Test documentation examples."""
 
     def test_doctests(self):
+        if sys.stdout.encoding != "utf-8":
+            msg = "Simulation doctests require UTF-8 support"
+            raise unittest.SkipTest(msg)
+
         failures, tests = doctest.testmod(m=pyrtl.simulation)
         self.assertGreater(tests, 0)
         self.assertEqual(failures, 0)

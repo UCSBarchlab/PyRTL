@@ -19,7 +19,7 @@ def software_fibonacci(n: int):
 # `software_fibonacci` is an iterative Fibonacci implementation. It repeatedly adds `a`
 # and `b` to calculate the `n`th number in the sequence.
 print("n   software_fibonacci(n)")
-print("─────────────────────────")
+print("-------------------------")
 for n in range(10):
     print(n, " ", software_fibonacci(n))
 
