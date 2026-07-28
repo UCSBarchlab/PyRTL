@@ -134,6 +134,18 @@ class TraceWithBasicOpsBase(unittest.TestCase):
         self.r.next <<= pyrtl.concat(left, right)
         self.check_trace("r 01377777\n")
 
+    def test_non_consecutive_bitslice_simulation(self):
+        pyrtl.reset_working_block()
+
+        input = pyrtl.Input(name="input", bitwidth=8)
+
+        odd_bits = pyrtl.Output(name="odd_bits", bitwidth=4)
+        odd_bits <<= input[1::2]
+
+        sim = self.sim()
+        sim.step({"input": 0b1010_1010})
+        self.assertEqual(sim.inspect("odd_bits"), 0b1111)
+
     def test_reg_to_reg_simulation(self):
         self.r2 = pyrtl.Register(bitwidth=self.bitwidth, name="r2")
         self.r.next <<= self.r2
@@ -471,9 +483,6 @@ class PrintPerfCountersBase(unittest.TestCase):
 class SimWithSpecialWiresBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
-
-    def test_reg_directly_before_reg(self):
-        pass
 
     def test_weird_wire_names(self):
         """Some simulations need to be careful when handling special names (eg Fastsim

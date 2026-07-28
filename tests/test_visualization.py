@@ -29,33 +29,29 @@ digraph g {
     n3 [label="0", shape=circle, fillcolor=lightgrey];
     n4 [label=" (Fanout: 0)", height=.1, width=.1];
     n5 [label="d", shape=house, fillcolor=lawngreen];
-    n6 [label="[0]*2 (Fanout: 1)", fillcolor=azure1, height=.25, width=.25];
-    n7 [label="concat (Fanout: 1)", height=.1, width=.1];
-    n8 [label="* (Fanout: 1)"];
-    n9 [label="[7:2] (Fanout: 1)", fillcolor=azure1, height=.25, width=.25];
-    n10 [label="[0]*4 (Fanout: 1)", fillcolor=azure1, height=.25, width=.25];
-    n11 [label="concat (Fanout: 1)", height=.1, width=.1];
-    n0 -> n7 [label="a/2 (Delay: 0.00)", penwidth="6", arrowhead="none"];
-    n1 -> n8 [label="const_0_8/4 (Delay: 0.00)", penwidth="6", arrowhead="normal"];
-    n2 -> n6 [label="const_1_0/1 (Delay: 0.00)", penwidth="2", arrowhead="none"];
-    n3 -> n10 [label="const_2_0/1 (Delay: 0.00)", penwidth="2", arrowhead="none"];
+    n6 [label="concat (Fanout: 1)", height=.1, width=.1];
+    n7 [label="* (Fanout: 1)"];
+    n8 [label="[7:2] (Fanout: 1)", fillcolor=azure1, height=.25, width=.25];
+    n9 [label="concat (Fanout: 1)", height=.1, width=.1];
+    n0 -> n6 [label="a/2 (Delay: 0.00)", penwidth="6", arrowhead="none"];
+    n1 -> n7 [label="const_0_8/4 (Delay: 0.00)", penwidth="6", arrowhead="normal"];
+    n2 -> n6 [label="const_1_0/2 (Delay: 0.00)", penwidth="6", arrowhead="none"];
+    n3 -> n9 [label="const_2_0/4 (Delay: 0.00)", penwidth="6", arrowhead="none"];
     n4 -> n5 [label="d/10 (Delay: 706.50)", penwidth="6", arrowhead="normal"];
-    n6 -> n7 [label="tmp0/2 (Delay: 0.00)", penwidth="6", arrowhead="none"];
-    n7 -> n8 [label="tmp1/4 (Delay: 0.00)", penwidth="6", arrowhead="normal"];
-    n8 -> n9 [label="tmp2/8 (Delay: 706.50)", penwidth="6", arrowhead="none"];
-    n9 -> n11 [label="tmp3/6 (Delay: 706.50)", penwidth="6", arrowhead="none"];
-    n10 -> n11 [label="tmp4/4 (Delay: 0.00)", penwidth="6", arrowhead="none"];
-    n11 -> n4 [label="tmp5/10 (Delay: 706.50)", penwidth="6", arrowhead="normal"];
+    n6 -> n7 [label="tmp0/4 (Delay: 0.00)", penwidth="6", arrowhead="normal"];
+    n7 -> n8 [label="tmp1/8 (Delay: 706.50)", penwidth="6", arrowhead="none"];
+    n8 -> n9 [label="tmp2/6 (Delay: 706.50)", penwidth="6", arrowhead="none"];
+    n9 -> n4 [label="tmp3/10 (Delay: 706.50)", penwidth="6", arrowhead="normal"];
     {
         rank=same;
         edge[style=invis];
-        n6 -> n0;
+        n2 -> n0;
         rankdir=LR;
     }
     {
         rank=same;
         edge[style=invis];
-        n10 -> n9;
+        n3 -> n8;
         rankdir=LR;
     }
 }
@@ -78,59 +74,53 @@ digraph g {
     n6 [label="o", shape=house, fillcolor=lawngreen];
     n7 [label="", height=.1, width=.1];
     n8 [label="q", shape=house, fillcolor=lawngreen];
-    n9 [label="[0]*4", fillcolor=azure1, height=.25, width=.25];
-    n10 [label="concat", height=.1, width=.1];
-    n11 [label="<"];
-    n12 [label="[0]*7", fillcolor=azure1, height=.25, width=.25];
-    n13 [label="concat", height=.1, width=.1];
-    n14 [label="[0]*4", fillcolor=azure1, height=.25, width=.25];
-    n15 [label="concat", height=.1, width=.1];
-    n16 [label=">"];
-    n0 -> n9 [label="", penwidth="2", arrowhead="none"];
-    n1 -> n12 [label="", penwidth="2", arrowhead="none"];
-    n2 -> n14 [label="", penwidth="2", arrowhead="none"];
-    n3 -> n11 [label="", penwidth="6", arrowhead="normal"];
-    n3 -> n16 [label="", penwidth="6", arrowhead="normal"];
-    n4 -> n10 [label="", penwidth="6", arrowhead="none"];
-    n4 -> n15 [label="", penwidth="6", arrowhead="none"];
+    n9 [label="concat", height=.1, width=.1];
+    n10 [label="<"];
+    n11 [label="concat", height=.1, width=.1];
+    n12 [label="concat", height=.1, width=.1];
+    n13 [label=">"];
+    n0 -> n9 [label="", penwidth="6", arrowhead="none"];
+    n1 -> n11 [label="", penwidth="6", arrowhead="none"];
+    n2 -> n12 [label="", penwidth="6", arrowhead="none"];
+    n3 -> n10 [label="", penwidth="6", arrowhead="normal"];
+    n3 -> n13 [label="", penwidth="6", arrowhead="normal"];
+    n4 -> n9 [label="", penwidth="6", arrowhead="none"];
+    n4 -> n12 [label="", penwidth="6", arrowhead="none"];
     n5 -> n6 [label="", penwidth="6", arrowhead="normal"];
     n7 -> n8 [label="", penwidth="2", arrowhead="normal"];
-    n9 -> n10 [label="", penwidth="6", arrowhead="none"];
-    n10 -> n11 [label="", penwidth="6", arrowhead="normal"];
-    n11 -> n13 [label="", penwidth="2", arrowhead="none"];
-    n12 -> n13 [label="", penwidth="6", arrowhead="none"];
-    n13 -> n5 [label="", penwidth="6", arrowhead="normal"];
-    n14 -> n15 [label="", penwidth="6", arrowhead="none"];
-    n15 -> n16 [label="", penwidth="6", arrowhead="normal"];
-    n16 -> n7 [label="", penwidth="2", arrowhead="normal"];
+    n9 -> n10 [label="", penwidth="6", arrowhead="normal"];
+    n10 -> n11 [label="", penwidth="2", arrowhead="none"];
+    n11 -> n5 [label="", penwidth="6", arrowhead="normal"];
+    n12 -> n13 [label="", penwidth="6", arrowhead="normal"];
+    n13 -> n7 [label="", penwidth="2", arrowhead="normal"];
     {
         rank=same;
         edge[style=invis];
-        n9 -> n4;
+        n0 -> n4;
         rankdir=LR;
     }
     {
         rank=same;
         edge[style=invis];
-        n3 -> n10;
+        n3 -> n9;
         rankdir=LR;
     }
     {
         rank=same;
         edge[style=invis];
-        n12 -> n11;
+        n1 -> n10;
         rankdir=LR;
     }
     {
         rank=same;
         edge[style=invis];
-        n14 -> n4;
+        n2 -> n4;
         rankdir=LR;
     }
     {
         rank=same;
         edge[style=invis];
-        n15 -> n3;
+        n12 -> n3;
         rankdir=LR;
     }
 }
@@ -153,31 +143,25 @@ digraph g {
     n6 [label="o", shape=house, fillcolor=lawngreen];
     n7 [label="", height=.1, width=.1];
     n8 [label="q", shape=house, fillcolor=lawngreen];
-    n9 [label="[0]*4", fillcolor=azure1, height=.25, width=.25];
-    n10 [label="concat", height=.1, width=.1];
-    n11 [label="<"];
-    n12 [label="[0]*7", fillcolor=azure1, height=.25, width=.25];
-    n13 [label="concat", height=.1, width=.1];
-    n14 [label="[0]*4", fillcolor=azure1, height=.25, width=.25];
-    n15 [label="concat", height=.1, width=.1];
-    n16 [label=">"];
-    n0 -> n9 [label="", penwidth="2", arrowhead="none"];
-    n1 -> n12 [label="", penwidth="2", arrowhead="none"];
-    n2 -> n14 [label="", penwidth="2", arrowhead="none"];
-    n3 -> n11 [label="", penwidth="6", arrowhead="normal"];
-    n3 -> n16 [label="", penwidth="6", arrowhead="normal"];
-    n4 -> n10 [label="", penwidth="6", arrowhead="none"];
-    n4 -> n15 [label="", penwidth="6", arrowhead="none"];
+    n9 [label="concat", height=.1, width=.1];
+    n10 [label="<"];
+    n11 [label="concat", height=.1, width=.1];
+    n12 [label="concat", height=.1, width=.1];
+    n13 [label=">"];
+    n0 -> n9 [label="", penwidth="6", arrowhead="none"];
+    n1 -> n11 [label="", penwidth="6", arrowhead="none"];
+    n2 -> n12 [label="", penwidth="6", arrowhead="none"];
+    n3 -> n10 [label="", penwidth="6", arrowhead="normal"];
+    n3 -> n13 [label="", penwidth="6", arrowhead="normal"];
+    n4 -> n9 [label="", penwidth="6", arrowhead="none"];
+    n4 -> n12 [label="", penwidth="6", arrowhead="none"];
     n5 -> n6 [label="", penwidth="6", arrowhead="normal"];
     n7 -> n8 [label="", penwidth="2", arrowhead="normal"];
-    n9 -> n10 [label="", penwidth="6", arrowhead="none"];
-    n10 -> n11 [label="", penwidth="6", arrowhead="normal"];
-    n11 -> n13 [label="", penwidth="2", arrowhead="none"];
-    n12 -> n13 [label="", penwidth="6", arrowhead="none"];
-    n13 -> n5 [label="", penwidth="6", arrowhead="normal"];
-    n14 -> n15 [label="", penwidth="6", arrowhead="none"];
-    n15 -> n16 [label="", penwidth="6", arrowhead="normal"];
-    n16 -> n7 [label="", penwidth="2", arrowhead="normal"];
+    n9 -> n10 [label="", penwidth="6", arrowhead="normal"];
+    n10 -> n11 [label="", penwidth="2", arrowhead="none"];
+    n11 -> n5 [label="", penwidth="6", arrowhead="normal"];
+    n12 -> n13 [label="", penwidth="6", arrowhead="normal"];
+    n13 -> n7 [label="", penwidth="2", arrowhead="normal"];
 }
 
 """
@@ -251,6 +235,7 @@ class TestOutputGraphs(unittest.TestCase):
                 namer=pyrtl.graphviz_detailed_namer(node_fanout, wire_delay),
                 maintain_arg_order=True,
             )
+            self.maxDiff = 10000
             self.assertEqual(vfile.getvalue(), graphviz_string_detailed)
 
     def test_output_to_graphviz_correct_output_with_arg_ordering(self):
@@ -263,6 +248,7 @@ class TestOutputGraphs(unittest.TestCase):
 
         with io.StringIO() as vfile:
             pyrtl.output_to_graphviz(file=vfile, maintain_arg_order=True)
+            self.maxDiff = 10000
             self.assertEqual(vfile.getvalue(), graphviz_string_arg_ordered)
 
     def test_output_to_graphviz_correct_output_without_arg_ordering(self):
@@ -275,6 +261,7 @@ class TestOutputGraphs(unittest.TestCase):
 
         with io.StringIO() as vfile:
             pyrtl.output_to_graphviz(file=vfile)
+            self.maxDiff = 10000
             self.assertEqual(vfile.getvalue(), graphviz_string_arg_unordered)
 
 

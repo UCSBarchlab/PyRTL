@@ -73,9 +73,6 @@ class TestBlock(unittest.TestCase):
         block = pyrtl.working_block()
         self.assertEqual(block.logic_subset(None), block.logic)
 
-    def test_sanity_check(self):
-        pass
-
     def test_block_iterators(self):
         # testing to see that it properly runs a trivial case
         inwire = pyrtl.Input(bitwidth=1, name="inwire1")
@@ -588,15 +585,6 @@ class TestLogicNets(unittest.TestCase):
     def test_string_format(self):
         net = pyrtl.LogicNet("+", "xx", ("arg1", "arg2"), ("dest",))
         self.assertEqual(str(net), "dest <-- + -- arg1, arg2 (xx)")
-
-    def test_net_with_wirevectors(self):
-        pass
-
-    def test_memory_read_print(self):
-        pass
-
-    def test_memory_write_print(self):
-        pass
 
     def test_self_equals(self):
         a = pyrtl.WireVector()

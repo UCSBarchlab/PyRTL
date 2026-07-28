@@ -1400,7 +1400,18 @@ class WireVector:
         :raises PyrtlError: If the ``bitwidth`` specified is smaller than
             :attr:`bitwidth`.
         """
-        return self._extend_with_bit(bitwidth, self[-1])
+        num_added_bits = bitwidth - self.bitwidth
+        if num_added_bits == 0:
+            return self
+        if num_added_bits < 0:
+            msg = "sign_extended can not reduce the number of bits"
+            raise PyrtlError(msg)
+
+        from pyrtl.corecircuits import concat
+
+        sign_bit = self[-1]
+
+        return concat(*([sign_bit] * num_added_bits), self)
 
     def zero_extended(self, bitwidth) -> WireVector:
         """Return a zero-extended copy of ``self``.
@@ -1433,27 +1444,16 @@ class WireVector:
         :raises PyrtlError: If the ``bitwidth`` specified is smaller than
             :attr:`bitwidth`.
         """
-        return self._extend_with_bit(bitwidth, 0)
-
-    def _extend_with_bit(self, bitwidth, extbit):
-        numext = bitwidth - self.bitwidth
-        if numext == 0:
+        num_added_bits = bitwidth - self.bitwidth
+        if num_added_bits == 0:
             return self
-        if numext < 0:
-            msg = (
-                "Neither zero_extended nor sign_extended can reduce the number of bits"
-            )
+        if num_added_bits < 0:
+            msg = "zero_extended can not reduce the number of bits"
             raise PyrtlError(msg)
+
         from pyrtl.corecircuits import concat
 
-        if isinstance(extbit, int):
-            extbit = Const(extbit, bitwidth=1)
-        extvector = WireVector(bitwidth=numext)
-        net = LogicNet(
-            op="s", op_param=(0,) * numext, args=(extbit,), dests=(extvector,)
-        )
-        working_block().add_net(net)
-        return concat(extvector, self)
+        return concat(Const(0, bitwidth=num_added_bits), self)
 
 
 WireVectorLike = WireVector | int | str | bool

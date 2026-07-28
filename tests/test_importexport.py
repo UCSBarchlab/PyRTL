@@ -803,7 +803,7 @@ module toplevel(clk, rst, a, o);
     input clk;
     input rst;
     input[3:0] a;
-    output[5:0] o;
+    output[9:0] o;
 
     // Memories
     reg[3:0] z[3:0];  // MemBlock
@@ -825,47 +825,29 @@ module toplevel(clk, rst, a, o);
     reg[3:0] s;
 
     // Temporaries
-    wire[4:0] tmp14;
-    wire[4:0] tmp18;
+    wire[4:0] tmp13;
+    wire[3:0] tmp14;
+    wire[4:0] tmp15;
+    wire[5:0] tmp17;
+    wire[6:0] tmp19;
     wire[4:0] tmp22;
-    wire[4:0] tmp26;
-    wire[4:0] tmp30;
-    wire[4:0] tmp34;
-    wire[4:0] tmp38;
-    wire[4:0] tmp42;
-    wire[4:0] tmp46;
-    wire[4:0] tmp50;
-    wire[4:0] tmp54;
-    wire[4:0] tmp58;
-    wire[4:0] tmp60;
-    wire[5:0] tmp63;
-    wire[6:0] tmp66;
-    wire[4:0] tmp70;
-    wire[3:0] tmp72;
-    wire[5:0] tmp75;
-    wire[3:0] tmp76;
-    wire[6:0] tmp79;
+    wire tmp24;
+    wire[3:0] tmp26;
+    wire[10:0] tmp28;
+    wire[3:0] tmp29;
+    wire[11:0] tmp31;
 
     // Combinational logic
-    assign o = (tmp79[5:0]);
-    assign tmp14 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp18 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp22 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp26 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp30 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp34 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp38 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp42 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp46 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp50 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp54 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp58 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp60 = (a + r);
-    assign tmp63 = (tmp60 + {{4 {1'd0}}, 1'd1});
-    assign tmp66 = (tmp63 - {{2 {1'd0}}, s});
-    assign tmp70 = (a - {{3 {1'd0}}, 1'd1});
-    assign tmp75 = (tmp60 + {(1'd0), tmp72});
-    assign tmp79 = (tmp75 + {{2 {1'd0}}, tmp76});
+    assign o = (tmp31[9:0]);
+    assign tmp13 = (r + {3'd0, 1'd1});
+    assign tmp14 = (tmp13[3:0]);
+    assign tmp15 = (a + r);
+    assign tmp17 = (tmp15 + {4'd0, 1'd1});
+    assign tmp19 = (tmp17 - {2'd0, s});
+    assign tmp22 = (a - {3'd0, 1'd1});
+    assign tmp24 = (tmp15[4]);
+    assign tmp28 = ({{5 {tmp24}}, tmp15} + {6'd0, tmp26});
+    assign tmp31 = (tmp28 + {7'd0, tmp29});
 
     // Register logic
     always @(posedge clk) begin
@@ -873,8 +855,8 @@ module toplevel(clk, rst, a, o);
             r <= 4'd0;
             s <= 4'd13;
         end else begin
-            r <= (tmp66[3:0]);
-            s <= (tmp70[3:0]);
+            r <= (tmp19[3:0]);
+            s <= (tmp22[3:0]);
         end
     end
 
@@ -886,75 +868,75 @@ module toplevel(clk, rst, a, o);
     // MemBlock tmp0 logic
     always @(posedge clk) begin
         tmp0[2'd0] <= a;
-        tmp0[2'd1] <= (tmp14[3:0]);
+        tmp0[2'd1] <= tmp14;
     end
-    assign tmp72 = tmp0[2'd0];
+    assign tmp26 = tmp0[2'd0];
 
     // MemBlock tmp1 logic
     always @(posedge clk) begin
         tmp1[2'd0] <= a;
-        tmp1[2'd1] <= (tmp18[3:0]);
+        tmp1[2'd1] <= tmp14;
     end
-    assign tmp76 = tmp1[2'd0];
+    assign tmp29 = tmp1[2'd0];
 
     // MemBlock tmp2 logic
     always @(posedge clk) begin
         tmp2[2'd0] <= a;
-        tmp2[2'd1] <= (tmp22[3:0]);
+        tmp2[2'd1] <= tmp14;
     end
 
     // MemBlock tmp3 logic
     always @(posedge clk) begin
         tmp3[2'd0] <= a;
-        tmp3[2'd1] <= (tmp26[3:0]);
+        tmp3[2'd1] <= tmp14;
     end
 
     // MemBlock tmp4 logic
     always @(posedge clk) begin
         tmp4[2'd0] <= a;
-        tmp4[2'd1] <= (tmp30[3:0]);
+        tmp4[2'd1] <= tmp14;
     end
 
     // MemBlock tmp5 logic
     always @(posedge clk) begin
         tmp5[2'd0] <= a;
-        tmp5[2'd1] <= (tmp34[3:0]);
+        tmp5[2'd1] <= tmp14;
     end
 
     // MemBlock tmp6 logic
     always @(posedge clk) begin
         tmp6[2'd0] <= a;
-        tmp6[2'd1] <= (tmp38[3:0]);
+        tmp6[2'd1] <= tmp14;
     end
 
     // MemBlock tmp7 logic
     always @(posedge clk) begin
         tmp7[2'd0] <= a;
-        tmp7[2'd1] <= (tmp42[3:0]);
+        tmp7[2'd1] <= tmp14;
     end
 
     // MemBlock tmp8 logic
     always @(posedge clk) begin
         tmp8[2'd0] <= a;
-        tmp8[2'd1] <= (tmp46[3:0]);
+        tmp8[2'd1] <= tmp14;
     end
 
     // MemBlock tmp9 logic
     always @(posedge clk) begin
         tmp9[2'd0] <= a;
-        tmp9[2'd1] <= (tmp50[3:0]);
+        tmp9[2'd1] <= tmp14;
     end
 
     // MemBlock tmp10 logic
     always @(posedge clk) begin
         tmp10[2'd0] <= a;
-        tmp10[2'd1] <= (tmp54[3:0]);
+        tmp10[2'd1] <= tmp14;
     end
 
     // MemBlock tmp11 logic
     always @(posedge clk) begin
         tmp11[2'd0] <= a;
-        tmp11[2'd1] <= (tmp58[3:0]);
+        tmp11[2'd1] <= tmp14;
     end
 endmodule
 """
@@ -1018,18 +1000,18 @@ module toplevel(clk, rst, o);
     reg[3:0] tmp0;
 
     // Temporaries
-    wire[4:0] tmp3;
+    wire[4:0] tmp2;
 
     // Combinational logic
     assign o = tmp0;
-    assign tmp3 = (tmp0 + {{3 {1'd0}}, 1'd1});
+    assign tmp2 = (tmp0 + {3'd0, 1'd1});
 
     // Register logic
     always @(posedge clk) begin
         if (rst) begin
             tmp0 <= 4'd2;
         end else begin
-            tmp0 <= (tmp3[3:0]);
+            tmp0 <= (tmp2[3:0]);
         end
     end
 endmodule
@@ -1050,18 +1032,18 @@ module toplevel(clk, rst, o);
     reg[3:0] tmp0;
 
     // Temporaries
-    wire[4:0] tmp3;
+    wire[4:0] tmp2;
 
     // Combinational logic
     assign o = tmp0;
-    assign tmp3 = (tmp0 + {{3 {1'd0}}, 1'd1});
+    assign tmp2 = (tmp0 + {3'd0, 1'd1});
 
     // Register logic
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             tmp0 <= 4'd2;
         end else begin
-            tmp0 <= (tmp3[3:0]);
+            tmp0 <= (tmp2[3:0]);
         end
     end
 endmodule
@@ -1081,15 +1063,15 @@ module toplevel(clk, o);
     reg[3:0] tmp0;
 
     // Temporaries
-    wire[4:0] tmp3;
+    wire[4:0] tmp2;
 
     // Combinational logic
     assign o = tmp0;
-    assign tmp3 = (tmp0 + {{3 {1'd0}}, 1'd1});
+    assign tmp2 = (tmp0 + {3'd0, 1'd1});
 
     // Register logic
     always @(posedge clk) begin
-        tmp0 <= (tmp3[3:0]);
+        tmp0 <= (tmp2[3:0]);
     end
 endmodule
 """
@@ -1108,16 +1090,16 @@ module toplevel(clk, rst);
     reg[3:0] r;
 
     // Temporaries
-    wire[4:0] tmp2;
-    wire[4:0] tmp5;
+    wire[4:0] tmp1;
+    wire[4:0] tmp3;
 
     // Combinational logic
-    assign tmp2 = (r + {{3 {1'd0}}, 1'd1});
-    assign tmp5 = (rst ? {{4 {1'd0}}, 1'd0} : tmp2);
+    assign tmp1 = (r + {3'd0, 1'd1});
+    assign tmp3 = (rst ? {4'd0, 1'd0} : tmp1);
 
     // Register logic
     always @(posedge clk) begin
-        r <= (tmp5[3:0]);
+        r <= (tmp3[3:0]);
     end
 endmodule
 """
@@ -1209,15 +1191,16 @@ class TestVerilogOutput(unittest.TestCase):
             pyrtl.MemBlock(bitwidth=4, addrwidth=2, max_write_ports=2)
             for _ in range(12)
         ]
+        mem1_value = (r + 1).truncate(4)
         for mem in m:
             mem[0] <<= a
-            mem[1] <<= (r + 1).truncate(4)
+            mem[1] <<= mem1_value
         b = a + r
         r.next <<= b + 1 - s
         s.next <<= a - 1
         mt[0] <<= 9
-        o = pyrtl.Output(6, "o")
-        o <<= b + m[0][0] + m[1][0]
+        o = pyrtl.Output(10, "o")
+        o <<= b.sign_extended(10) + m[0][0] + m[1][0]
 
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer)
@@ -1279,6 +1262,7 @@ class TestVerilogOutput(unittest.TestCase):
         r = pyrtl.Register(bitwidth=4, name="r")
         r.next <<= pyrtl.select(rst, 0, r + 1)
         pyrtl.output_to_verilog(buffer, add_reset=False)
+
         self.assertEqual(verilog_custom_reset, buffer.getvalue())
 
     def test_register_reset_value(self):
@@ -1348,7 +1332,6 @@ class TestVerilogOutput(unittest.TestCase):
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer)
 
-        print(buffer.getvalue())
         self.assertTrue("assign tmp0 = (a + b)" in buffer.getvalue())
         self.assertTrue("assign tmp2 = (b - a)" in buffer.getvalue())
         self.assertTrue("assign tmp4 = (a * b)" in buffer.getvalue())

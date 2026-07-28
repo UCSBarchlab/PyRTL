@@ -269,10 +269,6 @@ def _default_node_namer(
                 bits = f"[{selLower}]"
             elif node.op_param == tuple(range(selLower, selUpper + 1)):  # consecutive
                 bits = f"[{selUpper}:{selLower}]"
-            elif all(
-                ix == node.op_param[0] for ix in node.op_param[1:]
-            ):  # all the same
-                bits = f"[{node.op_param[0]}]*{len(node.op_param)}"
             else:
                 bits = "bits" + str(tuple(reversed(node.op_param)))
             return f'[label="{label(bits)}", fillcolor=azure1, height=.25, width=.25]'

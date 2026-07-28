@@ -425,9 +425,6 @@ class SimWithSpecialWiresBase(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_reg_directly_before_reg(self):
-        pass
-
     def test_weird_wire_names(self):
         """Some simulations need to be careful when handling special names (eg Fastsim
         June 2016)
