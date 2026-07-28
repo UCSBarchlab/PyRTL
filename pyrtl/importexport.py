@@ -920,11 +920,12 @@ class _VerilogOutput:
             and any(dest.op == "s" for dest in gate.dests)
         )
 
-    def _should_declare_const(self, gate: Gate) -> bool:
-        """Determine if we should declare a constant Verilog wire for ``gate``.
+    def _must_declare_const(self, gate: Gate) -> bool:
+        """Determine if we must declare a constant Verilog wire for ``gate``.
 
         This function determines which constant Gates will be declared in Verilog. Any
-        constant gate without a corresponding Verilog declaration will be inlined.
+        constant gate without a corresponding Verilog declaration will be inlined in
+        Verilog.
 
         Constant Verilog gates are declared for:
 
@@ -939,22 +940,14 @@ class _VerilogOutput:
         is_sliced = self._is_sliced(gate)
         return is_const and (is_named or is_sliced)
 
-    def _should_declare_wire(self, gate: Gate) -> bool:
-        """Determine if we should declare a temporary Verilog wire for ``gate``.
+    def _must_declare_wire(self, gate: Gate) -> bool:
+        """Determine if we must declare a temporary Verilog ``wire`` for ``gate``.
 
-        This function determines which temporary Gates will be declared in Verilog. Any
-        temporary gate without a corresponding Verilog declaration will be inlined.
+        When this function retuns ``True``, a Verilog ``wire`` will be declared for
+        ``gate``. When this function returns ``False``, ``gate`` will be inlined in
+        Verilog.
 
-        Temporary Verilog wires are never declared (``excluded``) for::
-
-
-        1. Outputs (``is_output``), Inputs (``I``), Consts (``C``), or Registers
-           (``r``), because those declarations are handled separately by
-           ``_to_verilog_header``.
-
-        2. Memory writes (``@``), because writes generate no output.
-
-        Otherwise, temporary Verilog wires are declared (``needs_declaration``) for:
+        Temporary Verilog wires are declared (``needs_declaration``) for:
 
         1. Named ``Gates``.
 
@@ -969,9 +962,18 @@ class _VerilogOutput:
         5. Arithmetic operations (``+``, ``-``, ``*``), because Verilog arithmetic
            operations implicitly truncate to input bitwidth, unless the arithmetic
            expression is explicitly assigned to a wider-bitwidth wire.
-        """
-        excluded = gate.is_output or gate.op in "ICr@"
 
+        There are some exceptions. Temporary Verilog wires are never declared
+        (``excluded``) for:
+
+        1. Outputs (``is_output``), Inputs (``I``), Consts (``C``), or Registers
+           (``r``), because those declarations are handled separately by
+           ``_to_verilog_header``.
+
+        2. Memory writes (``@``), because writes generate no output.
+
+        :return: ``True`` iff a Verilog ``wire`` must be declared for ``gate``.
+        """
         is_named = gate.name and not gate.name.startswith("tmp")
         multiple_users = len(gate.dests) > 1
         is_read = gate.op == "m"
@@ -982,14 +984,16 @@ class _VerilogOutput:
         # input bitwidth, *unless* the arithmetic expression is explicitly assigned to a
         # wider-bitwidth wire.
         #
-        # So we must declare wires for all arithmetic operations, to stop Verilog from
-        # truncating the carry bits. We could analyze the GateGraph to check if the
-        # carry bits are actually used, but we keep this simple for now.
+        # So we must declare wider-bitwidth wires for all arithmetic operations, to
+        # prevent Verilog from truncating carry bits. We could analyze the GateGraph to
+        # check if the carry bits are actually used, but we keep this simple for now.
         is_arithmetic = gate.op in "+-*"
 
         needs_declaration = (
             is_named or multiple_users or is_read or is_sliced or is_arithmetic
         )
+
+        excluded = gate.is_output or gate.op in "ICr@"
 
         return needs_declaration and not excluded
 
@@ -1084,7 +1088,7 @@ class _VerilogOutput:
         # Declare constants.
         const_gates = []
         for const_gate in self._name_sorted(self.gate_graph.consts):
-            if self._should_declare_const(const_gate):
+            if self._must_declare_const(const_gate):
                 const_gates.append(const_gate)
         self.declared_gates |= set(const_gates)
 
@@ -1102,7 +1106,7 @@ class _VerilogOutput:
         # Declare any needed temporary wires.
         temp_gates = []
         for gate in self.gate_graph:
-            if self._should_declare_wire(gate):
+            if self._must_declare_wire(gate):
                 temp_gates.append(gate)
         temp_gates = self._name_sorted(temp_gates)
         self.declared_gates |= set(temp_gates)
@@ -1306,7 +1310,7 @@ class _VerilogOutput:
                         )
                 print("    end", file=file)
 
-            # Find reads from ``memblock``. The ``read_gate`` should have been declared
+            # Find reads from ``memblock``. The ``read_gate`` must have been declared
             # by ``_to_verilog_header``.
             read_gates = []
             for read_gate in self._name_sorted(self.gate_graph.mem_reads):
