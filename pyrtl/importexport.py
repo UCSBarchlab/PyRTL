@@ -945,14 +945,16 @@ class _VerilogOutput:
         This function determines which temporary Gates will be declared in Verilog. Any
         temporary gate without a corresponding Verilog declaration will be inlined.
 
-        Temporary Verilog wires are never declared for Outputs, Inputs, Consts, or
-        Registers, because those declarations are handled separately by
-        ``_to_verilog_header``.
+        Temporary Verilog wires are never declared (``excluded``) for::
 
-        Temporary Verilog wires are never declared for memory writes, because writes
-        generate no output.
 
-        Otherwise, temporary Verilog wires are declared for:
+        1. Outputs (``is_output``), Inputs (``I``), Consts (``C``), or Registers
+           (``r``), because those declarations are handled separately by
+           ``_to_verilog_header``.
+
+        2. Memory writes (``@``), because writes generate no output.
+
+        Otherwise, temporary Verilog wires are declared (``needs_declaration``) for:
 
         1. Named ``Gates``.
 
@@ -963,14 +965,33 @@ class _VerilogOutput:
         4. ``Gates`` that are ``args`` for a ``s`` bit-selection ``Gate``, because
            Verilog's bit-selection operator ``[]`` only works on wires and registers,
            not arbitrary expressions.
+
+        5. Arithmetic operations (``+``, ``-``, ``*``), because Verilog arithmetic
+           operations implicitly truncate to input bitwidth, unless the arithmetic
+           expression is explicitly assigned to a wider-bitwidth wire.
         """
         excluded = gate.is_output or gate.op in "ICr@"
+
         is_named = gate.name and not gate.name.startswith("tmp")
         multiple_users = len(gate.dests) > 1
         is_read = gate.op == "m"
         is_sliced = self._is_sliced(gate)
 
-        return not excluded and (is_named or multiple_users or is_read or is_sliced)
+        # In PyRTL, addition increases input bitwidth by 1, and multiplication doubles
+        # input bitwidth. But in Verilog, multiplication and addition truncate to the
+        # input bitwidth, *unless* the arithmetic expression is explicitly assigned to a
+        # wider-bitwidth wire.
+        #
+        # So we must declare wires for all arithmetic operations, to stop Verilog from
+        # truncating the carry bits. We could analyze the GateGraph to check if the
+        # carry bits are actually used, but we keep this simple for now.
+        is_arithmetic = gate.op in "+-*"
+
+        needs_declaration = (
+            is_named or multiple_users or is_read or is_sliced or is_arithmetic
+        )
+
+        return needs_declaration and not excluded
 
     def _name_and_comment(self, name: str, kind="") -> tuple[str, str]:
         """Return the sanitized version of ``name`` and a Verilog comment with the
@@ -1485,6 +1506,7 @@ def output_to_verilog(
 
         >>> import pyrtl
         >>> pyrtl.reset_working_block()
+        >>> pyrtl.wire._reset_wire_indexers()
 
     Example::
 
@@ -1504,8 +1526,12 @@ def output_to_verilog(
             input[2:0] b;
             output[3:0] sum;
         <BLANKLINE>
+            // Temporaries
+            wire[3:0] tmp0;
+        <BLANKLINE>
             // Combinational logic
-            assign sum = (a + b);
+            assign sum = tmp0;
+            assign tmp0 = (a + b);
         endmodule
 
     :param dest_file: Open file where the Verilog output will be written. Defaults to

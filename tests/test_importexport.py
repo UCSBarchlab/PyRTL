@@ -838,9 +838,11 @@ module toplevel(clk, rst, a, o);
     wire[4:0] tmp54;
     wire[4:0] tmp58;
     wire[4:0] tmp60;
+    wire[5:0] tmp63;
     wire[6:0] tmp66;
     wire[4:0] tmp70;
     wire[3:0] tmp72;
+    wire[5:0] tmp75;
     wire[3:0] tmp76;
     wire[6:0] tmp79;
 
@@ -859,9 +861,11 @@ module toplevel(clk, rst, a, o);
     assign tmp54 = (r + {{3 {1'd0}}, 1'd1});
     assign tmp58 = (r + {{3 {1'd0}}, 1'd1});
     assign tmp60 = (a + r);
-    assign tmp66 = ((tmp60 + {{4 {1'd0}}, 1'd1}) - {{2 {1'd0}}, s});
+    assign tmp63 = (tmp60 + {{4 {1'd0}}, 1'd1});
+    assign tmp66 = (tmp63 - {{2 {1'd0}}, s});
     assign tmp70 = (a - {{3 {1'd0}}, 1'd1});
-    assign tmp79 = ((tmp60 + {(1'd0), tmp72}) + {{2 {1'd0}}, tmp76});
+    assign tmp75 = (tmp60 + {(1'd0), tmp72});
+    assign tmp79 = (tmp75 + {{2 {1'd0}}, tmp76});
 
     // Register logic
     always @(posedge clk) begin
@@ -1104,10 +1108,12 @@ module toplevel(clk, rst);
     reg[3:0] r;
 
     // Temporaries
+    wire[4:0] tmp2;
     wire[4:0] tmp5;
 
     // Combinational logic
-    assign tmp5 = (rst ? {{4 {1'd0}}, 1'd0} : (r + {{3 {1'd0}}, 1'd1}));
+    assign tmp2 = (r + {{3 {1'd0}}, 1'd1});
+    assign tmp5 = (rst ? {{4 {1'd0}}, 1'd0} : tmp2);
 
     // Register logic
     always @(posedge clk) begin
@@ -1185,7 +1191,7 @@ class TestVerilogOutput(unittest.TestCase):
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer, add_reset=False)
 
-        self.assertEqual(buffer.getvalue(), verilog_output_small)
+        self.assertEqual(verilog_output_small, buffer.getvalue())
 
     def test_textual_consistency_large(self):
         # The following is a non-sensical program created to test that the Verilog that
@@ -1216,7 +1222,7 @@ class TestVerilogOutput(unittest.TestCase):
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer)
 
-        self.assertEqual(buffer.getvalue(), verilog_output_large)
+        self.assertEqual(verilog_output_large, buffer.getvalue())
 
     def test_mems_with_no_writes(self):
         rdata = {0: 10, 1: 20, 2: 30, 3: 40, 4: 50, 5: 60}
@@ -1233,7 +1239,7 @@ class TestVerilogOutput(unittest.TestCase):
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer)
 
-        self.assertEqual(buffer.getvalue(), verilog_output_mems_with_no_writes)
+        self.assertEqual(verilog_output_mems_with_no_writes, buffer.getvalue())
 
     def check_counter_text(self, add_reset, expected):
         r = pyrtl.Register(bitwidth=4, reset_value=2)
@@ -1243,7 +1249,7 @@ class TestVerilogOutput(unittest.TestCase):
 
         buffer = io.StringIO()
         pyrtl.output_to_verilog(buffer, add_reset)
-        self.assertEqual(buffer.getvalue(), expected)
+        self.assertEqual(expected, buffer.getvalue())
 
     def test_textual_consistency_with_sync_reset(self):
         self.check_counter_text(True, verilog_output_counter_sync_reset)
@@ -1273,7 +1279,7 @@ class TestVerilogOutput(unittest.TestCase):
         r = pyrtl.Register(bitwidth=4, name="r")
         r.next <<= pyrtl.select(rst, 0, r + 1)
         pyrtl.output_to_verilog(buffer, add_reset=False)
-        self.assertEqual(buffer.getvalue(), verilog_custom_reset)
+        self.assertEqual(verilog_custom_reset, buffer.getvalue())
 
     def test_register_reset_value(self):
         register0 = pyrtl.Register(name="register0", bitwidth=8, reset_value=0)
@@ -1318,6 +1324,34 @@ class TestVerilogOutput(unittest.TestCase):
         # only has one user and just passes through ``c``, because that user is a
         # bit-slice.
         self.assertTrue("assign tmp3 = c" in buffer.getvalue())
+
+    def test_arithmetic_operations(self):
+        """Verify that wires are always declared for arithmetic operations.
+
+        These wires must be declared in case the carry bits are needed.
+        """
+        a = pyrtl.Input(name="a", bitwidth=6)
+        b = pyrtl.Input(name="b", bitwidth=6)
+        concat_sum = pyrtl.Output(name="concat_sum", bitwidth=8)
+        concat_diff = pyrtl.Output(name="concat_diff", bitwidth=8)
+        concat_prod = pyrtl.Output(name="concat_prod", bitwidth=13)
+
+        # In PyRTL, `a + b` and `b - a` have bitwidth 7, and concatenating `1` results
+        # in bitwidth 8. In Verilog, `a + b` and `b - a` have bitwidth 6, *unless* the
+        # arithmetic expression is explicitly assigned to a wider-bitwidth wire.
+        concat_sum <<= pyrtl.concat(1, a + b)
+        concat_diff <<= pyrtl.concat(1, b - a)
+        # Similarly, `a * b` has bitwidth 12 in PyRTL, but bitwidth 6 in Verilog,
+        # *unless* the multiplication is explicitly assigned to a wider-bitwidth wire.
+        concat_prod <<= pyrtl.concat(1, a * b)
+
+        buffer = io.StringIO()
+        pyrtl.output_to_verilog(buffer)
+
+        print(buffer.getvalue())
+        self.assertTrue("assign tmp0 = (a + b)" in buffer.getvalue())
+        self.assertTrue("assign tmp2 = (b - a)" in buffer.getvalue())
+        self.assertTrue("assign tmp4 = (a * b)" in buffer.getvalue())
 
     def test_custom_module_name(self):
         a, b = pyrtl.Input(1, "a"), pyrtl.Input(1, "b")
@@ -1651,7 +1685,7 @@ class TestOutputTestbench(unittest.TestCase):
 
         buffer = io.StringIO()
         pyrtl.output_verilog_testbench(buffer, add_reset=False)
-        self.assertEqual(buffer.getvalue(), verilog_testbench_custom_reset)
+        self.assertEqual(verilog_testbench_custom_reset, buffer.getvalue())
 
     def test_only_initialize_memblocks(self):
         """Test that RomBlocks are not re-initialized by the testbench."""
@@ -1765,7 +1799,7 @@ class TestOutputFirrtl(unittest.TestCase):
         buffer = io.StringIO()
         pyrtl.output_to_firrtl(buffer)
 
-        self.assertEqual(buffer.getvalue(), firrtl_output_concat_test)
+        self.assertEqual(firrtl_output_concat_test, buffer.getvalue())
 
     def test_textual_consistency_selects(self):
         a = pyrtl.Const(0b101101001101)
@@ -1775,7 +1809,7 @@ class TestOutputFirrtl(unittest.TestCase):
         buffer = io.StringIO()
         pyrtl.output_to_firrtl(buffer)
 
-        self.assertEqual(buffer.getvalue(), firrtl_output_select_test)
+        self.assertEqual(firrtl_output_select_test, buffer.getvalue())
 
 
 iscas85_bench_c432 = """\
