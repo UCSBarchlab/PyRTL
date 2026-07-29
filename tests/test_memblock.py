@@ -538,5 +538,21 @@ class TestSignedRomBlockData(unittest.TestCase):
             self.assertEqual(actual_read_data, romdata[i])
 
 
+class TestMemBlockNaming(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_memblock_naming(self):
+        with pyrtl.name_scope("a"):
+            mem = pyrtl.MemBlock(name="mem", addrwidth=2, bitwidth=3)
+            with pyrtl.name_scope("b"):
+                rom = pyrtl.RomBlock(
+                    name="rom", addrwidth=2, bitwidth=3, romdata=list(range(4))
+                )
+
+        self.assertEqual(mem.name, "a/mem")
+        self.assertEqual(rom.name, "a/b/rom")
+
+
 if __name__ == "__main__":
     unittest.main()

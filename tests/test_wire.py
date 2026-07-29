@@ -55,6 +55,9 @@ class TestWireVector(unittest.TestCase):
 
 
 class TestWireVectorNames(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
     def is_valid_str(self, s):
         return pyrtl.wire.next_tempvar_name(s) == s
 
@@ -94,6 +97,52 @@ class TestWireVectorNames(unittest.TestCase):
         self.check_name_setter("24")
         self.check_name_setter(str(24))
         self.check_name_setter("twenty_four")
+
+    def test_name_scope(self):
+        """Test ``name_scope`` and ``current_name_prefix``."""
+        with pyrtl.name_scope("a"):
+            a_scope = pyrtl.current_name_prefix()
+            with pyrtl.name_scope("b"):
+                b_scope = pyrtl.current_name_prefix()
+                c = pyrtl.WireVector(name="c")
+            a_scope_2 = pyrtl.current_name_prefix()
+            d = pyrtl.WireVector(name="d")
+
+            with pyrtl.name_scope("e"):
+                e_scope = pyrtl.current_name_prefix()
+                f = pyrtl.Register(name="f")
+                g = pyrtl.Const(42)
+
+                with pyrtl.name_scope("h"):
+                    h_scope = pyrtl.current_name_prefix()
+                    i = pyrtl.Input(name="i")
+                    j = pyrtl.Output(name="j")
+
+        self.assertEqual(a_scope, "a/")
+        self.assertEqual(b_scope, "a/b/")
+        self.assertEqual(a_scope, a_scope_2)
+
+        self.assertEqual(e_scope, "a/e/")
+        self.assertEqual(h_scope, "a/e/h/")
+
+        self.assertEqual(c.name, "a/b/c")
+        self.assertEqual(d.name, "a/d")
+        self.assertEqual(f.name, "a/e/f")
+        self.assertTrue(g.name.startswith("a/e/"))
+        self.assertEqual(i.name, "a/e/h/i")
+        self.assertEqual(j.name, "a/e/h/j")
+
+    def test_name_scope_error_empty_stack(self):
+        with self.assertRaises(pyrtl.PyrtlInternalError):
+            with pyrtl.name_scope("foo"):
+                pyrtl.WireVector(name="w")
+                pyrtl.wire._name_prefix_stack.pop()
+
+    def test_name_scope_error_corrupted_stack(self):
+        with self.assertRaises(pyrtl.PyrtlInternalError):
+            with pyrtl.name_scope("foo"):
+                pyrtl.WireVector(name="w")
+                pyrtl.wire._name_prefix_stack[-1] = "bar"
 
 
 class TestWireVectorFail(unittest.TestCase):

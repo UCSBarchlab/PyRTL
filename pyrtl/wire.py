@@ -57,6 +57,119 @@ def next_tempvar_name(name=""):
     return name
 
 
+_name_prefix_stack: list[str] = []
+"""
+Stack of current name prefixes. :func:`current_name_prefix` will prepend these prefixes
+to the names of all newly created :class:`WireVectors<WireVector>` and
+:class:`MemBlocks<.MemBlock>`.
+"""
+
+
+class name_scope:
+    """Context manager that prepends a slash-delimited ``prefix`` to the names of all
+    :class:`WireVectors<WireVector>` and :class:`MemBlocks<.MemBlock>` created within.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    This context manager helps create unique :class:`WireVector` and :class:`.MemBlock`
+    names in code that runs more than once. Example::
+
+        >>> def make_counter(prefix: str) -> pyrtl.Register:
+        ...     with pyrtl.name_scope(prefix):
+        ...         counter = pyrtl.Register(name="counter", bitwidth=8)
+        ...         counter.next <<= counter + 1
+        ...         return counter
+
+        >>> counter_a = make_counter(prefix="a")
+        >>> counter_b = make_counter(prefix="b")
+
+        >>> counter_a.name
+        'a/counter'
+        >>> counter_b.name
+        'b/counter'
+
+    Without ``name_scope``, the code above would fail :meth:`Block.sanity_check`,
+    because there would be two :class:`Registers<Register>` named ``counter``.
+    ``name_scope`` can be composed::
+
+        >>> with pyrtl.name_scope("foo"):
+        ...     wire = pyrtl.WireVector(name="wire", bitwidth=7)
+        ...     with pyrtl.name_scope("bar"):
+        ...         const = pyrtl.Const(name="const", val=1)
+
+        >>> wire.name
+        'foo/wire'
+        >>> const.name
+        'foo/bar/const'
+
+    .. note::
+
+        ``name_scope`` helps avoid name collisions, but it can not prevent them.
+        ``name_scope`` just prepends string prefixes to names, and these prefixes have
+        no special properties. For example, we could create a :class:`WireVector` whose
+        name collides with the previous example's :class:`Const`::
+
+            >>> collider = pyrtl.WireVector(name="foo/bar/const", bitwidth=4)
+            >>> pyrtl.working_block().sanity_check()
+            Traceback (most recent call last):
+              ...
+            pyrtl.pyrtlexceptions.PyrtlError: Duplicate wire names found for the following different signals: ['foo/bar/const'] (make sure you are not using "tmp" or "const_" as a signal name because those are reserved for internal use)
+
+    :param prefix: Prefix to prepend to the names of all
+        :class:`WireVectors<WireVector>` and :class:`MemBlocks<.MemBlock>` created
+        within.
+    """  # noqa: E501
+
+    def __init__(self, prefix: str):
+        self.prefix = prefix
+
+    def __enter__(self):
+        _name_prefix_stack.append(self.prefix)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not _name_prefix_stack:
+            msg = "Unexpected empty name prefix stack"
+            raise PyrtlInternalError(msg)
+
+        removed_prefix = _name_prefix_stack.pop()
+        if removed_prefix != self.prefix:
+            msg = "Corrupted name prefix stack"
+            raise PyrtlInternalError(msg)
+
+
+def current_name_prefix(suffix: str = "") -> str:
+    """Return the current stack of slash-delimited name prefixes.
+
+    .. doctest only::
+
+        >>> import pyrtl
+        >>> pyrtl.reset_working_block()
+
+    Examples::
+
+        >>> with pyrtl.name_scope("a"):
+        ...     current_name_prefix()
+        'a/'
+
+        >>> with pyrtl.name_scope("a"):
+        ...     with pyrtl.name_scope("b"):
+        ...         current_name_prefix("c")
+        'a/b/c'
+
+    :param suffix: A suffix to append to the current stack of name prefixes. If no
+        ``suffix`` is provided, returns the current stack of slash-delimited name
+        prefixes, with a trailing slash.
+    """
+    if not _name_prefix_stack:
+        return suffix
+
+    joined_prefixes = "/".join(_name_prefix_stack)
+    return f"{joined_prefixes}/{suffix}"
+
+
 class WireVector:
     """The main class for describing the connections between operators.
 
@@ -322,7 +435,7 @@ class WireVector:
 
         # used only to verify the one to one relationship of wires and blocks
         self._block = working_block(block)
-        self.name = next_tempvar_name(name)
+        self.name = current_name_prefix(next_tempvar_name(name))
         self._validate_bitwidth(bitwidth)
 
         if core._setting_keep_wirevector_call_stack:
@@ -330,7 +443,7 @@ class WireVector:
 
     @property
     def name(self) -> str:
-        """A property holding the name of the :class:`WireVector`.
+        """A property holding the :class:`WireVector`'s unique name.
 
         .. doctest only::
 
@@ -339,12 +452,19 @@ class WireVector:
 
         The name can be read or written. Examples::
 
-            >>> a = WireVector(name="foo", bitwidth=1)
-            >>> a.name
+            >>> foo = WireVector(name="foo", bitwidth=1)
+            >>> foo.name
             'foo'
-            >>> a.name = "mywire"
-            >>> a.name
+            >>> foo.name = "mywire"
+            >>> foo.name
             'mywire'
+
+        .. note::
+
+            All :class:`WireVectors<WireVector>` in a :class:`Block` must have unique
+            names. The :class:`.name_scope` context manager helps avoid name collisions,
+            and the :ref:`naming` section covers best practices for choosing names in
+            PyRTL.
         """
         return self._name
 
