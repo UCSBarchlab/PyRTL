@@ -141,7 +141,7 @@ class name_scope:
 
 
 def current_name_prefix(suffix: str = "") -> str:
-    """Return ``suffix`` prepended with the current slash-delimited name prefix stack.
+    """Return the current stack of slash-delimited name prefixes.
 
     .. doctest only::
 
@@ -159,7 +159,7 @@ def current_name_prefix(suffix: str = "") -> str:
         ...         current_name_prefix("c")
         'a/b/c'
 
-    :param suffix: Suffix to append to the current stack of name prefixes. If no
+    :param suffix: A suffix to append to the current stack of name prefixes. If no
         ``suffix`` is provided, returns the current stack of slash-delimited name
         prefixes, with a trailing slash.
     """
