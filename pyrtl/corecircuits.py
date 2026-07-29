@@ -213,6 +213,15 @@ def concat(*args: WireVectorLike) -> WireVector:
 
     arg_wirevectors = tuple(as_wires(arg) for arg in args)
     final_width = sum(len(arg) for arg in arg_wirevectors)
+
+    if all(isinstance(arg, Const) for arg in arg_wirevectors):
+        # If all args are `Const`, do the `concat` now and return the `Const` result.
+        result = 0
+        for const in arg_wirevectors:
+            result = result << const.bitwidth
+            result = result | const.val
+        return Const(result, bitwidth=final_width)
+
     outwire = WireVector(bitwidth=final_width)
     net = LogicNet(op="c", op_param=None, args=arg_wirevectors, dests=(outwire,))
     working_block().add_net(net)
@@ -714,22 +723,27 @@ def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]
 
     Example with sign-extension::
 
-        >>> a = pyrtl.Const(-1, name="a_short", signed=True, bitwidth=2)
-        >>> b = pyrtl.Const(-3, name="b", signed=True, bitwidth=4)
+        >>> a_short = pyrtl.Input(name="a_short", bitwidth=2)
+        >>> b_long = pyrtl.Input(name="b_long", bitwidth=4)
 
-        >>> a, b = pyrtl.match_bitwidth(a, b, signed=True)
-        >>> a.name = "a_long"
-        >>> a.bitwidth, b.bitwidth
-        (4, 4)
+        >>> a_matched = pyrtl.Output(name="a_matched", bitwidth=4)
+        >>> b_matched = pyrtl.Output(name="b_matched", bitwidth=4)
+
+        >>> a, b = pyrtl.match_bitwidth(a_short, b_long, signed=True)
+        >>> a_matched <<= a
+        >>> b_matched <<= b
 
         >>> sim = pyrtl.Simulation()
-        >>> sim.step()
-        >>> bin(sim.inspect("b"))
-        '0b1101'
+        >>> sim.step({"a_short": -1, "b_long": -3})
+
         >>> bin(sim.inspect("a_short"))
         '0b11'
-        >>> bin(sim.inspect("a_long"))
+        >>> bin(sim.inspect("b_long"))
+        '0b1101'
+        >>> bin(sim.inspect("a_matched"))
         '0b1111'
+        >>> bin(sim.inspect("b_matched"))
+        '0b1101'
 
     :param args: :class:`WireVectors<WireVector>` of which to match
         :attr:`~WireVector.bitwidth`

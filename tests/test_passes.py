@@ -949,9 +949,9 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
         pyrtl.reset_working_block()
 
     def test_two_way_concat(self):
-        i = pyrtl.Const(0b1100)
-        j = pyrtl.Const(0b011, bitwidth=3)
-        k = pyrtl.Const(0b100110)
+        i = pyrtl.Input(name="i", bitwidth=4)
+        j = pyrtl.Input(name="j", bitwidth=3)
+        k = pyrtl.Input(name="k", bitwidth=6)
         o = pyrtl.Output(13, "o")
         o <<= pyrtl.concat(i, j, k)
 
@@ -971,8 +971,8 @@ class TestConcatAndSelectSimplification(unittest.TestCase):
         self.assertEqual(lower_concat.args, (upper_concat.dests[0], k))
 
         sim = pyrtl.Simulation()
-        sim.step()
-        self.assertEqual(sim.inspect("o"), 0b1100011100110)
+        sim.step({"i": 0b1100, "j": 0b11, "k": 0b100110})
+        self.assertEqual(sim.inspect("o"), 0b1100_011_100110)
 
     def test_one_bit_selects(self):
         a = pyrtl.Const(0b101101001101)

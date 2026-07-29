@@ -305,14 +305,14 @@ class TestNetGraph(unittest.TestCase):
         self.assertEqual(len(g), 0)
 
     def test_netgraph_same_wire_multiple_edges_to_same_net(self):
-        c = pyrtl.Const(1, 1)
-        w = pyrtl.concat(c, c, c)
+        i = pyrtl.Input(name="i", bitwidth=1)
+        w = pyrtl.concat(i, i, i)
         g = pyrtl.net_graph()
-        self.assertEqual(len(g[c]), 1)
-        edges = next(iter(g[c].values()))
+        self.assertEqual(len(g[i]), 1)
+        edges = next(iter(g[i].values()))
         self.assertEqual(len(edges), 3)
         for w in edges:
-            self.assertIs(w, c)
+            self.assertIs(w, i)
 
 
 class TestOutputIPynb(unittest.TestCase):
