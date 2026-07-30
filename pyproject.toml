@@ -118,7 +118,6 @@ ignore = [
 dev = [
     "furo>=2025.9.25",
     "graphviz>=0.21",
-    "pydata-sphinx-theme>=0.15.4",
     "pyparsing>=3.2.5",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
