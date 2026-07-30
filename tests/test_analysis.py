@@ -156,25 +156,25 @@ paths_print_output = """\
 From i
   To o
     Path 0
-      tmp3/3W <-- - -- i/2I, tmp2/2W
-      tmp4/3W <-- | -- tmp1/3W, tmp3/3W
-      o/3O <-- w -- tmp4/3W
+      tmp2/3W <-- - -- i/2I, const_3_1/2C
+      tmp3/3W <-- | -- tmp1/3W, tmp2/3W
+      o/3O <-- w -- tmp3/3W
     Path 1
       tmp0/3W <-- c -- const_0_0/1C, i/2I
       tmp1/3W <-- & -- tmp0/3W, j/3I
-      tmp4/3W <-- | -- tmp1/3W, tmp3/3W
-      o/3O <-- w -- tmp4/3W
+      tmp3/3W <-- | -- tmp1/3W, tmp2/3W
+      o/3O <-- w -- tmp3/3W
   To p
     Path 0
-      tmp5/4W <-- c -- const_3_0/2C, i/2I
-      tmp6/5W <-- - -- k/4I, tmp5/4W
-      p/5O <-- w -- tmp6/5W
+      tmp4/4W <-- c -- const_4_0/2C, i/2I
+      tmp5/5W <-- - -- k/4I, tmp4/4W
+      p/5O <-- w -- tmp5/5W
 From j
   To o
     Path 0
       tmp1/3W <-- & -- tmp0/3W, j/3I
-      tmp4/3W <-- | -- tmp1/3W, tmp3/3W
-      o/3O <-- w -- tmp4/3W
+      tmp3/3W <-- | -- tmp1/3W, tmp2/3W
+      o/3O <-- w -- tmp3/3W
   To p
     (No paths)
 From k
@@ -182,8 +182,8 @@ From k
     (No paths)
   To p
     Path 0
-      tmp6/5W <-- - -- k/4I, tmp5/4W
-      p/5O <-- w -- tmp6/5W
+      tmp5/5W <-- - -- k/4I, tmp4/4W
+      p/5O <-- w -- tmp5/5W
 """
 
 
@@ -382,7 +382,7 @@ class TestPaths(unittest.TestCase):
         output = io.StringIO()
         paths.print(file=output)
         self.maxDiff = 30000
-        self.assertEqual(output.getvalue(), paths_print_output)
+        self.assertEqual(paths_print_output, output.getvalue())
 
 
 class TestDistance(unittest.TestCase):

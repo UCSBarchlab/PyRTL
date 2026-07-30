@@ -781,15 +781,16 @@ verilog_output_small = """\
 // As one initial test of synthesis, map to FPGA with:
 //   yosys -p "synth_xilinx -top toplevel" thisfile.v
 
-module toplevel(clk, o);
+module toplevel(clk, j, o);
     input clk;
+    input[2:0] j;
     output[12:0] o;
 
     // Constants
     wire[5:0] k = 6'd38;
 
     // Combinational logic
-    assign o = {4'd12, 3'd3, k};
+    assign o = {4'd12, j, k};
 endmodule
 """
 
@@ -825,29 +826,29 @@ module toplevel(clk, rst, a, o);
     reg[3:0] s;
 
     // Temporaries
-    wire[4:0] tmp13;
-    wire[3:0] tmp14;
-    wire[4:0] tmp15;
-    wire[5:0] tmp17;
-    wire[6:0] tmp19;
-    wire[4:0] tmp22;
-    wire tmp24;
+    wire[4:0] tmp12;
+    wire[3:0] tmp13;
+    wire[4:0] tmp14;
+    wire[5:0] tmp15;
+    wire[6:0] tmp17;
+    wire[4:0] tmp19;
+    wire tmp21;
+    wire[3:0] tmp23;
+    wire[10:0] tmp25;
     wire[3:0] tmp26;
-    wire[10:0] tmp28;
-    wire[3:0] tmp29;
-    wire[11:0] tmp31;
+    wire[11:0] tmp28;
 
     // Combinational logic
-    assign o = (tmp31[9:0]);
-    assign tmp13 = (r + {3'd0, 1'd1});
-    assign tmp14 = (tmp13[3:0]);
-    assign tmp15 = (a + r);
-    assign tmp17 = (tmp15 + {4'd0, 1'd1});
-    assign tmp19 = (tmp17 - {2'd0, s});
-    assign tmp22 = (a - {3'd0, 1'd1});
-    assign tmp24 = (tmp15[4]);
-    assign tmp28 = ({{5 {tmp24}}, tmp15} + {6'd0, tmp26});
-    assign tmp31 = (tmp28 + {7'd0, tmp29});
+    assign o = (tmp28[9:0]);
+    assign tmp12 = (r + 4'd1);
+    assign tmp13 = (tmp12[3:0]);
+    assign tmp14 = (a + r);
+    assign tmp15 = (tmp14 + 5'd1);
+    assign tmp17 = (tmp15 - {2'd0, s});
+    assign tmp19 = (a - 4'd1);
+    assign tmp21 = (tmp14[4]);
+    assign tmp25 = ({{5 {tmp21}}, tmp14} + {6'd0, tmp23});
+    assign tmp28 = (tmp25 + {7'd0, tmp26});
 
     // Register logic
     always @(posedge clk) begin
@@ -855,8 +856,8 @@ module toplevel(clk, rst, a, o);
             r <= 4'd0;
             s <= 4'd13;
         end else begin
-            r <= (tmp19[3:0]);
-            s <= (tmp22[3:0]);
+            r <= (tmp17[3:0]);
+            s <= (tmp19[3:0]);
         end
     end
 
@@ -868,75 +869,75 @@ module toplevel(clk, rst, a, o);
     // MemBlock tmp0 logic
     always @(posedge clk) begin
         tmp0[2'd0] <= a;
-        tmp0[2'd1] <= tmp14;
+        tmp0[2'd1] <= tmp13;
     end
-    assign tmp26 = tmp0[2'd0];
+    assign tmp23 = tmp0[2'd0];
 
     // MemBlock tmp1 logic
     always @(posedge clk) begin
         tmp1[2'd0] <= a;
-        tmp1[2'd1] <= tmp14;
+        tmp1[2'd1] <= tmp13;
     end
-    assign tmp29 = tmp1[2'd0];
+    assign tmp26 = tmp1[2'd0];
 
     // MemBlock tmp2 logic
     always @(posedge clk) begin
         tmp2[2'd0] <= a;
-        tmp2[2'd1] <= tmp14;
+        tmp2[2'd1] <= tmp13;
     end
 
     // MemBlock tmp3 logic
     always @(posedge clk) begin
         tmp3[2'd0] <= a;
-        tmp3[2'd1] <= tmp14;
+        tmp3[2'd1] <= tmp13;
     end
 
     // MemBlock tmp4 logic
     always @(posedge clk) begin
         tmp4[2'd0] <= a;
-        tmp4[2'd1] <= tmp14;
+        tmp4[2'd1] <= tmp13;
     end
 
     // MemBlock tmp5 logic
     always @(posedge clk) begin
         tmp5[2'd0] <= a;
-        tmp5[2'd1] <= tmp14;
+        tmp5[2'd1] <= tmp13;
     end
 
     // MemBlock tmp6 logic
     always @(posedge clk) begin
         tmp6[2'd0] <= a;
-        tmp6[2'd1] <= tmp14;
+        tmp6[2'd1] <= tmp13;
     end
 
     // MemBlock tmp7 logic
     always @(posedge clk) begin
         tmp7[2'd0] <= a;
-        tmp7[2'd1] <= tmp14;
+        tmp7[2'd1] <= tmp13;
     end
 
     // MemBlock tmp8 logic
     always @(posedge clk) begin
         tmp8[2'd0] <= a;
-        tmp8[2'd1] <= tmp14;
+        tmp8[2'd1] <= tmp13;
     end
 
     // MemBlock tmp9 logic
     always @(posedge clk) begin
         tmp9[2'd0] <= a;
-        tmp9[2'd1] <= tmp14;
+        tmp9[2'd1] <= tmp13;
     end
 
     // MemBlock tmp10 logic
     always @(posedge clk) begin
         tmp10[2'd0] <= a;
-        tmp10[2'd1] <= tmp14;
+        tmp10[2'd1] <= tmp13;
     end
 
     // MemBlock tmp11 logic
     always @(posedge clk) begin
         tmp11[2'd0] <= a;
-        tmp11[2'd1] <= tmp14;
+        tmp11[2'd1] <= tmp13;
     end
 endmodule
 """
@@ -1000,18 +1001,18 @@ module toplevel(clk, rst, o);
     reg[3:0] tmp0;
 
     // Temporaries
-    wire[4:0] tmp2;
+    wire[4:0] tmp1;
 
     // Combinational logic
     assign o = tmp0;
-    assign tmp2 = (tmp0 + {3'd0, 1'd1});
+    assign tmp1 = (tmp0 + 4'd1);
 
     // Register logic
     always @(posedge clk) begin
         if (rst) begin
             tmp0 <= 4'd2;
         end else begin
-            tmp0 <= (tmp2[3:0]);
+            tmp0 <= (tmp1[3:0]);
         end
     end
 endmodule
@@ -1032,18 +1033,18 @@ module toplevel(clk, rst, o);
     reg[3:0] tmp0;
 
     // Temporaries
-    wire[4:0] tmp2;
+    wire[4:0] tmp1;
 
     // Combinational logic
     assign o = tmp0;
-    assign tmp2 = (tmp0 + {3'd0, 1'd1});
+    assign tmp1 = (tmp0 + 4'd1);
 
     // Register logic
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             tmp0 <= 4'd2;
         end else begin
-            tmp0 <= (tmp2[3:0]);
+            tmp0 <= (tmp1[3:0]);
         end
     end
 endmodule
@@ -1063,15 +1064,15 @@ module toplevel(clk, o);
     reg[3:0] tmp0;
 
     // Temporaries
-    wire[4:0] tmp2;
+    wire[4:0] tmp1;
 
     // Combinational logic
     assign o = tmp0;
-    assign tmp2 = (tmp0 + {3'd0, 1'd1});
+    assign tmp1 = (tmp0 + 4'd1);
 
     // Register logic
     always @(posedge clk) begin
-        tmp0 <= (tmp2[3:0]);
+        tmp0 <= (tmp1[3:0]);
     end
 endmodule
 """
@@ -1090,16 +1091,16 @@ module toplevel(clk, rst);
     reg[3:0] r;
 
     // Temporaries
+    wire[4:0] tmp0;
     wire[4:0] tmp1;
-    wire[4:0] tmp3;
 
     // Combinational logic
-    assign tmp1 = (r + {3'd0, 1'd1});
-    assign tmp3 = (rst ? {4'd0, 1'd0} : tmp1);
+    assign tmp0 = (r + 4'd1);
+    assign tmp1 = (rst ? 5'd0 : tmp0);
 
     // Register logic
     always @(posedge clk) begin
-        r <= (tmp3[3:0]);
+        r <= (tmp1[3:0]);
     end
 endmodule
 """
@@ -1165,7 +1166,7 @@ class TestVerilogOutput(unittest.TestCase):
 
     def test_textual_consistency_small(self):
         i = pyrtl.Const(12)
-        j = pyrtl.Const(3, bitwidth=3)
+        j = pyrtl.Input(name="j", bitwidth=3)
         k = pyrtl.Const(38, name="k")
         o = pyrtl.Output(bitwidth=13, name="o")
         o <<= pyrtl.concat(i, j, k)
@@ -1405,8 +1406,8 @@ class TestVerilogInput(unittest.TestCase):
     def test_import_small(self):
         pyrtl.input_from_verilog(verilog_output_small)
         sim = pyrtl.Simulation()
-        sim.step()
-        self.assertEqual(sim.tracer.trace["o"][0], 0b1100011100110)
+        sim.step({"j": 3})
+        self.assertEqual(sim.tracer.trace["o"][0], 0b1100_011_100110)
 
     def test_import_counter_with_reset(self):
         pyrtl.input_from_verilog(verilog_output_counter_sync_reset)
@@ -1714,18 +1715,18 @@ circuit Example :
   module Example :
     input clock : Clock
     input reset : UInt<1>
+    input j : UInt<3>
     output o : UInt<13>
     wire tmp0 : UInt<13>
     wire tmp1 : UInt<7>
     wire tmp2 : UInt<13>
     node const_0_12 = UInt<4>(12)
-    node const_1_3 = UInt<3>(3)
-    node const_2_38 = UInt<6>(38)
+    node const_1_38 = UInt<6>(38)
 
     o <= tmp0
     tmp0 <= tmp2
-    tmp1 <= cat(const_0_12, const_1_3)
-    tmp2 <= cat(tmp1, const_2_38)
+    tmp1 <= cat(const_0_12, j)
+    tmp2 <= cat(tmp1, const_1_38)
 """
 
 firrtl_output_select_test = """\
@@ -1774,7 +1775,7 @@ class TestOutputFirrtl(unittest.TestCase):
 
     def test_textual_consistency_concats(self):
         i = pyrtl.Const(0b1100)
-        j = pyrtl.Const(0b011, bitwidth=3)
+        j = pyrtl.Input(name="j", bitwidth=3)
         k = pyrtl.Const(0b100110)
         o = pyrtl.Output(13, "o")
         o <<= pyrtl.concat(i, j, k)
