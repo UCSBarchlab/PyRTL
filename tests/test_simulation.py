@@ -186,7 +186,7 @@ class RenderTraceBase(unittest.TestCase):
         )
         buff = io.StringIO()
         sim.tracer.render_trace(file=buff, renderer=self.renderer, **kwargs)
-        self.assertEqual(buff.getvalue(), expected)
+        self.assertEqual(expected, buff.getvalue())
 
     def test_hex_trace(self):
         expected = (
@@ -195,8 +195,8 @@ class RenderTraceBase(unittest.TestCase):
             "a 0x1 |0x4 |0x9 |0xb |0xc\n"
             "  \n"
             "b 0x2 |0x17|0x2b|0x78|----\n"
-            "  \n"
-            "c ____,---------.____,----\n"
+            "       _________      ____\n"
+            "c ____|         |____|\n"
         )
         self.check_rendered_trace(expected)
 
@@ -207,8 +207,8 @@ class RenderTraceBase(unittest.TestCase):
             "a 0o1  |0o4  |0o11 |0o13 |0o14\n"
             "  \n"
             "b 0o2  |0o27 |0o53 |0o170|-----\n"
-            "  \n"
-            "c _____,-----------._____,-----\n"
+            "        ___________       _____\n"
+            "c _____|           |_____|\n"
         )
 
         self.check_rendered_trace(expected, repr_func=oct)
@@ -220,8 +220,8 @@ class RenderTraceBase(unittest.TestCase):
             "a 0b1      |0b100    |0b1001   |0b1011   |0b1100\n"
             "  \n"
             "b 0b10     |0b10111  |0b101011 |0b1111000|---------\n"
-            "  \n"
-            "c _________,-------------------._________,---------\n"
+            "            ___________________           _________\n"
+            "c _________|                   |_________|\n"
         )
 
         self.check_rendered_trace(expected, repr_func=bin)
@@ -233,8 +233,8 @@ class RenderTraceBase(unittest.TestCase):
             "a 1  |4  |9  |11 |12\n"
             "  \n"
             "b 2  |23 |43 |120|---\n"
-            "  \n"
-            "c ___,-------.___,---\n"
+            "      _______     ___\n"
+            "c ___|       |___|\n"
         )
         self.check_rendered_trace(expected, repr_func=str)
 

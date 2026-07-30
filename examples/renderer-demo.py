@@ -85,8 +85,8 @@ else:
     )
 
 for name, (constants, notes) in renderers.items():
-    print(f"# {notes}")
-    print(f"export PYRTL_RENDERER={name}\n")
+    print(f"# {notes}\n")
+    print(f"$ export PYRTL_RENDERER={name}\n")
     sim.tracer.render_trace(
         renderer=pyrtl.simulation.WaveRenderer(constants), repr_func=int
     )
