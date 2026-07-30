@@ -1376,10 +1376,10 @@ class Utf8RendererConstants(RendererConstants):
 
     This is the default renderer.
 
-    Enable this renderer by default by setting the ``PYRTL_RENDERER`` environment
-    variable to ``utf-8``::
+    Use this renderer by default by setting the ``PYRTL_RENDERER`` environment variable
+    to ``utf-8``::
 
-        export PYRTL_RENDERER=utf-8
+        $ export PYRTL_RENDERER=utf-8
 
     .. image:: ../docs/screenshots/pyrtl-renderer-demo-utf-8.png
        :width: 35em
@@ -1417,10 +1417,10 @@ class Utf8AltRendererConstants(RendererConstants):
     Compared to :class:`Utf8RendererConstants`, this renderer is more compact because it
     uses one character between cycles instead of two.
 
-    Enable this renderer by default by setting the ``PYRTL_RENDERER`` environment
-    variable to ``utf-8-alt``::
+    Use this renderer by default by setting the ``PYRTL_RENDERER`` environment variable
+    to ``utf-8-alt``::
 
-        export PYRTL_RENDERER=utf-8-alt
+        $ export PYRTL_RENDERER=utf-8-alt
 
     .. image:: ../docs/screenshots/pyrtl-renderer-demo-utf-8-alt.png
        :width: 25em
@@ -1456,10 +1456,10 @@ class PowerlineRendererConstants(Utf8RendererConstants):
     This renderer requires a `terminal font that supports Powerline glyphs
     <https://github.com/powerline/fonts>`_.
 
-    Enable this renderer by default by setting the ``PYRTL_RENDERER`` environment
-    variable to ``powerline``::
+    Use this renderer by default by setting the ``PYRTL_RENDERER`` environment variable
+    to ``powerline``::
 
-        export PYRTL_RENDERER=powerline
+         $ export PYRTL_RENDERER=powerline
 
     .. image:: ../docs/screenshots/pyrtl-renderer-demo-powerline.png
        :width: 35em
@@ -1487,10 +1487,10 @@ class Utf8BasicRendererConstants(RendererConstants):
     codes <https://en.wikipedia.org/wiki/ANSI_escape_code>`_, which makes its output
     suitable for inclusion in text files.
 
-    Enable this renderer by default by setting the ``PYRTL_RENDERER`` environment
-    variable to ``utf-8-basic``::
+    Use this renderer by default by setting the ``PYRTL_RENDERER`` environment variable
+    to ``utf-8-basic``::
 
-        export PYRTL_RENDERER=utf-8-basic
+        $ export PYRTL_RENDERER=utf-8-basic
 
     .. image:: ../docs/screenshots/pyrtl-renderer-demo-utf-8-basic.png
        :width: 25em
@@ -1515,14 +1515,14 @@ class Utf8BasicRendererConstants(RendererConstants):
 class AsciiRendererConstants(RendererConstants):
     """7-bit ASCII renderer constants. These should work anywhere.
 
-    Single-bit :class:`WireVectors<WireVector>` are rendered as waveforms with sloped
-    rising and falling edges. Multi-bit :class:`WireVector` values are rendered between
-    vertical bars.
+    Single-bit :class:`WireVectors<WireVector>` are rendered as square waveforms with
+    vertical rising and falling edges. Multi-bit :class:`WireVector` values are rendered
+    between vertical bars.
 
-    Enable this renderer by default by setting the ``PYRTL_RENDERER`` environment
-    variable to ``ascii``::
+    Use this renderer by default by setting the ``PYRTL_RENDERER`` environment variable
+    to ``ascii``::
 
-        export PYRTL_RENDERER=ascii
+        $ export PYRTL_RENDERER=ascii
 
     .. image:: ../docs/screenshots/pyrtl-renderer-demo-ascii.png
        :width: 25em
@@ -1530,8 +1530,11 @@ class AsciiRendererConstants(RendererConstants):
 
     _tick = "|"
 
-    _up, _down = ",", "."
-    _low, _high = "_", "-"
+    _up, _down = "|", "|"
+    _low, _high = "_", " "
+
+    _prev_line_up, _prev_line_down = " ", " "
+    _prev_line_low, _prev_line_high = " ", "_"
 
     _x = "|"
     _zero_x = "|"
