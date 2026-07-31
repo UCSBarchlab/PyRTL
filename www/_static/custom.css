@@ -4,6 +4,7 @@ body {
 
 div.body h1 {
     font-size: 120%;
+    margin-top: 3rem;
 }
 
 /* Spacing adjustments. */
@@ -64,8 +65,30 @@ a code {
     --sd-color-tabs-underline: rgba(222, 222, 222, 0);
 }
 
+/* Hero banner. */
+div.document {
+    margin-top: 0;
+}
 .title-card {
     background-image: linear-gradient(180deg, #2980B9, #3a4e5c, #4a5e6c);
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    margin-left: -50vw;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+.title-card .sd-container-fluid {
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.title-card .tagline p {
+    color: #c0c8d0;
+    font-size: 1.2rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
 }
 
 /* Hide the sidebar. It may appear as a footer on small screens. */
