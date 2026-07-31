@@ -7,6 +7,10 @@
 
    .. image:: ../docs/brand/pyrtl_logo.png
 
+   .. container:: tagline
+
+      register-transfer-level hardware design and simulation
+
    .. grid:: 1 2 2 4
       :gutter: 2
 
