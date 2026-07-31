@@ -200,4 +200,4 @@ It is always important to point out that PyRTL builds on the ideas of several
 other related projects as we all share the common goal of trying to make
 hardware design a better experience! You can read more about those
 relationships on our [PyRTL project web
-page](http://ucsbarchlab.github.io/PyRTL/).
+page](https://pyrtl.readthedocs.io/en/latest/#related-projects)
