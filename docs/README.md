@@ -67,23 +67,27 @@ This builds a local copy of PyRTL's documentation in `docs/_build/html`.
 ## Screenshots
 
 PyRTL is difficult to screenshot consistently, because it typically runs in a
-terminal window, and we rarely want to capture the whole window.
-
-To make our screenshots more consistent, we post-process them with `imagemagick`.
-They are first trimmed, to remove any existing inconsistent border, then we add
-a consistent 15-pixel black border:
+terminal window, and we rarely want to capture the whole window. To make our
+screenshots more consistent, we post-process them with `ImageMagick`, automated
+with `docs/screenshots/Makefile`:
 
 ```shell
-$ mogrify -strip -trim -bordercolor black -border 15 screenshot.png
+$ make -C docs/screenshots
 ```
 
-When importing screenshots into documentation, it's important to set the image
-width, because the screenshots typically contain text, and the screenshot's
-text should be about the same size as the surrounding text. To compute the
-proper `:width:`, take the width of the screenshot's text in characters (`">>>
-sim.tracer.render_trace()"` is 29 characters, for example), add two (for the
-15-pixel borders), then divide by two. Set width to `:width: {n}em`, where
-`{n}` is the computed number (`{n}` is `15` for the example).
+When including screenshots into documentation, we must set the image's width
+relative to the page's text size, because our screenshots typically contain
+text, and the screenshot's text should be about the same size as the page's
+surrounding text. We can't assume the surrounding text has a fixed pixel size,
+because that depends on factors beyond our control, such as the reader's
+display hardware and their browser zoom level.
+
+To compensate, we manually set each screenshot's `:width:` in reStructuredText.
+To compute the proper `:width:`, take the width of the screenshot's text in
+characters (`">>> sim.tracer.render_trace()"` is 29 characters, for example),
+add two (for the uniform borders added by `ImageMagick`), then divide by two.
+Set width to `:width: {n}em`, where `{n}` is the computed number (`{n}` is `15`
+for the example).
 
 PyRTL's current screenshots were taken in the Ghostty terminal, with 15-point
-"JetBrains Mono", using the "Peppermint" theme.
+"JetBrains Mono", using the "Peppermint" theme, with ligatures disabled.
