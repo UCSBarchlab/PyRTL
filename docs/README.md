@@ -24,11 +24,9 @@ Follow the instructions on this page to build a local copy of PyRTL's
 documentation. This is useful for verifying that PyRTL's documentation still
 renders correctly after making a local change.
 
-There is additional PyRTL documentation in the [`gh-pages`
-branch](https://github.com/UCSBarchlab/PyRTL/tree/gh-pages). This additional
-documentation is pushed to https://ucsbarchlab.github.io/PyRTL/ by the
-`pages-build-deployment` GitHub Action. This additional documentation is
-written HTML and is not described further in this README.
+There is additional PyRTL documentation in [GitHub
+Pages](https://ucsbarchlab.github.io/PyRTL/), see
+[`www/README.md`](https://github.com/UCSBarchlab/PyRTL/blob/development/www/README.md).
 
 ## Testing Documentation Examples
 
@@ -65,3 +63,27 @@ $ uv run just docs
 
 This builds a local copy of PyRTL's documentation in `docs/_build/html`.
 `docs/_build/html/index.html` is the home page.
+
+## Screenshots
+
+PyRTL is difficult to screenshot consistently, because it typically runs in a
+terminal window, and we rarely want to capture the whole window.
+
+To make our screenshots more consistent, we post-process them with `imagemagick`.
+They are first trimmed, to remove any existing inconsistent border, then we add
+a consistent 15-pixel black border:
+
+```shell
+$ mogrify -strip -trim -bordercolor black -border 15 screenshot.png
+```
+
+When importing screenshots into documentation, it's important to set the image
+width, because the screenshots typically contain text, and the screenshot's
+text should be about the same size as the surrounding text. To compute the
+proper `:width:`, take the width of the screenshot's text in characters (`">>>
+sim.tracer.render_trace()"` is 29 characters, for example), add two (for the
+15-pixel borders), then divide by two. Set width to `:width: {n}em`, where
+`{n}` is the computed number (`{n}` is `15` for the example).
+
+PyRTL's current screenshots were taken in the Ghostty terminal, with 15-point
+"JetBrains Mono", using the "Peppermint" theme.

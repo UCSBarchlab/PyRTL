@@ -4,7 +4,7 @@
 
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
-presubmit: tests docs
+presubmit: tests docs www
 
 tests:
         # Run `pytest` with the latest version of Python supported by PyRTL,
@@ -39,3 +39,9 @@ docs:
         #
         # Output: docs/_build/html/index.html
         uv run sphinx-build -M html docs/ docs/_build
+
+www:
+        # Run `sphinx-build` to generate github.io webpage.
+        #
+        # Output: www/_build/html/index.html
+        uv run sphinx-build -M html www/ www/_build

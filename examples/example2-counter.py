@@ -22,20 +22,19 @@ def one_bit_add(
 
 # If we call `one_bit_add` above with the arguments `x`, `y`, and `z`, it will make a
 # one-bit adder to add those values together, returning `WireVectors` for `sum` and
-# `carry_out` as applied to `x`, `y`, and `z`. If I call it again on `i`, `j`, and `k`
-# it will build a new one-bit adder for those inputs and return the resulting `sum` and
-# `carry_out` for that adder.
+# `carry_out` as applied to `x`, `y`, and `z`. If I call `one_bit_add` again on `i`,
+# `j`, and `k` it will build a new one-bit adder for those inputs and return the
+# resulting `sum` and `carry_out` for that adder.
 #
-# While PyRTL actually provides an `+` operator for `WireVectors` which generates
-# adders, a ripple carry adder is something people can understand easily but has enough
+# While PyRTL actually provides a `+` operator for `WireVectors` which generates adders,
+# a ripple carry adder is something people can understand easily but has enough
 # structure to be mildly interesting. Let's define an adder of arbitrary length
 # recursively and (hopefully) Pythonically. More comments after the code.
 def ripple_add(
     a: pyrtl.WireVector, b: pyrtl.WireVector, carry_in: pyrtl.WireVector = 0
 ) -> tuple[pyrtl.WireVector, pyrtl.WireVector]:
+    # `match_bitwidth` zero-extends its arguments to the widest argument's bitwidth.
     a, b = pyrtl.match_bitwidth(a, b)
-    # This function is a function that allows us to match the bitwidth of multiple
-    # different wires. By default, it zero extends the shorter bits
     if len(a) == 1:
         return one_bit_add(a, b, carry_in)
     lsb, ripple_carry = one_bit_add(a[0], b[0], carry_in)
@@ -47,7 +46,7 @@ def ripple_add(
 #
 # 1. If `a` is one-bit wide, just do a `one_bit_add`.
 # 2. Otherwise, do a `one_bit_add` on the least significant bits, `ripple_add` the rest,
-#    and then stick the results back together into one `WireVector`.
+#    and then `concat` the results back together into one `WireVector`.
 #
 # ## A couple interesting features of PyRTL can be seen here:
 #
@@ -62,26 +61,26 @@ def ripple_add(
 #   and PyRTL will cast integers and some other types to `WireVectors` when it can.
 #
 # Now let's build a 3-bit counter from our N-bit ripple carry adder.
-counter = pyrtl.Register(bitwidth=3, name="counter")
-sum, carry_out = ripple_add(counter, pyrtl.Const("1'b1"))
+counter = pyrtl.Register(name="counter", bitwidth=3)
+sum, _carry_out = ripple_add(counter, pyrtl.Const(1))
 counter.next <<= sum
 
 # ## A few new things in the above code:
 #
 # * The two remaining types of basic `WireVectors`, `Const` and `Register`, both appear.
 #   `Const`, unsurprisingly, is just for holding constants (such as the `0` in
-#   `ripple_add`), but here we create one explicitly with a Verilog-like string which
-#   includes both the value and the bitwidth.
+#   `ripple_add`), but here we create one explicitly.
 # * `Registers` are just like `WireVectors`, except their updates are delayed to the
 #   next clock cycle. This is made explicit in the syntax through the property `.next`
-#   which should always be set for registers.
+#   which must be set for registers.
 # * In this simple example, we make the counter's value on the next cycle equal to the
 #   counter's value this cycle plus one.
 #
 # Now let's run the bugger. No need for `Inputs`, as this circuit doesn't have any.
-# Finally we'll print the trace to the screen and check that it counts up correctly.
+# Finally we'll print the trace and check that `counter` counts up to 7, then wraps
+# around to 0.
 sim = pyrtl.Simulation()
-for cycle in range(15):
+for cycle in range(12):
     sim.step()
-    assert sim.value[counter] == cycle % 8
+    assert sim.inspect("counter") == cycle % 8
 sim.tracer.render_trace()

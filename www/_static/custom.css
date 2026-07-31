@@ -1,0 +1,77 @@
+body {
+    line-height: 1.5;
+}
+
+div.body h1 {
+    font-size: 120%;
+}
+
+/* Spacing adjustments. */
+pre {
+    padding: 12px;
+}
+div.bodywrapper {
+    margin: 0px;
+}
+div.body {
+    max-width: 100%;
+}
+
+div.body h1,
+div.body h2,
+div.body h3,
+div.body h4,
+div.body h5,
+div.body h6 {
+    color: #2980B9;
+}
+
+/* Code blocks. */
+.highlight {
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+    font-size: 1rem;
+}
+
+/* Syntax highlighting. */
+.highlight .n,
+.highlight .p {
+    color: #567482;
+}
+.highlight .nf {
+    color: #795da3;
+}
+.highlight .k,
+.highlight .kn {
+    color: #a71d5d;
+    font-weight: inherit;
+}
+
+/* Documentation links. */
+a code {
+    color: inherit;
+}
+
+/* Tabs. */
+.sd-tab-set {
+    margin: 0px;
+}
+
+/* Buttons. */
+:root {
+    --sd-color-secondary: #6a7e8c;
+    --sd-color-secondary-highlight: #7a8e9c;
+    --sd-color-tabs-underline: rgba(222, 222, 222, 0);
+}
+
+.title-card {
+    background-image: linear-gradient(180deg, #2980B9, #3a4e5c, #4a5e6c);
+}
+
+/* Hide the sidebar. It may appear as a footer on small screens. */
+div.sphinxsidebar {
+    height: 0px;
+    width: 0px;
+    margin: 0px;
+    padding: 0px;
+}

@@ -127,4 +127,5 @@ dev = [
     "sphinx>=7.4.7",
     "sphinx-autodoc-typehints>=2.3.0",
     "sphinx-copybutton>=0.5.2",
+    "sphinx-design>=0.6.1",
 ]

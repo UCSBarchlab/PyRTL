@@ -23,8 +23,6 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "PyRTL"
-copyright = "2026, Timothy Sherwood"
-author = "Timothy Sherwood"
 
 # -- General configuration ---------------------------------------------------
 
@@ -96,6 +94,9 @@ html_theme_options = {
     ],
 }
 html_logo = "brand/pyrtl_logo.png"
+html_show_sphinx = False
+html_show_copyright = False
+html_show_sourcelink = False
 
 # Force a light blue background color for inheritance-diagrams. The default is
 # transparent, which does not work well with Furo's dark mode.
