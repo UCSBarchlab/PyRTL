@@ -22,6 +22,8 @@ jobs:
         path: www/_build/html
 
   deploy:
+    # Only deploy for UCSBarchlab/PyRTL.
+    if: ${{ github.repository == 'UCSBarchlab/PyRTL' && github.ref_name == 'development' }}
     needs: build
     permissions:
       pages: write
