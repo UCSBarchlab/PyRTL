@@ -221,8 +221,8 @@ Notebooks on any of our examples on MyBinder
 Hello N-bit Ripple-Carry Adder!
 ===============================
 
-While adders are a builtin primitive for PyRTL, most people doing RTL are
-familiar with the idea of a `Ripple-Carry Adder
+While adders are a builtin primitive for PyRTL, most people writing RTL are
+familiar with `Ripple-Carry Adders
 <https://en.wikipedia.org/wiki/Adder_(electronics)>`_ and so it is useful to
 see how you might express one in PyRTL. Rather than the typical `Verilog
 introduction to fixed 4-bit adders
@@ -235,9 +235,9 @@ The code above includes ``ripple_add``, an adder generator with Python-style
 slices on wires, ``counter``, an instance of :class:`~pyrtl.Register`, and all
 the code needed to simulate the design, generate a waveform, and render it to
 the terminal. `Example 2
-<https://github.com/UCSBarchlab/PyRTL/blob/development/examples/example2-counter.py>`_'s
-comments describe this code in much more detail. Running this code shows a
-counter running from 0 to 7 and repeating:
+<https://github.com/UCSBarchlab/PyRTL/blob/development/examples/example2-counter.py>`_
+has more comments on how this code works. Running this code shows a counter
+running from 0 to 7 and repeating:
 
 .. image:: ../docs/screenshots/ripple-carry.png
    :width: 34em
