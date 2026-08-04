@@ -1,33 +1,50 @@
 # Changelog
 
-All notable PyRTL changes will be documented in this file. Only changes for published PyPI releases are tracked (no release candidates).
+Notable PyRTL changes are documented in this file. Only published PyPI releases are tracked (no release candidates).
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.3] - 2026-08-04
+
+### Added
+
+- [`name_scope`](https://pyrtl.readthedocs.io/en/latest/basic.html#naming-best-practices) is a context manager that prepends string prefixes to [`WireVector`](https://pyrtl.readthedocs.io/en/latest/basic.html#wirevector) and [`MemBlock`](https://pyrtl.readthedocs.io/en/latest/regmem.html#pyrtl.MemBlock) names.
+
+### Changed
+
+- [`sign_extended`](https://pyrtl.readthedocs.io/en/latest/basic.html#pyrtl.WireVector.sign_extended) and [`zero_extended`](https://pyrtl.readthedocs.io/en/latest/basic.html#pyrtl.WireVector.zero_extended) no longer generate slice (`s`) [`LogicNets`](https://pyrtl.readthedocs.io/en/latest/blocks.html#logicnets).
+- When [`concat`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.concat) is called with [`Const`](https://pyrtl.readthedocs.io/en/latest/basic.html#constants) args, the constants are immediately concatenated, returning a new `Const`.
+- Improved [`render_trace`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.SimulationTrace.render_trace)'s [ASCII output](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.simulation.AsciiRendererConstants).
+
+### Fixed
+
+- Fixed an [`output_to_verilog`](https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.output_to_verilog) bug where arithmetic expressions may truncate due to inlining.
+- Fixed several minor Windows compatibility issues around Unicode and testing. Enabled continuous Windows testing via GitHub Actions.
 
 ## [1.0.2] - 2026-07-22
 
 ### Fixed
 
-- Fixed a  `CompiledSimulation` `arm64` bug introduced in `1.0.1`. Added an `arm64` GitHub workflow to catch such regressions in the future.
+- Fixed a  [`CompiledSimulation`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.CompiledSimulation) `arm64` bug introduced in `1.0.1`. Added an `arm64` GitHub workflow to catch such regressions in the future.
 
 ## [1.0.1] - 2026-07-22
 
 ### Changed
 
-- Significant `Simulation` performance speedups (tested with [`pyrtlnet`](https://github.com/UCSBarchlab/pyrtlnet)):
+- Significant simulation speedups (tested with [`pyrtlnet`](https://github.com/UCSBarchlab/pyrtlnet)):
   class | method | speedup
   ---: | :--- | ---:
-  `Simulation` | `step()` | 40%
-  `FastSimulation` | `__init__()` | 10%
-  `FastSimulation` | `step()` | 15%
-  `CompiledSimulation` | `__init__()` | 65%
-  `CompiledSimulation` | `step()` | 30%
+  [`Simulation`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.Simulation) | `step()` | 40%
+  [`FastSimulation`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.FastSimulation) | `__init__()` | 10%
+  [`FastSimulation`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.FastSimulation) | `step()` | 15%
+  [`CompiledSimulation`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.CompiledSimulation) | `__init__()` | 65%
+  [`CompiledSimulation`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.CompiledSimulation) | `step()` | 30%
 - Documentation improvements.
 
 ### Fixed
 
-- Fixed a `CompiledSimulation` bug when the first arg to `concat` crosses a 64-bit boundary in the `concat`'s output.
+- Fixed a [`CompiledSimulation`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.CompiledSimulation) bug when the first arg to [`concat`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.concat) crosses a 64-bit boundary in the `concat`'s output.
 
 ## [1.0.0] - 2026-06-17
 
@@ -38,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Improved `CompiledSimulation`'s performance.
+- Improved [`CompiledSimulation`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.CompiledSimulation)'s performance.
 - [`output_to_verilog`](https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.output_to_verilog) now supports custom `module_name`s. ([@devmam999](https://github.com/devmam999))
 - Minor improvements to [`wire_struct`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.wire_struct) and [`wire_matrix`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.wire_matrix).
 - Minor improvements to [WaveDrom output](https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.trace_to_json).
