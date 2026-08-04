@@ -1,19 +1,18 @@
 import os
 import subprocess
 import sys
-from itertools import chain
 from pathlib import Path
 
 import pytest
 
 
-def get_scripts(directory: str) -> Path:
-    return (Path(os.path.dirname(__file__)) / ".." / directory).glob("*.py")
+def get_scripts(directory: str) -> list[Path]:
+    return list((Path(os.path.dirname(__file__)) / ".." / directory).glob("*.py"))
 
 
 @pytest.mark.parametrize(
     "file",
-    chain(get_scripts("examples"), get_scripts("www/examples")),
+    get_scripts("examples") + get_scripts("www/examples"),
     ids=lambda path: path.name,
 )
 def test_all_examples(file):

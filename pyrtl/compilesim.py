@@ -201,9 +201,7 @@ class CompiledSimulation:
             raise PyrtlError(msg)
 
         if len(provided_inputs) > 0:
-            longest = sorted(
-                provided_inputs.items(), key=lambda t: len(t[1]), reverse=True
-            )[0]
+            longest = max(provided_inputs.items(), key=lambda t: len(t[1]))
             provided_steps = len(longest[1])
             if nsteps:
                 if nsteps > provided_steps:
