@@ -422,9 +422,7 @@ class Simulation:
             raise PyrtlError(msg)
 
         if len(provided_inputs) > 0:
-            longest = sorted(
-                provided_inputs.items(), key=lambda t: len(t[1]), reverse=True
-            )[0]
+            longest = max(provided_inputs.items(), key=lambda t: len(t[1]))
             msteps = len(longest[1])
             if nsteps:
                 if nsteps > msteps:
@@ -866,9 +864,7 @@ class FastSimulation:
             raise PyrtlError(msg)
 
         if len(provided_inputs) > 0:
-            longest = sorted(
-                provided_inputs.items(), key=lambda t: len(t[1]), reverse=True
-            )[0]
+            longest = max(provided_inputs.items(), key=lambda t: len(t[1]))
             msteps = len(longest[1])
             if nsteps:
                 if nsteps > msteps:
