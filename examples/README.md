@@ -1,12 +1,40 @@
 # PyRTL's Examples
 
 PyRTL's examples are Python scripts that demonstrate various PyRTL features.
-These scripts can be run with `python $SCRIPT_FILE_NAME`.
 
-Each script is converted to an equivalent Jupyter notebook in the
-`ipynb-examples` directory. These conversions are done by the `to_ipynb.py`
-script in the `examples/tools` directory.
+These scripts can be run with:
 
-If you update an example script, be sure to update its corresponding Jupyter
-notebook. These updates are handled by the `Makefile` in this directory, so all
-Jupyter notebooks can be updated by running `make`.
+```shell
+$ uv run $SCRIPT_FILE
+```
+
+or interactively with:
+
+```shell
+uv run python3 -i $SCRIPT_FILE
+```
+
+PyRTL has examples in two directories:
+[`examples`](https://github.com/UCSBarchlab/PyRTL/tree/development/examples)
+and
+[`www/examples`](https://github.com/UCSBarchlab/PyRTL/tree/development/www/examples).
+
+## Generating Jupyter Notebooks
+
+Each example script is automatically converted to a Jupyter notebook in a
+corresponding `ipynb-examples` directory,
+[`ipynb-examples`](https://github.com/UCSBarchlab/PyRTL/tree/development/ipynb-examples)
+and
+[`www/ipynb-examples`](https://github.com/UCSBarchlab/PyRTL/tree/development/www/ipynb-examples).
+[`examples/tools/to_ipynb.py`](https://github.com/UCSBarchlab/PyRTL/blob/development/examples/tools/to_ipynb.py)
+does these automatic conversions. Do not manually edit the generated Jupyter
+notebooks! Any manual changes will be lost the next time someone runs
+`to_ipynb.py`.
+
+If you update an example script, re-run `to_ipynb.py` to update its
+corresponding Jupyter notebook. This process is automated with
+[`examples/Makefile`](https://github.com/UCSBarchlab/PyRTL/blob/development/examples/Makefile)
+and
+[`www/examples/Makefile`](https://github.com/UCSBarchlab/PyRTL/blob/development/www/examples/Makefile).
+Running `make` in these directories will re-generate Jupyter notebooks for any
+modified examples in their `examples` directory.
