@@ -107,6 +107,14 @@ div.document {
     margin-bottom: 1.5rem;
 }
 
+/* Waveform screenshots: extend dark background across full width. */
+.image-reference {
+    display: block;
+    background-color: #000;
+    padding: 6px;
+    border-radius: 0;
+}
+
 /* Hide the sidebar. It may appear as a footer on small screens. */
 div.sphinxsidebar {
     height: 0px;
