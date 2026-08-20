@@ -18,7 +18,7 @@ def adder(
     """n-bit ripple carry adder with carry in and carry out."""
     a, b = pyrtl.match_bitwidth(a, b)
 
-    sum = []
+    sum: list[pyrtl.WireVector] = []
     for i in range(a.bitwidth):
         s, cout = fa(a[i], b[i], cin)
         sum.append(s)
