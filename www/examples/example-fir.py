@@ -7,9 +7,11 @@ def fir(x: pyrtl.WireVector, bs: list[int]):
     rwidth = x.bitwidth  # Bitwidth of the registers.
     ntaps = len(bs)  # Number of coefficients.
 
-    zs = [x] + [pyrtl.Register(rwidth) for _ in range(ntaps - 1)]
-    for i in range(1, ntaps):
-        zs[i].next <<= zs[i - 1]
+    regs = [pyrtl.Register(rwidth) for _ in range(ntaps - 1)]
+    for i, reg in enumerate(regs):
+        reg.next <<= x if i == 0 else regs[i - 1]
+
+    zs = [x, *regs]
 
     # Produce the final sum of products.
     return sum(z * b for z, b in zip(zs, bs, strict=True))
