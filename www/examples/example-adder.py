@@ -19,10 +19,10 @@ def adder(
     a, b = pyrtl.match_bitwidth(a, b)
 
     sum: list[pyrtl.WireVector] = []
+    cout = cin
     for i in range(a.bitwidth):
-        s, cout = fa(a[i], b[i], cin)
+        s, cout = fa(a[i], b[i], cout)
         sum.append(s)
-        cin = cout
 
     full_sum = pyrtl.concat_list(sum)
     return full_sum, cout
