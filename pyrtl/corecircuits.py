@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import itertools
-
-from typing import Sequence, Iterable
+from collections.abc import Iterator, Sequence
 
 from pyrtl.conditional import otherwise
 from pyrtl.core import Block, LogicNet, working_block
@@ -707,7 +706,7 @@ def shift_right_logical(
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
 
 
-def match_bitwidth(*args: WireVector, signed: bool = False) -> Iterable[WireVector, ...]:
+def match_bitwidth(*args: WireVector, signed: bool = False) -> Iterator[WireVector]:
     """Matches multiple :class:`WireVector` :attr:`bitwidths<~WireVector.bitwidth>` via
     zero- or sign-extension.
 
