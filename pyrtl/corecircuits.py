@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import itertools
+from collections.abc import Iterator, Sequence
 
 from pyrtl.conditional import otherwise
 from pyrtl.core import Block, LogicNet, working_block
@@ -228,7 +229,7 @@ def concat(*args: WireVectorLike) -> WireVector:
     return outwire
 
 
-def concat_list(wire_list: list[WireVectorLike]) -> WireVector:
+def concat_list(wire_list: Sequence[WireVectorLike]) -> WireVector:
     """Concatenates a list of :class:`WireVectors<WireVector>` into a single
     :class:`WireVector`.
 
@@ -706,7 +707,7 @@ def shift_right_logical(
     return barrel.barrel_shifter(bits_to_shift, bit_in, dir, shift_amount)
 
 
-def match_bitwidth(*args: WireVector, signed: bool = False) -> tuple[WireVector]:
+def match_bitwidth(*args: WireVector, signed: bool = False) -> Iterator[WireVector]:
     """Matches multiple :class:`WireVector` :attr:`bitwidths<~WireVector.bitwidth>` via
     zero- or sign-extension.
 

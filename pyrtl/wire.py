@@ -2041,7 +2041,7 @@ class Register(WireVector):
         raise PyrtlError(msg)
 
     @next.setter
-    def next(self, other: WireVectorLike):
+    def next(self, other: Register._Next):
         if not isinstance(other, Register._Next):
             msg = 'error, .next should be set with "<<=" or "|=" operators'
             raise PyrtlError(msg)
