@@ -228,6 +228,7 @@ def concat(*args: WireVectorLike) -> WireVector:
     working_block().add_net(net)
     return outwire
 
+
 def concat_list(wire_list: Sequence[WireVectorLike]) -> WireVector:
     """Concatenates a list of :class:`WireVectors<WireVector>` into a single
     :class:`WireVector`.
