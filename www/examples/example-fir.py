@@ -1,4 +1,5 @@
 import pyrtl
+import itertools
 
 # # Finite impulse filter example.
 
@@ -7,10 +8,11 @@ def fir(x: pyrtl.WireVector, bs: list[int]):
     rwidth = x.bitwidth  # Bitwidth of the registers.
     ntaps = len(bs)  # Number of coefficients.
 
+    # Create a chain of registers.
     regs = [pyrtl.Register(rwidth) for _ in range(ntaps - 1)]
-    for i, reg in enumerate(regs):
-        reg.next <<= x if i == 0 else regs[i - 1]
-
+    regs[0].next <<= x
+    for prev, curr in itertools.pairwise(regs):
+        curr.next <<= prev
     zs = [x, *regs]
 
     # Produce the final sum of products.
