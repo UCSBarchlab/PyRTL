@@ -56,8 +56,8 @@ class TestWireVector(unittest.TestCase):
     def test_src_connects_wire(self):
         inp = pyrtl.Input(bitwidth=8, name="inp")
         w = pyrtl.WireVector(bitwidth=8, name="w", src=inp)
-        out = pyrtl.Output(name="out", bitwidth=8)
-        out <<= w
+        pyrtl.Output(name="out", bitwidth=8, src=w)
+
         sim = pyrtl.Simulation()
         sim.step(provided_inputs={"inp": 42})
         self.assertEqual(sim.inspect("out"), 42)
@@ -67,19 +67,24 @@ class TestWireVector(unittest.TestCase):
         w = pyrtl.WireVector(name="w", src=inp)
         self.assertEqual(w.bitwidth, 8)
 
-    def test_src_with_int(self):
-        w = pyrtl.WireVector(bitwidth=8, name="w", src=42)
-        out = pyrtl.Output(name="out", bitwidth=8)
-        out <<= w
         sim = pyrtl.Simulation()
-        sim.step(provided_inputs={})
-        self.assertEqual(sim.inspect("out"), 42)
+        sim.step(provided_inputs={"inp": 43})
+        self.assertEqual(sim.inspect("w"), 43)
+
+    def test_src_with_int(self):
+        w = pyrtl.WireVector(bitwidth=8, name="w", src=44)
+        pyrtl.Output(name="out", bitwidth=8, src=w)
+
+        sim = pyrtl.Simulation()
+        sim.step()
+        self.assertEqual(sim.inspect("out"), 44)
 
     def test_src_none_does_nothing(self):
         w = pyrtl.WireVector(bitwidth=8, name="w", src=None)
-        # No net should be created for this wire
+
+        # No net should be created for this wire.
         block = pyrtl.working_block()
-        src_dict, _ = block.net_connections(include_virtual_nodes=False)
+        src_dict, _ = block.net_connections()
         self.assertNotIn(w, src_dict)
 
 
@@ -370,38 +375,46 @@ class TestRegister(unittest.TestCase):
             pyrtl.Register(4, reset_value="hello")
 
 
-class TestRegisterSrc(unittest.TestCase):
+class TestRegisterNext(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
 
-    def test_register_src_sets_next(self):
+    def test_register_next_sets_next(self):
         inp = pyrtl.Input(bitwidth=3, name="inp")
-        r = pyrtl.Register(bitwidth=3, src=inp)
+        r = pyrtl.Register(bitwidth=3, next=inp)
         self.assertIsNotNone(r.reg_in)
 
-    def test_register_src_simulates(self):
+    def test_register_next_simulation(self):
         inp = pyrtl.Input(bitwidth=3, name="inp")
-        r = pyrtl.Register(bitwidth=3, name="r", src=inp)
+        r = pyrtl.Register(bitwidth=3, name="r", next=inp)
         pyrtl.Output(name="out", bitwidth=3, src=r)
-        sim = pyrtl.Simulation()
-        sim.step(provided_inputs={"inp": 5})
-        self.assertEqual(sim.inspect("out"), 0)  # reset value on first step
-        sim.step(provided_inputs={"inp": 7})
-        self.assertEqual(sim.inspect("out"), 5)  # gets previous input
 
-    def test_register_src_with_reset_value(self):
-        inp = pyrtl.Input(bitwidth=3, name="inp")
-        r = pyrtl.Register(bitwidth=3, name="r", reset_value=3, src=inp)
-        pyrtl.Output(name="out", bitwidth=3, src=r)
         sim = pyrtl.Simulation()
         sim.step(provided_inputs={"inp": 5})
-        self.assertEqual(sim.inspect("out"), 3)  # reset value on first step
+        # First step: Register contains its `reset_value`.
+        self.assertEqual(sim.inspect("out"), 0)
+
+        sim.step(provided_inputs={"inp": 7})
+        # Second step: Register contains the previous `inp` value.
+        self.assertEqual(sim.inspect("out"), 5)
+
+    def test_register_next_with_reset_value(self):
+        inp = pyrtl.Input(bitwidth=3, name="inp")
+        r = pyrtl.Register(bitwidth=3, name="r", reset_value=3, next=inp)
+        pyrtl.Output(name="out", bitwidth=3, src=r)
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={"inp": 5})
+        # First step: Register contains its `reset_value`.
+        self.assertEqual(sim.inspect("out"), 3)
+
+        # Second step: Register contains the previous `inp` value.
         sim.step(provided_inputs={"inp": 7})
         self.assertEqual(sim.inspect("out"), 5)
 
-    def test_register_src_double_assign_error(self):
+    def test_register_next_double_assign_error(self):
         inp = pyrtl.Input(bitwidth=3, name="inp")
-        r = pyrtl.Register(bitwidth=3, src=inp)
+        r = pyrtl.Register(bitwidth=3, next=inp)
         with self.assertRaises(pyrtl.PyrtlError):
             r.next <<= inp
 
