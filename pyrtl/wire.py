@@ -1993,8 +1993,8 @@ class Register(WireVector):
         bitwidth: int | None = None,
         name: str = "",
         reset_value: int | None = None,
-        State: type[enum.IntEnum] | None = None,
         block: Block | None = None,
+        State: type[enum.IntEnum] | None = None,
         *,
         next: WireVectorLike | None = None,
     ):
