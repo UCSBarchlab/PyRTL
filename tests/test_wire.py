@@ -53,6 +53,40 @@ class TestWireVector(unittest.TestCase):
         self.assertIn("testJohn", block.wirevector_by_name)
         self.assertIn(w, block.wirevector_set)
 
+    def test_src_connects_wire(self):
+        inp = pyrtl.Input(bitwidth=8, name="inp")
+        w = pyrtl.WireVector(bitwidth=8, name="w", src=inp)
+        pyrtl.Output(name="out", bitwidth=8, src=w)
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={"inp": 42})
+        self.assertEqual(sim.inspect("out"), 42)
+
+    def test_src_infers_bitwidth(self):
+        inp = pyrtl.Input(bitwidth=8, name="inp")
+        w = pyrtl.WireVector(name="w", src=inp)
+        self.assertEqual(w.bitwidth, 8)
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={"inp": 43})
+        self.assertEqual(sim.inspect("w"), 43)
+
+    def test_src_with_int(self):
+        w = pyrtl.WireVector(bitwidth=8, name="w", src=44)
+        pyrtl.Output(name="out", bitwidth=8, src=w)
+
+        sim = pyrtl.Simulation()
+        sim.step()
+        self.assertEqual(sim.inspect("out"), 44)
+
+    def test_src_none_does_nothing(self):
+        w = pyrtl.WireVector(bitwidth=8, name="w", src=None)
+
+        # No net should be created for this wire.
+        block = pyrtl.working_block()
+        src_dict, _ = block.net_connections()
+        self.assertNotIn(w, src_dict)
+
 
 class TestWireVectorNames(unittest.TestCase):
     def setUp(self):
@@ -341,6 +375,50 @@ class TestRegister(unittest.TestCase):
             pyrtl.Register(4, reset_value="hello")
 
 
+class TestRegisterNext(unittest.TestCase):
+    def setUp(self):
+        pyrtl.reset_working_block()
+
+    def test_register_next_sets_next(self):
+        inp = pyrtl.Input(bitwidth=3, name="inp")
+        r = pyrtl.Register(bitwidth=3, next=inp)
+        self.assertIsNotNone(r.reg_in)
+
+    def test_register_next_simulation(self):
+        inp = pyrtl.Input(bitwidth=3, name="inp")
+        r = pyrtl.Register(bitwidth=3, name="r", next=inp)
+        pyrtl.Output(name="out", bitwidth=3, src=r)
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={"inp": 5})
+        # First step: Register contains its `reset_value`.
+        self.assertEqual(sim.inspect("out"), 0)
+
+        sim.step(provided_inputs={"inp": 7})
+        # Second step: Register contains the previous `inp` value.
+        self.assertEqual(sim.inspect("out"), 5)
+
+    def test_register_next_with_reset_value(self):
+        inp = pyrtl.Input(bitwidth=3, name="inp")
+        r = pyrtl.Register(bitwidth=3, name="r", reset_value=3, next=inp)
+        pyrtl.Output(name="out", bitwidth=3, src=r)
+
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={"inp": 5})
+        # First step: Register contains its `reset_value`.
+        self.assertEqual(sim.inspect("out"), 3)
+
+        # Second step: Register contains the previous `inp` value.
+        sim.step(provided_inputs={"inp": 7})
+        self.assertEqual(sim.inspect("out"), 5)
+
+    def test_register_next_double_assign_error(self):
+        inp = pyrtl.Input(bitwidth=3, name="inp")
+        r = pyrtl.Register(bitwidth=3, next=inp)
+        with self.assertRaises(pyrtl.PyrtlError):
+            r.next <<= inp
+
+
 class TestStateRegister(unittest.TestCase):
     def setUp(self):
         pyrtl.reset_working_block()
@@ -500,6 +578,36 @@ class TestOutput(unittest.TestCase):
         o = pyrtl.Output(2)
         with self.assertRaises(pyrtl.PyrtlInternalError):
             _ = o[0]
+
+    def test_output_src_connects(self):
+        inp = pyrtl.Input(bitwidth=8, name="inp")
+        pyrtl.Output(name="out", src=inp)
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={"inp": 99})
+        self.assertEqual(sim.inspect("out"), 99)
+
+    def test_output_src_infers_bitwidth(self):
+        inp = pyrtl.Input(bitwidth=8, name="inp")
+        out = pyrtl.Output(name="out", src=inp)
+        self.assertEqual(out.bitwidth, 8)
+
+    def test_output_src_with_expression(self):
+        a = pyrtl.Input(bitwidth=8, name="a")
+        b = pyrtl.Input(bitwidth=8, name="b")
+        pyrtl.Output(name="out", src=a + b)
+        sim = pyrtl.Simulation()
+        sim.step(provided_inputs={"a": 10, "b": 20})
+        self.assertEqual(sim.inspect("out"), 30)
+
+    def test_input_rejects_src(self):
+        w = pyrtl.WireVector(bitwidth=8)
+        with self.assertRaises(TypeError):
+            pyrtl.Input(bitwidth=8, name="a", src=w)
+
+    def test_const_rejects_src(self):
+        w = pyrtl.WireVector(bitwidth=8)
+        with self.assertRaises(TypeError):
+            pyrtl.Const(val=5, src=w)
 
 
 class TestKeepingCallStack(unittest.TestCase):
