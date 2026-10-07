@@ -1,6 +1,6 @@
 import pyrtl
 
-# # Finite impulse filter example.
+# # Finite impulse response filter example.
 
 
 def fir(x: pyrtl.WireVector, bs: list[int]):

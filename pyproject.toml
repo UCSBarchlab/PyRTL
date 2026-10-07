@@ -55,7 +55,7 @@ Changelog = "https://github.com/UCSBarchlab/PyRTL/blob/development/CHANGELOG.md"
 source = "vcs"
 
 [tool.ruff]
-exclude = ["ipynb-examples", "docs/_build", "www/_build", "www/ipynb-examples"]
+exclude = ["ipynb-examples", "docs/_build", "www/_build"]
 
 [tool.ruff.lint]
 # See https://docs.astral.sh/ruff/rules/

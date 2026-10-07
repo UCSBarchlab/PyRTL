@@ -115,11 +115,11 @@ differences between the approaches.
             The code below provides everything needed to instantiate, simulate, and
             visualize the resulting design.
 
-            .. jupyterlite:: ipynb-examples/example-gcd.ipynb
+            .. jupyterlite:: ../ipynb-examples/example-gcd.ipynb
                :new_tab: True
                :new_tab_button_text: Try this example in your browser
 
-            .. literalinclude:: examples/example-gcd.py
+            .. literalinclude:: ../examples/example-gcd.py
 
             .. image:: ../docs/screenshots/gcd.png
                :width: 16em
@@ -134,11 +134,11 @@ differences between the approaches.
             an output ``y`` which is the resulting sum of products and is valid every
             cycle (since the design is naturally fully pipelined).
 
-            .. jupyterlite:: ipynb-examples/example-fir.ipynb
+            .. jupyterlite:: ../ipynb-examples/example-fir.ipynb
                :new_tab: True
                :new_tab_button_text: Try this example in your browser
 
-            .. literalinclude:: examples/example-fir.py
+            .. literalinclude:: ../examples/example-fir.py
 
             .. image:: ../docs/screenshots/fir.png
                :width: 30em
@@ -154,11 +154,11 @@ differences between the approaches.
             like :func:`~functools.reduce`, which is used to chain together multiple
             ``max_2`` elements into a bigger ``max_n``.
 
-            .. jupyterlite:: ipynb-examples/example-maxn.ipynb
+            .. jupyterlite:: ../ipynb-examples/example-maxn.ipynb
                :new_tab: True
                :new_tab_button_text: Try this example in your browser
 
-            .. literalinclude:: examples/example-maxn.py
+            .. literalinclude:: ../examples/example-maxn.py
 
             .. image:: ../docs/screenshots/maxn.png
                :width: 15em
@@ -176,11 +176,11 @@ differences between the approaches.
             an 8-bit ROM address and returns the value stored in the ROM at that
             address.
 
-            .. jupyterlite:: ipynb-examples/example-mul.ipynb
+            .. jupyterlite:: ../ipynb-examples/example-mul.ipynb
                :new_tab: True
                :new_tab_button_text: Try this example in your browser
 
-            .. literalinclude:: examples/example-mul.py
+            .. literalinclude:: ../examples/example-mul.py
 
             .. image:: ../docs/screenshots/mul.png
                :width: 15em
@@ -197,11 +197,11 @@ differences between the approaches.
             final ``full_sum`` is produced by concatenating the wires in ``sum`` with
             :func:`~pyrtl.concat_list`.
 
-            .. jupyterlite:: ipynb-examples/example-adder.ipynb
+            .. jupyterlite:: ../ipynb-examples/example-adder.ipynb
                :new_tab: True
                :new_tab_button_text: Try this example in your browser
 
-            .. literalinclude:: examples/example-adder.py
+            .. literalinclude:: ../examples/example-adder.py
 
             .. image:: ../docs/screenshots/adder.png
                :width: 15em
@@ -255,11 +255,11 @@ introduction to fixed 4-bit adders
 <https://www.youtube.com/watch?v=bL3ihMA8_Gs>`_, let's go ahead and build an
 `arbitrary` bitwidth adder.
 
-.. jupyterlite:: ipynb-examples/example-ripple-carry.ipynb
+.. jupyterlite:: ../ipynb-examples/example-ripple-carry.ipynb
    :new_tab: True
    :new_tab_button_text: Try this example in your browser
 
-.. literalinclude:: examples/example-ripple-carry.py
+.. literalinclude:: ../examples/example-ripple-carry.py
 
 The code above includes ``ripple_add``, an adder generator with Python-style
 slices on wires, ``counter``, an instance of :class:`~pyrtl.Register`, and all

@@ -7,16 +7,12 @@ import pytest
 
 
 def get_scripts(directory: str) -> list[Path]:
-    return list((Path(os.path.dirname(__file__)) / ".." / directory).glob("*.py"))
+    return list((Path(os.path.dirname(__file__)) / directory).glob("*.py"))
 
 
-@pytest.mark.parametrize(
-    "file",
-    get_scripts("examples") + get_scripts("www/examples"),
-    ids=lambda path: path.name,
-)
+@pytest.mark.parametrize("file", get_scripts("../examples"), ids=lambda path: path.name)
 def test_all_examples(file):
-    """Test all Python scripts in ``examples/`` and ``www/examples``.
+    """Test all Python scripts in ``examples/``.
 
     This just checks that all Python scripts terminate with exit status 0.
     """
