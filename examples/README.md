@@ -17,7 +17,7 @@ uv run python3 -i $SCRIPT_FILE
 ## Generating Jupyter Notebooks
 
 Each example script is automatically converted to a Jupyter notebook in the
-[`ipynb-examples`](https://github.com/UCSBarchlab/PyRTL/tree/development/ipynb-examples)
+[`www`](https://github.com/UCSBarchlab/PyRTL/tree/development/www)
 directory.
 [`examples/tools/to_ipynb.py`](https://github.com/UCSBarchlab/PyRTL/blob/development/examples/tools/to_ipynb.py)
 performs these conversions. Do not manually edit the generated Jupyter
