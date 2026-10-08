@@ -1,7 +1,7 @@
 PYTHON := uv run
 TO_IPYNB := tools/to_ipynb.py
 PY_FILES := $(wildcard example*.py) introduction-to-hardware.py
-IPYNB_FILES := $(addprefix ../ipynb-examples/, $(PY_FILES:.py=.ipynb))
+IPYNB_FILES := $(addprefix ../www/, $(PY_FILES:.py=.ipynb))
 
 all: $(IPYNB_FILES)
 

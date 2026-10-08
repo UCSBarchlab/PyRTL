@@ -115,7 +115,7 @@ differences between the approaches.
             The code below provides everything needed to instantiate, simulate, and
             visualize the resulting design.
 
-            .. jupyterlite:: ../ipynb-examples/example-gcd.ipynb
+            .. jupyterlite:: example-gcd.ipynb
                :new_tab: True
                :new_tab_button_text: Try this example in your browser
 
@@ -134,7 +134,7 @@ differences between the approaches.
             an output ``y`` which is the resulting sum of products and is valid every
             cycle (since the design is naturally fully pipelined).
 
-            .. jupyterlite:: ../ipynb-examples/example-fir.ipynb
+            .. jupyterlite:: example-fir.ipynb
                :new_tab: True
                :new_tab_button_text: Try this example in your browser
 
@@ -154,7 +154,7 @@ differences between the approaches.
             like :func:`~functools.reduce`, which is used to chain together multiple
             ``max_2`` elements into a bigger ``max_n``.
 
-            .. jupyterlite:: ../ipynb-examples/example-maxn.ipynb
+            .. jupyterlite:: example-maxn.ipynb
                :new_tab: True
                :new_tab_button_text: Try this example in your browser
 
@@ -176,7 +176,7 @@ differences between the approaches.
             an 8-bit ROM address and returns the value stored in the ROM at that
             address.
 
-            .. jupyterlite:: ../ipynb-examples/example-mul.ipynb
+            .. jupyterlite:: example-mul.ipynb
                :new_tab: True
                :new_tab_button_text: Try this example in your browser
 
@@ -197,7 +197,7 @@ differences between the approaches.
             final ``full_sum`` is produced by concatenating the wires in ``sum`` with
             :func:`~pyrtl.concat_list`.
 
-            .. jupyterlite:: ../ipynb-examples/example-adder.ipynb
+            .. jupyterlite:: example-adder.ipynb
                :new_tab: True
                :new_tab_button_text: Try this example in your browser
 
@@ -255,7 +255,7 @@ introduction to fixed 4-bit adders
 <https://www.youtube.com/watch?v=bL3ihMA8_Gs>`_, let's go ahead and build an
 `arbitrary` bitwidth adder.
 
-.. jupyterlite:: ../ipynb-examples/example-ripple-carry.ipynb
+.. jupyterlite:: example-ripple-carry.ipynb
    :new_tab: True
    :new_tab_button_text: Try this example in your browser
 
