@@ -28,7 +28,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["*.ipynb", "_build", "Thumbs.db", ".DS_Store"]
 
 # Enable links to Python standard library classes (str, list, dict, etc).
 intersphinx_mapping = {
@@ -36,7 +36,7 @@ intersphinx_mapping = {
     "pyrtl": ("https://pyrtl.readthedocs.io/en/latest/", None),
 }
 
-jupyterlite_contents = "../ipynb-examples"
+jupyterlite_contents = "*.ipynb"
 
 # -- Options for HTML output -------------------------------------------------
 

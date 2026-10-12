@@ -55,7 +55,7 @@ Changelog = "https://github.com/UCSBarchlab/PyRTL/blob/development/CHANGELOG.md"
 source = "vcs"
 
 [tool.ruff]
-exclude = ["ipynb-examples", "docs/_build", "www/_build"]
+exclude = ["*.ipynb", "docs/_build", "www/_build"]
 
 [tool.ruff.lint]
 # See https://docs.astral.sh/ruff/rules/
@@ -118,7 +118,7 @@ ignore = [
 dev = [
     "furo>=2025.9.25",
     "graphviz>=0.21",
-    "jupyterlite-pyodide-kernel<0.8",
+    "jupyterlite-pyodide-kernel>=0.8.6",
     "jupyterlite-sphinx>=0.9.3",
     "pyparsing>=3.2.5",
     "pytest>=8.4.2",
