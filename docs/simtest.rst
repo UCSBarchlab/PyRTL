@@ -20,7 +20,7 @@ Compiled (JIT to C) Simulation
 
 .. autoclass:: pyrtl.CompiledSimulation
     :members:
-    :exclude-members: run
+    :exclude-members: run, InputMetadata, OutputMetadata
 
 Simulation Trace
 ----------------
