@@ -95,6 +95,21 @@ class TestAreaEstimate(unittest.TestCase):
         memread <<= mem[reg]
         self.assertEqual(pyrtl.area_estimation(), (0.00734386752, 0.001879779717361501))
 
+    def test_area_est_small_multipliers(self):
+        """Multipliers narrower than four bits use their own area estimates."""
+        areas = []
+        for width in (1, 2, 3, 4):
+            pyrtl.reset_working_block()
+            a = pyrtl.Input(width, "a")
+            b = pyrtl.Input(width, "b")
+            product = pyrtl.Output(name="product")
+            product <<= a * b
+            logic_area, _mem_area = pyrtl.area_estimation()
+            self.assertGreater(logic_area, 0)
+            areas.append(logic_area)
+
+        self.assertEqual(areas, sorted(areas))
+
 
 class TestTimingEstimate(unittest.TestCase):
     def setUp(self):
