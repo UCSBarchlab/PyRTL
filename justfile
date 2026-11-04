@@ -14,7 +14,7 @@ tests:
 
         # Run `pytest` in an isolated virtual environment, with the earliest
         # version of Python supported by PyRTL.
-        uv run --python=3.10 --isolated pytest -rsx -n auto
+        uv run --python=3.11 --isolated pytest -rsx -n auto
 
         # Run `ruff format` to check that code is formatted properly.
         #
