@@ -286,9 +286,11 @@ def signed_tree_multiplier(
     a = _twos_comp_conditional(A, aneg)
     b = _twos_comp_conditional(B, bneg)
 
-    res = tree_multiplier(
-        a[:-1], b[:-1], reducer=reducer, adder_func=adder_func
-    ).zero_extended(len(A) + len(B))
+    # `a` and `b` are magnitudes. Keep their top bits: the magnitude of the most
+    # negative value, like -8 in 4 bits, is 2**(n-1), which needs all n bits.
+    res = tree_multiplier(a, b, reducer=reducer, adder_func=adder_func).zero_extended(
+        len(A) + len(B)
+    )
     return _twos_comp_conditional(res, aneg ^ bneg)
 
 
