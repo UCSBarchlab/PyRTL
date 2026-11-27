@@ -261,6 +261,26 @@ class TestSignedTreeMult(unittest.TestCase):
     def test_trivial_case_3(self):
         self.mult_t_base(3, 4)
 
+    def test_most_negative_operand(self):
+        # The most negative value, like -4 in 3 bits, has no positive counterpart of
+        # the same width. Exhaustively check all small signed products.
+        for len_a, len_b in [(2, 2), (3, 4), (4, 3)]:
+            pyrtl.reset_working_block()
+            a, b = pyrtl.Input(len_a, "a"), pyrtl.Input(len_b, "b")
+            product = pyrtl.Output(name="product")
+            product <<= multipliers.signed_tree_multiplier(a, b)
+            sim = pyrtl.Simulation()
+            for x in range(-(2 ** (len_a - 1)), 2 ** (len_a - 1)):
+                for y in range(-(2 ** (len_b - 1)), 2 ** (len_b - 1)):
+                    sim.step({a: x, b: y})
+                    self.assertEqual(
+                        pyrtl.val_to_signed_integer(
+                            sim.inspect("product"), len(product)
+                        ),
+                        x * y,
+                        f"{x} * {y} with widths {len_a}, {len_b}",
+                    )
+
     def test_wallace_tree_1(self):
         self.mult_t_base(10, 3)
 
